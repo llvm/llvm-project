@@ -8,7 +8,7 @@
 
 #include "ObjectContainerBSDArchive.h"
 
-#if defined(_WIN32) || defined(__ANDROID__)
+#if defined(_WIN32) || defined(_AIX)
 // Defines from ar, missing on Windows
 #define SARMAG 8
 #define ARFMAG "`\n"

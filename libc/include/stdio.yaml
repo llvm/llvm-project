@@ -1,4 +1,5 @@
 header: stdio.h
+header_template: stdio.h.def
 macros:
   - macro_name: stdout
     macro_value: stdout

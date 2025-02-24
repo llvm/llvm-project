@@ -1121,8 +1121,7 @@ llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
       if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
-            m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-                exe_ctx.GetTargetPtr());
+            m_sc.function->GetAddress().GetLoadAddress(exe_ctx.GetTargetPtr());
 
       llvm::Expected<Value> expr_value =
           m_sc.function->GetFrameBaseExpression().Evaluate(

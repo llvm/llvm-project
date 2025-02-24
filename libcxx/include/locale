@@ -219,7 +219,7 @@ template <class charT> class messages_byname;
 #    include <streambuf>
 #    include <version>
 
-// TODO: Properly qualify calls now that __bsd_locale_defaults.h defines functions instead of macros
+// TODO: Properly qualify calls now that the locale base API defines functions instead of macros
 // NOLINTBEGIN(libcpp-robust-against-adl)
 
 #    if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
@@ -292,7 +292,7 @@ _LIBCPP_HIDE_FROM_ABI _ForwardIterator __scan_keyword(
   if (__nkw > sizeof(__statbuf)) {
     __status = (unsigned char*)malloc(__nkw);
     if (__status == nullptr)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __stat_hold.reset(__status);
   }
   size_t __n_might_match = __nkw; // At this point, any keyword might match
@@ -400,8 +400,9 @@ struct __num_get : protected __num_get_base {
       unsigned*& __g_end,
       unsigned& __dc,
       _CharT* __atoms);
-#    ifndef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
-  static string __stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep);
+
+  [[__deprecated__("This exists only for ABI compatibility")]] static string
+  __stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep);
   static int __stage2_int_loop(
       _CharT __ct,
       int __base,
@@ -414,54 +415,31 @@ struct __num_get : protected __num_get_base {
       unsigned*& __g_end,
       _CharT* __atoms);
 
-#    else
-  static string __stage2_int_prep(ios_base& __iob, _CharT& __thousands_sep) {
+  _LIBCPP_HIDE_FROM_ABI static string __stage2_int_prep(ios_base& __iob, _CharT& __thousands_sep) {
     locale __loc                 = __iob.getloc();
     const numpunct<_CharT>& __np = use_facet<numpunct<_CharT> >(__loc);
     __thousands_sep              = __np.thousands_sep();
     return __np.grouping();
   }
 
-  const _CharT* __do_widen(ios_base& __iob, _CharT* __atoms) const { return __do_widen_p(__iob, __atoms); }
-
-  static int __stage2_int_loop(
-      _CharT __ct,
-      int __base,
-      char* __a,
-      char*& __a_end,
-      unsigned& __dc,
-      _CharT __thousands_sep,
-      const string& __grouping,
-      unsigned* __g,
-      unsigned*& __g_end,
-      const _CharT* __atoms);
+  _LIBCPP_HIDE_FROM_ABI const _CharT* __do_widen(ios_base& __iob, _CharT* __atoms) const {
+    return __do_widen_p(__iob, __atoms);
+  }
 
 private:
   template <typename _Tp>
-  const _Tp* __do_widen_p(ios_base& __iob, _Tp* __atoms) const {
+  _LIBCPP_HIDE_FROM_ABI const _Tp* __do_widen_p(ios_base& __iob, _Tp* __atoms) const {
     locale __loc = __iob.getloc();
     use_facet<ctype<_Tp> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
     return __atoms;
   }
 
-  const char* __do_widen_p(ios_base& __iob, char* __atoms) const {
+  _LIBCPP_HIDE_FROM_ABI const char* __do_widen_p(ios_base& __iob, char* __atoms) const {
     (void)__iob;
     (void)__atoms;
     return __src;
   }
-#    endif
 };
-
-#    ifndef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
-template <class _CharT>
-string __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep) {
-  locale __loc = __iob.getloc();
-  std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
-  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
-  __thousands_sep              = __np.thousands_sep();
-  return __np.grouping();
-}
-#    endif
 
 template <class _CharT>
 string __num_get<_CharT>::__stage2_float_prep(
@@ -475,18 +453,17 @@ string __num_get<_CharT>::__stage2_float_prep(
 }
 
 template <class _CharT>
-int
-#    ifndef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
-__num_get<_CharT>::__stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
-                  unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
-                  unsigned* __g, unsigned*& __g_end, _CharT* __atoms)
-#    else
-__num_get<_CharT>::__stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
-                  unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
-                  unsigned* __g, unsigned*& __g_end, const _CharT* __atoms)
-
-#    endif
-{
+int __num_get<_CharT>::__stage2_int_loop(
+    _CharT __ct,
+    int __base,
+    char* __a,
+    char*& __a_end,
+    unsigned& __dc,
+    _CharT __thousands_sep,
+    const string& __grouping,
+    unsigned* __g,
+    unsigned*& __g_end,
+    _CharT* __atoms) {
   if (__a_end == __a && (__ct == __atoms[24] || __ct == __atoms[25])) {
     *__a_end++ = __ct == __atoms[24] ? '+' : '-';
     __dc       = 0;
@@ -856,14 +833,9 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_signed(
   // Stage 2
   char_type __thousands_sep;
   const int __atoms_size = __num_get_base::__int_chr_cnt;
-#    ifdef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
   char_type __atoms1[__atoms_size];
   const char_type* __atoms = this->__do_widen(__iob, __atoms1);
   string __grouping        = this->__stage2_int_prep(__iob, __thousands_sep);
-#    else
-  char_type __atoms[__atoms_size];
-  string __grouping = this->__stage2_int_prep(__iob, __atoms, __thousands_sep);
-#    endif
   string __buf;
   __buf.resize(__buf.capacity());
   char* __a     = &__buf[0];
@@ -879,7 +851,17 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_signed(
       __a     = &__buf[0];
       __a_end = __a + __tmp;
     }
-    if (this->__stage2_int_loop(*__b, __base, __a, __a_end, __dc, __thousands_sep, __grouping, __g, __g_end, __atoms))
+    if (this->__stage2_int_loop(
+            *__b,
+            __base,
+            __a,
+            __a_end,
+            __dc,
+            __thousands_sep,
+            __grouping,
+            __g,
+            __g_end,
+            const_cast<char_type*>(__atoms)))
       break;
   }
   if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
@@ -905,14 +887,9 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_unsigned(
   // Stage 2
   char_type __thousands_sep;
   const int __atoms_size = __num_get_base::__int_chr_cnt;
-#    ifdef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
   char_type __atoms1[__atoms_size];
   const char_type* __atoms = this->__do_widen(__iob, __atoms1);
   string __grouping        = this->__stage2_int_prep(__iob, __thousands_sep);
-#    else
-  char_type __atoms[__atoms_size];
-  string __grouping = this->__stage2_int_prep(__iob, __atoms, __thousands_sep);
-#    endif
   string __buf;
   __buf.resize(__buf.capacity());
   char* __a     = &__buf[0];
@@ -928,7 +905,17 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_unsigned(
       __a     = &__buf[0];
       __a_end = __a + __tmp;
     }
-    if (this->__stage2_int_loop(*__b, __base, __a, __a_end, __dc, __thousands_sep, __grouping, __g, __g_end, __atoms))
+    if (this->__stage2_int_loop(
+            *__b,
+            __base,
+            __a,
+            __a_end,
+            __dc,
+            __thousands_sep,
+            __grouping,
+            __g,
+            __g_end,
+            const_cast<char_type*>(__atoms)))
       break;
   }
   if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
@@ -1337,7 +1324,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
     else
       __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
     if (__nc == -1)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __nbh.reset(__nb);
   }
   _LIBCPP_DIAGNOSTIC_POP
@@ -1350,7 +1337,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   if (__nb != __nar) {
     __ob = (char_type*)malloc(2 * static_cast<size_t>(__nc) * sizeof(char_type));
     if (__ob == 0)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __obh.reset(__ob);
   }
   char_type* __op; // pad here
@@ -2395,7 +2382,7 @@ _LIBCPP_HIDE_FROM_ABI void __double_or_nothing(unique_ptr<_Tp, void (*)(void*)>&
   size_t __n_off = static_cast<size_t>(__n - __b.get());
   _Tp* __t       = (_Tp*)std::realloc(__owns ? __b.get() : 0, __new_cap);
   if (__t == 0)
-    __throw_bad_alloc();
+    std::__throw_bad_alloc();
   if (__owns)
     __b.release();
   __b = unique_ptr<_Tp, void (*)(void*)>(__t, free);
@@ -2598,7 +2585,7 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
     if (__wn - __wb.get() > __bz - 2) {
       __h.reset((char*)malloc(static_cast<size_t>(__wn - __wb.get() + 2)));
       if (__h.get() == nullptr)
-        __throw_bad_alloc();
+        std::__throw_bad_alloc();
       __nc = __h.get();
     }
     if (__neg)
@@ -2607,7 +2594,7 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
       *__nc = __src[std::find(__atoms, std::end(__atoms), *__w) - __atoms];
     *__nc = char();
     if (sscanf(__nbuf, "%Lf", &__v) != 1)
-      __throw_runtime_error("money_get error");
+      std::__throw_runtime_error("money_get error");
   }
   if (__b == __e)
     __err |= ios_base::eofbit;
@@ -2872,11 +2859,11 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
   if (static_cast<size_t>(__n) > __bs - 1) {
     __n = __locale::__asprintf(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units);
     if (__n == -1)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __hn.reset(__bb);
     __hd.reset((char_type*)malloc(static_cast<size_t>(__n) * sizeof(char_type)));
     if (__hd == nullptr)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __db = __hd.get();
   }
   // gather info
@@ -2903,7 +2890,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
     __hw.reset((char_type*)malloc(__exn * sizeof(char_type)));
     __mb = __hw.get();
     if (__mb == 0)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   // format
   char_type* __mi;
@@ -2941,7 +2928,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
     __h.reset((char_type*)malloc(__exn * sizeof(char_type)));
     __mb = __h.get();
     if (__mb == 0)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   // format
   char_type* __mi;
@@ -3216,7 +3203,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::from_bytes(const char*
   }
 
   if (__wide_err_string_.empty())
-    __throw_range_error("wstring_convert: from_bytes error");
+    std::__throw_range_error("wstring_convert: from_bytes error");
 
   return __wide_err_string_;
 }
@@ -3285,7 +3272,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
   }
 
   if (__byte_err_string_.empty())
-    __throw_range_error("wstring_convert: to_bytes error");
+    std::__throw_range_error("wstring_convert: to_bytes error");
 
   return __byte_err_string_;
 }

@@ -533,7 +533,7 @@ define void @ilvod_v16i8_0(ptr %c, ptr %a, ptr %b) nounwind {
   ; CHECK-DAG: ld.b [[R2:\$w[0-9]+]], 0($6)
   %3 = shufflevector <16 x i8> %1, <16 x i8> %2,
                      <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
-  ; CHECK-DAG: ilvod.b [[R3:\$w[0-9]+]], [[R1]], [[R2]]
+  ; CHECK-DAG: ilvod.b [[R3:\$w[0-9]+]], [[R2]], [[R1]]
   store <16 x i8> %3, ptr %c
   ; CHECK-DAG: st.b [[R3]], 0($4)
 
@@ -548,7 +548,7 @@ define void @ilvod_v8i16_0(ptr %c, ptr %a, ptr %b) nounwind {
   %2 = load <8 x i16>, ptr %b
   ; CHECK-DAG: ld.h [[R2:\$w[0-9]+]], 0($6)
   %3 = shufflevector <8 x i16> %1, <8 x i16> %2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  ; CHECK-DAG: ilvod.h [[R3:\$w[0-9]+]], [[R1]], [[R2]]
+  ; CHECK-DAG: ilvod.h [[R3:\$w[0-9]+]], [[R2]], [[R1]]
   store <8 x i16> %3, ptr %c
   ; CHECK-DAG: st.h [[R3]], 0($4)
 
@@ -563,7 +563,7 @@ define void @ilvod_v4i32_0(ptr %c, ptr %a, ptr %b) nounwind {
   %2 = load <4 x i32>, ptr %b
   ; CHECK-DAG: ld.w [[R2:\$w[0-9]+]], 0($6)
   %3 = shufflevector <4 x i32> %1, <4 x i32> %2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  ; CHECK-DAG: ilvod.w [[R3:\$w[0-9]+]], [[R1]], [[R2]]
+  ; CHECK-DAG: ilvod.w [[R3:\$w[0-9]+]], [[R2]], [[R1]]
   store <4 x i32> %3, ptr %c
   ; CHECK-DAG: st.w [[R3]], 0($4)
 
@@ -578,7 +578,7 @@ define void @ilvod_v2i64_0(ptr %c, ptr %a, ptr %b) nounwind {
   %2 = load <2 x i64>, ptr %b
   ; CHECK-DAG: ld.d [[R2:\$w[0-9]+]], 0($6)
   %3 = shufflevector <2 x i64> %1, <2 x i64> %2, <2 x i32> <i32 1, i32 3>
-  ; CHECK-DAG: ilvod.d [[R3:\$w[0-9]+]], [[R1]], [[R2]]
+  ; CHECK-DAG: ilvod.d [[R3:\$w[0-9]+]], [[R2]], [[R1]]
   store <2 x i64> %3, ptr %c
   ; CHECK-DAG: st.d [[R3]], 0($4)
 
@@ -934,7 +934,7 @@ define void @ilvl_v2i64_0(ptr %c, ptr %a, ptr %b) nounwind {
   ; CHECK-DAG: ld.d [[R2:\$w[0-9]+]], 0($6)
   %3 = shufflevector <2 x i64> %1, <2 x i64> %2, <2 x i32> <i32 1, i32 3>
   ; ilvl.d and ilvod.d are equivalent for v2i64
-  ; CHECK-DAG: ilvod.d [[R3:\$w[0-9]+]], [[R1]], [[R2]]
+  ; CHECK-DAG: ilvod.d [[R3:\$w[0-9]+]], [[R2]], [[R1]]
   store <2 x i64> %3, ptr %c
   ; CHECK-DAG: st.d [[R3]], 0($4)
 
@@ -1290,7 +1290,7 @@ define void @pckod_v2i64_0(ptr %c, ptr %a, ptr %b) nounwind {
   ; CHECK-DAG: ld.d [[R2:\$w[0-9]+]], 0($6)
   %3 = shufflevector <2 x i64> %1, <2 x i64> %2, <2 x i32> <i32 1, i32 3>
   ; pckod.d and ilvod.d are equivalent for v2i64
-  ; CHECK-DAG: ilvod.d [[R3:\$w[0-9]+]], [[R1]], [[R2]]
+  ; CHECK-DAG: ilvod.d [[R3:\$w[0-9]+]], [[R2]], [[R1]]
   store <2 x i64> %3, ptr %c
   ; CHECK-DAG: st.d [[R3]], 0($4)
 

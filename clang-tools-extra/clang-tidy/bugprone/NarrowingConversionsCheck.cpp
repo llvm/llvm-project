@@ -38,7 +38,7 @@ AST_MATCHER(FieldDecl, hasIntBitwidth) {
   assert(Node.isBitField());
   const ASTContext &Ctx = Node.getASTContext();
   unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
-  unsigned CurrentBitWidth = Node.getBitWidthValue(Ctx);
+  unsigned CurrentBitWidth = Node.getBitWidthValue();
   return IntBitWidth == CurrentBitWidth;
 }
 
@@ -513,7 +513,9 @@ void NarrowingConversionsCheck::handleFloatingCast(const ASTContext &Context,
       return;
     }
     const BuiltinType *FromType = getBuiltinType(Rhs);
-    if (ToType->getKind() < FromType->getKind())
+    if (!llvm::APFloatBase::isRepresentableBy(
+            Context.getFloatTypeSemantics(FromType->desugar()),
+            Context.getFloatTypeSemantics(ToType->desugar())))
       diagNarrowType(SourceLoc, Lhs, Rhs);
   }
 }

@@ -57,8 +57,6 @@
 // because it changes the mangling of the virtual function located in the vtable, which
 // changes how it gets signed.
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
-// Enable optimized version of __do_get_(un)signed which avoids redundant copies.
-#  define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
 // Give reverse_iterator<T> one data member of type T, not two.
 // Also, in C++17 and later, don't derive iterator types from std::iterator.
 #  define _LIBCPP_ABI_NO_ITERATOR_BASES

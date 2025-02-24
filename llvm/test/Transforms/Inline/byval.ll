@@ -184,7 +184,7 @@ entry:
 
 define internal void @f5_as1(ptr addrspace(1) byval(%struct.S1) nocapture readonly align 4 %p) {
 ; CHECK-LABEL: define internal void @f5_as1(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly byval([[STRUCT_S1:%.*]]) align 4 [[P:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly byval([[STRUCT_S1:%.*]]) align 4 captures(none) [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, ptr addrspace(1) @d, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[P]], align 4

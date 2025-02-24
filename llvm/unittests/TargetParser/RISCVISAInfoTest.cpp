@@ -654,9 +654,10 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input :
-       {"rv64i_xqcisls0p2", "rv64i_xqcia0p2", "rv64i_xqciac0p2",
-        "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcics0p2",
-        "rv64i_xqcicli0p2"}) {
+       {"rv64i_xqcisls0p2", "rv64i_xqcia0p2", "rv64i_xqciac0p3",
+        "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
+        "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p2",
+        "rv64i_xqcilo0p2"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -1082,6 +1083,8 @@ R"(All available -march extensions for RISC-V
     xcvmac               1.0
     xcvmem               1.0
     xcvsimd              1.0
+    xmipscmove           1.0
+    xmipslsp             1.0
     xsfcease             1.0
     xsfvcp               1.0
     xsfvfnrclipxfqf      1.0
@@ -1105,21 +1108,28 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
+    p                    0.14
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zalasr               0.1
     zvbc32e              0.7
     zvkgs                0.7
+    sdext                1.0
+    sdtrig               1.0
     smctr                1.0
     ssctr                1.0
     svukte               0.3
     xqcia                0.2
-    xqciac               0.2
+    xqciac               0.3
     xqcicli              0.2
+    xqcicm               0.2
     xqcics               0.2
     xqcicsr              0.2
+    xqciint              0.2
+    xqcilo               0.2
     xqcilsm              0.2
     xqcisls              0.2
+    xrivosvizip          0.1
 
 Supported Profiles
     rva20s64

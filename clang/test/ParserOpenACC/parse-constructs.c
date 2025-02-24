@@ -109,30 +109,23 @@ void func() {
   for(int i = 0; i < 6;++i){}
 
   int i = 0, j = 0, k = 0;
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
 #pragma acc atomic
-  i = j;
-  // expected-error@+2{{invalid OpenACC clause 'garbage'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
+  // expected-error@+1{{invalid OpenACC clause 'garbage'}}
 #pragma acc atomic garbage
-  i = j;
-  // expected-error@+2{{invalid OpenACC clause 'garbage'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
+  // expected-error@+1{{invalid OpenACC clause 'garbage'}}
 #pragma acc atomic garbage clause list
-  i = j;
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
 #pragma acc atomic read
   i = j;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic write clause list
   i = i + j;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic update clause list
   i++;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic capture clause list
   i = j++;
 
@@ -148,11 +141,11 @@ void func() {
 #pragma acc shutdown clause list
   for(;;){}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'set' not yet implemented, pragma ignored}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
+  // expected-error@+2{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc update clause list
   for(;;){}
 }

@@ -451,8 +451,8 @@ bool X86DomainReassignment::visitRegister(Closure &C, Register Reg,
 }
 
 bool X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
-  auto I = EnclosedInstrs.find(MI);
-  if (I != EnclosedInstrs.end()) {
+  auto [I, Inserted] = EnclosedInstrs.try_emplace(MI, C.getID());
+  if (!Inserted) {
     if (I->second != C.getID()) {
       // Instruction already belongs to another closure, avoid conflicts between
       // closure and mark this closure as illegal.
@@ -462,7 +462,6 @@ bool X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
     return true;
   }
 
-  EnclosedInstrs[MI] = C.getID();
   C.addInstruction(MI);
 
   // Mark closure as illegal for reassignment to domains, if there is no

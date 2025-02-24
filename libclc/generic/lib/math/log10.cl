@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "tables.h"
+#include <clc/math/tables.h>
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 

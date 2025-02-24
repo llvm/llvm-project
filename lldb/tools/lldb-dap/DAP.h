@@ -9,36 +9,40 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAP_H
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
-#include <cstdio>
-#include <iosfwd>
-#include <map>
-#include <optional>
-#include <thread>
-
+#include "DAPForward.h"
+#include "ExceptionBreakpoint.h"
+#include "FunctionBreakpoint.h"
+#include "Handler/RequestHandler.h"
+#include "IOStream.h"
+#include "InstructionBreakpoint.h"
+#include "OutputRedirector.h"
+#include "ProgressEvent.h"
+#include "SourceBreakpoint.h"
+#include "lldb/API/SBBroadcaster.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFile.h"
+#include "lldb/API/SBFormat.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/API/SBValueList.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include "lldb/API/SBAttachInfo.h"
-#include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBEvent.h"
-#include "lldb/API/SBFormat.h"
-#include "lldb/API/SBLaunchInfo.h"
-#include "lldb/API/SBTarget.h"
-#include "lldb/API/SBThread.h"
-
-#include "ExceptionBreakpoint.h"
-#include "FunctionBreakpoint.h"
-#include "IOStream.h"
-#include "InstructionBreakpoint.h"
-#include "ProgressEvent.h"
-#include "SourceBreakpoint.h"
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <thread>
+#include <vector>
 
 #define VARREF_LOCALS (int64_t)1
 #define VARREF_GLOBALS (int64_t)2
@@ -48,7 +52,8 @@
 
 namespace lldb_dap {
 
-typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
+typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
+    SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
@@ -137,16 +142,20 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
+  std::string name;
   llvm::StringRef debug_adaptor_path;
+  std::ofstream *log;
   InputStream input;
   OutputStream output;
+  lldb::SBFile in;
+  OutputRedirector out;
+  OutputRedirector err;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   Variables variables;
   lldb::SBBroadcaster broadcaster;
   std::thread event_thread;
   std::thread progress_event_thread;
-  std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -178,6 +187,7 @@ struct DAP {
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
   std::map<std::string, RequestCallback, std::less<>> request_handlers;
+  llvm::StringMap<std::unique_ptr<RequestHandler>> new_request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -198,12 +208,24 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(llvm::StringRef path, ReplMode repl_mode);
+  DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
+
+  /// Redirect stdout and stderr fo the IDE's console output.
+  ///
+  /// Errors in this operation will be printed to the log file and the IDE's
+  /// console output as well.
+  llvm::Error ConfigureIO(std::FILE *overrideOut = nullptr,
+                          std::FILE *overrideErr = nullptr);
+
+  /// Stop the redirected IO threads and associated pipes.
+  void StopIO();
 
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
@@ -288,6 +310,15 @@ struct DAP {
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
 
+  /// Disconnect the DAP session.
+  lldb::SBError Disconnect();
+
+  /// Disconnect the DAP session and optionally terminate the debuggee.
+  lldb::SBError Disconnect(bool terminateDebuggee);
+
+  /// Send a "terminated" event to indicate the process is done being debugged.
+  void SendTerminatedEvent();
+
   llvm::Error Loop();
 
   /// Send a Debug Adapter Protocol reverse request to the IDE.
@@ -313,6 +344,12 @@ struct DAP {
   ///     The callback to execute when the given request is triggered by the
   ///     IDE.
   void RegisterRequestCallback(std::string request, RequestCallback callback);
+
+  /// Registers a request handler.
+  template <typename Handler> void RegisterRequest() {
+    new_request_handlers[Handler::getCommand()] =
+        std::make_unique<Handler>(*this);
+  }
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }

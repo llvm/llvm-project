@@ -154,6 +154,8 @@ def SDT_ZExtractVectorElt   : SDTypeProfile<1, 2,
                                              SDTCisVT<2, i32>]>;
 def SDT_ZReplicate          : SDTypeProfile<1, 1,
                                             [SDTCisVec<0>]>;
+def SDT_ZVecUnpack          : SDTypeProfile<1, 1,
+                                            [SDTCisVec<1>]>;
 def SDT_ZVecUnaryConv       : SDTypeProfile<1, 1,
                                             [SDTCisVec<0>,
                                              SDTCisVec<1>]>;
@@ -163,6 +165,13 @@ def SDT_ZVecUnary           : SDTypeProfile<1, 1,
 def SDT_ZVecUnaryCC         : SDTypeProfile<2, 1,
                                             [SDTCisVec<0>,
                                              SDTCisVT<1, i32>,
+                                             SDTCisSameAs<0, 2>]>;
+def SDT_ZVecCompare         : SDTypeProfile<1, 2,
+                                            [SDTCisSameAs<0, 1>,
+                                             SDTCisSameAs<0, 2>]>;
+def SDT_ZVecCompareCC       : SDTypeProfile<2, 2,
+                                            [SDTCisVT<1, i32>,
+                                             SDTCisSameAs<0, 2>,
                                              SDTCisSameAs<0, 2>]>;
 def SDT_ZVecBinary          : SDTypeProfile<1, 2,
                                             [SDTCisVec<0>,
@@ -345,10 +354,10 @@ def z_permute           : SDNode<"SystemZISD::PERMUTE", SDT_ZVecTernary>;
 def z_pack              : SDNode<"SystemZISD::PACK", SDT_ZVecBinaryConv>;
 def z_packs_cc          : SDNode<"SystemZISD::PACKS_CC", SDT_ZVecBinaryConvCC>;
 def z_packls_cc         : SDNode<"SystemZISD::PACKLS_CC", SDT_ZVecBinaryConvCC>;
-def z_unpack_high       : SDNode<"SystemZISD::UNPACK_HIGH", SDT_ZVecUnaryConv>;
-def z_unpackl_high      : SDNode<"SystemZISD::UNPACKL_HIGH", SDT_ZVecUnaryConv>;
-def z_unpack_low        : SDNode<"SystemZISD::UNPACK_LOW", SDT_ZVecUnaryConv>;
-def z_unpackl_low       : SDNode<"SystemZISD::UNPACKL_LOW", SDT_ZVecUnaryConv>;
+def z_unpack_high       : SDNode<"SystemZISD::UNPACK_HIGH", SDT_ZVecUnpack>;
+def z_unpackl_high      : SDNode<"SystemZISD::UNPACKL_HIGH", SDT_ZVecUnpack>;
+def z_unpack_low        : SDNode<"SystemZISD::UNPACK_LOW", SDT_ZVecUnpack>;
+def z_unpackl_low       : SDNode<"SystemZISD::UNPACKL_LOW", SDT_ZVecUnpack>;
 def z_vshl_by_scalar    : SDNode<"SystemZISD::VSHL_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
 def z_vsrl_by_scalar    : SDNode<"SystemZISD::VSRL_BY_SCALAR",
@@ -358,12 +367,12 @@ def z_vsra_by_scalar    : SDNode<"SystemZISD::VSRA_BY_SCALAR",
 def z_vrotl_by_scalar   : SDNode<"SystemZISD::VROTL_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
 def z_vsum              : SDNode<"SystemZISD::VSUM", SDT_ZBinaryConv>;
-def z_vicmpe            : SDNode<"SystemZISD::VICMPE", SDT_ZVecBinary>;
-def z_vicmph            : SDNode<"SystemZISD::VICMPH", SDT_ZVecBinary>;
-def z_vicmphl           : SDNode<"SystemZISD::VICMPHL", SDT_ZVecBinary>;
-def z_vicmpes           : SDNode<"SystemZISD::VICMPES", SDT_ZVecBinaryCC>;
-def z_vicmphs           : SDNode<"SystemZISD::VICMPHS", SDT_ZVecBinaryCC>;
-def z_vicmphls          : SDNode<"SystemZISD::VICMPHLS", SDT_ZVecBinaryCC>;
+def z_vicmpe            : SDNode<"SystemZISD::VICMPE", SDT_ZVecCompare>;
+def z_vicmph            : SDNode<"SystemZISD::VICMPH", SDT_ZVecCompare>;
+def z_vicmphl           : SDNode<"SystemZISD::VICMPHL", SDT_ZVecCompare>;
+def z_vicmpes           : SDNode<"SystemZISD::VICMPES", SDT_ZVecCompareCC>;
+def z_vicmphs           : SDNode<"SystemZISD::VICMPHS", SDT_ZVecCompareCC>;
+def z_vicmphls          : SDNode<"SystemZISD::VICMPHLS", SDT_ZVecCompareCC>;
 def z_vfcmpe            : SDNode<"SystemZISD::VFCMPE", SDT_ZVecBinaryConv>;
 def z_strict_vfcmpe     : SDNode<"SystemZISD::STRICT_VFCMPE",
                                  SDT_ZVecBinaryConv, [SDNPHasChain]>;
@@ -535,6 +544,12 @@ def z_ucmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
 def z_tm_reg : PatFrag<(ops node:$a, node:$b), (z_tm node:$a, node:$b, timm)>;
 def z_tm_mem : PatFrag<(ops node:$a, node:$b), (z_tm node:$a, node:$b, 0)>;
 
+// Shifts by small immediate amounts.
+def shl1 : PatFrag<(ops node:$src), (shl node:$src, (i32 1))>;
+def shl2 : PatFrag<(ops node:$src), (shl node:$src, (i32 2))>;
+def shl3 : PatFrag<(ops node:$src), (shl node:$src, (i32 3))>;
+def shl4 : PatFrag<(ops node:$src), (shl node:$src, (i32 4))>;
+
 // Register sign-extend operations.  Sub-32-bit values are represented as i32s.
 def sext8  : PatFrag<(ops node:$src), (sext_inreg node:$src, i8)>;
 def sext16 : PatFrag<(ops node:$src), (sext_inreg node:$src, i16)>;
@@ -549,6 +564,15 @@ def sext16dbl : PatFrag<(ops node:$src), (sext16 (anyext node:$src))>;
 def zext8  : PatFrag<(ops node:$src), (and node:$src, 0xff)>;
 def zext16 : PatFrag<(ops node:$src), (and node:$src, 0xffff)>;
 def zext32 : PatFrag<(ops node:$src), (zext (i32 node:$src))>;
+
+// Match a 64-bit value that is guaranteed to have been sign-
+// or zero-extended from a 32-bit value.
+def assertsext32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
+}]>;
+def assertzext32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
+}]>;
 
 // Match a load or a non-extending atomic load.
 def z_load : PatFrags<(ops node:$ptr),

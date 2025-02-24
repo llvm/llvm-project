@@ -616,9 +616,10 @@ value llvm_dibuild_create_member_pointer_type_bytecode(value *argv, int argn) {
   );
 }
 
-value llvm_dibuild_create_object_pointer_type(value Builder, value Type) {
+value llvm_dibuild_create_object_pointer_type(value Builder, value Type,
+                                              value Implicit) {
   LLVMMetadataRef Metadata = LLVMDIBuilderCreateObjectPointerType(
-      DIBuilder_val(Builder), Metadata_val(Type));
+      DIBuilder_val(Builder), Metadata_val(Type), Bool_val(Implicit));
   return to_val(Metadata);
 }
 

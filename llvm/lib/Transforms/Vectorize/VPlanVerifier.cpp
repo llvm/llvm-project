@@ -26,6 +26,7 @@ using namespace llvm;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
+  VPTypeAnalysis &TypeInfo;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -58,7 +59,8 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
+      : VPDT(VPDT), TypeInfo(TypeInfo) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -143,10 +145,6 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
         .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
-          return VerifyEVLUse(*W,
-                              Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
-        })
         .Case<VPScalarCastRecipe>(
             [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
@@ -195,11 +193,21 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
+      // Verify that we can infer a scalar type for each defined value. With
+      // assertions enabled, inferScalarType will perform some consistency
+      // checks during type inference.
+      if (!TypeInfo.inferScalarType(V)) {
+        errs() << "Failed to infer scalar type!\n";
+        return false;
+      }
+
       for (const VPUser *U : V->users()) {
-        auto *UI = dyn_cast<VPRecipeBase>(U);
+        auto *UI = cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
         if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
+            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI) ||
+            (isa<VPIRInstruction>(UI) &&
+             isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -406,6 +414,8 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
-  VPlanVerifier Verifier(VPDT);
+  VPTypeAnalysis TypeInfo(
+      const_cast<VPlan &>(Plan).getCanonicalIV()->getScalarType());
+  VPlanVerifier Verifier(VPDT, TypeInfo);
   return Verifier.verify(Plan);
 }

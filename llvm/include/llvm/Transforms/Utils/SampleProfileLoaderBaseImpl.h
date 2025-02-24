@@ -881,19 +881,21 @@ void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
 
     // Add predecessors for B1.
     SmallPtrSet<BasicBlockT *, 16> Visited;
-    if (!Predecessors[B1].empty())
+    auto &Preds = Predecessors[B1];
+    if (!Preds.empty())
       llvm_unreachable("Found a stale predecessors list in a basic block.");
     for (auto *B2 : getPredecessors(B1))
       if (Visited.insert(B2).second)
-        Predecessors[B1].push_back(B2);
+        Preds.push_back(B2);
 
     // Add successors for B1.
     Visited.clear();
-    if (!Successors[B1].empty())
+    auto &Succs = Successors[B1];
+    if (!Succs.empty())
       llvm_unreachable("Found a stale successors list in a basic block.");
     for (auto *B2 : getSuccessors(B1))
       if (Visited.insert(B2).second)
-        Successors[B1].push_back(B2);
+        Succs.push_back(B2);
   }
 }
 

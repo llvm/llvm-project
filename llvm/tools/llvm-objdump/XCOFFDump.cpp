@@ -42,6 +42,7 @@ private:
   void printPrivateHeaders() override;
   void printFileHeader();
   void printAuxiliaryHeader();
+  void printLoaderSectionHeader();
   void printAuxiliaryHeader(const XCOFFAuxiliaryHeader32 *AuxHeader);
   void printAuxiliaryHeader(const XCOFFAuxiliaryHeader64 *AuxHeader);
   template <typename AuxHeaderMemberType, typename XCOFFAuxiliaryHeader>
@@ -66,6 +67,7 @@ private:
 void XCOFFDumper::printPrivateHeaders() {
   printFileHeader();
   printAuxiliaryHeader();
+  printLoaderSectionHeader();
 }
 
 FormattedString XCOFFDumper::formatName(StringRef Name) {
@@ -260,6 +262,45 @@ void XCOFFDumper::printAuxiliaryHeader(
 
   checkAndPrintAuxHeaderParseError(PartialFieldName, PartialFieldOffset,
                                    AuxSize, *AuxHeader);
+}
+
+void XCOFFDumper::printLoaderSectionHeader() {
+  Expected<uintptr_t> LoaderSectionAddrOrError =
+      Obj.getSectionFileOffsetToRawData(XCOFF::STYP_LOADER);
+  if (!LoaderSectionAddrOrError) {
+    reportUniqueWarning(LoaderSectionAddrOrError.takeError());
+    return;
+  }
+  uintptr_t LoaderSectionAddr = LoaderSectionAddrOrError.get();
+
+  if (LoaderSectionAddr == 0)
+    return;
+
+  auto PrintLoadSecHeaderCommon = [&](const auto *LDHeader) {
+    printNumber("Version:", LDHeader->Version);
+    printNumber("NumberOfSymbolEntries:", LDHeader->NumberOfSymTabEnt);
+    printNumber("NumberOfRelocationEntries:", LDHeader->NumberOfRelTabEnt);
+    printNumber("LengthOfImportFileIDStringTable:",
+                LDHeader->LengthOfImpidStrTbl);
+    printNumber("NumberOfImportFileIDs:", LDHeader->NumberOfImpid);
+    printHex("OffsetToImportFileIDs:", LDHeader->OffsetToImpid);
+    printNumber("LengthOfStringTable:", LDHeader->LengthOfStrTbl);
+    printHex("OffsetToStringTable:", LDHeader->OffsetToStrTbl);
+  };
+
+  Width = 35;
+  outs() << "\n---Loader Section Header:\n";
+  if (Obj.is64Bit()) {
+    const LoaderSectionHeader64 *LoaderSec64 =
+        reinterpret_cast<const LoaderSectionHeader64 *>(LoaderSectionAddr);
+    PrintLoadSecHeaderCommon(LoaderSec64);
+    printHex("OffsetToSymbolTable", LoaderSec64->OffsetToSymTbl);
+    printHex("OffsetToRelocationEntries", LoaderSec64->OffsetToRelEnt);
+  } else {
+    const LoaderSectionHeader32 *LoaderSec32 =
+        reinterpret_cast<const LoaderSectionHeader32 *>(LoaderSectionAddr);
+    PrintLoadSecHeaderCommon(LoaderSec32);
+  }
 }
 
 void XCOFFDumper::printFileHeader() {

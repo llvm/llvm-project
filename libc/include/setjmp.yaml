@@ -1,4 +1,5 @@
 header: setjmp.h
+header_template: setjmp.h.def
 macros: []
 types:
   - type_name: jmp_buf
@@ -16,5 +17,7 @@ functions:
     standards:
       - stdc
     return_type: int
+    attributes:
+      - _Returns_twice
     arguments:
       - type: jmp_buf

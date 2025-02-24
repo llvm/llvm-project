@@ -73,6 +73,10 @@ protected:
   /// to emit them into.
   MCSection *CompactUnwindSection = nullptr;
 
+  /// If import call optimization is supported by the target, this is the
+  /// section to emit import call data to.
+  MCSection *ImportCallSection = nullptr;
+
   // Dwarf sections for debug info.  If a target supports debug info, these must
   // be set.
   MCSection *DwarfAbbrevSection = nullptr;
@@ -269,6 +273,7 @@ public:
   MCSection *getBSSSection() const { return BSSSection; }
   MCSection *getReadOnlySection() const { return ReadOnlySection; }
   MCSection *getLSDASection() const { return LSDASection; }
+  MCSection *getImportCallSection() const { return ImportCallSection; }
   MCSection *getCompactUnwindSection() const { return CompactUnwindSection; }
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }

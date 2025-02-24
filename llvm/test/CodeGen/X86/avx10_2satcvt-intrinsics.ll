@@ -2,221 +2,221 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64 --show-mc-encoding -mattr=+avx10.2-256 | FileCheck %s --check-prefixes=CHECK,X64
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i686 --show-mc-encoding -mattr=+avx10.2-256 | FileCheck %s --check-prefixes=CHECK,X86
 
-define dso_local <2 x i64> @test_mm_ipcvtnebf16_epi8(<8 x bfloat> noundef %__A) {
-; CHECK-LABEL: test_mm_ipcvtnebf16_epi8:
+define dso_local <2 x i64> @test_mm_ipcvtbf16_epi8(<8 x bfloat> noundef %__A) {
+; CHECK-LABEL: test_mm_ipcvtbf16_epi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvtnebf162ibs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x69,0xc0]
+; CHECK-NEXT:    vcvtbf162ibs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x69,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtnebf162ibs128(<8 x bfloat> %__A)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtbf162ibs128(<8 x bfloat> %__A)
   %1 = bitcast <8 x i16> %0 to <2 x i64>
   ret <2 x i64> %1
 }
 
-define dso_local <2 x i64> @test_mm_mask_ipcvtnebf16_epi8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_mask_ipcvtnebf16_epi8:
+define dso_local <2 x i64> @test_mm_mask_ipcvtbf16_epi8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_mask_ipcvtbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x69,0xc1]
+; X64-NEXT:    vcvtbf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x69,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_mask_ipcvtnebf16_epi8:
+; X86-LABEL: test_mm_mask_ipcvtbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x69,0xc1]
+; X86-NEXT:    vcvtbf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x69,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <2 x i64> %__S to <8 x i16>
-  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvtnebf162ibs128(<8 x bfloat> %__B)
+  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvtbf162ibs128(<8 x bfloat> %__B)
   %2 = bitcast i8 %__A to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %0
   %4 = bitcast <8 x i16> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
-declare <8 x i16> @llvm.x86.avx10.vcvtnebf162ibs128(<8 x bfloat>)
+declare <8 x i16> @llvm.x86.avx10.vcvtbf162ibs128(<8 x bfloat>)
 
-define dso_local <2 x i64> @test_mm_maskz_ipcvtnebf16_epi8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_maskz_ipcvtnebf16_epi8:
+define dso_local <2 x i64> @test_mm_maskz_ipcvtbf16_epi8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_maskz_ipcvtbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x69,0xc0]
+; X64-NEXT:    vcvtbf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x69,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_maskz_ipcvtnebf16_epi8:
+; X86-LABEL: test_mm_maskz_ipcvtbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x69,0xc0]
+; X86-NEXT:    vcvtbf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x69,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtnebf162ibs128(<8 x bfloat> %__B)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtbf162ibs128(<8 x bfloat> %__B)
   %1 = bitcast i8 %__A to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i16> %0, <8 x i16> zeroinitializer
   %3 = bitcast <8 x i16> %2 to <2 x i64>
   ret <2 x i64> %3
 }
 
-define dso_local <4 x i64> @test_mm256_ipcvtnebf16_epi8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
-; CHECK-LABEL: test_mm256_ipcvtnebf16_epi8:
+define dso_local <4 x i64> @test_mm256_ipcvtbf16_epi8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
+; CHECK-LABEL: test_mm256_ipcvtbf16_epi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvtnebf162ibs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x69,0xc0]
+; CHECK-NEXT:    vcvtbf162ibs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x69,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtnebf162ibs256(<16 x bfloat> %__A)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtbf162ibs256(<16 x bfloat> %__A)
   %1 = bitcast <16 x i16> %0 to <4 x i64>
   ret <4 x i64> %1
 }
 
-define dso_local <4 x i64> @test_mm256_mask_ipcvtnebf16_epi8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_mask_ipcvtnebf16_epi8:
+define dso_local <4 x i64> @test_mm256_mask_ipcvtbf16_epi8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_mask_ipcvtbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x69,0xc1]
+; X64-NEXT:    vcvtbf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x69,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_mask_ipcvtnebf16_epi8:
+; X86-LABEL: test_mm256_mask_ipcvtbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x69,0xc1]
+; X86-NEXT:    vcvtbf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x69,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <4 x i64> %__S to <16 x i16>
-  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvtnebf162ibs256(<16 x bfloat> %__B)
+  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvtbf162ibs256(<16 x bfloat> %__B)
   %2 = bitcast i16 %__A to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %0
   %4 = bitcast <16 x i16> %3 to <4 x i64>
   ret <4 x i64> %4
 }
 
-declare <16 x i16> @llvm.x86.avx10.vcvtnebf162ibs256(<16 x bfloat>)
+declare <16 x i16> @llvm.x86.avx10.vcvtbf162ibs256(<16 x bfloat>)
 
-define dso_local <4 x i64> @test_mm256_maskz_ipcvtnebf16_epi8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_maskz_ipcvtnebf16_epi8:
+define dso_local <4 x i64> @test_mm256_maskz_ipcvtbf16_epi8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_maskz_ipcvtbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x69,0xc0]
+; X64-NEXT:    vcvtbf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x69,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_maskz_ipcvtnebf16_epi8:
+; X86-LABEL: test_mm256_maskz_ipcvtbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x69,0xc0]
+; X86-NEXT:    vcvtbf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x69,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtnebf162ibs256(<16 x bfloat> %__B)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtbf162ibs256(<16 x bfloat> %__B)
   %1 = bitcast i16 %__A to <16 x i1>
   %2 = select <16 x i1> %1, <16 x i16> %0, <16 x i16> zeroinitializer
   %3 = bitcast <16 x i16> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-define dso_local <2 x i64> @test_mm_ipcvtnebf16_epu8(<8 x bfloat> noundef %__A) {
-; CHECK-LABEL: test_mm_ipcvtnebf16_epu8:
+define dso_local <2 x i64> @test_mm_ipcvtbf16_epu8(<8 x bfloat> noundef %__A) {
+; CHECK-LABEL: test_mm_ipcvtbf16_epu8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvtnebf162iubs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x6b,0xc0]
+; CHECK-NEXT:    vcvtbf162iubs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x6b,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtnebf162iubs128(<8 x bfloat> %__A)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtbf162iubs128(<8 x bfloat> %__A)
   %1 = bitcast <8 x i16> %0 to <2 x i64>
   ret <2 x i64> %1
 }
 
-define dso_local <2 x i64> @test_mm_mask_ipcvtnebf16_epu8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_mask_ipcvtnebf16_epu8:
+define dso_local <2 x i64> @test_mm_mask_ipcvtbf16_epu8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_mask_ipcvtbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6b,0xc1]
+; X64-NEXT:    vcvtbf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6b,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_mask_ipcvtnebf16_epu8:
+; X86-LABEL: test_mm_mask_ipcvtbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6b,0xc1]
+; X86-NEXT:    vcvtbf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6b,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <2 x i64> %__S to <8 x i16>
-  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvtnebf162iubs128(<8 x bfloat> %__B)
+  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvtbf162iubs128(<8 x bfloat> %__B)
   %2 = bitcast i8 %__A to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %0
   %4 = bitcast <8 x i16> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
-declare <8 x i16> @llvm.x86.avx10.vcvtnebf162iubs128(<8 x bfloat>)
+declare <8 x i16> @llvm.x86.avx10.vcvtbf162iubs128(<8 x bfloat>)
 
-define dso_local <2 x i64> @test_mm_maskz_ipcvtnebf16_epu8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_maskz_ipcvtnebf16_epu8:
+define dso_local <2 x i64> @test_mm_maskz_ipcvtbf16_epu8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_maskz_ipcvtbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6b,0xc0]
+; X64-NEXT:    vcvtbf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6b,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_maskz_ipcvtnebf16_epu8:
+; X86-LABEL: test_mm_maskz_ipcvtbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6b,0xc0]
+; X86-NEXT:    vcvtbf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6b,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtnebf162iubs128(<8 x bfloat> %__B)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvtbf162iubs128(<8 x bfloat> %__B)
   %1 = bitcast i8 %__A to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i16> %0, <8 x i16> zeroinitializer
   %3 = bitcast <8 x i16> %2 to <2 x i64>
   ret <2 x i64> %3
 }
 
-define dso_local <4 x i64> @test_mm256_ipcvtnebf16_epu8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
-; CHECK-LABEL: test_mm256_ipcvtnebf16_epu8:
+define dso_local <4 x i64> @test_mm256_ipcvtbf16_epu8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
+; CHECK-LABEL: test_mm256_ipcvtbf16_epu8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvtnebf162iubs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x6b,0xc0]
+; CHECK-NEXT:    vcvtbf162iubs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x6b,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtnebf162iubs256(<16 x bfloat> %__A)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtbf162iubs256(<16 x bfloat> %__A)
   %1 = bitcast <16 x i16> %0 to <4 x i64>
   ret <4 x i64> %1
 }
 
-define dso_local <4 x i64> @test_mm256_mask_ipcvtnebf16_epu8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_mask_ipcvtnebf16_epu8:
+define dso_local <4 x i64> @test_mm256_mask_ipcvtbf16_epu8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_mask_ipcvtbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6b,0xc1]
+; X64-NEXT:    vcvtbf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6b,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_mask_ipcvtnebf16_epu8:
+; X86-LABEL: test_mm256_mask_ipcvtbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6b,0xc1]
+; X86-NEXT:    vcvtbf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6b,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <4 x i64> %__S to <16 x i16>
-  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvtnebf162iubs256(<16 x bfloat> %__B)
+  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvtbf162iubs256(<16 x bfloat> %__B)
   %2 = bitcast i16 %__A to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %0
   %4 = bitcast <16 x i16> %3 to <4 x i64>
   ret <4 x i64> %4
 }
 
-define dso_local <4 x i64> @test_mm256_maskz_ipcvtnebf16_epu8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_maskz_ipcvtnebf16_epu8:
+define dso_local <4 x i64> @test_mm256_maskz_ipcvtbf16_epu8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_maskz_ipcvtbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvtnebf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6b,0xc0]
+; X64-NEXT:    vcvtbf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6b,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_maskz_ipcvtnebf16_epu8:
+; X86-LABEL: test_mm256_maskz_ipcvtbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvtnebf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6b,0xc0]
+; X86-NEXT:    vcvtbf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6b,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtnebf162iubs256(<16 x bfloat> %__B)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvtbf162iubs256(<16 x bfloat> %__B)
   %1 = bitcast i16 %__A to <16 x i1>
   %2 = select <16 x i1> %1, <16 x i16> %0, <16 x i16> zeroinitializer
   %3 = bitcast <16 x i16> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-declare <16 x i16> @llvm.x86.avx10.vcvtnebf162iubs256(<16 x bfloat>)
+declare <16 x i16> @llvm.x86.avx10.vcvtbf162iubs256(<16 x bfloat>)
 
 define dso_local <2 x i64> @test_mm_ipcvtph_epi8(<8 x half> noundef %__A) {
 ; CHECK-LABEL: test_mm_ipcvtph_epi8:
@@ -810,221 +810,221 @@ entry:
 
 declare <8 x i32> @llvm.x86.avx10.mask.vcvtps2iubs256(<8 x float>, <8 x i32>, i8, i32)
 
-define dso_local <2 x i64> @test_mm_ipcvttnebf16_epi8(<8 x bfloat> noundef %__A) {
-; CHECK-LABEL: test_mm_ipcvttnebf16_epi8:
+define dso_local <2 x i64> @test_mm_ipcvttbf16_epi8(<8 x bfloat> noundef %__A) {
+; CHECK-LABEL: test_mm_ipcvttbf16_epi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvttnebf162ibs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x68,0xc0]
+; CHECK-NEXT:    vcvttbf162ibs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x68,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttnebf162ibs128(<8 x bfloat> %__A)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttbf162ibs128(<8 x bfloat> %__A)
   %1 = bitcast <8 x i16> %0 to <2 x i64>
   ret <2 x i64> %1
 }
 
-define dso_local <2 x i64> @test_mm_mask_ipcvttnebf16_epi8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_mask_ipcvttnebf16_epi8:
+define dso_local <2 x i64> @test_mm_mask_ipcvttbf16_epi8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_mask_ipcvttbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x68,0xc1]
+; X64-NEXT:    vcvttbf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x68,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_mask_ipcvttnebf16_epi8:
+; X86-LABEL: test_mm_mask_ipcvttbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x68,0xc1]
+; X86-NEXT:    vcvttbf162ibs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x68,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <2 x i64> %__S to <8 x i16>
-  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvttnebf162ibs128(<8 x bfloat> %__B)
+  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvttbf162ibs128(<8 x bfloat> %__B)
   %2 = bitcast i8 %__A to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %0
   %4 = bitcast <8 x i16> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
-declare <8 x i16> @llvm.x86.avx10.vcvttnebf162ibs128(<8 x bfloat>)
+declare <8 x i16> @llvm.x86.avx10.vcvttbf162ibs128(<8 x bfloat>)
 
-define dso_local <2 x i64> @test_mm_maskz_ipcvttnebf16_epi8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_maskz_ipcvttnebf16_epi8:
+define dso_local <2 x i64> @test_mm_maskz_ipcvttbf16_epi8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_maskz_ipcvttbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x68,0xc0]
+; X64-NEXT:    vcvttbf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x68,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_maskz_ipcvttnebf16_epi8:
+; X86-LABEL: test_mm_maskz_ipcvttbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x68,0xc0]
+; X86-NEXT:    vcvttbf162ibs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x68,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttnebf162ibs128(<8 x bfloat> %__B)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttbf162ibs128(<8 x bfloat> %__B)
   %1 = bitcast i8 %__A to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i16> %0, <8 x i16> zeroinitializer
   %3 = bitcast <8 x i16> %2 to <2 x i64>
   ret <2 x i64> %3
 }
 
-define dso_local <4 x i64> @test_mm256_ipcvttnebf16_epi8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
-; CHECK-LABEL: test_mm256_ipcvttnebf16_epi8:
+define dso_local <4 x i64> @test_mm256_ipcvttbf16_epi8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
+; CHECK-LABEL: test_mm256_ipcvttbf16_epi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvttnebf162ibs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x68,0xc0]
+; CHECK-NEXT:    vcvttbf162ibs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x68,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttnebf162ibs256(<16 x bfloat> %__A)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttbf162ibs256(<16 x bfloat> %__A)
   %1 = bitcast <16 x i16> %0 to <4 x i64>
   ret <4 x i64> %1
 }
 
-define dso_local <4 x i64> @test_mm256_mask_ipcvttnebf16_epi8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_mask_ipcvttnebf16_epi8:
+define dso_local <4 x i64> @test_mm256_mask_ipcvttbf16_epi8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_mask_ipcvttbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x68,0xc1]
+; X64-NEXT:    vcvttbf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x68,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_mask_ipcvttnebf16_epi8:
+; X86-LABEL: test_mm256_mask_ipcvttbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x68,0xc1]
+; X86-NEXT:    vcvttbf162ibs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x68,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <4 x i64> %__S to <16 x i16>
-  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvttnebf162ibs256(<16 x bfloat> %__B)
+  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvttbf162ibs256(<16 x bfloat> %__B)
   %2 = bitcast i16 %__A to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %0
   %4 = bitcast <16 x i16> %3 to <4 x i64>
   ret <4 x i64> %4
 }
 
-define dso_local <4 x i64> @test_mm256_maskz_ipcvttnebf16_epi8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_maskz_ipcvttnebf16_epi8:
+define dso_local <4 x i64> @test_mm256_maskz_ipcvttbf16_epi8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_maskz_ipcvttbf16_epi8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x68,0xc0]
+; X64-NEXT:    vcvttbf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x68,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_maskz_ipcvttnebf16_epi8:
+; X86-LABEL: test_mm256_maskz_ipcvttbf16_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x68,0xc0]
+; X86-NEXT:    vcvttbf162ibs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x68,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttnebf162ibs256(<16 x bfloat> %__B)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttbf162ibs256(<16 x bfloat> %__B)
   %1 = bitcast i16 %__A to <16 x i1>
   %2 = select <16 x i1> %1, <16 x i16> %0, <16 x i16> zeroinitializer
   %3 = bitcast <16 x i16> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-declare <16 x i16> @llvm.x86.avx10.vcvttnebf162ibs256(<16 x bfloat>)
+declare <16 x i16> @llvm.x86.avx10.vcvttbf162ibs256(<16 x bfloat>)
 
-define dso_local <2 x i64> @test_mm_ipcvttnebf16_epu8(<8 x bfloat> noundef %__A) {
-; CHECK-LABEL: test_mm_ipcvttnebf16_epu8:
+define dso_local <2 x i64> @test_mm_ipcvttbf16_epu8(<8 x bfloat> noundef %__A) {
+; CHECK-LABEL: test_mm_ipcvttbf16_epu8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvttnebf162iubs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x6a,0xc0]
+; CHECK-NEXT:    vcvttbf162iubs %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7f,0x08,0x6a,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttnebf162iubs128(<8 x bfloat> %__A)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttbf162iubs128(<8 x bfloat> %__A)
   %1 = bitcast <8 x i16> %0 to <2 x i64>
   ret <2 x i64> %1
 }
 
-define dso_local <2 x i64> @test_mm_mask_ipcvttnebf16_epu8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_mask_ipcvttnebf16_epu8:
+define dso_local <2 x i64> @test_mm_mask_ipcvttbf16_epu8(<2 x i64> noundef %__S, i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_mask_ipcvttbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6a,0xc1]
+; X64-NEXT:    vcvttbf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6a,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_mask_ipcvttnebf16_epu8:
+; X86-LABEL: test_mm_mask_ipcvttbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6a,0xc1]
+; X86-NEXT:    vcvttbf162iubs %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x09,0x6a,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <2 x i64> %__S to <8 x i16>
-  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvttnebf162iubs128(<8 x bfloat> %__B)
+  %1 = tail call <8 x i16> @llvm.x86.avx10.vcvttbf162iubs128(<8 x bfloat> %__B)
   %2 = bitcast i8 %__A to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %0
   %4 = bitcast <8 x i16> %3 to <2 x i64>
   ret <2 x i64> %4
 }
 
-declare <8 x i16> @llvm.x86.avx10.vcvttnebf162iubs128(<8 x bfloat>)
+declare <8 x i16> @llvm.x86.avx10.vcvttbf162iubs128(<8 x bfloat>)
 
-define dso_local <2 x i64> @test_mm_maskz_ipcvttnebf16_epu8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
-; X64-LABEL: test_mm_maskz_ipcvttnebf16_epu8:
+define dso_local <2 x i64> @test_mm_maskz_ipcvttbf16_epu8(i8 noundef zeroext %__A, <8 x bfloat> noundef %__B) {
+; X64-LABEL: test_mm_maskz_ipcvttbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6a,0xc0]
+; X64-NEXT:    vcvttbf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6a,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm_maskz_ipcvttnebf16_epu8:
+; X86-LABEL: test_mm_maskz_ipcvttbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6a,0xc0]
+; X86-NEXT:    vcvttbf162iubs %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0x89,0x6a,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttnebf162iubs128(<8 x bfloat> %__B)
+  %0 = tail call <8 x i16> @llvm.x86.avx10.vcvttbf162iubs128(<8 x bfloat> %__B)
   %1 = bitcast i8 %__A to <8 x i1>
   %2 = select <8 x i1> %1, <8 x i16> %0, <8 x i16> zeroinitializer
   %3 = bitcast <8 x i16> %2 to <2 x i64>
   ret <2 x i64> %3
 }
 
-define dso_local <4 x i64> @test_mm256_ipcvttnebf16_epu8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
-; CHECK-LABEL: test_mm256_ipcvttnebf16_epu8:
+define dso_local <4 x i64> @test_mm256_ipcvttbf16_epu8(<16 x bfloat> noundef %__A) local_unnamed_addr #2 {
+; CHECK-LABEL: test_mm256_ipcvttbf16_epu8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvttnebf162iubs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x6a,0xc0]
+; CHECK-NEXT:    vcvttbf162iubs %ymm0, %ymm0 # encoding: [0x62,0xf5,0x7f,0x28,0x6a,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttnebf162iubs256(<16 x bfloat> %__A)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttbf162iubs256(<16 x bfloat> %__A)
   %1 = bitcast <16 x i16> %0 to <4 x i64>
   ret <4 x i64> %1
 }
 
-define dso_local <4 x i64> @test_mm256_mask_ipcvttnebf16_epu8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_mask_ipcvttnebf16_epu8:
+define dso_local <4 x i64> @test_mm256_mask_ipcvttbf16_epu8(<4 x i64> noundef %__S, i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_mask_ipcvttbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6a,0xc1]
+; X64-NEXT:    vcvttbf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6a,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_mask_ipcvttnebf16_epu8:
+; X86-LABEL: test_mm256_mask_ipcvttbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6a,0xc1]
+; X86-NEXT:    vcvttbf162iubs %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf5,0x7f,0x29,0x6a,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
   %0 = bitcast <4 x i64> %__S to <16 x i16>
-  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvttnebf162iubs256(<16 x bfloat> %__B)
+  %1 = tail call <16 x i16> @llvm.x86.avx10.vcvttbf162iubs256(<16 x bfloat> %__B)
   %2 = bitcast i16 %__A to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %0
   %4 = bitcast <16 x i16> %3 to <4 x i64>
   ret <4 x i64> %4
 }
 
-define dso_local <4 x i64> @test_mm256_maskz_ipcvttnebf16_epu8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
-; X64-LABEL: test_mm256_maskz_ipcvttnebf16_epu8:
+define dso_local <4 x i64> @test_mm256_maskz_ipcvttbf16_epu8(i16 noundef zeroext %__A, <16 x bfloat> noundef %__B) local_unnamed_addr #2 {
+; X64-LABEL: test_mm256_maskz_ipcvttbf16_epu8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvttnebf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6a,0xc0]
+; X64-NEXT:    vcvttbf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6a,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_mm256_maskz_ipcvttnebf16_epu8:
+; X86-LABEL: test_mm256_maskz_ipcvttbf16_epu8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvttnebf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6a,0xc0]
+; X86-NEXT:    vcvttbf162iubs %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf5,0x7f,0xa9,0x6a,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttnebf162iubs256(<16 x bfloat> %__B)
+  %0 = tail call <16 x i16> @llvm.x86.avx10.vcvttbf162iubs256(<16 x bfloat> %__B)
   %1 = bitcast i16 %__A to <16 x i1>
   %2 = select <16 x i1> %1, <16 x i16> %0, <16 x i16> zeroinitializer
   %3 = bitcast <16 x i16> %2 to <4 x i64>
   ret <4 x i64> %3
 }
 
-declare <16 x i16> @llvm.x86.avx10.vcvttnebf162iubs256(<16 x bfloat>)
+declare <16 x i16> @llvm.x86.avx10.vcvttbf162iubs256(<16 x bfloat>)
 
 define dso_local <2 x i64> @test_mm_ipcvttph_epi8(<8 x half> noundef %__A) {
 ; CHECK-LABEL: test_mm_ipcvttph_epi8:

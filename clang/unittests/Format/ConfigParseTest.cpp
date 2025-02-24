@@ -144,6 +144,13 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
   EXPECT_EQ(0, parseConfiguration(TEXT, &Style).value());                      \
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
 
+#define CHECK_PARSE_INT(FIELD) CHECK_PARSE(#FIELD ": -1234", FIELD, -1234)
+
+#define CHECK_PARSE_UNSIGNED(FIELD) CHECK_PARSE(#FIELD ": 1234", FIELD, 1234u)
+
+#define CHECK_PARSE_LIST(FIELD)                                                \
+  CHECK_PARSE(#FIELD ": [foo]", FIELD, std::vector<std::string>{"foo"})
+
 #define CHECK_PARSE_NESTED_VALUE(TEXT, STRUCT, FIELD, VALUE)                   \
   EXPECT_NE(VALUE, Style.STRUCT.FIELD) << "Initial value already the same!";   \
   EXPECT_EQ(0, parseConfiguration(#STRUCT ":\n  " TEXT, &Style).value());      \
@@ -161,8 +168,10 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
+  CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
+  CHECK_PARSE_BOOL(BreakBeforeTemplateCloser);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
@@ -173,6 +182,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
+  CHECK_PARSE_BOOL(IndentExportBlock);
   CHECK_PARSE_BOOL(IndentGotoLabels);
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
@@ -250,33 +260,40 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
 
 #undef CHECK_PARSE_BOOL
 
+TEST(ConfigParseTest, ParsesConfigurationIntegers) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+
+  CHECK_PARSE_INT(AccessModifierOffset);
+  CHECK_PARSE_INT(PPIndentWidth);
+
+  CHECK_PARSE_UNSIGNED(BracedInitializerIndentWidth);
+  CHECK_PARSE_UNSIGNED(ColumnLimit);
+  CHECK_PARSE_UNSIGNED(ConstructorInitializerIndentWidth);
+  CHECK_PARSE_UNSIGNED(ContinuationIndentWidth);
+  CHECK_PARSE_UNSIGNED(IndentWidth);
+  CHECK_PARSE_UNSIGNED(MaxEmptyLinesToKeep);
+  CHECK_PARSE_UNSIGNED(ObjCBlockIndentWidth);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakAssignment);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakBeforeFirstCallParameter);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakBeforeMemberAccess);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakComment);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakFirstLessLess);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakOpenParenthesis);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakScopeResolution);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakString);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakTemplateDeclaration);
+  CHECK_PARSE_UNSIGNED(PenaltyExcessCharacter);
+  CHECK_PARSE_UNSIGNED(PenaltyIndentedWhitespace);
+  CHECK_PARSE_UNSIGNED(PenaltyReturnTypeOnItsOwnLine);
+  CHECK_PARSE_UNSIGNED(ShortNamespaceLines);
+  CHECK_PARSE_UNSIGNED(SpacesBeforeTrailingComments);
+  CHECK_PARSE_UNSIGNED(TabWidth);
+}
+
 TEST(ConfigParseTest, ParsesConfiguration) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
-  CHECK_PARSE("AccessModifierOffset: -1234", AccessModifierOffset, -1234);
-  CHECK_PARSE("ConstructorInitializerIndentWidth: 1234",
-              ConstructorInitializerIndentWidth, 1234u);
-  CHECK_PARSE("ObjCBlockIndentWidth: 1234", ObjCBlockIndentWidth, 1234u);
-  CHECK_PARSE("ColumnLimit: 1234", ColumnLimit, 1234u);
-  CHECK_PARSE("MaxEmptyLinesToKeep: 1234", MaxEmptyLinesToKeep, 1234u);
-  CHECK_PARSE("PenaltyBreakAssignment: 1234", PenaltyBreakAssignment, 1234u);
-  CHECK_PARSE("PenaltyBreakBeforeFirstCallParameter: 1234",
-              PenaltyBreakBeforeFirstCallParameter, 1234u);
-  CHECK_PARSE("PenaltyBreakTemplateDeclaration: 1234",
-              PenaltyBreakTemplateDeclaration, 1234u);
-  CHECK_PARSE("PenaltyBreakOpenParenthesis: 1234", PenaltyBreakOpenParenthesis,
-              1234u);
-  CHECK_PARSE("PenaltyBreakScopeResolution: 1234", PenaltyBreakScopeResolution,
-              1234u);
-  CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);
-  CHECK_PARSE("PenaltyReturnTypeOnItsOwnLine: 1234",
-              PenaltyReturnTypeOnItsOwnLine, 1234u);
-  CHECK_PARSE("SpacesBeforeTrailingComments: 1234",
-              SpacesBeforeTrailingComments, 1234u);
-  CHECK_PARSE("IndentWidth: 32", IndentWidth, 32u);
-  CHECK_PARSE("ContinuationIndentWidth: 11", ContinuationIndentWidth, 11u);
-  CHECK_PARSE("BracedInitializerIndentWidth: 34", BracedInitializerIndentWidth,
-              34);
   CHECK_PARSE("CommentPragmas: '// abc$'", CommentPragmas, "// abc$");
 
   Style.QualifierAlignment = FormatStyle::QAS_Right;
@@ -865,6 +882,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SortUsingDeclarations: true", SortUsingDeclarations,
               FormatStyle::SUD_LexicographicNumeric);
 
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Never",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Never);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Always",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Always);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Leave",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Leave);
+
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.
   Style.ForEachMacros.clear();
@@ -899,11 +923,15 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("StatementMacros: [QUNUSED, QT_REQUIRE_VERSION]", StatementMacros,
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
-  Style.NamespaceMacros.clear();
-  CHECK_PARSE("NamespaceMacros: [TESTSUITE]", NamespaceMacros,
-              std::vector<std::string>{"TESTSUITE"});
-  CHECK_PARSE("NamespaceMacros: [TESTSUITE, SUITE]", NamespaceMacros,
-              std::vector<std::string>({"TESTSUITE", "SUITE"}));
+  CHECK_PARSE_LIST(JavaImportGroups);
+  CHECK_PARSE_LIST(Macros);
+  CHECK_PARSE_LIST(NamespaceMacros);
+  CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
+  CHECK_PARSE_LIST(TableGenBreakingDAGArgOperators);
+  CHECK_PARSE_LIST(TemplateNames);
+  CHECK_PARSE_LIST(TypeNames);
+  CHECK_PARSE_LIST(TypenameMacros);
+  CHECK_PARSE_LIST(VariableTemplates);
 
   Style.WhitespaceSensitiveMacros.clear();
   CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE]",

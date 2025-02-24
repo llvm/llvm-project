@@ -11,14 +11,6 @@
 /// instruction or some other User instance which refers to a Value.  The Use
 /// class keeps the "use list" of the referenced value up to date.
 ///
-/// Pointer tagging is used to efficiently find the User corresponding to a Use
-/// without having to store a User pointer in every Use. A User is preceded in
-/// memory by all the Uses corresponding to its operands, and the low bits of
-/// one of the fields (Prev) of the Use class are used to encode offsets to be
-/// able to find that User given a pointer to any Use. For details, see:
-///
-///   http://www.llvm.org/docs/ProgrammersManual.html#UserLayout
-///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_USE_H

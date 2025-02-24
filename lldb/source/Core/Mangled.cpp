@@ -79,8 +79,10 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   // Swift 4.2 used "$S" and "_$S".
   // Swift 5 and onward uses "$s" and "_$s".
   // Swift also uses "@__swiftmacro_" as a prefix for mangling filenames.
+  // Embedded Swift introduced "$e" and  "_$e" as Swift mangling prefixes.
   if (name.starts_with("$S") || name.starts_with("_$S") ||
       name.starts_with("$s") || name.starts_with("_$s") ||
+      name.starts_with("$e") || name.starts_with("_$e") ||
       name.starts_with("@__swiftmacro_"))
     return Mangled::eManglingSchemeSwift;
 

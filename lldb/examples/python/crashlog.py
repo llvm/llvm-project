@@ -1512,7 +1512,7 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
         arch = crashlog.process_arch
         if not arch:
             raise InteractiveCrashLogException(
-                "couldn't create find the architecture to create the target"
+                "couldn't find the architecture to create the target"
             )
         target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail

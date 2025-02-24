@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  nativecodegen
+  native
+  orcjit
+  support
+)
+
 add_mlir_unittest(MLIRExecutionEngineTests
   DynamicMemRef.cpp
   StridedMemRef.cpp

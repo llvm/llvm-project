@@ -11,7 +11,6 @@
 #include "pointer-assignment.h"
 #include "resolve-names-utils.h"
 #include "resolve-names.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/fold.h"
@@ -24,6 +23,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <functional>
@@ -1506,9 +1506,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
     if (cosubsOk && !reversed.empty()) {
       int numCosubscripts{static_cast<int>(cosubscripts.size())};
       const Symbol &symbol{reversed.front()};
-      if (numCosubscripts != symbol.Corank()) {
+      if (numCosubscripts != GetCorank(symbol)) {
         Say("'%s' has corank %d, but coindexed reference has %d cosubscripts"_err_en_US,
-            symbol.name(), symbol.Corank(), numCosubscripts);
+            symbol.name(), GetCorank(symbol), numCosubscripts);
       }
     }
     for (const auto &imageSelSpec :
@@ -2536,6 +2536,15 @@ static bool CheckCompatibleArgument(bool isElemental,
             return false;
           },
           [&](const characteristics::DummyProcedure &dummy) {
+            if ((dummy.attrs.test(
+                     characteristics::DummyProcedure::Attr::Optional) ||
+                    dummy.attrs.test(
+                        characteristics::DummyProcedure::Attr::Pointer)) &&
+                IsBareNullPointer(expr)) {
+              // NULL() is compatible with any dummy pointer
+              // or optional dummy procedure.
+              return true;
+            }
             if (!expr || !IsProcedurePointerTarget(*expr)) {
               return false;
             }
@@ -2825,13 +2834,12 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   // Check for generic or explicit INTRINSIC of the same name in outer scopes.
   // See 15.5.5.2 for details.
   if (!symbol.owner().IsGlobal() && !symbol.owner().IsDerivedType()) {
-    for (const std::string &n : GetAllNames(context_, symbol.name())) {
-      if (const Symbol *outer{symbol.owner().parent().FindSymbol(n)}) {
-        auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
-            mightBeStructureConstructor)};
-        if (pair.first) {
-          return pair;
-        }
+    if (const Symbol *
+        outer{symbol.owner().parent().FindSymbol(symbol.name())}) {
+      auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
+          mightBeStructureConstructor)};
+      if (pair.first) {
+        return pair;
       }
     }
   }
@@ -3626,13 +3634,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
 // The Name represents a user-defined intrinsic operator.
 // If the actuals match one of the specific procedures, return a function ref.
 // Otherwise report the error in messages.
-MaybeExpr ExpressionAnalyzer::AnalyzeDefinedOp(
-    const parser::Name &name, ActualArguments &&actuals) {
+MaybeExpr ExpressionAnalyzer::AnalyzeDefinedOp(const parser::Name &name,
+    ActualArguments &&actuals, const Symbol *&symbol) {
   if (auto callee{GetCalleeAndArguments(name, std::move(actuals))}) {
-    CHECK(std::holds_alternative<ProcedureDesignator>(callee->u));
-    return MakeFunctionRef(name.source,
-        std::move(std::get<ProcedureDesignator>(callee->u)),
-        std::move(callee->arguments));
+    auto &proc{std::get<evaluate::ProcedureDesignator>(callee->u)};
+    symbol = proc.GetSymbol();
+    return MakeFunctionRef(
+        name.source, std::move(proc), std::move(callee->arguments));
   } else {
     return std::nullopt;
   }
@@ -4070,8 +4078,7 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    Warn(common::UsageWarning::BadTypeForTarget,
-        "%s(KIND=%jd) is not an enabled type for this target"_warn_en_US,
+    Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
         ToUpperCase(EnumToString(category)), kind);
     return true;
   } else {
@@ -4093,20 +4100,7 @@ bool ExpressionAnalyzer::CheckIntrinsicSize(
       return false;
     }
   }
-  if (foldingContext_.targetCharacteristics().IsTypeEnabled(
-          category, kind)) { // C712, C714, C715, C727
-    return true;
-  } else if (foldingContext_.targetCharacteristics().CanSupportType(
-                 category, kind)) {
-    Warn(common::UsageWarning::BadTypeForTarget,
-        "%s*%jd is not an enabled type for this target"_warn_en_US,
-        ToUpperCase(EnumToString(category)), size);
-    return true;
-  } else {
-    Say("%s*%jd is not a supported type"_err_en_US,
-        ToUpperCase(EnumToString(category)), size);
-    return false;
-  }
+  return CheckIntrinsicKind(category, kind);
 }
 
 bool ExpressionAnalyzer::AddImpliedDo(parser::CharBlock name, int kind) {
@@ -4444,38 +4438,45 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     parser::Messages buffer;
     auto restorer{context_.GetContextualMessages().SetMessages(buffer)};
     const auto &scope{context_.context().FindScope(source_)};
-    if (Symbol *symbol{scope.FindSymbol(oprName)}) {
+
+    auto FoundOne{[&](MaybeExpr &&thisResult, const Symbol &generic,
+                      const Symbol *resolution) {
       anyPossibilities = true;
-      parser::Name name{symbol->name(), symbol};
-      if (!fatalErrors_) {
-        result = context_.AnalyzeDefinedOp(name, GetActuals());
-      }
-      if (result) {
-        inaccessible = CheckAccessibleSymbol(scope, *symbol);
-        if (inaccessible) {
-          result.reset();
+      if (thisResult) {
+        if (auto thisInaccessible{CheckAccessibleSymbol(scope, generic)}) {
+          inaccessible = thisInaccessible;
         } else {
-          hit.push_back(symbol);
-          hitBuffer = std::move(buffer);
+          bool isElemental{IsElementalProcedure(DEREF(resolution))};
+          bool hitsAreNonElemental{
+              !hit.empty() && !IsElementalProcedure(DEREF(hit[0]))};
+          if (isElemental && hitsAreNonElemental) {
+            // ignore elemental resolutions in favor of a non-elemental one
+          } else {
+            if (!isElemental && !hitsAreNonElemental) {
+              hit.clear();
+            }
+            result = std::move(thisResult);
+            hit.push_back(resolution);
+            hitBuffer = std::move(buffer);
+          }
         }
       }
+    }};
+
+    if (Symbol * generic{scope.FindSymbol(oprName)}; generic && !fatalErrors_) {
+      parser::Name name{generic->name(), generic};
+      const Symbol *resultSymbol{nullptr};
+      MaybeExpr possibleResult{context_.AnalyzeDefinedOp(
+          name, ActualArguments{actuals_}, resultSymbol)};
+      FoundOne(std::move(possibleResult), *generic, resultSymbol);
     }
     for (std::size_t passIndex{0}; passIndex < actuals_.size(); ++passIndex) {
       buffer.clear();
       const Symbol *generic{nullptr};
-      if (const Symbol *binding{
-              FindBoundOp(oprName, passIndex, generic, false)}) {
-        anyPossibilities = true;
-        if (MaybeExpr thisResult{TryBoundOp(*binding, passIndex)}) {
-          if (auto thisInaccessible{
-                  CheckAccessibleSymbol(scope, DEREF(generic))}) {
-            inaccessible = thisInaccessible;
-          } else {
-            result = std::move(thisResult);
-            hit.push_back(binding);
-            hitBuffer = std::move(buffer);
-          }
-        }
+      if (const Symbol *
+          binding{FindBoundOp(
+              oprName, passIndex, generic, /*isSubroutine=*/false)}) {
+        FoundOne(TryBoundOp(*binding, passIndex), DEREF(generic), binding);
       }
     }
   }
@@ -4646,7 +4647,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     }
     for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
+      if (const Symbol *
+          binding{FindBoundOp(oprName, i, generic, /*isSubroutine=*/true)}) {
         if (CheckAccessibleSymbol(scope, DEREF(generic))) {
           // ignore inaccessible type-bound ASSIGNMENT(=) generic
         } else if (const Symbol *

@@ -27,6 +27,11 @@ add_clang_library(clangTidyBugproneModule STATIC
   ForwardingReferenceOverloadCheck.cpp
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
+  IncorrectEnableIfCheck.cpp
+  IncorrectEnableSharedFromThisCheck.cpp
+  ReturnConstRefFromParameterCheck.cpp
+  SuspiciousStringviewDataUsageCheck.cpp
+  SwitchMissingDefaultCaseCheck.cpp
   IncDecInConditionsCheck.cpp
   IncorrectEnableIfCheck.cpp
   IncorrectRoundingsCheck.cpp

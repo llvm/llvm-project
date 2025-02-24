@@ -61,7 +61,6 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ;
 ; CHECK: Executing best plan with VF=8, UF=2
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={8},UF={2}' {
-; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
 ; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
@@ -75,30 +74,24 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:  IR   %n.vec = sub i64 %and, %n.mod.vf
 ; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + ir<[[VTC]]> * ir<-1>
 ; CHECK-NEXT:  vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + ir<[[VTC]]> * ir<1>
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     SCALAR-PHI vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
-; CHECK-NEXT:     vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
-; CHECK-NEXT:     vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR1]]>
-; CHECK-NEXT:     WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
-; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
-; CHECK-NEXT:     vp<[[VPTR3:%.+]]> = vector-pointer vp<[[PADD1]]>
-; CHECK-NEXT:     vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR3]]>, ir<%add>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR4]]>, ir<%add>.1
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, ir<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-cond ir<true>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): ir-bb<middle.block>
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   vp<[[STEPS1:%.+]]> = SCALAR-STEPS ir<0>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
+; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
+; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[VPTR1]]>
+; CHECK-NEXT:   WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
+; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%l>, ir<10>
+; CHECK-NEXT:   WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
+; CHECK-NEXT:   vp<[[VPTR3:%.+]]> = vector-pointer vp<[[PADD1]]>
+; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:   WIDEN store vp<[[VPTR3]]>, ir<%add>
+; CHECK-NEXT:   WIDEN store vp<[[VPTR4]]>, ir<%add>.1
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<middle.block>:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>

@@ -96,3 +96,80 @@ namespace PR38286 {
   template<typename> struct C; // expected-note {{non-type declaration found}}
   template<typename T> C<T>::~C() {} // expected-error {{identifier 'C' after '~' in destructor name does not name a type}}
 }
+
+namespace GH121706 {
+
+struct A {
+  *&A(); // expected-error {{invalid constructor declaration}}
+};
+
+struct B {
+  *&&B(); // expected-error {{invalid constructor declaration}}
+};
+
+struct C {
+  *const C(); // expected-error {{invalid constructor declaration}}
+};
+
+struct D {
+  *const *D(); // expected-error {{invalid constructor declaration}}
+};
+
+struct E {
+  *E::*E(); // expected-error {{invalid constructor declaration}}
+};
+
+struct F {
+  *F::*const F(); // expected-error {{invalid constructor declaration}}
+};
+
+struct G {
+  ****G(); // expected-error {{invalid constructor declaration}}
+};
+
+struct H {
+  **H(const H &); // expected-error {{invalid constructor declaration}}
+};
+
+struct I {
+  *I(I &&); // expected-error {{invalid constructor declaration}}
+};
+
+struct J {
+  *&(J)(); // expected-error {{invalid constructor declaration}}
+};
+
+struct K {
+  **&&(K)(); // expected-error {{invalid constructor declaration}}
+};
+
+struct L {
+  *L(L&& other); // expected-error {{invalid constructor declaration}}
+};
+
+struct M {
+  *M(M& other); // expected-error {{invalid constructor declaration}}
+};
+
+struct N {
+  int N(); // expected-error {{constructor cannot have a return type}}
+};
+
+struct O {
+  static O(); // expected-error {{constructor cannot be declared 'static'}}
+};
+
+struct P {
+  explicit P();
+};
+
+struct Q {
+  constexpr Q();
+};
+
+struct R {
+  R();
+  friend R::R();
+};
+
+}

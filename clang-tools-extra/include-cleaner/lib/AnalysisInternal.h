@@ -25,6 +25,8 @@
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include <vector>
 
@@ -57,13 +59,14 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
                                               const PragmaIncludes *PI);
 
 /// A set of locations that provides the declaration.
-std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S);
+std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S,
+                                                 const LangOptions &LO);
 
 /// Write an HTML summary of the analysis to the given stream.
 void writeHTMLReport(FileID File, const Includes &,
                      llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
-                     const HeaderSearch &HS, PragmaIncludes *PI,
+                     const Preprocessor &PP, PragmaIncludes *PI,
                      llvm::raw_ostream &OS);
 
 } // namespace include_cleaner

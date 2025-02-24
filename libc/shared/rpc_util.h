@@ -152,10 +152,10 @@ public:
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 RPC_ATTRS void sleep_briefly() {
-#if defined(__NVPTX__) && defined(RPC_TARGET_IS_GPU)
+#if __has_builtin(__nvvm_reflect)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700)
     asm("nanosleep.u32 64;" ::: "memory");
-#elif defined(__AMDGPU__) && defined(RPC_TARGET_IS_GPU)
+#elif __has_builtin(__builtin_amdgcn_s_sleep)
   __builtin_amdgcn_s_sleep(2);
 #elif __has_builtin(__builtin_ia32_pause)
   __builtin_ia32_pause();

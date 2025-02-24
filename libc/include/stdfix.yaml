@@ -1,6 +1,7 @@
 header: stdfix.h
+header_template: stdfix.h.def
 macros: []
-types: 
+types:
   - type_name: stdfix-types
 enums: []
 objects: []
@@ -304,4 +305,88 @@ functions:
     return_type: unsigned accum
     arguments:
       - type: unsigned int
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlshr
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: short fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsr
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlslr
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlshk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: short accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlslk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: long accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsuhr
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: unsigned short fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsur
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: unsigned fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsulr
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: unsigned long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsuhk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: unsigned short accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsuk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: unsigned accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: countlsulk
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT

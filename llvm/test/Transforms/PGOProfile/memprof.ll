@@ -64,14 +64,14 @@
 ; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
 
 ;; Check that the total sizes are reported if requested.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES
 
 ;; Check that we hint additional allocations with a threshold < 100%
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60
 
 ;; Make sure that the -memprof-cloning-cold-threshold flag is enough to cause
 ;; the size metadata to be generated for the LTO link.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
 
 ;; Make sure we emit a random hotness seed if requested.
 ; RUN: llvm-profdata merge -memprof-random-hotness %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
@@ -85,6 +85,14 @@
 ; RAND2: random hotness seed = 1730170724
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2,ALL,MEMPROFONLY,MEMPROFSTATS
 
+;; With the hot access density threshold set to 0, and hot hints enabled,
+;; the unconditionally notcold call to new should instead get a hot attribute.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats -memprof-min-ave-lifetime-access-density-hot-threshold=0 -memprof-use-hot-hints 2>&1 | FileCheck %s --check-prefixes=MEMPROFHOT,ALL
+
+;; However, with the same threshold, but hot hints not enabled, it should be
+;; notcold again.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL
+
 ; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
@@ -93,6 +101,16 @@
 ; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 748269490701775343
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 1544787832369987002
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 2061451396820446691
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 2104812325165620841
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 6281715513834610934
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 8467819354083268568
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 8690657650969109624
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 9086428284934609951
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 12481870273128938184
+; MEMPROFMATCHINFO: MemProf callsite match for inline call stack 12699492813229484831
 
 ; ModuleID = 'memprof.cc'
 source_filename = "memprof.cc"
@@ -192,6 +210,7 @@ entry:
   store ptr %argv, ptr %argv.addr, align 8
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
   ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
+  ; MEMPROFHOT: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !35
   store ptr %call, ptr %a, align 8, !dbg !36
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A2:[0-9]+]]
@@ -330,7 +349,7 @@ for.end:                                          ; preds = %for.cond
 
 ; MEMPROF: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROF: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
-; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]], ![[MIB5:[0-9]+]]}
+; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
 ; MEMPROF: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK1]] = !{i64 2732490490862098848, i64 748269490701775343}
 ; MEMPROF: ![[MIB2]] = !{![[STACK2:[0-9]+]], !"cold"}
@@ -339,8 +358,6 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[STACK3]] = !{i64 2732490490862098848, i64 2104812325165620841, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934}
 ; MEMPROF: ![[MIB4]] = !{![[STACK4:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK4]] = !{i64 2732490490862098848, i64 8467819354083268568}
-; MEMPROF: ![[MIB5]] = !{![[STACK5:[0-9]+]], !"notcold"}
-; MEMPROF: ![[STACK5]] = !{i64 2732490490862098848, i64 8690657650969109624}
 ; MEMPROF: ![[C1]] = !{i64 2732490490862098848}
 ; MEMPROF: ![[C2]] = !{i64 8467819354083268568}
 ; MEMPROF: ![[C3]] = !{i64 9086428284934609951}
@@ -381,17 +398,15 @@ for.end:                                          ; preds = %for.cond
 
 ; MEMPROFNOCOLINFO: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROFNOCOLINFO: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
-; MEMPROFNOCOLINFO: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]], ![[MIB5:[0-9]+]]}
+; MEMPROFNOCOLINFO: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
 ; MEMPROFNOCOLINFO: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
 ; MEMPROFNOCOLINFO: ![[STACK1]] = !{i64 5281664982037379640, i64 6362220161075421157, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790, i64 3577763375057267810}
 ; MEMPROFNOCOLINFO: ![[MIB2]] = !{![[STACK2:[0-9]+]], !"notcold"}
 ; MEMPROFNOCOLINFO: ![[STACK2]] = !{i64 5281664982037379640, i64 6362220161075421157, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790}
-; MEMPROFNOCOLINFO: ![[MIB3]] = !{![[STACK3:[0-9]+]], !"notcold"}
-; MEMPROFNOCOLINFO: ![[STACK3]] = !{i64 5281664982037379640, i64 -6896091699916449732}
+; MEMPROFNOCOLINFO: ![[MIB3]] = !{![[STACK3:[0-9]+]], !"cold"}
+; MEMPROFNOCOLINFO: ![[STACK3]] = !{i64 5281664982037379640, i64 -6871734214936418908}
 ; MEMPROFNOCOLINFO: ![[MIB4]] = !{![[STACK4:[0-9]+]], !"cold"}
-; MEMPROFNOCOLINFO: ![[STACK4]] = !{i64 5281664982037379640, i64 -6871734214936418908}
-; MEMPROFNOCOLINFO: ![[MIB5]] = !{![[STACK5:[0-9]+]], !"cold"}
-; MEMPROFNOCOLINFO: ![[STACK5]] = !{i64 5281664982037379640, i64 -6201180255894224618}
+; MEMPROFNOCOLINFO: ![[STACK4]] = !{i64 5281664982037379640, i64 -6201180255894224618}
 ; MEMPROFNOCOLINFO: ![[C1]] = !{i64 5281664982037379640}
 ; MEMPROFNOCOLINFO: ![[C2]] = !{i64 -6871734214936418908}
 ; MEMPROFNOCOLINFO: ![[C3]] = !{i64 -5588766871448036195}
@@ -404,12 +419,13 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROFNOCOLINFO: ![[C10]] = !{i64 -4535090212904553409}
 ; MEMPROFNOCOLINFO: ![[C11]] = !{i64 3577763375057267810}
 
+; MEMPROFHOT: #[[A1]] = { builtin allocsize(0) "memprof"="hot" }
+
 ;; For the specific random seed, this is the expected order of hotness
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"cold"
-; MEMPROFRAND2: !"hot"
-; MEMPROFRAND2: !"hot"
+; MEMPROFRAND2: !"notcold"
 
 ; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
 ; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.

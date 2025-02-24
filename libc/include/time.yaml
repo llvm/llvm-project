@@ -1,4 +1,5 @@
 header: time.h
+header_template: time.h.def
 macros: []
 types:
   - type_name: struct_timeval
@@ -8,6 +9,7 @@ types:
   - type_name: time_t
   - type_name: clock_t
   - type_name: size_t
+  - type_name: locale_t
 enums: []
 objects: []
 functions:
@@ -90,6 +92,25 @@ functions:
     arguments:
       - type: const struct timespec *
       - type: struct timespec *
+  - name: strftime
+    standard:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: size_t
+      - type: const char *__restrict
+      - type: const struct tm *__restrict
+  - name: strftime_l
+    standard:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: size_t
+      - type: const char *__restrict
+      - type: const struct tm *__restrict
+      - type: locale_t
   - name: time
     standard:
       - stdc

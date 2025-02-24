@@ -163,9 +163,10 @@ void ClangTidyCheck::OptionsView::store<bool>(
   store(Options, LocalName, Value ? StringRef("true") : StringRef("false"));
 }
 
-std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
-    StringRef LocalName, ArrayRef<NameAndValue> Mapping, bool CheckGlobal,
-    bool IgnoreCase) const {
+std::optional<int64_t>
+ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
+                                        ArrayRef<NameAndValue> Mapping,
+                                        bool CheckGlobal) const {
   if (!CheckGlobal && Context->getOptionsCollector())
     Context->getOptionsCollector()->insert((NamePrefix + LocalName).str());
   auto Iter = CheckGlobal ? findPriorityOption(CheckOptions, NamePrefix,
@@ -178,12 +179,10 @@ std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
   StringRef Closest;
   unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
-    if (IgnoreCase) {
-      if (Value.equals_insensitive(NameAndEnum.second))
-        return NameAndEnum.first;
-    } else if (Value == NameAndEnum.second) {
+    if (Value == NameAndEnum.second) {
       return NameAndEnum.first;
-    } else if (Value.equals_insensitive(NameAndEnum.second)) {
+    }
+    if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;
       EditDistance = 0;
       continue;

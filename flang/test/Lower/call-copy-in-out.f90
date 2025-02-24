@@ -23,7 +23,7 @@ subroutine test_assumed_shape_to_array(x)
 ! CHECK-DAG:  fir.store %[[temp_box]] to %[[temp_box_loc:.*]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
 ! CHECK-DAG: %[[temp_box_addr:.*]] = fir.convert %[[temp_box_loc]] : (!fir.ref<!fir.box<!fir.array<?xf32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK-DAG: %[[arg_box:.*]] = fir.convert %[[x]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-! CHECK-DAG: fir.call @_FortranAAssignTemporary(%[[temp_box_addr]], %[[arg_box]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK-DAG: fir.call @_FortranAAssignTemporary(%[[temp_box_addr]], %[[arg_box]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:  fir.result %[[temp]] : !fir.heap<!fir.array<?xf32>>
 
 ! CHECK:  %[[dim:.*]]:3 = fir.box_dims %[[x]], %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
@@ -38,7 +38,7 @@ subroutine test_assumed_shape_to_array(x)
 ! CHECK-DAG:  fir.store %[[x]] to %[[arg_box_loc:.*]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
 ! CHECK-DAG: %[[arg_box_addr:.*]] = fir.convert %[[arg_box_loc]] : (!fir.ref<!fir.box<!fir.array<?xf32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK-DAG: %[[temp_box_cast:.*]] = fir.convert %[[temp_box_ref]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK-DAG: fir.call @_FortranACopyOutAssign(%[[arg_box_addr]], %[[temp_box_cast]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none
+! CHECK-DAG: fir.call @_FortranACopyOutAssign(%[[arg_box_addr]], %[[temp_box_cast]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 
   call bar(x)
 end subroutine
@@ -204,7 +204,7 @@ subroutine test_char(x)
 ! CHECK:             fir.store %[[VAL_12]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.array<?x!fir.char<1,10>>>>
 ! CHECK:             %[[VAL_15:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.array<?x!fir.char<1,10>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<none>
-! CHECK:             %[[VAL_18:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_15]], %[[VAL_16]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:             fir.call @_FortranAAssignTemporary(%[[VAL_15]], %[[VAL_16]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:             fir.result %[[VAL_10]] : !fir.heap<!fir.array<?x!fir.char<1,10>>>
 ! CHECK:           }
 ! CHECK:           %[[VAL_19:.*]] = arith.constant 0 : index
@@ -222,7 +222,7 @@ subroutine test_char(x)
 ! CHECK:             fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<?x!fir.char<1,10>>>>
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?x!fir.char<1,10>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_32:.*]] = fir.convert %[[TMP_BOX_REF]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:             %[[VAL_34:.*]] = fir.call @_FortranACopyOutAssign(%[[VAL_31]], %[[VAL_32]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none
+! CHECK:             fir.call @_FortranACopyOutAssign(%[[VAL_31]], %[[VAL_32]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 ! CHECK:           }
   
   character(10) :: x(:)

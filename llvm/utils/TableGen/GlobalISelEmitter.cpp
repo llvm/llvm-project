@@ -418,7 +418,8 @@ private:
                                 const TreePatternNode &N) const;
 
   Error importLeafNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
-                               const TreePatternNode &N) const;
+                               const TreePatternNode &N,
+                               action_iterator InsertPt) const;
 
   Error importXFormNodeRenderer(RuleMatcher &M, BuildMIAction &MIBuilder,
                                 const TreePatternNode &N) const;
@@ -431,9 +432,6 @@ private:
                            const TreePatternNode &N,
                            action_iterator &InsertPt) const;
 
-  Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
-                                      BuildMIAction &DstMIBuilder,
-                                      const DAGDefaultOperand &DefaultOp) const;
   Error importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                                    ArrayRef<const Record *> ImplicitDefs) const;
 
@@ -767,6 +765,18 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
   }
 
+  // Since there are no opcodes for atomic loads and stores comparing to
+  // SelectionDAG, we add CheckMMOIsNonAtomic predicate immediately after the
+  // opcode predicate to make a logical combination of them.
+  if (SrcGIEquivOrNull &&
+      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
+  else if (SrcGIEquivOrNull &&
+           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+  }
+
   unsigned OpIdx = 0;
   for (const TypeSetByHwMode &VTy : Src.getExtTypes()) {
     // Results don't have a name unless they are the root node. The caller will
@@ -827,15 +837,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport("Src pattern child has predicate (" +
                           explainPredicates(Src) + ")");
     }
-  }
-
-  if (SrcGIEquivOrNull &&
-      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
-  else if (SrcGIEquivOrNull &&
-           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
 
   if (Src.isLeaf()) {
@@ -1291,7 +1292,8 @@ Error GlobalISelEmitter::importNamedNodeRenderer(
 
 // Equivalent of MatcherGen::EmitResultLeafAsOperand.
 Error GlobalISelEmitter::importLeafNodeRenderer(
-    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N) const {
+    RuleMatcher &M, BuildMIAction &MIBuilder, const TreePatternNode &N,
+    action_iterator InsertPt) const {
   if (const auto *II = dyn_cast<IntInit>(N.getLeafValue())) {
     MIBuilder.addRenderer<ImmRenderer>(II->getValue());
     return Error::success();
@@ -1300,8 +1302,26 @@ Error GlobalISelEmitter::importLeafNodeRenderer(
   if (const auto *DI = dyn_cast<DefInit>(N.getLeafValue())) {
     const Record *R = DI->getDef();
 
-    if (R->isSubClassOf("Register")) {
+    if (R->isSubClassOf("Register") || R->getName() == "zero_reg") {
       MIBuilder.addRenderer<AddRegisterRenderer>(Target, R);
+      return Error::success();
+    }
+
+    if (R->getName() == "undef_tied_input") {
+      std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N.getSimpleType(0));
+      if (!OpTyOrNone)
+        return failedImport("unsupported type");
+
+      unsigned TempRegID = M.allocateTempRegID();
+      M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone, TempRegID);
+
+      auto I = M.insertAction<BuildMIAction>(
+          InsertPt, M.allocateOutputInsnID(),
+          &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));
+      auto &ImpDefBuilder = static_cast<BuildMIAction &>(**I);
+      ImpDefBuilder.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
+
+      MIBuilder.addRenderer<TempRegRenderer>(TempRegID);
       return Error::success();
     }
 
@@ -1386,7 +1406,7 @@ Error GlobalISelEmitter::importNodeRenderer(RuleMatcher &M,
     return importNamedNodeRenderer(M, MIBuilder, N);
 
   if (N.isLeaf())
-    return importLeafNodeRenderer(M, MIBuilder, N);
+    return importLeafNodeRenderer(M, MIBuilder, N, InsertPt);
 
   if (N.getOperator()->isSubClassOf("SDNodeXForm"))
     return importXFormNodeRenderer(M, MIBuilder, N);
@@ -1412,15 +1432,15 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   action_iterator InsertPt = InsertPtOrError.get();
   BuildMIAction &DstMIBuilder = *static_cast<BuildMIAction *>(InsertPt->get());
 
-  for (auto PhysInput : InsnMatcher.getPhysRegInputs()) {
+  for (auto PhysOp : M.physoperands()) {
     InsertPt = M.insertAction<BuildMIAction>(
         InsertPt, M.allocateOutputInsnID(),
         &Target.getInstruction(RK.getDef("COPY")));
     BuildMIAction &CopyToPhysRegMIBuilder =
         *static_cast<BuildMIAction *>(InsertPt->get());
-    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(
-        Target, PhysInput.first, true);
-    CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
+    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(Target,
+                                                            PhysOp.first, true);
+    CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysOp.first);
   }
 
   if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst,
@@ -1707,11 +1727,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       // This is a predicate or optional def operand which the pattern has not
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
-
-      const Record *OperandNode = DstI->Operands[InstOpNo].Rec;
-      if (auto Error = importDefaultOperandRenderers(
-              InsertPt, M, DstMIBuilder, CGP.getDefaultOperand(OperandNode)))
-        return std::move(Error);
+      for (const TreePatternNode &OpNode :
+           make_pointee_range(CGP.getDefaultOperand(OperandNode).DefaultOps)) {
+        if (Error Err = importNodeRenderer(M, DstMIBuilder, OpNode, InsertPt))
+          return Err;
+      }
 
       ++NumDefaultOps;
       continue;
@@ -1732,47 +1752,6 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
                         " default ones");
 
   return InsertPt;
-}
-
-Error GlobalISelEmitter::importDefaultOperandRenderers(
-    action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const DAGDefaultOperand &DefaultOp) const {
-  for (const auto &Op : DefaultOp.DefaultOps) {
-    const auto &N = *Op;
-    if (!N.isLeaf())
-      return failedImport("Could not add default op");
-
-    const auto *DefaultOp = N.getLeafValue();
-
-    if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
-      std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N.getSimpleType(0));
-      auto *Def = DefaultDefOp->getDef();
-      if (Def->getName() == "undef_tied_input") {
-        unsigned TempRegID = M.allocateTempRegID();
-        M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone,
-                                               TempRegID);
-        InsertPt = M.insertAction<BuildMIAction>(
-            InsertPt, M.allocateOutputInsnID(),
-            &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));
-        BuildMIAction &IDMIBuilder =
-            *static_cast<BuildMIAction *>(InsertPt->get());
-        IDMIBuilder.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
-        DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
-      } else {
-        DstMIBuilder.addRenderer<AddRegisterRenderer>(Target, Def);
-      }
-      continue;
-    }
-
-    if (const IntInit *DefaultIntOp = dyn_cast<IntInit>(DefaultOp)) {
-      DstMIBuilder.addRenderer<ImmRenderer>(DefaultIntOp->getValue());
-      continue;
-    }
-
-    return failedImport("Could not add default op");
-  }
-
-  return Error::success();
 }
 
 Error GlobalISelEmitter::importImplicitDefRenderers(
@@ -2240,8 +2219,8 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
   for (RuleMatcher &Rule : Rules) {
     const StringRef Opcode = Rule.getOpcode();
     assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.count(Opcode) == 0)
-      OpcodeOrder[Opcode] = CurrentOrdering++;
+    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
+      ++CurrentOrdering;
   }
 
   llvm::stable_sort(
@@ -2367,6 +2346,20 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
      << "}\n";
 }
 
+bool hasBFloatType(const TreePatternNode &Node) {
+  for (unsigned I = 0, E = Node.getNumTypes(); I < E; I++) {
+    auto Ty = Node.getType(I);
+    for (auto T : Ty)
+      if (T.second == MVT::bf16 ||
+          (T.second.isVector() && T.second.getScalarType() == MVT::bf16))
+        return true;
+  }
+  for (const TreePatternNode &C : Node.children())
+    if (hasBFloatType(C))
+      return true;
+  return false;
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   if (!UseCoverageFile.empty()) {
     RuleCoverage = CodeGenCoverage();
@@ -2403,6 +2396,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
     if (Pat.getGISelShouldIgnore())
       continue; // skip without warning
+
+    // Skip any patterns containing BF16 types, as GISel cannot currently tell
+    // the difference between fp16 and bf16. FIXME: This can be removed once
+    // BF16 is supported properly.
+    if (hasBFloatType(Pat.getSrcPattern()))
+      continue;
+
     auto MatcherOrErr = runOnPattern(Pat);
 
     // The pattern analysis can fail, indicating an unsupported pattern.

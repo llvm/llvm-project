@@ -208,7 +208,7 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
 /// separate arrays.
 template <class _Context>
 class __basic_format_arg_value {
-  using _CharT = typename _Context::char_type;
+  using _CharT _LIBCPP_NODEBUG = typename _Context::char_type;
 
 public:
   /// Contains the implementation for basic_format_arg::handle.
@@ -277,7 +277,7 @@ public:
 };
 
 template <class _Context>
-class _LIBCPP_TEMPLATE_VIS basic_format_arg {
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS basic_format_arg {
 public:
   class _LIBCPP_TEMPLATE_VIS handle;
 

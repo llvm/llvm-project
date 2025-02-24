@@ -7,53 +7,53 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
 // CHECK-LABEL: test_cosh_half
-// NATIVE_HALF: call half @llvm.cosh.f16
-// NO_HALF: call float @llvm.cosh.f32
+// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn half @llvm.cosh.f16
+// NO_HALF: call reassoc nnan ninf nsz arcp afn float @llvm.cosh.f32
 half test_cosh_half ( half p0 ) {
   return cosh ( p0 );
 }
 
 // CHECK-LABEL: test_cosh_half2
-// NATIVE_HALF: call <2 x half> @llvm.cosh.v2f16
-// NO_HALF: call <2 x float> @llvm.cosh.v2f32
+// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.cosh.v2f16
+// NO_HALF: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.cosh.v2f32
 half2 test_cosh_half2 ( half2 p0 ) {
   return cosh ( p0 );
 }
 
 // CHECK-LABEL: test_cosh_half3
-// NATIVE_HALF: call <3 x half> @llvm.cosh.v3f16
-// NO_HALF: call <3 x float> @llvm.cosh.v3f32
+// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.cosh.v3f16
+// NO_HALF: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.cosh.v3f32
 half3 test_cosh_half3 ( half3 p0 ) {
   return cosh ( p0 );
 }
 
 // CHECK-LABEL: test_cosh_half4
-// NATIVE_HALF: call <4 x half> @llvm.cosh.v4f16
-// NO_HALF: call <4 x float> @llvm.cosh.v4f32
+// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.cosh.v4f16
+// NO_HALF: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.cosh.v4f32
 half4 test_cosh_half4 ( half4 p0 ) {
   return cosh ( p0 );
 }
 
 // CHECK-LABEL: test_cosh_float
-// CHECK: call float @llvm.cosh.f32
+// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.cosh.f32
 float test_cosh_float ( float p0 ) {
   return cosh ( p0 );
 }
 
 // CHECK-LABEL: test_cosh_float2
-// CHECK: call <2 x float> @llvm.cosh.v2f32
+// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.cosh.v2f32
 float2 test_cosh_float2 ( float2 p0 ) {
   return cosh ( p0 );
 }
 
 // CHECK-LABEL: test_cosh_float3
-// CHECK: call <3 x float> @llvm.cosh.v3f32
+// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.cosh.v3f32
 float3 test_cosh_float3 ( float3 p0 ) {
   return cosh ( p0 );
 }
 
 // CHECK-LABEL: test_cosh_float4
-// CHECK: call <4 x float> @llvm.cosh.v4f32
+// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.cosh.v4f32
 float4 test_cosh_float4 ( float4 p0 ) {
   return cosh ( p0 );
 }

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=arch15 | FileCheck %s -check-prefix=ARC15
 ;
 ; Note: The scalarized vector instructions costs are not including any
 ; extracts, due to the undef operands.
@@ -131,18 +132,22 @@ define void @mul() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res5 = mul <2 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res6 = mul <2 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %res7 = mul <2 x i64> undef, undef
+; ARC15: Cost Model: Found an estimated cost of 1 for instruction:   %res7 = mul <2 x i64> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res8 = mul <4 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res9 = mul <4 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res10 = mul <4 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %res11 = mul <4 x i64> undef, undef
+; ARC15: Cost Model: Found an estimated cost of 2 for instruction:   %res11 = mul <4 x i64> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res12 = mul <8 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res13 = mul <8 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res14 = mul <8 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %res15 = mul <8 x i64> undef, undef
+; ARC15: Cost Model: Found an estimated cost of 4 for instruction:   %res15 = mul <8 x i64> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res16 = mul <16 x i8> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res17 = mul <16 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %res18 = mul <16 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %res19 = mul <16 x i64> undef, undef
+; ARC15: Cost Model: Found an estimated cost of 8 for instruction:   %res19 = mul <16 x i64> undef, undef
 
   ret void;
 }

@@ -26,14 +26,18 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r29, r5
 ; CHECK-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_@notoc
-; CHECK-NEXT:    xxsetaccz acc0
-; CHECK-NEXT:    xvf32gerpp acc0, v31, v30
+; CHECK-NEXT:    xxsetaccz acc1
+; CHECK-NEXT:    xvf32gerpp acc1, v31, v30
 ; CHECK-NEXT:    lxv v3, 32(r1)
-; CHECK-NEXT:    lxv v2, 48(r1)
-; CHECK-NEXT:    xvf32gerpp acc0, v3, v2
+; CHECK-NEXT:    lxv vs0, 48(r1)
+; CHECK-NEXT:    xvf32gerpp acc1, v3, vs0
 ; CHECK-NEXT:    lxv v31, -48(r30) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v30, -64(r30) # 16-byte Folded Reload
-; CHECK-NEXT:    xxmfacc acc0
+; CHECK-NEXT:    xxmfacc acc1
+; CHECK-NEXT:    xxlor vs0, vs4, vs4
+; CHECK-NEXT:    xxlor vs1, vs5, vs5
+; CHECK-NEXT:    xxlor vs2, vs6, vs6
+; CHECK-NEXT:    xxlor vs3, vs7, vs7
 ; CHECK-NEXT:    stxv vs3, 0(r29)
 ; CHECK-NEXT:    pstxv vs2, 8(r29), 0
 ; CHECK-NEXT:    stxv vs1, 16(r29)
@@ -68,8 +72,8 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-NEXT:    xxsetaccz acc1
 ; CHECK-BE-NEXT:    xvf32gerpp acc1, v31, v30
 ; CHECK-BE-NEXT:    lxv v3, 144(r1)
-; CHECK-BE-NEXT:    lxv v2, 128(r1)
-; CHECK-BE-NEXT:    xvf32gerpp acc1, v2, v3
+; CHECK-BE-NEXT:    lxv vs0, 128(r1)
+; CHECK-BE-NEXT:    xvf32gerpp acc1, vs0, v3
 ; CHECK-BE-NEXT:    lxv v31, -48(r30) # 16-byte Folded Reload
 ; CHECK-BE-NEXT:    lxv v30, -64(r30) # 16-byte Folded Reload
 ; CHECK-BE-NEXT:    xxmfacc acc1

@@ -34,7 +34,7 @@ public:
     helper = std::make_unique<fir::factory::Complex>(*firBuilder, loc);
 
     // Init commonly used types
-    realTy1 = mlir::FloatType::getF32(&context);
+    realTy1 = mlir::Float32Type::get(&context);
     complexTy1 = mlir::ComplexType::get(realTy1);
     integerTy1 = mlir::IntegerType::get(&context, 32);
 

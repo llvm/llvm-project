@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -165,16 +165,20 @@ struct RecordTypeStorage : public mlir::TypeStorage {
     setTypeList(typeList);
   }
 
+  bool isPacked() const { return packed; }
+  void pack(bool p) { packed = p; }
+
 protected:
   std::string name;
   bool finalized;
+  bool packed;
   std::vector<RecordType::TypePair> lens;
   std::vector<RecordType::TypePair> types;
 
 private:
   RecordTypeStorage() = delete;
   explicit RecordTypeStorage(llvm::StringRef name)
-      : name{name}, finalized{false} {}
+      : name{name}, finalized{false}, packed{false} {}
 };
 
 } // namespace detail
@@ -206,6 +210,7 @@ mlir::Type getDerivedType(mlir::Type ty) {
           return seq.getEleTy();
         return p.getEleTy();
       })
+      .Case<fir::BoxType>([](auto p) { return getDerivedType(p.getEleTy()); })
       .Default([](mlir::Type t) { return t; });
 }
 
@@ -419,6 +424,11 @@ mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
       return ty;
     ty = nt;
   }
+}
+
+mlir::Type getFortranElementType(mlir::Type ty) {
+  return fir::unwrapSequenceType(
+      fir::unwrapPassByRefType(fir::unwrapRefType(ty)));
 }
 
 mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
@@ -872,9 +882,14 @@ llvm::LogicalResult fir::PointerType::verify(
 //===----------------------------------------------------------------------===//
 
 // Fortran derived type
+// unpacked:
 // `type` `<` name
 //           (`(` id `:` type (`,` id `:` type)* `)`)?
 //           (`{` id `:` type (`,` id `:` type)* `}`)? '>'
+// packed:
+// `type` `<` name
+//           (`(` id `:` type (`,` id `:` type)* `)`)?
+//           (`<{` id `:` type (`,` id `:` type)* `}>`)? '>'
 mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
   llvm::StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
@@ -900,6 +915,10 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
   }
 
   RecordType::TypeList typeList;
+  if (!parser.parseOptionalLess()) {
+    result.pack(true);
+  }
+
   if (!parser.parseOptionalLBrace()) {
     while (true) {
       llvm::StringRef field;
@@ -913,8 +932,10 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
       if (parser.parseOptionalComma())
         break;
     }
-    if (parser.parseRBrace())
-      return {};
+    if (parser.parseOptionalGreater()) {
+      if (parser.parseRBrace())
+        return {};
+    }
   }
 
   if (parser.parseGreater())
@@ -941,6 +962,9 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       printer << ')';
     }
     if (getTypeList().size()) {
+      if (isPacked()) {
+        printer << '<';
+      }
       char ch = '{';
       for (auto p : getTypeList()) {
         printer << ch << p.first << ':';
@@ -948,6 +972,9 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
         ch = ',';
       }
       printer << '}';
+      if (isPacked()) {
+        printer << '>';
+      }
     }
     recordTypeVisited.erase(uniqueKey());
   }
@@ -972,6 +999,10 @@ RecordType::TypeList fir::RecordType::getLenParamList() const {
 }
 
 bool fir::RecordType::isFinalized() const { return getImpl()->isFinalized(); }
+
+void fir::RecordType::pack(bool p) { getImpl()->pack(p); }
+
+bool fir::RecordType::isPacked() const { return getImpl()->isPacked(); }
 
 detail::RecordTypeStorage const *fir::RecordType::uniqueKey() const {
   return getImpl();
@@ -1224,17 +1255,17 @@ mlir::Type fir::fromRealTypeID(mlir::MLIRContext *context,
                                llvm::Type::TypeID typeID, fir::KindTy kind) {
   switch (typeID) {
   case llvm::Type::TypeID::HalfTyID:
-    return mlir::FloatType::getF16(context);
+    return mlir::Float16Type::get(context);
   case llvm::Type::TypeID::BFloatTyID:
-    return mlir::FloatType::getBF16(context);
+    return mlir::BFloat16Type::get(context);
   case llvm::Type::TypeID::FloatTyID:
-    return mlir::FloatType::getF32(context);
+    return mlir::Float32Type::get(context);
   case llvm::Type::TypeID::DoubleTyID:
-    return mlir::FloatType::getF64(context);
+    return mlir::Float64Type::get(context);
   case llvm::Type::TypeID::X86_FP80TyID:
-    return mlir::FloatType::getF80(context);
+    return mlir::Float80Type::get(context);
   case llvm::Type::TypeID::FP128TyID:
-    return mlir::FloatType::getF128(context);
+    return mlir::Float128Type::get(context);
   default:
     mlir::emitError(mlir::UnknownLoc::get(context))
         << "unsupported type: !fir.real<" << kind << ">";
@@ -1339,23 +1370,12 @@ void FIROpsDialect::registerTypes() {
            TypeDescType, fir::VectorType, fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
-  fir::ReferenceType::attachInterface<
-      OpenACCPointerLikeModel<fir::ReferenceType>>(*getContext());
-
   fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(
       *getContext());
-  fir::PointerType::attachInterface<OpenACCPointerLikeModel<fir::PointerType>>(
-      *getContext());
-
   fir::HeapType::attachInterface<OpenMPPointerLikeModel<fir::HeapType>>(
       *getContext());
-  fir::HeapType::attachInterface<OpenACCPointerLikeModel<fir::HeapType>>(
-      *getContext());
-
   fir::LLVMPointerType::attachInterface<
       OpenMPPointerLikeModel<fir::LLVMPointerType>>(*getContext());
-  fir::LLVMPointerType::attachInterface<
-      OpenACCPointerLikeModel<fir::LLVMPointerType>>(*getContext());
 }
 
 std::optional<std::pair<uint64_t, unsigned short>>

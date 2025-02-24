@@ -60,6 +60,9 @@
 ; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       Constant Hoisting
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
+; LAXX-NEXT:       Lazy Branch Probability Analysis
+; LAXX-NEXT:       Lazy Block Frequency Analysis
+; LAXX-NEXT:       Optimization Remark Emitter
 ; LAXX-NEXT:       Partially inline calls to library functions
 ; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics

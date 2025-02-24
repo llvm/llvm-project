@@ -94,6 +94,9 @@ public:
 
   void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
 
+  // Returns a list of chunks of selected symbols.
+  std::vector<Chunk *> getChunks() const;
+
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
   void pullArm64ECIcallHelper();
@@ -106,17 +109,12 @@ private:
   StringRef findLib(StringRef filename);
   StringRef findLibMinGW(StringRef filename);
 
-  bool findUnderscoreMangle(StringRef sym);
-
   // Determines the location of the sysroot based on `args`, environment, etc.
   void detectWinSysRoot(const llvm::opt::InputArgList &args);
 
   // Adds various search paths based on the sysroot.  Must only be called once
-  // config->machine has been set.
+  // config.machine has been set.
   void addWinSysRootLibSearchPaths();
-
-  // Symbol names are mangled by prepending "_" on x86.
-  StringRef mangle(StringRef sym);
 
   void setMachine(llvm::COFF::MachineTypes machine);
   llvm::Triple::ArchType getArch();
@@ -145,8 +143,6 @@ private:
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(InputFile *file);
 
-  void parseModuleDefs(StringRef path);
-
   // Parse an /order file. If an option is given, the linker places COMDAT
   // sections int he same order as their names appear in the given file.
   void parseOrderFile(StringRef arg);
@@ -173,22 +169,6 @@ private:
 
   std::set<std::string> visitedLibs;
 
-  Symbol *addUndefined(StringRef sym, bool aliasEC = false);
-
-  void addUndefinedGlob(StringRef arg);
-
-  StringRef mangleMaybe(Symbol *s);
-
-  // Windows specific -- "main" is not the only main function in Windows.
-  // You can choose one from these four -- {w,}{WinMain,main}.
-  // There are four different entry point functions for them,
-  // {w,}{WinMain,main}CRTStartup, respectively. The linker needs to
-  // choose the right one depending on which "main" function is defined.
-  // This function looks up the symbol table and resolve corresponding
-  // entry point name.
-  StringRef findDefaultEntry();
-  WindowsSubsystem inferSubsystem();
-
   void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
@@ -200,7 +180,6 @@ private:
   std::list<std::function<void()>> taskQueue;
   std::vector<MemoryBufferRef> resources;
 
-  llvm::DenseSet<StringRef> directivesExports;
   llvm::DenseSet<StringRef> excludedSymbols;
 
   COFFLinkerContext &ctx;
@@ -230,11 +209,13 @@ private:
   void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
                       uint32_t *minor, bool *gotVersion = nullptr);
 
-  void parseAlternateName(StringRef);
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
   void parseAligncomm(StringRef);
+
+  // Parses a MS-DOS stub file
+  void parseDosStub(StringRef path);
 
   // Parses a string in the form of "[:<integer>]"
   void parseFunctionPadMin(llvm::opt::Arg *a);
@@ -264,8 +245,6 @@ private:
 
   // Used for dllexported symbols.
   Export parseExport(StringRef arg);
-  void fixupExports();
-  void assignExportOrdinals();
 
   // Parses a string in the form of "key=value" and check
   // if value matches previous values for the key.

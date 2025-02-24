@@ -20,9 +20,8 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     std::deque<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
     assert(d.get_allocator() == test_allocator<int>(3));
     assert(d.size() == 4);
@@ -31,8 +30,8 @@ int main(int, char**)
     assert(d[2] == 5);
     assert(d[3] == 6);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
-    }
-    {
+  }
+  {
     std::deque<int, min_allocator<int>> d({3, 4, 5, 6}, min_allocator<int>());
     assert(d.get_allocator() == min_allocator<int>());
     assert(d.size() == 4);
@@ -41,7 +40,7 @@ int main(int, char**)
     assert(d[2] == 5);
     assert(d[3] == 6);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
-    }
+  }
 
   return 0;
 }

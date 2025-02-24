@@ -20,6 +20,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 using namespace llvm;
@@ -562,4 +563,25 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
   }
   return nullptr;
+}
+
+unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
+  if (isa<AllocaInst>(V))
+    return ADDRESS_SPACE_LOCAL;
+
+  return -1;
+}
+
+void NVPTXTTIImpl::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  std::optional<unsigned> Val;
+  if ((Val = getMaxClusterRank(F)))
+    LB.push_back({"maxclusterrank", *Val});
+  if ((Val = getMaxNTIDx(F)))
+    LB.push_back({"maxntidx", *Val});
+  if ((Val = getMaxNTIDy(F)))
+    LB.push_back({"maxntidy", *Val});
+  if ((Val = getMaxNTIDz(F)))
+    LB.push_back({"maxntidz", *Val});
 }

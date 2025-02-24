@@ -1010,7 +1010,7 @@ namespace FunctionStart {
   void a(void) {}
   static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
                                                        // ref-note {{comparison against opaque constant address '&__builtin_function_start(a)'}} \
-                                                       // expected-note {{comparison of addresses of literals has unspecified value}}
+                                                       // expected-note {{comparison of addresses of potentially overlapping literals has unspecified value}}
 }
 
 namespace BuiltinInImplicitCtor {
@@ -1272,6 +1272,22 @@ namespace BuiltinMemcpy {
     return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
   }
   static_assert(test_incomplete_array_type() == 1234); // both-error {{constant}} both-note {{in call}}
+
+
+  /// FIXME: memmove needs to support overlapping memory regions.
+  constexpr bool memmoveOverlapping() {
+    char s1[] {1, 2, 3};
+    __builtin_memmove(s1, s1 + 1, 2 * sizeof(char));
+    // Now: 2, 3, 3
+    bool Result1 = (s1[0] == 2 && s1[1] == 3 && s1[2]== 3);
+
+    __builtin_memmove(s1 + 1, s1, 2 * sizeof(char));
+    // Now: 2, 2, 3
+    bool Result2 = (s1[0] == 2 && s1[1] == 2 && s1[2]== 3);
+
+    return Result1 && Result2;
+  }
+  static_assert(memmoveOverlapping()); // expected-error {{failed}}
 }
 
 namespace Memcmp {

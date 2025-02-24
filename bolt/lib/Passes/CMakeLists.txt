@@ -23,6 +23,7 @@ add_llvm_library(LLVMBOLTPasses
   LoopInversionPass.cpp
   LivenessAnalysis.cpp
   MCF.cpp
+  NonPacProtectedRetAnalysis.cpp
   PatchEntries.cpp
   PettisAndHansen.cpp
   PLTCall.cpp
@@ -46,6 +47,7 @@ add_llvm_library(LLVMBOLTPasses
   VeneerElimination.cpp
   RetpolineInsertion.cpp
 
+  NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 
   LINK_LIBS

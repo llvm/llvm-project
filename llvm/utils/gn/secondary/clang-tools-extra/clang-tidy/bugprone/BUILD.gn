@@ -41,6 +41,7 @@ static_library("bugprone") {
     "InaccurateEraseCheck.cpp",
     "IncDecInConditionsCheck.cpp",
     "IncorrectEnableIfCheck.cpp",
+    "IncorrectEnableSharedFromThisCheck.cpp",
     "IncorrectRoundingsCheck.cpp",
     "InfiniteLoopCheck.cpp",
     "IntegerDivisionCheck.cpp",

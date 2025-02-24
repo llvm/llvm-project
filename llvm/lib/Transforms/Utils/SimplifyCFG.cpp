@@ -74,6 +74,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -96,8 +97,9 @@ using namespace PatternMatch;
 cl::opt<bool> llvm::RequireAndPreserveDomTree(
     "simplifycfg-require-and-preserve-domtree", cl::Hidden,
 
-    cl::desc("Temorary development switch used to gradually uplift SimplifyCFG "
-             "into preserving DomTree,"));
+    cl::desc(
+        "Temporary development switch used to gradually uplift SimplifyCFG "
+        "into preserving DomTree,"));
 
 // Chosen as 2 so as to be cheap, but still to have enough power to fold
 // a select, so the "clamp" idiom (of a min followed by a max) will be caught.
@@ -126,7 +128,7 @@ static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
 
 static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
     "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
-    cl::desc("Control the maximal conditonal load/store that we are willing "
+    cl::desc("Control the maximal conditional load/store that we are willing "
              "to speculatively execute to eliminate conditional branch "
              "(default = 6)"));
 
@@ -1772,77 +1774,6 @@ static bool isSafeCheapLoadStore(const Instruction *I,
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
-namespace {
-
-// LockstepReverseIterator - Iterates through instructions
-// in a set of blocks in reverse order from the first non-terminator.
-// For example (assume all blocks have size n):
-//   LockstepReverseIterator I([B1, B2, B3]);
-//   *I-- = [B1[n], B2[n], B3[n]];
-//   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
-//   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
-//   ...
-class LockstepReverseIterator {
-  ArrayRef<BasicBlock *> Blocks;
-  SmallVector<Instruction *, 4> Insts;
-  bool Fail;
-
-public:
-  LockstepReverseIterator(ArrayRef<BasicBlock *> Blocks) : Blocks(Blocks) {
-    reset();
-  }
-
-  void reset() {
-    Fail = false;
-    Insts.clear();
-    for (auto *BB : Blocks) {
-      Instruction *Inst = BB->getTerminator();
-      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-        Inst = Inst->getPrevNode();
-      if (!Inst) {
-        // Block wasn't big enough.
-        Fail = true;
-        return;
-      }
-      Insts.push_back(Inst);
-    }
-  }
-
-  bool isValid() const { return !Fail; }
-
-  void operator--() {
-    if (Fail)
-      return;
-    for (auto *&Inst : Insts) {
-      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-        Inst = Inst->getPrevNode();
-      // Already at beginning of block.
-      if (!Inst) {
-        Fail = true;
-        return;
-      }
-    }
-  }
-
-  void operator++() {
-    if (Fail)
-      return;
-    for (auto *&Inst : Insts) {
-      for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-        Inst = Inst->getNextNode();
-      // Already at end of block.
-      if (!Inst) {
-        Fail = true;
-        return;
-      }
-    }
-  }
-
-  ArrayRef<Instruction *> operator*() const { return Insts; }
-};
-
-} // end anonymous namespace
-
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If AllInstsEqOnly is
 /// given, only perform hoisting in case all successors blocks contain matching
@@ -1894,7 +1825,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     if (!AllSame)
       return false;
     if (AllSame) {
-      LockstepReverseIterator LRI(Succs);
+      LockstepReverseIterator<true> LRI(Succs);
       while (LRI.isValid()) {
         Instruction *I0 = (*LRI)[0];
         if (any_of(*LRI, [I0](Instruction *I) {
@@ -2003,11 +1934,11 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
         // and leave any that were not hoisted behind (by calling moveBefore
         // rather than moveBeforePreserving).
-        I1->moveBefore(TI);
+        I1->moveBefore(TI->getIterator());
         for (auto &SuccIter : OtherSuccIterRange) {
           auto *I2 = &*SuccIter++;
           assert(isa<DbgInfoIntrinsic>(I2));
-          I2->moveBefore(TI);
+          I2->moveBefore(TI->getIterator());
         }
       } else {
         // For a normal instruction, we just move one to right before the
@@ -2017,7 +1948,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
         // and leave any that were not hoisted behind (by calling moveBefore
         // rather than moveBeforePreserving).
-        I1->moveBefore(TI);
+        I1->moveBefore(TI->getIterator());
         for (auto &SuccIter : OtherSuccIterRange) {
           Instruction *I2 = &*SuccIter++;
           assert(I2 != I1);
@@ -2153,12 +2084,9 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
         SelectInst *&SI = InsertedSelects[std::make_pair(BB1V, BB2V)];
         if (!SI) {
           // Propagate fast-math-flags from phi node to its replacement select.
-          IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-          if (isa<FPMathOperator>(PN))
-            Builder.setFastMathFlags(PN.getFastMathFlags());
-
-          SI = cast<SelectInst>(Builder.CreateSelect(
+          SI = cast<SelectInst>(Builder.CreateSelectFMF(
               BI->getCondition(), BB1V, BB2V,
+              isa<FPMathOperator>(PN) ? &PN : nullptr,
               BB1V->getName() + "." + BB2V->getName(), BI));
         }
 
@@ -2187,20 +2115,6 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   if (DTU)
     DTU->applyUpdates(Updates);
   return Changed;
-}
-
-// Check lifetime markers.
-static bool isLifeTimeMarker(const Instruction *I) {
-  if (auto II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    default:
-      break;
-    case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
-      return true;
-    }
-  }
-  return false;
 }
 
 // TODO: Refine this. This should avoid cases like turning constant memcpy sizes
@@ -2323,7 +2237,7 @@ static bool canSinkInstructions(
       // backend may handle such lifetimes incorrectly as well (#104776).
       // Don't sink lifetimes if it would introduce a phi on the pointer
       // argument.
-      if (isLifeTimeMarker(I0) && OI == 1 &&
+      if (isa<LifetimeIntrinsic>(I0) && OI == 1 &&
           any_of(Insts, [](const Instruction *I) {
             return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
           }))
@@ -2515,7 +2429,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
 
   int ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
-  LockstepReverseIterator LRI(UnconditionalPreds);
+  LockstepReverseIterator<true> LRI(UnconditionalPreds);
   while (LRI.isValid() &&
          canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
@@ -2545,7 +2459,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
-    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
+    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
       unsigned NumPHIInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
@@ -3122,8 +3036,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
-            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
-                                  /*StoreCaptures=*/true) &&
+            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -3898,16 +3811,14 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
-  IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
   while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
-    if (isa<FPMathOperator>(PN))
-      Builder.setFastMathFlags(PN->getFastMathFlags());
-
     // Change the PHI node into a select instruction.
     Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
     Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
 
-    Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
+    Value *Sel = Builder.CreateSelectFMF(IfCond, TrueVal, FalseVal,
+                                         isa<FPMathOperator>(PN) ? PN : nullptr,
+                                         "", DomBI);
     PN->replaceAllUsesWith(Sel);
     Sel->takeName(PN);
     PN->eraseFromParent();
@@ -5266,8 +5177,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
 bool SimplifyCFGOpt::simplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
   if (isa<PHINode>(RI->getValue()))
     return simplifyCommonResume(RI);
-  else if (isa<LandingPadInst>(RI->getParent()->getFirstNonPHI()) &&
-           RI->getValue() == RI->getParent()->getFirstNonPHI())
+  else if (isa<LandingPadInst>(RI->getParent()->getFirstNonPHIIt()) &&
+           RI->getValue() == &*RI->getParent()->getFirstNonPHIIt())
     // The resume must unwind the exception that caused control to branch here.
     return simplifySingleResume(RI);
 
@@ -5301,8 +5212,8 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 
   // Check that there are no other instructions except for debug and lifetime
   // intrinsics between the phi's and resume instruction.
-  if (!isCleanupBlockEmpty(
-          make_range(RI->getParent()->getFirstNonPHI(), BB->getTerminator())))
+  if (!isCleanupBlockEmpty(make_range(RI->getParent()->getFirstNonPHIIt(),
+                                      BB->getTerminator()->getIterator())))
     return false;
 
   SmallSetVector<BasicBlock *, 4> TrivialUnwindBlocks;
@@ -5319,7 +5230,7 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
     if (IncomingBB->getUniqueSuccessor() != BB)
       continue;
 
-    auto *LandingPad = dyn_cast<LandingPadInst>(IncomingBB->getFirstNonPHI());
+    auto *LandingPad = dyn_cast<LandingPadInst>(IncomingBB->getFirstNonPHIIt());
     // Not the landing pad that caused the control to branch here.
     if (IncomingValue != LandingPad)
       continue;
@@ -5368,7 +5279,7 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 // Simplify resume that is only used by a single (non-phi) landing pad.
 bool SimplifyCFGOpt::simplifySingleResume(ResumeInst *RI) {
   BasicBlock *BB = RI->getParent();
-  auto *LPInst = cast<LandingPadInst>(BB->getFirstNonPHI());
+  auto *LPInst = cast<LandingPadInst>(BB->getFirstNonPHIIt());
   assert(RI->getValue() == LPInst &&
          "Resume must unwind the exception that caused control to here");
 
@@ -5416,7 +5327,6 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI, DomTreeUpdater *DTU) {
   // If the cleanup return we are simplifying unwinds to the caller, this will
   // set UnwindDest to nullptr.
   BasicBlock *UnwindDest = RI->getUnwindDest();
-  Instruction *DestEHPad = UnwindDest ? UnwindDest->getFirstNonPHI() : nullptr;
 
   // We're about to remove BB from the control flow.  Before we do, sink any
   // PHINodes into the unwind destination.  Doing this before changing the
@@ -5453,7 +5363,7 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI, DomTreeUpdater *DTU) {
     }
 
     // Sink any remaining PHI nodes directly into UnwindDest.
-    Instruction *InsertPt = DestEHPad;
+    BasicBlock::iterator InsertPt = UnwindDest->getFirstNonPHIIt();
     for (PHINode &PN : make_early_inc_range(BB->phis())) {
       if (PN.use_empty() || !PN.isUsedOutsideOfBlock(BB))
         // If the PHI node has no uses or all of its uses are in this basic
@@ -6008,7 +5918,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
 /// the phi node, and set PhiIndex to BB's index in the phi node.
 static PHINode *findPHIForConditionForwarding(ConstantInt *CaseValue,
                                               BasicBlock *BB, int *PhiIndex) {
-  if (BB->getFirstNonPHIOrDbg() != BB->getTerminator())
+  if (&*BB->getFirstNonPHIIt() != BB->getTerminator())
     return nullptr; // BB must be empty to be a candidate for simplification.
   if (!BB->getSinglePredecessor())
     return nullptr; // BB must be dominated by the switch.
@@ -7889,7 +7799,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
       Options.NeedCanonicalLoop &&
       (!LoopHeaders.empty() && BB->hasNPredecessorsOrMore(2) &&
        (is_contained(LoopHeaders, BB) || is_contained(LoopHeaders, Succ)));
-  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg(true)->getIterator();
+  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
       !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU))
     return true;
@@ -8180,8 +8090,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
   if (C->isNullValue() || isa<UndefValue>(C)) {
     // Only look at the first use we can handle, avoid hurting compile time with
     // long uselists
-    auto FindUse = llvm::find_if(I->users(), [](auto *U) {
-      auto *Use = cast<Instruction>(U);
+    auto FindUse = llvm::find_if(I->uses(), [](auto &U) {
+      auto *Use = cast<Instruction>(U.getUser());
       // Change this list when we want to add new instructions.
       switch (Use->getOpcode()) {
       default:
@@ -8204,26 +8114,28 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
         return true;
       }
     });
-    if (FindUse == I->user_end())
+    if (FindUse == I->use_end())
       return false;
-    auto *Use = cast<Instruction>(*FindUse);
-    // Bail out if Use is not in the same BB as I or Use == I or Use comes
-    // before I in the block. The latter two can be the case if Use is a
+    auto &Use = *FindUse;
+    auto *User = cast<Instruction>(Use.getUser());
+    // Bail out if User is not in the same BB as I or User == I or User comes
+    // before I in the block. The latter two can be the case if User is a
     // PHI node.
-    if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
+    if (User->getParent() != I->getParent() || User == I ||
+        User->comesBefore(I))
       return false;
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)
     auto InstrRange =
-        make_range(std::next(I->getIterator()), Use->getIterator());
+        make_range(std::next(I->getIterator()), User->getIterator());
     if (any_of(InstrRange, [](Instruction &I) {
           return !isGuaranteedToTransferExecutionToSuccessor(&I);
         }))
       return false;
 
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
-    if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))
+    if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(User))
       if (GEP->getPointerOperand() == I) {
         // The current base address is null, there are four cases to consider:
         // getelementptr (TY, null, 0)                 -> null
@@ -8240,7 +8152,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       }
 
     // Look through return.
-    if (ReturnInst *Ret = dyn_cast<ReturnInst>(Use)) {
+    if (ReturnInst *Ret = dyn_cast<ReturnInst>(User)) {
       bool HasNoUndefAttr =
           Ret->getFunction()->hasRetAttribute(Attribute::NoUndef);
       // Return undefined to a noundef return value is undefined.
@@ -8254,56 +8166,45 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     }
 
     // Load from null is undefined.
-    if (LoadInst *LI = dyn_cast<LoadInst>(Use))
+    if (LoadInst *LI = dyn_cast<LoadInst>(User))
       if (!LI->isVolatile())
         return !NullPointerIsDefined(LI->getFunction(),
                                      LI->getPointerAddressSpace());
 
     // Store to null is undefined.
-    if (StoreInst *SI = dyn_cast<StoreInst>(Use))
+    if (StoreInst *SI = dyn_cast<StoreInst>(User))
       if (!SI->isVolatile())
         return (!NullPointerIsDefined(SI->getFunction(),
                                       SI->getPointerAddressSpace())) &&
                SI->getPointerOperand() == I;
 
     // llvm.assume(false/undef) always triggers immediate UB.
-    if (auto *Assume = dyn_cast<AssumeInst>(Use)) {
+    if (auto *Assume = dyn_cast<AssumeInst>(User)) {
       // Ignore assume operand bundles.
       if (I == Assume->getArgOperand(0))
         return true;
     }
 
-    if (auto *CB = dyn_cast<CallBase>(Use)) {
+    if (auto *CB = dyn_cast<CallBase>(User)) {
       if (C->isNullValue() && NullPointerIsDefined(CB->getFunction()))
         return false;
       // A call to null is undefined.
       if (CB->getCalledOperand() == I)
         return true;
 
-      if (C->isNullValue()) {
-        for (const llvm::Use &Arg : CB->args())
-          if (Arg == I) {
-            unsigned ArgIdx = CB->getArgOperandNo(&Arg);
-            if (CB->isPassingUndefUB(ArgIdx) &&
-                CB->paramHasAttr(ArgIdx, Attribute::NonNull)) {
-              // Passing null to a nonnnull+noundef argument is undefined.
-              return !PtrValueMayBeModified;
-            }
-          }
-      } else if (isa<UndefValue>(C)) {
+      if (CB->isArgOperand(&Use)) {
+        unsigned ArgIdx = CB->getArgOperandNo(&Use);
+        // Passing null to a nonnnull+noundef argument is undefined.
+        if (C->isNullValue() && CB->isPassingUndefUB(ArgIdx) &&
+            CB->paramHasAttr(ArgIdx, Attribute::NonNull))
+          return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.
-        for (const llvm::Use &Arg : CB->args())
-          if (Arg == I) {
-            unsigned ArgIdx = CB->getArgOperandNo(&Arg);
-            if (CB->isPassingUndefUB(ArgIdx)) {
-              // Passing undef to a noundef argument is undefined.
-              return true;
-            }
-          }
+        if (isa<UndefValue>(C) && CB->isPassingUndefUB(ArgIdx))
+          return true;
       }
     }
     // Div/Rem by zero is immediate UB
-    if (match(Use, m_BinOp(m_Value(), m_Specific(I))) && Use->isIntDivRem())
+    if (match(User, m_BinOp(m_Value(), m_Specific(I))) && User->isIntDivRem())
       return true;
   }
   return false;

@@ -1,112 +1,112 @@
 # RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=i386 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
-# ATT:   vminmaxnepbf16 $123, %xmm4, %xmm3, %xmm2
-# INTEL: vminmaxnepbf16 xmm2, xmm3, xmm4, 123
+# ATT:   vminmaxbf16 $123, %xmm4, %xmm3, %xmm2
+# INTEL: vminmaxbf16 xmm2, xmm3, xmm4, 123
 0x62,0xf3,0x67,0x08,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %xmm4, %xmm3, %xmm2 {%k7}
-# INTEL: vminmaxnepbf16 xmm2 {k7}, xmm3, xmm4, 123
+# ATT:   vminmaxbf16 $123, %xmm4, %xmm3, %xmm2 {%k7}
+# INTEL: vminmaxbf16 xmm2 {k7}, xmm3, xmm4, 123
 0x62,0xf3,0x67,0x0f,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %xmm4, %xmm3, %xmm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 xmm2 {k7} {z}, xmm3, xmm4, 123
+# ATT:   vminmaxbf16 $123, %xmm4, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vminmaxbf16 xmm2 {k7} {z}, xmm3, xmm4, 123
 0x62,0xf3,0x67,0x8f,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %zmm4, %zmm3, %zmm2
-# INTEL: vminmaxnepbf16 zmm2, zmm3, zmm4, 123
+# ATT:   vminmaxbf16 $123, %zmm4, %zmm3, %zmm2
+# INTEL: vminmaxbf16 zmm2, zmm3, zmm4, 123
 0x62,0xf3,0x67,0x48,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %zmm4, %zmm3, %zmm2 {%k7}
-# INTEL: vminmaxnepbf16 zmm2 {k7}, zmm3, zmm4, 123
+# ATT:   vminmaxbf16 $123, %zmm4, %zmm3, %zmm2 {%k7}
+# INTEL: vminmaxbf16 zmm2 {k7}, zmm3, zmm4, 123
 0x62,0xf3,0x67,0x4f,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %zmm4, %zmm3, %zmm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 zmm2 {k7} {z}, zmm3, zmm4, 123
+# ATT:   vminmaxbf16 $123, %zmm4, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vminmaxbf16 zmm2 {k7} {z}, zmm3, zmm4, 123
 0x62,0xf3,0x67,0xcf,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %ymm4, %ymm3, %ymm2
-# INTEL: vminmaxnepbf16 ymm2, ymm3, ymm4, 123
+# ATT:   vminmaxbf16 $123, %ymm4, %ymm3, %ymm2
+# INTEL: vminmaxbf16 ymm2, ymm3, ymm4, 123
 0x62,0xf3,0x67,0x28,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %ymm4, %ymm3, %ymm2 {%k7}
-# INTEL: vminmaxnepbf16 ymm2 {k7}, ymm3, ymm4, 123
+# ATT:   vminmaxbf16 $123, %ymm4, %ymm3, %ymm2 {%k7}
+# INTEL: vminmaxbf16 ymm2 {k7}, ymm3, ymm4, 123
 0x62,0xf3,0x67,0x2f,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16 $123, %ymm4, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 ymm2 {k7} {z}, ymm3, ymm4, 123
+# ATT:   vminmaxbf16 $123, %ymm4, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vminmaxbf16 ymm2 {k7} {z}, ymm3, ymm4, 123
 0x62,0xf3,0x67,0xaf,0x52,0xd4,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 268435456(%esp,%esi,8), %ymm3, %ymm2
-# INTEL: vminmaxnepbf16 ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456], 123
+# ATT:   vminmaxbf16  $123, 268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL: vminmaxbf16 ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456], 123
 0x62,0xf3,0x67,0x28,0x52,0x94,0xf4,0x00,0x00,0x00,0x10,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
-# INTEL: vminmaxnepbf16 ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291], 123
+# ATT:   vminmaxbf16  $123, 291(%edi,%eax,4), %ymm3, %ymm2 {%k7}
+# INTEL: vminmaxbf16 ymm2 {k7}, ymm3, ymmword ptr [edi + 4*eax + 291], 123
 0x62,0xf3,0x67,0x2f,0x52,0x94,0x87,0x23,0x01,0x00,0x00,0x7b
 
-# ATT:   vminmaxnepbf16  $123, (%eax){1to16}, %ymm3, %ymm2
-# INTEL: vminmaxnepbf16 ymm2, ymm3, word ptr [eax]{1to16}, 123
+# ATT:   vminmaxbf16  $123, (%eax){1to16}, %ymm3, %ymm2
+# INTEL: vminmaxbf16 ymm2, ymm3, word ptr [eax]{1to16}, 123
 0x62,0xf3,0x67,0x38,0x52,0x10,0x7b
 
-# ATT:   vminmaxnepbf16  $123, -1024(,%ebp,2), %ymm3, %ymm2
-# INTEL: vminmaxnepbf16 ymm2, ymm3, ymmword ptr [2*ebp - 1024], 123
+# ATT:   vminmaxbf16  $123, -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL: vminmaxbf16 ymm2, ymm3, ymmword ptr [2*ebp - 1024], 123
 0x62,0xf3,0x67,0x28,0x52,0x14,0x6d,0x00,0xfc,0xff,0xff,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 4064(%ecx), %ymm3, %ymm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064], 123
+# ATT:   vminmaxbf16  $123, 4064(%ecx), %ymm3, %ymm2 {%k7} {z}
+# INTEL: vminmaxbf16 ymm2 {k7} {z}, ymm3, ymmword ptr [ecx + 4064], 123
 0x62,0xf3,0x67,0xaf,0x52,0x51,0x7f,0x7b
 
-# ATT:   vminmaxnepbf16  $123, -256(%edx){1to16}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 ymm2 {k7} {z}, ymm3, word ptr [edx - 256]{1to16}, 123
+# ATT:   vminmaxbf16  $123, -256(%edx){1to16}, %ymm3, %ymm2 {%k7} {z}
+# INTEL: vminmaxbf16 ymm2 {k7} {z}, ymm3, word ptr [edx - 256]{1to16}, 123
 0x62,0xf3,0x67,0xbf,0x52,0x52,0x80,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 268435456(%esp,%esi,8), %xmm3, %xmm2
-# INTEL: vminmaxnepbf16 xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456], 123
+# ATT:   vminmaxbf16  $123, 268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL: vminmaxbf16 xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456], 123
 0x62,0xf3,0x67,0x08,0x52,0x94,0xf4,0x00,0x00,0x00,0x10,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
-# INTEL: vminmaxnepbf16 xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291], 123
+# ATT:   vminmaxbf16  $123, 291(%edi,%eax,4), %xmm3, %xmm2 {%k7}
+# INTEL: vminmaxbf16 xmm2 {k7}, xmm3, xmmword ptr [edi + 4*eax + 291], 123
 0x62,0xf3,0x67,0x0f,0x52,0x94,0x87,0x23,0x01,0x00,0x00,0x7b
 
-# ATT:   vminmaxnepbf16  $123, (%eax){1to8}, %xmm3, %xmm2
-# INTEL: vminmaxnepbf16 xmm2, xmm3, word ptr [eax]{1to8}, 123
+# ATT:   vminmaxbf16  $123, (%eax){1to8}, %xmm3, %xmm2
+# INTEL: vminmaxbf16 xmm2, xmm3, word ptr [eax]{1to8}, 123
 0x62,0xf3,0x67,0x18,0x52,0x10,0x7b
 
-# ATT:   vminmaxnepbf16  $123, -512(,%ebp,2), %xmm3, %xmm2
-# INTEL: vminmaxnepbf16 xmm2, xmm3, xmmword ptr [2*ebp - 512], 123
+# ATT:   vminmaxbf16  $123, -512(,%ebp,2), %xmm3, %xmm2
+# INTEL: vminmaxbf16 xmm2, xmm3, xmmword ptr [2*ebp - 512], 123
 0x62,0xf3,0x67,0x08,0x52,0x14,0x6d,0x00,0xfe,0xff,0xff,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 2032(%ecx), %xmm3, %xmm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032], 123
+# ATT:   vminmaxbf16  $123, 2032(%ecx), %xmm3, %xmm2 {%k7} {z}
+# INTEL: vminmaxbf16 xmm2 {k7} {z}, xmm3, xmmword ptr [ecx + 2032], 123
 0x62,0xf3,0x67,0x8f,0x52,0x51,0x7f,0x7b
 
-# ATT:   vminmaxnepbf16  $123, -256(%edx){1to8}, %xmm3, %xmm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 xmm2 {k7} {z}, xmm3, word ptr [edx - 256]{1to8}, 123
+# ATT:   vminmaxbf16  $123, -256(%edx){1to8}, %xmm3, %xmm2 {%k7} {z}
+# INTEL: vminmaxbf16 xmm2 {k7} {z}, xmm3, word ptr [edx - 256]{1to8}, 123
 0x62,0xf3,0x67,0x9f,0x52,0x52,0x80,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 268435456(%esp,%esi,8), %zmm3, %zmm2
-# INTEL: vminmaxnepbf16 zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456], 123
+# ATT:   vminmaxbf16  $123, 268435456(%esp,%esi,8), %zmm3, %zmm2
+# INTEL: vminmaxbf16 zmm2, zmm3, zmmword ptr [esp + 8*esi + 268435456], 123
 0x62,0xf3,0x67,0x48,0x52,0x94,0xf4,0x00,0x00,0x00,0x10,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
-# INTEL: vminmaxnepbf16 zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291], 123
+# ATT:   vminmaxbf16  $123, 291(%edi,%eax,4), %zmm3, %zmm2 {%k7}
+# INTEL: vminmaxbf16 zmm2 {k7}, zmm3, zmmword ptr [edi + 4*eax + 291], 123
 0x62,0xf3,0x67,0x4f,0x52,0x94,0x87,0x23,0x01,0x00,0x00,0x7b
 
-# ATT:   vminmaxnepbf16  $123, (%eax){1to32}, %zmm3, %zmm2
-# INTEL: vminmaxnepbf16 zmm2, zmm3, word ptr [eax]{1to32}, 123
+# ATT:   vminmaxbf16  $123, (%eax){1to32}, %zmm3, %zmm2
+# INTEL: vminmaxbf16 zmm2, zmm3, word ptr [eax]{1to32}, 123
 0x62,0xf3,0x67,0x58,0x52,0x10,0x7b
 
-# ATT:   vminmaxnepbf16  $123, -2048(,%ebp,2), %zmm3, %zmm2
-# INTEL: vminmaxnepbf16 zmm2, zmm3, zmmword ptr [2*ebp - 2048], 123
+# ATT:   vminmaxbf16  $123, -2048(,%ebp,2), %zmm3, %zmm2
+# INTEL: vminmaxbf16 zmm2, zmm3, zmmword ptr [2*ebp - 2048], 123
 0x62,0xf3,0x67,0x48,0x52,0x14,0x6d,0x00,0xf8,0xff,0xff,0x7b
 
-# ATT:   vminmaxnepbf16  $123, 8128(%ecx), %zmm3, %zmm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128], 123
+# ATT:   vminmaxbf16  $123, 8128(%ecx), %zmm3, %zmm2 {%k7} {z}
+# INTEL: vminmaxbf16 zmm2 {k7} {z}, zmm3, zmmword ptr [ecx + 8128], 123
 0x62,0xf3,0x67,0xcf,0x52,0x51,0x7f,0x7b
 
-# ATT:   vminmaxnepbf16  $123, -256(%edx){1to32}, %zmm3, %zmm2 {%k7} {z}
-# INTEL: vminmaxnepbf16 zmm2 {k7} {z}, zmm3, word ptr [edx - 256]{1to32}, 123
+# ATT:   vminmaxbf16  $123, -256(%edx){1to32}, %zmm3, %zmm2 {%k7} {z}
+# INTEL: vminmaxbf16 zmm2 {k7} {z}, zmm3, word ptr [edx - 256]{1to32}, 123
 0x62,0xf3,0x67,0xdf,0x52,0x52,0x80,0x7b
 
 # ATT:   vminmaxpd $123, %xmm4, %xmm3, %xmm2

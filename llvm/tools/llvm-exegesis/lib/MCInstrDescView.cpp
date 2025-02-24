@@ -38,7 +38,7 @@ bool Operand::isExplicit() const { return Info; }
 
 bool Operand::isImplicit() const { return !Info; }
 
-bool Operand::isImplicitReg() const { return ImplicitReg; }
+bool Operand::isImplicitReg() const { return ImplicitReg.isValid(); }
 
 bool Operand::isDef() const { return IsDef; }
 
@@ -64,7 +64,7 @@ unsigned Operand::getTiedToIndex() const { return *TiedToIndex; }
 
 unsigned Operand::getVariableIndex() const { return *VariableIndex; }
 
-unsigned Operand::getImplicitReg() const {
+MCRegister Operand::getImplicitReg() const {
   assert(ImplicitReg);
   return ImplicitReg;
 }

@@ -17,12 +17,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Runtime/reduce.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/SmallVector.h"
@@ -320,7 +320,7 @@ constexpr TypeBuilderFunc getModel<unsigned long long>() {
 template <>
 constexpr TypeBuilderFunc getModel<double>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::FloatType::getF64(context);
+    return mlir::Float64Type::get(context);
   };
 }
 template <>
@@ -347,11 +347,11 @@ constexpr TypeBuilderFunc getModel<long double>() {
     static_assert(size == 16 || size == 10 || size == 8,
                   "unsupported long double size");
     if constexpr (size == 16)
-      return mlir::FloatType::getF128(context);
+      return mlir::Float128Type::get(context);
     if constexpr (size == 10)
-      return mlir::FloatType::getF80(context);
+      return mlir::Float80Type::get(context);
     if constexpr (size == 8)
-      return mlir::FloatType::getF64(context);
+      return mlir::Float64Type::get(context);
     llvm_unreachable("failed static assert");
   };
 }
@@ -369,7 +369,7 @@ constexpr TypeBuilderFunc getModel<const long double *>() {
 template <>
 constexpr TypeBuilderFunc getModel<float>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::FloatType::getF32(context);
+    return mlir::Float32Type::get(context);
   };
 }
 template <>
@@ -395,6 +395,13 @@ constexpr TypeBuilderFunc getModel<bool>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<bool &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    TypeBuilderFunc f{getModel<bool>()};
+    return fir::ReferenceType::get(f(context));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<bool *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     TypeBuilderFunc f{getModel<bool>()};
     return fir::ReferenceType::get(f(context));
@@ -674,6 +681,8 @@ struct RuntimeTableKey<RT(ATs...)> {
       llvm::SmallVector<mlir::Type, sizeof...(ATs)> argTys;
       for (auto f : args)
         argTys.push_back(f(ctxt));
+      if (mlir::isa<mlir::NoneType>(retTy))
+        return mlir::FunctionType::get(ctxt, argTys, {});
       return mlir::FunctionType::get(ctxt, argTys, {retTy});
     };
   }

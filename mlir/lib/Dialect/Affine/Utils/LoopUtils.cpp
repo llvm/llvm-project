@@ -919,8 +919,9 @@ static void generateUnrolledLoop(
   // 'forOp'.
   auto builder = OpBuilder::atBlockTerminator(loopBodyBlock);
 
+  constexpr auto defaultAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
   if (!annotateFn)
-    annotateFn = [](unsigned, Operation *, OpBuilder) {};
+    annotateFn = defaultAnnotateFn;
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
@@ -2000,8 +2001,15 @@ static LogicalResult generateCopy(
   }
 
   SmallVector<AffineMap, 4> lbMaps(rank), ubMaps(rank);
-  for (unsigned i = 0; i < rank; ++i)
+  for (unsigned i = 0; i < rank; ++i) {
     region.getLowerAndUpperBound(i, lbMaps[i], ubMaps[i]);
+    if (lbMaps[i].getNumResults() == 0 || ubMaps[i].getNumResults() == 0) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Missing lower or upper bound for region along dimension: "
+                 << i << '\n');
+      return failure();
+    }
+  }
 
   const FlatAffineValueConstraints *cst = region.getConstraints();
   // 'regionSymbols' hold values that this memory region is symbolic/parametric

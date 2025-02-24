@@ -141,6 +141,10 @@ end
   This interpretation has usability advantages and is what six other
   Fortran compilers do, but is not conforming now that J3 approved an
   "interp" in June 2024 to the contrary.
+* When an Arm processor raises an `ieee_overflow` or `ieee_underflow`
+  exception, the `ieee_inexact` exception is also raised. This happens
+  for a call to `ieee_set_flag` as well as for floating point expression
+  evaluation.
 * Arm has processors that allow a user to control what happens when an
   arithmetic exception is signaled, as well as processors that do not
   have this capability. An Arm executable will run on either type of
@@ -160,7 +164,11 @@ end
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
-* Saved variables without explicit or default initializers are zero initialized.
+* Saved variables without explicit or default initializers are zero initialized,
+  except for scalar variables from the main program that are not explicitly
+  initialized or marked with an explicit SAVE attribute (these variables may be
+  placed on the stack by flang and not zero initialized). It is not advised to
+  rely on this extension in new code.
 * In a saved entity of a type with a default initializer, components without default
   values are zero initialized.
 * Kind specification with `*`, e.g. `REAL*4`
@@ -406,6 +414,9 @@ end
 * A character length specifier in a component or entity declaration
   is accepted before an array specification (`ch*3(2)`) as well
   as afterwards.
+* A zero field width is allowed for logical formatted output (`L0`).
+* `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
+  the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
 
 ### Extensions supported when enabled by options
 

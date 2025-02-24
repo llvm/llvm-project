@@ -738,6 +738,10 @@ enum ASTRecordTypes {
   CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
 
   CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION = 75,
+
+  UPDATE_MODULE_LOCAL_VISIBLE = 76,
+
+  UPDATE_TU_LOCAL_VISIBLE = 77,
 };
 
 /// Record types used within a source manager block.
@@ -1312,6 +1316,9 @@ enum DeclCode {
   /// A BlockDecl record.
   DECL_BLOCK,
 
+  /// A OutlinedFunctionDecl record.
+  DECL_OUTLINEDFUNCTION,
+
   /// A CapturedDecl record.
   DECL_CAPTURED,
 
@@ -1333,6 +1340,14 @@ enum DeclCode {
   /// IDs. This data is used when performing qualified name lookup
   /// into a DeclContext via DeclContext::lookup.
   DECL_CONTEXT_VISIBLE,
+
+  /// A record containing the set of declarations that are
+  /// only visible from DeclContext in the same module.
+  DECL_CONTEXT_MODULE_LOCAL_VISIBLE,
+
+  /// A record that stores the set of declarations that are only visible
+  /// to the TU.
+  DECL_CONTEXT_TU_LOCAL_VISIBLE,
 
   /// A LabelDecl record.
   DECL_LABEL,
@@ -1587,6 +1602,9 @@ enum StmtCode {
 
   /// A CapturedStmt record.
   STMT_CAPTURED,
+
+  /// A SYCLKernelCallStmt record.
+  STMT_SYCLKERNELCALL,
 
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,
@@ -1920,6 +1938,7 @@ enum StmtCode {
   STMT_OMP_PARALLEL_DIRECTIVE,
   STMT_OMP_SIMD_DIRECTIVE,
   STMT_OMP_TILE_DIRECTIVE,
+  STMP_OMP_STRIPE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
   STMT_OMP_REVERSE_DIRECTIVE,
   STMT_OMP_INTERCHANGE_DIRECTIVE,
@@ -2024,6 +2043,9 @@ enum StmtCode {
   STMT_OPENACC_WAIT_CONSTRUCT,
   STMT_OPENACC_INIT_CONSTRUCT,
   STMT_OPENACC_SHUTDOWN_CONSTRUCT,
+  STMT_OPENACC_SET_CONSTRUCT,
+  STMT_OPENACC_UPDATE_CONSTRUCT,
+  STMT_OPENACC_ATOMIC_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,

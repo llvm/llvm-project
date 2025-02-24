@@ -70,6 +70,7 @@
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
@@ -657,7 +658,7 @@ struct BuiltinDumpStructGenerator {
         Format += ": %zu ";
         QualType SizeT = S.Context.getSizeType();
         llvm::APInt BitWidth(S.Context.getIntWidth(SizeT),
-                             FD->getBitWidthValue(S.Context));
+                             FD->getBitWidthValue());
         Args.push_back(IntegerLiteral::Create(S.Context, BitWidth, SizeT, Loc));
       }
 
@@ -1235,7 +1236,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   bool IsChkVariant = false;
 
   auto GetFunctionName = [&]() {
-    StringRef FunctionName = getASTContext().BuiltinInfo.getName(BuiltinID);
+    std::string FunctionNameStr =
+        getASTContext().BuiltinInfo.getName(BuiltinID);
+    llvm::StringRef FunctionName = FunctionNameStr;
     // Skim off the details of whichever builtin was called to produce a better
     // diagnostic, as it's unlikely that the user wrote the __builtin
     // explicitly.
@@ -1245,7 +1248,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     } else {
       FunctionName.consume_front("__builtin_");
     }
-    return FunctionName;
+    return FunctionName.str();
   };
 
   switch (BuiltinID) {
@@ -1289,7 +1292,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                         unsigned SourceSize) {
       DiagID = diag::warn_fortify_scanf_overflow;
       unsigned Index = ArgIndex + DataIndex;
-      StringRef FunctionName = GetFunctionName();
+      std::string FunctionName = GetFunctionName();
       DiagRuntimeBehavior(TheCall->getArg(Index)->getBeginLoc(), TheCall,
                           PDiag(DiagID) << FunctionName << (Index + 1)
                                         << DestSize << SourceSize);
@@ -1438,7 +1441,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       llvm::APSInt::compareValues(*SourceSize, *DestinationSize) <= 0)
     return;
 
-  StringRef FunctionName = GetFunctionName();
+  std::string FunctionName = GetFunctionName();
 
   SmallString<16> DestinationStr;
   SmallString<16> SourceStr;
@@ -1934,6 +1937,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
     return MIPS().CheckMipsBuiltinFunctionCall(TI, BuiltinID, TheCall);
+  case llvm::Triple::spirv:
+    return SPIRV().CheckSPIRVBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::systemz:
     return SystemZ().CheckSystemZBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::x86:
@@ -2446,7 +2451,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
     break;
   }
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case Builtin::BI##ID:                                                        \
     return AtomicOpsOverloaded(TheCallResult, AtomicExpr::AO##ID);
@@ -3631,6 +3635,7 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__atomic_clear:
     return OrderingCABI != llvm::AtomicOrderingCABI::consume &&
            OrderingCABI != llvm::AtomicOrderingCABI::acquire &&
            OrderingCABI != llvm::AtomicOrderingCABI::acq_rel;
@@ -3683,12 +3688,18 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     C11CmpXchg,
 
     // bool __atomic_compare_exchange(A *, C *, CP, bool, int, int)
-    GNUCmpXchg
+    GNUCmpXchg,
+
+    // bool __atomic_test_and_set(A *, int)
+    TestAndSetByte,
+
+    // void __atomic_clear(A *, int)
+    ClearByte,
   } Form = Init;
 
-  const unsigned NumForm = GNUCmpXchg + 1;
-  const unsigned NumArgs[] = { 2, 2, 3, 3, 3, 3, 4, 5, 6 };
-  const unsigned NumVals[] = { 1, 0, 1, 1, 1, 1, 2, 2, 3 };
+  const unsigned NumForm = ClearByte + 1;
+  const unsigned NumArgs[] = {2, 2, 3, 3, 3, 3, 4, 5, 6, 2, 2};
+  const unsigned NumVals[] = {1, 0, 1, 1, 1, 1, 2, 2, 3, 0, 0};
   // where:
   //   C is an appropriate type,
   //   A is volatile _Atomic(C) for __c11 builtins and is C for GNU builtins,
@@ -3849,6 +3860,14 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
     Form = GNUCmpXchg;
     break;
+
+  case AtomicExpr::AO__atomic_test_and_set:
+    Form = TestAndSetByte;
+    break;
+
+  case AtomicExpr::AO__atomic_clear:
+    Form = ClearByte;
+    break;
   }
 
   unsigned AdjustedNumArgs = NumArgs[Form];
@@ -3908,14 +3927,28 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     }
   }
 
-  // Pointer to object of size zero is not allowed.
-  if (RequireCompleteType(Ptr->getBeginLoc(), AtomTy,
-                          diag::err_incomplete_type))
-    return ExprError();
-  if (Context.getTypeInfoInChars(AtomTy).Width.isZero()) {
-    Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
-        << Ptr->getType() << 1 << Ptr->getSourceRange();
-    return ExprError();
+  if (Form != TestAndSetByte && Form != ClearByte) {
+    // Pointer to object of size zero is not allowed.
+    if (RequireCompleteType(Ptr->getBeginLoc(), AtomTy,
+                            diag::err_incomplete_type))
+      return ExprError();
+
+    if (Context.getTypeInfoInChars(AtomTy).Width.isZero()) {
+      Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
+          << Ptr->getType() << 1 << Ptr->getSourceRange();
+      return ExprError();
+    }
+  } else {
+    // The __atomic_clear and __atomic_test_and_set intrinsics accept any
+    // non-const pointer type, including void* and pointers to incomplete
+    // structs, but only access the first byte.
+    AtomTy = Context.CharTy;
+    AtomTy = AtomTy.withCVRQualifiers(
+        pointerType->getPointeeType().getCVRQualifiers());
+    QualType PointerQT = Context.getPointerType(AtomTy);
+    pointerType = PointerQT->getAs<PointerType>();
+    Ptr = ImpCastExprToType(Ptr, PointerQT, CK_BitCast).get();
+    ValType = AtomTy;
   }
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
@@ -3994,10 +4027,10 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   ValType.removeLocalVolatile();
   ValType.removeLocalConst();
   QualType ResultType = ValType;
-  if (Form == Copy || Form == LoadCopy || Form == GNUXchg ||
-      Form == Init)
+  if (Form == Copy || Form == LoadCopy || Form == GNUXchg || Form == Init ||
+      Form == ClearByte)
     ResultType = Context.VoidTy;
-  else if (Form == C11CmpXchg || Form == GNUCmpXchg)
+  else if (Form == C11CmpXchg || Form == GNUCmpXchg || Form == TestAndSetByte)
     ResultType = Context.BoolTy;
 
   // The type of a parameter passed 'by value'. In the GNU atomics, such
@@ -4041,6 +4074,10 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       APIOrderedArgs.push_back(Args[5]); // Weak
       APIOrderedArgs.push_back(Args[1]); // Order
       APIOrderedArgs.push_back(Args[3]); // OrderFail
+      break;
+    case TestAndSetByte:
+    case ClearByte:
+      APIOrderedArgs.push_back(Args[1]); // Order
       break;
     }
   } else
@@ -4127,6 +4164,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     SubExprs.push_back(APIOrderedArgs[1]); // Val1
     break;
   case Load:
+  case TestAndSetByte:
+  case ClearByte:
     SubExprs.push_back(APIOrderedArgs[1]); // Order
     break;
   case LoadCopy:
@@ -4546,7 +4585,7 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   // Get the decl for the concrete builtin from this, we can tell what the
   // concrete integer type we should convert to is.
   unsigned NewBuiltinID = BuiltinIndices[BuiltinIndex][SizeIndex];
-  StringRef NewBuiltinName = Context.BuiltinInfo.getName(NewBuiltinID);
+  std::string NewBuiltinName = Context.BuiltinInfo.getName(NewBuiltinID);
   FunctionDecl *NewBuiltinDecl;
   if (NewBuiltinID == BuiltinID)
     NewBuiltinDecl = FDecl;
@@ -5223,8 +5262,8 @@ ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                        << E->getSourceRange());
   }
 
-  return new (Context) class ConvertVectorExpr(E, TInfo, DstTy, VK, OK,
-                                               BuiltinLoc, RParenLoc);
+  return ConvertVectorExpr::Create(Context, E, TInfo, DstTy, VK, OK, BuiltinLoc,
+                                   RParenLoc, CurFPFeatureOverrides());
 }
 
 bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
@@ -8341,7 +8380,7 @@ static void emitReplacement(Sema &S, SourceLocation Loc, SourceRange Range,
                             unsigned AbsKind, QualType ArgType) {
   bool EmitHeaderHint = true;
   const char *HeaderName = nullptr;
-  StringRef FunctionName;
+  std::string FunctionName;
   if (S.getLangOpts().CPlusPlus && !ArgType->isAnyComplexType()) {
     FunctionName = "std::abs";
     if (ArgType->isIntegralOrEnumerationType()) {
@@ -8451,26 +8490,43 @@ static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   llvm_unreachable("unknown MathCheck");
 }
 
+static bool IsInfinityFunction(const FunctionDecl *FDecl) {
+  if (FDecl->getName() != "infinity")
+    return false;
+
+  if (const CXXMethodDecl *MDecl = dyn_cast<CXXMethodDecl>(FDecl)) {
+    const CXXRecordDecl *RDecl = MDecl->getParent();
+    if (RDecl->getName() != "numeric_limits")
+      return false;
+
+    if (const NamespaceDecl *NSDecl =
+            dyn_cast<NamespaceDecl>(RDecl->getDeclContext()))
+      return NSDecl->isStdNamespace();
+  }
+
+  return false;
+}
+
 void Sema::CheckInfNaNFunction(const CallExpr *Call,
                                const FunctionDecl *FDecl) {
+  if (!FDecl->getIdentifier())
+    return;
+
   FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());
-  bool HasIdentifier = FDecl->getIdentifier() != nullptr;
-  bool IsNaNOrIsUnordered =
-      IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered");
-  bool IsSpecialNaN =
-      HasIdentifier && IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN);
-  if ((IsNaNOrIsUnordered || IsSpecialNaN) && FPO.getNoHonorNaNs()) {
+  if (FPO.getNoHonorNaNs() &&
+      (IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered") ||
+       IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN))) {
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << Call->getSourceRange();
-  } else {
-    bool IsInfOrIsFinite =
-        IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite");
-    bool IsInfinityOrIsSpecialInf =
-        HasIdentifier && ((FDecl->getName() == "infinity") ||
-                          IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf));
-    if ((IsInfOrIsFinite || IsInfinityOrIsSpecialInf) && FPO.getNoHonorInfs())
-      Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-          << 0 << 0 << Call->getSourceRange();
+    return;
+  }
+
+  if (FPO.getNoHonorInfs() &&
+      (IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite") ||
+       IsInfinityFunction(FDecl) ||
+       IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf))) {
+    Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 0 << 0 << Call->getSourceRange();
   }
 }
 
@@ -8490,7 +8546,7 @@ void Sema::CheckAbsoluteValueFunction(const CallExpr *Call,
   // Unsigned types cannot be negative.  Suggest removing the absolute value
   // function call.
   if (ArgType->isUnsignedIntegerType()) {
-    StringRef FunctionName =
+    std::string FunctionName =
         IsStdAbs ? "std::abs" : Context.BuiltinInfo.getName(AbsKind);
     Diag(Call->getExprLoc(), diag::warn_unsigned_abs) << ArgType << ParamType;
     Diag(Call->getExprLoc(), diag::note_remove_abs)
@@ -10024,7 +10080,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                            Approximate);
 
   if (const auto *BitField = E->getSourceBitField())
-    return IntRange(BitField->getBitWidthValue(C),
+    return IntRange(BitField->getBitWidthValue(),
                     BitField->getType()->isUnsignedIntegerOrEnumerationType());
 
   if (GetExprType(E)->isVoidType())
@@ -10577,7 +10633,7 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     return false;
 
   Expr *OriginalInit = Init->IgnoreParenImpCasts();
-  unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
+  unsigned FieldWidth = Bitfield->getBitWidthValue();
 
   Expr::EvalResult Result;
   if (!OriginalInit->EvaluateAsInt(Result, S.Context,
@@ -11623,8 +11679,12 @@ static void AnalyzeImplicitConversions(
   // Propagate whether we are in a C++ list initialization expression.
   // If so, we do not issue warnings for implicit int-float conversion
   // precision loss, because C++11 narrowing already handles it.
-  bool IsListInit = Item.IsListInit ||
-                    (isa<InitListExpr>(OrigE) && S.getLangOpts().CPlusPlus);
+  //
+  // HLSL's initialization lists are special, so they shouldn't observe the C++
+  // behavior here.
+  bool IsListInit =
+      Item.IsListInit || (isa<InitListExpr>(OrigE) &&
+                          S.getLangOpts().CPlusPlus && !S.getLangOpts().HLSL);
 
   if (E->isTypeDependent() || E->isValueDependent())
     return;
@@ -14041,8 +14101,8 @@ static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
 
   if (Field1->isBitField()) {
     // Make sure that the bit-fields are the same length.
-    unsigned Bits1 = Field1->getBitWidthValue(C);
-    unsigned Bits2 = Field2->getBitWidthValue(C);
+    unsigned Bits1 = Field1->getBitWidthValue();
+    unsigned Bits2 = Field2->getBitWidthValue();
 
     if (Bits1 != Bits2)
       return false;
@@ -14594,11 +14654,23 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
                      _2, _3, _4));
 }
 
+// Performs a similar job to Sema::UsualUnaryConversions, but without any
+// implicit promotion of integral/enumeration types.
+static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
+  // First, convert to an r-value.
+  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
+  if (Res.isInvalid())
+    return ExprError();
+
+  // Promote floating-point types.
+  return S.UsualUnaryFPConversions(Res.get());
+}
+
 bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   if (checkArgCount(TheCall, 1))
     return true;
 
-  ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
+  ExprResult A = BuiltinVectorMathConversions(*this, TheCall->getArg(0));
   if (A.isInvalid())
     return true;
 
@@ -14613,57 +14685,77 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
 }
 
 bool Sema::BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly) {
-  QualType Res;
-  if (BuiltinVectorMath(TheCall, Res, FPOnly))
-    return true;
-  TheCall->setType(Res);
-  return false;
+  if (auto Res = BuiltinVectorMath(TheCall, FPOnly); Res.has_value()) {
+    TheCall->setType(*Res);
+    return false;
+  }
+  return true;
 }
 
 bool Sema::BuiltinVectorToScalarMath(CallExpr *TheCall) {
-  QualType Res;
-  if (BuiltinVectorMath(TheCall, Res))
+  std::optional<QualType> Res = BuiltinVectorMath(TheCall);
+  if (!Res)
     return true;
 
-  if (auto *VecTy0 = Res->getAs<VectorType>())
+  if (auto *VecTy0 = (*Res)->getAs<VectorType>())
     TheCall->setType(VecTy0->getElementType());
   else
-    TheCall->setType(Res);
+    TheCall->setType(*Res);
 
   return false;
 }
 
-bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly) {
+static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
+                                             SourceLocation Loc) {
+  QualType L = LHS->getEnumCoercedType(S.Context),
+           R = RHS->getEnumCoercedType(S.Context);
+  if (L->isUnscopedEnumerationType() && R->isUnscopedEnumerationType() &&
+      !S.Context.hasSameUnqualifiedType(L, R)) {
+    return S.Diag(Loc, diag::err_conv_mixed_enum_types_cxx26)
+           << LHS->getSourceRange() << RHS->getSourceRange()
+           << /*Arithmetic Between*/ 0 << L << R;
+  }
+  return false;
+}
+
+std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
+                                                bool FPOnly) {
   if (checkArgCount(TheCall, 2))
-    return true;
+    return std::nullopt;
 
-  ExprResult A = TheCall->getArg(0);
-  ExprResult B = TheCall->getArg(1);
-  // Do standard promotions between the two arguments, returning their common
-  // type.
-  Res = UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
-  if (A.isInvalid() || B.isInvalid())
-    return true;
+  if (checkBuiltinVectorMathMixedEnums(
+          *this, TheCall->getArg(0), TheCall->getArg(1), TheCall->getExprLoc()))
+    return std::nullopt;
 
-  QualType TyA = A.get()->getType();
-  QualType TyB = B.get()->getType();
-
-  if (Res.isNull() || TyA.getCanonicalType() != TyB.getCanonicalType())
-    return Diag(A.get()->getBeginLoc(),
-                diag::err_typecheck_call_different_arg_types)
-           << TyA << TyB;
-
-  if (FPOnly) {
-    if (checkFPMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-      return true;
-  } else {
-    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-      return true;
+  Expr *Args[2];
+  for (int I = 0; I < 2; ++I) {
+    ExprResult Converted =
+        BuiltinVectorMathConversions(*this, TheCall->getArg(I));
+    if (Converted.isInvalid())
+      return std::nullopt;
+    Args[I] = Converted.get();
   }
 
-  TheCall->setArg(0, A.get());
-  TheCall->setArg(1, B.get());
-  return false;
+  SourceLocation LocA = Args[0]->getBeginLoc();
+  QualType TyA = Args[0]->getType();
+  QualType TyB = Args[1]->getType();
+
+  if (TyA.getCanonicalType() != TyB.getCanonicalType()) {
+    Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
+    return std::nullopt;
+  }
+
+  if (FPOnly) {
+    if (checkFPMathBuiltinElementType(*this, LocA, TyA, 1))
+      return std::nullopt;
+  } else {
+    if (checkMathBuiltinElementType(*this, LocA, TyA, 1))
+      return std::nullopt;
+  }
+
+  TheCall->setArg(0, Args[0]);
+  TheCall->setArg(1, Args[1]);
+  return TyA;
 }
 
 bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
@@ -14671,9 +14763,17 @@ bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
   if (checkArgCount(TheCall, 3))
     return true;
 
+  SourceLocation Loc = TheCall->getExprLoc();
+  if (checkBuiltinVectorMathMixedEnums(*this, TheCall->getArg(0),
+                                       TheCall->getArg(1), Loc) ||
+      checkBuiltinVectorMathMixedEnums(*this, TheCall->getArg(1),
+                                       TheCall->getArg(2), Loc))
+    return true;
+
   Expr *Args[3];
   for (int I = 0; I < 3; ++I) {
-    ExprResult Converted = UsualUnaryConversions(TheCall->getArg(I));
+    ExprResult Converted =
+        BuiltinVectorMathConversions(*this, TheCall->getArg(I));
     if (Converted.isInvalid())
       return true;
     Args[I] = Converted.get();
