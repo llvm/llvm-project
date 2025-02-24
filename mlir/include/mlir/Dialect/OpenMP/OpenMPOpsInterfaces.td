@@ -24,6 +24,13 @@ include "mlir/IR/OpBase.td"
 class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     BlockArgOpenMPClause previousClause> {
   // Default-implemented method to be overriden by the corresponding clause.
+  //
+  // Usage example:
+  //
+  // ```c++
+  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
+  // unsigned numInReductionArgs = iface.numInReductionBlockArgs();
+  // ```
   InterfaceMethod numArgsMethod = InterfaceMethod<
     "Get number of block arguments defined by `" # clauseNameSnake # "`.",
     "unsigned", "num" # clauseNameCamel # "BlockArgs", (ins), [{}], [{
@@ -33,6 +40,13 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
 
   // Unified access method for the start index of clause-associated entry block
   // arguments.
+  //
+  // Usage example:
+  //
+  // ```c++
+  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
+  // unsigned firstMapIndex = iface.getMapBlockArgsStart();
+  // ```
   InterfaceMethod startMethod = InterfaceMethod<
     "Get start index of block arguments defined by `" # clauseNameSnake # "`.",
     "unsigned", "get" # clauseNameCamel # "BlockArgsStart", (ins),
@@ -45,6 +59,13 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
   >;
 
   // Unified access method for clause-associated entry block arguments.
+  //
+  // Usage example:
+  //
+  // ```c++
+  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
+  // ArrayRef<BlockArgument> reductionArgs = iface.getReductionBlockArgs();
+  // ```
   InterfaceMethod blockArgsMethod = InterfaceMethod<
     "Get block arguments defined by `" # clauseNameSnake # "`.",
     "::llvm::MutableArrayRef<::mlir::BlockArgument>",
