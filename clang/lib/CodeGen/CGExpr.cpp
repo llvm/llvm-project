@@ -568,8 +568,8 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       QualType RefType = M->getType().withoutLocalFastQualifiers();
       if (RefType.getPointerAuth()) {
         // Use the qualifier of the reference temporary to sign the pointer.
-        auto LV = MakeRawAddrLValue(Object.getPointer(), RefType,
-                                    Object.getAlignment());
+        LValue LV = MakeRawAddrLValue(Object.getPointer(), RefType,
+                                      Object.getAlignment());
         EmitScalarInit(E, M->getExtendingDecl(), LV, false);
       } else {
         EmitAnyExprToMem(E, Object, Qualifiers(), /*IsInit*/ true);
@@ -1774,7 +1774,7 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
   ConstantEmissionKind CEK;
   if (isa<ParmVarDecl>(Value)) {
     CEK = CEK_None;
-  } else if (auto *var = dyn_cast<VarDecl>(Value)) {
+  } else if (const auto *var = dyn_cast<VarDecl>(Value)) {
     CEK = checkVarTypeForConstantEmission(var->getType());
   } else if (isa<EnumConstantDecl>(Value)) {
     CEK = CEK_AsValueOnly;
@@ -1831,8 +1831,8 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
   }
 
   // Emit as a constant.
-  auto C = ConstantEmitter(*this).emitAbstract(RefExpr->getLocation(),
-                                               result.Val, resultType);
+  llvm::Constant *C = ConstantEmitter(*this).emitAbstract(
+      RefExpr->getLocation(), result.Val, resultType);
 
   // Make sure we emit a debug reference to the global variable.
   // This should probably fire even for
@@ -2236,7 +2236,7 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   // Load from __ptrauth.
   if (PointerAuthQualifier PtrAuth = LV.getQuals().getPointerAuth()) {
     LV.getQuals().removePointerAuth();
-    auto Value = EmitLoadOfLValue(LV, Loc).getScalarVal();
+    llvm::Value *Value = EmitLoadOfLValue(LV, Loc).getScalarVal();
     return RValue::get(EmitPointerAuthUnqualify(PtrAuth, Value, LV.getType(),
                                                 LV.getAddress(),
                                                 /*known nonnull*/ false));
@@ -5735,9 +5735,10 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     // Try to remember the original __ptrauth qualifier for loads of
     // function pointers.
     if (ICE->getCastKind() == CK_LValueToRValue) {
-      const auto *SubExpr = ICE->getSubExpr();
+      const Expr *SubExpr = ICE->getSubExpr();
       if (const auto *PtrType = SubExpr->getType()->getAs<PointerType>()) {
-        auto Result = EmitOrigPointerRValue(E);
+        std::pair<llvm::Value *, CGPointerAuthInfo> Result =
+            EmitOrigPointerRValue(E);
 
         QualType FunctionType = PtrType->getPointeeType();
         assert(FunctionType->isFunctionType());

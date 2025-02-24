@@ -2542,9 +2542,9 @@ bool Qualifiers::isEmptyWhenPrinted(const PrintingPolicy &Policy) const {
     if (!(lifetime == Qualifiers::OCL_Strong && Policy.SuppressStrongLifetime))
       return false;
 
-  if (PointerAuthQualifier PointerAuth = getPointerAuth())
-    if (!PointerAuth.isEmptyWhenPrinted(Policy))
-      return false;
+  if (PointerAuthQualifier PointerAuth = getPointerAuth();
+      PointerAuth && !PointerAuth.isEmptyWhenPrinted(Policy))
+    return false;
 
   return true;
 }

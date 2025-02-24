@@ -810,7 +810,7 @@ private:
                 "PointerAuthQualifier must be 32 bits");
 
   static constexpr uint64_t PtrAuthShift = 32;
-  static constexpr uint64_t PtrAuthMask = uint64_t(0xffffffff) << PtrAuthShift;
+  static constexpr uint64_t PtrAuthMask = UINT64_C(0xffffffff) << PtrAuthShift;
 
   static constexpr uint64_t UMask = 0x8;
   static constexpr uint64_t UShift = 3;

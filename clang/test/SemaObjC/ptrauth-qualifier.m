@@ -11,23 +11,23 @@
 // expected-note@-2 {{add a super class to fix this problem}}
 
 @property void *__ptrauth(1, 1, 1) invalid1;
-// expected-error@-1 {{properties may not be qualified with __ptrauth; type is 'void *__ptrauth(1,1,1)'}}
+// expected-error@-1 {{property may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,1,1)'}}
 
 @property void *__ptrauth(1, 0, 1) invalid2;
-// expected-error@-1 {{properties may not be qualified with __ptrauth; type is 'void *__ptrauth(1,0,1)'}}
+// expected-error@-1 {{property may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,0,1)'}}
 
 - (void *__ptrauth(1, 1, 1))invalid5;
-// expected-error@-1 {{return types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,1,1)'}}
+// expected-error@-1 {{return type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,1,1)'}}
 
 - (void *__ptrauth(1, 0, 1))invalid6;
-// expected-error@-1 {{return types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,0,1)'}}
+// expected-error@-1 {{return type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,0,1)'}}
 
 - (void)invalid9:(void *__ptrauth(1, 1, 1))a;
-// expected-error@-1 {{parameter types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,1,1)'}}
+// expected-error@-1 {{parameter type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,1,1)'}}
 // expected-note@-2 {{method 'invalid9:' declared here}}
 
 - (void)invalid10:(void *__ptrauth(1, 0, 1))a;
-// expected-error@-1 {{parameter types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,0,1)'}}
+// expected-error@-1 {{parameter type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,0,1)'}}
 // expected-note@-2 {{method 'invalid10:' declared here}}
 
 @end
@@ -36,21 +36,21 @@
 // expected-warning@-1 2{{method definition for}}
 
 - (void *__ptrauth(1, 1, 1))invalid13 {
-// expected-error@-1 {{return types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,1,1)'}}
+// expected-error@-1 {{return type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,1,1)'}}
   return 0;
 }
 
 - (void *__ptrauth(1, 0, 1))invalid14 {
-// expected-error@-1 {{return types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,0,1)'}}
+// expected-error@-1 {{return type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,0,1)'}}
   return 0;
 }
 
 - (void)invalid17:(void *__ptrauth(1, 1, 1))a {
-// expected-error@-1 {{parameter types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,1,1)'}}
+// expected-error@-1 {{parameter type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,1,1)'}}
 }
 
 - (void)invalid18:(void *__ptrauth(1, 0, 1))a {
-// expected-error@-1 {{parameter types may not be qualified with __ptrauth; type is 'void *__ptrauth(1,0,1)'}}
+// expected-error@-1 {{parameter type may not be qualified with '__ptrauth'; type is 'void *__ptrauth(1,0,1)'}}
 }
 
 @end

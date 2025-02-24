@@ -5273,7 +5273,7 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
     return QualType();
   }
 
-  auto LocalPointerAuth = Quals.getPointerAuth();
+  PointerAuthQualifier LocalPointerAuth = Quals.getPointerAuth();
   if (LocalPointerAuth.isPresent()) {
     if (T.getPointerAuth().isPresent()) {
       SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant)

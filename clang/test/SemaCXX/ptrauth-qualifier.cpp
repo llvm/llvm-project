@@ -5,7 +5,7 @@
 #define AQ2 __ptrauth(1,1,51)
 #define IQ __ptrauth(1,0,50)
 
-struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}} expected-note {{'trivial_abi' is disallowed on 'AddrDisc' because it has an address-discriminated __ptrauth field}}
+struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}} expected-note {{'trivial_abi' is disallowed on 'AddrDisc' because it has an address-discriminated '__ptrauth' field}}
   int * AQ m0;
 };
 
@@ -16,7 +16,7 @@ struct __attribute__((trivial_abi)) NoAddrDisc {
 namespace test_union {
 
   union U0 {
-    int * AQ f0; // expected-note 4 {{'U0' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+    int * AQ f0; // expected-note 4 {{'U0' is implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
 
     // ptrauth fields that don't have an address-discriminated qualifier don't
     // delete the special functions.
@@ -24,7 +24,7 @@ namespace test_union {
   };
 
   union U1 {
-    int * AQ f0; // expected-note 8 {{'U1' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+    int * AQ f0; // expected-note 8 {{'U1' is implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
     U1() = default;
     ~U1() = default;
     U1(const U1 &) = default; // expected-warning {{explicitly defaulted copy constructor is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
@@ -49,7 +49,7 @@ namespace test_union {
   // class.
   struct S0 {
     union {
-      int * AQ f0; // expected-note 4 {{' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+      int * AQ f0; // expected-note 4 {{' is implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
       char f1;
     };
   };
@@ -57,7 +57,7 @@ namespace test_union {
   struct S1 {
     union {
       union {
-        int * AQ f0; // expected-note 4 {{implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+        int * AQ f0; // expected-note 4 {{implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
         char f1;
       } u; // expected-note 4 {{'S1' is implicitly deleted because field 'u' has a deleted}}
       int f2;
@@ -131,8 +131,8 @@ bool test_composite_type1(bool c, int * AQ * a0, int * AQ2 * a1) {
   return a0 == a1;      // expected-error {{comparison of distinct pointer types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
 }
 
-void test_bad_call_diag(void *AQ *ptr); // expected-note{{candidate function not viable: 1st argument ('void *__ptrauth(1,1,51) *') has __ptrauth(1,1,51) qualifier, but parameter has __ptrauth(1,1,50) qualifier}} expected-note{{candidate function not viable: 1st argument ('void **') has no ptrauth qualifier, but parameter has __ptrauth(1,1,50) qualifier}}
-void test_bad_call_diag2(void **ptr);   // expected-note{{1st argument ('void *__ptrauth(1,1,50) *') has __ptrauth(1,1,50) qualifier, but parameter has no ptrauth qualifier}}
+void test_bad_call_diag(void *AQ *ptr); // expected-note{{candidate function not viable: 1st argument ('void *__ptrauth(1,1,51) *') has __ptrauth(1,1,51) qualifier, but parameter has __ptrauth(1,1,50) qualifier}} expected-note {{candidate function not viable: 1st argument ('void **') has no '__ptrauth' qualifier, but parameter has __ptrauth(1,1,50) qualifier}}
+void test_bad_call_diag2(void **ptr); // expected-note {{candidate function not viable: 1st argument ('void *__ptrauth(1,1,50) *') has __ptrauth(1,1,50) qualifier, but parameter has no '__ptrauth' qualifier}}
 
 int test_call_diag() {
   void *AQ ptr1, *AQ2 ptr2, *ptr3;

@@ -982,22 +982,21 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
 
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
-  "%select{return types|parameter types|properties}1 may not be qualified with __ptrauth; type is %0">;
+  "%select{return type|parameter type|property}1 may not be qualified with '__ptrauth'; type is %0">;
 def err_ptrauth_qualifier_cast : Error<
-  "cast types may not be qualified with __ptrauth; type is %0">;
+  "cannot cast to '__ptrauth'-qualified type %0">;
 def err_ptrauth_qualifier_nonpointer : Error<
-  "__ptrauth qualifier may only be applied to pointer types; type here is %0">;
+  "'__ptrauth' qualifier only applies to pointer types; %0 is invalid">;
 def err_ptrauth_qualifier_redundant : Error<
   "type %0 is already %1-qualified">;
 def err_ptrauth_qualifier_bad_arg_count : Error<
-  "%0 qualifier must take between 1 and 3 arguments">;
+  "'__ptrauth' qualifier must take between 1 and 3 arguments">;
 def err_ptrauth_arg_not_ice : Error<
-  "argument to __ptrauth must be an integer constant expression">;
+  "argument to '__ptrauth' must be an integer constant expression">;
 def err_ptrauth_address_discrimination_invalid : Error<
-  "address discrimination flag for __ptrauth must be 0 or 1; value is %0">;
+  "invalid address discrimination flag '%0'; '__ptrauth' requires '0' or '1'">;
 def err_ptrauth_extra_discriminator_invalid : Error<
-  "extra discriminator for __ptrauth must be between "
-  "0 and %1; value is %0">;
+  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between '0' and '%1'">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -3963,7 +3962,7 @@ def note_cannot_use_trivial_abi_reason : Note<
   "it is polymorphic|"
   "it has a base of a non-trivial class type|it has a virtual base|"
   "it has a __weak field|it has a field of a non-trivial class type|"
-  "it has an address-discriminated __ptrauth field}1">;
+  "it has an address-discriminated '__ptrauth' field}1">;
 
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
@@ -5039,8 +5038,8 @@ def note_ovl_candidate_bad_ownership : Note<
     "__autoreleasing}5 ownership">;
 def note_ovl_candidate_bad_ptrauth : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "%ordinal8 argument (%3) has %select{no ptrauth|%5}4 qualifier,"
-    " but parameter has %select{no ptrauth|%7}6 qualifier">;
+    "%ordinal8 argument (%3) has %select{no '__ptrauth'|%5}4 qualifier,"
+    " but parameter has %select{no '__ptrauth'|%7}6 qualifier">;
 def note_ovl_candidate_bad_cvr_this : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "'this' argument has type %3, but method is not marked "
@@ -6136,7 +6135,7 @@ def note_deleted_special_member_class_subobject : Note<
   "%select{default|corresponding|default|default|default}4 constructor}0|"
   "destructor}5"
   "%select{||s||}4"
-  "|is an ObjC pointer|has an address-discriminated ptrauth qualifier}6">;
+  "|is an ObjC pointer|has an address-discriminated '__ptrauth' qualifier}6">;
 def note_default_constructed_field
     : Note<"default constructed field %0 declared here">;
 def note_deleted_default_ctor_uninit_field : Note<
@@ -8991,7 +8990,7 @@ def err_typecheck_incompatible_ptrauth : Error<
   "|%diff{sending $ to parameter of type $|"
   "sending to parameter of different type}0,1"
   "|%diff{casting $ to type $|casting between types}0,1}2"
-  " changes pointer-authentication of pointee type">;
+  " changes pointer authentication of pointee type">;
 def err_typecheck_comparison_of_distinct_blocks : Error<
   "comparison of distinct block types%diff{ ($ and $)|}0,1">;
 
@@ -9399,7 +9398,7 @@ def ext_typecheck_cond_pointer_integer_mismatch : ExtWarn<
   "%diff{ ($ and $)|}0,1">,
   InGroup<DiagGroup<"conditional-type-mismatch">>;
 def err_typecheck_cond_incompatible_ptrauth : Error<
-  "__ptrauth qualification mismatch%diff{ ($ and $)|}0,1">;
+  "'__ptrauth' qualification mismatch%diff{ ($ and $)|}0,1">;
 def err_typecheck_choose_expr_requires_constant : Error<
   "'__builtin_choose_expr' requires a constant expression">;
 def warn_unused_expr : Warning<"expression result unused">,

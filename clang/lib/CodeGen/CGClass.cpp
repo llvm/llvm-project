@@ -929,9 +929,9 @@ namespace {
       Qualifiers Qual = F->getType().getQualifiers();
       if (Qual.hasVolatile() || Qual.hasObjCLifetime())
         return false;
-      if (PointerAuthQualifier Q = F->getType().getPointerAuth())
-        if (Q.isAddressDiscriminated())
-          return false;
+      if (PointerAuthQualifier Q = F->getType().getPointerAuth();
+          Q && Q.isAddressDiscriminated())
+        return false;
       return true;
     }
 

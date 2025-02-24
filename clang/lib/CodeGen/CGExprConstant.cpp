@@ -2154,12 +2154,11 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
   }
 
   // Apply pointer-auth signing from the destination type.
-  if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth()) {
-    if (!result.HasDestPointerAuth) {
-      value = Emitter.tryEmitConstantSignedPointer(value, PointerAuth);
-      if (!value)
-        return nullptr;
-    }
+  if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth();
+      PointerAuth && !result.HasDestPointerAuth) {
+    value = Emitter.tryEmitConstantSignedPointer(value, PointerAuth);
+    if (!value)
+      return nullptr;
   }
 
   // Convert to the appropriate type; this could be an lvalue for
