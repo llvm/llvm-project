@@ -5025,6 +5025,9 @@ static InstructionCost getScalarizationOverhead(const TargetTransformInfo &TTI,
                                                 ArrayRef<Value *> VL = {}) {
   assert(!isa<ScalableVectorType>(Ty) &&
          "ScalableVectorType is not supported.");
+  assert(getNumElements(ScalarTy) * DemandedElts.getBitWidth() ==
+             getNumElements(Ty) &&
+         "Incorrect usage.");
   if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
     assert(SLPReVec && "Only supported by REVEC.");
     // If ScalarTy is FixedVectorType, we should use CreateInsertVector instead
