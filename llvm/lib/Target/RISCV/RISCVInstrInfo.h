@@ -217,10 +217,9 @@ public:
       unsigned MinRepeats) const override;
 
   // Return if/how a given MachineInstr should be outlined.
-  virtual outliner::InstrType
-  getOutliningTypeImpl(const MachineModuleInfo &MMI,
-                       MachineBasicBlock::iterator &MBBI,
-                       unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MBBI,
+                                           unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
