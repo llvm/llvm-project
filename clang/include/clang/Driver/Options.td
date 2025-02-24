@@ -1393,6 +1393,8 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
+def flto_partitions_EQ : Joined<["--"], "flto-partitions=">, Group<hip_Group>,
+  HelpText<"Number of partitions to use for parallel full LTO codegen. Use 1 to disable partitioning.">;
 }
 
 // Clang specific/exclusive options for OpenACC.

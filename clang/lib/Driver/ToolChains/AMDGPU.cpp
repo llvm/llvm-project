@@ -21,6 +21,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
@@ -630,8 +631,11 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO()) {
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
-                  C.getDriver().getLTOMode() == LTOK_Thin);
+    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+
+    if (!ThinLTO)
+      addFullLTOPartitionOption(C.getDriver(), Args, CmdArgs);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -706,6 +710,34 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
+}
+
+static unsigned GetFullLTOPartitions(const Driver &D, const ArgList &Args) {
+  const Arg *A = Args.getLastArg(options::OPT_flto_partitions_EQ);
+  // In the absence of an option, use the number of available threads with a cap
+  // at 16 partitions. More than 16 partitions rarely benefits code splitting
+  // and can lead to more empty/small modules each with their own overhead.
+  if (!A)
+    return std::max(16u, llvm::hardware_concurrency().compute_thread_count());
+  int Value;
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || (Value < 1)) {
+    D.Diag(diag::err_drv_invalid_int_value)
+        << A->getAsString(Args) << A->getValue();
+    return 1;
+  }
+
+  return Value;
+}
+
+void amdgpu::addFullLTOPartitionOption(const Driver &D,
+                                       const llvm::opt::ArgList &Args,
+                                       llvm::opt::ArgStringList &CmdArgs) {
+  // TODO: restrict to gpu-rdc only?
+
+  if (unsigned NumParts = GetFullLTOPartitions(D, Args); NumParts > 1) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--lto-partitions=" + std::to_string(NumParts)));
+  }
 }
 
 /// AMDGPU Toolchain
