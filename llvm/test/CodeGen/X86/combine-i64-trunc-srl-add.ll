@@ -7,8 +7,9 @@ define i1 @test_ult_trunc_add(i64 %x) {
 ; X64-LABEL: test_ult_trunc_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $48, %rdi
-; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
-; X64-NEXT:    cmpl $3, %edi
+; X64-NEXT:    addl $14, %edi
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    cmpl $3, %eax
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %add = add i64 %x, 3940649673949184
@@ -22,8 +23,9 @@ define i1 @test_ult_add(i64 %x) {
 ; X64-LABEL: test_ult_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $48, %rdi
-; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
-; X64-NEXT:    cmpl $3, %edi
+; X64-NEXT:    addl $14, %edi
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    cmpl $3, %eax
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %add = add i64 3940649673949184, %x
@@ -35,8 +37,9 @@ define i1 @test_ugt_trunc_add(i64 %x) {
 ; X64-LABEL: test_ugt_trunc_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $48, %rdi
-; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
-; X64-NEXT:    cmpl $4, %edi
+; X64-NEXT:    addl $14, %edi
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    cmpl $4, %eax
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %add = add i64 %x, 3940649673949184
@@ -116,10 +119,56 @@ define i32 @test_trunc_add(i64 %x) {
 ; X64-LABEL: test_trunc_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $48, %rdi
-; X64-NEXT:    leal -65522(%rdi), %eax
+; X64-NEXT:    addl $14, %edi
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
   %add = add i64 %x, 3940649673949184
   %shr = lshr i64 %add, 48
   %conv = trunc i64 %shr to i32
   ret i32 %conv
+}
+
+; Make sure we don't crash on this test case.
+
+define i32 @pr128158(i64 %x) {
+; X64-LABEL: pr128158:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
+; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    .p2align 4
+; X64-NEXT:  .LBB9_1: # %for.body
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    cmpl $9, %eax
+; X64-NEXT:    jb .LBB9_1
+; X64-NEXT:  # %bb.2: # %exit
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+entry:
+  br label %for.body
+
+for.body:
+  %add = add i64 %x, -4294967296
+  %cmp = icmp ult i64 %add, 38654705664
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
+  ret i32 0
+}
+
+define i64 @pr128309(i64 %x) {
+; X64-LABEL: pr128309:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $18114, %eax # imm = 0x46C2
+; X64-NEXT:    addl $6, %eax
+; X64-NEXT:    andl %edi, %eax
+; X64-NEXT:    retq
+entry:
+  %shl = shl i64 %x, 48
+  %and = and i64 %shl, 5098637728136822784
+  %add = add i64 %and, 1688849860263936
+  %lshr = lshr i64 %add, 48
+  %res = and i64 %lshr, %x
+  ret i64 %res
 }

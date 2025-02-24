@@ -40,14 +40,13 @@ private:
   static void errorCallback(void *Ctx, const char *Format, ...);
   Error getParseError();
 #if LLVM_ENABLE_LIBXML2
-  xmlDocPtr CombinedDoc = nullptr;
-  std::vector<xmlDocPtr> MergedDocs;
-
-  bool Merged = false;
   struct XmlDeleter {
     void operator()(xmlChar *Ptr) { xmlFree(Ptr); }
     void operator()(xmlDoc *Ptr) { xmlFreeDoc(Ptr); }
   };
+  xmlDocPtr CombinedDoc = nullptr;
+  std::vector<xmlDocPtr> MergedDocs;
+  bool Merged = false;
   int BufferSize = 0;
   std::unique_ptr<xmlChar, XmlDeleter> Buffer;
 #endif

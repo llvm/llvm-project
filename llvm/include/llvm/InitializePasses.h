@@ -198,7 +198,7 @@ void initializeMachineDominanceFrontierPass(PassRegistry &);
 void initializeMachineDominatorTreeWrapperPassPass(PassRegistry &);
 void initializeMachineFunctionPrinterPassPass(PassRegistry &);
 void initializeMachineFunctionSplitterPass(PassRegistry &);
-void initializeMachineLateInstrsCleanupPass(PassRegistry &);
+void initializeMachineLateInstrsCleanupLegacyPass(PassRegistry &);
 void initializeMachineLICMPass(PassRegistry &);
 void initializeMachineLoopInfoWrapperPassPass(PassRegistry &);
 void initializeMachineModuleInfoWrapperPassPass(PassRegistry &);

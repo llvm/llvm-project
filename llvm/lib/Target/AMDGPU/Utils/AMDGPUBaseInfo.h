@@ -430,6 +430,7 @@ struct MIMGBaseOpcodeInfo {
   bool BVH;
   bool A16;
   bool NoReturn;
+  bool PointSampleAccel;
 };
 
 LLVM_READONLY
