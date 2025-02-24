@@ -7339,12 +7339,21 @@ hasSuitableMoveAssignmentOperatorForRelocation(CXXRecordDecl *D,
          (AllowUserDefined ? true : HasDefaultedCopyAssignment);
 }
 
+// [C++26][class.prop]
+// A class C is default-movable if
+// - overload resolution for direct-initializing an object of type C
+// from an xvalue of type C selects a constructor that is a direct member of C
+// and is neither user-provided nor deleted,
+// - overload resolution for assigning to an lvalue of type C from an xvalue of
+// type C selects an assignment operator function that is a direct member of C
+// and is neither user-provided nor deleted, and C has a destructor that is
+// neither user-provided nor deleted.
 static bool isDefaultMovable(CXXRecordDecl *D) {
-  if (!hasSuitableConstructorForRelocation(D, /*AllowUserDefined*/ false))
+  if (!hasSuitableConstructorForRelocation(D, /*AllowUserDefined=*/false))
     return false;
 
   if (!hasSuitableMoveAssignmentOperatorForRelocation(
-          D, /*AllowUserDefined*/ false))
+          D, /*AllowUserDefined=*/false))
     return false;
 
   const auto *Dtr = D->getDestructor();
@@ -7364,12 +7373,16 @@ static bool hasDeletedDestructor(CXXRecordDecl *D) {
   return false;
 }
 
+// [C++26][class.prop]
+// A class is eligible for trivial relocation unless it...
 static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
 
   for (const CXXBaseSpecifier &B : D->bases()) {
     const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
     if (!BaseDecl)
       continue;
+    // ... has any virtual base classes
+    // ... has a base class that is not a trivially relocatable class
     if (B.isVirtual() ||
         (!BaseDecl->isDependentType() && !BaseDecl->isTriviallyRelocatable()))
       return false;
@@ -7380,6 +7393,8 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
       continue;
     if (Field->getType()->isReferenceType())
       continue;
+    // ... has a non-static data member of an object type that is not
+    // of a trivially relocatable type
     QualType T = SemaRef.getASTContext().getBaseElementType(
         Field->getType().getUnqualifiedType());
     if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
@@ -7388,9 +7403,12 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
     }
   }
 
+  // ...has a deleted destructor
   return !hasDeletedDestructor(D);
 }
 
+// [C++26][class.prop]
+// A class C is a trivially relocatable class if
 void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
   if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
     return;
@@ -7401,30 +7419,38 @@ void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
       D->getTriviallyRelocatableSpecifier().isSet();
 
   bool IsTriviallyRelocatable = [&] {
+    // if it is eligible for trivial relocation
+
     if (!isEligibleForTrivialRelocation(*this, D))
       return false;
 
+    // has the trivially_relocatable_if_eligible class-property-specifier,
     if (D->isDependentType() || MarkedTriviallyRelocatable)
       return true;
 
+    // is a union with no user-declared special member functions, or
     if (D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
         !D->hasUserDeclaredCopyAssignment() &&
         !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor()) {
       return true;
     }
 
+    // is default-movable.
     return isDefaultMovable(D);
   }();
 
   D->setIsTriviallyRelocatable(IsTriviallyRelocatable);
 }
 
+// [C++26][class.prop]
+// A class C is eligible for replacement unless
 static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
 
   for (const CXXBaseSpecifier &B : D->bases()) {
     const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
     if (!BaseDecl)
       continue;
+    // it has a base class that is not a replaceable class
     if ((!BaseDecl->isDependentType() && !BaseDecl->isReplaceable()))
       return false;
   }
@@ -7433,23 +7459,16 @@ static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
     if (Field->getType()->isDependentType())
       continue;
 
-    if (Field->getType()->isReferenceType())
+    // it has a non-static data member that is not of a replaceable type,
+    if (Field->getType().isReplaceableType(SemaRef.getASTContext()))
       return false;
-
-    if (Field->getType().isConstQualified())
-      return false;
-
-    QualType T = SemaRef.getASTContext().getBaseElementType(
-        Field->getType().getUnqualifiedType());
-    if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
-      if (!RD->isReplaceable())
-        return false;
-    }
   }
 
+  // it has a deleted destructor.
   return !hasDeletedDestructor(D);
 }
 
+// [C++26][class.prop] A class C is a replaceable class if...
 void Sema::CheckCXX2CReplaceable(CXXRecordDecl *D) {
   if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
     return;
@@ -7458,6 +7477,8 @@ void Sema::CheckCXX2CReplaceable(CXXRecordDecl *D) {
 
   bool MarkedCXX2CReplaceable = D->getReplaceableSpecifier().isSet();
 
+  // This is part of "eligible for replacement", however we defer it
+  // to avoid extraneous computations.
   auto HasSuitableSMP = [&] {
     return hasSuitableConstructorForRelocation(D, /*AllowUserDefined=*/true) &&
            hasSuitableMoveAssignmentOperatorForRelocation(
@@ -7465,18 +7486,22 @@ void Sema::CheckCXX2CReplaceable(CXXRecordDecl *D) {
   };
 
   bool IsReplaceable = [&] {
+    // A class C is a replaceable class if it is eligible for replacement
     if (!isEligibleForReplacement(*this, D))
       return false;
 
+    // has the replaceable_if_eligible class-property-specifier
     if (D->isDependentType() || MarkedCXX2CReplaceable)
       return HasSuitableSMP();
 
+    // is a union with no user-declared special member functions, or
     if (D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
         !D->hasUserDeclaredCopyAssignment() &&
         !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor()) {
       return HasSuitableSMP();
     }
 
+    // is default-movable.
     return isDefaultMovable(D);
   }();
 
