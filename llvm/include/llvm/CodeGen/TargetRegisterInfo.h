@@ -1111,6 +1111,14 @@ public:
   prependOffsetExpression(const DIExpression *Expr, unsigned PrependFlags,
                           const StackOffset &Offset) const;
 
+  /// If the register corresponding to DwarfReg is a vector register that holds
+  /// a per-thread value in each lane, return the size in bytes of the lane.
+  /// Otherwise return nullopt.
+  virtual std::optional<unsigned> getDwarfRegLaneSize(int64_t DwarfReg,
+                                                      bool isEH) const {
+    return std::nullopt;
+  }
+
   /// Spill the register so it can be used by the register scavenger.
   /// Return true if the register was spilled, false otherwise.
   /// If this function does not spill the register, the scavenger
