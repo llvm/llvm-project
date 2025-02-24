@@ -28,6 +28,7 @@
 # convert_<destTypen><_sat><_roundingMode>(<sourceTypen>)
 
 import argparse
+from sys import stderr
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -40,6 +41,14 @@ args = parser.parse_args()
 
 clc = args.clc
 clspv = args.clspv
+
+
+# We don't generate clspv-specific code for clc conversions - don't allow this
+# accidentally (later checks rely on mutual exclusivity)
+if clc and clspv:
+    print("Error: clc and clspv conversions are mutually exclusive", file=stderr)
+    exit(1)
+
 
 types = [
     "char",
@@ -308,7 +317,7 @@ def generate_default_conversion(src, dst, mode):
 
 # Do not generate user-facing default conversions for clspv as they are handled
 # natively
-if clc or not clspv:
+if not clspv:
     for src in types:
         for dst in types:
             generate_default_conversion(src, dst, "")
@@ -318,7 +327,7 @@ for src in int_types:
         for mode in rounding_modes:
             # Do not generate user-facing "_rte" conversions for clspv as they
             # are handled natively
-            if clspv and not clc and mode == "_rte":
+            if clspv and mode == "_rte":
                 continue
             generate_default_conversion(src, dst, mode)
 
@@ -560,6 +569,6 @@ for src in types:
             for mode in rounding_modes:
                 # Do not generate user-facing "_rte" conversions for clspv as
                 # they are handled natively
-                if clspv and not clc and mode == "_rte":
+                if clspv and mode == "_rte":
                     continue
                 generate_float_conversion(src, dst, size, mode, "")
