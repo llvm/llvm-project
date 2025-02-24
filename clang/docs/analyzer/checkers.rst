@@ -3583,7 +3583,7 @@ The goal of this rule is to make sure that lifetime of any dynamically allocated
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
 alpha.webkit.UnretainedCallArgsChecker
-"""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that lifetime of any dynamically allocated NS or CF objects passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. NS or CF objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unretained types.
 
 The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
