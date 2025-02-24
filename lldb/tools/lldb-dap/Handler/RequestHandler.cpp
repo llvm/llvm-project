@@ -226,8 +226,8 @@ void RequestHandler::PrintWelcomeMessage() {
 }
 
 bool RequestHandler::HasInstructionGranularity(
-    const llvm::json::Object &request) {
-  if (std::optional<llvm::StringRef> value = request.getString("granularity"))
+    const llvm::json::Object &arguments) {
+  if (std::optional<llvm::StringRef> value = arguments.getString("granularity"))
     return value == "instruction";
   return false;
 }
