@@ -7,21 +7,55 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/BinaryStreamWriter.h"
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
+Error StreamOffsetHelper::addOffset(std::string Key) {
+  const uint32_t DummyValue = std::numeric_limits<uint32_t>::max();
+
+  uint32_t Offset = Stream.getOffset();
+  auto Value = std::make_pair(Offset, DummyValue);
+
+  OffsetsMaping.insert_or_assign(Key, Value);
+
+  if (Error Err = Stream.writeInteger(DummyValue))
+    return Err;
+
+  return Error::success();
+}
+
+void StreamOffsetHelper::addRewriteValue(std::string Key) {
+  auto It = OffsetsMaping.find(Key);
+  assert(It != OffsetsMaping.end() && "Offset address was not found.");
+  auto [Offset, _] = It->second;
+
+  uint32_t Value = Stream.getOffset();
+
+  std::pair<uint32_t, uint32_t> NewValue = std::make_pair(Offset, Value);
+  OffsetsMaping.insert_or_assign(Key, NewValue);
+}
+
+Error StreamOffsetHelper::rewrite() {
+  for (auto &[Key, RewriteInfo] : OffsetsMaping) {
+    auto [Position, Value] = RewriteInfo;
+    assert(Value != std::numeric_limits<uint32_t>::max());
+
+    Stream.setOffset(Position);
+    if (Error Err = Stream.writeInteger(Value))
+      return Err;
+  }
+
+  return Error::success();
+}
+
 Error RootSignatureDesc::write(raw_ostream &OS) const {
-  // Header Size + accounting for parameter offset + parameters size
-  std::vector<uint8_t> Buffer(24 + (Parameters.size() * 4) +
-                              Parameters.size_in_bytes());
+  std::vector<uint8_t> Buffer(getSizeInBytes());
   BinaryStreamWriter Writer(Buffer, llvm::endianness::little);
 
-  SmallVector<uint64_t> OffsetsToReplace;
-  SmallVector<uint32_t> ValuesToReplaceOffsetsWith;
-  const uint32_t Dummy = std::numeric_limits<uint32_t>::max();
+  StreamOffsetHelper OffsetMap(Writer);
 
   const uint32_t NumParameters = Parameters.size();
   const uint32_t Zero = 0;
@@ -32,8 +66,7 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
   if (Error Err = Writer.writeInteger(NumParameters))
     return Err;
 
-  OffsetsToReplace.push_back(Writer.getOffset());
-  if (Error Err = Writer.writeInteger(Dummy))
+  if (Error Err = OffsetMap.addOffset("header"))
     return Err;
 
   // Static samplers still not implemented
@@ -46,21 +79,28 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
   if (Error Err = Writer.writeInteger(Header.Flags))
     return Err;
 
-  ValuesToReplaceOffsetsWith.push_back(Writer.getOffset());
+  OffsetMap.addRewriteValue("header");
 
-  for (const dxbc::RootParameter &P : Parameters) {
+  for (size_t It = 0; It < Parameters.size(); It++) {
+    const auto &P = Parameters[It];
+
     if (Error Err = Writer.writeEnum(P.ParameterType))
       return Err;
+
     if (Error Err = Writer.writeEnum(P.ShaderVisibility))
       return Err;
 
-    OffsetsToReplace.push_back(Writer.getOffset());
-    if (Error Err = Writer.writeInteger(Dummy))
+    std::string Key = ("parameters" + Twine(It)).str();
+    if (Error Err = OffsetMap.addOffset(Key))
       return Err;
   }
 
-  for (const dxbc::RootParameter &P : Parameters) {
-    ValuesToReplaceOffsetsWith.push_back(Writer.getOffset());
+  for (size_t It = 0; It < Parameters.size(); It++) {
+    const auto &P = Parameters[It];
+
+    std::string Key = ("parameters" + Twine(It)).str();
+    OffsetMap.addRewriteValue(Key);
+
     switch (P.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit: {
       if (Error Err = Writer.writeInteger(P.Constants.ShaderRegister))
@@ -75,17 +115,8 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
     }
   }
 
-  assert(ValuesToReplaceOffsetsWith.size() == OffsetsToReplace.size() &&
-         "Offset missing value to replace with.");
-
-  for (size_t It = 0; It < ValuesToReplaceOffsetsWith.size(); It++) {
-    uint32_t Position = OffsetsToReplace[It];
-    uint32_t Value = ValuesToReplaceOffsetsWith[It];
-
-    Writer.setOffset(Position);
-    if (Error Err = Writer.writeInteger(Value))
-      return Err;
-  }
+  if (Error Err = OffsetMap.rewrite())
+    return Err;
 
   llvm::ArrayRef<char> BufferRef(reinterpret_cast<char *>(Buffer.data()),
                                  Buffer.size());
