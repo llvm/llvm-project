@@ -24971,6 +24971,7 @@ TEST_F(FormatTest, StructuredBindings) {
 }
 
 TEST_F(FormatTest, FileAndCode) {
+  EXPECT_EQ(FormatStyle::LK_C, guessLanguage("foo.c", ""));
   EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.cc", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.m", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.mm", ""));
@@ -25134,6 +25135,18 @@ TEST_F(FormatTest, GuessLanguageWithChildLines) {
   EXPECT_EQ(
       FormatStyle::LK_ObjC,
       guessLanguage("foo.h", "#define FOO ({ foo(); ({ NSString *s; }) })"));
+}
+
+TEST_F(FormatTest, GetLanguageByComment) {
+  EXPECT_EQ(FormatStyle::LK_C,
+            guessLanguage("foo.h", "// clang-format Language: C\n"
+                                   "int i;"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "// clang-format Language: Cpp\n"
+                                   "int DoStuff(CGRect rect);"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "// clang-format Language: ObjC\n"
+                                   "int i;"));
 }
 
 TEST_F(FormatTest, TypenameMacros) {

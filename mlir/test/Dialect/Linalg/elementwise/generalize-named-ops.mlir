@@ -14,9 +14,9 @@
 //
 func.func @unary_exp(%A : tensor<8x16x32xf32>, %B: tensor<8x16x32xf32>) ->  tensor<8x16x32xf32> {
   %r = linalg.elementwise
-               kind=#linalg.elementwise_kind<exp>
-               ins(%A : tensor<8x16x32xf32>)
-               outs(%B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
+      kind=#linalg.elementwise_kind<exp>
+      ins(%A : tensor<8x16x32xf32>)
+      outs(%B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %r : tensor<8x16x32xf32>
 }
 // -----
@@ -36,11 +36,11 @@ func.func @unary_exp(%A : tensor<8x16x32xf32>, %B: tensor<8x16x32xf32>) ->  tens
 //
 func.func @unary_transpose_broadcast_tanh(%A : tensor<32x16xf32>, %B: tensor<8x16x32xf32>) ->  tensor<8x16x32xf32> {
   %r = linalg.elementwise
-               kind=#linalg.elementwise_kind<tanh>
-               indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d1)>,
-                                affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
-               ins(%A : tensor<32x16xf32>)
-               outs(%B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
+      kind=#linalg.elementwise_kind<tanh>
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+      ins(%A : tensor<32x16xf32>)
+      outs(%B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %r : tensor<8x16x32xf32>
 }
 // -----
@@ -59,9 +59,9 @@ func.func @unary_transpose_broadcast_tanh(%A : tensor<32x16xf32>, %B: tensor<8x1
 //
 func.func @binary_div_on_memrefs(%A : memref<16x8xf32>, %B: memref<16x8xf32>, %C: memref<16x8xf32>) {
   linalg.elementwise
-               kind=#linalg.elementwise_kind<div>
-               ins(%A, %B: memref<16x8xf32>, memref<16x8xf32>)
-               outs(%C: memref<16x8xf32>)
+      kind=#linalg.elementwise_kind<div>
+      ins(%A, %B: memref<16x8xf32>, memref<16x8xf32>)
+      outs(%C: memref<16x8xf32>)
   return
 }
 // -----
@@ -80,9 +80,9 @@ func.func @binary_div_on_memrefs(%A : memref<16x8xf32>, %B: memref<16x8xf32>, %C
 //
 func.func @binary_mul_on_tensors(%A : tensor<16x8xf32>, %B: tensor<16x8xf32>, %C: tensor<16x8xf32>) ->  tensor<16x8xf32> {
   %r = linalg.elementwise
-               kind=#linalg.elementwise_kind<mul>
-               ins(%A, %B: tensor<16x8xf32>, tensor<16x8xf32>)
-               outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
+      kind=#linalg.elementwise_kind<mul>
+      ins(%A, %B: tensor<16x8xf32>, tensor<16x8xf32>)
+      outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
   return %r : tensor<16x8xf32>
 }
 // -----
@@ -102,12 +102,12 @@ func.func @binary_mul_on_tensors(%A : tensor<16x8xf32>, %B: tensor<16x8xf32>, %C
 //
 func.func @binary_transpose_a(%A : tensor<8x16xf32>, %B: tensor<16x8xf32>, %C: tensor<16x8xf32>) ->  tensor<16x8xf32> {
   %r = linalg.elementwise
-               kind=#linalg.elementwise_kind<sub>
-               indexing_maps = [affine_map<(d0, d1) -> (d1, d0)>,
-                                affine_map<(d0, d1) -> (d0, d1)>,
-                                affine_map<(d0, d1) -> (d0, d1)>]
-               ins(%A, %B: tensor<8x16xf32>, tensor<16x8xf32>)
-               outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
+      kind=#linalg.elementwise_kind<sub>
+      indexing_maps = [affine_map<(d0, d1) -> (d1, d0)>,
+                       affine_map<(d0, d1) -> (d0, d1)>,
+                       affine_map<(d0, d1) -> (d0, d1)>]
+      ins(%A, %B: tensor<8x16xf32>, tensor<16x8xf32>)
+      outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
   return %r : tensor<16x8xf32>
 }
 // -----
@@ -128,12 +128,12 @@ func.func @binary_transpose_a(%A : tensor<8x16xf32>, %B: tensor<16x8xf32>, %C: t
 //
 func.func @binary_transpose_a_broadcast_b(%A : tensor<8x16xf32>, %B: tensor<16xf32>, %C: tensor<16x8xf32>) ->  tensor<16x8xf32> {
   %r = linalg.elementwise
-               kind=#linalg.elementwise_kind<add>
-               indexing_maps = [affine_map<(d0, d1) -> (d1, d0)>,
-                                affine_map<(d0, d1) -> (d0)>,
-                                affine_map<(d0, d1) -> (d0, d1)>]
-               ins(%A, %B: tensor<8x16xf32>, tensor<16xf32>)
-               outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
+      kind=#linalg.elementwise_kind<add>
+      indexing_maps = [affine_map<(d0, d1) -> (d1, d0)>,
+                       affine_map<(d0, d1) -> (d0)>,
+                       affine_map<(d0, d1) -> (d0, d1)>]
+      ins(%A, %B: tensor<8x16xf32>, tensor<16xf32>)
+      outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
   return %r : tensor<16x8xf32>
 }
 // -----
@@ -154,12 +154,12 @@ func.func @binary_transpose_a_broadcast_b(%A : tensor<8x16xf32>, %B: tensor<16xf
 //
 func.func @ternary(%A : tensor<32x16xi1>, %B: tensor<8x16x32xf32>, %C : tensor<8x16x32xf32>, %D : tensor<8x16x32xf32>) ->  tensor<8x16x32xf32> {
   %r = linalg.elementwise
-               kind=#linalg.elementwise_kind<select>
-               indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d1)>,
-                                affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
-                                affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
-                                affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
-               ins(%A, %B, %C : tensor<32x16xi1>, tensor<8x16x32xf32>, tensor<8x16x32xf32>)
-               outs(%D: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
+      kind=#linalg.elementwise_kind<select>
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+      ins(%A, %B, %C : tensor<32x16xi1>, tensor<8x16x32xf32>, tensor<8x16x32xf32>)
+      outs(%D: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %r : tensor<8x16x32xf32>
 }

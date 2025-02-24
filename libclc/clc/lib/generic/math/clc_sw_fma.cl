@@ -20,11 +20,14 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
+#include <clc/clc_as_type.h>
 #include <clc/clcmacro.h>
+#include <clc/float/definitions.h>
 #include <clc/integer/clc_abs.h>
 #include <clc/integer/clc_clz.h>
-#include <clc/math/clc_subnormal_config.h>
+#include <clc/integer/definitions.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_mad.h>
 #include <clc/math/math.h>
 #include <clc/relational/clc_isinf.h>
 #include <clc/relational/clc_isnan.h>
@@ -39,33 +42,36 @@ struct fp {
 _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
   /* special cases */
   if (__clc_isnan(a) || __clc_isnan(b) || __clc_isnan(c) || __clc_isinf(a) ||
-      __clc_isinf(b))
-    return mad(a, b, c);
+      __clc_isinf(b)) {
+    return __clc_mad(a, b, c);
+  }
 
   /* If only c is inf, and both a,b are regular numbers, the result is c*/
-  if (__clc_isinf(c))
+  if (__clc_isinf(c)) {
     return c;
+  }
 
   a = __clc_flush_denormal_if_not_supported(a);
   b = __clc_flush_denormal_if_not_supported(b);
   c = __clc_flush_denormal_if_not_supported(c);
 
-  if (c == 0)
+  if (c == 0) {
     return a * b;
+  }
 
   struct fp st_a, st_b, st_c;
 
-  st_a.exponent = a == .0f ? 0 : ((as_uint(a) & 0x7f800000) >> 23) - 127;
-  st_b.exponent = b == .0f ? 0 : ((as_uint(b) & 0x7f800000) >> 23) - 127;
-  st_c.exponent = c == .0f ? 0 : ((as_uint(c) & 0x7f800000) >> 23) - 127;
+  st_a.exponent = a == .0f ? 0 : ((__clc_as_uint(a) & 0x7f800000) >> 23) - 127;
+  st_b.exponent = b == .0f ? 0 : ((__clc_as_uint(b) & 0x7f800000) >> 23) - 127;
+  st_c.exponent = c == .0f ? 0 : ((__clc_as_uint(c) & 0x7f800000) >> 23) - 127;
 
-  st_a.mantissa = a == .0f ? 0 : (as_uint(a) & 0x7fffff) | 0x800000;
-  st_b.mantissa = b == .0f ? 0 : (as_uint(b) & 0x7fffff) | 0x800000;
-  st_c.mantissa = c == .0f ? 0 : (as_uint(c) & 0x7fffff) | 0x800000;
+  st_a.mantissa = a == .0f ? 0 : (__clc_as_uint(a) & 0x7fffff) | 0x800000;
+  st_b.mantissa = b == .0f ? 0 : (__clc_as_uint(b) & 0x7fffff) | 0x800000;
+  st_c.mantissa = c == .0f ? 0 : (__clc_as_uint(c) & 0x7fffff) | 0x800000;
 
-  st_a.sign = as_uint(a) & 0x80000000;
-  st_b.sign = as_uint(b) & 0x80000000;
-  st_c.sign = as_uint(c) & 0x80000000;
+  st_a.sign = __clc_as_uint(a) & 0x80000000;
+  st_b.sign = __clc_as_uint(b) & 0x80000000;
+  st_c.sign = __clc_as_uint(c) & 0x80000000;
 
   // Multiplication.
   // Move the product to the highest bits to maximize precision
@@ -137,8 +143,9 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
   ulong grs_bits = (0x4ul << (C_ADJUST - 3 + overflow_bits));
 
   // round to nearest even
-  if ((trunc_bits > grs_bits) || (trunc_bits == grs_bits && last_bit != 0))
+  if ((trunc_bits > grs_bits) || (trunc_bits == grs_bits && last_bit != 0)) {
     st_fma.mantissa += (1ul << (C_ADJUST + overflow_bits));
+  }
 
   // Shift mantissa back to bit 23
   st_fma.mantissa = (st_fma.mantissa >> (C_ADJUST + overflow_bits));
@@ -149,19 +156,23 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
     st_fma.mantissa >>= 1;
   }
 
-  if (st_fma.mantissa == 0)
+  if (st_fma.mantissa == 0) {
     return .0f;
+  }
 
   // Flating point range limit
-  if (st_fma.exponent > 127)
-    return as_float(as_uint(INFINITY) | st_fma.sign);
+  if (st_fma.exponent > 127) {
+    return __clc_as_float(__clc_as_uint(INFINITY) | st_fma.sign);
+  }
 
   // Flush denormals
-  if (st_fma.exponent <= -127)
-    return as_float(st_fma.sign);
+  if (st_fma.exponent <= -127) {
+    return __clc_as_float(st_fma.sign);
+  }
 
-  return as_float(st_fma.sign | ((st_fma.exponent + 127) << 23) |
-                  ((uint)st_fma.mantissa & 0x7fffff));
+  return __clc_as_float(st_fma.sign | ((st_fma.exponent + 127) << 23) |
+                        ((uint)st_fma.mantissa & 0x7fffff));
 }
+
 _CLC_TERNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_sw_fma, float,
                        float, float)

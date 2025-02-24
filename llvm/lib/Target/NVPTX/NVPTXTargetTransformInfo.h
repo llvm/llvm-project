@@ -129,6 +129,7 @@ public:
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const;
+  unsigned getAssumedAddrSpace(const Value *V) const;
 
   void collectKernelLaunchBounds(
       const Function &F,
