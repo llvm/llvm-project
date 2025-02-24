@@ -3017,8 +3017,7 @@ static void collectMapDataFromMapOperands(
     llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
     auto mapType = static_cast<llvm::omp::OpenMPOffloadMappingFlags>(
         mapOp.getMapType().value());
-    auto mapTypeAlways =
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+    auto mapTypeAlways = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
 
     mapData.OriginalValue.push_back(origValue);
     mapData.BasePointers.push_back(origValue);
