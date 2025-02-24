@@ -30,6 +30,7 @@ public:
 
   virtual void operator()(const llvm::json::Object &request) = 0;
 
+protected:
   /// Helpers used by multiple request handlers.
   /// FIXME: Move these into the DAP class?
   /// @{
@@ -48,9 +49,11 @@ public:
   // This way we can reuse the process launching logic for RestartRequest too.
   lldb::SBError LaunchProcess(const llvm::json::Object &request);
 
+  // Check if the step-granularity is `instruction`.
+  bool HasInstructionGranularity(const llvm::json::Object &request);
+
   /// @}
 
-protected:
   DAP &dap;
 };
 
@@ -128,6 +131,34 @@ class RestartRequestHandler : public RequestHandler {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral getCommand() { return "restart"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class NextRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "next"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class StepInRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "stepIn"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class StepInTargetsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "stepInTargets"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class StepOutRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "stepOut"; }
   void operator()(const llvm::json::Object &request) override;
 };
 
