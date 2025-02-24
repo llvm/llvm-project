@@ -3,11 +3,12 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format \
 // RUN:   experimental-full > %t/result.json
+// RUN: cat %t/result.json | FileCheck %s
 
 //--- cdb.json.in
 [{
   "directory": "DIR",
-  "command": "clang -g -fdebug-info-for-profiling DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -IDIR/include/ -o DIR/tu.o",
+  "command": "clang -c -g -gmodules DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -IDIR/include/ -fdebug-compilation-dir=DIR -o DIR/tu.o",
   "file": "DIR/tu.c"
 }]
 
@@ -20,3 +21,10 @@ module mod {
 
 //--- tu.c
 #include "mod.h"
+
+// Check the -fdebug-compilation-dir used for the module is the root
+// directory when current working directory optimization is in effect.
+// CHECK:  "modules": [
+// CHECK: "command-line": [
+// CHECK: "-fdebug-compilation-dir={{\/|C:|\/\/net}}",
+// CHECK:  "translation-units": [
