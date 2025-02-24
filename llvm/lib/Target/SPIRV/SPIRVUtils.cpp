@@ -819,7 +819,8 @@ void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
   for (size_t I = 0; I < SPIRVStructNumElements; ++I)
     MIB.addUse(Args[I]);
 
-  for (size_t I = SPIRVStructNumElements; I < NumElements; I += MaxNumElements) {
+  for (size_t I = SPIRVStructNumElements; I < NumElements;
+       I += MaxNumElements) {
     auto MIB = MIRBuilder.buildInstr(ContinuedOpcode);
     for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
       MIB.addUse(Args[J]);
