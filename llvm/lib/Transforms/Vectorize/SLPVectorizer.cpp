@@ -15304,7 +15304,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
           if (ExtractMask[I] == PoisonMaskElem)
             continue;
-          if (isa<UndefValue>(E->Scalars[I]))
+          if (isa<UndefValue>(StoredGS[I]))
             continue;
           auto *EI = cast<ExtractElementInst>(StoredGS[I]);
           Value *VecOp = EI->getVectorOperand();

@@ -197,12 +197,10 @@ struct ModuleAnalysisInfo {
   // Convert MBB's number to corresponding ID register.
   Register getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
     auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    auto It = BBNumToRegMap.find(Key);
-    if (It != BBNumToRegMap.end())
-      return It->second;
-    Register NewReg = Register::index2VirtReg(getNextID());
-    BBNumToRegMap[Key] = NewReg;
-    return NewReg;
+    auto [It, Inserted] = BBNumToRegMap.try_emplace(Key);
+    if (Inserted)
+      It->second = Register::index2VirtReg(getNextID());
+    return It->second;
   }
 };
 } // namespace SPIRV

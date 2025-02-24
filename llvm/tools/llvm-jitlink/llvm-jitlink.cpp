@@ -2141,7 +2141,7 @@ static Error addLibraries(Session &S,
     std::string LibName;
     bool IsPath = false;
     unsigned Position;
-    StringRef *CandidateExtensions;
+    ArrayRef<StringRef> CandidateExtensions;
     enum { Standard, Hidden } Modifier;
   };
 
@@ -2157,7 +2157,7 @@ static Error addLibraries(Session &S,
     LL.LibName = InputFile.str();
     LL.IsPath = true;
     LL.Position = InputFiles.getPosition(InputFileItr - InputFiles.begin());
-    LL.CandidateExtensions = nullptr;
+    LL.CandidateExtensions = {};
     LL.Modifier = LibraryLoad::Standard;
     LibraryLoadQueue.push_back(std::move(LL));
   }
@@ -2169,7 +2169,7 @@ static Error addLibraries(Session &S,
     LL.LibName = *LibItr;
     LL.IsPath = true;
     LL.Position = LoadHidden.getPosition(LibItr - LoadHidden.begin());
-    LL.CandidateExtensions = nullptr;
+    LL.CandidateExtensions = {};
     LL.Modifier = LibraryLoad::Hidden;
     LibraryLoadQueue.push_back(std::move(LL));
   }
@@ -2286,12 +2286,12 @@ static Error addLibraries(Session &S,
     auto CurJDSearchPaths = JDSearchPaths[&JD];
     for (StringRef SearchPath :
          concat<StringRef>(CurJDSearchPaths, SystemSearchPaths)) {
-      for (const char *LibExt : {".dylib", ".so", ".dll", ".a", ".lib"}) {
+      for (auto LibExt : LL.CandidateExtensions) {
         SmallVector<char, 256> LibPath;
         LibPath.reserve(SearchPath.size() + strlen("lib") + LL.LibName.size() +
-                        strlen(LibExt) + 2); // +2 for pathsep, null term.
+                        LibExt.size() + 2); // +2 for pathsep, null term.
         llvm::copy(SearchPath, std::back_inserter(LibPath));
-        if (StringRef(LibExt) != ".lib" && StringRef(LibExt) != ".dll")
+        if (LibExt != ".lib" && LibExt != ".dll")
           sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
         else
           sys::path::append(LibPath, LL.LibName + LibExt);
