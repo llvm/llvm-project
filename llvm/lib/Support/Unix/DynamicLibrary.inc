@@ -27,8 +27,10 @@ DynamicLibrary::HandleSet::~HandleSet() {
 void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
   void *Handle = ::dlopen(File, RTLD_LAZY | RTLD_GLOBAL);
   if (!Handle) {
-    if (Err)
+    if (Err) {
       *Err = ::dlerror();
+      ::dlerror();
+    }
     return &DynamicLibrary::Invalid;
   }
 
@@ -45,7 +47,10 @@ void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
 void DynamicLibrary::HandleSet::DLClose(void *Handle) { ::dlclose(Handle); }
 
 void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
-  return ::dlsym(Handle, Symbol);
+  auto* p = ::dlsym(Handle, Symbol);
+  ::dlerror();
+  ::dlerror();
+  return p;
 }
 
 #else // !HAVE_DLOPEN
