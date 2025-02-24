@@ -1154,6 +1154,12 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
+  // For GFX13+ memory is shared between LDS and VectorCache. LDS can be set
+  // to multiple values based on the split ratio. For now we will use default
+  // value set by HW after the reset.
+  if (STI->getFeatureBits().test(FeatureDefaultLocalMemorySize131072))
+    return 131072;
+
   unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
   // "Per CU" really means "per whatever functional block the waves of a

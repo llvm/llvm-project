@@ -2123,7 +2123,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
-   FeatureAddressableLocalMemorySize327680,
+   FeatureAddressableLocalMemorySize196608,
+   FeatureDefaultLocalMemorySize131072,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,

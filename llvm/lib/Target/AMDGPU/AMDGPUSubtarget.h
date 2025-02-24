@@ -80,6 +80,7 @@ protected:
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
+  unsigned DefaultLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
 
 public:
@@ -284,7 +285,13 @@ public:
   /// running on the same WGP or CU.
   /// For GFX10-GFX12 in WGP mode this is 128k even though each workgroup is
   /// limited to 64k.
+  //  For GFX13+ memory is shared between LDS and VectorCache. LDS can be set
+  //  to multiple values based on the split ratio. For now we will use default
+  //  value set by HW after the reset.
   unsigned getLocalMemorySize() const {
+    if (DefaultLocalMemorySize != 0)
+      return DefaultLocalMemorySize;
+
     return LocalMemorySize;
   }
 

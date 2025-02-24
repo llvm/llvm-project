@@ -431,8 +431,8 @@ define amdgpu_kernel void @used_lds_13112() {
 ; GFX10W32:   ; Occupancy: 8{{$}}
 ; GFX1100W64: ; Occupancy: 4{{$}}
 ; GFX1100W32: ; Occupancy: 8{{$}}
-; GFX1300W64: ; Occupancy: 16{{$}}
-; GFX1300W32: ; Occupancy: 16{{$}}
+; GFX1300W64: ; Occupancy: 4{{$}}
+; GFX1300W32: ; Occupancy: 8{{$}}
 @lds8252 = internal addrspace(3) global [8252 x i8] undef, align 4
 define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
   store volatile i8 1, ptr addrspace(3) @lds8252
@@ -445,8 +445,8 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
 ; GFX10W32:   ; Occupancy: 12{{$}}
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 12{{$}}
-; GFX1300W64: ; Occupancy: 16{{$}}
-; GFX1300W32: ; Occupancy: 16{{$}}
+; GFX1300W64: ; Occupancy: 8{{$}}
+; GFX1300W32: ; Occupancy: 12{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
   store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
@@ -458,8 +458,8 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
 ; GFX10W32:   ; Occupancy: 15{{$}}
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
-; GFX1300W64: ; Occupancy: 16{{$}}
-; GFX1300W32: ; Occupancy: 16{{$}}
+; GFX1300W64: ; Occupancy: 8{{$}}
+; GFX1300W32: ; Occupancy: 15{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
   store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
@@ -472,7 +472,8 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
 ; GFX1030W32: ; Occupancy: 15{{$}}
 ; GFX1100W64: ; Occupancy: 12{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
-; GFX1300:    ; Occupancy: 16{{$}}
+; GFX1300W64: ; Occupancy: 12{{$}}
+; GFX1300W32: ; Occupancy: 15{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
   store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
@@ -485,7 +486,8 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
 ; GFX1030W32: ; Occupancy: 16{{$}}
 ; GFX1100W64: ; Occupancy: 15{{$}}
 ; GFX1100W32: ; Occupancy: 16{{$}}
-; GFX1300:    ; Occupancy: 16{{$}}
+; GFX1300W64: ; Occupancy: 15{{$}}
+; GFX1300W32: ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_256() #7 {
   store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
@@ -518,7 +520,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_1024() #9 {
 ; GFX9:       ; Occupancy: 2{{$}}
 ; GFX10:      ; Occupancy: 4{{$}}
 ; GFX1100:    ; Occupancy: 4{{$}}
-; GFX1300:    ; Occupancy: 16{{$}}
+; GFX1300:    ; Occupancy: 4{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_32() #10 {
   store volatile i8 1, ptr addrspace(3) @lds8252
   ret void

@@ -18,6 +18,18 @@ def FeatureFMA : SubtargetFeature<"fmaf",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
 
+// GFX13+ has common memory for LDS and VectorCache which can be split in different ratios.
+// After the reset LDS is set to default value which can be different than
+// total addressable LDS.
+class SubtargetFeatureDefaultLocalMemorySize <int Value> : SubtargetFeature<
+  "defaultlocalmemorysize"#Value,
+  "DefaultLocalMemorySize",
+  !cast<string>(Value),
+  "Default size of local memory (in bytes) after reset"
+>;
+
+def FeatureDefaultLocalMemorySize131072 : SubtargetFeatureDefaultLocalMemorySize<131072>;
+
 // Addressable local memory size is the maximum number of bytes of LDS that can
 // be allocated to a single workgroup.
 class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
@@ -30,6 +42,7 @@ class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
 def FeatureAddressableLocalMemorySize32768 : SubtargetFeatureAddressableLocalMemorySize<32768>;
 def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMemorySize<65536>;
 def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
+def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
 class SubtargetFeatureWavefrontSize <int ValueLog2> : SubtargetFeature<
