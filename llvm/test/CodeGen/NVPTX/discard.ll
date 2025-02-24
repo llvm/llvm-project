@@ -4,10 +4,10 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-declare void  @llvm.nvvm.discard.global.L2(ptr addrspace(1) %global_ptr, i64 %size)
-declare void  @llvm.nvvm.discard.L2(ptr %ptr, i64 %size)
+declare void  @llvm.nvvm.discard.global.L2(ptr addrspace(1) %global_ptr, i64 immarg)
+declare void  @llvm.nvvm.discard.L2(ptr %ptr, i64 immarg)
 
-define void @discard_global_L2(ptr addrspace(1) %global_ptr, i64 %size) {
+define void @discard_global_L2(ptr addrspace(1) %global_ptr) {
 ; CHECK-PTX64-LABEL: discard_global_L2(
 ; CHECK-PTX64:       {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
@@ -20,7 +20,7 @@ define void @discard_global_L2(ptr addrspace(1) %global_ptr, i64 %size) {
   ret void
 }
 
-define void @discard_L2(ptr %ptr, i64 %size) {
+define void @discard_L2(ptr %ptr) {
 ; CHECK-PTX64-LABEL: discard_L2(
 ; CHECK-PTX64:       {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;

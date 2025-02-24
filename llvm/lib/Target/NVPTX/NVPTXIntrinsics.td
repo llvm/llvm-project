@@ -791,10 +791,10 @@ def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
 //Discard Intrinsics
 class DISCARD_L2_INTRS<string Addr> :
-          NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$size),
-          StrJoin<".", ["discard", Addr , "L2"]>.ret # " [$addr], $size;",
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+          StrJoin<".", ["discard", Addr , "L2"]>.ret # " [$addr], 128;",
           [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_discard", Addr , "L2"]>.ret)
-          i64:$addr, i64:$size)]>,
+          i64:$addr, (i64 128))]>,
           Requires<[hasPTX<74>, hasSM<80>]>;
 
 def DISCARD_L2        : DISCARD_L2_INTRS<"">;

@@ -638,8 +638,8 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void  @llvm.nvvm.discard.global.L2(ptr addrspace(1) %global_ptr, i64 %size)
-  declare void  @llvm.nvvm.discard.L2(ptr %ptr, i64 %size)
+  declare void  @llvm.nvvm.discard.global.L2(ptr addrspace(1) %global_ptr, i64 immarg)
+  declare void  @llvm.nvvm.discard.L2(ptr %ptr, i64 immarg)
 
 Overview:
 """""""""
