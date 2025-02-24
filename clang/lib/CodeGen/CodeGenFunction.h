@@ -4727,13 +4727,7 @@ public:
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
                                         ReturnValueSlot ReturnValue);
 
-  std::vector<std::string> HostexecFns{
-      "printf",          "fprintf",        "hostexec",      "hostexec_uint",
-      "hostexec_uint64", "hostexec_int",   "hostexec_long", "hostexec_float",
-      "hostexec_double", "hostexec_fortrt"};
-  RValue EmitHostexecAllocAndExecFns(const CallExpr *E,
-                                     const char *allocate_name,
-                                     const char *execute_name);
+  RValue EmitEmissaryExec(const CallExpr *E);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);

@@ -15,16 +15,24 @@
 #include "Debug.h"
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
+#include "EmissaryIds.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
 
-using namespace ompx;
-
+extern "C" {
+__attribute__((noinline)) void *__alt_libc_malloc(size_t sz);
+__attribute__((noinline)) void __alt_libc_free(void *ptr);
+__attribute__((noinline)) void *__llvm_omp_emissary_premalloc64(size_t sz);
+__attribute__((noinline)) void *__llvm_omp_emissary_premalloc(uint32_t sz32);
+__attribute__((noinline)) void __llvm_omp_emissary_free(void *ptr);
 __attribute__((noinline)) void *internal_malloc(uint64_t Size);
 __attribute__((noinline)) void internal_free(void *Ptr);
+}
+
+using namespace ompx;
 
 /// Memory implementation
 ///
@@ -68,21 +76,31 @@ __attribute__((noinline)) extern "C" void __asan_free_impl(uint64_t ptr,
 #endif
 #ifdef __AMDGPU__
 extern "C" {
+__attribute__((noinline)) uint64_t __ockl_devmem_request(uint64_t addr,
+                                                         uint64_t size) {
+  if (size) { // allocation request
+    [[clang::noinline]] return (uint64_t)__alt_libc_malloc((size_t)size);
+  } else { // free request
+    [[clang::noinline]] __alt_libc_free((void *)addr);
+    return 0;
+  }
+}
+
 __attribute__((noinline)) void *internal_malloc(uint64_t Size) {
 #if SANITIZER_AMDGPU
   uint64_t ptr =
       __asan_malloc_impl(Size, (uint64_t)__builtin_return_address(0));
-#else
-  uint64_t ptr = __ockl_dm_alloc(Size);
-#endif
   return (void *)ptr;
+#else
+  [[clang::noinline]] return (void *)__ockl_dm_alloc(Size);
+#endif
 }
 
 __attribute__((noinline)) void internal_free(void *Ptr) {
 #if SANITIZER_AMDGPU
   __asan_free_impl((uint64_t)Ptr, (uint64_t)__builtin_return_address(0));
 #else
-  __ockl_dm_dealloc((uint64_t)Ptr);
+  [[clang::noinline]] __ockl_dm_dealloc((uint64_t)Ptr);
 #endif
 }
 }

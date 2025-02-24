@@ -1,3 +1,13 @@
+
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+	#set(emissary_include_dir ${CMAKE_CURRENT_SOURCE_DIR}/../../emissary/include)
+  set(emissary_sources
+    src/Emissary.cpp
+    src/EmissaryFortrt.cpp
+    src/EmissaryPrint.cpp
+  )
+endif()
+
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginCommon OBJECT
@@ -6,6 +16,7 @@ add_library(PluginCommon OBJECT
   src/JIT.cpp
   src/RPC.cpp
   src/Utils/ELF.cpp
+  ${emissary_sources}
 )
 add_dependencies(PluginCommon intrinsics_gen)
 
@@ -24,6 +35,10 @@ endif()
 # Include the RPC server from the `libc` project if available.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime
+  -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
+endif()
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
 	target_link_libraries(PluginCommon PRIVATE llvmlibc_rpc_server)
 	target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
@@ -61,6 +76,7 @@ target_include_directories(PluginCommon PUBLIC
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}
+  #  ${emissary_include_dir}
 )
 
 set_target_properties(PluginCommon PROPERTIES POSITION_INDEPENDENT_CODE ON)

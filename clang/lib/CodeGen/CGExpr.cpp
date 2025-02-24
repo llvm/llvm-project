@@ -6158,17 +6158,20 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       StaticOperator = true;
   }
 
-  // GPUs can execute hostexec variadic functions, printf, and fprintf on host.
-  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) &&
-      CGM.getLangOpts().OpenMP && FnType &&
+  // Emit __llvm_omp_emissary_rpc for stubs of emissary APIs.
+  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) && FnType &&
       dyn_cast<FunctionProtoType>(FnType) &&
-      dyn_cast<FunctionProtoType>(FnType)->isVariadic() &&
-      (std::find(std::begin(HostexecFns), std::end(HostexecFns),
-                 E->getDirectCallee()->getNameAsString()) !=
-       std::end(HostexecFns)))
-    return EmitHostexecAllocAndExecFns(
-        E, E->getDirectCallee()->getNameAsString().append("_allocate").c_str(),
-        E->getDirectCallee()->getNameAsString().append("_execute").c_str());
+      dyn_cast<FunctionProtoType>(FnType)->isVariadic()) {
+    // This is a variadic function in a device compile
+    // if (emissary_exec || (openmp && (fprintf || printf))
+    if ((E->getDirectCallee()->getNameAsString() == "_emissary_exec") ||
+        // FIXME: do not call for fprintf or printf if device libc is active
+        (CGM.getLangOpts().OpenMP && 
+         ((E->getDirectCallee()->getNameAsString() == "fprintf") ||
+          (E->getDirectCallee()->getNameAsString() == "printf")))) {
+      return EmitEmissaryExec(E);
+    }
+  }
 
   auto Arguments = E->arguments();
   if (StaticOperator) {
