@@ -21,7 +21,6 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: LV: Scalar loop costs: 5.
 ; CHECK: Cost of 1 for VF 2: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-; CHECK: Cost of 1 for VF 2: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 2: vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<%3>
@@ -34,11 +33,10 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 0 for VF 2: vp<%5> = vector-pointer ir<%arrayidx7>
 ; CHECK: Cost of 16 for VF 2: WIDEN store vp<%5>, ir<%conv6>, ir<%cmp2>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK: Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK: Cost for VF 2: 86 (Estimated cost per lane: 43.
 ; CHECK: Cost of 1 for VF 4: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-; CHECK: Cost of 1 for VF 4: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 4: vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK: Cost of 0 for VF 4: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<%3>
@@ -51,11 +49,10 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 0 for VF 4: vp<%5> = vector-pointer ir<%arrayidx7>
 ; CHECK: Cost of 2 for VF 4: WIDEN store vp<%5>, ir<%conv6>, ir<%cmp2>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-; CHECK: Cost of 0 for VF 4: EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK: Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK: Cost for VF 4: 10 (Estimated cost per lane: 2.
 ; CHECK: Cost of 1 for VF 8: induction instruction   %inc = add nuw nsw i32 %i.016, 1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-; CHECK: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i32 %inc, %n
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 8: vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK: Cost of 0 for VF 8: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<%3>
@@ -68,7 +65,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 ; CHECK: Cost of 0 for VF 8: vp<%5> = vector-pointer ir<%arrayidx7>
 ; CHECK: Cost of 2 for VF 8: WIDEN store vp<%5>, ir<%conv6>, ir<%cmp2>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-; CHECK: Cost of 0 for VF 8: EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK: Cost for VF 8: 46 (Estimated cost per lane: 5.
 ; CHECK: LV: Selecting VF: 4.
 define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s, i32 %n, i16 zeroext %m) #0 {
@@ -134,7 +131,6 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 2: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 2: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 2: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 1 for VF 2: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
 ; CHECK: Cost of 0 for VF 2: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 2: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
@@ -156,7 +152,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 2: vp<[[VEC_PTR3:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 18 for VF 2: WIDEN store vp<[[VEC_PTR3]]>, ir<%conv4>
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<%0>
-; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 2: 130 (Estimated cost per lane: 65.
 ; CHECK: Cost of 1 for VF 4: induction instruction   %dec = add i32 %blkCnt.012, -1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
@@ -166,7 +162,6 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 4: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 4: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 4: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 1 for VF 4: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
 ; CHECK: Cost of 0 for VF 4: EMIT vp<[[CAN_IV:%.]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 4: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
@@ -188,7 +183,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 4: vp<[[VEC_PTR2:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 2 for VF 4: WIDEN store vp<[[VEC_PTR2]]>, ir<%conv4>
 ; CHECK: Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<%0>
-; CHECK: Cost of 0 for VF 4: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 4: 14 (Estimated cost per lane: 3.
 ; CHECK: Cost of 1 for VF 8: induction instruction   %dec = add i32 %blkCnt.012, -1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
@@ -198,7 +193,6 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 8: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 8: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 8: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 1 for VF 8: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
 ; CHECK: Cost of 0 for VF 8: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 8: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
@@ -220,7 +214,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 8: vp<[[VEC_PTR3:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 2 for VF 8: WIDEN store vp<[[VEC_PTR3]]>, ir<%conv4>
 ; CHECK: Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<{{.+}}
-; CHECK: Cost of 0 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 8: 26 (Estimated cost per lane: 3.
 ; CHECK: Cost of 1 for VF 16: induction instruction   %dec = add i32 %blkCnt.012, -1
 ; CHECK: Cost of 0 for VF 16: induction instruction   %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
@@ -230,7 +224,6 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 16: induction instruction   %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK: Cost of 0 for VF 16: induction instruction   %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK: Cost of 0 for VF 16: induction instruction   %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK: Cost of 1 for VF 16: exit condition instruction   %cmp.not = icmp eq i32 %dec, 0
 ; CHECK: Cost of 0 for VF 16: EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 16: vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK: Cost of 0 for VF 16: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[STEPS1]]>
@@ -252,7 +245,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 0 for VF 16: vp<[[VEC_PTR2:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 2 for VF 16: WIDEN store vp<[[VEC_PTR2]]>, ir<%conv4>
 ; CHECK: Cost of 0 for VF 16: EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<{{.+}}>
-; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 16: 50
 ; CHECK: LV: Selecting VF: 16.
 define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %pSrcB, ptr nocapture %pDst, i32 %blockSize) #0 {
