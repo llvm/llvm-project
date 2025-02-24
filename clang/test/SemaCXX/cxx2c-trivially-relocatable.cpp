@@ -1,13 +1,19 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
 
 class Trivial {};
+static_assert(__builtin_is_cpp_trivially_relocatable(Trivial));
 struct NonRelocatable {
     ~NonRelocatable();
 };
 static NonRelocatable NonRelocatable_g;
 
 class A trivially_relocatable_if_eligible {};
+static_assert(__builtin_is_cpp_trivially_relocatable(A));
+
+
 class B trivially_relocatable_if_eligible : Trivial{};
+static_assert(__builtin_is_cpp_trivially_relocatable(B));
+
 class C trivially_relocatable_if_eligible {
     int a;
     void* b;
@@ -15,10 +21,29 @@ class C trivially_relocatable_if_eligible {
     Trivial d[3];
     NonRelocatable& e = NonRelocatable_g;
 };
+static_assert(__builtin_is_cpp_trivially_relocatable(C));
+
+
 class D trivially_relocatable_if_eligible : Trivial {};
+static_assert(__builtin_is_cpp_trivially_relocatable(D));
+
+
 class E trivially_relocatable_if_eligible : virtual Trivial {};
+static_assert(!__builtin_is_cpp_trivially_relocatable(E));
+
 
 class F trivially_relocatable_if_eligible : NonRelocatable {};
+static_assert(!__builtin_is_cpp_trivially_relocatable(F));
+
+class G trivially_relocatable_if_eligible {
+    G(G&&);
+};
+static_assert(__builtin_is_cpp_trivially_relocatable(G));
+
+class H trivially_relocatable_if_eligible {
+    ~H();
+};
+static_assert(__builtin_is_cpp_trivially_relocatable(H));
 
 class I trivially_relocatable_if_eligible {
     NonRelocatable a;
@@ -26,30 +51,29 @@ class I trivially_relocatable_if_eligible {
     const NonRelocatable c;
     const NonRelocatable d[1];
 };
+static_assert(!__builtin_is_cpp_trivially_relocatable(I));
+
 
 class J trivially_relocatable_if_eligible:  virtual Trivial, NonRelocatable {
     NonRelocatable a;
 };
+static_assert(!__builtin_is_cpp_trivially_relocatable(J));
 
-class G trivially_relocatable_if_eligible {
-    G(G&&);
-};
-
-class H trivially_relocatable_if_eligible {
-    ~H();
-};
 
 struct Incomplete; // expected-note {{forward declaration of 'Incomplete'}}
 static_assert(__builtin_is_cpp_trivially_relocatable(Incomplete));  // expected-error {{incomplete type 'Incomplete' used in type trait expression}}
-static_assert(__builtin_is_cpp_trivially_relocatable(Trivial));
-static_assert(__builtin_is_cpp_trivially_relocatable(G));
-static_assert(__builtin_is_cpp_trivially_relocatable(H));
 static_assert(__builtin_is_cpp_trivially_relocatable(int));
 static_assert(__builtin_is_cpp_trivially_relocatable(void*));
 static_assert(!__builtin_is_cpp_trivially_relocatable(int&));
 static_assert(!__builtin_is_cpp_trivially_relocatable(Trivial&));
 static_assert(__builtin_is_cpp_trivially_relocatable(const Trivial));
 static_assert(__builtin_is_cpp_trivially_relocatable(Trivial[1]));
+static_assert(__builtin_is_cpp_trivially_relocatable(Trivial[]));
+
+struct WithConst {
+    const int i;
+};
+static_assert(__builtin_is_cpp_trivially_relocatable(WithConst));
 
 struct UserDtr {
     ~UserDtr();
@@ -115,9 +139,15 @@ struct DeletedMoveAssign {
     DeletedMoveAssign& operator=(DeletedMoveAssign&&) = delete;
 };
 
+struct DeletedDtr {
+    ~DeletedDtr() = delete;
+};
+
 static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedMove));
 static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedCopy));
 static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedMoveAssign));
+static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedDtr));
+
 
 union U {
     G g;
@@ -174,6 +204,7 @@ static_assert(__builtin_is_replaceable(DefaultedMoveAssign));
 static_assert(!__builtin_is_replaceable(DeletedMove));
 static_assert(!__builtin_is_replaceable(DeletedCopy));
 static_assert(!__builtin_is_replaceable(DeletedMoveAssign));
+static_assert(!__builtin_is_replaceable(DeletedDtr));
 
 static_assert(!__builtin_is_replaceable(UserProvidedMove));
 static_assert(!__builtin_is_replaceable(UserProvidedCopy));
@@ -275,4 +306,17 @@ void test__builtin_trivially_relocate() {
     __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '{{.*}}' with an rvalue of type 'int *'}}
     __builtin_trivially_relocate((int*)0, (int*)0, 0);
     __builtin_trivially_relocate((R*)0, (R*)0, 0);
+}
+
+void test__builtin_trivially_relocate(auto&& src, auto&&dest, auto size) {
+    __builtin_trivially_relocate(src, dest, size); // #reloc1
+}
+
+void do_test__builtin_trivially_relocate() {
+    struct S{ ~S();};
+    struct R {};
+    test__builtin_trivially_relocate((R*)0, (R*)0, 0);
+    test__builtin_trivially_relocate((S*)0, (S*)0, 0);
+    // expected-note@-1 {{'test__builtin_trivially_relocate<S *, S *, int>' requested here}}
+    // expected-error@#reloc1 {{first argument to '__builtin_trivially_relocate' must be relocatable}}
 }

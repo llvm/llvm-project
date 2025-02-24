@@ -3201,12 +3201,12 @@ private:
 
   bool isCXX2CTriviallyRelocatableKeyword(Token Tok) const;
   bool isCXX2CTriviallyRelocatableKeyword() const;
-  void ParseOptionalCXX2CTriviallyRelocatableSpecifier(
-      TriviallyRelocatableSpecifier &TRS);
+  void
+  ParseCXX2CTriviallyRelocatableSpecifier(TriviallyRelocatableSpecifier &TRS);
 
   bool isCXX2CReplaceableKeyword(Token Tok) const;
   bool isCXX2CReplaceableKeyword() const;
-  void ParseOptionalCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS);
+  void ParseCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS);
 
   bool isClassCompatibleKeyword(Token Tok) const;
   bool isClassCompatibleKeyword() const;

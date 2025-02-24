@@ -1066,7 +1066,7 @@ def ext_ms_abstract_keyword : ExtWarn<
   InGroup<MicrosoftAbstract>;
 
 def ext_relocatable_keyword : ExtWarn<
-  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
+  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
   "keyword is a C++2c extension">,
   InGroup<CXX26>;
 def warn_relocatable_keyword  : Warning<
