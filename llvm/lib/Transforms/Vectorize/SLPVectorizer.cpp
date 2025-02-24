@@ -13320,9 +13320,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   Entries.clear();
   // TODO: currently checking only for Scalars in the tree entry, need to count
   // reused elements too for better cost estimation.
-  const EdgeInfo &TEUseEI = TE == VectorizableTree.front().get()
-                                ? EdgeInfo(const_cast<TreeEntry *>(TE), 0)
-                                : TE->UserTreeIndex;
+  auto GetUserEntry = [&](const TreeEntry *TE) {
+    while (TE->UserTreeIndex && TE->UserTreeIndex.EdgeIdx == UINT_MAX)
+      TE = TE->UserTreeIndex.UserTE;
+    if (TE == VectorizableTree.front().get())
+      return EdgeInfo(const_cast<TreeEntry *>(TE), 0);
+    return TE->UserTreeIndex;
+  };
+  const EdgeInfo TEUseEI = GetUserEntry(TE);
+  if (!TEUseEI)
+    return std::nullopt;
   const Instruction *TEInsertPt = &getLastInstructionInBundle(TEUseEI.UserTE);
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
@@ -13874,15 +13881,13 @@ BoUpSLP::isGatherShuffledEntry(
   assert(VL.size() % NumParts == 0 &&
          "Number of scalars must be divisible by NumParts.");
   if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->isGather() &&
-      TE->UserTreeIndex.EdgeIdx == UINT_MAX) {
-    assert(
-        (TE->Idx == 0 ||
-         (TE->hasState() && TE->getOpcode() == Instruction::ExtractElement) ||
-         isSplat(TE->Scalars) ||
-         getSameValuesTreeEntry(TE->getMainOp(), TE->Scalars)) &&
-        "Expected splat or extractelements only node.");
+      TE->UserTreeIndex.EdgeIdx == UINT_MAX &&
+      (TE->Idx == 0 ||
+       (TE->hasState() && TE->getOpcode() == Instruction::ExtractElement) ||
+       isSplat(TE->Scalars) ||
+       (TE->hasState() &&
+        getSameValuesTreeEntry(TE->getMainOp(), TE->Scalars))))
     return {};
-  }
   unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
   SmallVector<std::optional<TTI::ShuffleKind>> Res;
   for (unsigned Part : seq<unsigned>(NumParts)) {
