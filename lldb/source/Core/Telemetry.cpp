@@ -43,7 +43,7 @@ static uint64_t ToNanosec(const SteadyTimePoint Point) {
 
 // Generate a unique string. This should be unique across different runs.
 // We build such string by combining three parts:
-// <16 random bytes>_<timestamp>_<hash of username>
+// <16 random bytes>_<timestamp>
 // This reduces the chances of getting the same UUID, even when the same
 // user runs the two copies of binary at the same time.
 static std::string MakeUUID() {
@@ -56,17 +56,9 @@ static std::string MakeUUID() {
     randomString = UUID(random_bytes).GetAsString();
   }
 
-  std::string username = "_";
-  UserIDResolver &resolver = lldb_private::HostInfo::GetUserIDResolver();
-  std::optional<llvm::StringRef> opt_username =
-      resolver.GetUserName(lldb_private::HostInfo::GetUserID());
-  if (opt_username)
-    username = *opt_username;
-
   return llvm::formatv(
-      "{0}_{1}_{2}", randomString,
-      std::chrono::steady_clock::now().time_since_epoch().count(),
-      llvm::MD5Hash(username));
+      "{0}_{1}", randomString,
+      std::chrono::steady_clock::now().time_since_epoch().count());
 }
 
 void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
@@ -90,33 +82,16 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   }
 }
 
-void MiscTelemetryInfo::serialize(Serializer &serializer) const {
-  LLDBBaseTelemetryInfo::serialize(serializer);
-  serializer.write("target_uuid", target_uuid);
-  serializer.beginObject("meta_data");
-  for (const auto &kv : meta_data)
-    serializer.write(kv.first, kv.second);
-  serializer.endObject();
-}
-
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
     : m_config(std::move(config)), m_id(MakeUUID) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
-  // Look up the session_id to assign to this entry or make one
-  // if none had been computed for this debugger.
+  // Assign the manager_id, and debugger_id, if available, to this entry.
   LLDBBaseTelemetryInfo *lldb_entry =
       llvm::dyn_cast<LLDBBaseTelemetryInfo>(entry);
-  std::string session_id = m_id;
-  if (Debugger *debugger = lldb_entry->debugger) {
-    auto session_id_pos = session_ids.find(debugger->getID());
-    if (session_id_pos != session_ids.end())
-      session_id = session_id_pos->second;
-    else
-      session_id_pos->second = session_id =
-          llvm::formatv("{0}_{1}", m_id, debugger->getID());
-  }
-  lldb_entry->SessionId = session_id;
+  lldb_entry->SessionId = m_id;
+  if (Debugger *debugger = lldb_entry->debugger)
+    lldb_entry->debugger_id = debugger->GetID();
 
   return llvm::Error::success();
 }
@@ -124,40 +99,46 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 const Config *getConfig() { return m_config.get(); }
 
 void TelemetryManager::AtDebuggerStartup(DebuggerInfo *entry) {
-  if (auto er = dispatch(entry)) {
-    LLDB_LOG(GetLog(LLDBLog::Object), "Failed to dispatch entry at startup");
+  if (llvm::Error er = dispatch(entry)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                   "Failed to dispatch entry at debugger startup: {0}");
   }
-}
 
-void TelemetryManager::AtDebuggerExit(DebuggerInfo *entry) {
-  // There must be a reference to the debugger at this point.
-  assert(entry->debugger != nullptr);
+  void TelemetryManager::AtDebuggerExit(DebuggerInfo * entry) {
+    // There must be a reference to the debugger at this point.
+    assert(entry->debugger != nullptr);
 
-  if (auto *selected_target =
-          entry->debugger->GetSelectedExecutionContext().GetTargetPtr()) {
-    if (!selected_target->IsDummyTarget()) {
-      const lldb::ProcessSP proc = selected_target->GetProcessSP();
-      if (proc == nullptr) {
-        // no process has been launched yet.
-        entry->exit_desc = {-1, "no process launched."};
-      } else {
-        entry->exit_desc = {proc->GetExitStatus(), ""};
-        if (const char *description = proc->GetExitDescription())
-          entry->exit_desc->description = std::string(description);
+    if (auto *selected_target =
+            entry->debugger->GetSelectedExecutionContext().GetTargetPtr()) {
+      if (!selected_target->IsDummyTarget()) {
+        const lldb::ProcessSP proc = selected_target->GetProcessSP();
+        if (proc == nullptr) {
+          // no process has been launched yet.
+          entry->exit_desc = {-1, "no process launched."};
+        } else {
+          entry->exit_desc = {proc->GetExitStatus(), ""};
+          if (const char *description = proc->GetExitDescription())
+            entry->exit_desc->description = std::string(description);
+        }
       }
     }
-  }
-  dispatch(entry);
-}
 
-std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
-TelemetryManager *TelemetryManager::getInstance() { return g_instance.get(); }
+    if (llvm::Error er = dispatch(entry)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                     "Failed to dispatch entry at debugger exit: {0}");
+    }
 
-void TelemetryManager::setInstance(std::unique_ptr<TelemetryManager> manager) {
-  g_instance = std::move(manager);
-}
+    std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
+    TelemetryManager *TelemetryManager::getInstance() {
+      return g_instance.get();
+    }
 
-} // namespace telemetry
+    void TelemetryManager::setInstance(
+        std::unique_ptr<TelemetryManager> manager) {
+      g_instance = std::move(manager);
+    }
+
+  } // namespace telemetry
 } // namespace lldb_private
 
 #endif // LLVM_BUILD_TELEMETRY

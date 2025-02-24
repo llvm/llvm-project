@@ -45,6 +45,7 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   std::optional<SteadyTimePoint> end_time;
   // TBD: could add some memory stats here too?
 
+  uint64_t debugger_id = 0;
   Debugger *debugger;
 
   // For dyn_cast, isa, etc operations.
@@ -70,10 +71,6 @@ struct DebuggerInfo : public LLDBBaseTelemetryInfo {
   std::string lldb_version;
   std::optional<ExitDescription> exit_desc;
 
-  std::string lldb_path;
-  std::string cwd;
-  std::string username;
-
   DebuggerInfo() = default;
 
   llvm::telemetry::KindType getKind() const override {
@@ -82,35 +79,6 @@ struct DebuggerInfo : public LLDBBaseTelemetryInfo {
 
   static bool classof(const llvm::telemetry::TelemetryInfo *T) {
     return T->getKind() == LLDBEntryKind::DebuggerInfo;
-  }
-
-  void serialize(llvm::telemetry::Serializer &serializer) const override;
-};
-
-/// The "catch-all" entry to store a set of non-standard data, such as
-/// error-messages, etc.
-struct MiscTelemetryInfo : public LLDBBaseTelemetryInfo {
-  /// If the event is/can be associated with a target entry,
-  /// this field contains that target's UUID.
-  /// <EMPTY> otherwise.
-  std::string target_uuid;
-
-  /// Set of key-value pairs for any optional (or impl-specific) data
-  llvm::StringMap<std::string> meta_data;
-
-  MiscTelemetryInfo() = default;
-
-  MiscTelemetryInfo(const MiscTelemetryInfo &other) {
-    target_uuid = other.target_uuid;
-    meta_data = other.meta_data;
-  }
-
-  llvm::telemetry::KindType getKind() const override {
-    return LLDBEntryKind::MiscInfo;
-  }
-
-  static bool classof(const llvm::telemetry::TelemetryInfo *T) {
-    return T->getKind() == LLDBEntryKind::MiscInfo;
   }
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
@@ -141,10 +109,6 @@ private:
   // Each instance of a TelemetryManager is assigned a unique ID.
   const std::string m_id;
 
-  // Map of debugger's ID to a unique session_id string.
-  // All TelemetryInfo entries emitted for the same debugger instance
-  // will get the same session_id.
-  llvm::DenseMap<lldb::user_id_t, std::string> session_ids;
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 
