@@ -2,6 +2,26 @@
 ; RUN: opt -mtriple=s390x-unknown-linux-gnu -mcpu=arch15 -passes=slp-vectorizer -S -slp-revec %s | FileCheck %s
 
 define void @e(<4 x i16> %0) {
+; CHECK-LABEL: @e(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ zeroinitializer, [[ENTRY:%.*]] ], [ zeroinitializer, [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i16> [[TMP0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i16> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i1> [[TMP7]] to <4 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp sgt <4 x i16> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <4 x i1> [[TMP10]] to <4 x i32>
+; CHECK-NEXT:    [[TMP12]] = or <4 x i32> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    br label [[VECTOR_BODY]]
+;
 entry:
   br label %vector.body
 
