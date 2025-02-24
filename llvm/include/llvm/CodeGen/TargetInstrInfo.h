@@ -1040,7 +1040,7 @@ public:
                            bool RenamableSrc = false) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
   }
-  // Similar to copycopyPhysReg, but for targets that don't do register
+  // Similar to copyPhysReg, but for targets that don't do register
   // allocation and need to copy virtual registers like NVPTX, SPIR-V, and
   // WebAssembly.
   virtual void copyReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
