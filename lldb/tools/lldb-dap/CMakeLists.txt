@@ -27,6 +27,7 @@ add_lldb_tool(lldb-dap
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
+  EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
   FunctionBreakpoint.cpp
@@ -40,6 +41,19 @@ add_lldb_tool(lldb-dap
   SourceBreakpoint.cpp
   Watchpoint.cpp
 
+  Handler/AttachRequestHandler.cpp
+  Handler/BreakpointLocationsHandler.cpp
+  Handler/CompletionsHandler.cpp
+  Handler/ConfigurationDoneRequestHandler.cpp
+  Handler/ContinueRequestHandler.cpp
+  Handler/DisconnectRequestHandler.cpp
+  Handler/EvaluateRequestHandler.cpp
+  Handler/ExceptionInfoRequestHandler.cpp
+  Handler/InitializeRequestHandler.cpp
+  Handler/LaunchRequestHandler.cpp
+  Handler/RequestHandler.cpp
+  Handler/RestartRequestHandler.cpp
+
   LINK_LIBS
     liblldb
     lldbHost
@@ -49,6 +63,8 @@ add_lldb_tool(lldb-dap
     Option
     Support
   )
+
+target_include_directories(lldb-dap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(LLDB_DAP_WELCOME_MESSAGE)
   target_compile_definitions(lldb-dap
