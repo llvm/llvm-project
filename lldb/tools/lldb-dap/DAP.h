@@ -68,7 +68,6 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
 typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
@@ -190,8 +189,7 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  std::map<std::string, RequestCallback, std::less<>> request_handlers;
-  llvm::StringMap<std::unique_ptr<RequestHandler>> new_request_handlers;
+  llvm::StringMap<std::unique_ptr<RequestHandler>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -309,8 +307,6 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  const std::map<std::string, RequestCallback> &GetRequestHandlers();
-
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
 
@@ -338,20 +334,9 @@ struct DAP {
   void SendReverseRequest(llvm::StringRef command, llvm::json::Value arguments,
                           ResponseCallback callback);
 
-  /// Registers a callback handler for a Debug Adapter Protocol request
-  ///
-  /// \param[in] request
-  ///     The name of the request following the Debug Adapter Protocol
-  ///     specification.
-  ///
-  /// \param[in] callback
-  ///     The callback to execute when the given request is triggered by the
-  ///     IDE.
-  void RegisterRequestCallback(std::string request, RequestCallback callback);
-
   /// Registers a request handler.
   template <typename Handler> void RegisterRequest() {
-    new_request_handlers[Handler::getCommand()] =
+    request_handlers[Handler::getCommand()] =
         std::make_unique<Handler>(*this);
   }
 

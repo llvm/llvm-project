@@ -758,17 +758,9 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
 
-    // Try the new request handler first.
-    auto new_handler_pos = new_request_handlers.find(command);
-    if (new_handler_pos != new_request_handlers.end()) {
+    auto new_handler_pos = request_handlers.find(command);
+    if (new_handler_pos != request_handlers.end()) {
       (*new_handler_pos->second)(object);
-      return true; // Success
-    }
-
-    // FIXME: Remove request_handlers once everything has been migrated.
-    auto handler_pos = request_handlers.find(command);
-    if (handler_pos != request_handlers.end()) {
-      handler_pos->second(*this, object);
       return true; // Success
     }
 
@@ -898,11 +890,6 @@ void DAP::SendReverseRequest(llvm::StringRef command,
       {"command", command},
       {"arguments", std::move(arguments)},
   });
-}
-
-void DAP::RegisterRequestCallback(std::string request,
-                                  RequestCallback callback) {
-  request_handlers[request] = callback;
 }
 
 lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
