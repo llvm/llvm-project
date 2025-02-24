@@ -209,13 +209,15 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // If OriginalArgType is non-pointer, use the OriginalArgType (the type cannot
   // be legally reassigned later).
   if (!isPointerTy(OriginalArgType))
-    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
+    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual,
+                                    true);
 
   Argument *Arg = F.getArg(ArgIdx);
   Type *ArgType = Arg->getType();
   if (isTypedPointerTy(ArgType)) {
     SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder);
+        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
+        SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
@@ -231,7 +233,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // type.
   if (hasPointeeTypeAttr(Arg)) {
     SPIRVType *ElementType =
-        GR->getOrCreateSPIRVType(getPointeeTypeByAttr(Arg), MIRBuilder);
+        GR->getOrCreateSPIRVType(getPointeeTypeByAttr(Arg), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
@@ -245,7 +248,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       Type *BuiltinType =
           cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
       assert(BuiltinType->isTargetExtTy() && "Expected TargetExtType");
-      return GR->getOrCreateSPIRVType(BuiltinType, MIRBuilder, ArgAccessQual);
+      return GR->getOrCreateSPIRVType(BuiltinType, MIRBuilder, ArgAccessQual,
+                                      true);
     }
 
     // Check if this is spv_assign_ptr_type assigning pointer element type.
@@ -255,7 +259,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
     Type *ElementTy =
         toTypedPointer(cast<ConstantAsMetadata>(VMD->getMetadata())->getType());
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(ElementTy, MIRBuilder);
+    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
+        ElementTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
         addressSpaceToStorageClass(
@@ -265,7 +270,7 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
   return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
-                                  ArgAccessQual);
+                                  ArgAccessQual, true);
 }
 
 static SPIRV::ExecutionModel::ExecutionModel
@@ -405,7 +410,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       FRetTy = DerivedTy;
     }
   }
-  SPIRVType *RetTy = GR->getOrCreateSPIRVType(FRetTy, MIRBuilder);
+  SPIRVType *RetTy = GR->getOrCreateSPIRVType(
+      FRetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
   FTy = fixFunctionTypeIfPtrArgs(GR, F, FTy, RetTy, ArgTypeVRegs);
   SPIRVType *FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
       FTy, RetTy, ArgTypeVRegs, MIRBuilder);
@@ -486,10 +492,12 @@ void SPIRVCallLowering::produceIndirectPtrTypes(
   // Create indirect call data types if any
   MachineFunction &MF = MIRBuilder.getMF();
   for (auto const &IC : IndirectCalls) {
-    SPIRVType *SpirvRetTy = GR->getOrCreateSPIRVType(IC.RetTy, MIRBuilder);
+    SPIRVType *SpirvRetTy = GR->getOrCreateSPIRVType(
+        IC.RetTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
     SmallVector<SPIRVType *, 4> SpirvArgTypes;
     for (size_t i = 0; i < IC.ArgTys.size(); ++i) {
-      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(IC.ArgTys[i], MIRBuilder);
+      SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(
+          IC.ArgTys[i], MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
       SpirvArgTypes.push_back(SPIRVTy);
       if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
         GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
@@ -586,7 +594,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           ArgTy = Arg.Ty;
         }
         if (ArgTy) {
-          SpvType = GR->getOrCreateSPIRVType(ArgTy, MIRBuilder);
+          SpvType = GR->getOrCreateSPIRVType(
+              ArgTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
           GR->assignSPIRVTypeToVReg(SpvType, ArgReg, MF);
         }
       }

@@ -341,9 +341,8 @@ public:
   // want to emit extra IR instructions there.
   SPIRVType *getOrCreateSPIRVType(const Type *Type,
                                   MachineIRBuilder &MIRBuilder,
-                                  SPIRV::AccessQualifier::AccessQualifier AQ =
-                                      SPIRV::AccessQualifier::ReadWrite,
-                                  bool EmitIR = true);
+                                  SPIRV::AccessQualifier::AccessQualifier AQ,
+                                  bool EmitIR);
 
   const Type *getTypeForSPIRVType(const SPIRVType *Ty) const {
     auto Res = SPIRVToLLVMType.find(Ty);
@@ -360,7 +359,7 @@ public:
   // corresponding to the given string containing the name of the builtin type.
   // Return nullptr if unable to recognize SPIRV type name from `TypeStr`.
   SPIRVType *getOrCreateSPIRVTypeByName(
-      StringRef TypeStr, MachineIRBuilder &MIRBuilder,
+      StringRef TypeStr, MachineIRBuilder &MIRBuilder, bool EmitIR,
       SPIRV::StorageClass::StorageClass SC = SPIRV::StorageClass::Function,
       SPIRV::AccessQualifier::AccessQualifier AQ =
           SPIRV::AccessQualifier::ReadWrite);
@@ -516,7 +515,7 @@ private:
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                            SPIRVType *SpvType, bool EmitIR = true,
+                            SPIRVType *SpvType, bool EmitIR,
                             bool ZeroAsNull = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
@@ -568,12 +567,14 @@ public:
                                   unsigned SPIRVOPcode, Type *LLVMTy);
   SPIRVType *getOrCreateSPIRVFloatType(unsigned BitWidth, MachineInstr &I,
                                        const SPIRVInstrInfo &TII);
-  SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder,
+                                      bool EmitIR);
   SPIRVType *getOrCreateSPIRVBoolType(MachineInstr &I,
                                       const SPIRVInstrInfo &TII);
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements,
-                                        MachineIRBuilder &MIRBuilder);
+                                        MachineIRBuilder &MIRBuilder,
+                                        bool EmitIR);
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements, MachineInstr &I,
                                         const SPIRVInstrInfo &TII);
@@ -603,7 +604,8 @@ public:
                                        const TargetExtType *ExtensionType,
                                        const SPIRVType *ElemType,
                                        uint32_t Scope, uint32_t Rows,
-                                       uint32_t Columns, uint32_t Use);
+                                       uint32_t Columns, uint32_t Use,
+                                       bool EmitIR);
   SPIRVType *
   getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccQual);
