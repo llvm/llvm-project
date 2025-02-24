@@ -162,3 +162,13 @@ end subroutine
 ! CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<i32> to !llvm.ptr
 ! CHECK: llvm.cmpxchg %[[ADDR]], %{{.*}}, %c14{{.*}} acq_rel monotonic : !llvm.ptr, i32
+
+attributes(device) subroutine testAtomic2()
+  integer(8) :: a, i, istat
+  istat = atomiccas(a, i, 14)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestatomic2()
+! CHECK: %[[VAL:.*]] = fir.convert %c14{{.*}} : (i32) -> i64
+! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<i64> to !llvm.ptr
+! CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %[[VAL]] acq_rel monotonic : !llvm.ptr, i64
