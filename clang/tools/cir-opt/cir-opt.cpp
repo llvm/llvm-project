@@ -41,6 +41,6 @@ int main(int argc, char **argv) {
 
   mlir::registerTransformsPasses();
 
-  return failed(MlirOptMain(
+  return mlir::asMainReturnCode(MlirOptMain(
       argc, argv, "Clang IR analysis and optimization tool\n", registry));
 }
