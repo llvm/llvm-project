@@ -808,7 +808,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
     EmplaceSafeString(source, "path",
                       std::string(buf, size) + '`' + frame_name);
     source.try_emplace("sourceReference", MakeDAPFrameID(frame));
-    // Markthe source as deemphasized since users will only be able to view
+    // Mark the source as deemphasized since users will only be able to view
     // assembly for these frames.
     EmplaceSafeString(source, "presentationHint", "deemphasize");
     object.try_emplace("source", std::move(source));
