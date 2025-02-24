@@ -27,7 +27,7 @@ import argparse
 import logging
 
 from mlgo.corpus import combine_training_corpus_lib
-from mlgo.corpus import parser_setup_lib
+from mlgo.corpus import flags
 
 
 def parse_args_and_run():
@@ -37,7 +37,7 @@ def parse_args_and_run():
     parser.add_argument(
         "--root_dir", type=str, help="The root dir of module paths to combine."
     )
-    parser_setup_lib.add_verbosity_arguments(parser)
+    flags.add_verbosity_arguments(parser)
     args = parser.parse_args()
     main(args)
 
