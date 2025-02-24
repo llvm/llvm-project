@@ -7400,13 +7400,6 @@ static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D) {
   return !Dtr->isDeleted();
 }
 
-static bool hasDeletedDestructor(CXXRecordDecl *D) {
-  const auto *Dtr = D->getDestructor();
-  if (Dtr)
-    return Dtr->isDeleted();
-  return false;
-}
-
 // [C++26][class.prop]
 // A class is eligible for trivial relocation unless it...
 static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
@@ -7435,7 +7428,7 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
   }
 
   // ...has a deleted destructor
-  return !hasDeletedDestructor(D);
+  return !D->hasDeletedDestructor();
 }
 
 // [C++26][class.prop]
@@ -7461,7 +7454,7 @@ static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
   }
 
   // it has a deleted destructor.
-  return !hasDeletedDestructor(D);
+  return !D->hasDeletedDestructor();
 }
 
 void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
@@ -7511,9 +7504,9 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
       return true;
 
     // is a union with no user-declared special member functions, or
-    if (IsUnion()) {
+    if (IsUnion())
       return true;
-    }
+
     // is default-movable.
     return IsDefaultMovable();
   }();
@@ -7533,9 +7526,8 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
       return HasSuitableSMP();
 
     // is a union with no user-declared special member functions, or
-    if (IsUnion()) {
+    if (IsUnion())
       return HasSuitableSMP();
-    }
 
     // is default-movable.
     return IsDefaultMovable();
