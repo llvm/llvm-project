@@ -8,6 +8,7 @@ import lldb
 
 @lldb.command()
 def fzf_history(debugger, cmdstr, ctx, result, _):
+    """Use fzf to search and select from lldb command history."""
     if sys.platform != "darwin":
         result.SetError("fzf_history supports macOS only")
         return
