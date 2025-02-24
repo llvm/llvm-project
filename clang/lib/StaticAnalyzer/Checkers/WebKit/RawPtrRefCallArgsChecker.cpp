@@ -168,9 +168,9 @@ public:
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (auto *InnerMsg = dyn_cast<ObjCMessageExpr>(Receiver)) {
           auto InnerSelector = InnerMsg->getSelector();
-          if (InnerSelector.getNameForSlot(0) == "alloc"
-            && Selector.getNameForSlot(0).starts_with("init"))
-          return;
+          if (InnerSelector.getNameForSlot(0) == "alloc" &&
+              Selector.getNameForSlot(0).starts_with("init"))
+            return;
         }
         reportBugOnReceiver(Receiver, D);
       }
@@ -360,7 +360,8 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  void reportBugOnReceiver(const Expr *CallArg, const Decl *DeclWithIssue) const {
+  void reportBugOnReceiver(const Expr *CallArg,
+                           const Decl *DeclWithIssue) const {
     assert(CallArg);
 
     const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();

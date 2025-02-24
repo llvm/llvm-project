@@ -372,7 +372,7 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
         auto QT = maybeRefToRawOperator->getConversionType();
         auto *T = QT.getTypePtrOrNull();
         return T && (T->isPointerType() || T->isReferenceType() ||
-          T->isObjCObjectPointerType());
+                     T->isObjCObjectPointerType());
       }
     }
   }
