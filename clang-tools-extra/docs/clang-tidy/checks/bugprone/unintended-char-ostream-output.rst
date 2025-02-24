@@ -17,13 +17,23 @@ integer values.
   uint8_t v = 65;
   std::cout << v; // output 'A' instead of '65'
 
-It could be fixed as
+The check will suggest casting the value to an appropriate type to indicate the
+intent, by default, it will cast to ``unsigned int`` for ``unsigned char`` and
+``int`` for ``signed char``.
 
 .. code-block:: c++
 
-  std::cout << static_cast<uint32_t>(v);
+  std::cout << static_cast<unsigned int>(v); // when v is unsigned char
+  std::cout << static_cast<int>(v); // when v is signed char
 
-Or cast to char to explicitly indicate the intent
+To avoid lengthy cast statements, add prefix ``+`` to the variable can also
+suppress warnings.
+
+.. code-block:: c++
+
+  std::cout << +v;
+
+Or cast to char to explicitly indicate that output should be a character.
 
 .. code-block:: c++
 
