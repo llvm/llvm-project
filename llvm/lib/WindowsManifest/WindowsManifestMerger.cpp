@@ -44,6 +44,9 @@ private:
     void operator()(xmlChar *Ptr) { xmlFree(Ptr); }
     void operator()(xmlDoc *Ptr) { xmlFreeDoc(Ptr); }
   };
+
+
+
   xmlDocPtr CombinedDoc = nullptr;
   std::vector<xmlDocPtr> MergedDocs;
   bool Merged = false;
