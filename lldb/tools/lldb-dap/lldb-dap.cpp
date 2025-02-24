@@ -39,6 +39,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 #include <condition_variable>
 #include <cstdio>
@@ -207,11 +208,6 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                              llvm::StringRef comm_file,
                                              lldb::pid_t debugger_pid,
                                              char *argv[]) {
-#if defined(_WIN32)
-  return llvm::createStringError(
-      "runInTerminal is only supported on POSIX systems");
-#else
-
   // On Linux with the Yama security module enabled, a process can only attach
   // to its descendants by default. In the runInTerminal case the target
   // process is launched by the client so we need to allow tracing explicitly.
@@ -220,9 +216,46 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
 #endif
 
-  RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid())
+  const char *target = target_arg.getValue();
+
+#ifdef _WIN32
+  /* Win32 provides no way to replace the process image. exec* are misnomers.
+     Neither is the adapter notified of new processes due to DebugActiveProcess
+     semantics. Hence, we create the new process in a suspended state and resume
+     it after attach.
+   */
+  std::string cmdline;
+  for (char **arg = argv; *arg != nullptr; ++arg) {
+    cmdline += *arg;
+    cmdline += ' ';
+  }
+  STARTUPINFOA si = {};
+  si.cb = sizeof(si);
+  PROCESS_INFORMATION pi = {};
+  bool res = CreateProcessA(target, cmdline.data(), NULL, NULL, FALSE,
+                            CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+  if (!res) {
+    llvm::errs() << "Failed to create process: " << GetLastError() << "\n";
+    exit(EXIT_FAILURE);
+  }
+#endif
+
+  auto comm_fifo_file = FifoFile::create(comm_file);
+  if (!comm_fifo_file) {
+    llvm::errs() << "Failed to create fifo file: " << comm_fifo_file.takeError()
+                 << "\n";
+    exit(EXIT_FAILURE);
+  }
+  RunInTerminalLauncherCommChannel comm_channel(*comm_fifo_file);
+  if (llvm::Error err = comm_channel.NotifyPid(
+#ifdef _WIN32
+          pi.dwProcessId
+#else
+          getpid()
+#endif
+          )) {
     return err;
+  }
 
   // We will wait to be attached with a timeout. We don't wait indefinitely
   // using a signal to prevent being paused forever.
@@ -235,15 +268,17 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
           std::chrono::milliseconds(timeout_in_ms))) {
     return err;
   }
-
-  const char *target = target_arg.getValue();
+#ifdef _WIN32
+  if (ResumeThread(pi.hThread) != -1)
+    exit(EXIT_SUCCESS);
+  auto error = llvm::mapLastWindowsError();
+#else
   execvp(target, argv);
-
-  std::string error = std::strerror(errno);
-  comm_channel.NotifyError(error);
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 std::move(error));
+  std::error_code error(errno, std::generic_category());
 #endif
+
+  comm_channel.NotifyError(error.message());
+  return llvm::createStringError(error, "Failed to exec target");
 }
 
 /// used only by TestVSCode_redirection_to_console.py
