@@ -597,15 +597,6 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     LabelAndGotoScopes[S] = ParentScope;
     break;
 
-  case Stmt::AttributedStmtClass: {
-    AttributedStmt *AS = cast<AttributedStmt>(S);
-    if (GetMustTailAttr(AS)) {
-      LabelAndGotoScopes[AS] = ParentScope;
-      MustTailStmts.push_back(AS);
-    }
-    break;
-  }
-
   case Stmt::OpenACCComputeConstructClass: {
     unsigned NewParentScope = Scopes.size();
     OpenACCComputeConstruct *CC = cast<OpenACCComputeConstruct>(S);
@@ -649,7 +640,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
       continue;
     }
 
-    // Cases, labels, and defaults aren't "scope parents".  It's also
+    // Cases, labels, attributes, and defaults aren't "scope parents".  It's also
     // important to handle these iteratively instead of recursively in
     // order to avoid blowing out the stack.
     while (true) {
@@ -658,7 +649,13 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
         Next = SC->getSubStmt();
       else if (LabelStmt *LS = dyn_cast<LabelStmt>(SubStmt))
         Next = LS->getSubStmt();
-      else
+      else if (AttributedStmt *AS = dyn_cast<AttributedStmt>(SubStmt)) {
+        if (GetMustTailAttr(AS)) {
+          LabelAndGotoScopes[AS] = ParentScope;
+          MustTailStmts.push_back(AS);
+        }
+        Next = AS->getSubStmt();
+      } else
         break;
 
       LabelAndGotoScopes[SubStmt] = ParentScope;

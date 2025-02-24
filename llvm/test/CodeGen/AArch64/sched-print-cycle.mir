@@ -1,8 +1,14 @@
 # RUN: llc -mtriple=arm64-apple-macos -mcpu=apple-m1 -sched-print-cycles=true \
 # RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
 
+# RUN: llc -mtriple=arm64-apple-macos -mcpu=apple-m1 -sched-print-cycles=true \
+# RUN: -passes=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
+
 # RUN: llc -mtriple=arm64-apple-macos -mcpu=apple-m1 -sched-print-cycles=false \
 # RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s --check-prefix=NOCYCLES
+
+# RUN: llc -mtriple=arm64-apple-macos -mcpu=apple-m1 -sched-print-cycles=false \
+# RUN: -passes=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s --check-prefix=NOCYCLES
 
 # REQUIRES: asserts
 ---

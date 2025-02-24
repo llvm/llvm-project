@@ -48,14 +48,17 @@
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
@@ -960,7 +963,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (getOptLevel() != CodeGenOptLevel::None &&
       !TM.targetSchedulesPostRAScheduling()) {
     if (Opt.MISchedPostRA)
-      addPass(PostMachineSchedulerPass());
+      addPass(PostMachineSchedulerPass(&TM));
     else
       addPass(PostRASchedulerPass(&TM));
   }
@@ -1144,7 +1147,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   addPass(RenameIndependentSubregsPass());
 
   // PreRA instruction scheduling.
-  addPass(MachineSchedulerPass());
+  addPass(MachineSchedulerPass(&TM));
 
   if (derived().addRegAssignmentOptimized(addPass)) {
     // Allow targets to expand pseudo instructions depending on the choice of

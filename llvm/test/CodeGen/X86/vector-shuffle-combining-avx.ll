@@ -403,13 +403,12 @@ define void @PR39483() {
 ;
 ; X86-AVX512-LABEL: PR39483:
 ; X86-AVX512:       # %bb.0: # %entry
-; X86-AVX512-NEXT:    vmovups 0, %zmm0
-; X86-AVX512-NEXT:    vmovups 64, %ymm1
-; X86-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
-; X86-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
-; X86-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X86-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1
-; X86-AVX512-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; X86-AVX512-NEXT:    vmovups 64, %ymm0
+; X86-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [18,21,24,27,30,1,4,7]
+; X86-AVX512-NEXT:    vpermt2ps 0, %zmm1, %zmm0
+; X86-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X86-AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; X86-AVX512-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vmovups %ymm0, (%eax)
 ;
 ; X64-AVX1-LABEL: PR39483:
@@ -444,13 +443,12 @@ define void @PR39483() {
 ;
 ; X64-AVX512-LABEL: PR39483:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vmovups 0, %zmm0
-; X64-AVX512-NEXT:    vmovups 64, %ymm1
-; X64-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
-; X64-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
-; X64-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1
-; X64-AVX512-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; X64-AVX512-NEXT:    vmovups 64, %ymm0
+; X64-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [18,21,24,27,30,1,4,7]
+; X64-AVX512-NEXT:    vpermt2ps 0, %zmm1, %zmm0
+; X64-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vmovups %ymm0, (%rax)
 entry:
   %wide.vec = load <24 x float>, ptr null, align 4

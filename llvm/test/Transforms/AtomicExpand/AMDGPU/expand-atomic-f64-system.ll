@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX906 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX908 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX90A %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX940 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX10 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX11 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX12 %s
@@ -139,10 +139,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -268,10 +268,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -385,10 +385,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -502,10 +502,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -619,10 +619,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
@@ -1164,10 +1164,10 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1281,10 +1281,10 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1398,10 +1398,10 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1653,10 +1653,10 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1770,10 +1770,10 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1887,10 +1887,10 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -2072,7 +2072,7 @@ attributes #1 = { "denormal-fp-mode"="dynamic,dynamic" }
 ;.
 ; GFX90A: [[META0]] = !{}
 ;.
-; GFX940: [[META0]] = !{}
+; GFX942: [[META0]] = !{}
 ;.
 ; GFX10: [[META0]] = !{}
 ;.

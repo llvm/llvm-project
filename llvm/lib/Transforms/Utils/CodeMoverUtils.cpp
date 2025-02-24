@@ -398,7 +398,7 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   // Check if I has any output/flow/anti dependences with instructions from \p
   // StartInst to \p EndInst.
   if (llvm::any_of(InstsToCheck, [&DI, &I](Instruction *CurInst) {
-        auto DepResult = DI->depends(&I, CurInst, true);
+        auto DepResult = DI->depends(&I, CurInst);
         if (DepResult && (DepResult->isOutput() || DepResult->isFlow() ||
                           DepResult->isAnti()))
           return true;

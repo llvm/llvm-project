@@ -902,9 +902,12 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 
   // Check for a splat of a constant or for a non uniform vector of constants
   // and check if the constant(s) are all powers of two.
-  if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
-    OpInfo = OK_NonUniformConstantValue;
-    if (Splat) {
+  if (Splat) {
+    // Check for a splat of a uniform value. This is not loop aware, so return
+    // true only for the obviously uniform cases (argument, globalvalue)
+    if (isa<Argument>(Splat) || isa<GlobalValue>(Splat)) {
+      OpInfo = OK_UniformValue;
+    } else if (isa<Constant>(Splat)) {
       OpInfo = OK_UniformConstantValue;
       if (auto *CI = dyn_cast<ConstantInt>(Splat)) {
         if (CI->getValue().isPowerOf2())
@@ -912,27 +915,25 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
         else if (CI->getValue().isNegatedPowerOf2())
           OpProps = OP_NegatedPowerOf2;
       }
-    } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-      bool AllPow2 = true, AllNegPow2 = true;
-      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
-        if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I))) {
-          AllPow2 &= CI->getValue().isPowerOf2();
-          AllNegPow2 &= CI->getValue().isNegatedPowerOf2();
-          if (AllPow2 || AllNegPow2)
-            continue;
-        }
-        AllPow2 = AllNegPow2 = false;
-        break;
-      }
-      OpProps = AllPow2 ? OP_PowerOf2 : OpProps;
-      OpProps = AllNegPow2 ? OP_NegatedPowerOf2 : OpProps;
     }
+  } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
+    OpInfo = OK_NonUniformConstantValue;
+    bool AllPow2 = true, AllNegPow2 = true;
+    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I))) {
+        AllPow2 &= CI->getValue().isPowerOf2();
+        AllNegPow2 &= CI->getValue().isNegatedPowerOf2();
+        if (AllPow2 || AllNegPow2)
+          continue;
+      }
+      AllPow2 = AllNegPow2 = false;
+      break;
+    }
+    OpProps = AllPow2 ? OP_PowerOf2 : OpProps;
+    OpProps = AllNegPow2 ? OP_NegatedPowerOf2 : OpProps;
+  } else if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
+    OpInfo = OK_NonUniformConstantValue;
   }
-
-  // Check for a splat of a uniform value. This is not loop aware, so return
-  // true only for the obviously uniform cases (argument, globalvalue)
-  if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
-    OpInfo = OK_UniformValue;
 
   return {OpInfo, OpProps};
 }
@@ -1109,6 +1110,16 @@ TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
   // This is mentioned in the interface description and respected by all
   // callers, but never asserted upon.
   InstructionCost Cost = TTIImpl->getVectorInstrCost(I, Val, CostKind, Index);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getInsertExtractValueCost(
+    unsigned Opcode, TTI::TargetCostKind CostKind) const {
+  assert((Opcode == Instruction::InsertValue ||
+          Opcode == Instruction::ExtractValue) &&
+         "Expecting Opcode to be insertvalue/extractvalue.");
+  InstructionCost Cost = TTIImpl->getInsertExtractValueCost(Opcode, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
