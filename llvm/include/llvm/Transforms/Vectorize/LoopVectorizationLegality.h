@@ -382,11 +382,18 @@ public:
   const LoopAccessInfo *getLAI() const { return LAI; }
 
   bool isSafeForAnyVectorWidth() const {
-    return LAI->getDepChecker().isSafeForAnyVectorWidth();
+    return LAI->getDepChecker().isSafeForAnyVectorWidth() &&
+           (!hasUncountableEarlyExit() || !getNumPotentiallyFaultingPointers());
   }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
-    return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
+    uint64_t MaxSafeVectorWidth =
+        LAI->getDepChecker().getMaxSafeVectorWidthInBits();
+    // The legalizer bails out if getMinPageSize does not return a value.
+    if (hasUncountableEarlyExit() && getNumPotentiallyFaultingPointers())
+      MaxSafeVectorWidth =
+          std::min(MaxSafeVectorWidth, uint64_t(*TTI->getMinPageSize()) * 8);
+    return MaxSafeVectorWidth;
   }
 
   /// Returns true if the loop has exactly one uncountable early exit, i.e. an
@@ -418,6 +425,19 @@ public:
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
+
+  /// Return the number of pointers in the loop that could potentially fault in
+  /// a loop with uncountable early exits.
+  unsigned getNumPotentiallyFaultingPointers() const {
+    return PotentiallyFaultingPtrs.size();
+  }
+
+  /// Return a vector of all potentially faulting pointers in a loop with
+  /// uncountable early exits.
+  const SmallVectorImpl<std::pair<const SCEV *, Type *>> *
+  getPotentiallyFaultingPointers() const {
+    return &PotentiallyFaultingPtrs;
+  }
 
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
@@ -523,6 +543,11 @@ private:
   /// but simply a statement that more work is needed to support these
   /// additional cases safely.
   bool isVectorizableEarlyExitLoop();
+
+  /// Returns true if all loads in the loop contained in \p Loads can be
+  /// analyzed as potentially faulting. Any loads that may fault are added to
+  /// the member variable PotentiallyFaultingPtrs.
+  bool analyzePotentiallyFaultingLoads(SmallVectorImpl<LoadInst *> *Loads);
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
@@ -642,6 +667,10 @@ private:
   /// Keep track of the loop edge to an uncountable exit, comprising a pair
   /// of (Exiting, Exit) blocks, if there is exactly one early exit.
   std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
+
+  /// Keep a record of all potentially faulting pointers in loops with
+  /// uncountable early exits.
+  SmallVector<std::pair<const SCEV *, Type *>, 4> PotentiallyFaultingPtrs;
 };
 
 } // namespace llvm

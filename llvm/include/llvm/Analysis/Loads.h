@@ -88,12 +88,6 @@ bool isDereferenceableAndAlignedInLoop(
     AssumptionCache *AC = nullptr,
     SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
-/// Return true if the loop \p L cannot fault on any iteration and only
-/// contains read-only memory accesses.
-bool isDereferenceableReadOnlyLoop(
-    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
-
 /// Return true if we know that executing a load from this value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
