@@ -331,12 +331,12 @@ define <vscale x 1 x i32> @ceil_nxv1f16_to_ui32(<vscale x 1 x half> %x) {
 define <vscale x 1 x i64> @ceil_nxv1f16_to_si64(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: ceil_nxv1f16_to_si64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, %hi(.LCPI22_0)
 ; CHECK-NEXT:    flh fa5, %lo(.LCPI22_0)(a0)
-; CHECK-NEXT:    fsrmi a0, 3
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
+; CHECK-NEXT:    fsrmi a0, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -388,12 +388,12 @@ define <vscale x 1 x i64> @ceil_nxv1f16_to_si64(<vscale x 1 x half> %x) {
 define <vscale x 1 x i64> @ceil_nxv1f16_to_ui64(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: ceil_nxv1f16_to_ui64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, %hi(.LCPI23_0)
 ; CHECK-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
-; CHECK-NEXT:    fsrmi a0, 3
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
+; CHECK-NEXT:    fsrmi a0, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -533,12 +533,12 @@ define <vscale x 4 x i32> @ceil_nxv4f16_to_ui32(<vscale x 4 x half> %x) {
 define <vscale x 4 x i64> @ceil_nxv4f16_to_si64(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: ceil_nxv4f16_to_si64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, %hi(.LCPI30_0)
 ; CHECK-NEXT:    flh fa5, %lo(.LCPI30_0)(a0)
-; CHECK-NEXT:    fsrmi a0, 3
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
+; CHECK-NEXT:    fsrmi a0, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -590,12 +590,12 @@ define <vscale x 4 x i64> @ceil_nxv4f16_to_si64(<vscale x 4 x half> %x) {
 define <vscale x 4 x i64> @ceil_nxv4f16_to_ui64(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: ceil_nxv4f16_to_ui64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, %hi(.LCPI31_0)
 ; CHECK-NEXT:    flh fa5, %lo(.LCPI31_0)(a0)
-; CHECK-NEXT:    fsrmi a0, 3
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
+; CHECK-NEXT:    fsrmi a0, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t

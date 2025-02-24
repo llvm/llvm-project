@@ -342,19 +342,18 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 ; RV32-NEXT:    srli a3, a3, 2
 ; RV32-NEXT:    vwaddu.vv v12, v11, v11
 ; RV32-NEXT:    vwmaccu.vx v12, a1, v11
-; RV32-NEXT:    add a1, a3, a3
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
-; RV32-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v11, v12, a3
 ; RV32-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v11, 0
+; RV32-NEXT:    add a1, a3, a3
 ; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
 ; RV32-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; RV32-NEXT:    vslideup.vx v10, v9, a3
-; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
-; RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v10, (a0), v0.t
 ; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
@@ -383,19 +382,19 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 ; RV64-NEXT:    srli a3, a3, 2
 ; RV64-NEXT:    vwaddu.vv v12, v11, v11
 ; RV64-NEXT:    vwmaccu.vx v12, a2, v11
-; RV64-NEXT:    add a1, a3, a3
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
-; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslidedown.vx v11, v12, a3
 ; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV64-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v11, 0
+; RV64-NEXT:    add a1, a3, a3
 ; RV64-NEXT:    vmerge.vim v9, v9, 1, v0
 ; RV64-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v10, v9, a3
-; RV64-NEXT:    srli a1, a4, 32
-; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    srli a1, a4, 32
 ; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v10, (a0), v0.t
 ; RV64-NEXT:    li a1, 32
@@ -689,19 +688,18 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 ; RV32-NEXT:    srli a3, a3, 2
 ; RV32-NEXT:    vwaddu.vv v12, v9, v11
 ; RV32-NEXT:    vwmaccu.vx v12, a2, v11
-; RV32-NEXT:    add a2, a3, a3
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
-; RV32-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v9, v12, a3
 ; RV32-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v9, 0
+; RV32-NEXT:    add a2, a3, a3
 ; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; RV32-NEXT:    vslideup.vx v10, v8, a3
-; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v10, (a0), v0.t
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -725,21 +723,21 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 ; RV64-NEXT:    vmv1r.v v0, v9
 ; RV64-NEXT:    vmerge.vim v9, v8, 1, v0
 ; RV64-NEXT:    srli a3, a3, 2
-; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    vwaddu.vv v12, v9, v11
 ; RV64-NEXT:    vwmaccu.vx v12, a2, v11
-; RV64-NEXT:    add a2, a3, a3
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
-; RV64-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslidedown.vx v9, v12, a3
 ; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV64-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v9, 0
+; RV64-NEXT:    add a2, a3, a3
 ; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v10, v8, a3
 ; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v10, (a0), v0.t
 ; RV64-NEXT:    li a0, 32

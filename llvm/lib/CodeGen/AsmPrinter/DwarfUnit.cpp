@@ -1149,6 +1149,8 @@ void DwarfUnit::constructTemplateValueParameterDIE(
   if (Metadata *Val = VP->getValue()) {
     if (ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Val))
       addConstantValue(ParamDIE, CI, VP->getType());
+    else if (ConstantFP *CF = mdconst::dyn_extract<ConstantFP>(Val))
+      addConstantFPValue(ParamDIE, CF);
     else if (GlobalValue *GV = mdconst::dyn_extract<GlobalValue>(Val)) {
       // We cannot describe the location of dllimport'd entities: the
       // computation of their address requires loads from the IAT.

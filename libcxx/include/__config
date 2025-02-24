@@ -663,7 +663,10 @@ typedef __char32_t char32_t;
 #    if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                     \
          __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500) ||                                                    \
         (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&                                                    \
-         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000)
+         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000) ||                                                   \
+        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) &&                                                     \
+         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000) ||                                                     \
+        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 130000)
 #      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 0
 #    else
 #      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 1
@@ -1198,6 +1201,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #  endif
 
+// TODO(LLVM 22): Remove this macro once LLVM19 support ends. __cpp_explicit_this_parameter has been set in LLVM20.
 // Clang-18 has support for deducing this, but it does not set the FTM.
 #  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 1

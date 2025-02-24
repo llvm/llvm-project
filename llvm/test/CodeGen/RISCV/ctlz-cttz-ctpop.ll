@@ -475,10 +475,10 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    beqz a0, .LBB3_2
 ; RV64M-NEXT:  # %bb.1: # %cond.false
-; RV64M-NEXT:    neg a1, a0
-; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, %hi(.LCPI3_0)
 ; RV64M-NEXT:    ld a1, %lo(.LCPI3_0)(a1)
+; RV64M-NEXT:    neg a2, a0
+; RV64M-NEXT:    and a0, a0, a2
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srli a0, a0, 58
 ; RV64M-NEXT:    lui a1, %hi(.LCPI3_1)
@@ -889,10 +889,10 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ;
 ; RV64M-LABEL: test_cttz_i64_zero_undef:
 ; RV64M:       # %bb.0:
-; RV64M-NEXT:    neg a1, a0
-; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, %hi(.LCPI7_0)
 ; RV64M-NEXT:    ld a1, %lo(.LCPI7_0)(a1)
+; RV64M-NEXT:    neg a2, a0
+; RV64M-NEXT:    and a0, a0, a2
 ; RV64M-NEXT:    mul a0, a0, a1
 ; RV64M-NEXT:    srli a0, a0, 58
 ; RV64M-NEXT:    lui a1, %hi(.LCPI7_1)

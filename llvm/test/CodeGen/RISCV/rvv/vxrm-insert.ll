@@ -393,8 +393,8 @@ define void @test10(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, pt
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vle8.v v9, (a2)
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
-; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    sub a3, a3, a4
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    bnez a3, .LBB9_2
 ; CHECK-NEXT:  .LBB9_3: # %for.end
 ; CHECK-NEXT:    ret
@@ -432,8 +432,8 @@ define void @test11(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, pt
 ; CHECK-NEXT:  .LBB10_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
-; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    sub a3, a3, a4
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    beqz a3, .LBB10_3
 ; CHECK-NEXT:  # %bb.2: # %for.body
 ; CHECK-NEXT:    # in Loop: Header=BB10_1 Depth=1

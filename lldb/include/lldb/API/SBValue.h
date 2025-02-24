@@ -442,6 +442,7 @@ public:
 
 protected:
   friend class SBBlock;
+  friend class SBCommandReturnObject;
   friend class SBFrame;
   friend class SBModule;
   friend class SBTarget;

@@ -3109,9 +3109,9 @@ define <vscale x 1 x i32> @vmand_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; NOVLOPT-NEXT:    vmand.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmand_mm:
@@ -3119,9 +3119,9 @@ define <vscale x 1 x i32> @vmand_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmand.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -3136,9 +3136,9 @@ define <vscale x 1 x i32> @vmnand_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; NOVLOPT-NEXT:    vmnand.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmnand_mm:
@@ -3146,9 +3146,9 @@ define <vscale x 1 x i32> @vmnand_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmnand.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmnand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -3163,9 +3163,9 @@ define <vscale x 1 x i32> @vmandn_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; NOVLOPT-NEXT:    vmandn.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmandn_mm:
@@ -3173,9 +3173,9 @@ define <vscale x 1 x i32> @vmandn_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmandn.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmandn.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -3190,9 +3190,9 @@ define <vscale x 1 x i32> @vmxor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; NOVLOPT-NEXT:    vmxor.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmxor_mm:
@@ -3200,9 +3200,9 @@ define <vscale x 1 x i32> @vmxor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmxor.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmxor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -3217,9 +3217,9 @@ define <vscale x 1 x i32> @vmor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, <
 ; NOVLOPT-NEXT:    vmor.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmor_mm:
@@ -3227,9 +3227,9 @@ define <vscale x 1 x i32> @vmor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, <
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmor.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -3245,9 +3245,9 @@ define <vscale x 1 x i32> @vmnor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; NOVLOPT-NEXT:    vmnor.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmnor_mm:
@@ -3255,9 +3255,9 @@ define <vscale x 1 x i32> @vmnor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmnor.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmnor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -3272,9 +3272,9 @@ define <vscale x 1 x i32> @vmorn_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; NOVLOPT-NEXT:    vmorn.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmorn_mm:
@@ -3282,9 +3282,9 @@ define <vscale x 1 x i32> @vmorn_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmorn.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmorn.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -3299,9 +3299,9 @@ define <vscale x 1 x i32> @vmxnor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; NOVLOPT-NEXT:    vmxnor.mm v8, v0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
-; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; NOVLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; NOVLOPT-NEXT:    vmv1r.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; NOVLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmxnor_mm:
@@ -3309,9 +3309,9 @@ define <vscale x 1 x i32> @vmxnor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; VLOPT-NEXT:    vmxnor.mm v8, v0, v8
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
-; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; VLOPT-NEXT:    vadd.vv v9, v9, v9, v0.t
 ; VLOPT-NEXT:    vmv1r.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; VLOPT-NEXT:    vadd.vv v8, v9, v9, v0.t
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmxnor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -5068,4 +5068,52 @@ define <vscale x 4 x float> @vfwmaccbf16_vf(<vscale x 4 x float> %a, bfloat %b, 
   %1 = call <vscale x 4 x float> @llvm.riscv.vfwmaccbf16(<vscale x 4 x float> %a, bfloat %b, <vscale x 4 x bfloat> %c, iXLen 7, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x float> @llvm.riscv.vfadd(<vscale x 4 x float> poison, <vscale x 4 x float> %1, <vscale x 4 x float> %d, iXLen 7, iXLen %vl)
   ret <vscale x 4 x float> %2
+}
+
+define <vscale x 4 x double> @vfsqrt(<vscale x 4 x float> %a) {
+; NOVLOPT-LABEL: vfsqrt:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    fsrmi a0, 0
+; NOVLOPT-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfsqrt.v v10, v8
+; NOVLOPT-NEXT:    fsrm a0
+; NOVLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; NOVLOPT-NEXT:    vmv4r.v v8, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfsqrt:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    fsrmi a0, 0
+; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; VLOPT-NEXT:    vfsqrt.v v10, v8
+; VLOPT-NEXT:    fsrm a0
+; VLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; VLOPT-NEXT:    vmv4r.v v8, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x float> @llvm.riscv.vfsqrt.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, iXLen 0, iXLen 7)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %1, iXLen 7, iXLen 6, iXLen 0)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfrsqrt7(<vscale x 4 x float> %a) {
+; NOVLOPT-LABEL: vfrsqrt7:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfrsqrt7.v v10, v8
+; NOVLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; NOVLOPT-NEXT:    vmv4r.v v8, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfrsqrt7:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; VLOPT-NEXT:    vfrsqrt7.v v10, v8
+; VLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; VLOPT-NEXT:    vmv4r.v v8, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x float> @llvm.riscv.vfrsqrt7.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, iXLen 7)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %1, iXLen 7, iXLen 6, iXLen 0)
+  ret <vscale x 4 x double> %2
 }

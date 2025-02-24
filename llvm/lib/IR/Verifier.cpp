@@ -6391,6 +6391,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+          "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_init_exec_from_input: {
+    const Argument *Arg = dyn_cast<Argument>(Call.getOperand(0));
+    Check(Arg && Arg->hasInRegAttr(),
+          "only inreg arguments to the parent function are valid as inputs to "
+          "this intrinsic",
+          &Call);
     break;
   }
   case Intrinsic::amdgcn_set_inactive_chain_arg: {

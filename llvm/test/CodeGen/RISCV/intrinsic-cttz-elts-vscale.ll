@@ -75,15 +75,15 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    addi a2, sp, 16
 ; RV32-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    li a3, -1
-; RV32-NEXT:    addi a4, sp, 32
-; RV32-NEXT:    vl2r.v v16, (a4) # Unknown-size Folded Reload
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vmsne.vi v0, v16, 0
 ; RV32-NEXT:    vlse64.v v16, (a2), zero
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    li a2, -1
+; RV32-NEXT:    addi a3, sp, 32
+; RV32-NEXT:    vl2r.v v24, (a3) # Unknown-size Folded Reload
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV32-NEXT:    vmsne.vi v0, v24, 0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV32-NEXT:    vmadd.vx v8, a3, v16
+; RV32-NEXT:    vmadd.vx v8, a2, v16
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vmerge.vim v16, v16, -1, v0

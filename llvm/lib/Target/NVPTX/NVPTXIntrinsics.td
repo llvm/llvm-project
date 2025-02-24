@@ -328,6 +328,25 @@ defm REDUX_SYNC_AND : REDUX_SYNC<"and", "b32", int_nvvm_redux_sync_and>;
 defm REDUX_SYNC_XOR : REDUX_SYNC<"xor", "b32", int_nvvm_redux_sync_xor>;
 defm REDUX_SYNC_OR : REDUX_SYNC<"or", "b32", int_nvvm_redux_sync_or>;
 
+multiclass REDUX_SYNC_F<string BinOp, string abs, string NaN> {
+  defvar intr_name = "int_nvvm_redux_sync_f" # BinOp # !subst(".", "_", abs) # !subst(".", "_", NaN);
+
+  def : NVPTXInst<(outs Float32Regs:$dst),
+                  (ins Float32Regs:$src, Int32Regs:$mask),
+                  "redux.sync." # BinOp # abs # NaN # ".f32 $dst, $src, $mask;",
+                  [(set f32:$dst, (!cast<Intrinsic>(intr_name) f32:$src, Int32Regs:$mask))]>,
+                  Requires<[hasPTX<86>, hasSM100a]>; 
+}
+
+defm REDUX_SYNC_FMIN : REDUX_SYNC_F<"min", "", "">;
+defm REDUX_SYNC_FMIN_ABS : REDUX_SYNC_F<"min", ".abs", "">;
+defm REDUX_SYNC_FMIN_NAN: REDUX_SYNC_F<"min", "", ".NaN">;
+defm REDUX_SYNC_FMIN_ABS_NAN: REDUX_SYNC_F<"min", ".abs", ".NaN">;
+defm REDUX_SYNC_FMAX : REDUX_SYNC_F<"max", "", "">;
+defm REDUX_SYNC_FMAX_ABS : REDUX_SYNC_F<"max", ".abs", "">;
+defm REDUX_SYNC_FMAX_NAN: REDUX_SYNC_F<"max", "", ".NaN">;
+defm REDUX_SYNC_FMAX_ABS_NAN: REDUX_SYNC_F<"max", ".abs", ".NaN">;
+
 } // isConvergent = true
 
 //-----------------------------------
@@ -741,9 +760,6 @@ foreach dim = [1, 2, 3, 4, 5] in {
 }
 
 //Prefetch and Prefetchu 
-class Join<string sep, list<string> lst> {
-  string ret = !foldl("", lst, a, b, !if(!eq(a, ""), b, !if(!eq(b,""), a, !strconcat(a, sep, b))));
-}
 
 class PREFETCH_INTRS<string InstName> :
           NVPTXInst<(outs), (ins Int64Regs:$addr),
@@ -753,19 +769,25 @@ class PREFETCH_INTRS<string InstName> :
           Requires<[hasPTX<80>, hasSM<90>]>;
    
 
-// Only global supports evictlast and evictnormal.
-// Other variants (local and default) only support evictnormal
-foreach level = ["L1", "L2"] in {
-  foreach addr = ["global", "local", ""] in {
-    foreach evict = !if(!eq(addr, "global"), ["evictlast", "evictnormal"], ["evictnormal"]) in {
-      defvar suffix = Join<"_", [addr, level, evict]>.ret;
-      defvar inst_name = "prefetch." # !subst("_", ".", suffix);
-      def PREFETCH_# suffix : PREFETCH_INTRS<inst_name>;
-    }
-  }
-}
+def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1">;
+def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2">;
+def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1">;
+def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1">;
+def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2">;
+def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
 
-def PREFETCHU_L1_EVICTNORMAL : PREFETCH_INTRS<"prefetchu.L1.evictnormal">;
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_normal" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_normal") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_last" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_last") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
 //-----------------------------------
 // MBarrier Functions
@@ -2671,12 +2693,6 @@ defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
 // Scalar
 
 multiclass LDU_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr),
-                      []>, Requires<[hasLDU]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr),
-                        []>, Requires<[hasLDU]>;
  def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
                !strconcat("ldu.global.", TyStr),
                       []>, Requires<[hasLDU]>;
@@ -2699,12 +2715,6 @@ defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
 
 // Elementized vector ldu
 multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
                      !strconcat("ldu.global.", TyStr), []>;
@@ -2717,12 +2727,6 @@ multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
 }
 
 multiclass VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                             regclass:$dst4), (ins MEMri:$src),
                !strconcat("ldu.global.", TyStr), []>;
@@ -2774,12 +2778,6 @@ defm INT_PTX_LDU_G_v4f32_ELE
 // during the lifetime of the kernel.
 
 multiclass LDG_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                      []>, Requires<[hasLDG]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                        []>, Requires<[hasLDG]>;
  def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
                !strconcat("ld.global.nc.", TyStr),
                       []>, Requires<[hasLDG]>;
@@ -2808,12 +2806,6 @@ defm INT_PTX_LDG_GLOBAL_f64
 
 // Elementized vector ldg
 multiclass VLDG_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
                      !strconcat("ld.global.nc.", TyStr), []>;
@@ -7574,7 +7566,7 @@ multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
   def : NVPTXInst<(outs), (ins i32imm:$reg_count),
           "setmaxnreg." # Action # ".sync.aligned.u32 $reg_count;",
           [(Intr timm:$reg_count)]>,
-    Requires<[hasAcceleratedFeatures, hasSM<90>, hasPTX<80>]>;
+    Requires<[hasArchAccelFeatures, hasSM<90>, hasPTX<80>]>;
 }
 
 defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
@@ -7682,6 +7674,48 @@ defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "2">;
 defm TCGEN05_COMMIT_S32_CG1 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "1">;
 defm TCGEN05_COMMIT_S32_CG2 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "2">;
 
+multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr),
+             !strconcat("tcgen05.shift.cta_group::", num, ".down [$tmem_addr];"),
+             [(Intr Int32Regs:$tmem_addr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
+defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
+
+multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
+  defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
+  defvar fmt_asm = StrJoin<".", [dst_fmt, src_fmt]>.ret;
+  defvar fmt_intr = StrJoin<"_", [src_fmt]>.ret;
+
+  defvar shape_mc_asm = StrJoin<".", [shape, mc]>.ret;
+  defvar shape_mc_intr = !subst("::", "_", !subst(".", "_", shape_mc_asm));
+
+  defvar intr_prefix = StrJoin<"_", ["int_nvvm_tcgen05_cp", shape_mc_intr, fmt_intr]>.ret;
+  defvar IntrCG1 = !cast<Intrinsic>(intr_prefix # "_cg1");
+  defvar IntrCG2 = !cast<Intrinsic>(intr_prefix # "_cg2");
+
+  def NAME # _cg1 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::1." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG1 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+  def NAME # _cg2 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::2." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG2 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+}
+
+foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
+  defm TCGEN05_CP_128x256b # src_fmt : TCGEN05_CP_INTR<"128x256b", src_fmt>;
+  defm TCGEN05_CP_4x256b # src_fmt   : TCGEN05_CP_INTR<"4x256b", src_fmt>;
+  defm TCGEN05_CP_128x128b # src_fmt : TCGEN05_CP_INTR<"128x128b", src_fmt>;
+  defm TCGEN05_CP_64x128_1 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::02_13">;
+  defm TCGEN05_CP_64x128_2 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::01_23">;
+  defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
+}
 } // isConvergent
 
 let hasSideEffects = 1 in {

@@ -511,39 +511,6 @@ static void addCoveragePrefixMapArg(const Driver &D, const ArgList &Args,
   }
 }
 
-/// Vectorize at all optimization levels greater than 1 except for -Oz.
-/// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
-/// enabled.
-static bool shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
-      return true;
-
-    if (A->getOption().matches(options::OPT_O0))
-      return false;
-
-    assert(A->getOption().matches(options::OPT_O) && "Must have a -O flag");
-
-    // Vectorize -Os.
-    StringRef S(A->getValue());
-    if (S == "s")
-      return true;
-
-    // Don't vectorize -Oz, unless it's the slp vectorizer.
-    if (S == "z")
-      return isSlpVec;
-
-    unsigned OptLevel = 0;
-    if (S.getAsInteger(10, OptLevel))
-      return false;
-
-    return OptLevel > 1;
-  }
-
-  return false;
-}
-
 /// Add -x lang to \p CmdArgs for \p Input.
 static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
                              ArgStringList &CmdArgs) {
@@ -7117,9 +7084,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Forward -nogpulib to -cc1.
-  if (Args.hasArg(options::OPT_nogpulib))
-    CmdArgs.push_back("-nogpulib");
+  // Forward --no-offloadlib to -cc1.
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
+    CmdArgs.push_back("--no-offloadlib");
 
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
     CmdArgs.push_back(
@@ -9282,6 +9249,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (StringRef Arg : LinkerArgs)
         CmdArgs.push_back(Args.MakeArgString(
             "--device-linker=" + TC->getTripleString() + "=" + Arg));
+
+      // Forward the LTO mode relying on the Driver's parsing.
+      if (C.getDriver().getOffloadLTOMode() == LTOK_Full)
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() + "=-flto=full"));
+      else if (C.getDriver().getOffloadLTOMode() == LTOK_Thin)
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() + "=-flto=thin"));
     }
   }
 
@@ -9289,6 +9264,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString("--host-triple=" + getToolChain().getTripleString()));
   if (Args.hasArg(options::OPT_v))
     CmdArgs.push_back("--wrapper-verbose");
+  if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("--cuda-path=") + A->getValue()));
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
@@ -9319,7 +9297,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--save-temps");
 
   // Pass in the C library for GPUs if present and not disabled.
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_r, options::OPT_nogpulib,
+  if (Args.hasFlag(options::OPT_offloadlib, OPT_no_offloadlib, true) &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_r,
                    options::OPT_nodefaultlibs, options::OPT_nolibc,
                    options::OPT_nogpulibc)) {
     forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {

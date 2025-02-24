@@ -25,9 +25,17 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
 
+#define REDUX_F32_ID_IMPL(op, abs, hasNaN)                                     \
+  hasNaN ? llvm::Intrinsic::nvvm_redux_sync_f##op##abs##_NaN                   \
+         : llvm::Intrinsic::nvvm_redux_sync_f##op##abs
+
+#define GET_REDUX_F32_ID(op, hasAbs, hasNaN)                                   \
+  hasAbs ? REDUX_F32_ID_IMPL(op, _abs, hasNaN) : REDUX_F32_ID_IMPL(op, , hasNaN)
+
 static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
-                                               NVVM::ReduxKind kind) {
-  if (!resultType->isIntegerTy(32))
+                                               NVVM::ReduxKind kind,
+                                               bool hasAbs, bool hasNaN) {
+  if (!(resultType->isIntegerTy(32) || resultType->isFloatTy()))
     llvm_unreachable("unsupported data type for redux");
 
   switch (kind) {
@@ -47,6 +55,10 @@ static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
     return llvm::Intrinsic::nvvm_redux_sync_max;
   case NVVM::ReduxKind::MIN:
     return llvm::Intrinsic::nvvm_redux_sync_min;
+  case NVVM::ReduxKind::FMIN:
+    return GET_REDUX_F32_ID(min, hasAbs, hasNaN);
+  case NVVM::ReduxKind::FMAX:
+    return GET_REDUX_F32_ID(max, hasAbs, hasNaN);
   }
   llvm_unreachable("unknown redux kind");
 }

@@ -454,8 +454,8 @@ define <4 x i64> @vwmul_v4i64_v4i32_v4i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwmul_v4i64_v4i32_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsext.vf4 v11, v8
 ; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
@@ -859,11 +859,11 @@ define <2 x i64> @vwmul_vx_v2i64_i64(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    lw a0, 0(a1)
-; RV32-NEXT:    lw a1, 4(a1)
-; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a2, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -894,18 +894,18 @@ define <2 x i16> @vwmul_v2i16_multiuse(ptr %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-LABEL: vwmul_v2i16_multiuse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vle8.v v9, (a1)
-; CHECK-NEXT:    vle8.v v10, (a2)
-; CHECK-NEXT:    vle8.v v11, (a3)
-; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v9, (a2)
+; CHECK-NEXT:    vsext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v8, v9
-; CHECK-NEXT:    vsext.vf2 v9, v10
-; CHECK-NEXT:    vsext.vf2 v10, v11
-; CHECK-NEXT:    vmul.vv v11, v12, v10
-; CHECK-NEXT:    vmul.vv v10, v8, v10
-; CHECK-NEXT:    vdivu.vv v8, v8, v9
-; CHECK-NEXT:    vor.vv v9, v11, v10
+; CHECK-NEXT:    vdivu.vv v8, v10, v8
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v11, (a3)
+; CHECK-NEXT:    vsext.vf2 v12, v9
+; CHECK-NEXT:    vsext.vf2 v9, v11
+; CHECK-NEXT:    vmul.vv v11, v12, v9
+; CHECK-NEXT:    vmul.vv v9, v10, v9
+; CHECK-NEXT:    vor.vv v9, v11, v9
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x
