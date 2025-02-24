@@ -12,6 +12,7 @@
 #include "DAPForward.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
+#include "Handler/RequestHandler.h"
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -185,6 +187,7 @@ struct DAP {
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
   std::map<std::string, RequestCallback, std::less<>> request_handlers;
+  llvm::StringMap<std::unique_ptr<RequestHandler>> new_request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -341,6 +344,12 @@ struct DAP {
   ///     The callback to execute when the given request is triggered by the
   ///     IDE.
   void RegisterRequestCallback(std::string request, RequestCallback callback);
+
+  /// Registers a request handler.
+  template <typename Handler> void RegisterRequest() {
+    new_request_handlers[Handler::getCommand()] =
+        std::make_unique<Handler>(*this);
+  }
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
