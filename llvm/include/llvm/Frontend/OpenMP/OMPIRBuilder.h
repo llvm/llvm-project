@@ -1004,12 +1004,12 @@ private:
   ///                 preheader of the loop.
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
+  /// \param LoopType Type of workshare loop.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointOrErrorTy applyStaticWorkshareLoop(DebugLoc DL,
-                                                CanonicalLoopInfo *CLI,
-                                                InsertPointTy AllocaIP,
-                                                bool NeedsBarrier);
+  InsertPointOrErrorTy applyStaticWorkshareLoop(
+      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+      omp::WorksharingLoopType LoopType, bool NeedsBarrier);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.
@@ -2665,6 +2665,15 @@ public:
   createTeams(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
               Value *NumTeamsLower = nullptr, Value *NumTeamsUpper = nullptr,
               Value *ThreadLimit = nullptr, Value *IfExpr = nullptr);
+
+  /// Generator for `#omp distribute`
+  ///
+  /// \param Loc The location where the distribute construct was encountered.
+  /// \param AllocaIP The insertion points to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  InsertPointOrErrorTy createDistribute(const LocationDescription &Loc,
+                                        InsertPointTy AllocaIP,
+                                        BodyGenCallbackTy BodyGenCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
