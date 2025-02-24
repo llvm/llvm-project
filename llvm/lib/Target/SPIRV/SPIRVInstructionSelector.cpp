@@ -273,8 +273,10 @@ private:
   bool selectPhi(Register ResVReg, const SPIRVType *ResType,
                  MachineInstr &I) const;
 
-  bool selectExtInst(Register ResVReg, const SPIRVType *RestType,
-                     MachineInstr &I, GL::GLSLExtInst GLInst) const;
+  [[maybe_unused]] bool selectExtInst(Register ResVReg,
+                                      const SPIRVType *RestType,
+                                      MachineInstr &I,
+                                      GL::GLSLExtInst GLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, CL::OpenCLExtInst CLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
@@ -903,14 +905,6 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                                              const SPIRVType *ResType,
                                              MachineInstr &I,
                                              GL::GLSLExtInst GLInst) const {
-  if (!STI.canUseExtInstSet(
-          SPIRV::InstructionSet::InstructionSet::GLSL_std_450)) {
-    std::string DiagMsg;
-    raw_string_ostream OS(DiagMsg);
-    I.print(OS, true, false, false, false);
-    DiagMsg += " is only supported with the GLSL extended instruction set.\n";
-    report_fatal_error(DiagMsg.c_str(), false);
-  }
   return selectExtInst(ResVReg, ResType, I,
                        {{SPIRV::InstructionSet::GLSL_std_450, GLInst}});
 }
@@ -3067,8 +3061,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
-  case Intrinsic::spv_reflect:
-    return selectExtInst(ResVReg, ResType, I, GL::Reflect);
   case Intrinsic::spv_rsqrt:
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:

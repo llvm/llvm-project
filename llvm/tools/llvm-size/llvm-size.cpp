@@ -901,7 +901,7 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
     OutputFormat = sysv;
   else {
     error("--format value should be one of: 'berkeley', 'darwin', 'sysv'");
-    return 1;
+    OutputFormat = berkeley;
   }
   V = Args.getLastArgValue(OPT_radix_EQ, "10");
   if (V == "8")
@@ -912,7 +912,7 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
     Radix = RadixTy::hexadecimal;
   else {
     error("--radix value should be one of: 8, 10, 16 ");
-    return 1;
+    Radix = RadixTy::decimal;
   }
 
   for (const auto *A : Args.filtered(OPT_arch_EQ)) {

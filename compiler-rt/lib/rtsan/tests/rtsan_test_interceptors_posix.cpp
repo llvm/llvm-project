@@ -401,7 +401,7 @@ TEST_F(RtsanFileTest, FcntlFlockDiesWhenRealtime) {
   ASSERT_THAT(fd, Ne(-1));
 
   auto Func = [fd]() {
-    struct flock lock {};
+    struct flock lock{};
     lock.l_type = F_RDLCK;
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
@@ -735,7 +735,7 @@ TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
     GTEST_SKIP();
   }
 
-  struct ifreq ifr {};
+  struct ifreq ifr{};
   strncpy(ifr.ifr_name, ifaddr->ifa_name, IFNAMSIZ - 1);
 
   int retval = ioctl(sock, SIOCGIFADDR, &ifr);
@@ -860,6 +860,45 @@ TEST_F(RtsanOpenedFileTest, FwriteDiesWhenRealtime) {
   const char *message = "Hello, world!";
   auto Func = [&]() { fwrite(&message, 1, 4, GetOpenFile()); };
   ExpectRealtimeDeath(Func, "fwrite");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkDiesWhenRealtime) {
+  auto Func = [&]() { unlink(GetTemporaryFilePath()); };
+  ExpectRealtimeDeath(Func, "unlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkatDiesWhenRealtime) {
+  auto Func = [&]() { unlinkat(0, GetTemporaryFilePath(), 0); };
+  ExpectRealtimeDeath(Func, "unlinkat");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, StatDiesWhenRealtime) {
+  auto Func = [&]() {
+    struct stat s{};
+    stat(GetTemporaryFilePath(), &s);
+  };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("stat"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, LstatDiesWhenRealtime) {
+  auto Func = [&]() {
+    struct stat s{};
+    lstat(GetTemporaryFilePath(), &s);
+  };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("lstat"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FstatDiesWhenRealtime) {
+  auto Func = [&]() {
+    struct stat s{};
+    fstat(GetOpenFd(), &s);
+  };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fstat"));
   ExpectNonRealtimeSurvival(Func);
 }
 
