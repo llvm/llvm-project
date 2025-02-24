@@ -8,7 +8,7 @@
 //--- cdb.json.in
 [{
   "directory": "DIR",
-  "command": "clang -c -g -gmodules DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -IDIR/include/ -fdebug-compilation-dir=DIR -o DIR/tu.o",
+  "command": "clang -target x86_64-apple-darwin -c -g -gmodules DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -IDIR/include/ -fdebug-compilation-dir=DIR -o DIR/tu.o",
   "file": "DIR/tu.c"
 }]
 
@@ -26,5 +26,5 @@ module mod {
 // directory when current working directory optimization is in effect.
 // CHECK:  "modules": [
 // CHECK: "command-line": [
-// CHECK: "-fdebug-compilation-dir={{\/|C:|\/\/net}}",
+// CHECK: "-fdebug-compilation-dir=/",
 // CHECK:  "translation-units": [
