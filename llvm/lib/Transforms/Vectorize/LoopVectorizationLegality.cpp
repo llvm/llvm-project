@@ -693,6 +693,9 @@ void LoopVectorizationLegality::addInductionPhi(
   Type *PhiTy = Phi->getType();
   const DataLayout &DL = Phi->getDataLayout();
 
+  assert((PhiTy->isIntOrPtrTy() || PhiTy->isFloatingPointTy()) &&
+         "Expected int, ptr, or FP induction phi type");
+
   // Get the widest type.
   if (PhiTy->isIntOrPtrTy()) {
     if (!WidestIndTy)
