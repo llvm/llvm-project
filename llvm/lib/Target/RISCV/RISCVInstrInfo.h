@@ -88,7 +88,7 @@ public:
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
                          const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                   const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DstReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 

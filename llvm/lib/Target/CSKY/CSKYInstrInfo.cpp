@@ -476,8 +476,8 @@ void CSKYInstrInfo::loadRegFromStackSlot(
 
 void CSKYInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I,
-                                const DebugLoc &DL, MCRegister DestReg,
-                                MCRegister SrcReg, bool KillSrc,
+                                const DebugLoc &DL, Register DestReg,
+                                Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
   if (CSKY::GPRRegClass.contains(SrcReg) &&
       CSKY::CARRYRegClass.contains(DestReg)) {
