@@ -59,26 +59,30 @@ set(FLANG_TEST_PARAMS
 
 set(FLANG_TEST_DEPENDS
   flang
-  llvm-config
-  FileCheck
-  count
-  not
   module_files
   fir-opt
   tco
   bbc
-  llvm-dis
-  llvm-objdump
-  llvm-readobj
-  split-file
   FortranDecimal
 )
+if (NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS
+    llvm-config
+    FileCheck
+    count
+    not
+    llvm-dis
+    llvm-objdump
+    llvm-readobj
+    split-file
+  )
+endif ()
 
 if (FLANG_INCLUDE_RUNTIME)
   list(APPEND FLANG_TEST_DEPENDS flang_rt.runtime)
 endif ()
 
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+if (LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 

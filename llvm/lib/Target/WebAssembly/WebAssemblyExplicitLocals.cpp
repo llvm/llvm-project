@@ -65,7 +65,7 @@ static void checkFrameBase(WebAssemblyFunctionInfo &MFI, unsigned Local,
   if (MFI.isFrameBaseVirtual() && Reg == MFI.getFrameBaseVreg()) {
     LLVM_DEBUG({
       dbgs() << "Allocating local " << Local << "for VReg "
-             << Register::virtReg2Index(Reg) << '\n';
+             << Register(Reg).virtRegIndex() << '\n';
     });
     MFI.setFrameBaseLocal(Local);
   }

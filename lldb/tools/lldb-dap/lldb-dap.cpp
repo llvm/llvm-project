@@ -7,52 +7,67 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "EventHelper.h"
 #include "FifoFiles.h"
+#include "Handler/RequestHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFile.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/Socket.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/UriParser.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Base64.h"
-#include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
-#include <cassert>
-#include <climits>
-#include <cstdarg>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
+#include <fstream>
+#include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <ostream>
 #include <set>
+#include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if defined(_WIN32)
@@ -68,6 +83,7 @@
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #endif
 
@@ -83,6 +99,9 @@ typedef int socklen_t;
 #endif
 
 using namespace lldb_dap;
+using lldb_private::NativeSocket;
+using lldb_private::Socket;
+using lldb_private::Status;
 
 namespace {
 using namespace llvm::opt;
@@ -116,18 +135,8 @@ public:
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
 
-enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
-
 /// Page size used for reporting addtional frames in the 'stackTrace' request.
 constexpr int StackPageSize = 20;
-
-/// Prints a welcome message on the editor if the preprocessor variable
-/// LLDB_DAP_WELCOME_MESSAGE is defined.
-static void PrintWelcomeMessage(DAP &dap) {
-#ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
-#endif
-}
 
 lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
   switch (variablesReference) {
@@ -139,425 +148,6 @@ lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
     return &dap.variables.registers;
   default:
     return nullptr;
-  }
-}
-
-SOCKET AcceptConnection(std::ofstream *log, int portno) {
-  // Accept a socket connection from any host on "portno".
-  SOCKET newsockfd = -1;
-  struct sockaddr_in serv_addr, cli_addr;
-  SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    if (log)
-      *log << "error: opening socket (" << strerror(errno) << ")" << std::endl;
-  } else {
-    memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    // serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    serv_addr.sin_port = htons(portno);
-    if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      if (log)
-        *log << "error: binding socket (" << strerror(errno) << ")"
-             << std::endl;
-    } else {
-      listen(sockfd, 5);
-      socklen_t clilen = sizeof(cli_addr);
-      newsockfd =
-          llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
-                                      (struct sockaddr *)&cli_addr, &clilen);
-      if (newsockfd < 0)
-        if (log)
-          *log << "error: accept (" << strerror(errno) << ")" << std::endl;
-    }
-#if defined(_WIN32)
-    closesocket(sockfd);
-#else
-    close(sockfd);
-#endif
-  }
-  return newsockfd;
-}
-
-std::vector<const char *> MakeArgv(const llvm::ArrayRef<std::string> &strs) {
-  // Create and return an array of "const char *", one for each C string in
-  // "strs" and terminate the list with a NULL. This can be used for argument
-  // vectors (argv) or environment vectors (envp) like those passed to the
-  // "main" function in C programs.
-  std::vector<const char *> argv;
-  for (const auto &s : strs)
-    argv.push_back(s.c_str());
-  argv.push_back(nullptr);
-  return argv;
-}
-
-// Send a "exited" event to indicate the process has exited.
-void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
-  llvm::json::Object event(CreateEventObject("exited"));
-  llvm::json::Object body;
-  body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
-  llvm::json::Object event(CreateEventObject("thread"));
-  llvm::json::Object body;
-  body.try_emplace("reason", "exited");
-  body.try_emplace("threadId", (int64_t)tid);
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-// Send a "continued" event to indicate the process is in the running state.
-void SendContinuedEvent(DAP &dap) {
-  lldb::SBProcess process = dap.target.GetProcess();
-  if (!process.IsValid()) {
-    return;
-  }
-
-  // If the focus thread is not set then we haven't reported any thread status
-  // to the client, so nothing to report.
-  if (!dap.configuration_done_sent || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
-    return;
-  }
-
-  llvm::json::Object event(CreateEventObject("continued"));
-  llvm::json::Object body;
-  body.try_emplace("threadId", (int64_t)dap.focus_tid);
-  body.try_emplace("allThreadsContinued", true);
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-// Send a "terminated" event to indicate the process is done being
-// debugged.
-void SendTerminatedEvent(DAP &dap) {
-  // Prevent races if the process exits while we're being asked to disconnect.
-  llvm::call_once(dap.terminated_event_flag, [&] {
-    dap.RunTerminateCommands();
-    // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject(dap.target));
-    dap.SendJSON(llvm::json::Value(std::move(event)));
-  });
-}
-
-// Send a thread stopped event for all threads as long as the process
-// is stopped.
-void SendThreadStoppedEvent(DAP &dap) {
-  lldb::SBProcess process = dap.target.GetProcess();
-  if (process.IsValid()) {
-    auto state = process.GetState();
-    if (state == lldb::eStateStopped) {
-      llvm::DenseSet<lldb::tid_t> old_thread_ids;
-      old_thread_ids.swap(dap.thread_ids);
-      uint32_t stop_id = process.GetStopID();
-      const uint32_t num_threads = process.GetNumThreads();
-
-      // First make a pass through the threads to see if the focused thread
-      // has a stop reason. In case the focus thread doesn't have a stop
-      // reason, remember the first thread that has a stop reason so we can
-      // set it as the focus thread if below if needed.
-      lldb::tid_t first_tid_with_reason = LLDB_INVALID_THREAD_ID;
-      uint32_t num_threads_with_reason = 0;
-      bool focus_thread_exists = false;
-      for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-        lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-        const lldb::tid_t tid = thread.GetThreadID();
-        const bool has_reason = ThreadHasStopReason(thread);
-        // If the focus thread doesn't have a stop reason, clear the thread ID
-        if (tid == dap.focus_tid) {
-          focus_thread_exists = true;
-          if (!has_reason)
-            dap.focus_tid = LLDB_INVALID_THREAD_ID;
-        }
-        if (has_reason) {
-          ++num_threads_with_reason;
-          if (first_tid_with_reason == LLDB_INVALID_THREAD_ID)
-            first_tid_with_reason = tid;
-        }
-      }
-
-      // We will have cleared dap.focus_tid if the focus thread doesn't have
-      // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
-      // then set the focus thread to the first thread with a stop reason.
-      if (!focus_thread_exists || dap.focus_tid == LLDB_INVALID_THREAD_ID)
-        dap.focus_tid = first_tid_with_reason;
-
-      // If no threads stopped with a reason, then report the first one so
-      // we at least let the UI know we stopped.
-      if (num_threads_with_reason == 0) {
-        lldb::SBThread thread = process.GetThreadAtIndex(0);
-        dap.focus_tid = thread.GetThreadID();
-        dap.SendJSON(CreateThreadStopped(dap, thread, stop_id));
-      } else {
-        for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-          lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-          dap.thread_ids.insert(thread.GetThreadID());
-          if (ThreadHasStopReason(thread)) {
-            dap.SendJSON(CreateThreadStopped(dap, thread, stop_id));
-          }
-        }
-      }
-
-      for (auto tid : old_thread_ids) {
-        auto end = dap.thread_ids.end();
-        auto pos = dap.thread_ids.find(tid);
-        if (pos == end)
-          SendThreadExitedEvent(dap, tid);
-      }
-    } else {
-      if (dap.log)
-        *dap.log << "error: SendThreadStoppedEvent() when process"
-                    " isn't stopped ("
-                 << lldb::SBDebugger::StateAsCString(state) << ')' << std::endl;
-    }
-  } else {
-    if (dap.log)
-      *dap.log << "error: SendThreadStoppedEvent() invalid process"
-               << std::endl;
-  }
-  dap.RunStopCommands();
-}
-
-// "ProcessEvent": {
-//   "allOf": [
-//     { "$ref": "#/definitions/Event" },
-//     {
-//       "type": "object",
-//       "description": "Event message for 'process' event type. The event
-//                       indicates that the debugger has begun debugging a
-//                       new process. Either one that it has launched, or one
-//                       that it has attached to.",
-//       "properties": {
-//         "event": {
-//           "type": "string",
-//           "enum": [ "process" ]
-//         },
-//         "body": {
-//           "type": "object",
-//           "properties": {
-//             "name": {
-//               "type": "string",
-//               "description": "The logical name of the process. This is
-//                               usually the full path to process's executable
-//                               file. Example: /home/myproj/program.js."
-//             },
-//             "systemProcessId": {
-//               "type": "integer",
-//               "description": "The system process id of the debugged process.
-//                               This property will be missing for non-system
-//                               processes."
-//             },
-//             "isLocalProcess": {
-//               "type": "boolean",
-//               "description": "If true, the process is running on the same
-//                               computer as the debug adapter."
-//             },
-//             "startMethod": {
-//               "type": "string",
-//               "enum": [ "launch", "attach", "attachForSuspendedLaunch" ],
-//               "description": "Describes how the debug engine started
-//                               debugging this process.",
-//               "enumDescriptions": [
-//                 "Process was launched under the debugger.",
-//                 "Debugger attached to an existing process.",
-//                 "A project launcher component has launched a new process in
-//                  a suspended state and then asked the debugger to attach."
-//               ]
-//             }
-//           },
-//           "required": [ "name" ]
-//         }
-//       },
-//       "required": [ "event", "body" ]
-//     }
-//   ]
-// }
-void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
-  lldb::SBFileSpec exe_fspec = dap.target.GetExecutable();
-  char exe_path[PATH_MAX];
-  exe_fspec.GetPath(exe_path, sizeof(exe_path));
-  llvm::json::Object event(CreateEventObject("process"));
-  llvm::json::Object body;
-  EmplaceSafeString(body, "name", std::string(exe_path));
-  const auto pid = dap.target.GetProcess().GetProcessID();
-  body.try_emplace("systemProcessId", (int64_t)pid);
-  body.try_emplace("isLocalProcess", true);
-  const char *startMethod = nullptr;
-  switch (launch_method) {
-  case Launch:
-    startMethod = "launch";
-    break;
-  case Attach:
-    startMethod = "attach";
-    break;
-  case AttachForSuspendedLaunch:
-    startMethod = "attachForSuspendedLaunch";
-    break;
-  }
-  body.try_emplace("startMethod", startMethod);
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-// Grab any STDOUT and STDERR from the process and send it up to VS Code
-// via an "output" event to the "stdout" and "stderr" categories.
-void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
-  char buffer[OutputBufferSize];
-  size_t count;
-  while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
-  while ((count = process.GetSTDERR(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
-}
-
-void ProgressEventThreadFunction(DAP &dap) {
-  lldb::SBListener listener("lldb-dap.progress.listener");
-  dap.debugger.GetBroadcaster().AddListener(
-      listener, lldb::SBDebugger::eBroadcastBitProgress |
-                    lldb::SBDebugger::eBroadcastBitExternalProgress);
-  dap.broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
-  lldb::SBEvent event;
-  bool done = false;
-  while (!done) {
-    if (listener.WaitForEvent(1, event)) {
-      const auto event_mask = event.GetType();
-      if (event.BroadcasterMatchesRef(dap.broadcaster)) {
-        if (event_mask & eBroadcastBitStopProgressThread) {
-          done = true;
-        }
-      } else {
-        uint64_t progress_id = 0;
-        uint64_t completed = 0;
-        uint64_t total = 0;
-        bool is_debugger_specific = false;
-        const char *message = lldb::SBDebugger::GetProgressFromEvent(
-            event, progress_id, completed, total, is_debugger_specific);
-        if (message)
-          dap.SendProgressEvent(progress_id, message, completed, total);
-      }
-    }
-  }
-}
-
-// All events from the debugger, target, process, thread and frames are
-// received in this function that runs in its own thread. We are using a
-// "FILE *" to output packets back to VS Code and they have mutexes in them
-// them prevent multiple threads from writing simultaneously so no locking
-// is required.
-void EventThreadFunction(DAP &dap) {
-  lldb::SBEvent event;
-  lldb::SBListener listener = dap.debugger.GetListener();
-  bool done = false;
-  while (!done) {
-    if (listener.WaitForEvent(1, event)) {
-      const auto event_mask = event.GetType();
-      if (lldb::SBProcess::EventIsProcessEvent(event)) {
-        lldb::SBProcess process = lldb::SBProcess::GetProcessFromEvent(event);
-        if (event_mask & lldb::SBProcess::eBroadcastBitStateChanged) {
-          auto state = lldb::SBProcess::GetStateFromEvent(event);
-          switch (state) {
-          case lldb::eStateInvalid:
-            // Not a state event
-            break;
-          case lldb::eStateUnloaded:
-            break;
-          case lldb::eStateConnected:
-            break;
-          case lldb::eStateAttaching:
-            break;
-          case lldb::eStateLaunching:
-            break;
-          case lldb::eStateStepping:
-            break;
-          case lldb::eStateCrashed:
-            break;
-          case lldb::eStateDetached:
-            break;
-          case lldb::eStateSuspended:
-            break;
-          case lldb::eStateStopped:
-            // We launch and attach in synchronous mode then the first stop
-            // event will not be delivered. If we use "launchCommands" during a
-            // launch or "attachCommands" during an attach we might some process
-            // stop events which we do not want to send an event for. We will
-            // manually send a stopped event in request_configurationDone(...)
-            // so don't send any before then.
-            if (dap.configuration_done_sent) {
-              // Only report a stopped event if the process was not
-              // automatically restarted.
-              if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
-                SendStdOutStdErr(dap, process);
-                SendThreadStoppedEvent(dap);
-              }
-            }
-            break;
-          case lldb::eStateRunning:
-            dap.WillContinue();
-            SendContinuedEvent(dap);
-            break;
-          case lldb::eStateExited:
-            lldb::SBStream stream;
-            process.GetStatus(stream);
-            dap.SendOutput(OutputType::Console, stream.GetData());
-
-            // When restarting, we can get an "exited" event for the process we
-            // just killed with the old PID, or even with no PID. In that case
-            // we don't have to terminate the session.
-            if (process.GetProcessID() == LLDB_INVALID_PROCESS_ID ||
-                process.GetProcessID() == dap.restarting_process_id) {
-              dap.restarting_process_id = LLDB_INVALID_PROCESS_ID;
-            } else {
-              // Run any exit LLDB commands the user specified in the
-              // launch.json
-              dap.RunExitCommands();
-              SendProcessExitedEvent(dap, process);
-              SendTerminatedEvent(dap);
-              done = true;
-            }
-            break;
-          }
-        } else if ((event_mask & lldb::SBProcess::eBroadcastBitSTDOUT) ||
-                   (event_mask & lldb::SBProcess::eBroadcastBitSTDERR)) {
-          SendStdOutStdErr(dap, process);
-        }
-      } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
-        if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
-          auto event_type =
-              lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
-          auto bp = Breakpoint(
-              dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
-          // If the breakpoint was originated from the IDE, it will have the
-          // BreakpointBase::GetBreakpointLabel() label attached. Regardless
-          // of wether the locations were added or removed, the breakpoint
-          // ins't going away, so we the reason is always "changed".
-          if ((event_type & lldb::eBreakpointEventTypeLocationsAdded ||
-               event_type & lldb::eBreakpointEventTypeLocationsRemoved) &&
-              bp.MatchesName(BreakpointBase::GetBreakpointLabel())) {
-            auto bp_event = CreateEventObject("breakpoint");
-            llvm::json::Object body;
-            // As VSCode already knows the path of this breakpoint, we don't
-            // need to send it back as part of a "changed" event. This
-            // prevent us from sending to VSCode paths that should be source
-            // mapped. Note that CreateBreakpoint doesn't apply source mapping.
-            // Besides, the current implementation of VSCode ignores the
-            // "source" element of breakpoint events.
-            llvm::json::Value source_bp = CreateBreakpoint(&bp);
-            source_bp.getAsObject()->erase("source");
-
-            body.try_emplace("breakpoint", source_bp);
-            body.try_emplace("reason", "changed");
-            bp_event.try_emplace("body", std::move(body));
-            dap.SendJSON(llvm::json::Value(std::move(bp_event)));
-          }
-        }
-      } else if (event.BroadcasterMatchesRef(dap.broadcaster)) {
-        if (event_mask & eBroadcastBitStopEventThread) {
-          done = true;
-        }
-      }
-    }
   }
 }
 
@@ -601,55 +191,6 @@ lldb::SBValue FindVariable(DAP &dap, uint64_t variablesReference,
     }
   }
   return variable;
-}
-
-// Both attach and launch take a either a sourcePath or sourceMap
-// argument (or neither), from which we need to set the target.source-map.
-void SetSourceMapFromArguments(DAP &dap, const llvm::json::Object &arguments) {
-  const char *sourceMapHelp =
-      "source must be be an array of two-element arrays, "
-      "each containing a source and replacement path string.\n";
-
-  std::string sourceMapCommand;
-  llvm::raw_string_ostream strm(sourceMapCommand);
-  strm << "settings set target.source-map ";
-  const auto sourcePath = GetString(arguments, "sourcePath");
-
-  // sourceMap is the new, more general form of sourcePath and overrides it.
-  constexpr llvm::StringRef sourceMapKey = "sourceMap";
-
-  if (const auto *sourceMapArray = arguments.getArray(sourceMapKey)) {
-    for (const auto &value : *sourceMapArray) {
-      const auto *mapping = value.getAsArray();
-      if (mapping == nullptr || mapping->size() != 2 ||
-          (*mapping)[0].kind() != llvm::json::Value::String ||
-          (*mapping)[1].kind() != llvm::json::Value::String) {
-        dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
-        return;
-      }
-      const auto mapFrom = GetAsString((*mapping)[0]);
-      const auto mapTo = GetAsString((*mapping)[1]);
-      strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
-    }
-  } else if (const auto *sourceMapObj = arguments.getObject(sourceMapKey)) {
-    for (const auto &[key, value] : *sourceMapObj) {
-      if (value.kind() == llvm::json::Value::String) {
-        strm << "\"" << key.str() << "\" \"" << GetAsString(value) << "\" ";
-      }
-    }
-  } else {
-    if (ObjectContainsKey(arguments, sourceMapKey)) {
-      dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
-      return;
-    }
-    if (sourcePath.empty())
-      return;
-    // Do any source remapping needed before we create our targets
-    strm << "\".\" \"" << sourcePath << "\"";
-  }
-  if (!sourceMapCommand.empty()) {
-    dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
-  }
 }
 
 // Fill in the stack frames of the thread.
@@ -724,1151 +265,6 @@ bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
   }
 
   return reached_end_of_stack;
-}
-
-// "AttachRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Attach request; value of command field is 'attach'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "attach" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/AttachRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments" ]
-//   }]
-// },
-// "AttachRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'attach' request.\nThe attach request has no
-//   standardized attributes."
-// },
-// "AttachResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'attach' request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// }
-void request_attach(DAP &dap, const llvm::json::Object &request) {
-  dap.is_attach = true;
-  dap.last_launch_or_attach_request = request;
-  llvm::json::Object response;
-  lldb::SBError error;
-  FillResponse(request, response);
-  lldb::SBAttachInfo attach_info;
-  const int invalid_port = 0;
-  const auto *arguments = request.getObject("arguments");
-  const lldb::pid_t pid =
-      GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
-  const auto gdb_remote_port =
-      GetUnsigned(arguments, "gdb-remote-port", invalid_port);
-  const auto gdb_remote_hostname =
-      GetString(arguments, "gdb-remote-hostname", "localhost");
-  if (pid != LLDB_INVALID_PROCESS_ID)
-    attach_info.SetProcessID(pid);
-  const auto wait_for = GetBoolean(arguments, "waitFor", false);
-  attach_info.SetWaitForLaunch(wait_for, false /*async*/);
-  dap.init_commands = GetStrings(arguments, "initCommands");
-  dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
-  dap.stop_commands = GetStrings(arguments, "stopCommands");
-  dap.exit_commands = GetStrings(arguments, "exitCommands");
-  dap.terminate_commands = GetStrings(arguments, "terminateCommands");
-  auto attachCommands = GetStrings(arguments, "attachCommands");
-  llvm::StringRef core_file = GetString(arguments, "coreFile");
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
-  dap.stop_at_entry =
-      core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
-  dap.post_run_commands = GetStrings(arguments, "postRunCommands");
-  const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
-  dap.enable_auto_variable_summaries =
-      GetBoolean(arguments, "enableAutoVariableSummaries", false);
-  dap.enable_synthetic_child_debugging =
-      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
-  dap.display_extended_backtrace =
-      GetBoolean(arguments, "displayExtendedBacktrace", false);
-  dap.command_escape_prefix = GetString(arguments, "commandEscapePrefix", "`");
-  dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
-  dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
-
-  PrintWelcomeMessage(dap);
-
-  // This is a hack for loading DWARF in .o files on Mac where the .o files
-  // in the debug map of the main executable have relative paths which require
-  // the lldb-dap binary to have its working directory set to that relative
-  // root for the .o files in order to be able to load debug info.
-  if (!debuggerRoot.empty())
-    llvm::sys::fs::set_current_path(debuggerRoot);
-
-  // Run any initialize LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunInitCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  SetSourceMapFromArguments(dap, *arguments);
-
-  lldb::SBError status;
-  dap.SetTarget(dap.CreateTargetFromArguments(*arguments, status));
-  if (status.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", status.GetCString());
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  // Run any pre run LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunPreRunCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  if ((pid == LLDB_INVALID_PROCESS_ID || gdb_remote_port == invalid_port) &&
-      wait_for) {
-    char attach_msg[256];
-    auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
-                                   "Waiting to attach to \"%s\"...",
-                                   dap.target.GetExecutable().GetFilename());
-    dap.SendOutput(OutputType::Console,
-                   llvm::StringRef(attach_msg, attach_msg_len));
-  }
-  if (attachCommands.empty()) {
-    // No "attachCommands", just attach normally.
-    // Disable async events so the attach will be successful when we return from
-    // the launch call and the launch will happen synchronously
-    dap.debugger.SetAsync(false);
-    if (core_file.empty()) {
-      if ((pid != LLDB_INVALID_PROCESS_ID) &&
-          (gdb_remote_port != invalid_port)) {
-        // If both pid and port numbers are specified.
-        error.SetErrorString("The user can't specify both pid and port");
-      } else if (gdb_remote_port != invalid_port) {
-        // If port is specified and pid is not.
-        lldb::SBListener listener = dap.debugger.GetListener();
-
-        // If the user hasn't provided the hostname property, default localhost
-        // being used.
-        std::string connect_url =
-            llvm::formatv("connect://{0}:", gdb_remote_hostname);
-        connect_url += std::to_string(gdb_remote_port);
-        dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
-                                 error);
-      } else {
-        // Attach by process name or id.
-        dap.target.Attach(attach_info, error);
-      }
-    } else
-      dap.target.LoadCore(core_file.data(), error);
-    // Reenable async events
-    dap.debugger.SetAsync(true);
-  } else {
-    // We have "attachCommands" that are a set of commands that are expected
-    // to execute the commands after which a process should be created. If there
-    // is no valid process after running these commands, we have failed.
-    if (llvm::Error err = dap.RunAttachCommands(attachCommands)) {
-      response["success"] = false;
-      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-      dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
-    // The custom commands might have created a new target so we should use the
-    // selected target after these commands are run.
-    dap.target = dap.debugger.GetSelectedTarget();
-
-    // Make sure the process is attached and stopped before proceeding as the
-    // the launch commands are not run using the synchronous mode.
-    error = dap.WaitForProcessToStop(timeout_seconds);
-  }
-
-  if (error.Success() && core_file.empty()) {
-    auto attached_pid = dap.target.GetProcess().GetProcessID();
-    if (attached_pid == LLDB_INVALID_PROCESS_ID) {
-      if (attachCommands.empty())
-        error.SetErrorString("failed to attach to a process");
-      else
-        error.SetErrorString("attachCommands failed to attach to a process");
-    }
-  }
-
-  if (error.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", std::string(error.GetCString()));
-  } else {
-    dap.RunPostRunCommands();
-  }
-
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-  if (error.Success()) {
-    SendProcessEvent(dap, Attach);
-    dap.SendJSON(CreateEventObject("initialized"));
-  }
-}
-
-// "BreakpointLocationsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "The `breakpointLocations` request returns all possible
-//     locations for source breakpoints in a given range.\nClients should only
-//     call this request if the corresponding capability
-//     `supportsBreakpointLocationsRequest` is true.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "breakpointLocations" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/BreakpointLocationsArguments"
-//       }
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "BreakpointLocationsArguments": {
-//   "type": "object",
-//   "description": "Arguments for `breakpointLocations` request.",
-//   "properties": {
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "The source location of the breakpoints; either
-//       `source.path` or `source.sourceReference` must be specified."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "Start line of range to search possible breakpoint
-//       locations in. If only the line is specified, the request returns all
-//       possible locations in that line."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "Start position within `line` to search possible
-//       breakpoint locations in. It is measured in UTF-16 code units and the
-//       client capability `columnsStartAt1` determines whether it is 0- or
-//       1-based. If no column is given, the first position in the start line is
-//       assumed."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "End line of range to search possible breakpoint
-//       locations in. If no end line is given, then the end line is assumed to
-//       be the start line."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "End position within `endLine` to search possible
-//       breakpoint locations in. It is measured in UTF-16 code units and the
-//       client capability `columnsStartAt1` determines whether it is 0- or
-//       1-based. If no end column is given, the last position in the end line
-//       is assumed."
-//     }
-//   },
-//   "required": [ "source", "line" ]
-// },
-// "BreakpointLocationsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `breakpointLocations` request.\nContains
-//     possible locations for source breakpoints.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "breakpoints": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/BreakpointLocation"
-//             },
-//             "description": "Sorted set of possible breakpoint locations."
-//           }
-//         },
-//         "required": [ "breakpoints" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// },
-// "BreakpointLocation": {
-//   "type": "object",
-//   "description": "Properties of a breakpoint location returned from the
-//   `breakpointLocations` request.",
-//   "properties": {
-//     "line": {
-//       "type": "integer",
-//       "description": "Start line of breakpoint location."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "The start position of a breakpoint location. Position
-//       is measured in UTF-16 code units and the client capability
-//       `columnsStartAt1` determines whether it is 0- or 1-based."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "The end line of breakpoint location if the location
-//       covers a range."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "The end position of a breakpoint location (if the
-//       location covers a range). Position is measured in UTF-16 code units and
-//       the client capability `columnsStartAt1` determines whether it is 0- or
-//       1-based."
-//     }
-//   },
-//   "required": [ "line" ]
-// },
-void request_breakpointLocations(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  auto *arguments = request.getObject("arguments");
-  auto *source = arguments->getObject("source");
-  std::string path = GetString(source, "path").str();
-  uint64_t start_line = GetUnsigned(arguments, "line", 0);
-  uint64_t start_column = GetUnsigned(arguments, "column", 0);
-  uint64_t end_line = GetUnsigned(arguments, "endLine", start_line);
-  uint64_t end_column =
-      GetUnsigned(arguments, "endColumn", std::numeric_limits<uint64_t>::max());
-
-  lldb::SBFileSpec file_spec(path.c_str(), true);
-  lldb::SBSymbolContextList compile_units =
-      dap.target.FindCompileUnits(file_spec);
-
-  // Find all relevant lines & columns
-  llvm::SmallVector<std::pair<uint32_t, uint32_t>, 8> locations;
-  for (uint32_t c_idx = 0, c_limit = compile_units.GetSize(); c_idx < c_limit;
-       ++c_idx) {
-    const lldb::SBCompileUnit &compile_unit =
-        compile_units.GetContextAtIndex(c_idx).GetCompileUnit();
-    if (!compile_unit.IsValid())
-      continue;
-    lldb::SBFileSpec primary_file_spec = compile_unit.GetFileSpec();
-
-    // Go through the line table and find all matching lines / columns
-    for (uint32_t l_idx = 0, l_limit = compile_unit.GetNumLineEntries();
-         l_idx < l_limit; ++l_idx) {
-      lldb::SBLineEntry line_entry = compile_unit.GetLineEntryAtIndex(l_idx);
-
-      // Filter by line / column
-      uint32_t line = line_entry.GetLine();
-      if (line < start_line || line > end_line)
-        continue;
-      uint32_t column = line_entry.GetColumn();
-      if (column == LLDB_INVALID_COLUMN_NUMBER)
-        continue;
-      if (line == start_line && column < start_column)
-        continue;
-      if (line == end_line && column > end_column)
-        continue;
-
-      // Make sure we are in the right file.
-      // We might have a match on line & column range and still
-      // be in the wrong file, e.g. for included files.
-      // Given that the involved pointers point into LLDB's string pool,
-      // we can directly compare the `const char*` pointers.
-      if (line_entry.GetFileSpec().GetFilename() !=
-              primary_file_spec.GetFilename() ||
-          line_entry.GetFileSpec().GetDirectory() !=
-              primary_file_spec.GetDirectory())
-        continue;
-
-      locations.emplace_back(line, column);
-    }
-  }
-
-  // The line entries are sorted by addresses, but we must return the list
-  // ordered by line / column position.
-  std::sort(locations.begin(), locations.end());
-  locations.erase(std::unique(locations.begin(), locations.end()),
-                  locations.end());
-
-  llvm::json::Array locations_json;
-  for (auto &l : locations) {
-    llvm::json::Object location;
-    location.try_emplace("line", l.first);
-    location.try_emplace("column", l.second);
-    locations_json.emplace_back(std::move(location));
-  }
-
-  llvm::json::Object body;
-  body.try_emplace("breakpoints", std::move(locations_json));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "ContinueRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Continue request; value of command field is 'continue'.
-//                     The request starts the debuggee to run again.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "continue" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/ContinueArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "ContinueArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'continue' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Continue execution for the specified thread (if
-//                       possible). If the backend cannot continue on a single
-//                       thread but will continue on all threads, it should
-//                       set the allThreadsContinued attribute in the response
-//                       to true."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "ContinueResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'continue' request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "allThreadsContinued": {
-//             "type": "boolean",
-//             "description": "If true, the continue request has ignored the
-//                             specified thread and continued all threads
-//                             instead. If this attribute is missing a value
-//                             of 'true' is assumed for backward
-//                             compatibility."
-//           }
-//         }
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void request_continue(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  lldb::SBProcess process = dap.target.GetProcess();
-  lldb::SBError error = process.Continue();
-  llvm::json::Object body;
-  body.try_emplace("allThreadsContinued", true);
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "ConfigurationDoneRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//             "type": "object",
-//             "description": "ConfigurationDone request; value of command field
-//             is 'configurationDone'.\nThe client of the debug protocol must
-//             send this request at the end of the sequence of configuration
-//             requests (which was started by the InitializedEvent).",
-//             "properties": {
-//             "command": {
-//             "type": "string",
-//             "enum": [ "configurationDone" ]
-//             },
-//             "arguments": {
-//             "$ref": "#/definitions/ConfigurationDoneArguments"
-//             }
-//             },
-//             "required": [ "command" ]
-//             }]
-// },
-// "ConfigurationDoneArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'configurationDone' request.\nThe
-//   configurationDone request has no standardized attributes."
-// },
-// "ConfigurationDoneResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//             "type": "object",
-//             "description": "Response to 'configurationDone' request. This is
-//             just an acknowledgement, so no body field is required."
-//             }]
-// },
-void request_configurationDone(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-  dap.configuration_done_sent = true;
-  if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
-  else
-    dap.target.GetProcess().Continue();
-}
-
-// "DisconnectRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Disconnect request; value of command field is
-//                     'disconnect'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "disconnect" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/DisconnectArguments"
-//       }
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "DisconnectArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'disconnect' request.",
-//   "properties": {
-//     "terminateDebuggee": {
-//       "type": "boolean",
-//       "description": "Indicates whether the debuggee should be terminated
-//                       when the debugger is disconnected. If unspecified,
-//                       the debug adapter is free to do whatever it thinks
-//                       is best. A client can only rely on this attribute
-//                       being properly honored if a debug adapter returns
-//                       true for the 'supportTerminateDebuggee' capability."
-//     },
-//     "restart": {
-//       "type": "boolean",
-//       "description": "Indicates whether the debuggee should be restart
-//                       the process."
-//     }
-//   }
-// },
-// "DisconnectResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'disconnect' request. This is just an
-//                     acknowledgement, so no body field is required."
-//   }]
-// }
-void request_disconnect(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-
-  bool defaultTerminateDebuggee = dap.is_attach ? false : true;
-  bool terminateDebuggee =
-      GetBoolean(arguments, "terminateDebuggee", defaultTerminateDebuggee);
-  lldb::SBProcess process = dap.target.GetProcess();
-  auto state = process.GetState();
-  switch (state) {
-  case lldb::eStateInvalid:
-  case lldb::eStateUnloaded:
-  case lldb::eStateDetached:
-  case lldb::eStateExited:
-    break;
-  case lldb::eStateConnected:
-  case lldb::eStateAttaching:
-  case lldb::eStateLaunching:
-  case lldb::eStateStepping:
-  case lldb::eStateCrashed:
-  case lldb::eStateSuspended:
-  case lldb::eStateStopped:
-  case lldb::eStateRunning:
-    dap.debugger.SetAsync(false);
-    lldb::SBError error = terminateDebuggee ? process.Kill() : process.Detach();
-    if (!error.Success())
-      EmplaceSafeString(response, "error", error.GetCString());
-    dap.debugger.SetAsync(true);
-    break;
-  }
-  SendTerminatedEvent(dap);
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-  if (dap.event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
-    dap.event_thread.join();
-  }
-  if (dap.progress_event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
-    dap.progress_event_thread.join();
-  }
-  dap.StopIO();
-  dap.disconnecting = true;
-}
-
-// "ExceptionInfoRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Retrieves the details of the exception that
-//     caused this event to be raised. Clients should only call this request if
-//     the corresponding capability `supportsExceptionInfoRequest` is true.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "exceptionInfo" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/ExceptionInfoArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "ExceptionInfoArguments": {
-//   "type": "object",
-//   "description": "Arguments for `exceptionInfo` request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Thread for which exception information should be
-//       retrieved."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "ExceptionInfoResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `exceptionInfo` request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "exceptionId": {
-//             "type": "string",
-//             "description": "ID of the exception that was thrown."
-//           },
-//           "description": {
-//             "type": "string",
-//             "description": "Descriptive text for the exception."
-//           },
-//           "breakMode": {
-//          "$ref": "#/definitions/ExceptionBreakMode",
-//            "description": "Mode that caused the exception notification to
-//            be raised."
-//           },
-//           "details": {
-//             "$ref": "#/definitions/ExceptionDetails",
-//            "description": "Detailed information about the exception."
-//           }
-//         },
-//         "required": [ "exceptionId", "breakMode" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-// "ExceptionDetails": {
-//   "type": "object",
-//   "description": "Detailed information about an exception that has
-//   occurred.", "properties": {
-//     "message": {
-//       "type": "string",
-//       "description": "Message contained in the exception."
-//     },
-//     "typeName": {
-//       "type": "string",
-//       "description": "Short type name of the exception object."
-//     },
-//     "fullTypeName": {
-//       "type": "string",
-//       "description": "Fully-qualified type name of the exception object."
-//     },
-//     "evaluateName": {
-//       "type": "string",
-//       "description": "An expression that can be evaluated in the current
-//       scope to obtain the exception object."
-//     },
-//     "stackTrace": {
-//       "type": "string",
-//       "description": "Stack trace at the time the exception was thrown."
-//     },
-//     "innerException": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/ExceptionDetails"
-//       },
-//       "description": "Details of the exception contained by this exception,
-//       if any."
-//     }
-//   }
-// },
-void request_exceptionInfo(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  llvm::json::Object body;
-  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
-  if (thread.IsValid()) {
-    auto stopReason = thread.GetStopReason();
-    if (stopReason == lldb::eStopReasonSignal)
-      body.try_emplace("exceptionId", "signal");
-    else if (stopReason == lldb::eStopReasonBreakpoint) {
-      ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
-      if (exc_bp) {
-        EmplaceSafeString(body, "exceptionId", exc_bp->filter);
-        EmplaceSafeString(body, "description", exc_bp->label);
-      } else {
-        body.try_emplace("exceptionId", "exception");
-      }
-    } else {
-      body.try_emplace("exceptionId", "exception");
-    }
-    if (!ObjectContainsKey(body, "description")) {
-      char description[1024];
-      if (thread.GetStopDescription(description, sizeof(description))) {
-        EmplaceSafeString(body, "description", std::string(description));
-      }
-    }
-    body.try_emplace("breakMode", "always");
-    auto exception = thread.GetCurrentException();
-    if (exception.IsValid()) {
-      llvm::json::Object details;
-      lldb::SBStream stream;
-      if (exception.GetDescription(stream)) {
-        EmplaceSafeString(details, "message", stream.GetData());
-      }
-
-      auto exceptionBacktrace = thread.GetCurrentExceptionBacktrace();
-      if (exceptionBacktrace.IsValid()) {
-        lldb::SBStream stream;
-        exceptionBacktrace.GetDescription(stream);
-        for (uint32_t i = 0; i < exceptionBacktrace.GetNumFrames(); i++) {
-          lldb::SBFrame frame = exceptionBacktrace.GetFrameAtIndex(i);
-          frame.GetDescription(stream);
-        }
-        EmplaceSafeString(details, "stackTrace", stream.GetData());
-      }
-
-      body.try_emplace("details", std::move(details));
-    }
-    // auto excInfoCount = thread.GetStopReasonDataCount();
-    // for (auto i=0; i<excInfoCount; ++i) {
-    //   uint64_t exc_data = thread.GetStopReasonDataAtIndex(i);
-    // }
-  } else {
-    response["success"] = llvm::json::Value(false);
-  }
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "CompletionsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Returns a list of possible completions for a given caret
-//     position and text.\nThe CompletionsRequest may only be called if the
-//     'supportsCompletionsRequest' capability exists and is true.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "completions" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/CompletionsArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "CompletionsArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'completions' request.",
-//   "properties": {
-//     "frameId": {
-//       "type": "integer",
-//       "description": "Returns completions in the scope of this stack frame.
-//       If not specified, the completions are returned for the global scope."
-//     },
-//     "text": {
-//       "type": "string",
-//       "description": "One or more source lines. Typically this is the text a
-//       user has typed into the debug console before he asked for completion."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "The character position for which to determine the
-//       completion proposals."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "An optional line for which to determine the completion
-//       proposals. If missing the first line of the text is assumed."
-//     }
-//   },
-//   "required": [ "text", "column" ]
-// },
-// "CompletionsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'completions' request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "targets": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/CompletionItem"
-//             },
-//             "description": "The possible completions for ."
-//           }
-//         },
-//         "required": [ "targets" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// },
-// "CompletionItem": {
-//   "type": "object",
-//   "description": "CompletionItems are the suggestions returned from the
-//   CompletionsRequest.", "properties": {
-//     "label": {
-//       "type": "string",
-//       "description": "The label of this completion item. By default this is
-//       also the text that is inserted when selecting this completion."
-//     },
-//     "text": {
-//       "type": "string",
-//       "description": "If text is not falsy then it is inserted instead of the
-//       label."
-//     },
-//     "sortText": {
-//       "type": "string",
-//       "description": "A string that should be used when comparing this item
-//       with other items. When `falsy` the label is used."
-//     },
-//     "type": {
-//       "$ref": "#/definitions/CompletionItemType",
-//       "description": "The item's type. Typically the client uses this
-//       information to render the item in the UI with an icon."
-//     },
-//     "start": {
-//       "type": "integer",
-//       "description": "This value determines the location (in the
-//       CompletionsRequest's 'text' attribute) where the completion text is
-//       added.\nIf missing the text is added at the location specified by the
-//       CompletionsRequest's 'column' attribute."
-//     },
-//     "length": {
-//       "type": "integer",
-//       "description": "This value determines how many characters are
-//       overwritten by the completion text.\nIf missing the value 0 is assumed
-//       which results in the completion text being inserted."
-//     }
-//   },
-//   "required": [ "label" ]
-// },
-// "CompletionItemType": {
-//   "type": "string",
-//   "description": "Some predefined types for the CompletionItem. Please note
-//   that not all clients have specific icons for all of them.", "enum": [
-//   "method", "function", "constructor", "field", "variable", "class",
-//   "interface", "module", "property", "unit", "value", "enum", "keyword",
-//   "snippet", "text", "color", "file", "reference", "customcolor" ]
-// }
-void request_completions(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-  const auto *arguments = request.getObject("arguments");
-
-  // If we have a frame, try to set the context for variable completions.
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  if (frame.IsValid()) {
-    frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
-    frame.GetThread().SetSelectedFrame(frame.GetFrameID());
-  }
-
-  std::string text = GetString(arguments, "text").str();
-  auto original_column = GetSigned(arguments, "column", text.size());
-  auto original_line = GetSigned(arguments, "line", 1);
-  auto offset = original_column - 1;
-  if (original_line > 1) {
-    llvm::SmallVector<::llvm::StringRef, 2> lines;
-    llvm::StringRef(text).split(lines, '\n');
-    for (int i = 0; i < original_line - 1; i++) {
-      offset += lines[i].size();
-    }
-  }
-  llvm::json::Array targets;
-
-  bool had_escape_prefix =
-      llvm::StringRef(text).starts_with(dap.command_escape_prefix);
-  ReplMode completion_mode = dap.DetectReplMode(frame, text, true);
-
-  // Handle the offset change introduced by stripping out the
-  // `command_escape_prefix`.
-  if (had_escape_prefix) {
-    if (offset < static_cast<int64_t>(dap.command_escape_prefix.size())) {
-      body.try_emplace("targets", std::move(targets));
-      response.try_emplace("body", std::move(body));
-      dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
-    offset -= dap.command_escape_prefix.size();
-  }
-
-  // While the user is typing then we likely have an incomplete input and cannot
-  // reliably determine the precise intent (command vs variable), try completing
-  // the text as both a command and variable expression, if applicable.
-  const std::string expr_prefix = "expression -- ";
-  std::array<std::tuple<ReplMode, std::string, uint64_t>, 2> exprs = {
-      {std::make_tuple(ReplMode::Command, text, offset),
-       std::make_tuple(ReplMode::Variable, expr_prefix + text,
-                       offset + expr_prefix.size())}};
-  for (const auto &[mode, line, cursor] : exprs) {
-    if (completion_mode != ReplMode::Auto && completion_mode != mode)
-      continue;
-
-    lldb::SBStringList matches;
-    lldb::SBStringList descriptions;
-    if (!dap.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
-            line.c_str(), cursor, 0, 100, matches, descriptions))
-      continue;
-
-    // The first element is the common substring after the cursor position for
-    // all the matches. The rest of the elements are the matches so ignore the
-    // first result.
-    for (size_t i = 1; i < matches.GetSize(); i++) {
-      std::string match = matches.GetStringAtIndex(i);
-      std::string description = descriptions.GetStringAtIndex(i);
-
-      llvm::json::Object item;
-      llvm::StringRef match_ref = match;
-      for (llvm::StringRef commit_point : {".", "->"}) {
-        if (match_ref.contains(commit_point)) {
-          match_ref = match_ref.rsplit(commit_point).second;
-        }
-      }
-      EmplaceSafeString(item, "text", match_ref);
-
-      if (description.empty())
-        EmplaceSafeString(item, "label", match);
-      else
-        EmplaceSafeString(item, "label", match + " -- " + description);
-
-      targets.emplace_back(std::move(item));
-    }
-  }
-
-  body.try_emplace("targets", std::move(targets));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-//  "EvaluateRequest": {
-//    "allOf": [ { "$ref": "#/definitions/Request" }, {
-//      "type": "object",
-//      "description": "Evaluate request; value of command field is 'evaluate'.
-//                      Evaluates the given expression in the context of the
-//                      top most stack frame. The expression has access to any
-//                      variables and arguments that are in scope.",
-//      "properties": {
-//        "command": {
-//          "type": "string",
-//          "enum": [ "evaluate" ]
-//        },
-//        "arguments": {
-//          "$ref": "#/definitions/EvaluateArguments"
-//        }
-//      },
-//      "required": [ "command", "arguments"  ]
-//    }]
-//  },
-//  "EvaluateArguments": {
-//    "type": "object",
-//    "description": "Arguments for 'evaluate' request.",
-//    "properties": {
-//      "expression": {
-//        "type": "string",
-//        "description": "The expression to evaluate."
-//      },
-//      "frameId": {
-//        "type": "integer",
-//        "description": "Evaluate the expression in the scope of this stack
-//                        frame. If not specified, the expression is evaluated
-//                        in the global scope."
-//      },
-//      "context": {
-//        "type": "string",
-//        "_enum": [ "watch", "repl", "hover" ],
-//        "enumDescriptions": [
-//          "evaluate is run in a watch.",
-//          "evaluate is run from REPL console.",
-//          "evaluate is run from a data hover."
-//        ],
-//        "description": "The context in which the evaluate request is run."
-//      },
-//      "format": {
-//        "$ref": "#/definitions/ValueFormat",
-//        "description": "Specifies details on how to format the Evaluate
-//                        result."
-//      }
-//    },
-//    "required": [ "expression" ]
-//  },
-//  "EvaluateResponse": {
-//    "allOf": [ { "$ref": "#/definitions/Response" }, {
-//      "type": "object",
-//      "description": "Response to 'evaluate' request.",
-//      "properties": {
-//        "body": {
-//          "type": "object",
-//          "properties": {
-//            "result": {
-//              "type": "string",
-//              "description": "The result of the evaluate request."
-//            },
-//            "type": {
-//              "type": "string",
-//              "description": "The optional type of the evaluate result."
-//            },
-//            "presentationHint": {
-//              "$ref": "#/definitions/VariablePresentationHint",
-//              "description": "Properties of a evaluate result that can be
-//                              used to determine how to render the result in
-//                              the UI."
-//            },
-//            "variablesReference": {
-//              "type": "number",
-//              "description": "If variablesReference is > 0, the evaluate
-//                              result is structured and its children can be
-//                              retrieved by passing variablesReference to the
-//                              VariablesRequest."
-//            },
-//            "namedVariables": {
-//              "type": "number",
-//              "description": "The number of named child variables. The
-//                              client can use this optional information to
-//                              present the variables in a paged UI and fetch
-//                              them in chunks."
-//            },
-//            "indexedVariables": {
-//              "type": "number",
-//              "description": "The number of indexed child variables. The
-//                              client can use this optional information to
-//                              present the variables in a paged UI and fetch
-//                              them in chunks."
-//            },
-//            "valueLocationReference": {
-//              "type": "integer",
-//              "description": "A reference that allows the client to request
-//                              the location where the returned value is
-//                              declared. For example, if a function pointer is
-//                              returned, the adapter may be able to look up the
-//                              function's location. This should be present only
-//                              if the adapter is likely to be able to resolve
-//                              the location.\n\nThis reference shares the same
-//                              lifetime as the `variablesReference`. See
-//                              'Lifetime of Object References' in the
-//              Overview section for details."
-//            }
-//            "memoryReference": {
-//               "type": "string",
-//                "description": "A memory reference to a location appropriate
-//                                for this result. For pointer type eval
-//                                results, this is generally a reference to the
-//                                memory address contained in the pointer. This
-//                                attribute may be returned by a debug adapter
-//                                if corresponding capability
-//                                `supportsMemoryReferences` is true."
-//             },
-//          },
-//          "required": [ "result", "variablesReference" ]
-//        }
-//      },
-//      "required": [ "body" ]
-//    }]
-//  }
-void request_evaluate(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-  const auto *arguments = request.getObject("arguments");
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  std::string expression = GetString(arguments, "expression").str();
-  llvm::StringRef context = GetString(arguments, "context");
-  bool repeat_last_command =
-      expression.empty() && dap.last_nonempty_var_expression.empty();
-
-  if (context == "repl" &&
-      (repeat_last_command ||
-       (!expression.empty() &&
-        dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
-    // Since the current expression is not for a variable, clear the
-    // last_nonempty_var_expression field.
-    dap.last_nonempty_var_expression.clear();
-    // If we're evaluating a command relative to the current frame, set the
-    // focus_tid to the current frame for any thread related events.
-    if (frame.IsValid()) {
-      dap.focus_tid = frame.GetThread().GetThreadID();
-    }
-    auto result = RunLLDBCommandsVerbatim(dap.debugger, llvm::StringRef(),
-                                          {std::string(expression)});
-    EmplaceSafeString(body, "result", result);
-    body.try_emplace("variablesReference", (int64_t)0);
-  } else {
-    if (context == "repl") {
-      // If the expression is empty and the last expression was for a
-      // variable, set the expression to the previous expression (repeat the
-      // evaluation); otherwise save the current non-empty expression for the
-      // next (possibly empty) variable expression.
-      if (expression.empty())
-        expression = dap.last_nonempty_var_expression;
-      else
-        dap.last_nonempty_var_expression = expression;
-    }
-    // Always try to get the answer from the local variables if possible. If
-    // this fails, then if the context is not "hover", actually evaluate an
-    // expression using the expression parser.
-    //
-    // "frame variable" is more reliable than the expression parser in
-    // many cases and it is faster.
-    lldb::SBValue value = frame.GetValueForVariablePath(
-        expression.data(), lldb::eDynamicDontRunTarget);
-
-    // Freeze dry the value in case users expand it later in the debug console
-    if (value.GetError().Success() && context == "repl")
-      value = value.Persist();
-
-    if (value.GetError().Fail() && context != "hover")
-      value = frame.EvaluateExpression(expression.data());
-
-    if (value.GetError().Fail()) {
-      response["success"] = llvm::json::Value(false);
-      // This error object must live until we're done with the pointer returned
-      // by GetCString().
-      lldb::SBError error = value.GetError();
-      const char *error_cstr = error.GetCString();
-      if (error_cstr && error_cstr[0])
-        EmplaceSafeString(response, "message", std::string(error_cstr));
-      else
-        EmplaceSafeString(response, "message", "evaluate failed");
-    } else {
-      VariableDescription desc(value, dap.enable_auto_variable_summaries);
-      EmplaceSafeString(body, "result", desc.GetResult(context));
-      EmplaceSafeString(body, "type", desc.display_type_name);
-      int64_t var_ref = 0;
-      if (value.MightHaveChildren() || ValuePointsToCode(value))
-        var_ref = dap.variables.InsertVariable(
-            value, /*is_permanent=*/context == "repl");
-      if (value.MightHaveChildren())
-        body.try_emplace("variablesReference", var_ref);
-      else
-        body.try_emplace("variablesReference", (int64_t)0);
-      if (lldb::addr_t addr = value.GetLoadAddress();
-          addr != LLDB_INVALID_ADDRESS)
-        body.try_emplace("memoryReference", EncodeMemoryReference(addr));
-      if (ValuePointsToCode(value))
-        body.try_emplace("valueLocationReference", var_ref);
-    }
-  }
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
 // "compileUnitsRequest": {
@@ -1975,506 +371,6 @@ void request_modules(DAP &dap, const llvm::json::Object &request) {
   body.try_emplace("modules", std::move(modules));
   response.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "InitializeRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Initialize request; value of command field is
-//                     'initialize'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "initialize" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/InitializeRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments" ]
-//   }]
-// },
-// "InitializeRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'initialize' request.",
-//   "properties": {
-//     "clientID": {
-//       "type": "string",
-//       "description": "The ID of the (frontend) client using this adapter."
-//     },
-//     "adapterID": {
-//       "type": "string",
-//       "description": "The ID of the debug adapter."
-//     },
-//     "locale": {
-//       "type": "string",
-//       "description": "The ISO-639 locale of the (frontend) client using
-//                       this adapter, e.g. en-US or de-CH."
-//     },
-//     "linesStartAt1": {
-//       "type": "boolean",
-//       "description": "If true all line numbers are 1-based (default)."
-//     },
-//     "columnsStartAt1": {
-//       "type": "boolean",
-//       "description": "If true all column numbers are 1-based (default)."
-//     },
-//     "pathFormat": {
-//       "type": "string",
-//       "_enum": [ "path", "uri" ],
-//       "description": "Determines in what format paths are specified. The
-//                       default is 'path', which is the native format."
-//     },
-//     "supportsVariableType": {
-//       "type": "boolean",
-//       "description": "Client supports the optional type attribute for
-//                       variables."
-//     },
-//     "supportsVariablePaging": {
-//       "type": "boolean",
-//       "description": "Client supports the paging of variables."
-//     },
-//     "supportsRunInTerminalRequest": {
-//       "type": "boolean",
-//       "description": "Client supports the runInTerminal request."
-//     }
-//   },
-//   "required": [ "adapterID" ]
-// },
-// "InitializeResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'initialize' request.",
-//     "properties": {
-//       "body": {
-//         "$ref": "#/definitions/Capabilities",
-//         "description": "The capabilities of this debug adapter."
-//       }
-//     }
-//   }]
-// }
-void request_initialize(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-
-  const auto *arguments = request.getObject("arguments");
-  // sourceInitFile option is not from formal DAP specification. It is only
-  // used by unit tests to prevent sourcing .lldbinit files from environment
-  // which may affect the outcome of tests.
-  bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
-
-  // Do not source init files until in/out/err are configured.
-  dap.debugger = lldb::SBDebugger::Create(false);
-  dap.debugger.SetInputFile(dap.in);
-  auto out_fd = dap.out.GetWriteFileDescriptor();
-  if (llvm::Error err = out_fd.takeError()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-  dap.debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
-  auto err_fd = dap.err.GetWriteFileDescriptor();
-  if (llvm::Error err = err_fd.takeError()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-  dap.debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
-
-  auto interp = dap.debugger.GetCommandInterpreter();
-
-  if (source_init_file) {
-    dap.debugger.SkipLLDBInitFiles(false);
-    dap.debugger.SkipAppInitFiles(false);
-    lldb::SBCommandReturnObject init;
-    interp.SourceInitFileInGlobalDirectory(init);
-    interp.SourceInitFileInHomeDirectory(init);
-  }
-
-  if (llvm::Error err = dap.RunPreInitCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  dap.PopulateExceptionBreakpoints();
-  auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
-      "lldb-dap", "Commands for managing lldb-dap.");
-  if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
-    cmd.AddCommand(
-        "start-debugging", new StartDebuggingRequestHandler(dap),
-        "Sends a startDebugging request from the debug adapter to the client "
-        "to start a child debug session of the same type as the caller.");
-  }
-  cmd.AddCommand(
-      "repl-mode", new ReplModeRequestHandler(dap),
-      "Get or set the repl behavior of lldb-dap evaluation requests.");
-  cmd.AddCommand("send-event", new SendEventRequestHandler(dap),
-                 "Sends an DAP event to the client.");
-
-  dap.progress_event_thread =
-      std::thread(ProgressEventThreadFunction, std::ref(dap));
-
-  // Start our event thread so we can receive events from the debugger, target,
-  // process and more.
-  dap.event_thread = std::thread(EventThreadFunction, std::ref(dap));
-
-  // The debug adapter supports the configurationDoneRequest.
-  body.try_emplace("supportsConfigurationDoneRequest", true);
-  // The debug adapter supports function breakpoints.
-  body.try_emplace("supportsFunctionBreakpoints", true);
-  // The debug adapter supports conditional breakpoints.
-  body.try_emplace("supportsConditionalBreakpoints", true);
-  // The debug adapter supports breakpoints that break execution after a
-  // specified number of hits.
-  body.try_emplace("supportsHitConditionalBreakpoints", true);
-  // The debug adapter supports a (side effect free) evaluate request for
-  // data hovers.
-  body.try_emplace("supportsEvaluateForHovers", true);
-  // Available filters or options for the setExceptionBreakpoints request.
-  llvm::json::Array filters;
-  for (const auto &exc_bp : *dap.exception_breakpoints) {
-    filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
-  }
-  body.try_emplace("exceptionBreakpointFilters", std::move(filters));
-  // The debug adapter supports launching a debugee in intergrated VSCode
-  // terminal.
-  body.try_emplace("supportsRunInTerminalRequest", true);
-  // The debug adapter supports stepping back via the stepBack and
-  // reverseContinue requests.
-  body.try_emplace("supportsStepBack", false);
-  // The debug adapter supports setting a variable to a value.
-  body.try_emplace("supportsSetVariable", true);
-  // The debug adapter supports restarting a frame.
-  body.try_emplace("supportsRestartFrame", false);
-  // The debug adapter supports the gotoTargetsRequest.
-  body.try_emplace("supportsGotoTargetsRequest", false);
-  // The debug adapter supports the stepInTargetsRequest.
-  body.try_emplace("supportsStepInTargetsRequest", true);
-  // The debug adapter supports the completions request.
-  body.try_emplace("supportsCompletionsRequest", true);
-  // The debug adapter supports the disassembly request.
-  body.try_emplace("supportsDisassembleRequest", true);
-  // The debug adapter supports the `breakpointLocations` request.
-  body.try_emplace("supportsBreakpointLocationsRequest", true);
-  // The debug adapter supports stepping granularities (argument `granularity`)
-  // for the stepping requests.
-  body.try_emplace("supportsSteppingGranularity", true);
-  // The debug adapter support for instruction breakpoint.
-  body.try_emplace("supportsInstructionBreakpoints", true);
-
-  llvm::json::Array completion_characters;
-  completion_characters.emplace_back(".");
-  completion_characters.emplace_back(" ");
-  completion_characters.emplace_back("\t");
-  body.try_emplace("completionTriggerCharacters",
-                   std::move(completion_characters));
-
-  // The debug adapter supports the modules request.
-  body.try_emplace("supportsModulesRequest", true);
-  // The set of additional module information exposed by the debug adapter.
-  //   body.try_emplace("additionalModuleColumns"] = ColumnDescriptor
-  // Checksum algorithms supported by the debug adapter.
-  //   body.try_emplace("supportedChecksumAlgorithms"] = ChecksumAlgorithm
-  // The debug adapter supports the RestartRequest. In this case a client
-  // should not implement 'restart' by terminating and relaunching the adapter
-  // but by calling the RestartRequest.
-  body.try_emplace("supportsRestartRequest", true);
-  // The debug adapter supports 'exceptionOptions' on the
-  // setExceptionBreakpoints request.
-  body.try_emplace("supportsExceptionOptions", true);
-  // The debug adapter supports a 'format' attribute on the stackTraceRequest,
-  // variablesRequest, and evaluateRequest.
-  body.try_emplace("supportsValueFormattingOptions", true);
-  // The debug adapter supports the exceptionInfo request.
-  body.try_emplace("supportsExceptionInfoRequest", true);
-  // The debug adapter supports the 'terminateDebuggee' attribute on the
-  // 'disconnect' request.
-  body.try_emplace("supportTerminateDebuggee", true);
-  // The debug adapter supports the delayed loading of parts of the stack,
-  // which requires that both the 'startFrame' and 'levels' arguments and the
-  // 'totalFrames' result of the 'StackTrace' request are supported.
-  body.try_emplace("supportsDelayedStackTraceLoading", true);
-  // The debug adapter supports the 'loadedSources' request.
-  body.try_emplace("supportsLoadedSourcesRequest", false);
-  // The debug adapter supports sending progress reporting events.
-  body.try_emplace("supportsProgressReporting", true);
-  // The debug adapter supports 'logMessage' in breakpoint.
-  body.try_emplace("supportsLogPoints", true);
-  // The debug adapter supports data watchpoints.
-  body.try_emplace("supportsDataBreakpoints", true);
-  // The debug adapter supports the `readMemory` request.
-  body.try_emplace("supportsReadMemoryRequest", true);
-
-  // Put in non-DAP specification lldb specific information.
-  llvm::json::Object lldb_json;
-  lldb_json.try_emplace("version", dap.debugger.GetVersionString());
-  body.try_emplace("__lldb", std::move(lldb_json));
-
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-llvm::Error request_runInTerminal(DAP &dap,
-                                  const llvm::json::Object &launch_request,
-                                  const uint64_t timeout_seconds) {
-  dap.is_attach = true;
-  lldb::SBAttachInfo attach_info;
-
-  llvm::Expected<std::shared_ptr<FifoFile>> comm_file_or_err =
-      CreateRunInTerminalCommFile();
-  if (!comm_file_or_err)
-    return comm_file_or_err.takeError();
-  FifoFile &comm_file = *comm_file_or_err.get();
-
-  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
-
-  lldb::pid_t debugger_pid = LLDB_INVALID_PROCESS_ID;
-#if !defined(_WIN32)
-  debugger_pid = getpid();
-#endif
-  llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      launch_request, dap.debug_adaptor_path, comm_file.m_path, debugger_pid);
-  dap.SendReverseRequest("runInTerminal", std::move(reverse_request),
-                         [](llvm::Expected<llvm::json::Value> value) {
-                           if (!value) {
-                             llvm::Error err = value.takeError();
-                             llvm::errs()
-                                 << "runInTerminal request failed: "
-                                 << llvm::toString(std::move(err)) << "\n";
-                           }
-                         });
-
-  if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
-    attach_info.SetProcessID(*pid);
-  else
-    return pid.takeError();
-
-  dap.debugger.SetAsync(false);
-  lldb::SBError error;
-  dap.target.Attach(attach_info, error);
-
-  if (error.Fail())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to attach to the target process. %s",
-                                   comm_channel.GetLauncherError().c_str());
-  // This will notify the runInTerminal launcher that we attached.
-  // We have to make this async, as the function won't return until the launcher
-  // resumes and reads the data.
-  std::future<lldb::SBError> did_attach_message_success =
-      comm_channel.NotifyDidAttach();
-
-  // We just attached to the runInTerminal launcher, which was waiting to be
-  // attached. We now resume it, so it can receive the didAttach notification
-  // and then perform the exec. Upon continuing, the debugger will stop the
-  // process right in the middle of the exec. To the user, what we are doing is
-  // transparent, as they will only be able to see the process since the exec,
-  // completely unaware of the preparatory work.
-  dap.target.GetProcess().Continue();
-
-  // Now that the actual target is just starting (i.e. exec was just invoked),
-  // we return the debugger to its async state.
-  dap.debugger.SetAsync(true);
-
-  // If sending the notification failed, the launcher should be dead by now and
-  // the async didAttach notification should have an error message, so we
-  // return it. Otherwise, everything was a success.
-  did_attach_message_success.wait();
-  error = did_attach_message_success.get();
-  if (error.Success())
-    return llvm::Error::success();
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 error.GetCString());
-}
-
-// Takes a LaunchRequest object and launches the process, also handling
-// runInTerminal if applicable. It doesn't do any of the additional
-// initialization and bookkeeping stuff that is needed for `request_launch`.
-// This way we can reuse the process launching logic for RestartRequest too.
-lldb::SBError LaunchProcess(DAP &dap, const llvm::json::Object &request) {
-  lldb::SBError error;
-  const auto *arguments = request.getObject("arguments");
-  auto launchCommands = GetStrings(arguments, "launchCommands");
-
-  // Instantiate a launch info instance for the target.
-  auto launch_info = dap.target.GetLaunchInfo();
-
-  // Grab the current working directory if there is one and set it in the
-  // launch info.
-  const auto cwd = GetString(arguments, "cwd");
-  if (!cwd.empty())
-    launch_info.SetWorkingDirectory(cwd.data());
-
-  // Extract any extra arguments and append them to our program arguments for
-  // when we launch
-  auto args = GetStrings(arguments, "args");
-  if (!args.empty())
-    launch_info.SetArguments(MakeArgv(args).data(), true);
-
-  // Pass any environment variables along that the user specified.
-  const auto envs = GetEnvironmentFromArguments(*arguments);
-  launch_info.SetEnvironment(envs, true);
-
-  auto flags = launch_info.GetLaunchFlags();
-
-  if (GetBoolean(arguments, "disableASLR", true))
-    flags |= lldb::eLaunchFlagDisableASLR;
-  if (GetBoolean(arguments, "disableSTDIO", false))
-    flags |= lldb::eLaunchFlagDisableSTDIO;
-  if (GetBoolean(arguments, "shellExpandArguments", false))
-    flags |= lldb::eLaunchFlagShellExpandArguments;
-  const bool detachOnError = GetBoolean(arguments, "detachOnError", false);
-  launch_info.SetDetachOnError(detachOnError);
-  launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
-                             lldb::eLaunchFlagStopAtEntry);
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
-
-  if (GetBoolean(arguments, "runInTerminal", false)) {
-    if (llvm::Error err = request_runInTerminal(dap, request, timeout_seconds))
-      error.SetErrorString(llvm::toString(std::move(err)).c_str());
-  } else if (launchCommands.empty()) {
-    // Disable async events so the launch will be successful when we return from
-    // the launch call and the launch will happen synchronously
-    dap.debugger.SetAsync(false);
-    dap.target.Launch(launch_info, error);
-    dap.debugger.SetAsync(true);
-  } else {
-    // Set the launch info so that run commands can access the configured
-    // launch details.
-    dap.target.SetLaunchInfo(launch_info);
-    if (llvm::Error err = dap.RunLaunchCommands(launchCommands)) {
-      error.SetErrorString(llvm::toString(std::move(err)).c_str());
-      return error;
-    }
-    // The custom commands might have created a new target so we should use the
-    // selected target after these commands are run.
-    dap.target = dap.debugger.GetSelectedTarget();
-    // Make sure the process is launched and stopped at the entry point before
-    // proceeding as the launch commands are not run using the synchronous
-    // mode.
-    error = dap.WaitForProcessToStop(timeout_seconds);
-  }
-  return error;
-}
-
-// "LaunchRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Launch request; value of command field is 'launch'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "launch" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/LaunchRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "LaunchRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'launch' request.",
-//   "properties": {
-//     "noDebug": {
-//       "type": "boolean",
-//       "description": "If noDebug is true the launch request should launch
-//                       the program without enabling debugging."
-//     }
-//   }
-// },
-// "LaunchResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'launch' request. This is just an
-//                     acknowledgement, so no body field is required."
-//   }]
-// }
-void request_launch(DAP &dap, const llvm::json::Object &request) {
-  dap.is_attach = false;
-  dap.last_launch_or_attach_request = request;
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  dap.init_commands = GetStrings(arguments, "initCommands");
-  dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
-  dap.stop_commands = GetStrings(arguments, "stopCommands");
-  dap.exit_commands = GetStrings(arguments, "exitCommands");
-  dap.terminate_commands = GetStrings(arguments, "terminateCommands");
-  dap.post_run_commands = GetStrings(arguments, "postRunCommands");
-  dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
-  const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
-  dap.enable_auto_variable_summaries =
-      GetBoolean(arguments, "enableAutoVariableSummaries", false);
-  dap.enable_synthetic_child_debugging =
-      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
-  dap.display_extended_backtrace =
-      GetBoolean(arguments, "displayExtendedBacktrace", false);
-  dap.command_escape_prefix = GetString(arguments, "commandEscapePrefix", "`");
-  dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
-  dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
-
-  PrintWelcomeMessage(dap);
-
-  // This is a hack for loading DWARF in .o files on Mac where the .o files
-  // in the debug map of the main executable have relative paths which
-  // require the lldb-dap binary to have its working directory set to that
-  // relative root for the .o files in order to be able to load debug info.
-  if (!debuggerRoot.empty())
-    llvm::sys::fs::set_current_path(debuggerRoot);
-
-  // Run any initialize LLDB commands the user specified in the launch.json.
-  // This is run before target is created, so commands can't do anything with
-  // the targets - preRunCommands are run with the target.
-  if (llvm::Error err = dap.RunInitCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  SetSourceMapFromArguments(dap, *arguments);
-
-  lldb::SBError status;
-  dap.SetTarget(dap.CreateTargetFromArguments(*arguments, status));
-  if (status.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", status.GetCString());
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  // Run any pre run LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunPreRunCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  status = LaunchProcess(dap, request);
-
-  if (status.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", std::string(status.GetCString()));
-  } else {
-    dap.RunPostRunCommands();
-  }
-
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-
-  if (!status.Fail()) {
-    if (dap.is_attach)
-      SendProcessEvent(dap, Attach); // this happens when doing runInTerminal
-    else
-      SendProcessEvent(dap, Launch);
-  }
-  dap.SendJSON(CreateEventObject("initialized"));
 }
 
 // Check if the step-granularity is `instruction`
@@ -2589,120 +485,6 @@ void request_pause(DAP &dap, const llvm::json::Object &request) {
   FillResponse(request, response);
   lldb::SBProcess process = dap.target.GetProcess();
   lldb::SBError error = process.Stop();
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "RestartRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Restarts a debug session. Clients should only call this
-//     request if the corresponding capability `supportsRestartRequest` is
-//     true.\nIf the capability is missing or has the value false, a typical
-//     client emulates `restart` by terminating the debug adapter first and then
-//     launching it anew.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "restart" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/RestartArguments"
-//       }
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "RestartArguments": {
-//   "type": "object",
-//   "description": "Arguments for `restart` request.",
-//   "properties": {
-//     "arguments": {
-//       "oneOf": [
-//         { "$ref": "#/definitions/LaunchRequestArguments" },
-//         { "$ref": "#/definitions/AttachRequestArguments" }
-//       ],
-//       "description": "The latest version of the `launch` or `attach`
-//       configuration."
-//     }
-//   }
-// },
-// "RestartResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `restart` request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// },
-void request_restart(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  if (!dap.last_launch_or_attach_request) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message",
-                      "Restart request received but no process was launched.");
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-  // Check if we were in a "launch" session or an "attach" session.
-  //
-  // Restarting is not well defined when we started the session by attaching to
-  // an existing process, because we don't know how the process was started, so
-  // we don't support it.
-  //
-  // Note that when using runInTerminal we're technically attached, but it's an
-  // implementation detail. The adapter *did* launch the process in response to
-  // a "launch" command, so we can still stop it and re-run it. This is why we
-  // don't just check `dap.is_attach`.
-  if (GetString(*dap.last_launch_or_attach_request, "command") == "attach") {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message",
-                      "Restarting an \"attach\" session is not supported.");
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  // The optional `arguments` field in RestartRequest can contain an updated
-  // version of the launch arguments. If there's one, use it.
-  const auto *restart_arguments = request.getObject("arguments");
-  if (restart_arguments) {
-    const auto *launch_request_arguments =
-        restart_arguments->getObject("arguments");
-    if (launch_request_arguments) {
-      (*dap.last_launch_or_attach_request)["arguments"] =
-          llvm::json::Value(llvm::json::Object(*launch_request_arguments));
-    }
-  }
-
-  // Keep track of the old PID so when we get a "process exited" event from the
-  // killed process we can detect it and not shut down the whole session.
-  lldb::SBProcess process = dap.target.GetProcess();
-  dap.restarting_process_id = process.GetProcessID();
-
-  // Stop the current process if necessary. The logic here is similar to
-  // CommandObjectProcessLaunchOrAttach::StopProcessIfNecessary, except that
-  // we don't ask the user for confirmation.
-  dap.debugger.SetAsync(false);
-  if (process.IsValid()) {
-    lldb::StateType state = process.GetState();
-    if (state != lldb::eStateConnected) {
-      process.Kill();
-    }
-    // Clear the list of thread ids to avoid sending "thread exited" events
-    // for threads of the process we are terminating.
-    dap.thread_ids.clear();
-  }
-  dap.debugger.SetAsync(true);
-  LaunchProcess(dap, *dap.last_launch_or_attach_request);
-
-  // This is normally done after receiving a "configuration done" request.
-  // Because we're restarting, configuration has already happened so we can
-  // continue the process right away.
-  if (dap.stop_at_entry) {
-    SendThreadStoppedEvent(dap);
-  } else {
-    dap.target.GetProcess().Continue();
-  }
-
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
@@ -4998,20 +2780,20 @@ void request_setInstructionBreakpoints(DAP &dap,
 }
 
 void RegisterRequestCallbacks(DAP &dap) {
-  dap.RegisterRequestCallback("attach", request_attach);
-  dap.RegisterRequestCallback("breakpointLocations",
-                              request_breakpointLocations);
-  dap.RegisterRequestCallback("completions", request_completions);
-  dap.RegisterRequestCallback("continue", request_continue);
-  dap.RegisterRequestCallback("configurationDone", request_configurationDone);
-  dap.RegisterRequestCallback("disconnect", request_disconnect);
-  dap.RegisterRequestCallback("evaluate", request_evaluate);
-  dap.RegisterRequestCallback("exceptionInfo", request_exceptionInfo);
-  dap.RegisterRequestCallback("initialize", request_initialize);
-  dap.RegisterRequestCallback("launch", request_launch);
+  dap.RegisterRequest<AttachRequestHandler>();
+  dap.RegisterRequest<BreakpointLocationsRequestHandler>();
+  dap.RegisterRequest<CompletionsRequestHandler>();
+  dap.RegisterRequest<ContinueRequestHandler>();
+  dap.RegisterRequest<ConfigurationDoneRequestHandler>();
+  dap.RegisterRequest<DisconnectRequestHandler>();
+  dap.RegisterRequest<EvaluateRequestHandler>();
+  dap.RegisterRequest<ExceptionInfoRequestHandler>();
+  dap.RegisterRequest<InitializeRequestHandler>();
+  dap.RegisterRequest<LaunchRequestHandler>();
+  dap.RegisterRequest<RestartRequestHandler>();
+
   dap.RegisterRequestCallback("next", request_next);
   dap.RegisterRequestCallback("pause", request_pause);
-  dap.RegisterRequestCallback("restart", request_restart);
   dap.RegisterRequestCallback("scopes", request_scopes);
   dap.RegisterRequestCallback("setBreakpoints", request_setBreakpoints);
   dap.RegisterRequestCallback("setExceptionBreakpoints",
@@ -5052,10 +2834,10 @@ EXAMPLES:
   The debug adapter can be started in two modes.
 
   Running lldb-dap without any arguments will start communicating with the
-  parent over stdio. Passing a port number causes lldb-dap to start listening
-  for connections on that port.
+  parent over stdio. Passing a --connection URI will cause lldb-dap to listen
+  for a connection in the specified mode.
 
-    lldb-dap -p <port>
+    lldb-dap --connection connection://localhost:<port>
 
   Passing --wait-for-debugger will pause the process at startup and wait for a
   debugger to attach to the process.
@@ -5147,6 +2929,159 @@ static int DuplicateFileDescriptor(int fd) {
 #endif
 }
 
+static llvm::Expected<std::pair<Socket::SocketProtocol, std::string>>
+validateConnection(llvm::StringRef conn) {
+  auto uri = lldb_private::URI::Parse(conn);
+
+  if (uri && (uri->scheme == "tcp" || uri->scheme == "connect" ||
+              !uri->hostname.empty() || uri->port)) {
+    return std::make_pair(
+        Socket::ProtocolTcp,
+        formatv("[{0}]:{1}", uri->hostname.empty() ? "0.0.0.0" : uri->hostname,
+                uri->port.value_or(0)));
+  }
+
+  if (uri && (uri->scheme == "unix" || uri->scheme == "unix-connect" ||
+              uri->path != "/")) {
+    return std::make_pair(Socket::ProtocolUnixDomain, uri->path.str());
+  }
+
+  return llvm::createStringError(
+      "Unsupported connection specifier, expected 'unix-connect:///path' or "
+      "'connect://[host]:port', got '%s'.",
+      conn.str().c_str());
+}
+
+static llvm::Error
+serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
+                std::ofstream *log, llvm::StringRef program_path,
+                const ReplMode default_repl_mode,
+                const std::vector<std::string> &pre_init_commands) {
+  Status status;
+  static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  status = listener->Listen(name, /*backlog=*/5);
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  std::string address = llvm::join(listener->GetListeningConnectionURI(), ", ");
+  if (log)
+    *log << "started with connection listeners " << address << "\n";
+
+  llvm::outs() << "Listening for: " << address << "\n";
+  // Ensure listening address are flushed for calles to retrieve the resolve
+  // address.
+  llvm::outs().flush();
+
+  static lldb_private::MainLoop g_loop;
+  llvm::sys::SetInterruptFunction([]() {
+    g_loop.AddPendingCallback(
+        [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  });
+  std::condition_variable dap_sessions_condition;
+  std::mutex dap_sessions_mutex;
+  std::map<Socket *, DAP *> dap_sessions;
+  unsigned int clientCount = 0;
+  auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
+                                          &dap_sessions_mutex, &dap_sessions,
+                                          &clientCount](
+                                             std::unique_ptr<Socket> sock) {
+    std::string name = llvm::formatv("client_{0}", clientCount++).str();
+    if (log) {
+      auto now = std::chrono::duration<double>(
+          std::chrono::system_clock::now().time_since_epoch());
+      *log << llvm::formatv("{0:f9}", now.count()).str()
+           << " client connected: " << name << "\n";
+    }
+
+    // Move the client into a background thread to unblock accepting the next
+    // client.
+    std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
+                        &dap_sessions, sock = std::move(sock)]() {
+      llvm::set_thread_name(name + ".runloop");
+      StreamDescriptor input =
+          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+      // Close the output last for the best chance at error reporting.
+      StreamDescriptor output =
+          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+      DAP dap = DAP(name, program_path, log, std::move(input),
+                    std::move(output), default_repl_mode, pre_init_commands);
+
+      if (auto Err = dap.ConfigureIO()) {
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                    "Failed to configure stdout redirect: ");
+        return;
+      }
+
+      RegisterRequestCallbacks(dap);
+
+      {
+        std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
+        dap_sessions[sock.get()] = &dap;
+      }
+
+      if (auto Err = dap.Loop()) {
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                    "DAP session error: ");
+      }
+
+      if (log) {
+        auto now = std::chrono::duration<double>(
+            std::chrono::system_clock::now().time_since_epoch());
+        *log << llvm::formatv("{0:f9}", now.count()).str()
+             << " client closed: " << name << "\n";
+      }
+
+      std::unique_lock<std::mutex> lock(dap_sessions_mutex);
+      dap_sessions.erase(sock.get());
+      std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
+    });
+    client.detach();
+  });
+
+  if (auto Err = handle.takeError()) {
+    return Err;
+  }
+
+  status = g_loop.Run();
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  if (log)
+    *log << "lldb-dap server shutdown requested, disconnecting remaining "
+            "clients...\n";
+
+  bool client_failed = false;
+  {
+    std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
+    for (auto [sock, dap] : dap_sessions) {
+      auto error = dap->Disconnect();
+      if (error.Fail()) {
+        client_failed = true;
+        llvm::errs() << "DAP client " << dap->name
+                     << " disconnected failed: " << error.GetCString() << "\n";
+      }
+      // Close the socket to ensure the DAP::Loop read finishes.
+      sock->Close();
+    }
+  }
+
+  // Wait for all clients to finish disconnecting.
+  std::unique_lock<std::mutex> lock(dap_sessions_mutex);
+  dap_sessions_condition.wait(lock, [&] { return dap_sessions.empty(); });
+
+  if (client_failed)
+    return llvm::make_error<llvm::StringError>(
+        "disconnecting all clients failed", llvm::inconvertibleErrorCode());
+
+  return llvm::Error::success();
+}
+
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
 #if !defined(__APPLE__)
@@ -5182,9 +3117,9 @@ int main(int argc, char *argv[]) {
     } else if (repl_mode_value == "command") {
       default_repl_mode = ReplMode::Command;
     } else {
-      llvm::errs()
-          << "'" << repl_mode_value
-          << "' is not a valid option, use 'variable', 'command' or 'auto'.\n";
+      llvm::errs() << "'" << repl_mode_value
+                   << "' is not a valid option, use 'variable', 'command' or "
+                      "'auto'.\n";
       return EXIT_FAILURE;
     }
   }
@@ -5217,15 +3152,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  int portno = -1;
-  if (auto *arg = input_args.getLastArg(OPT_port)) {
-    const auto *optarg = arg->getValue();
-    char *remainder;
-    portno = strtol(optarg, &remainder, 0);
-    if (remainder == optarg || *remainder != '\0') {
-      fprintf(stderr, "'%s' is not a valid port number.\n", optarg);
-      return EXIT_FAILURE;
-    }
+  std::string connection;
+  if (auto *arg = input_args.getLastArg(OPT_connection)) {
+    const auto *path = arg->getValue();
+    connection.assign(path);
   }
 
 #if !defined(_WIN32)
@@ -5253,72 +3183,75 @@ int main(int argc, char *argv[]) {
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
-  StreamDescriptor input;
-  StreamDescriptor output;
-  std::FILE *redirectOut = nullptr;
-  std::FILE *redirectErr = nullptr;
-  if (portno != -1) {
-    printf("Listening on port %i...\n", portno);
-    SOCKET socket_fd = AcceptConnection(log.get(), portno);
-    if (socket_fd < 0)
-      return EXIT_FAILURE;
+  std::vector<std::string> pre_init_commands;
+  for (const std::string &arg :
+       input_args.getAllArgValues(OPT_pre_init_command)) {
+    pre_init_commands.push_back(arg);
+  }
 
-    input = StreamDescriptor::from_socket(socket_fd, true);
-    output = StreamDescriptor::from_socket(socket_fd, false);
-  } else {
-#if defined(_WIN32)
-    // Windows opens stdout and stdin in text mode which converts \n to 13,10
-    // while the value is just 10 on Darwin/Linux. Setting the file mode to
-    // binary fixes this.
-    int result = _setmode(fileno(stdout), _O_BINARY);
-    assert(result);
-    result = _setmode(fileno(stdin), _O_BINARY);
-    UNUSED_IF_ASSERT_DISABLED(result);
-    assert(result);
-#endif
-
-    int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
-    if (stdout_fd == -1) {
-      llvm::logAllUnhandledErrors(
-          llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
-          "Failed to configure stdout redirect: ");
+  if (!connection.empty()) {
+    auto maybeProtoclAndName = validateConnection(connection);
+    if (auto Err = maybeProtoclAndName.takeError()) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Invalid connection: ");
       return EXIT_FAILURE;
     }
 
-    redirectOut = stdout;
-    redirectErr = stderr;
+    Socket::SocketProtocol protocol;
+    std::string name;
+    std::tie(protocol, name) = *maybeProtoclAndName;
+    if (auto Err = serveConnection(protocol, name, log.get(), program_path,
+                                   default_repl_mode, pre_init_commands)) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Connection failed: ");
+      return EXIT_FAILURE;
+    }
 
-    input = StreamDescriptor::from_file(fileno(stdin), false);
-    output = StreamDescriptor::from_file(stdout_fd, false);
+    return EXIT_SUCCESS;
   }
 
-  DAP dap = DAP(program_path.str(), log.get(), default_repl_mode,
-                std::move(input), std::move(output));
+#if defined(_WIN32)
+  // Windows opens stdout and stdin in text mode which converts \n to 13,10
+  // while the value is just 10 on Darwin/Linux. Setting the file mode to
+  // binary fixes this.
+  int result = _setmode(fileno(stdout), _O_BINARY);
+  assert(result);
+  result = _setmode(fileno(stdin), _O_BINARY);
+  UNUSED_IF_ASSERT_DISABLED(result);
+  assert(result);
+#endif
+
+  int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
+  if (stdout_fd == -1) {
+    llvm::logAllUnhandledErrors(
+        llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
+        "Failed to configure stdout redirect: ");
+    return EXIT_FAILURE;
+  }
+
+  StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
+  StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
+
+  DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
+                std::move(output), default_repl_mode, pre_init_commands);
 
   // stdout/stderr redirection to the IDE's console
-  if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
+  if (auto Err = dap.ConfigureIO(stdout, stderr)) {
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                "Failed to configure lldb-dap IO operations: ");
+                                "Failed to configure stdout redirect: ");
     return EXIT_FAILURE;
   }
 
   RegisterRequestCallbacks(dap);
 
-  for (const std::string &arg :
-       input_args.getAllArgValues(OPT_pre_init_command)) {
-    dap.pre_init_commands.push_back(arg);
-  }
-
   // used only by TestVSCode_redirection_to_console.py
   if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
     redirection_test();
 
-  bool CleanExit = true;
   if (auto Err = dap.Loop()) {
-    if (log)
-      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
-    CleanExit = false;
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                "DAP session error: ");
+    return EXIT_FAILURE;
   }
-
-  return CleanExit ? EXIT_SUCCESS : EXIT_FAILURE;
+  return EXIT_SUCCESS;
 }

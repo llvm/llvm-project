@@ -8,7 +8,7 @@
 
 // RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 
-/// End-to-end test for tensor.unpack where one of the inner tile sizes is
+/// End-to-end test for linalg.unpack where one of the inner tile sizes is
 /// dynamic.
 
 func.func @main() {
@@ -56,7 +56,7 @@ func.func private @unpack(%A: tensor<?x3x?x1xi32>) {
   %tile_size = arith.constant 8 : index
   %A_unpack_empty = tensor.empty() : tensor<7x3xi32>
 
-  %A_unpack = tensor.unpack %A
+  %A_unpack = linalg.unpack %A
     inner_dims_pos = [0, 1]
     inner_tiles = [%tile_size, 1]
     into %A_unpack_empty : tensor<?x3x?x1xi32> -> tensor<7x3xi32>
@@ -78,9 +78,9 @@ func.func private @unpack(%A: tensor<?x3x?x1xi32>) {
 
 module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.consume}) {
-    %pack = transform.structured.match ops{["tensor.unpack"]} in %module : (!transform.any_op) -> !transform.any_op
+    %pack = transform.structured.match ops{["linalg.unpack"]} in %module : (!transform.any_op) -> !transform.any_op
 
-    // 1. Tile so that we can decompose tensor.pack
+    // 1. Tile so that we can decompose linalg.pack
     // Ops (see step 2)
     %c8 = transform.param.constant 8 : i64 -> !transform.param<i64>
     %tiled_pack_op_p, %loops:2 = transform.structured.tile_using_for %pack tile_sizes [%c8, 1]

@@ -27,8 +27,8 @@ public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
   using AddAbsoluteSymbolsFn = unique_function<Error(JITDylib &, SymbolMap)>;
 
-  /// Create a DynamicLibrarySearchGenerator that searches for symbols in the
-  /// library with the given handle.
+  /// Create an EPCDynamicLibrarySearchGenerator that searches for symbols in
+  /// the library with the given handle.
   ///
   /// If the Allow predicate is given then only symbols matching the predicate
   /// will be searched for. If the predicate is not given then all symbols will
@@ -44,8 +44,9 @@ public:
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
   /// Permanently loads the library at the given path and, on success, returns
-  /// a DynamicLibrarySearchGenerator that will search it for symbol definitions
-  /// in the library. On failure returns the reason the library failed to load.
+  /// an EPCDynamicLibrarySearchGenerator that will search it for symbol
+  /// definitions in the library. On failure returns the reason the library
+  /// failed to load.
   static Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
   Load(ExecutionSession &ES, const char *LibraryPath,
        SymbolPredicate Allow = SymbolPredicate(),

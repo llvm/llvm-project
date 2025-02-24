@@ -204,7 +204,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
 
 namespace cgdata {
 
-void warn(Twine Message, std::string Whence, std::string Hint) {
+void warn(Twine Message, StringRef Whence, StringRef Hint) {
   WithColor::warning();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -216,7 +216,7 @@ void warn(Twine Message, std::string Whence, std::string Hint) {
 void warn(Error E, StringRef Whence) {
   if (E.isA<CGDataError>()) {
     handleAllErrors(std::move(E), [&](const CGDataError &IPE) {
-      warn(IPE.message(), Whence.str(), "");
+      warn(IPE.message(), Whence, "");
     });
   }
 }

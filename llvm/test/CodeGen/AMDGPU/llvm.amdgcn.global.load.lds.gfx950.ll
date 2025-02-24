@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950,GFX950-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX950,GFX950-GISEL %s
 
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx940 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx940 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
+; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 
 ; ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.global.load.lds
 

@@ -301,7 +301,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       // the last instruction in the block.
       if (MI.isReturn() && MFI.isCalleeSavedInfoValid()) {
         for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
-          if (Info.getReg() == Reg) {
+          if (Info.getReg() == Reg.asMCReg()) {
             IsNotLive = !Info.isRestored();
             break;
           }

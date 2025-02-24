@@ -25,7 +25,7 @@ define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %p, i16 0, i32 1234, i32 5678)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 0, i32 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
 }
 
@@ -43,7 +43,7 @@ define amdgpu_ps float @read_raw_buffer(ptr addrspace(1) inreg %p) {
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_]], 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %p, i16 0, i32 0, i32 0)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %p, i16 0, i32 0, i32 0)
   %loaded = call float @llvm.amdgcn.raw.ptr.buffer.load(ptr addrspace(8) %rsrc, i32 4, i32 0, i32 0)
   ret float %loaded
 }
@@ -74,7 +74,7 @@ define amdgpu_ps ptr addrspace(8) @basic_struct_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %p, i16 4, i32 1234, i32 5678)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 4, i32 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
 }
 
@@ -104,7 +104,7 @@ define amdgpu_ps ptr addrspace(8) @variable_top_half(ptr inreg %p, i32 inreg %nu
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %p, i16 4, i32 %numVals, i32 %flags)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 4, i32 %numVals, i32 %flags)
   ret ptr addrspace(8) %rsrc
 }
 
@@ -136,7 +136,7 @@ define amdgpu_ps ptr addrspace(8) @general_case(ptr inreg %p, i16 inreg %stride,
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
   ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %p, i16 %stride, i32 %numVals, i32 %flags)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 %stride, i32 %numVals, i32 %flags)
   ret ptr addrspace(8) %rsrc
 }
 
@@ -161,7 +161,7 @@ define amdgpu_ps float @general_case_load(ptr inreg %p, i16 inreg %stride, i32 i
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_IDXEN [[COPY5]], [[REG_SEQUENCE]], [[S_MOV_B32_2]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_IDXEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %p, i16 %stride, i32 %numVals, i32 %flags)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 %stride, i32 %numVals, i32 %flags)
   %value = call float @llvm.amdgcn.struct.ptr.buffer.load(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
   ret float %value
 }
@@ -221,12 +221,52 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i3
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_IDXEN]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %p, i16 %stride, i32 %numVals, i32 %flags)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 %stride, i32 %numVals, i32 %flags)
   %value = call float @llvm.amdgcn.struct.ptr.buffer.load(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
   ret float %value
 }
 
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr nocapture readnone, i16, i32, i32)
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) nocapture readnone, i16, i32, i32)
+define amdgpu_ps float @read_buffer_fat_ptr_p0(ptr inreg %p) {
+  ; CHECK-LABEL: name: read_buffer_fat_ptr_p0
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %ptr = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p0(ptr %p, i16 0, i32 0, i32 0)
+  %loaded = load float, ptr addrspace(7) %ptr
+  ret float %loaded
+}
+
+define amdgpu_ps float @read_buffer_fat_ptr_p1(ptr addrspace(1) inreg %p) {
+  ; CHECK-LABEL: name: read_buffer_fat_ptr_p1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  %ptr = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %p, i16 0, i32 0, i32 0)
+  %loaded = load float, ptr addrspace(7) %ptr
+  ret float %loaded
+}
+
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr nocapture readnone, i16, i32, i32)
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) nocapture readnone, i16, i32, i32)
+declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p0(ptr nocapture readnone, i16, i32, i32)
+declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) nocapture readnone, i16, i32, i32)
 declare float @llvm.amdgcn.raw.ptr.buffer.load(ptr addrspace(8) nocapture readonly, i32, i32, i32 immarg)
 declare float @llvm.amdgcn.struct.ptr.buffer.load(ptr addrspace(8) nocapture readonly, i32, i32, i32, i32 immarg)

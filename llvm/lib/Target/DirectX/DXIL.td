@@ -930,6 +930,7 @@ def MakeDouble : DXILOp<101, makeDouble> {
 
 def SplitDouble : DXILOp<102, splitDouble> {
   let Doc = "Splits a double into 2 uints";
+  let intrinsics = [IntrinSelect<int_dx_splitdouble>];
   let arguments = [OverloadTy];
   let result = SplitDoubleTy;
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];

@@ -27,6 +27,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -324,6 +325,10 @@ public:
       LastEMS = EMS_None;
 
     MCELFStreamer::changeSection(Section, Subsection);
+
+    // Section alignment of 4 to match GNU Assembler
+    if (Section->isText())
+      Section->ensureMinAlignment(Align(4));
   }
 
   // Reset state between object emissions
@@ -502,6 +507,23 @@ void AArch64TargetELFStreamer::finish() {
       for (auto &F : S.getWriter().getFileNames())
         F.second += llvm::lower_bound(Idx, F.second) - Idx.begin();
     }
+  }
+
+  // The mix of execute-only and non-execute-only at link time is
+  // non-execute-only. To avoid the empty implicitly created .text
+  // section from making the whole .text section non-execute-only, we
+  // mark it execute-only if it is empty and there is at least one
+  // execute-only section in the object.
+  if (any_of(Asm, [](const MCSection &Sec) {
+        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_AARCH64_PURECODE;
+      })) {
+    auto *Text =
+        static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
+    for (auto &F : *Text)
+      if (auto *DF = dyn_cast<MCDataFragment>(&F))
+        if (!DF->getContents().empty())
+          return;
+    Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
   }
 
   MCSectionELF *MemtagSec = nullptr;

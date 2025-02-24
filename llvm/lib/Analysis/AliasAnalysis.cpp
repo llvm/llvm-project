@@ -623,8 +623,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!Call || Call == Object)
     return ModRefInfo::ModRef;
 
-  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
-                                 /* StoreCaptures */ true, I, DT,
+  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true, I, DT,
                                  /* include Object */ true))
     return ModRefInfo::ModRef;
 
@@ -851,6 +850,12 @@ bool llvm::isEscapeSource(const Value *V) {
   // escaping, and objects located at well-known addresses via platform-specific
   // means cannot be considered non-escaping local objects.
   if (isa<IntToPtrInst>(V))
+    return true;
+
+  // Capture tracking considers insertions into aggregates and vectors as
+  // captures. As such, extractions from aggregates and vectors are escape
+  // sources.
+  if (isa<ExtractValueInst, ExtractElementInst>(V))
     return true;
 
   // Same for inttoptr constant expressions.

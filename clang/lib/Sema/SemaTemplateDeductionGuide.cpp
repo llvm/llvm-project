@@ -998,8 +998,6 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
       Template = CTSD->getSpecializedTemplate();
       AliasRhsTemplateArgs = CTSD->getTemplateArgs().asArray();
     }
-  } else {
-    assert(false && "unhandled RHS type of the alias");
   }
   return {Template, AliasRhsTemplateArgs};
 }

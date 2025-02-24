@@ -229,7 +229,7 @@
 #error "wrong value for __cpp_aggregate_bases"
 #endif
 
-#if check(structured_bindings, 0, 0, 0, 202403L, 202403L, 202403L, 202403L)
+#if check(structured_bindings, 0, 0, 0, 202411L, 202411L, 202411L, 202411L)
 #error "wrong value for __cpp_structured_bindings"
 #endif
 

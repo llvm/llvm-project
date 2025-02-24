@@ -170,8 +170,8 @@ TYPE_PARSER(sourced( //
 TYPE_PARSER(construct<OmpLocatorList>(nonemptyList(Parser<OmpLocator>{})))
 
 TYPE_PARSER( //
-    construct<OmpTypeSpecifier>(Parser<TypeSpec>{}) ||
-    construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}))
+    construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}) ||
+    construct<OmpTypeSpecifier>(Parser<TypeSpec>{}))
 
 TYPE_PARSER(construct<OmpReductionSpecifier>( //
     Parser<OmpReductionIdentifier>{},
@@ -1148,9 +1148,7 @@ TYPE_PARSER(construct<OmpReductionInitializerClause>(
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
     verbatim("DECLARE REDUCTION"_tok),
-    "(" >> Parser<OmpReductionIdentifier>{} / ":",
-    nonemptyList(Parser<DeclarationTypeSpec>{}) / ":",
-    Parser<OmpReductionCombiner>{} / ")",
+    "(" >> indirect(Parser<OmpReductionSpecifier>{}) / ")",
     maybe(Parser<OmpReductionInitializerClause>{}))))
 
 // declare-target with list

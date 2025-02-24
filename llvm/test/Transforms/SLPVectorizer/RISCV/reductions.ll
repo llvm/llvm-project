@@ -341,13 +341,12 @@ define void @reduce_or_2() {
 ; ZVFHMIN-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVFHMIN-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVFHMIN-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVFHMIN-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVFHMIN-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVFHMIN-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; ZVFHMIN-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVFHMIN-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
 ; ZVFHMIN-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVFHMIN:       8:
+; ZVFHMIN:       7:
 ; ZVFHMIN-NEXT:    ret void
-; ZVFHMIN:       9:
+; ZVFHMIN:       8:
 ; ZVFHMIN-NEXT:    ret void
 ;
 ; ZVL128-LABEL: @reduce_or_2(
@@ -356,13 +355,12 @@ define void @reduce_or_2() {
 ; ZVL128-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVL128-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVL128-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVL128-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVL128-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVL128-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; ZVL128-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVL128-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
 ; ZVL128-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVL128:       8:
+; ZVL128:       7:
 ; ZVL128-NEXT:    ret void
-; ZVL128:       9:
+; ZVL128:       8:
 ; ZVL128-NEXT:    ret void
 ;
 ; ZVL256-LABEL: @reduce_or_2(
@@ -371,13 +369,12 @@ define void @reduce_or_2() {
 ; ZVL256-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVL256-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVL256-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVL256-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVL256-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVL256-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; ZVL256-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVL256-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
 ; ZVL256-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVL256:       8:
+; ZVL256:       7:
 ; ZVL256-NEXT:    ret void
-; ZVL256:       9:
+; ZVL256:       8:
 ; ZVL256-NEXT:    ret void
 ;
 ; ZVL512-LABEL: @reduce_or_2(

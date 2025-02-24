@@ -268,8 +268,6 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  bool MightHaveChildren() override { return true; }
-
   size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);

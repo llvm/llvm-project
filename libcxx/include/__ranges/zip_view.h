@@ -252,7 +252,7 @@ class zip_view<_Views...>::__iterator : public __zip_view_iterator_category_base
   friend class zip_view<_Views...>;
 
 public:
-  using iterator_concept = decltype(__get_zip_view_iterator_tag<_Const, _Views...>());
+  using iterator_concept = decltype(ranges::__get_zip_view_iterator_tag<_Const, _Views...>());
   using value_type       = tuple<range_value_t<__maybe_const<_Const, _Views>>...>;
   using difference_type  = common_type_t<range_difference_t<__maybe_const<_Const, _Views>>...>;
 

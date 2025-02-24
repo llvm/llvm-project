@@ -439,3 +439,15 @@ define i4 @test_vector_load_i4_non_byte_sized() {
   %res0 = load i4, ptr %ptr0, align 1
   ret i4 %res0
 }
+
+define i32 @load_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
+; CHECK-LABEL: @load_select_with_null_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %gep = getelementptr i8, ptr %sel, i64 %off
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}

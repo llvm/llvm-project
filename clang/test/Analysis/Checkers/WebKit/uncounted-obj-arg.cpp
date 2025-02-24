@@ -77,6 +77,8 @@ T&& forward(T& arg);
 template<typename T>
 T&& move( T&& t );
 
+#define offsetof(t, d) __builtin_offsetof(t, d)
+
 } // namespace std
 
 bool isMainThread();
@@ -373,6 +375,8 @@ public:
     double y;
   };
   void trivial68() { point pt = { 1.0 }; }
+  unsigned trivial69() { return offsetof(RefCounted, children); }
+  DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -560,6 +564,8 @@ public:
     getFieldTrivial().trivial66()->trivial6(); // no-warning
     getFieldTrivial().trivial67()->trivial6(); // no-warning
     getFieldTrivial().trivial68(); // no-warning
+    getFieldTrivial().trivial69(); // no-warning
+    getFieldTrivial().trivial70(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning

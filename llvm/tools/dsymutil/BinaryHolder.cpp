@@ -288,15 +288,13 @@ void BinaryHolder::eraseObjectEntry(StringRef Filename) {
   if (isArchive(Filename)) {
     StringRef ArchiveFilename = getArchiveAndObjectName(Filename).first;
     std::lock_guard<std::mutex> Lock(ArchiveCacheMutex);
-    ArchiveRefCounter[ArchiveFilename]--;
-    if (ArchiveRefCounter[ArchiveFilename] == 0)
+    if (--ArchiveRefCounter[ArchiveFilename] == 0)
       ArchiveCache.erase(ArchiveFilename);
     return;
   }
 
   std::lock_guard<std::mutex> Lock(ObjectCacheMutex);
-  ObjectRefCounter[Filename]--;
-  if (ObjectRefCounter[Filename] == 0)
+  if (--ObjectRefCounter[Filename] == 0)
     ObjectCache.erase(Filename);
 }
 

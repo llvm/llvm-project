@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "IOStream.h"
+#include <fstream>
+#include <string>
 
 #if defined(_WIN32)
 #include <io.h>
@@ -15,9 +17,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
-
-#include <fstream>
-#include <string>
 
 using namespace lldb_dap;
 

@@ -1,5 +1,6 @@
 import os
 import time
+import subprocess
 
 import dap_server
 from lldbsuite.test.lldbtest import *
@@ -10,10 +11,10 @@ import lldbgdbserverutils
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    timeoutval = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adaptor(self, lldbDAPEnv=None):
+    def create_debug_adaptor(self, lldbDAPEnv=None, connection=None):
         """Create the Visual Studio Code debug adaptor"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
@@ -21,6 +22,7 @@ class DAPTestCaseBase(TestBase):
         log_file_path = self.getBuildArtifact("dap.txt")
         self.dap_server = dap_server.DebugAdaptorServer(
             executable=self.lldbDAPExec,
+            connection=connection,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,

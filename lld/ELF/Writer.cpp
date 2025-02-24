@@ -284,7 +284,6 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  bool hasDynsym = ctx.hasDynsym;
   bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
@@ -301,9 +300,8 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    if (hasDynsym)
-      sym->isPreemptible = maybePreemptible &&
-                           (sym->isUndefined() || sym->isExported) &&
+    if (maybePreemptible)
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
                            computeIsPreemptible(ctx, *sym);
   }
 }
@@ -1853,7 +1851,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // If the previous code block defines any non-hidden symbols (e.g.
   // __global_pointer$), they may be exported.
-  if (ctx.hasDynsym && ctx.arg.exportDynamic)
+  if (ctx.arg.exportDynamic)
     for (Symbol *sym : ctx.synthesizedSymbols)
       if (sym->computeBinding(ctx) != STB_LOCAL)
         sym->isExported = true;
