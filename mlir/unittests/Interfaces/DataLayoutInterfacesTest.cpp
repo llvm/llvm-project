@@ -25,7 +25,8 @@ constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
 constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
-constexpr static llvm::StringLiteral kManglingModeKeyName = "dltest.mangling";
+constexpr static llvm::StringLiteral kManglingModeKeyName =
+    "dltest.mangling_mode";
 constexpr static llvm::StringLiteral kProgramKeyName =
     "dltest.program_memory_space";
 constexpr static llvm::StringLiteral kGlobalKeyName =
