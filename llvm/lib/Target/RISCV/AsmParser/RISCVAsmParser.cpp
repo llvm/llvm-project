@@ -1063,7 +1063,7 @@ public:
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isInt<32>(fixImmediateForRV32(Imm, isRV64Imm())) &&
-	   VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   /// getStartLoc - Gets location of the first token of this operand
