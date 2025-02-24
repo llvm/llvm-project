@@ -12,7 +12,7 @@
 // RUN: llc %t.ll -o %t.o -filetype=obj
 
 // Compile the current C file and link it to the MLIR code:
-// RUN: "%host_cc" %s %t.o -o %t.exe
+// RUN: %host_cc %s %t.o -o %t.exe
 
 // Exec
 // RUN: %t.exe | FileCheck %s
