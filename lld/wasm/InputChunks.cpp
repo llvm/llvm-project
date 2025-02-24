@@ -167,6 +167,19 @@ void InputChunk::relocate(uint8_t *buf) const {
   }
 }
 
+static bool relocIsLive(const WasmRelocation& rel, ObjFile* file) {
+  return rel.Type == R_WASM_TYPE_INDEX_LEB ||
+    file->getSymbol(rel.Index)->isLive();
+}
+
+size_t InputChunk::getNumLiveRelocations() const {
+  size_t result = 0;
+  for (const WasmRelocation& rel : relocations) {
+    if (relocIsLive(rel, file)) result ++;
+  }
+  return result;
+}
+
 // Copy relocation entries to a given output stream.
 // This function is used only when a user passes "-r". For a regular link,
 // we consume relocations instead of copying them to an output file.
@@ -179,6 +192,8 @@ void InputChunk::writeRelocations(raw_ostream &os) const {
                     << " offset=" << Twine(off) << "\n");
 
   for (const WasmRelocation &rel : relocations) {
+    if (!relocIsLive(rel, file))
+      continue;
     writeUleb128(os, rel.Type, "reloc type");
     writeUleb128(os, rel.Offset + off, "reloc offset");
     writeUleb128(os, file->calcNewIndex(rel), "reloc index");
