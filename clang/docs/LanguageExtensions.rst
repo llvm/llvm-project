@@ -1862,12 +1862,13 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_relocatable`` (Clang): Returns true if moving an object
   of the given type, and then destroying the source object, is known to be
   functionally equivalent to copying the underlying bytes and then dropping the
-  source object on the floor. This is true of trivial types and types which
+  source object on the floor. This is true of trivial types,
+  C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
 * ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
   is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
-  Note that the caller code should ensure that if the object is polymorphic,
-  the dynamic type is of the most derived type.
+  Note that when relocating the caller code should ensure that if the object is polymorphic,
+  the dynamic type is of the most derived type. Padding bytes should not be copied.
 * ``__builtin_is_replaceable`` (C++): Returns true if an object
   is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
