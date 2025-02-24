@@ -676,9 +676,6 @@ bool windows_manifest::isAvailable() { return true; }
 
 #else
 
-WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
-}
-
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
     MemoryBufferRef Manifest) {
   return make_error<WindowsManifestError>("no libxml2");
