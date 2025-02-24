@@ -67,9 +67,9 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 }
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
-TelemetryManager *TelemetryManager::getInstance() { return g_instance.get(); }
+TelemetryManager *TelemetryManager::GetInstance() { return g_instance.get(); }
 
-void TelemetryManager::setInstance(std::unique_ptr<TelemetryManager> manager) {
+void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
   g_instance = std::move(manager);
 }
 
