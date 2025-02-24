@@ -120,8 +120,8 @@ func.func @transpose_conv2d_strided_quantized(%arg0: tensor<2x17x15x3xi8>, %arg1
   // CHECK-DAG: %[[CONV_NEW_SHAPE:.*]] = tosa.const_shape  {value = dense<[2, 18, 16, 2, 3, 5]> : tensor<6xindex>}
   // CHECK-DAG: %[[RESHAPE_OUT_1:.+]] = tosa.reshape %[[CONV]], %[[CONV_NEW_SHAPE]]
   // CHECK-DAG: %[[TRANS_OUT:.+]] = tosa.transpose %[[RESHAPE_OUT_1]], %[[TRANS2]]
-  // CHECK-DAG: %[[TEANS_NEW_SHAPE:.+]] = tosa.const_shape {value = dense<[2, 36, 48, 5]> : tensor<4xindex>}
-  // CHECK-DAG: %[[RESHAPE_OUT_2:.+]] = tosa.reshape %[[TRANS_OUT]], %[[TEANS_NEW_SHAPE]]
+  // CHECK-DAG: %[[TRANS_NEW_SHAPE:.+]] = tosa.const_shape {value = dense<[2, 36, 48, 5]> : tensor<4xindex>}
+  // CHECK-DAG: %[[RESHAPE_OUT_2:.+]] = tosa.reshape %[[TRANS_OUT]], %[[TRANS_NEW_SHAPE]]
   // CHECK-DAG: %[[SLICE:.+]] = tosa.slice %[[RESHAPE_OUT_2]], %[[START]], %[[SIZE]]
   // CHECK-DAG: %[[ARG2_NEW_SHAPE:.+]] = tosa.const_shape {value = dense<[1, 1, 1, 5]> : tensor<4xindex>}
   // CHECK-DAG: %[[RESHAPE_ARG2:.+]] = tosa.reshape %arg2, %[[ARG2_NEW_SHAPE]]

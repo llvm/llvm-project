@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefix=GCN %s
 
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
+; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 
 ; ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.permlane16.swap
 ; ERR-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32), %{{[0-9]+}}:vgpr_32(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.permlane16.swap)

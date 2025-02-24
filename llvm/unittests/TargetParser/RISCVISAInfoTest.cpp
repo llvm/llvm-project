@@ -1108,6 +1108,7 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
+    p                    0.14
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zalasr               0.1
@@ -1128,6 +1129,7 @@ Experimental extensions
     xqcilo               0.2
     xqcilsm              0.2
     xqcisls              0.2
+    xrivosvizip          0.1
 
 Supported Profiles
     rva20s64

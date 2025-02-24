@@ -977,8 +977,15 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
       } else if (Attr.isIntAttribute()) {
         Record.push_back(1);
-        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        Record.push_back(Attr.getValueAsInt());
+        Attribute::AttrKind Kind = Attr.getKindAsEnum();
+        Record.push_back(getAttrKindEncoding(Kind));
+        if (Kind == Attribute::Memory) {
+          // Version field for upgrading old memory effects.
+          const uint64_t Version = 1;
+          Record.push_back((Version << 56) | Attr.getValueAsInt());
+        } else {
+          Record.push_back(Attr.getValueAsInt());
+        }
       } else if (Attr.isStringAttribute()) {
         StringRef Kind = Attr.getKindAsString();
         StringRef Val = Attr.getValueAsString();

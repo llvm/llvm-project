@@ -763,15 +763,15 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     if (T.isWasm()) {
       supportMemtagGlobals = true;
     }
-    else if (arch == Triple::aarch64 && T.isAndroid()) {
+    else if (arch == Triple::aarch64) {
       supportMemtagGlobals = true;
     }
 
     if (!supportMemtagGlobals)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
-                             "only supported on AArch64 Android or WebAssembly");
-    OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
+                             "only supported on AArch64 or WebAssembly");
+    OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 
   if (!GV->hasInitializer())   // External globals require no extra code.
@@ -1095,11 +1095,9 @@ void AsmPrinter::emitFunctionEntryLabel() {
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
     if (Sym != CurrentFnSym) {
-      cast<MCSymbolELF>(Sym)->setType(ELF::STT_FUNC);
       CurrentFnBeginLocal = Sym;
       OutStreamer->emitLabel(Sym);
-      if (MAI->hasDotTypeDotSizeDirective())
-        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     }
   }
 }

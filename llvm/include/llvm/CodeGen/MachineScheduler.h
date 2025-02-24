@@ -1084,9 +1084,23 @@ public:
   /// Represent the type of SchedCandidate found within a single queue.
   /// pickNodeBidirectional depends on these listed by decreasing priority.
   enum CandReason : uint8_t {
-    NoCand, Only1, PhysReg, RegExcess, RegCritical, Stall, Cluster, Weak,
-    RegMax, ResourceReduce, ResourceDemand, BotHeightReduce, BotPathReduce,
-    TopDepthReduce, TopPathReduce, NextDefUse, NodeOrder};
+    NoCand,
+    Only1,
+    PhysReg,
+    RegExcess,
+    RegCritical,
+    Stall,
+    Cluster,
+    Weak,
+    RegMax,
+    ResourceReduce,
+    ResourceDemand,
+    BotHeightReduce,
+    BotPathReduce,
+    TopDepthReduce,
+    TopPathReduce,
+    NodeOrder
+  };
 
 #ifndef NDEBUG
   static const char *getReasonStr(GenericSchedulerBase::CandReason Reason);

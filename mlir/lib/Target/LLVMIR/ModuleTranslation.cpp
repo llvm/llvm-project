@@ -145,7 +145,7 @@ private:
 };
 
 using CapturingIRBuilder =
-    llvm::IRBuilder<llvm::ConstantFolder, InstructionCapturingInserter>;
+    llvm::IRBuilder<llvm::TargetFolder, InstructionCapturingInserter>;
 } // namespace
 
 InstructionCapturingInserter::CollectionScope::CollectionScope(
@@ -1522,7 +1522,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // converted before uses.
   auto blocks = getBlocksSortedByDominance(func.getBody());
   for (Block *bb : blocks) {
-    CapturingIRBuilder builder(llvmContext);
+    CapturingIRBuilder builder(llvmContext,
+                               llvm::TargetFolder(llvmModule->getDataLayout()));
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
                                 /*recordInsertions=*/true)))
       return failure();
@@ -2141,7 +2142,9 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   LLVM::legalizeDIExpressionsRecursively(module);
 
   ModuleTranslation translator(module, std::move(llvmModule));
-  llvm::IRBuilder<> llvmBuilder(llvmContext);
+  llvm::IRBuilder<llvm::TargetFolder> llvmBuilder(
+      llvmContext,
+      llvm::TargetFolder(translator.getLLVMModule()->getDataLayout()));
 
   // Convert module before functions and operations inside, so dialect
   // attributes can be used to change dialect-specific global configurations via

@@ -309,6 +309,10 @@ MLIR_CAPI_EXPORTED MlirModule mlirModuleCreateEmpty(MlirLocation location);
 MLIR_CAPI_EXPORTED MlirModule mlirModuleCreateParse(MlirContext context,
                                                     MlirStringRef module);
 
+/// Parses a module from file and transfers ownership to the caller.
+MLIR_CAPI_EXPORTED MlirModule
+mlirModuleCreateParseFromFile(MlirContext context, MlirStringRef fileName);
+
 /// Gets the context that a module was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirModuleGetContext(MlirModule module);
 

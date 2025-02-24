@@ -59,10 +59,12 @@ static int (*RemoveFindDynamicUnwindSections)(void *) = nullptr;
 
 UnwindInfoManager::~UnwindInfoManager() {
   if (int Err = RemoveFindDynamicUnwindSections((void *)&findSections)) {
+    (void)Err; // Silence unused variable warning in release builds.
     LLVM_DEBUG({
       dbgs() << "Failed call to " << RemoveFnName << ": error = " << Err
              << "\n";
     });
+    (void)Err;
   }
 }
 
@@ -85,6 +87,7 @@ bool UnwindInfoManager::TryEnable() {
   Instance.reset(new UnwindInfoManager());
 
   if (auto Err = AddFn((void *)&findSections)) {
+    (void)Err; // Silence unused variable warning in release builds.
     LLVM_DEBUG({
       dbgs() << "Failed call to " << AddFnName << ": error = " << Err << "\n";
     });

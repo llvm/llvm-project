@@ -336,7 +336,7 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
-      O << '%' << (Register::virtReg2Index(Op.getReg()) + 1);
+      O << '%' << (Register(Op.getReg()).virtRegIndex() + 1);
     else if (Op.isImm())
       O << formatImm((int64_t)Op.getImm());
     else if (Op.isDFPImm())

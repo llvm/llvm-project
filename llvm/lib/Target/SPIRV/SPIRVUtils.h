@@ -383,6 +383,28 @@ inline const Type *unifyPtrType(const Type *Ty) {
   return toTypedPointer(const_cast<Type *>(Ty));
 }
 
+inline bool isVector1(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  return FVTy && FVTy->getNumElements() == 1;
+}
+
+// Modify an LLVM type to conform with future transformations in IRTranslator.
+// At the moment use cases comprise only a <1 x Type> vector. To extend when/if
+// needed.
+inline Type *normalizeType(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  if (!FVTy || FVTy->getNumElements() != 1)
+    return Ty;
+  // If it's a <1 x Type> vector type, replace it by the element type, because
+  // it's not a legal vector type in LLT and IRTranslator will represent it as
+  // the scalar eventually.
+  return normalizeType(FVTy->getElementType());
+}
+
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
+  return PoisonValue::get(normalizeType(Ty));
+}
+
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"

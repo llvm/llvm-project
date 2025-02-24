@@ -36,7 +36,7 @@ using namespace mlir;
 using tblgen::NamedTypeConstraint;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-irdl-dialect");
-llvm::cl::opt<std::string>
+static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::Required);
 
