@@ -8462,6 +8462,35 @@ void SelectionDAGBuilder::visitVPLoad(
   setValue(&VPIntrin, LD);
 }
 
+void SelectionDAGBuilder::visitVPLoadFF(
+    const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+    const SmallVectorImpl<SDValue> &OpValues) {
+  assert(OpValues.size() == 3);
+  SDLoc DL = getCurSDLoc();
+  Value *PtrOperand = VPIntrin.getArgOperand(0);
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  AAMDNodes AAInfo = VPIntrin.getAAMetadata();
+  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  SDValue LD;
+  bool AddToChain = true;
+  // Do not serialize variable-length loads of constant memory with
+  // anything.
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
+  MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
+  AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
+  SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+  LD = DAG.getLoadFFVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
+                       MMO);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, EVLVT, LD.getValue(1));
+  if (AddToChain)
+    PendingLoads.push_back(LD.getValue(2));
+  setValue(&VPIntrin, DAG.getMergeValues({LD.getValue(0), Trunc}, DL));
+}
+
 void SelectionDAGBuilder::visitVPGather(
     const VPIntrinsic &VPIntrin, EVT VT,
     const SmallVectorImpl<SDValue> &OpValues) {
@@ -8694,6 +8723,9 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   }
   case ISD::VP_LOAD:
     visitVPLoad(VPIntrin, ValueVTs[0], OpValues);
+    break;
+  case ISD::VP_LOAD_FF:
+    visitVPLoadFF(VPIntrin, ValueVTs[0], ValueVTs[1], OpValues);
     break;
   case ISD::VP_GATHER:
     visitVPGather(VPIntrin, ValueVTs[0], OpValues);

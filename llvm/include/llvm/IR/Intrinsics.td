@@ -1911,6 +1911,12 @@ def int_vp_load  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
 
+def int_vp_load_ff : DefaultAttrsIntrinsic<[ llvm_anyvector_ty, llvm_i32_ty ],
+                             [ llvm_anyptr_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
+
 def int_vp_gather: DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                              [ LLVMVectorOfAnyPointersToElt<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
