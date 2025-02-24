@@ -5243,10 +5243,9 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                     Instruction::GetElementPtr, CostKind, ScalarTy, VecTy);
     // Estimate the cost of masked gather GEP. If not a splat, roughly
     // estimate as a buildvector, otherwise estimate as splat.
-    APInt DemandedElts = APInt::getAllOnes(VecTy->getNumElements());
+    APInt DemandedElts = APInt::getAllOnes(Sz);
     VectorType *PtrVecTy =
-        getWidenedType(PointerOps.front()->getType()->getScalarType(),
-                       VecTy->getNumElements());
+        getWidenedType(PointerOps.front()->getType()->getScalarType(), Sz);
     if (static_cast<unsigned>(count_if(
             PointerOps, IsaPred<GetElementPtrInst>)) < PointerOps.size() - 1 ||
         any_of(PointerOps, [&](Value *V) {
@@ -5257,9 +5256,9 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
           PtrVecTy, DemandedElts, /*Insert=*/true, /*Extract=*/false, CostKind);
     else
       VectorGEPCost +=
-          TTI.getScalarizationOverhead(
-              PtrVecTy, APInt::getOneBitSet(VecTy->getNumElements(), 0),
-              /*Insert=*/true, /*Extract=*/false, CostKind) +
+          TTI.getScalarizationOverhead(PtrVecTy, APInt::getOneBitSet(Sz, 0),
+                                       /*Insert=*/true, /*Extract=*/false,
+                                       CostKind) +
           ::getShuffleCost(TTI, TTI::SK_Broadcast, PtrVecTy, {}, CostKind);
     // The cost of scalar loads.
     InstructionCost ScalarLoadsCost =
@@ -5340,7 +5339,6 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
             VecLdCost +=
                 TTI.getInstructionCost(cast<Instruction>(VL[Idx]), CostKind);
       }
-      unsigned ScalarTyNumElements = getNumElements(ScalarTy);
       auto *SubVecTy = getWidenedType(ScalarTy, VF);
       for (auto [I, LS] : enumerate(States)) {
         auto *LI0 = cast<LoadInst>(VL[I * VF]);
@@ -5366,8 +5364,7 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
           else
             VectorGEPCost +=
                 getScalarizationOverhead(
-                    TTI, ScalarTy, SubVecTy,
-                    APInt::getOneBitSet(ScalarTyNumElements * VF, 0),
+                    TTI, ScalarTy, SubVecTy, APInt::getOneBitSet(VF, 0),
                     /*Insert=*/true, /*Extract=*/false, CostKind) +
                 ::getShuffleCost(TTI, TTI::SK_Broadcast, SubVecTy, {},
                                  CostKind);
@@ -9969,7 +9966,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
                                ? TTI::SK_PermuteTwoSrc
                                : TTI::SK_PermuteSingleSrc,
                            VecTy, ReorderMask);
-  DemandedElts = APInt::getAllOnes(VecTy->getNumElements());
+  DemandedElts = APInt::getAllOnes(TE.Scalars.size());
   ReorderMask.assign(Sz, PoisonMaskElem);
   for (unsigned I : seq<unsigned>(Sz)) {
     Value *V = TE.getOrdered(I);
