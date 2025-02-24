@@ -162,6 +162,50 @@ public:
   void operator()(const llvm::json::Object &request) override;
 };
 
+class SetBreakpointsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "setBreakpoints"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class SetExceptionBreakpointsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "setExceptionBreakpoints"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class SetFunctionBreakpointsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "setFunctionBreakpoints"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class DataBreakpointInfoRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "dataBreakpointInfo"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class SetDataBreakpointsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "setDataBreakpoints"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class SetInstructionBreakpointsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() {
+    return "setInstructionBreakpoints";
+  }
+  void operator()(const llvm::json::Object &request) override;
+};
+
 class CompileUnitsRequestHandler : public RequestHandler {
 public:
   using RequestHandler::RequestHandler;
