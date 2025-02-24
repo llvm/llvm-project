@@ -2156,6 +2156,12 @@ CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
   return nullptr;
 }
 
+bool CXXRecordDecl::hasDeletedDestructor() const {
+  if (const CXXDestructorDecl *D = getDestructor())
+    return D->isDeleted();
+  return false;
+}
+
 static bool isDeclContextInNamespace(const DeclContext *DC) {
   while (!DC->isTranslationUnit()) {
     if (DC->isNamespace())
