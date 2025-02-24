@@ -119,7 +119,7 @@ void DataBreakpointInfoRequestHandler::operator()(
       GetUnsigned(arguments, "variablesReference", 0);
   llvm::StringRef name = GetString(arguments, "name");
   lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  lldb::SBValue variable = FindVariable(variablesReference, name);
+  lldb::SBValue variable = dap.variables.FindVariable(variablesReference, name);
   std::string addr, size;
 
   if (variable.IsValid()) {

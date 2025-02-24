@@ -52,9 +52,6 @@ protected:
   // Check if the step-granularity is `instruction`.
   bool HasInstructionGranularity(const llvm::json::Object &request);
 
-  lldb::SBValueList *GetTopLevelScope(int64_t variablesReference);
-  lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
-
   /// @}
 
   DAP &dap;

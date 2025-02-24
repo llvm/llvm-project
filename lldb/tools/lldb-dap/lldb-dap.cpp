@@ -130,61 +130,6 @@ typedef void (*RequestCallback)(const llvm::json::Object &command);
 /// Page size used for reporting addtional frames in the 'stackTrace' request.
 constexpr int StackPageSize = 20;
 
-lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
-  switch (variablesReference) {
-  case VARREF_LOCALS:
-    return &dap.variables.locals;
-  case VARREF_GLOBALS:
-    return &dap.variables.globals;
-  case VARREF_REGS:
-    return &dap.variables.registers;
-  default:
-    return nullptr;
-  }
-}
-
-lldb::SBValue FindVariable(DAP &dap, uint64_t variablesReference,
-                           llvm::StringRef name) {
-  lldb::SBValue variable;
-  if (lldb::SBValueList *top_scope =
-          GetTopLevelScope(dap, variablesReference)) {
-    bool is_duplicated_variable_name = name.contains(" @");
-    // variablesReference is one of our scopes, not an actual variable it is
-    // asking for a variable in locals or globals or registers
-    int64_t end_idx = top_scope->GetSize();
-    // Searching backward so that we choose the variable in closest scope
-    // among variables of the same name.
-    for (int64_t i = end_idx - 1; i >= 0; --i) {
-      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
-      std::string variable_name = CreateUniqueVariableNameForDisplay(
-          curr_variable, is_duplicated_variable_name);
-      if (variable_name == name) {
-        variable = curr_variable;
-        break;
-      }
-    }
-  } else {
-    // This is not under the globals or locals scope, so there are no duplicated
-    // names.
-
-    // We have a named item within an actual variable so we need to find it
-    // withing the container variable by name.
-    lldb::SBValue container = dap.variables.GetVariable(variablesReference);
-    variable = container.GetChildMemberWithName(name.data());
-    if (!variable.IsValid()) {
-      if (name.starts_with("[")) {
-        llvm::StringRef index_str(name.drop_front(1));
-        uint64_t index = 0;
-        if (!index_str.consumeInteger(0, index)) {
-          if (index_str == "]")
-            variable = container.GetChildAtIndex(index);
-        }
-      }
-    }
-  }
-  return variable;
-}
-
 // Fill in the stack frames of the thread.
 //
 // Threads stacks may contain runtime specific extended backtraces, when
@@ -741,7 +686,7 @@ void request_setVariable(DAP &dap, const llvm::json::Object &request) {
   if (id_value != UINT64_MAX) {
     variable = dap.variables.GetVariable(id_value);
   } else {
-    variable = FindVariable(dap, variablesReference, name);
+    variable = dap.variables.FindVariable(variablesReference, name);
   }
 
   if (variable.IsValid()) {
@@ -867,7 +812,7 @@ void request_variables(DAP &dap, const llvm::json::Object &request) {
     hex = GetBoolean(format, "hex", false);
 
   if (lldb::SBValueList *top_scope =
-          GetTopLevelScope(dap, variablesReference)) {
+          dap.variables.GetTopLevelScope(variablesReference)) {
     // variablesReference is one of our scopes, not an actual variable it is
     // asking for the list of args, locals or globals.
     int64_t start_idx = 0;
