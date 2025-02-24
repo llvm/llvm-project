@@ -333,7 +333,6 @@ use omp_lib
   !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
-  !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
   !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
   !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
@@ -428,7 +427,7 @@ use omp_lib
      enddo
   enddo
   !omp end do nowait
-  !$omp end parallel
+  !$omp end parallel 
 
 ! 2.11.4 parallel-do-simd-clause -> parallel-clause |
 !                                   do-simd-clause
@@ -586,7 +585,7 @@ use omp_lib
      allc = 3.14
   enddo
 
-  !$omp target enter data map(alloc:A) device(0)
-  !$omp target exit data map(delete:A) device(0)
+  !$omp target enter data map(alloc:A) device(0) 
+  !$omp target exit data map(delete:A) device(0) 
 
 end program

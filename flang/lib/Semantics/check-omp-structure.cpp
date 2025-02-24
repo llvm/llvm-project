@@ -2885,12 +2885,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   // clause
   CheckMultListItems();
 
-  // 2.7.3 Single Construct Restriction
-  if (GetContext().directive == llvm::omp::Directive::OMPD_end_single) {
-    CheckNotAllowedIfClause(
-        llvm::omp::Clause::OMPC_copyprivate, {llvm::omp::Clause::OMPC_nowait});
-  }
-
   auto testThreadprivateVarErr = [&](Symbol sym, parser::Name name,
                                      llvmOmpClause clauseTy) {
     if (sym.test(Symbol::Flag::OmpThreadprivate))
