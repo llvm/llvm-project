@@ -325,6 +325,10 @@ public:
       LastEMS = EMS_None;
 
     MCELFStreamer::changeSection(Section, Subsection);
+
+    // Section alignment of 4 to match GNU Assembler
+    if (Section->isText())
+      Section->ensureMinAlignment(Align(4));
   }
 
   // Reset state between object emissions
