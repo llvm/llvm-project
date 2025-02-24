@@ -76,7 +76,7 @@ static std::vector<StringRef> ArchFlags;
 static bool ELFCommons;
 static OutputFormatTy OutputFormat;
 static bool DarwinLongFormat;
-static RadixTy Radix;
+static RadixTy Radix = RadixTy::decimal;
 static bool TotalSizes;
 
 static std::vector<std::string> InputFilenames;
@@ -899,10 +899,8 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
     OutputFormat = darwin;
   else if (V == "sysv")
     OutputFormat = sysv;
-  else {
+  else
     error("--format value should be one of: 'berkeley', 'darwin', 'sysv'");
-    OutputFormat = berkeley;
-  }
   V = Args.getLastArgValue(OPT_radix_EQ, "10");
   if (V == "8")
     Radix = RadixTy::octal;
@@ -910,10 +908,8 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
     Radix = RadixTy::decimal;
   else if (V == "16")
     Radix = RadixTy::hexadecimal;
-  else {
+  else
     error("--radix value should be one of: 8, 10, 16 ");
-    Radix = RadixTy::decimal;
-  }
 
   for (const auto *A : Args.filtered(OPT_arch_EQ)) {
     SmallVector<StringRef, 2> Values;
