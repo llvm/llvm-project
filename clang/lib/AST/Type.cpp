@@ -2848,7 +2848,7 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
     return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
     return RD->canPassInRegisters();
-  } else if (BaseElementType.isTriviallyCopyableType(Context)) {
+  } else if (BaseElementType.isCppTriviallyRelocatableType(Context)) {
     return true;
   } else {
     switch (isNonTrivialToPrimitiveDestructiveMove()) {
@@ -2864,10 +2864,16 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
 
 bool QualType::isCppTriviallyRelocatableType(const ASTContext &Context) const {
   QualType BaseElementType = Context.getBaseElementType(*this);
+
+  if (hasNonTrivialObjCLifetime())
+    return false;
+
   if (BaseElementType->isIncompleteType())
     return false;
-  if (BaseElementType->isScalarType())
+
+  if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
     return true;
+
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
     return RD->isTriviallyRelocatable();
   return false;
