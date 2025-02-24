@@ -474,7 +474,8 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
   return InstructionCost::getInvalid();
 }
 
-InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp, ArrayRef<int> Mask,
+InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
+                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind) {
   // Avoid missing masks
   if (Mask.size() <= 2)
@@ -495,7 +496,7 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp, ArrayRef<int> Ma
     assert(SlideAmt != 0);
     if (SlideAmt < 0)
       return SlideAmt > -32 ? RISCV::VSLIDEDOWN_VI : RISCV::VSLIDEDOWN_VX;
-    return  SlideAmt < 32 ? RISCV::VSLIDEUP_VI : RISCV::VSLIDEUP_VX;
+    return SlideAmt < 32 ? RISCV::VSLIDEUP_VI : RISCV::VSLIDEUP_VX;
   };
 
   std::pair<int, int> SrcInfo[2];
@@ -519,11 +520,13 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp, ArrayRef<int> Ma
     unsigned Opcode = getSlideOpcode(SrcInfo[1].second);
     SecondSlideCost = getRISCVInstructionCost(Opcode, LT.second, CostKind);
   } else {
-    SecondSlideCost = getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second, CostKind);
+    SecondSlideCost =
+        getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second, CostKind);
   }
 
   auto EC = Tp->getElementCount();
-  VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(Tp->getContext()), EC);
+  VectorType *MaskTy =
+      VectorType::get(IntegerType::getInt1Ty(Tp->getContext()), EC);
   InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }

@@ -5944,7 +5944,8 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   std::pair<int, int> SrcInfo[2];
   int Dummy1, Dummy2;
   return ShuffleVectorInst::isReverseMask(M, NumElts) ||
-         (::isMaskedSlidePair(M, SrcInfo) && isElementRotate(SrcInfo, NumElts)) ||
+         (::isMaskedSlidePair(M, SrcInfo) &&
+          isElementRotate(SrcInfo, NumElts)) ||
          isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
 }
 
