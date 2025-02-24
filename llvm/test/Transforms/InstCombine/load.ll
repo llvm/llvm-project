@@ -487,10 +487,8 @@ define i32 @test_load_phi_with_select(ptr %p, i1 %cond1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
-; CHECK-NEXT:    [[BASE:%.*]] = phi ptr [ [[P1:%.*]], [[ENTRY:%.*]] ], [ [[P:%.*]], [[LOOP_BODY]] ]
-; CHECK-NEXT:    [[TARGET:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 24
+; CHECK-NEXT:    [[TARGET:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE:%.*]], i64 24
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TARGET]], align 4
-; CHECK-NEXT:    [[P]] = select i1 [[COND1:%.*]], ptr null, ptr [[P1]]
 ; CHECK-NEXT:    [[COND21:%.*]] = icmp eq i32 [[LOAD]], 0
 ; CHECK-NEXT:    br i1 [[COND21]], label [[LOOP_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:

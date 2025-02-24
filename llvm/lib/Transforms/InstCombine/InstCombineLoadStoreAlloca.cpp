@@ -1011,6 +1011,20 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     }
   }
 
+  if (auto *PHI = dyn_cast<PHINode>(V)) {
+    bool Changed = false;
+    for (Use &U : PHI->incoming_values()) {
+      if (auto *Res =
+              simplifyNonNullOperand(U.get(), HasDereferenceable, Depth + 1)) {
+        replaceUse(U, Res);
+        Changed = true;
+      }
+    }
+    if (Changed)
+      addToWorklist(PHI);
+    return nullptr;
+  }
+
   return nullptr;
 }
 
