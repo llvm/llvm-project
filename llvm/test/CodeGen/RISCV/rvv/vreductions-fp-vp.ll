@@ -344,8 +344,8 @@ define double @vpreduce_ord_fadd_nxv4f64(double %s, <vscale x 4 x double> %v, <v
   ret double %r
 }
 
-define float @vreduce_fminimum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vreduce_fminimum_nxv4f32:
+define float @vpreduce_fminimum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fminimum_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmfne.vv v10, v8, v8, v0.t
@@ -369,8 +369,8 @@ define float @vreduce_fminimum_nxv4f32(float %start, <vscale x 4 x float> %val, 
   ret float %s
 }
 
-define float @vreduce_fmaximum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vreduce_fmaximum_nxv4f32:
+define float @vpreduce_fmaximum_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmaximum_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmfne.vv v10, v8, v8, v0.t
@@ -394,8 +394,8 @@ define float @vreduce_fmaximum_nxv4f32(float %start, <vscale x 4 x float> %val, 
   ret float %s
 }
 
-define float @vreduce_fminimum_nnan_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vreduce_fminimum_nnan_nxv4f32:
+define float @vpreduce_fminimum_nnan_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fminimum_nnan_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v10, fa0
@@ -407,8 +407,8 @@ define float @vreduce_fminimum_nnan_nxv4f32(float %start, <vscale x 4 x float> %
   ret float %s
 }
 
-define float @vreduce_fmaximum_nnan_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vreduce_fmaximum_nnan_nxv4f32:
+define float @vpreduce_fmaximum_nnan_nxv4f32(float %start, <vscale x 4 x float> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmaximum_nnan_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v10, fa0
@@ -420,8 +420,8 @@ define float @vreduce_fmaximum_nnan_nxv4f32(float %start, <vscale x 4 x float> %
   ret float %s
 }
 
-define float @vreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vreduce_fminimum_v4f32:
+define float @vpreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fminimum_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
@@ -445,8 +445,8 @@ define float @vreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %m
   ret float %s
 }
 
-define float @vreduce_fmaximum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vreduce_fmaximum_v4f32:
+define float @vpreduce_fmaximum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmaximum_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
