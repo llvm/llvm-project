@@ -1082,6 +1082,25 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     // bug
     if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
+  } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
+    // For an integer expression `e` and an integer constant `n`, `e & n` and
+    // `n & e` are bounded by `n`:
+    if (BE->getOpcode() != BO_And)
+      return false;
+
+    const Expr *LHS = BE->getLHS();
+    const Expr *RHS = BE->getRHS();
+
+    if ((!LHS->isValueDependent() &&
+         LHS->EvaluateAsInt(EVResult,
+                            Finder->getASTContext())) || // case: `n & e`
+        (!RHS->isValueDependent() &&
+         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) { // `e & n`
+      llvm::APSInt result = EVResult.Val.getInt();
+      if (result.isNonNegative() && result.getLimitedValue() < limit)
+        return true;
+    }
+    return false;
   }
   return false;
 }
