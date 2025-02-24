@@ -257,7 +257,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
         std::list<Status> errors;
         StreamString feedback_stream;
         if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
-          lldb::StreamSP s = GetAsyncErrorStream();
+          lldb::StreamUP s = GetAsyncErrorStream();
           for (auto &error : errors)
             s->Printf("%s\n", error.AsCString());
           if (feedback_stream.GetSize())
@@ -1328,13 +1328,13 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
   return true;
 }
 
-StreamSP Debugger::GetAsyncOutputStream() {
-  return std::make_shared<StreamAsynchronousIO>(*this,
+StreamUP Debugger::GetAsyncOutputStream() {
+  return std::make_unique<StreamAsynchronousIO>(*this,
                                                 StreamAsynchronousIO::STDOUT);
 }
 
-StreamSP Debugger::GetAsyncErrorStream() {
-  return std::make_shared<StreamAsynchronousIO>(*this,
+StreamUP Debugger::GetAsyncErrorStream() {
+  return std::make_unique<StreamAsynchronousIO>(*this,
                                                 StreamAsynchronousIO::STDERR);
 }
 
@@ -1577,8 +1577,7 @@ static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
     // diagnostic directly to the debugger's error stream.
     DiagnosticEventData event_data(severity, std::move(message),
                                    debugger_specific);
-    StreamSP stream = debugger.GetAsyncErrorStream();
-    event_data.Dump(stream.get());
+    event_data.Dump(debugger.GetAsyncErrorStream().get());
     return;
   }
   EventSP event_sp = std::make_shared<Event>(
@@ -1774,12 +1773,11 @@ void Debugger::HandleBreakpointEvent(const EventSP &event_sp) {
     if (num_new_locations > 0) {
       BreakpointSP breakpoint =
           Breakpoint::BreakpointEventData::GetBreakpointFromEvent(event_sp);
-      StreamSP output_sp(GetAsyncOutputStream());
-      if (output_sp) {
-        output_sp->Printf("%d location%s added to breakpoint %d\n",
+      if (StreamUP output_up = GetAsyncOutputStream()) {
+        output_up->Printf("%d location%s added to breakpoint %d\n",
                           num_new_locations, num_new_locations == 1 ? "" : "s",
                           breakpoint->GetID());
-        output_sp->Flush();
+        output_up->Flush();
       }
     }
   }
@@ -1823,8 +1821,8 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
           ? EventDataStructuredData::GetProcessFromEvent(event_sp.get())
           : Process::ProcessEventData::GetProcessFromEvent(event_sp.get());
 
-  StreamSP output_stream_sp = GetAsyncOutputStream();
-  StreamSP error_stream_sp = GetAsyncErrorStream();
+  StreamUP output_stream_up = GetAsyncOutputStream();
+  StreamUP error_stream_up = GetAsyncErrorStream();
   const bool gui_enabled = IsForwardingEvents();
 
   if (!gui_enabled) {
@@ -1849,7 +1847,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     if (got_state_changed && !state_is_stopped) {
       // This is a public stop which we are going to announce to the user, so
       // we should force the most relevant frame selection here.
-      Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
+      Process::HandleProcessStateChangedEvent(event_sp, output_stream_up.get(),
                                               SelectMostRelevantFrame,
                                               pop_process_io_handler);
     }
@@ -1865,37 +1863,35 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
       if (plugin_sp) {
         auto structured_data_sp =
             EventDataStructuredData::GetObjectFromEvent(event_sp.get());
-        if (output_stream_sp) {
-          StreamString content_stream;
-          Status error =
-              plugin_sp->GetDescription(structured_data_sp, content_stream);
-          if (error.Success()) {
-            if (!content_stream.GetString().empty()) {
-              // Add newline.
-              content_stream.PutChar('\n');
-              content_stream.Flush();
+        StreamString content_stream;
+        Status error =
+            plugin_sp->GetDescription(structured_data_sp, content_stream);
+        if (error.Success()) {
+          if (!content_stream.GetString().empty()) {
+            // Add newline.
+            content_stream.PutChar('\n');
+            content_stream.Flush();
 
-              // Print it.
-              output_stream_sp->PutCString(content_stream.GetString());
-            }
-          } else {
-            error_stream_sp->Format("Failed to print structured "
-                                    "data with plugin {0}: {1}",
-                                    plugin_sp->GetPluginName(), error);
+            // Print it.
+            output_stream_up->PutCString(content_stream.GetString());
           }
+        } else {
+          error_stream_up->Format("Failed to print structured "
+                                  "data with plugin {0}: {1}",
+                                  plugin_sp->GetPluginName(), error);
         }
       }
     }
 
     // Now display any stopped state changes after any STDIO
     if (got_state_changed && state_is_stopped) {
-      Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
+      Process::HandleProcessStateChangedEvent(event_sp, output_stream_up.get(),
                                               SelectMostRelevantFrame,
                                               pop_process_io_handler);
     }
 
-    output_stream_sp->Flush();
-    error_stream_sp->Flush();
+    output_stream_up->Flush();
+    error_stream_up->Flush();
 
     if (pop_process_io_handler)
       process_sp->PopProcessIOHandler();
@@ -1995,22 +1991,18 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
               const char *data = static_cast<const char *>(
                   EventDataBytes::GetBytesFromEvent(event_sp.get()));
               if (data && data[0]) {
-                StreamSP error_sp(GetAsyncErrorStream());
-                if (error_sp) {
-                  error_sp->PutCString(data);
-                  error_sp->Flush();
-                }
+                StreamUP error_up = GetAsyncErrorStream();
+                error_up->PutCString(data);
+                error_up->Flush();
               }
             } else if (event_type & CommandInterpreter::
                                         eBroadcastBitAsynchronousOutputData) {
               const char *data = static_cast<const char *>(
                   EventDataBytes::GetBytesFromEvent(event_sp.get()));
               if (data && data[0]) {
-                StreamSP output_sp(GetAsyncOutputStream());
-                if (output_sp) {
-                  output_sp->PutCString(data);
-                  output_sp->Flush();
-                }
+                StreamUP output_up = GetAsyncOutputStream();
+                output_up->PutCString(data);
+                output_up->Flush();
               }
             }
           } else if (broadcaster == &m_broadcaster) {
@@ -2125,7 +2117,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   if (!file_sp->GetIsInteractive() || !file_sp->GetIsTerminalWithColors())
     return;
 
-  StreamSP output = GetAsyncOutputStream();
+  StreamUP output = GetAsyncOutputStream();
 
   // Print over previous line, if any.
   output->Printf("\r");
@@ -2175,8 +2167,7 @@ void Debugger::HandleDiagnosticEvent(const lldb::EventSP &event_sp) {
   if (!data)
     return;
 
-  StreamSP stream = GetAsyncErrorStream();
-  data->Dump(stream.get());
+  data->Dump(GetAsyncErrorStream().get());
 }
 
 bool Debugger::HasIOHandlerThread() const {

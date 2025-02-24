@@ -149,6 +149,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
+
 Changes to LLDB
 ---------------------------------
 

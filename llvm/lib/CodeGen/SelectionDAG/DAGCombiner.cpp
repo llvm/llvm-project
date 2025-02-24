@@ -16158,11 +16158,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
                              MaybePoisonOperand);
     }
+
+    // This node has been merged with another.
+    if (N->getOpcode() == ISD::DELETED_NODE)
+      return SDValue(N, 0);
   }
 
-  // This node has been merged with another.
-  if (N->getOpcode() == ISD::DELETED_NODE)
-    return SDValue(N, 0);
+  assert(N->getOpcode() != ISD::DELETED_NODE && "Node was deleted!");
 
   // The whole node may have been updated, so the value we were holding
   // may no longer be valid. Re-fetch the operand we're `freeze`ing.
@@ -27419,23 +27421,20 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
         continue;
       }
 
-      APInt Bits;
-      if (auto *Cst = dyn_cast<ConstantSDNode>(Elt))
-        Bits = Cst->getAPIntValue();
-      else if (auto *CstFP = dyn_cast<ConstantFPSDNode>(Elt))
-        Bits = CstFP->getValueAPF().bitcastToAPInt();
-      else
+      std::optional<APInt> Bits = Elt->bitcastToAPInt();
+      if (!Bits)
         return SDValue();
 
       // Extract the sub element from the constant bit mask.
       if (DAG.getDataLayout().isBigEndian())
-        Bits = Bits.extractBits(NumSubBits, (Split - SubIdx - 1) * NumSubBits);
+        *Bits =
+            Bits->extractBits(NumSubBits, (Split - SubIdx - 1) * NumSubBits);
       else
-        Bits = Bits.extractBits(NumSubBits, SubIdx * NumSubBits);
+        *Bits = Bits->extractBits(NumSubBits, SubIdx * NumSubBits);
 
-      if (Bits.isAllOnes())
+      if (Bits->isAllOnes())
         Indices.push_back(i);
-      else if (Bits == 0)
+      else if (*Bits == 0)
         Indices.push_back(i + NumSubElts);
       else
         return SDValue();

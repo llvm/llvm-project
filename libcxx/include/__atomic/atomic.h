@@ -40,6 +40,8 @@ struct __atomic_base // false
 {
   mutable __cxx_atomic_impl<_Tp> __a_;
 
+  using value_type = _Tp;
+
 #if _LIBCPP_STD_VER >= 17
   static constexpr bool is_always_lock_free = __libcpp_is_always_lock_free<__cxx_atomic_impl<_Tp> >::__value;
 #endif
@@ -145,6 +147,8 @@ template <class _Tp>
 struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   using __base _LIBCPP_NODEBUG = __atomic_base<_Tp, false>;
 
+  using difference_type = typename __base::value_type;
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __atomic_base() _NOEXCEPT = default;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
@@ -229,8 +233,6 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
 template <class _Tp>
 struct atomic : public __atomic_base<_Tp> {
   using __base _LIBCPP_NODEBUG = __atomic_base<_Tp>;
-  using value_type             = _Tp;
-  using difference_type        = value_type;
 
 #if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI atomic() = default;
@@ -258,8 +260,8 @@ struct atomic : public __atomic_base<_Tp> {
 template <class _Tp>
 struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   using __base _LIBCPP_NODEBUG = __atomic_base<_Tp*>;
-  using value_type             = _Tp*;
-  using difference_type        = ptrdiff_t;
+
+  using difference_type = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 

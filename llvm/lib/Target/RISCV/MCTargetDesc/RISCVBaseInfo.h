@@ -200,7 +200,8 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - Offset;
 }
 
-static inline unsigned getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
+static inline MCRegister
+getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
   // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
   // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
   return FeatureBits[RISCV::FeatureStdExtZicfilp] ? RISCV::X7 : RISCV::X6;

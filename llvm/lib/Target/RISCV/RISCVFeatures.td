@@ -1374,6 +1374,15 @@ def HasVendorXqcilo
       AssemblerPredicate<(all_of FeatureVendorXqcilo),
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
+// Rivos Extension(s)
+
+def FeatureVendorXRivosVizip
+    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
+def HasVendorXRivosVizip
+    : Predicate<"Subtarget->hasVendorXRivosVizip()">,
+      AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
+                         "'XRivosVizip' (Rivos Vector Register Zips)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

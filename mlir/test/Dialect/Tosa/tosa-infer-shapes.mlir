@@ -1479,3 +1479,13 @@ func.func @test_multiple_non_inferrable_consumers(%arg0: tensor<1x2x8xf32>) {
   %expanded_1 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%dim, 1, 4, 8] : tensor<?x2x8xf32> into tensor<?x1x2x8xf32>
   return
 }
+
+// -----
+// CHECK-LABEL: test_mul_scalar
+func.func @test_mul_scalar(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<*xf32> {
+  // CHECK: %[[SHIFT:.*]] = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK: tosa.mul %arg0, %arg1, %[[SHIFT]] : (tensor<f32>, tensor<f32>, tensor<1xi8>) -> tensor<f32>
+  %shift = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<f32>, tensor<f32>, tensor<1xi8>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}

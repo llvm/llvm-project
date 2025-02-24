@@ -2693,12 +2693,6 @@ defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
 // Scalar
 
 multiclass LDU_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr),
-                      []>, Requires<[hasLDU]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr),
-                        []>, Requires<[hasLDU]>;
  def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
                !strconcat("ldu.global.", TyStr),
                       []>, Requires<[hasLDU]>;
@@ -2721,12 +2715,6 @@ defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
 
 // Elementized vector ldu
 multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
                      !strconcat("ldu.global.", TyStr), []>;
@@ -2739,12 +2727,6 @@ multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
 }
 
 multiclass VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                             regclass:$dst4), (ins MEMri:$src),
                !strconcat("ldu.global.", TyStr), []>;
@@ -2796,12 +2778,6 @@ defm INT_PTX_LDU_G_v4f32_ELE
 // during the lifetime of the kernel.
 
 multiclass LDG_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                      []>, Requires<[hasLDG]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                        []>, Requires<[hasLDG]>;
  def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
                !strconcat("ld.global.nc.", TyStr),
                       []>, Requires<[hasLDG]>;
@@ -2830,12 +2806,6 @@ defm INT_PTX_LDG_GLOBAL_f64
 
 // Elementized vector ldg
 multiclass VLDG_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
                      !strconcat("ld.global.nc.", TyStr), []>;
@@ -7596,7 +7566,7 @@ multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
   def : NVPTXInst<(outs), (ins i32imm:$reg_count),
           "setmaxnreg." # Action # ".sync.aligned.u32 $reg_count;",
           [(Intr timm:$reg_count)]>,
-    Requires<[hasAcceleratedFeatures, hasSM<90>, hasPTX<80>]>;
+    Requires<[hasArchAccelFeatures, hasSM<90>, hasPTX<80>]>;
 }
 
 defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
