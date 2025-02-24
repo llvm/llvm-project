@@ -2169,10 +2169,11 @@ public:
 };
 } // namespace
 
-static void addPointerAlignmentChecks(
-    ArrayRef<std::pair<const SCEV *, Type *>> Ptrs, Function *F,
-    PredicatedScalarEvolution &PSE, TargetTransformInfo *TTI, ElementCount VF,
-    unsigned IC) {
+static void
+addPointerAlignmentChecks(ArrayRef<std::pair<const SCEV *, Type *>> Ptrs,
+                          Function *F, PredicatedScalarEvolution &PSE,
+                          TargetTransformInfo *TTI, ElementCount VF,
+                          unsigned IC) {
   ScalarEvolution *SE = PSE.getSE();
   const DataLayout &DL = SE->getDataLayout();
 
