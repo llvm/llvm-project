@@ -32,7 +32,6 @@ void WindowsManifestError::log(raw_ostream &OS) const { OS << Msg; }
 
 class WindowsManifestMerger::WindowsManifestMergerImpl {
 public:
-  ~WindowsManifestMergerImpl();
   Error merge(MemoryBufferRef Manifest);
   std::unique_ptr<MemoryBuffer> getMergedManifest();
 
@@ -46,7 +45,6 @@ private:
   };
   xmlDocPtr CombinedDoc = nullptr;
   std::vector<std::unique_ptr<xmlDoc, XmlDeleter>> MergedDocs;
-
   bool Merged = false;
   int BufferSize = 0;
   std::unique_ptr<xmlChar, XmlDeleter> Buffer;
@@ -610,9 +608,6 @@ static void checkAndStripPrefixes(xmlNodePtr Node,
     xmlFreeNs(Def);
     Def = &Temp;
   }
-}
-
-WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
 }
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
