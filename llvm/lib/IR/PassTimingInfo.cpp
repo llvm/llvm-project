@@ -37,6 +37,12 @@ namespace llvm {
 bool TimePassesIsEnabled = false;
 bool TimePassesPerRun = false;
 
+static constexpr StringRef PassGroupName = "pass";
+static constexpr StringRef AnalysisGroupName = "analysis";
+static constexpr StringRef PassGroupDesc = "Pass execution timing report";
+static constexpr StringRef AnalysisGroupDesc =
+    "Analysis execution timing report";
+
 static cl::opt<bool, true> EnableTiming(
     "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
     cl::desc("Time each pass, printing elapsed time for each on exit"));
@@ -62,16 +68,12 @@ public:
 
 private:
   StringMap<unsigned> PassIDCountMap; ///< Map that counts instances of passes
-  DenseMap<PassInstanceID, std::unique_ptr<Timer>> TimingData; ///< timers for pass instances
-  TimerGroup TG;
+  DenseMap<PassInstanceID, Timer *> TimingData; ///< timers for pass instances
 
 public:
-  /// Default constructor for yet-inactive timeinfo.
-  /// Use \p init() to activate it.
-  PassTimingInfo();
+  PassTimingInfo() = default;
 
-  /// Print out timing information and release timers.
-  ~PassTimingInfo();
+  ~PassTimingInfo() = default;
 
   /// Initializes the static \p TheTimeInfo member to a non-null value when
   /// -time-passes is enabled. Leaves it null otherwise.
@@ -94,14 +96,6 @@ private:
 
 static ManagedStatic<sys::SmartMutex<true>> TimingInfoMutex;
 
-PassTimingInfo::PassTimingInfo() : TG("pass", "Pass execution timing report") {}
-
-PassTimingInfo::~PassTimingInfo() {
-  // Deleting the timers accumulates their info into the TG member.
-  // Then TG member is (implicitly) deleted, actually printing the report.
-  TimingData.clear();
-}
-
 void PassTimingInfo::init() {
   if (TheTimeInfo || !TimePassesIsEnabled)
     return;
@@ -115,7 +109,8 @@ void PassTimingInfo::init() {
 
 /// Prints out timing information and then resets the timers.
 void PassTimingInfo::print(raw_ostream *OutStream) {
-  TG.print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
+  NamedRegionTimer::getNamedGroupTimerGroup(PassGroupName, PassGroupDesc)
+      .print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
 }
 
 Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
@@ -124,7 +119,8 @@ Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
   // Appending description with a pass-instance number for all but the first one
   std::string PassDescNumbered =
       num <= 1 ? PassDesc.str() : formatv("{0} #{1}", PassDesc, num).str();
-  return new Timer(PassID, PassDescNumbered, TG);
+  return &NamedRegionTimer::getNamedGroupTimer(PassID, PassDescNumbered,
+                                               PassGroupName, PassGroupDesc);
 }
 
 Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
@@ -133,16 +129,16 @@ Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
 
   init();
   sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
-  std::unique_ptr<Timer> &T = TimingData[Pass];
+  Timer *&T = TimingData[Pass];
 
   if (!T) {
     StringRef PassName = P->getPassName();
     StringRef PassArgument;
     if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
       PassArgument = PI->getPassArgument();
-    T.reset(newPassTimer(PassArgument.empty() ? PassName : PassArgument, PassName));
+    T = newPassTimer(PassArgument.empty() ? PassName : PassArgument, PassName);
   }
-  return T.get();
+  return T;
 }
 
 PassTimingInfo *PassTimingInfo::TheTimeInfo;
@@ -170,11 +166,13 @@ void reportAndResetTimings(raw_ostream *OutStream) {
 /// Returns the timer for the specified pass invocation of \p PassID.
 /// Each time it creates a new timer.
 Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
-  TimerGroup &TG = IsPass ? PassTG : AnalysisTG;
+  StringRef TGName = IsPass ? PassGroupName : PassGroupDesc;
+  StringRef TGDesc = IsPass ? PassGroupDesc : AnalysisGroupDesc;
+  TimerGroup &TG = NamedRegionTimer::getNamedGroupTimerGroup(TGName, TGDesc);
   if (!PerRun) {
     TimerVector &Timers = TimingData[PassID];
     if (Timers.size() == 0)
-      Timers.emplace_back(new Timer(PassID, PassID, TG));
+      Timers.push_back(new Timer(PassID, PassID, TG));
     return *Timers.front();
   }
 
@@ -186,16 +184,14 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
   std::string FullDesc = formatv("{0} #{1}", PassID, Count).str();
 
   Timer *T = new Timer(PassID, FullDesc, TG);
-  Timers.emplace_back(T);
+  Timers.push_back(T);
   assert(Count == Timers.size() && "Timers vector not adjusted correctly.");
 
   return *T;
 }
 
 TimePassesHandler::TimePassesHandler(bool Enabled, bool PerRun)
-    : PassTG("pass", "Pass execution timing report"),
-      AnalysisTG("analysis", "Analysis execution timing report"),
-      Enabled(Enabled), PerRun(PerRun) {}
+    : Enabled(Enabled), PerRun(PerRun) {}
 
 TimePassesHandler::TimePassesHandler()
     : TimePassesHandler(TimePassesIsEnabled, TimePassesPerRun) {}
@@ -215,8 +211,12 @@ void TimePassesHandler::print() {
     MaybeCreated = CreateInfoOutputFile();
     OS = &*MaybeCreated;
   }
-  PassTG.print(*OS, true);
-  AnalysisTG.print(*OS, true);
+
+  NamedRegionTimer::getNamedGroupTimerGroup(PassGroupName, PassGroupDesc)
+      .print(*OS, true);
+  NamedRegionTimer::getNamedGroupTimerGroup(AnalysisGroupName,
+                                            AnalysisGroupDesc)
+      .print(*OS, true);
 }
 
 LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
@@ -226,7 +226,7 @@ LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
     StringRef PassID = I.getKey();
     const TimerVector& MyTimers = I.getValue();
     for (unsigned idx = 0; idx < MyTimers.size(); idx++) {
-      const Timer* MyTimer = MyTimers[idx].get();
+      const Timer *MyTimer = MyTimers[idx];
       if (MyTimer && MyTimer->isRunning())
         dbgs() << "\tTimer " << MyTimer << " for pass " << PassID << "(" << idx << ")\n";
     }
@@ -236,7 +236,7 @@ LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
     StringRef PassID = I.getKey();
     const TimerVector& MyTimers = I.getValue();
     for (unsigned idx = 0; idx < MyTimers.size(); idx++) {
-      const Timer* MyTimer = MyTimers[idx].get();
+      const Timer *MyTimer = MyTimers[idx];
       if (MyTimer && MyTimer->hasTriggered() && !MyTimer->isRunning())
         dbgs() << "\tTimer " << MyTimer << " for pass " << PassID << "(" << idx << ")\n";
     }
