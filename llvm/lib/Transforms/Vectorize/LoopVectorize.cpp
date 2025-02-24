@@ -2170,13 +2170,13 @@ public:
 } // namespace
 
 static void addPointerAlignmentChecks(
-    const SmallVectorImpl<std::pair<const SCEV *, Type *>> *Ptrs, Function *F,
+    ArrayRef<std::pair<const SCEV *, Type *>> Ptrs, Function *F,
     PredicatedScalarEvolution &PSE, TargetTransformInfo *TTI, ElementCount VF,
     unsigned IC) {
   ScalarEvolution *SE = PSE.getSE();
   const DataLayout &DL = SE->getDataLayout();
 
-  for (auto Ptr : *Ptrs) {
+  for (auto Ptr : Ptrs) {
     Type *PtrIntType = DL.getIntPtrType(Ptr.first->getType());
     APInt EltSize(PtrIntType->getScalarSizeInBits(),
                   DL.getTypeStoreSize(Ptr.second).getFixedValue());
@@ -2186,7 +2186,7 @@ static void addPointerAlignmentChecks(
         SE->getMulExpr(ScevEC, SE->getConstant(EltSize),
                        (SCEV::NoWrapFlags)(SCEV::FlagNSW | SCEV::FlagNUW));
     const SCEV *Rem = SE->getURemExpr(Start, Align);
-    PSE.addPredicate(*(SE->getEqualPredicate(Rem, SE->getZero(PtrIntType))));
+    PSE.addPredicate(*SE->getEqualPredicate(Rem, SE->getZero(PtrIntType)));
   }
 }
 

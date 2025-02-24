@@ -1603,17 +1603,20 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
 }
 
 bool LoopVectorizationLegality::analyzePotentiallyFaultingLoads(
-    SmallVectorImpl<LoadInst *> *Loads) {
+    SmallVectorImpl<LoadInst *> &Loads) {
   LLVM_DEBUG(dbgs() << "LV: Looking for potentially faulting loads in loop "
                        "with uncountable early exit:\n");
-  for (LoadInst *LI : *Loads) {
+  for (LoadInst *LI : Loads) {
     LLVM_DEBUG(dbgs() << "LV:   Load: " << *LI << '\n');
-    Value *Ptr = LI->getPointerOperand();
-    if (!Ptr)
+    if (LI->getPointerAddressSpace())
       return false;
+
+    Value *Ptr = LI->getPointerOperand();
     const SCEV *PtrExpr = PSE.getSCEV(Ptr);
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr);
     // TODO: Deal with loop invariant pointers.
+    // NOTE: The reasoning below is only safe if the load executes at least
+    // once.
     if (!AR || AR->getLoop() != TheLoop || !AR->isAffine())
       return false;
     auto Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*PSE.getSE()));
@@ -1785,7 +1788,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   if (!NonDerefLoads.empty()) {
     if (!TTI->getMinPageSize() ||
-        !analyzePotentiallyFaultingLoads(&NonDerefLoads)) {
+        !analyzePotentiallyFaultingLoads(NonDerefLoads)) {
       PotentiallyFaultingPtrs.clear();
       reportVectorizationFailure(
           "Loop may fault",

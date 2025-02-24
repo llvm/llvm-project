@@ -434,9 +434,9 @@ public:
 
   /// Return a vector of all potentially faulting pointers in a loop with
   /// uncountable early exits.
-  const SmallVectorImpl<std::pair<const SCEV *, Type *>> *
+  ArrayRef<std::pair<const SCEV *, Type *>>
   getPotentiallyFaultingPointers() const {
-    return &PotentiallyFaultingPtrs;
+    return PotentiallyFaultingPtrs;
   }
 
   /// Returns a HistogramInfo* for the given instruction if it was determined
@@ -547,7 +547,7 @@ private:
   /// Returns true if all loads in the loop contained in \p Loads can be
   /// analyzed as potentially faulting. Any loads that may fault are added to
   /// the member variable PotentiallyFaultingPtrs.
-  bool analyzePotentiallyFaultingLoads(SmallVectorImpl<LoadInst *> *Loads);
+  bool analyzePotentiallyFaultingLoads(SmallVectorImpl<LoadInst *> &Loads);
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
