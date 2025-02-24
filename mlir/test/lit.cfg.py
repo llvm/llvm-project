@@ -43,6 +43,7 @@ config.suffixes = [
     ".test",
     ".pdll",
     ".c",
+    ".spv",
 ]
 
 # test_source_root: The root path where tests are located.
