@@ -11,13 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_DEPENDENT_AST_VISITOR_H
-#define LLVM_CLANG_AST_DEPENDENT_AST_VISITOR_H
+#ifndef LLVM_CLANG_AST_DEPENDENT_SEMA_VISITOR_H
+#define LLVM_CLANG_AST_DEPENDENT_SEMA_VISITOR_H
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Sema/HeuristicResolver.h"
 
 namespace clang {
 
@@ -44,7 +45,8 @@ private:
       return true;
     RD = RD->getDefinition();
     std::vector<const NamedDecl *> Symbols =
-        RD->lookupDependentName(Name, Filter);
+        HeuristicResolver(RD->getASTContext())
+            .lookupDependentName(RD, Name, Filter);
     // FIXME: Improve overload handling.
     if (Symbols.size() != 1)
       return true;
@@ -87,4 +89,4 @@ public:
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_AST_DEPENDENT_AST_VISITOR_H
+#endif // LLVM_CLANG_AST_DEPENDENT_SEMA_VISITOR_H

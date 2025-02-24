@@ -15,11 +15,11 @@
 
 #include "clang/Tooling/Refactor/SymbolOccurrenceFinder.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DependentASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Sema/DependentASTVisitor.h"
 #include "clang/Tooling/Refactor/USRFinder.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
