@@ -13,7 +13,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LLVM.h"
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
