@@ -261,112 +261,6 @@ bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
   return reached_end_of_stack;
 }
 
-// "compileUnitsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Compile Unit request; value of command field is
-//                     'compileUnits'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "compileUnits" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/compileUnitRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments" ]
-//   }]
-// },
-// "compileUnitsRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'compileUnits' request.",
-//   "properties": {
-//     "moduleId": {
-//       "type": "string",
-//       "description": "The ID of the module."
-//     }
-//   },
-//   "required": [ "moduleId" ]
-// },
-// "compileUnitsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'compileUnits' request.",
-//     "properties": {
-//       "body": {
-//         "description": "Response to 'compileUnits' request. Array of
-//                         paths of compile units."
-//       }
-//     }
-//   }]
-// }
-void request_compileUnits(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-  llvm::json::Array units;
-  const auto *arguments = request.getObject("arguments");
-  std::string module_id = std::string(GetString(arguments, "moduleId"));
-  int num_modules = dap.target.GetNumModules();
-  for (int i = 0; i < num_modules; i++) {
-    auto curr_module = dap.target.GetModuleAtIndex(i);
-    if (module_id == curr_module.GetUUIDString()) {
-      int num_units = curr_module.GetNumCompileUnits();
-      for (int j = 0; j < num_units; j++) {
-        auto curr_unit = curr_module.GetCompileUnitAtIndex(j);
-        units.emplace_back(CreateCompileUnit(curr_unit));
-      }
-      body.try_emplace("compileUnits", std::move(units));
-      break;
-    }
-  }
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "modulesRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Modules request; value of command field is
-//                     'modules'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "modules" ]
-//       },
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "modulesResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'modules' request.",
-//     "properties": {
-//       "body": {
-//         "description": "Response to 'modules' request. Array of
-//                         module objects."
-//       }
-//     }
-//   }]
-// }
-void request_modules(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-
-  llvm::json::Array modules;
-  for (size_t i = 0; i < dap.target.GetNumModules(); i++) {
-    lldb::SBModule module = dap.target.GetModuleAtIndex(i);
-    modules.emplace_back(CreateModule(dap.target, module));
-  }
-
-  llvm::json::Object body;
-  body.try_emplace("modules", std::move(modules));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
 // "PauseRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -2187,25 +2081,6 @@ void request_readMemory(DAP &dap, const llvm::json::Object &request) {
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-// A request used in testing to get the details on all breakpoints that are
-// currently set in the target. This helps us to test "setBreakpoints" and
-// "setFunctionBreakpoints" requests to verify we have the correct set of
-// breakpoints currently set in LLDB.
-void request__testGetTargetBreakpoints(DAP &dap,
-                                       const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Array response_breakpoints;
-  for (uint32_t i = 0; dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    auto bp = Breakpoint(dap, dap.target.GetBreakpointAtIndex(i));
-    AppendBreakpoint(&bp, response_breakpoints);
-  }
-  llvm::json::Object body;
-  body.try_emplace("breakpoints", std::move(response_breakpoints));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
 // "SetInstructionBreakpointsRequest": {
 //   "allOf": [
 //     {"$ref": "#/definitions/Request"},
@@ -2456,6 +2331,13 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<StepInTargetsRequestHandler>();
   dap.RegisterRequest<StepOutRequestHandler>();
 
+  // Custom requests
+  dap.RegisterRequest<CompileUnitsRequestHandler>();
+  dap.RegisterRequest<ModulesRequestHandler>();
+
+  // Testing requests
+  dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
+
   dap.RegisterRequestCallback("pause", request_pause);
   dap.RegisterRequestCallback("scopes", request_scopes);
   dap.RegisterRequestCallback("setBreakpoints", request_setBreakpoints);
@@ -2475,12 +2357,6 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequestCallback("readMemory", request_readMemory);
   dap.RegisterRequestCallback("setInstructionBreakpoints",
                               request_setInstructionBreakpoints);
-  // Custom requests
-  dap.RegisterRequestCallback("compileUnits", request_compileUnits);
-  dap.RegisterRequestCallback("modules", request_modules);
-  // Testing requests
-  dap.RegisterRequestCallback("_testGetTargetBreakpoints",
-                              request__testGetTargetBreakpoints);
 }
 
 } // anonymous namespace
