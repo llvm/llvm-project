@@ -368,7 +368,6 @@ func.func @xfer_read_minor_identity_transposed_masked_scalable(
 /// IN: vector.transfer_read (minor identity map + broadcast)
 /// OUT: vector.transfer_read + vector.broadcast
 ///----------------------------------------------------------------------------------------
-/// TODO: Review and categorize
 
 // CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims
 //  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>, %[[IDX:.*]]: index) -> vector<8x4x2x3xf32> {
@@ -429,6 +428,29 @@ func.func @xfer_read_minor_identitiy_bcast_dims_with_mask(
   } : memref<?x?x?x?xf32>, vector<8x4x2x3xf32>
 
   return %res : vector<8x4x2x3xf32>
+}
+
+// CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims_with_mask_scalable
+//  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>
+//  CHECK-SAME:     %[[MASK:.*]]: vector<[4]x3xi1>
+//  CHECK-SAME:     %[[IDX:.*]]: index) -> vector<8x[4]x2x3xf32>
+//       CHECK:     %[[PASS_THROUGH:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:     %[[T_READ:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]], %[[PASS_THROUGH]], %[[MASK]]{{.*}} permutation_map = #[[$MAP]]} : memref<?x?x?x?xf32>, vector<[4]x2x3xf32>
+//       CHECK:     %[[BC:.*]] = vector.broadcast %[[T_READ]] : vector<[4]x2x3xf32> to vector<8x[4]x2x3xf32>
+//       CHECK:     return %[[BC]] : vector<8x[4]x2x3xf32>
+func.func @xfer_read_minor_identitiy_bcast_dims_with_mask_scalable(
+    %mem: memref<?x?x?x?xf32>,
+    %mask: vector<[4]x3xi1>,
+    %idx: index) -> vector<8x[4]x2x3xf32> {
+
+  %pad = arith.constant 0.000000e+00 : f32
+
+  %res = vector.transfer_read %mem[%idx, %idx, %idx, %idx], %pad, %mask {
+    in_bounds = [true, true, true, true],
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>
+  } : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32>
+
+  return %res : vector<8x[4]x2x3xf32>
 }
 
 // Masked version is not supported
