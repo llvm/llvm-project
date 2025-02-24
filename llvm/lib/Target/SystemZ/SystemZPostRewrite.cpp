@@ -114,7 +114,7 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
   if (Src1Reg == Src2Reg) {
     BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
             TII->get(SystemZ::COPY), DestReg)
-        .addReg(MBBI->getOperand(1).getReg(), getRegState(MBBI->getOperand(1)));
+        .addReg(MBBI->getOperand(1).getReg(), RegState::Renamable);
     MBBI->eraseFromParent();
     return;
   }
