@@ -382,6 +382,34 @@ llvm::ArrayRef<mlir::Type> FuncType::getReturnTypes() const {
 bool FuncType::isVoid() const { return mlir::isa<VoidType>(getReturnType()); }
 
 //===----------------------------------------------------------------------===//
+// BoolType
+//===----------------------------------------------------------------------===//
+
+Type BoolType::parse(mlir::AsmParser &parser) {
+  return get(parser.getContext());
+}
+
+void BoolType::print(mlir::AsmPrinter &printer) const {}
+
+llvm::TypeSize
+BoolType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                            ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(8);
+}
+
+uint64_t
+BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                          ::mlir::DataLayoutEntryListRef params) const {
+  return 1;
+}
+
+uint64_t
+BoolType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  return 1;
+}
+
+//===----------------------------------------------------------------------===//
 // PointerType Definitions
 //===----------------------------------------------------------------------===//
 

@@ -36,6 +36,25 @@ class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// BoolAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
+  let summary = "Represent true/false for !cir.bool types";
+  let description = [{
+    The BoolAttr represents a 'true' or 'false' value.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                        "", "cir::BoolType">:$type,
+                    "bool":$value);
+
+  let assemblyFormat = [{
+    `<` $value `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
