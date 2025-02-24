@@ -162,6 +162,33 @@ public:
   void operator()(const llvm::json::Object &request) override;
 };
 
+class CompileUnitsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "compileUnits"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class ModulesRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "modules"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+/// A request used in testing to get the details on all breakpoints that are
+/// currently set in the target. This helps us to test "setBreakpoints" and
+/// "setFunctionBreakpoints" requests to verify we have the correct set of
+/// breakpoints currently set in LLDB.
+class TestGetTargetBreakpointsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() {
+    return "_testGetTargetBreakpoints";
+  }
+  void operator()(const llvm::json::Object &request) override;
+};
+
 } // namespace lldb_dap
 
 #endif
