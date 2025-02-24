@@ -1867,7 +1867,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
 
 amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
 #ifdef COMGR_DISABLE_SPIRV
-  LogS << "Calling AMDGPUCompiler::translateSpirvToBitcode() not supported "
+  LogS << "Calling AMDGPUCompiler::translateSpirvToBitcode() not supported. "
        << "Comgr is built with -DCOMGR_DISABLE_SPIRV. Re-build LLVM and Comgr "
        << "with LLVM-SPIRV-Translator support to continue.\n";
   return AMD_COMGR_STATUS_ERROR;
