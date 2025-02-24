@@ -413,7 +413,7 @@ static IntegerType *getWiderInductionTy(const DataLayout &DL, Type *Ty0,
                                         Type *Ty1) {
   IntegerType *TyA = getInductionIntegerTy(DL, Ty0);
   IntegerType *TyB = getInductionIntegerTy(DL, Ty1);
-  return (TyA->getScalarSizeInBits() > TyB->getScalarSizeInBits()) ? TyA : TyB;
+  return TyA->getScalarSizeInBits() > TyB->getScalarSizeInBits() ? TyA : TyB;
 }
 
 /// Check that the instruction has outside loop users and is not an
