@@ -199,6 +199,10 @@ protected:
   /// zero length bitfield, regardless of the zero length bitfield type.
   unsigned ZeroLengthBitfieldBoundary;
 
+  /// The largest container size which should be used for an over-sized
+  /// bitfield, in bits.
+  unsigned LargestOverSizedBitfieldContainer;
+
   /// If non-zero, specifies a maximum alignment to truncate alignment
   /// specified in the aligned attribute of a static variable to this value.
   unsigned MaxAlignedAttribute;
@@ -954,6 +958,10 @@ public:
     return ZeroLengthBitfieldBoundary;
   }
 
+  unsigned getLargestOverSizedBitfieldContainer() const {
+    return LargestOverSizedBitfieldContainer;
+  }
+
   /// Get the maximum alignment in bits for a static variable with
   /// aligned attribute.
   unsigned getMaxAlignedAttribute() const { return MaxAlignedAttribute; }
@@ -1662,7 +1670,7 @@ public:
   // access target-specific GPU grid values that must be consistent between
   // host RTL (plugin), deviceRTL and clang.
   virtual const llvm::omp::GV &getGridValue() const {
-    llvm_unreachable("getGridValue not implemented on this target");
+    return llvm::omp::SPIRVGridValues;
   }
 
   /// Retrieve the name of the platform as it is used in the

@@ -6024,7 +6024,7 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
   if (!R.isUsable())
-    return nullptr;
+    R = Actions.ActOnNullStmt(Tok.getLocation());
 
   Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 

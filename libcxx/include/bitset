@@ -343,7 +343,7 @@ __bitset<_N_words, _Size>::to_ulong(false_type) const {
   __const_iterator __e = __make_iter(_Size);
   __const_iterator __i = std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
   if (__i != __e)
-    __throw_overflow_error("bitset to_ulong overflow error");
+    std::__throw_overflow_error("bitset to_ulong overflow error");
 
   return __first_[0];
 }
@@ -360,7 +360,7 @@ __bitset<_N_words, _Size>::to_ullong(false_type) const {
   __const_iterator __e = __make_iter(_Size);
   __const_iterator __i = std::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
   if (__i != __e)
-    __throw_overflow_error("bitset to_ullong overflow error");
+    std::__throw_overflow_error("bitset to_ullong overflow error");
 
   return to_ullong(true_type());
 }
@@ -645,7 +645,7 @@ public:
       _CharT __zero                                                = _CharT('0'),
       _CharT __one                                                 = _CharT('1')) {
     if (__pos > __str.size())
-      __throw_out_of_range("bitset string pos out of range");
+      std::__throw_out_of_range("bitset string pos out of range");
 
     size_t __rlen = std::min(__n, __str.size() - __pos);
     __init_from_string_view(basic_string_view<_CharT, _Traits>(__str.data() + __pos, __rlen), __zero, __one);
@@ -790,7 +790,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset
 template <size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset<_Size>::set(size_t __pos, bool __val) {
   if (__pos >= _Size)
-    __throw_out_of_range("bitset set argument out of range");
+    std::__throw_out_of_range("bitset set argument out of range");
 
   (*this)[__pos] = __val;
   return *this;
@@ -805,7 +805,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset
 template <size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset<_Size>::reset(size_t __pos) {
   if (__pos >= _Size)
-    __throw_out_of_range("bitset reset argument out of range");
+    std::__throw_out_of_range("bitset reset argument out of range");
 
   (*this)[__pos] = false;
   return *this;
@@ -827,7 +827,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset
 template <size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset<_Size>::flip(size_t __pos) {
   if (__pos >= _Size)
-    __throw_out_of_range("bitset flip argument out of range");
+    std::__throw_out_of_range("bitset flip argument out of range");
 
   reference __r = __base::__make_ref(__pos);
   __r           = ~__r;
@@ -899,7 +899,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool bitset<_Size>::operator!=(const bitset& __rhs)
 template <size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool bitset<_Size>::test(size_t __pos) const {
   if (__pos >= _Size)
-    __throw_out_of_range("bitset test argument out of range");
+    std::__throw_out_of_range("bitset test argument out of range");
 
   return (*this)[__pos];
 }

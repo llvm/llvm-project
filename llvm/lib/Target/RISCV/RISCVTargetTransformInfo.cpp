@@ -393,8 +393,9 @@ static InstructionCost
 costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
                             std::optional<unsigned> VLen, VectorType *Tp,
                             ArrayRef<int> Mask, TTI::TargetCostKind CostKind) {
+  assert(LegalVT.isFixedLengthVector());
   InstructionCost NumOfDests = InstructionCost::getInvalid();
-  if (VLen && LegalVT.isFixedLengthVector() && !Mask.empty()) {
+  if (VLen && !Mask.empty()) {
     MVT ElemVT = LegalVT.getVectorElementType();
     unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
     LegalVT = TTI.getTypeLegalizationCost(
@@ -404,7 +405,6 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
     NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
   }
   if (!NumOfDests.isValid() || NumOfDests <= 1 ||
-      !LegalVT.isFixedLengthVector() ||
       LegalVT.getVectorElementType().getSizeInBits() !=
           Tp->getElementType()->getPrimitiveSizeInBits() ||
       LegalVT.getVectorNumElements() >= Tp->getElementCount().getFixedValue())
@@ -487,7 +487,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // First, handle cases where having a fixed length vector enables us to
   // give a more accurate cost than falling back to generic scalable codegen.
   // TODO: Each of these cases hints at a modeling gap around scalable vectors.
-  if (ST->hasVInstructions() && isa<FixedVectorType>(Tp)) {
+  if (ST->hasVInstructions() && isa<FixedVectorType>(Tp) &&
+      LT.second.isFixedLengthVector()) {
     InstructionCost VRegSplittingCost = costShuffleViaVRegSplitting(
         *this, LT.second, ST->getRealVLen(), Tp, Mask, CostKind);
     if (VRegSplittingCost.isValid())
@@ -496,7 +497,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     default:
       break;
     case TTI::SK_PermuteSingleSrc: {
-      if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
+      if (Mask.size() >= 2) {
         MVT EltTp = LT.second.getVectorElementType();
         // If the size of the element is < ELEN then shuffles of interleaves and
         // deinterleaves of 2 vectors can be lowered into the following
@@ -545,24 +546,23 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       }
       // vrgather + cost of generating the mask constant.
       // We model this for an unknown mask with a single vrgather.
-      if (LT.second.isFixedLengthVector() && LT.first == 1 &&
-          (LT.second.getScalarSizeInBits() != 8 ||
-           LT.second.getVectorNumElements() <= 256)) {
-        VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
+      if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
+                            LT.second.getVectorNumElements() <= 256)) {
+        VectorType *IdxTy =
+            getVRGatherIndexType(LT.second, *ST, Tp->getContext());
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         return IndexCost +
                getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
       }
-      [[fallthrough]];
+      break;
     }
     case TTI::SK_Transpose:
     case TTI::SK_PermuteTwoSrc: {
       // 2 x (vrgather + cost of generating the mask constant) + cost of mask
       // register for the second vrgather. We model this for an unknown
       // (shuffle) mask.
-      if (LT.second.isFixedLengthVector() && LT.first == 1 &&
-          (LT.second.getScalarSizeInBits() != 8 ||
-           LT.second.getVectorNumElements() <= 256)) {
+      if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
+                            LT.second.getVectorNumElements() <= 256)) {
         auto &C = Tp->getContext();
         auto EC = Tp->getElementCount();
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
@@ -574,56 +574,64 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                        LT.second, CostKind) +
                MaskCost;
       }
-      [[fallthrough]];
-    }
-    case TTI::SK_Select: {
-      // We are going to permute multiple sources and the result will be in
-      // multiple destinations. Providing an accurate cost only for splits where
-      // the element type remains the same.
-      if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
-          LT.second.isFixedLengthVector() &&
-          LT.second.getVectorElementType().getSizeInBits() ==
-              Tp->getElementType()->getPrimitiveSizeInBits() &&
-          LT.second.getVectorNumElements() <
-              cast<FixedVectorType>(Tp)->getNumElements() &&
-          divideCeil(Mask.size(),
-                     cast<FixedVectorType>(Tp)->getNumElements()) ==
-              static_cast<unsigned>(*LT.first.getValue())) {
-        unsigned NumRegs = *LT.first.getValue();
-        unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
-        unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
-        auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
-
-        InstructionCost Cost = 0;
-        for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
-             I < NumSrcRegs; ++I) {
-          bool IsSingleVector = true;
-          SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-          transform(
-              Mask.slice(I * SubVF,
-                         I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
-              SubMask.begin(), [&](int I) -> int {
-                if (I == PoisonMaskElem)
-                  return PoisonMaskElem;
-                bool SingleSubVector = I / VF == 0;
-                IsSingleVector &= SingleSubVector;
-                return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
-              });
-          if (all_of(enumerate(SubMask), [](auto &&P) {
-                return P.value() == PoisonMaskElem ||
-                       static_cast<unsigned>(P.value()) == P.index();
-              }))
-            continue;
-          Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
-                                                : TTI::SK_PermuteTwoSrc,
-                                 SubVecTy, SubMask, CostKind, 0, nullptr);
-        }
-        return Cost;
-      }
       break;
     }
     }
-  };
+
+    auto shouldSplit = [](TTI::ShuffleKind Kind) {
+      switch (Kind) {
+      default:
+        return false;
+      case TTI::SK_PermuteSingleSrc:
+      case TTI::SK_Transpose:
+      case TTI::SK_PermuteTwoSrc:
+        return true;
+      }
+    };
+    // We are going to permute multiple sources and the result will be in
+    // multiple destinations. Providing an accurate cost only for splits where
+    // the element type remains the same.
+    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
+        shouldSplit(Kind) &&
+        LT.second.getVectorElementType().getSizeInBits() ==
+        Tp->getElementType()->getPrimitiveSizeInBits() &&
+        LT.second.getVectorNumElements() <
+        cast<FixedVectorType>(Tp)->getNumElements() &&
+        divideCeil(Mask.size(),
+                   cast<FixedVectorType>(Tp)->getNumElements()) ==
+        static_cast<unsigned>(*LT.first.getValue())) {
+      unsigned NumRegs = *LT.first.getValue();
+      unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
+      unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
+      auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
+
+      InstructionCost Cost = 0;
+      for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
+           I < NumSrcRegs; ++I) {
+        bool IsSingleVector = true;
+        SmallVector<int> SubMask(SubVF, PoisonMaskElem);
+        transform(
+                  Mask.slice(I * SubVF,
+                             I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
+                  SubMask.begin(), [&](int I) -> int {
+                    if (I == PoisonMaskElem)
+                      return PoisonMaskElem;
+                    bool SingleSubVector = I / VF == 0;
+                    IsSingleVector &= SingleSubVector;
+                    return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
+                  });
+        if (all_of(enumerate(SubMask), [](auto &&P) {
+          return P.value() == PoisonMaskElem ||
+            static_cast<unsigned>(P.value()) == P.index();
+        }))
+          continue;
+        Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
+                               : TTI::SK_PermuteTwoSrc,
+                               SubVecTy, SubMask, CostKind, 0, nullptr);
+      }
+      return Cost;
+    }
+  }
 
   // Handle scalable vectors (and fixed vectors legalized to scalable vectors).
   switch (Kind) {
@@ -765,9 +773,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 }
 
 static unsigned isM1OrSmaller(MVT VT) {
-  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  return (LMUL == RISCVII::VLMUL::LMUL_F8 || LMUL == RISCVII::VLMUL::LMUL_F4 ||
-          LMUL == RISCVII::VLMUL::LMUL_F2 || LMUL == RISCVII::VLMUL::LMUL_1);
+  RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  return (LMUL == RISCVVType::VLMUL::LMUL_F8 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F4 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F2 ||
+          LMUL == RISCVVType::VLMUL::LMUL_1);
 }
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
@@ -1354,13 +1364,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_fneg: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value());
-    return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
   case Intrinsic::vp_select: {
@@ -2513,7 +2516,7 @@ void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
+unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) const {
   if (Ty->isVectorTy()) {
     // f16 with only zvfhmin and bf16 will be promoted to f32
     Type *EltTy = cast<VectorType>(Ty)->getElementType();

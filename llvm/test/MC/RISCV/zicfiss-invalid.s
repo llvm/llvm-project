@@ -15,5 +15,5 @@ c.sspopchk ra
 # CHECK-ERR: error: register must be ra or t0 (x1 or x5)
 sspush a0
 
-# CHECK-ERR: error: invalid operand for instruction
+# CHECK-ERR: error: register must be a GPR excluding zero (x0)
 ssrdp zero

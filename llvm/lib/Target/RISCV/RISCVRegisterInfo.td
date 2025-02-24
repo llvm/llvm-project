@@ -258,9 +258,15 @@ def GPRX5 : GPRRegisterClass<(add X5)> {
   let DiagnosticString = "register must be t0 (x5)";
 }
 
-def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
+def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
+  let DiagnosticType = "InvalidRegClassGPRX0";
+  let DiagnosticString = "register must be a GPR excluding zero (x0)";
+}
 
-def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)>;
+def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX0X2";
+  let DiagnosticString = "register must be a GPR excluding zero (x0) and sp (x2)";
+}
 
 def GPRX7 : GPRRegisterClass<(add X7)>;
 
@@ -284,7 +290,10 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
                                   (sequence "X%u", 28, 31))>;
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
-def SP : GPRRegisterClass<(add X2)>;
+def SP : GPRRegisterClass<(add X2)> {
+  let DiagnosticType = "InvalidRegClassSP";
+  let DiagnosticString = "register must be sp (x2)";
+}
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),

@@ -528,8 +528,7 @@ define i1 @test_inv_and(float %x, i1 %cond2) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND2]], [[NOT]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET1:%.*]] = fcmp oeq float [[X]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;

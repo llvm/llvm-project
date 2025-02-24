@@ -341,14 +341,18 @@ private:
   FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst);
   /// Returns the callee name, or an empty symbol if the call is not direct.
   FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
-  /// Converts the parameter attributes attached to `func` and adds them to
-  /// the `funcOp`.
+  /// Converts the parameter and result attributes attached to `func` and adds
+  /// them to the `funcOp`.
   void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
                                   OpBuilder &builder);
   /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
   /// DictionaryAttr for the LLVM dialect.
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
+  /// Converts the parameter and result attributes attached to `call` and adds
+  /// them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
+                                  OpBuilder &builder);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
   LogicalResult convertCallAttributes(llvm::CallInst *inst, CallOp op);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
@@ -403,6 +407,10 @@ private:
   /// always requires a symbol name.
   FlatSymbolRefAttr
   getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
+  /// Returns the global insertion point for the next global operation. If the
+  /// `globalInsertionOp` is set, the insertion point is placed after the
+  /// specified operation. Otherwise, it defaults to the start of the module.
+  OpBuilder::InsertionGuard setGlobalInsertionPoint();
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -412,8 +420,6 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
-  /// Operation to insert the next alias after.
-  Operation *aliasInsertionOp = nullptr;
   /// Operation to insert comdat selector operations into.
   ComdatOp globalComdatOp = nullptr;
   /// The current context.

@@ -6,11 +6,23 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+from functools import total_ordering
 
+
+@total_ordering
 class Enumeration:
     def __init__(self, name, value):
         self.name = name
         self.value = value
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __hash__(self):
+        return self.name.__hash__()
 
     def __str__(self):
         if self.value != None:

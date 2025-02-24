@@ -12,4 +12,4 @@ int f1(int n, ABC v1); // line 11
 
 
 
-int f2(        int n,       const ABC& v2); // line 15
+void f2(        int n,       const ABC& v2); // line 15

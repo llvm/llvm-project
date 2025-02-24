@@ -1660,10 +1660,6 @@ static bool hasZeroDimVectors(Operation *op) {
 
 /// Fold extractOp with scalar result coming from BroadcastOp or SplatOp.
 static Value foldExtractFromBroadcast(ExtractOp extractOp) {
-  // TODO: Canonicalization for dynamic position not implemented yet.
-  if (extractOp.hasDynamicPosition())
-    return Value();
-
   Operation *defOp = extractOp.getVector().getDefiningOp();
   if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
     return Value();
@@ -1700,20 +1696,22 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   // extract position to `0` when extracting from the source operand.
   llvm::SetVector<int64_t> broadcastedUnitDims =
       broadcastOp.computeBroadcastedUnitDims();
-  SmallVector<int64_t> extractPos(extractOp.getStaticPosition());
+  SmallVector<OpFoldResult> extractPos(extractOp.getMixedPosition());
+  OpBuilder b(extractOp.getContext());
   int64_t broadcastRankDiff = broadcastDstRank - broadcastSrcRank;
   for (int64_t i = broadcastRankDiff, e = extractPos.size(); i < e; ++i)
     if (broadcastedUnitDims.contains(i))
-      extractPos[i] = 0;
+      extractPos[i] = b.getIndexAttr(0);
   // `rankDiff` leading dimensions correspond to new broadcasted dims, drop the
   // matching extract position when extracting from the source operand.
   int64_t rankDiff = broadcastSrcRank - extractResultRank;
   extractPos.erase(extractPos.begin(),
                    std::next(extractPos.begin(), extractPos.size() - rankDiff));
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
-  OpBuilder b(extractOp.getContext());
-  extractOp.setOperand(0, source);
-  extractOp.setStaticPosition(extractPos);
+  auto [staticPos, dynPos] = decomposeMixedValues(extractPos);
+  extractOp->setOperands(
+      llvm::to_vector(llvm::concat<Value>(ValueRange(source), dynPos)));
+  extractOp.setStaticPosition(staticPos);
   return extractOp.getResult();
 }
 
@@ -1989,6 +1987,45 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
+/// If the dynamic indices of `extractOp` or `insertOp` are in fact constants,
+/// then fold it.
+template <typename OpType, typename AdaptorType>
+static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
+                                         SmallVectorImpl<Value> &operands) {
+  std::vector<int64_t> staticPosition = op.getStaticPosition().vec();
+  OperandRange dynamicPosition = op.getDynamicPosition();
+  ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
+
+  // If the dynamic operands is empty, it is returned directly.
+  if (!dynamicPosition.size())
+    return {};
+
+  // `index` is used to iterate over the `dynamicPosition`.
+  unsigned index = 0;
+
+  // `opChange` is a flag. If it is true, it means to update `op` in place.
+  bool opChange = false;
+  for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
+    if (!ShapedType::isDynamic(staticPosition[i]))
+      continue;
+    Attribute positionAttr = dynamicPositionAttr[index];
+    Value position = dynamicPosition[index++];
+    if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
+      staticPosition[i] = attr.getInt();
+      opChange = true;
+      continue;
+    }
+    operands.push_back(position);
+  }
+
+  if (opChange) {
+    op.setStaticPosition(staticPosition);
+    op.getOperation()->setOperands(operands);
+    return op.getResult();
+  }
+  return {};
+}
+
 /// Fold an insert or extract operation into an poison value when a poison index
 /// is found at any dimension of the static position.
 static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
@@ -2034,6 +2071,9 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
+    return val;
+  SmallVector<Value> operands = {getVector()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
   return OpFoldResult();
 }
@@ -2353,7 +2393,7 @@ computeBroadcastedUnitDims(ArrayRef<int64_t> srcShape,
   for (auto [s1, s2] :
        llvm::zip_equal(srcShape, dstShape.drop_front(rankDiff))) {
     if (s1 != s2) {
-      assert(s1 == 1 && "expected dim-1 broadcasting");
+      assert(s1 == 1 && "expected \"dim-1\" broadcasting");
       res.insert(dstDim);
     }
     ++dstDim;
@@ -2372,7 +2412,7 @@ llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
 
 /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
 /// `broadcastedDims` dimensions in the dstShape are broadcasted.
-/// This requires (and asserts) that the broadcast is free of dim-1
+/// This requires (and asserts) that the broadcast is free of "dim-1"
 /// broadcasting.
 /// Since vector.broadcast only allows expanding leading dimensions, an extra
 /// vector.transpose may be inserted to make the broadcast possible.
@@ -2458,10 +2498,10 @@ Value BroadcastOp::createOrFoldBroadcastOp(
   // 3.c. Append the srcShape.
   llvm::append_range(broadcastShape, srcVectorType.getShape());
 
-  // Ensure there are no dim-1 broadcasts.
+  // Ensure there are no "dim-1" broadcasts.
   assert(::computeBroadcastedUnitDims(srcVectorType.getShape(), broadcastShape)
              .empty() &&
-         "unexpected dim-1 broadcast");
+         "unexpected \"dim-1\" broadcast");
 
   VectorType broadcastType = VectorType::get(broadcastShape, elementType);
   assert(vector::isBroadcastableTo(value.getType(), broadcastType) ==
@@ -3094,6 +3134,9 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
+  SmallVector<Value> operands = {getSource(), getDest()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
@@ -3978,8 +4021,8 @@ public:
     // Avoid generating slices that have leading unit dimensions. The shape_cast
     // op that we create below would take bad generic fallback patterns
     // (ShapeCastOpRewritePattern).
-    while (sizes[numOffsets] == 1 &&
-           numOffsets < static_cast<int>(sizes.size()) - 1) {
+    while (numOffsets < static_cast<int>(sizes.size()) - 1 &&
+           sizes[numOffsets] == 1) {
       ++numOffsets;
     }
 
