@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: Do not know how to widen the result of this operator!
 

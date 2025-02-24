@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=sparc64-linux-gnu -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK-RESERVED-L0
+; RUN: not llc -mtriple=sparc64-linux-gnu -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK-RESERVED-L0
 
 ;; Ensure explicit register references for non-reserved registers
 ;; are caught properly.

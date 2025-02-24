@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -wasm-enable-eh -enable-emscripten-sjlj -exception-model=wasm 2>&1 | FileCheck %s
+; RUN: not llc < %s -wasm-enable-eh -enable-emscripten-sjlj -exception-model=wasm 2>&1 | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

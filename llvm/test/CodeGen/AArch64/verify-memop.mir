@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=aarch64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code"  %s
+# RUN: not llc -mtriple=aarch64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code"  %s
 
 # CHECK: *** Bad machine code: Unexpected immediate on load/store instruction ***
 # CHECK: - instruction: STRSui $s1, $x0, 4096

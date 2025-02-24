@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
 ; This testcase fails register allocation at the same time it performs
 ; virtual register splitting (by introducing VGPR to AGPR copies). We

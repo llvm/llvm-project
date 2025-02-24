@@ -25,11 +25,11 @@
 ; RUN: FileCheck --check-prefix=CHECK-ADD --check-prefix=CHECK-MINUS-257-OFFSET %s
 
 ; XFAIL
-; RUN: not --crash llc %t/h2.ll -o - 2>&1 | \
+; RUN: not llc %t/h2.ll -o - 2>&1 | \
 ; RUN: FileCheck --check-prefix=CHECK-BAD-OFFSET %s
-; RUN: not --crash llc %t/i2.ll -o - 2>&1 | \
+; RUN: not llc %t/i2.ll -o - 2>&1 | \
 ; RUN: FileCheck --check-prefix=CHECK-BAD-OFFSET %s
-; RUN: not --crash llc %t/j2.ll -o - 2>&1 | \
+; RUN: not llc %t/j2.ll -o - 2>&1 | \
 ; RUN: FileCheck --check-prefix=CHECK-BAD-OFFSET %s
 
 ;--- main.ll

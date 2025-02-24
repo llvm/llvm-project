@@ -1,6 +1,6 @@
-; RUN: not --crash llc -mtriple=riscv32 -mattr=+v -global-isel -stop-after=irtranslator \
+; RUN: not llc -mtriple=riscv32 -mattr=+v -global-isel -stop-after=irtranslator \
 ; RUN:   -verify-machineinstrs < %s 2>&1 | FileCheck %s
-; RUN: not --crash llc -mtriple=riscv64 -mattr=+v -global-isel -stop-after=irtranslator \
+; RUN: not llc -mtriple=riscv64 -mattr=+v -global-isel -stop-after=irtranslator \
 ; RUN:   -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
 ; The purpose of this test is to show that the compiler throws an error when

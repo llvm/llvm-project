@@ -1,8 +1,8 @@
 ; A test that the option -verify-each reports the last pass run
 ; when a failure occurs.
 
-; RUN: not --crash opt -disable-output -debug-pass-manager -verify-each -passes="module(trigger-verifier-error)" %s 2>&1 | FileCheck %s --check-prefix=CHECK_MODULE
-; RUN: not --crash opt -disable-output -debug-pass-manager -verify-each -passes="function(trigger-verifier-error)" %s 2>&1 | FileCheck %s --check-prefix=CHECK_FUNCTION
+; RUN: not opt -disable-output -debug-pass-manager -verify-each -passes="module(trigger-verifier-error)" %s 2>&1 | FileCheck %s --check-prefix=CHECK_MODULE
+; RUN: not opt -disable-output -debug-pass-manager -verify-each -passes="function(trigger-verifier-error)" %s 2>&1 | FileCheck %s --check-prefix=CHECK_FUNCTION
 
 ; CHECK_MODULE: Running pass: TriggerVerifierErrorPass on [module]
 ; CHECK_MODULE: Broken module found after pass "TriggerVerifierErrorPass", compilation aborted!

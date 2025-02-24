@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -mtriple=nvptx -mcpu=sm_20 -mattr=+ptx70 2>&1 | \
+; RUN: not llc < %s -mtriple=nvptx -mcpu=sm_20 -mattr=+ptx70 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=ERROR
 
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -mattr=+ptx71 | \

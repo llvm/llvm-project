@@ -1,5 +1,5 @@
-; RUN: not --crash llc < %s -enable-emscripten-sjlj 2>&1 | FileCheck %s
-; RUN: not --crash llc < %s -wasm-enable-sjlj -mattr=+exception-handling -exception-model=wasm 2>&1 | FileCheck %s
+; RUN: not llc < %s -enable-emscripten-sjlj 2>&1 | FileCheck %s
+; RUN: not llc < %s -wasm-enable-sjlj -mattr=+exception-handling -exception-model=wasm 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

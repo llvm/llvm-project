@@ -1,4 +1,4 @@
-; RUN: not --crash opt -passes='lower-matrix-intrinsics' -verify-matrix-shapes=true -S %s 2>&1 | FileCheck --check-prefix=VERIFY %s
+; RUN: not opt -passes='lower-matrix-intrinsics' -verify-matrix-shapes=true -S %s 2>&1 | FileCheck --check-prefix=VERIFY %s
 ; RUN: opt -passes='lower-matrix-intrinsics' -verify-matrix-shapes=false -S %s 2>&1 | FileCheck --check-prefix=NOVERIFY %s
 
 ; VERIFY: Conflicting shapes (6x1 vs 1x6)

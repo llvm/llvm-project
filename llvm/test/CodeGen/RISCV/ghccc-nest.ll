@@ -1,5 +1,5 @@
-; RUN: not --crash llc -mtriple=riscv64 -mattr=+f,+d -verify-machineinstrs -filetype=null < %s 2>&1 | FileCheck %s
-; RUN: not --crash llc -mtriple=riscv32 -mattr=+f,+d -verify-machineinstrs -filetype=null < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=riscv64 -mattr=+f,+d -verify-machineinstrs -filetype=null < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=riscv32 -mattr=+f,+d -verify-machineinstrs -filetype=null < %s 2>&1 | FileCheck %s
 
 define ghccc ptr @nest_receiver(ptr nest %arg) nounwind {
   ret ptr %arg

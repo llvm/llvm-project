@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=sparc < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=sparc < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: sparc only supports sret on the first parameter
 

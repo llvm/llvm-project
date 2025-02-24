@@ -139,15 +139,15 @@
 
 ;--- err-key.ll
 
-; RUN: not --crash llc < err-key.ll -mtriple arm64e-apple-darwin 2>&1 \
+; RUN: not llc < err-key.ll -mtriple arm64e-apple-darwin 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
-; RUN: not --crash llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
+; RUN: not llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
 
-; RUN: not --crash llc < err-key.ll -mtriple arm64e-apple-darwin \
+; RUN: not llc < err-key.ll -mtriple arm64e-apple-darwin \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1  2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
-; RUN: not --crash llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err-key.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-KEY
 
@@ -158,15 +158,15 @@
 
 ;--- err-disc.ll
 
-; RUN: not --crash llc < err-disc.ll -mtriple arm64e-apple-darwin 2>&1 \
+; RUN: not llc < err-disc.ll -mtriple arm64e-apple-darwin 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
-; RUN: not --crash llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
+; RUN: not llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
 
-; RUN: not --crash llc < err-disc.ll -mtriple arm64e-apple-darwin \
+; RUN: not llc < err-disc.ll -mtriple arm64e-apple-darwin \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1  2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
-; RUN: not --crash llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err-disc.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC
 

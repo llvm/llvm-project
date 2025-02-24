@@ -1,4 +1,4 @@
-# RUN: not --crash llc -o - -mtriple=amdgcn -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not llc -o - -mtriple=amdgcn -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 
 ---
 name:            test_intrinsic_w_side_effects

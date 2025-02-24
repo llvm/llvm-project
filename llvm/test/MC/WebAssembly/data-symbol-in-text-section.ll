@@ -1,4 +1,4 @@
-; RUN: not --crash llc -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: data symbols must live in a data section: data_symbol
 
 target triple = "wasm32-unknown-unknown"

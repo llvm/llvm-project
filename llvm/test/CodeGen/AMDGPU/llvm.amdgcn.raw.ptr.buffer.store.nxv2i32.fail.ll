@@ -1,8 +1,8 @@
 ; Note: The exact error messages aren't important here, but are included to catch
 ; anything changing.
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900  -filetype=null < %s 2>&1 | FileCheck %s --check-prefix=SDAG
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900  -filetype=null < %s 2>&1 | FileCheck %s --check-prefix=SDAG
 ; SDAG: LLVM ERROR: Scalarization of scalable vectors is not supported.
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900  -filetype=null < %s 2>&1 | FileCheck %s --check-prefix=GISEL
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900  -filetype=null < %s 2>&1 | FileCheck %s --check-prefix=GISEL
 ; GISEL: LLVM ERROR: Invalid size request on a scalable vector.
 
 define void @buffer_store_nxv2i32(ptr addrspace(8) inreg %rsrc, i32 %offset) {

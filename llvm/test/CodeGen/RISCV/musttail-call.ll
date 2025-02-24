@@ -1,12 +1,12 @@
 ; Check that we error out if tail is not possible but call is marked as mustail.
 
-; RUN: not --crash llc -mtriple riscv32-unknown-linux-gnu -o - %s \
+; RUN: not llc -mtriple riscv32-unknown-linux-gnu -o - %s \
 ; RUN: 2>&1 | FileCheck %s
-; RUN: not --crash llc -mtriple riscv32-unknown-elf -o - %s \
+; RUN: not llc -mtriple riscv32-unknown-elf -o - %s \
 ; RUN: 2>&1 | FileCheck %s
-; RUN: not --crash llc -mtriple riscv64-unknown-linux-gnu -o - %s \
+; RUN: not llc -mtriple riscv64-unknown-linux-gnu -o - %s \
 ; RUN: 2>&1 | FileCheck %s
-; RUN: not --crash llc -mtriple riscv64-unknown-elf -o - %s \
+; RUN: not llc -mtriple riscv64-unknown-elf -o - %s \
 ; RUN: 2>&1 | FileCheck %s
 
 %struct.A = type { i32 }

@@ -2,7 +2,7 @@
 ; TODO: Run these for global isel as well.
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1013 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX1013 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX1030 %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s

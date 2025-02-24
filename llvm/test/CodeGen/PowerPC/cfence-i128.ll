@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: not --crash llc -verify-machineinstrs -mtriple=powerpc64-unknown-unknown \
+; RUN: not llc -verify-machineinstrs -mtriple=powerpc64-unknown-unknown \
 ; RUN:   < %s 2>&1 | FileCheck %s
 
 declare void @llvm.ppc.sync()

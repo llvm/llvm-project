@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple arm64-apple-ios7 -mattr=+sve < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple arm64-apple-ios7 -mattr=+sve < %s 2>&1 | FileCheck %s
 
 ; CHECK: Passing SVE types to variadic functions is currently not supported
 

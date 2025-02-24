@@ -2,10 +2,10 @@
 
 ;--- err1.ll
 
-; RUN: not --crash llc < err1.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err1.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR1 %s
-; RUN: not --crash llc < err1.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err1.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR1 %s
 
@@ -18,10 +18,10 @@ define ptr @foo() {
 
 ;--- err2.ll
 
-; RUN: not --crash llc < err2.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err2.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR2 %s
-; RUN: not --crash llc < err2.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err2.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR2 %s
 
@@ -34,10 +34,10 @@ define ptr @foo() {
 
 ;--- err3.ll
 
-; RUN: not --crash llc < err3.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err3.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR3 %s
-; RUN: not --crash llc < err3.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err3.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR3 %s
 
@@ -50,10 +50,10 @@ define ptr @foo() {
 
 ;--- err4.ll
 
-; RUN: not --crash llc < err4.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err4.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR4 %s
-; RUN: not --crash llc < err4.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err4.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR4 %s
 
@@ -67,7 +67,7 @@ define ptr @foo() {
 
 ;--- err5.ll
 
-; RUN: not --crash llc < err5.ll -mtriple aarch64-windows -mattr=+pauth \
+; RUN: not llc < err5.ll -mtriple aarch64-windows -mattr=+pauth \
 ; RUN:   -global-isel=1 -verify-machineinstrs -global-isel-abort=1 2>&1 | \
 ; RUN:   FileCheck --check-prefix=ERR5 %s
 
