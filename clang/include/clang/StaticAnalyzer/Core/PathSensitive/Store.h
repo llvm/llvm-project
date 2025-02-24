@@ -50,6 +50,14 @@ class SymbolReaper;
 
 using InvalidatedSymbols = llvm::DenseSet<SymbolRef>;
 
+struct BindResult {
+  StoreRef ResultingStore;
+
+  // If during the bind operation we exhaust the allowed binding budget, we set
+  // this to the beginning of the escaped part of the region.
+  llvm::SmallVector<SVal, 0> FailedToBindValues;
+};
+
 class StoreManager {
 protected:
   SValBuilder &svalBuilder;
@@ -105,17 +113,17 @@ public:
   /// \return A StoreRef object that contains the same
   ///   bindings as \c store with the addition of having the value specified
   ///   by \c val bound to the location given for \c loc.
-  virtual StoreRef Bind(Store store, Loc loc, SVal val) = 0;
+  virtual BindResult Bind(Store store, Loc loc, SVal val) = 0;
 
   /// Return a store with the specified value bound to all sub-regions of the
   /// region. The region must not have previous bindings. If you need to
   /// invalidate existing bindings, consider invalidateRegions().
-  virtual StoreRef BindDefaultInitial(Store store, const MemRegion *R,
-                                      SVal V) = 0;
+  virtual BindResult BindDefaultInitial(Store store, const MemRegion *R,
+                                        SVal V) = 0;
 
   /// Return a store with in which all values within the given region are
   /// reset to zero. This method is allowed to overwrite previous bindings.
-  virtual StoreRef BindDefaultZero(Store store, const MemRegion *R) = 0;
+  virtual BindResult BindDefaultZero(Store store, const MemRegion *R) = 0;
 
   /// Create a new store with the specified binding removed.
   /// \param ST the original store, that is the basis for the new store.
@@ -240,9 +248,8 @@ public:
 
   /// enterStackFrame - Let the StoreManager to do something when execution
   /// engine is about to execute into a callee.
-  StoreRef enterStackFrame(Store store,
-                           const CallEvent &Call,
-                           const StackFrameContext *CalleeCtx);
+  BindResult enterStackFrame(Store store, const CallEvent &Call,
+                             const StackFrameContext *CalleeCtx);
 
   /// Finds the transitive closure of symbols within the given region.
   ///

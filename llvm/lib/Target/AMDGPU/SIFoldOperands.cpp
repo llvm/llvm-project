@@ -203,6 +203,8 @@ static unsigned macToMad(unsigned Opc) {
     return AMDGPU::V_FMA_F32_e64;
   case AMDGPU::V_FMAC_F16_e64:
     return AMDGPU::V_FMA_F16_gfx9_e64;
+  case AMDGPU::V_FMAC_F16_t16_e64:
+    return AMDGPU::V_FMA_F16_gfx9_t16_e64;
   case AMDGPU::V_FMAC_F16_fake16_e64:
     return AMDGPU::V_FMA_F16_gfx9_fake16_e64;
   case AMDGPU::V_FMAC_LEGACY_F32_e64:
@@ -1082,13 +1084,11 @@ void SIFoldOperandsImpl::foldOperand(
           }
 
           if (CopyToVGPR.Reg) {
-            Register Vgpr;
-            if (VGPRCopies.count(CopyToVGPR)) {
-              Vgpr = VGPRCopies[CopyToVGPR];
-            } else {
+            auto [It, Inserted] = VGPRCopies.try_emplace(CopyToVGPR);
+            Register &Vgpr = It->second;
+            if (Inserted) {
               Vgpr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
               BuildMI(MBB, UseMI, DL, TII->get(AMDGPU::COPY), Vgpr).add(*Def);
-              VGPRCopies[CopyToVGPR] = Vgpr;
             }
             auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
             BuildMI(MBB, UseMI, DL,

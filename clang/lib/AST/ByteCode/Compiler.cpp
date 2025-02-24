@@ -567,8 +567,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // Location for the SubExpr.
     // Since SubExpr is of complex type, visiting it results in a pointer
     // anyway, so we just create a temporary pointer variable.
-    unsigned SubExprOffset = allocateLocalPrimitive(
-        SubExpr, PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+    unsigned SubExprOffset =
+        allocateLocalPrimitive(SubExpr, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(PT_Ptr, SubExprOffset, CE))
@@ -611,8 +611,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     const auto *VT = CE->getType()->getAs<VectorType>();
     PrimType ElemT = classifyPrim(SubExpr->getType());
-    unsigned ElemOffset = allocateLocalPrimitive(
-        SubExpr, ElemT, /*IsConst=*/true, /*IsExtended=*/false);
+    unsigned ElemOffset =
+        allocateLocalPrimitive(SubExpr, ElemT, /*IsConst=*/true);
 
     // Prepare a local variable for the scalar value.
     if (!this->visit(SubExpr))
@@ -1104,7 +1104,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   PrimType ResultElemT = this->classifyComplexElementType(E->getType());
   unsigned ResultOffset = ~0u;
   if (!DiscardResult)
-    ResultOffset = this->allocateLocalPrimitive(E, PT_Ptr, true, false);
+    ResultOffset = this->allocateLocalPrimitive(E, PT_Ptr, /*IsConst=*/true);
 
   // Save result pointer in ResultOffset
   if (!this->DiscardResult) {
@@ -1178,14 +1178,14 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
   // Evaluate LHS and save value to LHSOffset.
   if (LHSType->isAnyComplexType()) {
-    LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
+    LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(LHS))
       return false;
     if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
       return false;
   } else {
     PrimType LHST = classifyPrim(LHSType);
-    LHSOffset = this->allocateLocalPrimitive(LHS, LHST, true, false);
+    LHSOffset = this->allocateLocalPrimitive(LHS, LHST, /*IsConst=*/true);
     if (!this->visit(LHS))
       return false;
     if (!this->emitSetLocal(LHST, LHSOffset, E))
@@ -1195,14 +1195,14 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Same with RHS.
   unsigned RHSOffset;
   if (RHSType->isAnyComplexType()) {
-    RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
+    RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(RHS))
       return false;
     if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
       return false;
   } else {
     PrimType RHST = classifyPrim(RHSType);
-    RHSOffset = this->allocateLocalPrimitive(RHS, RHST, true, false);
+    RHSOffset = this->allocateLocalPrimitive(RHS, RHST, /*IsConst=*/true);
     if (!this->visit(RHS))
       return false;
     if (!this->emitSetLocal(RHST, RHSOffset, E))
@@ -1342,14 +1342,16 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
 
   // Evaluate LHS and save value to LHSOffset.
-  unsigned LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
+  unsigned LHSOffset =
+      this->allocateLocalPrimitive(LHS, PT_Ptr, /*IsConst=*/true);
   if (!this->visit(LHS))
     return false;
   if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
     return false;
 
   // Evaluate RHS and save value to RHSOffset.
-  unsigned RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
+  unsigned RHSOffset =
+      this->allocateLocalPrimitive(RHS, PT_Ptr, /*IsConst=*/true);
   if (!this->visit(RHS))
     return false;
   if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
@@ -1687,14 +1689,17 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   if (!Success)
     return false;
 
-  PrimType IndexT = classifyPrim(Index->getType());
+  std::optional<PrimType> IndexT = classify(Index->getType());
+  // In error-recovery cases, the index expression has a dependent type.
+  if (!IndexT)
+    return this->emitError(E);
   // If the index is first, we need to change that.
   if (LHS == Index) {
-    if (!this->emitFlip(PT_Ptr, IndexT, E))
+    if (!this->emitFlip(PT_Ptr, *IndexT, E))
       return false;
   }
 
-  return this->emitArrayElemPtrPop(IndexT, E);
+  return this->emitArrayElemPtrPop(*IndexT, E);
 }
 
 template <class Emitter>
@@ -2710,8 +2715,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // For everyhing else, use local variables.
   if (SubExprT) {
     bool IsConst = SubExpr->getType().isConstQualified();
-    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, IsConst,
-                                                 /*IsExtended=*/true);
+    unsigned LocalIndex =
+        allocateLocalPrimitive(E, *SubExprT, IsConst, E->getExtendingDecl());
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
@@ -2781,7 +2786,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     unsigned LocalIndex;
 
     if (T)
-      LocalIndex = this->allocateLocalPrimitive(Init, *T, false, false);
+      LocalIndex = this->allocateLocalPrimitive(Init, *T, /*IsConst=*/false);
     else if (std::optional<unsigned> MaybeIndex = this->allocateLocal(Init))
       LocalIndex = *MaybeIndex;
     else
@@ -3337,8 +3342,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     PrimType SizeT = classifyPrim(Stripped->getType());
 
     // Save evaluated array size to a variable.
-    unsigned ArrayLen = allocateLocalPrimitive(
-        Stripped, SizeT, /*IsConst=*/false, /*IsExtended=*/false);
+    unsigned ArrayLen =
+        allocateLocalPrimitive(Stripped, SizeT, /*IsConst=*/false);
     if (!this->visit(Stripped))
       return false;
     if (!this->emitSetLocal(SizeT, ArrayLen, E))
@@ -3397,7 +3402,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
           CtorFunc = getFunction(CE->getConstructor());
           if (!CtorFunc)
             return false;
-        }
+        } else if (!DynamicInit)
+          DynamicInit = Init;
 
         LabelTy EndLabel = this->getLabel();
         LabelTy StartLabel = this->getLabel();
@@ -3416,8 +3422,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         }
 
         // Create loop variables.
-        unsigned Iter = allocateLocalPrimitive(
-            Stripped, SizeT, /*IsConst=*/false, /*IsExtended=*/false);
+        unsigned Iter =
+            allocateLocalPrimitive(Stripped, SizeT, /*IsConst=*/false);
         if (!this->emitConst(StaticInitElems, SizeT, E))
           return false;
         if (!this->emitSetLocal(SizeT, Iter, E))
@@ -3668,8 +3674,8 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(E->getType()->isVoidPointerType());
 
-  unsigned Offset = allocateLocalPrimitive(
-      E->getLabel(), PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+  unsigned Offset =
+      allocateLocalPrimitive(E->getLabel(), PT_Ptr, /*IsConst=*/true);
 
   return this->emitGetLocal(PT_Ptr, Offset, E);
 }
@@ -3684,7 +3690,8 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
   QualType SrcType = Src->getType();
   PrimType SrcElemT = classifyVectorElementType(SrcType);
 
-  unsigned SrcOffset = this->allocateLocalPrimitive(Src, PT_Ptr, true, false);
+  unsigned SrcOffset =
+      this->allocateLocalPrimitive(Src, PT_Ptr, /*IsConst=*/true);
   if (!this->visit(Src))
     return false;
   if (!this->emitSetLocal(PT_Ptr, SrcOffset, E))
@@ -3727,8 +3734,8 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   // Save both input vectors to a local variable.
   unsigned VectorOffsets[2];
   for (unsigned I = 0; I != 2; ++I) {
-    VectorOffsets[I] = this->allocateLocalPrimitive(
-        Vecs[I], PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+    VectorOffsets[I] =
+        this->allocateLocalPrimitive(Vecs[I], PT_Ptr, /*IsConst=*/true);
     if (!this->visit(Vecs[I]))
       return false;
     if (!this->emitSetLocal(PT_Ptr, VectorOffsets[I], E))
@@ -3780,8 +3787,7 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
   }
 
   // Create a local variable for the base.
-  unsigned BaseOffset = allocateLocalPrimitive(Base, PT_Ptr, /*IsConst=*/true,
-                                               /*IsExtended=*/false);
+  unsigned BaseOffset = allocateLocalPrimitive(Base, PT_Ptr, /*IsConst=*/true);
   if (!this->visit(Base))
     return false;
   if (!this->emitSetLocal(PT_Ptr, BaseOffset, E))
@@ -4193,9 +4199,8 @@ bool Compiler<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
 }
 
 template <class Emitter>
-unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
-                                                   bool IsConst,
-                                                   bool IsExtended) {
+unsigned Compiler<Emitter>::allocateLocalPrimitive(
+    DeclTy &&Src, PrimType Ty, bool IsConst, const ValueDecl *ExtendingDecl) {
   // Make sure we don't accidentally register the same decl twice.
   if (const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
@@ -4212,7 +4217,10 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
-  VarScope->add(Local, IsExtended);
+  if (ExtendingDecl)
+    VarScope->addExtended(Local, ExtendingDecl);
+  else
+    VarScope->add(Local, false);
   return Local.Offset;
 }
 
@@ -4780,7 +4788,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       // decl as the function pointer.
       const Expr *Callee = E->getCallee();
       CalleeOffset =
-          this->allocateLocalPrimitive(Callee, PT_MemberPtr, true, false);
+          this->allocateLocalPrimitive(Callee, PT_MemberPtr, /*IsConst=*/true);
       if (!this->visit(Callee))
         return false;
       if (!this->emitSetLocal(PT_MemberPtr, *CalleeOffset, E))
@@ -4802,7 +4810,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     return this->emitKill(E);
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
-    CalleeOffset = this->allocateLocalPrimitive(Callee, PT_FnPtr, true, false);
+    CalleeOffset =
+        this->allocateLocalPrimitive(Callee, PT_FnPtr, /*IsConst=*/true);
     if (!this->visit(Callee))
       return false;
     if (!this->emitSetLocal(PT_FnPtr, *CalleeOffset, E))
@@ -5404,7 +5413,8 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
 
   LabelTy EndLabel = this->getLabel();
   OptLabelTy DefaultLabel = std::nullopt;
-  unsigned CondVar = this->allocateLocalPrimitive(Cond, CondT, true, false);
+  unsigned CondVar =
+      this->allocateLocalPrimitive(Cond, CondT, /*IsConst=*/true);
 
   if (const auto *CondInit = S->getInit())
     if (!visitStmt(CondInit))
@@ -6067,7 +6077,8 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
   // The offset of the temporary, if we created one.
   unsigned SubExprOffset = ~0u;
   auto createTemp = [=, &SubExprOffset]() -> bool {
-    SubExprOffset = this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+    SubExprOffset =
+        this->allocateLocalPrimitive(SubExpr, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(SubExpr))
       return false;
     return this->emitSetLocal(PT_Ptr, SubExprOffset, E);
@@ -6181,7 +6192,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
 
   // The offset of the temporary, if we created one.
   unsigned SubExprOffset =
-      this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+      this->allocateLocalPrimitive(SubExpr, PT_Ptr, /*IsConst=*/true);
   if (!this->visit(SubExpr))
     return false;
   if (!this->emitSetLocal(PT_Ptr, SubExprOffset, E))
@@ -6554,8 +6565,7 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
   if (LHS->getType()->isAnyComplexType()) {
     LHSIsComplex = true;
     ElemT = classifyComplexElementType(LHS->getType());
-    LHSOffset = allocateLocalPrimitive(LHS, PT_Ptr, /*IsConst=*/true,
-                                       /*IsExtended=*/false);
+    LHSOffset = allocateLocalPrimitive(LHS, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(LHS))
       return false;
     if (!this->emitSetLocal(PT_Ptr, LHSOffset, E))
@@ -6563,7 +6573,7 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
   } else {
     LHSIsComplex = false;
     PrimType LHST = classifyPrim(LHS->getType());
-    LHSOffset = this->allocateLocalPrimitive(LHS, LHST, true, false);
+    LHSOffset = this->allocateLocalPrimitive(LHS, LHST, /*IsConst=*/true);
     if (!this->visit(LHS))
       return false;
     if (!this->emitSetLocal(LHST, LHSOffset, E))
@@ -6575,8 +6585,7 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
   if (RHS->getType()->isAnyComplexType()) {
     RHSIsComplex = true;
     ElemT = classifyComplexElementType(RHS->getType());
-    RHSOffset = allocateLocalPrimitive(RHS, PT_Ptr, /*IsConst=*/true,
-                                       /*IsExtended=*/false);
+    RHSOffset = allocateLocalPrimitive(RHS, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(RHS))
       return false;
     if (!this->emitSetLocal(PT_Ptr, RHSOffset, E))
@@ -6584,7 +6593,7 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
   } else {
     RHSIsComplex = false;
     PrimType RHST = classifyPrim(RHS->getType());
-    RHSOffset = this->allocateLocalPrimitive(RHS, RHST, true, false);
+    RHSOffset = this->allocateLocalPrimitive(RHS, RHST, /*IsConst=*/true);
     if (!this->visit(RHS))
       return false;
     if (!this->emitSetLocal(RHST, RHSOffset, E))
@@ -6761,8 +6770,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     if (!this->visit(SubExpr))
       return false;
   } else if (std::optional<PrimType> FromT = classify(SubExpr)) {
-    unsigned TempOffset = allocateLocalPrimitive(
-        SubExpr, *FromT, /*IsConst=*/true, /*IsExtended=*/false);
+    unsigned TempOffset =
+        allocateLocalPrimitive(SubExpr, *FromT, /*IsConst=*/true);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*FromT, TempOffset, E))

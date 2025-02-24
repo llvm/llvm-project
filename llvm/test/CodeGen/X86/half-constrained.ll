@@ -15,7 +15,7 @@ define float @half_to_float() strictfp {
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NOF16C-NEXT:    movzwl a, %eax
 ; X86-NOF16C-NEXT:    movl %eax, (%esp)
-; X86-NOF16C-NEXT:    calll __gnu_h2f_ieee
+; X86-NOF16C-NEXT:    calll __extendhfsf2
 ; X86-NOF16C-NEXT:    addl $12, %esp
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOF16C-NEXT:    retl
@@ -64,7 +64,7 @@ define double @half_to_double() strictfp {
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NOF16C-NEXT:    movzwl a, %eax
 ; X86-NOF16C-NEXT:    movl %eax, (%esp)
-; X86-NOF16C-NEXT:    calll __gnu_h2f_ieee
+; X86-NOF16C-NEXT:    calll __extendhfsf2
 ; X86-NOF16C-NEXT:    addl $12, %esp
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOF16C-NEXT:    retl
@@ -116,7 +116,7 @@ define x86_fp80 @half_to_fp80() strictfp {
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NOF16C-NEXT:    movzwl a, %eax
 ; X86-NOF16C-NEXT:    movl %eax, (%esp)
-; X86-NOF16C-NEXT:    calll __gnu_h2f_ieee
+; X86-NOF16C-NEXT:    calll __extendhfsf2
 ; X86-NOF16C-NEXT:    addl $12, %esp
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOF16C-NEXT:    retl
@@ -166,7 +166,7 @@ define void @float_to_half(float %0) strictfp {
 ; X86-NOF16C-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NOF16C-NEXT:    fstps (%esp)
 ; X86-NOF16C-NEXT:    wait
-; X86-NOF16C-NEXT:    calll __gnu_f2h_ieee
+; X86-NOF16C-NEXT:    calll __truncsfhf2
 ; X86-NOF16C-NEXT:    movw %ax, a
 ; X86-NOF16C-NEXT:    addl $12, %esp
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 4
@@ -324,17 +324,17 @@ define void @add() strictfp {
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NOF16C-NEXT:    movzwl a, %eax
 ; X86-NOF16C-NEXT:    movl %eax, (%esp)
-; X86-NOF16C-NEXT:    calll __gnu_h2f_ieee
+; X86-NOF16C-NEXT:    calll __extendhfsf2
 ; X86-NOF16C-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-NOF16C-NEXT:    wait
 ; X86-NOF16C-NEXT:    movzwl b, %eax
 ; X86-NOF16C-NEXT:    movl %eax, (%esp)
-; X86-NOF16C-NEXT:    calll __gnu_h2f_ieee
+; X86-NOF16C-NEXT:    calll __extendhfsf2
 ; X86-NOF16C-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; X86-NOF16C-NEXT:    faddp %st, %st(1)
 ; X86-NOF16C-NEXT:    fstps (%esp)
 ; X86-NOF16C-NEXT:    wait
-; X86-NOF16C-NEXT:    calll __gnu_f2h_ieee
+; X86-NOF16C-NEXT:    calll __truncsfhf2
 ; X86-NOF16C-NEXT:    movw %ax, c
 ; X86-NOF16C-NEXT:    addl $12, %esp
 ; X86-NOF16C-NEXT:    .cfi_def_cfa_offset 4

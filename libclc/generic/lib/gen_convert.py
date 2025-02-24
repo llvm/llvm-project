@@ -28,6 +28,7 @@
 # convert_<destTypen><_sat><_roundingMode>(<sourceTypen>)
 
 import argparse
+from sys import stderr
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -40,6 +41,14 @@ args = parser.parse_args()
 
 clc = args.clc
 clspv = args.clspv
+
+
+# We don't generate clspv-specific code for clc conversions - don't allow this
+# accidentally (later checks rely on mutual exclusivity)
+if clc and clspv:
+    print("Error: clc and clspv conversions are mutually exclusive", file=stderr)
+    exit(1)
+
 
 types = [
     "char",
@@ -308,7 +317,7 @@ def generate_default_conversion(src, dst, mode):
 
 # Do not generate user-facing default conversions for clspv as they are handled
 # natively
-if clc or not clspv:
+if not clspv:
     for src in types:
         for dst in types:
             generate_default_conversion(src, dst, "")
@@ -318,7 +327,7 @@ for src in int_types:
         for mode in rounding_modes:
             # Do not generate user-facing "_rte" conversions for clspv as they
             # are handled natively
-            if clspv and not clc and mode == "_rte":
+            if clspv and mode == "_rte":
                 continue
             generate_default_conversion(src, dst, mode)
 
@@ -369,22 +378,13 @@ def generate_saturated_conversion(src, dst, size):
 
     elif src in float_types:
 
-        if clspv:
-            # Conversion from float to int
-            print(
-                f"""  {dstn} y = __clc_convert_{dstn}(x);
+        # Conversion from float to int
+        print(
+            f"""  {dstn} y = __clc_convert_{dstn}(x);
   y = __clc_select(y, ({dstn}){dst_min}, {bool_prefix}(x <= ({srcn}){dst_min}){bool_suffix});
   y = __clc_select(y, ({dstn}){dst_max}, {bool_prefix}(x >= ({srcn}){dst_max}){bool_suffix});
   return y;"""
-            )
-        else:
-            # Conversion from float to int
-            print(
-                f"""  {dstn} y = __clc_convert_{dstn}(x);
-  y = __clc_select(y, ({dstn}){dst_min}, {bool_prefix}(x < ({srcn}){dst_min}){bool_suffix});
-  y = __clc_select(y, ({dstn}){dst_max}, {bool_prefix}(x > ({srcn}){dst_max}){bool_suffix});
-  return y;"""
-            )
+        )
     else:
 
         # Integer to integer convesion with sizeof(src) == sizeof(dst)
@@ -494,7 +494,7 @@ def generate_float_conversion(src, dst, size, mode, sat):
         print(f"  return __clc_convert_{dstn}(x);")
     else:
         print(f"  {dstn} r = __clc_convert_{dstn}(x);")
-        if clspv:
+        if src in int_types:
             print(f"  {srcn} y = __clc_convert_{srcn}_sat(r);")
         else:
             print(f"  {srcn} y = __clc_convert_{srcn}(r);")
@@ -507,7 +507,7 @@ def generate_float_conversion(src, dst, size, mode, sat):
                 print(f"  {srcn} abs_x = __clc_fabs(x);")
                 print(f"  {srcn} abs_y = __clc_fabs(y);")
             print(f"  {booln} c = __clc_convert_{booln}(abs_y > abs_x);")
-            if clspv and sizeof_type[src] >= 4 and src in int_types:
+            if sizeof_type[src] >= sizeof_type[dst] and src in int_types:
                 print(f"  c = c || __clc_convert_{booln}(({srcn}){src_max} == x);")
             print(
                 f"  {dstn} sel = __clc_select(r, __clc_nextafter(r, __clc_sign(r) * ({dstn})-INFINITY), c);"
@@ -533,7 +533,7 @@ def generate_float_conversion(src, dst, size, mode, sat):
                 print("  return sel;")
         if mode == "_rtn":
             print(f"  {booln} c = __clc_convert_{booln}(y > x);")
-            if clspv and sizeof_type[src] >= 4 and src in int_types:
+            if sizeof_type[src] >= sizeof_type[dst] and src in int_types:
                 print(f"  c = c || __clc_convert_{booln}(({srcn}){src_max} == x);")
             print(
                 f"  {dstn} sel = __clc_select(r, __clc_nextafter(r, ({dstn})-INFINITY), c);"
@@ -569,6 +569,6 @@ for src in types:
             for mode in rounding_modes:
                 # Do not generate user-facing "_rte" conversions for clspv as
                 # they are handled natively
-                if clspv and not clc and mode == "_rte":
+                if clspv and mode == "_rte":
                     continue
                 generate_float_conversion(src, dst, size, mode, "")
