@@ -1170,6 +1170,22 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// An entry to cache a shared memory buffer for Args to emissary APIs
+  struct ArgBufEntryTy {
+    size_t Size; // Size of Buffer
+    void *Addr;  // Pointer to SHARED mem
+    bool is_free;
+  };
+  /// The cache of allocated shared memory buffers for emissary APIs args
+  std::list<ArgBufEntryTy *> ArgBufEntries;
+  /// Get a free shared memory buffer and mark it not free. If none
+  /// free, allocate a new buffer and mark it not free.
+  void *getFree_ArgBuf(size_t sz);
+  /// Change a cached buffer from not free (busy) to free.
+  void moveBusyToFree_ArgBuf(void *ptr);
+  /// Destroy Argbufs and clear the cache. Used as part of device destructor
+  void clear_ArgBufs();
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output

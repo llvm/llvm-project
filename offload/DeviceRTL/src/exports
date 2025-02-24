@@ -23,8 +23,9 @@ printf_*
 f90print*
 fprintf_*
 
-hostexec*
-__ockl*
+_FortranAio*
+__ockl_dm_alloc
+__ockl_dm_dealloc
 __asan*
 __strlen_max
 __tgt_fort_ptr_assn_i8
@@ -34,8 +35,10 @@ global_free
 exp
 sqrt
 pow
+powif
 sin
 cos
 atan2f
+atanf
 
 abs

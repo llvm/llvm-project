@@ -28,6 +28,7 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "ieee_features"
   "iso_c_binding"
   "iso_fortran_env"
+  "f90deviceio"
 )
 
 set(MODULES ${MODULES_WITH_IMPLEMENTATION} ${MODULES_WITHOUT_IMPLEMENTATION})
