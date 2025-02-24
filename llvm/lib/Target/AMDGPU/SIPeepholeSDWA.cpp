@@ -93,6 +93,11 @@ private:
   MachineOperand *Target; // Operand that would be used in converted instruction
   MachineOperand *Replaced; // Operand that would be replace by Target
 
+  /// Returns true iff the SDWA selection of this SDWAOperand can be combined
+  /// with the SDWA selections of its uses in \p MI.
+  virtual bool canCombineSelections(const MachineInstr &MI,
+                                    const SIInstrInfo *TII) = 0;
+
 public:
   SDWAOperand(MachineOperand *TargetOp, MachineOperand *ReplacedOp)
       : Target(TargetOp), Replaced(ReplacedOp) {
@@ -106,11 +111,6 @@ public:
                                            const GCNSubtarget &ST,
                                            SDWAOperandsMap *PotentialMatches = nullptr) = 0;
   virtual bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) = 0;
-
-  /// Returns true iff the SDWA selection of this SDWAOperand can be combined
-  /// with the SDWA selections of its uses in \p MI.
-  virtual bool canCombineSelections(const MachineInstr &MI,
-                                    const SIInstrInfo *TII) = 0;
 
   MachineOperand *getTargetOperand() const { return Target; }
   MachineOperand *getReplacedOperand() const { return Replaced; }
@@ -416,7 +416,9 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
   if (!PotentialMO)
     return nullptr;
 
-  return PotentialMO->getParent();
+  auto parent = PotentialMO->getParent();
+
+  return canCombineSelections(*parent, TII) ? parent : nullptr;
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
@@ -540,7 +542,8 @@ MachineInstr *SDWADstOperand::potentialToConvert(const SIInstrInfo *TII,
       return nullptr;
   }
 
-  return PotentialMO->getParent();
+  auto parent = PotentialMO->getParent();
+  return canCombineSelections(*parent, TII) ? parent : nullptr;
 }
 
 bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
@@ -1377,8 +1380,7 @@ bool SIPeepholeSDWA::run(MachineFunction &MF) {
         MachineInstr *PotentialMI =
             Operand->potentialToConvert(TII, ST, &PotentialMatches);
 
-        if (PotentialMI && isConvertibleToSDWA(*PotentialMI, ST, TII) &&
-            Operand->canCombineSelections(*PotentialMI, TII))
+        if (PotentialMI && isConvertibleToSDWA(*PotentialMI, ST, TII))
           PotentialMatches[PotentialMI].push_back(Operand.get());
       }
 
