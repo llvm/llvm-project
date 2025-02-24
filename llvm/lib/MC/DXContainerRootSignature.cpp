@@ -7,19 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include <cstdint>
+#include <sys/types.h>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
-Error StreamOffsetHelper::addOffset(std::string Key) {
+Error setRewrite(BinaryStreamWriter &Stream, uint32_t &Offset) {
   const uint32_t DummyValue = std::numeric_limits<uint32_t>::max();
 
-  uint32_t Offset = Stream.getOffset();
-  auto Value = std::make_pair(Offset, DummyValue);
-
-  OffsetsMaping.insert_or_assign(Key, Value);
+  Offset = Stream.getOffset();
 
   if (Error Err = Stream.writeInteger(DummyValue))
     return Err;
@@ -27,26 +27,13 @@ Error StreamOffsetHelper::addOffset(std::string Key) {
   return Error::success();
 }
 
-void StreamOffsetHelper::addRewriteValue(std::string Key) {
-  auto It = OffsetsMaping.find(Key);
-  assert(It != OffsetsMaping.end() && "Offset address was not found.");
-  auto [Offset, _] = It->second;
+Error rewriteOffset(BinaryStreamWriter &Stream, uint32_t Offset) {
+  uint64_t Value = Stream.getOffset();
+  Stream.setOffset(Offset);
+  if (Error Err = Stream.writeInteger((uint32_t)Value))
+    return Err;
 
-  uint32_t Value = Stream.getOffset();
-
-  std::pair<uint32_t, uint32_t> NewValue = std::make_pair(Offset, Value);
-  OffsetsMaping.insert_or_assign(Key, NewValue);
-}
-
-Error StreamOffsetHelper::rewrite() {
-  for (auto &[Key, RewriteInfo] : OffsetsMaping) {
-    auto [Position, Value] = RewriteInfo;
-    assert(Value != std::numeric_limits<uint32_t>::max());
-
-    Stream.setOffset(Position);
-    if (Error Err = Stream.writeInteger(Value))
-      return Err;
-  }
+  Stream.setOffset(Value);
 
   return Error::success();
 }
@@ -54,8 +41,6 @@ Error StreamOffsetHelper::rewrite() {
 Error RootSignatureDesc::write(raw_ostream &OS) const {
   std::vector<uint8_t> Buffer(getSizeInBytes());
   BinaryStreamWriter Writer(Buffer, llvm::endianness::little);
-
-  StreamOffsetHelper OffsetMap(Writer);
 
   const uint32_t NumParameters = Parameters.size();
   const uint32_t Zero = 0;
@@ -66,7 +51,8 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
   if (Error Err = Writer.writeInteger(NumParameters))
     return Err;
 
-  if (Error Err = OffsetMap.addOffset("header"))
+  uint32_t HeaderPoint;
+  if (Error Err = setRewrite(Writer, HeaderPoint))
     return Err;
 
   // Static samplers still not implemented
@@ -79,10 +65,11 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
   if (Error Err = Writer.writeInteger(Header.Flags))
     return Err;
 
-  OffsetMap.addRewriteValue("header");
+  if (Error Err = rewriteOffset(Writer, HeaderPoint))
+    return Err;
 
-  for (size_t It = 0; It < Parameters.size(); It++) {
-    const auto &P = Parameters[It];
+  SmallVector<uint32_t> ParamsOffset;
+  for (const auto &P : Parameters) {
 
     if (Error Err = Writer.writeEnum(P.ParameterType))
       return Err;
@@ -90,16 +77,19 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
     if (Error Err = Writer.writeEnum(P.ShaderVisibility))
       return Err;
 
-    std::string Key = ("parameters" + Twine(It)).str();
-    if (Error Err = OffsetMap.addOffset(Key))
+    uint32_t Offset;
+    if (Error Err = setRewrite(Writer, Offset))
       return Err;
+    ParamsOffset.push_back(Offset);
   }
 
-  for (size_t It = 0; It < Parameters.size(); It++) {
-    const auto &P = Parameters[It];
+  size_t It = 0;
+  for (const auto &P : Parameters) {
 
-    std::string Key = ("parameters" + Twine(It)).str();
-    OffsetMap.addRewriteValue(Key);
+    auto Offset = ParamsOffset[It];
+    if (Error Err = rewriteOffset(Writer, Offset))
+      return Err;
+    It++;
 
     switch (P.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit: {
@@ -115,8 +105,7 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
     }
   }
 
-  if (Error Err = OffsetMap.rewrite())
-    return Err;
+  assert(It == NumParameters);
 
   llvm::ArrayRef<char> BufferRef(reinterpret_cast<char *>(Buffer.data()),
                                  Buffer.size());

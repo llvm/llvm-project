@@ -6,32 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/raw_ostream.h"
-#include <map>
-#include <string>
 
 namespace llvm {
 
 class raw_ostream;
 
 namespace mcdxbc {
-
-class StreamOffsetHelper {
-private:
-  std::map<std::string, std::pair<uint32_t, uint32_t>> OffsetsMaping;
-  BinaryStreamWriter &Stream;
-
-public:
-  explicit StreamOffsetHelper(BinaryStreamWriter &Stream) : Stream(Stream) {}
-
-  Error addOffset(std::string Key);
-
-  void addRewriteValue(std::string Key);
-
-  Error rewrite();
-};
 
 struct RootSignatureDesc {
   dxbc::RootSignatureHeader Header;
