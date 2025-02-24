@@ -56,8 +56,8 @@ config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
-config.substitutions.append(("%host_cxx", config.host_cxx))
-config.substitutions.append(("%host_cc", config.host_cc))
+config.substitutions.append(("%host_cxx", config.host_cxx.strip()))
+config.substitutions.append(("%host_cc", config.host_cc.strip()))
 
 
 # Searches for a runtime library with the given name and returns the found path.
