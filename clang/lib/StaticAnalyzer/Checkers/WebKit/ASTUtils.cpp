@@ -8,6 +8,7 @@
 
 #include "ASTUtils.h"
 #include "PtrTypesSemantics.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -28,6 +29,15 @@ bool tryToFindPtrOrigin(
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      auto *ValDecl = DRE->getDecl();
+      auto QT = ValDecl->getType();
+      auto ValName = ValDecl->getName();
+      if (ValDecl && (ValName.starts_with('k') || ValName.starts_with("_k")) &&
+          QT.isConstQualified()) {
+        return callback(E, true);
+      }
+    }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
       E = tempExpr->getSubExpr();
       continue;
@@ -117,6 +127,9 @@ bool tryToFindPtrOrigin(
           E = call->getArg(0);
           continue;
         }
+
+        if (safeGetName(callee) == "__builtin___CFStringMakeConstantString")
+          return callback(E, true);
       }
     }
     if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
