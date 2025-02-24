@@ -9,8 +9,17 @@ import lldb
 @lldb.command()
 def fzf_history(debugger, cmdstr, ctx, result, _):
     """Use fzf to search and select from lldb command history."""
+    history_file = os.path.expanduser("~/.lldb/lldb-widehistory")
+    if not os.path.exists(history_file):
+        result.SetError("history file does not exist")
+        return
+    history = _load_history(history_file)
+
     if sys.platform != "darwin":
-        result.SetError("fzf_history supports macOS only")
+        # The ability to integrate fzf's result into lldb uses copy and paste.
+        # In absense of copy and paste, do the basics and forgo features.
+        fzf_command = ("fzf", "--no-sort", f"--query={query}")
+        subprocess.run(fzf_command, input=history)
         return
 
     # Capture the current pasteboard contents to restore after overwriting.
@@ -23,18 +32,10 @@ def fzf_history(debugger, cmdstr, ctx, result, _):
         f"--query={cmdstr}",
         "--bind=enter:execute-silent(echo -n {} | pbcopy)+close",
     )
-
-    history_file = os.path.expanduser("~/.lldb/lldb-widehistory")
-    if not os.path.exists(history_file):
-        result.SetError("history file does not exist")
-        return
-
-    history_commands = _load_history(history_file)
-    fzf_input = "\n".join(history_commands)
-    completed = subprocess.run(fzf_command, input=fzf_input, text=True)
+    completed = subprocess.run(fzf_command, input=history, text=True)
     # 130 is used for CTRL-C or ESC.
     if completed.returncode not in (0, 130):
-        result.SetError(f"fzf failed: {completed.stderr}")
+        result.SetError("fzf failed")
         return
 
     # Get the user's selected history entry.
@@ -70,7 +71,7 @@ def _handle_command(debugger, command):
 
 
 def _load_history(history_file):
-    """Load, decode, and parse an lldb history file."""
+    """Load, decode, parse, and prepare an lldb history file for fzf."""
     with open(history_file) as f:
         history_contents = f.read()
 
@@ -91,7 +92,7 @@ def _load_history(history_file):
             history_commands.append(line)
             history_seen.add(line)
 
-    return history_commands
+    return "\n".join(history_commands)
 
 
 def _decode_char(match):
