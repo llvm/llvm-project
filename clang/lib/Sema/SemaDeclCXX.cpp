@@ -7574,9 +7574,8 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
 
   assert(D->hasDefinition());
 
-  bool MarkedCXX2CReplaceable = D->getReplaceableSpecifier().isSet();
-  bool MarkedTriviallyRelocatable =
-      D->getTriviallyRelocatableSpecifier().isSet();
+  bool MarkedCXX2CReplaceable = D->hasAttr<ReplaceableAttr>();
+  bool MarkedTriviallyRelocatable = D->hasAttr<TriviallyRelocatableAttr>();
 
   // This is part of "eligible for replacement", however we defer it
   // to avoid extraneous computations.

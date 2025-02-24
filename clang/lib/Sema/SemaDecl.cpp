@@ -18480,19 +18480,10 @@ bool Sema::ActOnDuplicateDefinition(Scope *S, Decl *Prev,
   return true;
 }
 
-TriviallyRelocatableSpecifier
-Sema::ActOnTriviallyRelocatableSpecifier(SourceLocation Loc) {
-  return {Loc};
-}
-
-ReplaceableSpecifier Sema::ActOnReplaceableSpecifier(SourceLocation Loc) {
-  return {Loc};
-}
-
 void Sema::ActOnStartCXXMemberDeclarations(
     Scope *S, Decl *TagD, SourceLocation FinalLoc, bool IsFinalSpelledSealed,
-    bool IsAbstract, TriviallyRelocatableSpecifier TriviallyRelocatable,
-    ReplaceableSpecifier Replaceable, SourceLocation LBraceLoc) {
+    bool IsAbstract, SourceLocation TriviallyRelocatable,
+    SourceLocation Replaceable, SourceLocation LBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
 
@@ -18511,11 +18502,12 @@ void Sema::ActOnStartCXXMemberDeclarations(
                                           : FinalAttr::Keyword_final));
   }
 
-  if (TriviallyRelocatable.isSet() && !Record->isInvalidDecl())
-    Record->setTriviallyRelocatableSpecifier(TriviallyRelocatable);
+  if (TriviallyRelocatable.isValid())
+    Record->addAttr(
+        TriviallyRelocatableAttr::Create(Context, TriviallyRelocatable));
 
-  if (Replaceable.isSet() && !Record->isInvalidDecl())
-    Record->setReplaceableSpecifier(Replaceable);
+  if (Replaceable.isValid())
+    Record->addAttr(ReplaceableAttr::Create(Context, Replaceable));
 
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the

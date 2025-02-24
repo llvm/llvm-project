@@ -3581,10 +3581,6 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   // Start the definition of this instantiation.
   Instantiation->startDefinition();
 
-  Instantiation->setTriviallyRelocatableSpecifier(
-      Pattern->getTriviallyRelocatableSpecifier());
-  Instantiation->setReplaceableSpecifier(Pattern->getReplaceableSpecifier());
-
   // The instantiation is visible here, even if it was first declared in an
   // unimported module.
   Instantiation->setVisibleDespiteOwningModule();

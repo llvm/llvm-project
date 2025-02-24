@@ -4309,19 +4309,16 @@ public:
   /// Invoked when we enter a tag definition that we're skipping.
   SkippedDefinitionContext ActOnTagStartSkippedDefinition(Scope *S, Decl *TD);
 
-  TriviallyRelocatableSpecifier
-  ActOnTriviallyRelocatableSpecifier(SourceLocation Loc);
-
-  ReplaceableSpecifier ActOnReplaceableSpecifier(SourceLocation Loc);
-
   /// ActOnStartCXXMemberDeclarations - Invoked when we have parsed a
   /// C++ record definition's base-specifiers clause and are starting its
   /// member declarations.
-  void ActOnStartCXXMemberDeclarations(
-      Scope *S, Decl *TagDecl, SourceLocation FinalLoc,
-      bool IsFinalSpelledSealed, bool IsAbstract,
-      TriviallyRelocatableSpecifier TriviallyRelocatable,
-      ReplaceableSpecifier Replaceable, SourceLocation LBraceLoc);
+  void ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagDecl,
+                                       SourceLocation FinalLoc,
+                                       bool IsFinalSpelledSealed,
+                                       bool IsAbstract,
+                                       SourceLocation TriviallyRelocatable,
+                                       SourceLocation Replaceable,
+                                       SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
   /// the definition of a tag (enumeration, class, struct, or union).

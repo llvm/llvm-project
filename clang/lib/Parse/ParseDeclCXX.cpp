@@ -2711,8 +2711,7 @@ bool Parser::isCXX2CTriviallyRelocatableKeyword() const {
   return isCXX2CTriviallyRelocatableKeyword(Tok);
 }
 
-void Parser::ParseCXX2CTriviallyRelocatableSpecifier(
-    TriviallyRelocatableSpecifier &TRS) {
+void Parser::ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS) {
   assert(isCXX2CTriviallyRelocatableKeyword() &&
          "expected a trivially_relocatable specifier");
 
@@ -2721,7 +2720,7 @@ void Parser::ParseCXX2CTriviallyRelocatableSpecifier(
                               : diag::ext_relocatable_keyword)
       << /*relocatable*/ 0;
 
-  TRS = Actions.ActOnTriviallyRelocatableSpecifier(ConsumeToken());
+  TRS = ConsumeToken();
 }
 
 bool Parser::isCXX2CReplaceableKeyword(Token Tok) const {
@@ -2738,7 +2737,7 @@ bool Parser::isCXX2CReplaceableKeyword() const {
   return isCXX2CReplaceableKeyword(Tok);
 }
 
-void Parser::ParseCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS) {
+void Parser::ParseCXX2CReplaceableSpecifier(SourceLocation &MRS) {
   assert(isCXX2CReplaceableKeyword() &&
          "expected a replaceable_if_eligible specifier");
 
@@ -2747,7 +2746,7 @@ void Parser::ParseCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS) {
                               : diag::ext_relocatable_keyword)
       << /*replaceable*/ 1;
 
-  MRS = Actions.ActOnReplaceableSpecifier(ConsumeToken());
+  MRS = ConsumeToken();
 }
 
 /// isClassCompatibleKeyword - Determine whether the next token is a C++11
@@ -3872,8 +3871,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   SourceLocation AbstractLoc;
   bool IsFinalSpelledSealed = false;
   bool IsAbstract = false;
-  TriviallyRelocatableSpecifier TriviallyRelocatable;
-  ReplaceableSpecifier Replacable;
+  SourceLocation TriviallyRelocatable;
+  SourceLocation Replacable;
 
   // Parse the optional 'final' keyword.
   if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
@@ -3881,22 +3880,21 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
       if (Specifier == VirtSpecifiers::VS_None) {
         if (isCXX2CTriviallyRelocatableKeyword(Tok)) {
-          if (TriviallyRelocatable.isSet()) {
+          if (TriviallyRelocatable.isValid()) {
             auto Skipped = Tok;
             ConsumeToken();
             Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
-                << /*trivial_relocatable*/ 0
-                << TriviallyRelocatable.getLocation();
+                << /*trivial_relocatable*/ 0 << TriviallyRelocatable;
           } else {
             ParseCXX2CTriviallyRelocatableSpecifier(TriviallyRelocatable);
           }
           continue;
         } else if (isCXX2CReplaceableKeyword(Tok)) {
-          if (Replacable.isSet()) {
+          if (Replacable.isValid()) {
             auto Skipped = Tok;
             ConsumeToken();
             Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
-                << /*replaceable*/ 1 << Replacable.getLocation();
+                << /*replaceable*/ 1 << Replacable;
           } else {
             ParseCXX2CReplaceableSpecifier(Replacable);
           }
@@ -3941,7 +3939,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
         Diag(FinalLoc, diag::ext_warn_gnu_final);
     }
     assert((FinalLoc.isValid() || AbstractLoc.isValid() ||
-            TriviallyRelocatable.isSet() || Replacable.isSet()) &&
+            TriviallyRelocatable.isValid() || Replacable.isValid()) &&
            "not a class definition");
 
     // Parse any C++11 attributes after 'final' keyword.
