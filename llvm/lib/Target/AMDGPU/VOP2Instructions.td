@@ -922,6 +922,8 @@ let isReMaterializable = 1 in {
 let SubtargetPredicate = isGFX1250Plus in {
 let SchedRW = [Write64Bit] in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
+// We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
+let isCommutable = 0 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SchedRW = [Write64Bit]
 let SchedRW = [WriteDouble] in
