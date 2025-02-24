@@ -257,13 +257,13 @@ opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
     desc("Add #include directives when accepting code completions"),
     init(CodeCompleteOptions().InsertIncludes),
     values(
-        clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
+        clEnumValN(CodeCompleteOptions::IncludeInsertion::IWYU, "iwyu",
                    "Include what you use. "
                    "Insert the owning header for top-level symbols, unless the "
                    "header is already directly included or the symbol is "
                    "forward-declared"),
         clEnumValN(
-            CodeCompleteOptions::NeverInsert, "never",
+            CodeCompleteOptions::IncludeInsertion::NeverInsert, "never",
             "Never insert #include directives as part of code completion")),
 };
 
