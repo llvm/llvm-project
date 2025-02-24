@@ -13972,9 +13972,9 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       unsigned ScalarTyNumElements = getNumElements(ScalarTy);
       for (unsigned I : seq<unsigned>(VL.size()))
         if (DemandedElements[I])
-          Cost += TTI->getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
-              I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
+          Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, {},
+                                   CostKind, I * ScalarTyNumElements,
+                                   cast<FixedVectorType>(ScalarTy));
     } else {
       Cost += TTI->getScalarizationOverhead(VecTy, DemandedElements,
                                             /*Insert=*/true,
