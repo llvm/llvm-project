@@ -760,8 +760,9 @@ unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }
 
-bool TargetTransformInfo::hasConditionalLoadStoreForType(Type *Ty) const {
-  return TTIImpl->hasConditionalLoadStoreForType(Ty);
+bool TargetTransformInfo::hasConditionalMoveForType(Type *Ty,
+                                                    MoveType MT) const {
+  return TTIImpl->hasConditionalMoveForType(Ty, MT);
 }
 
 unsigned TargetTransformInfo::getRegisterClassForType(bool Vector,

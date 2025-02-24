@@ -132,7 +132,10 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const;
-  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
+  bool
+  hasConditionalMoveForType(Type *Ty = nullptr,
+                            TargetTransformInfo::MoveType MT =
+                                TargetTransformInfo::MoveType::NoMem) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const;
   unsigned getMaxInterleaveFactor(ElementCount VF);

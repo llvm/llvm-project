@@ -132,6 +132,10 @@ static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
              "to speculatively execute to eliminate conditional branch "
              "(default = 6)"));
 
+static cl::opt<unsigned> ProfitableToSinkInstructionThreshold(
+    "profitable-to-sink-instruction-threshold", cl::Hidden, cl::init(6),
+    cl::desc("Control the maximal PHI instructions"));
+
 static cl::opt<unsigned>
     HoistCommonSkipLimit("simplifycfg-hoist-common-skip-limit", cl::Hidden,
                          cl::init(20),
@@ -1770,7 +1774,8 @@ static bool isSafeCheapLoadStore(const Instruction *I,
   // llvm.masked.load/store use i32 for alignment while load/store use i64.
   // That's why we have the alignment limitation.
   // FIXME: Update the prototype of the intrinsics?
-  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I)) &&
+  return TTI.hasConditionalMoveForType(getLoadStoreType(I),
+                                       TargetTransformInfo::MoveType::All) &&
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
@@ -2355,8 +2360,8 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
 
 /// Check whether BB's predecessors end with unconditional branches. If it is
 /// true, sink any common code from the predecessors to BB.
-static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
-                                           DomTreeUpdater *DTU) {
+static bool sinkCommonCodeFromPredecessors(BasicBlock *BB, DomTreeUpdater *DTU,
+                                           const TargetTransformInfo &TTI) {
   // We support two situations:
   //   (1) all incoming arcs are unconditional
   //   (2) there are non-unconditional incoming arcs
@@ -2461,12 +2466,16 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     // sink?
     auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
       unsigned NumPHIInsts = 0;
+      unsigned NumCmovInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
         if (It != PHIOperands.end() && !all_of(It->second, [&](Value *V) {
               return InstructionsToSink.contains(V);
             })) {
-          ++NumPHIInsts;
+          if (TTI.hasConditionalMoveForType(U->getType()))
+            ++NumCmovInsts;
+          else
+            ++NumPHIInsts;
           // Do not separate a load/store from the gep producing the address.
           // The gep can likely be folded into the load/store as an addressing
           // mode. Additionally, a load of a gep is easier to analyze than a
@@ -2480,7 +2489,8 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
         }
       }
       LLVM_DEBUG(dbgs() << "SINK: #phi insts: " << NumPHIInsts << "\n");
-      return NumPHIInsts <= 1;
+      return NumPHIInsts <= 1 &&
+             NumCmovInsts < ProfitableToSinkInstructionThreshold;
     };
 
     // We've determined that we are going to sink last ScanIdx instructions,
@@ -8308,7 +8318,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     return true;
 
   if (SinkCommon && Options.SinkCommonInsts)
-    if (sinkCommonCodeFromPredecessors(BB, DTU) ||
+    if (sinkCommonCodeFromPredecessors(BB, DTU, TTI) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
       // so we may now how duplicate PHI's.

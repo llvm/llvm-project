@@ -175,8 +175,11 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
-bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
-  if (!ST->hasCF())
+bool X86TTIImpl::hasConditionalMoveForType(
+    Type *Ty, TargetTransformInfo::MoveType MT) const {
+  if (!ST->canUseCMOV())
+    return false;
+  if (MT != TargetTransformInfo::MoveType::NoMem && !ST->hasCF())
     return false;
   if (!Ty)
     return true;
@@ -6234,7 +6237,7 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
 
   // The backend can't handle a single element vector w/o CFCMOV.
   if (isa<VectorType>(DataTy) && cast<FixedVectorType>(DataTy)->getNumElements() == 1)
-    return ST->hasCF() && hasConditionalLoadStoreForType(ScalarTy);
+    return ST->hasCF() && hasConditionalMoveForType(ScalarTy);
 
   if (!ST->hasAVX())
     return false;
