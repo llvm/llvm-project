@@ -5519,13 +5519,33 @@ void IntrinsicLibrary::genIeeeSetRoundingMode(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   // Set the current floating point rounding mode to the value of arg
   // ROUNDING_VALUE. Values are llvm.get.rounding encoding values.
-  // Generate an error if the value of optional arg RADIX is not 2.
+  // Modes ieee_to_zero, ieee_nearest, ieee_up, and ieee_down are supported.
+  // Modes ieee_away and ieee_other are not supported, and are treated as
+  // ieee_nearest. Generate an error if the optional RADIX arg is not 2.
   assert(args.size() == 1 || args.size() == 2);
   if (args.size() == 2)
     checkRadix(builder, loc, fir::getBase(args[1]), "ieee_set_rounding_mode");
-  auto [fieldRef, ignore] = getFieldRef(builder, loc, fir::getBase(args[0]));
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(builder);
   mlir::Value mode = builder.create<fir::LoadOp>(loc, fieldRef);
+  static_assert(
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO <= 3 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST <= 3 && _FORTRAN_RUNTIME_IEEE_UP >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_UP <= 3 && _FORTRAN_RUNTIME_IEEE_DOWN >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_DOWN <= 3 && "unexpected rounding mode mapping");
+  mlir::Value mask = builder.create<mlir::arith::ShLIOp>(
+      loc, builder.createAllOnesInteger(loc, fieldTy),
+      builder.createIntegerConstant(loc, fieldTy, 2));
+  mlir::Value modeIsSupported = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq,
+      builder.create<mlir::arith::AndIOp>(loc, mode, mask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  mlir::Value nearest = builder.createIntegerConstant(
+      loc, fieldTy, _FORTRAN_RUNTIME_IEEE_NEAREST);
+  mode = builder.create<mlir::arith::SelectOp>(loc, modeIsSupported, mode,
+                                               nearest);
   mode = builder.create<fir::ConvertOp>(
       loc, setRound.getFunctionType().getInput(0), mode);
   builder.create<fir::CallOp>(loc, setRound, mode);

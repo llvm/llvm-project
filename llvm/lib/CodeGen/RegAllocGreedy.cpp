@@ -2710,9 +2710,6 @@ bool RAGreedy::hasVirtRegAlloc() {
     Register Reg = Register::index2VirtReg(I);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
-    const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-    if (!RC)
-      continue;
     if (shouldAllocateRegister(Reg))
       return true;
   }
