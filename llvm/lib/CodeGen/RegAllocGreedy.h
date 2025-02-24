@@ -358,8 +358,9 @@ private:
                                     BlockFrequency &BestCost,
                                     unsigned &NumCands, bool IgnoreCSR);
   /// Perform region splitting.
-  Register doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
-                         bool HasCompact, SmallVectorImpl<Register> &NewVRegs);
+  MCRegister doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
+                           bool HasCompact,
+                           SmallVectorImpl<Register> &NewVRegs);
   /// Try to split VirtReg around physical Hint register.
   bool trySplitAroundHintReg(MCPhysReg Hint, const LiveInterval &VirtReg,
                              SmallVectorImpl<Register> &NewVRegs,
@@ -371,18 +372,18 @@ private:
                                    uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
   void initializeCSRCost();
-  Register tryBlockSplit(const LiveInterval &, AllocationOrder &,
-                         SmallVectorImpl<Register> &);
-  Register tryInstructionSplit(const LiveInterval &, AllocationOrder &,
-                               SmallVectorImpl<Register> &);
-  Register tryLocalSplit(const LiveInterval &, AllocationOrder &,
-                         SmallVectorImpl<Register> &);
-  Register trySplit(const LiveInterval &, AllocationOrder &,
-                    SmallVectorImpl<Register> &, const SmallVirtRegSet &);
-  Register tryLastChanceRecoloring(const LiveInterval &, AllocationOrder &,
-                                   SmallVectorImpl<Register> &,
-                                   SmallVirtRegSet &, RecoloringStack &,
-                                   unsigned);
+  MCRegister tryBlockSplit(const LiveInterval &, AllocationOrder &,
+                           SmallVectorImpl<Register> &);
+  MCRegister tryInstructionSplit(const LiveInterval &, AllocationOrder &,
+                                 SmallVectorImpl<Register> &);
+  MCRegister tryLocalSplit(const LiveInterval &, AllocationOrder &,
+                           SmallVectorImpl<Register> &);
+  MCRegister trySplit(const LiveInterval &, AllocationOrder &,
+                      SmallVectorImpl<Register> &, const SmallVirtRegSet &);
+  MCRegister tryLastChanceRecoloring(const LiveInterval &, AllocationOrder &,
+                                     SmallVectorImpl<Register> &,
+                                     SmallVirtRegSet &, RecoloringStack &,
+                                     unsigned);
   bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
                                SmallVirtRegSet &, RecoloringStack &, unsigned);
   void tryHintRecoloring(const LiveInterval &);
