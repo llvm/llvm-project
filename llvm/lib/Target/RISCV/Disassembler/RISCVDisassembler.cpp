@@ -711,6 +711,9 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "Qualcomm uC Conditional Move");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint32,
                         "Qualcomm uC Interrupts");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXRivosVizip, DecoderTableXRivos32,
+                        "Rivos");
+
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32");
 
   return MCDisassembler::Fail;
@@ -764,6 +767,8 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
   for (size_t i = Size; i-- != 0;) {
     Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
   }
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilia, DecoderTableXqcilia48,
+                        "Qualcomm uC Large Immediate Arithmetic 48bit");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilo, DecoderTableXqcilo48,
                         "Qualcomm uC Large Offset Load Store 48bit");
 

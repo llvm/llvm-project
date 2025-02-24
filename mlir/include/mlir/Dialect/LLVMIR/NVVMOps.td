@@ -257,11 +257,13 @@ def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
 def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
 def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
 def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
+def ReduxKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
+def ReduxKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
 
 /// Enum attribute of the different kinds.
 def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
   [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
-    ReduxKindUmax, ReduxKindUmin, ReduxKindXor]> {
+   ReduxKindUmax, ReduxKindUmin, ReduxKindXor, ReduxKindFmin, ReduxKindFmax]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -273,9 +275,24 @@ def NVVM_ReduxOp :
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_Type:$val,
                  ReduxKindAttr:$kind,
-                 I32:$mask_and_clamp)> {
+                 I32:$mask_and_clamp,
+                 DefaultValuedAttr<BoolAttr, "false">:$abs,
+                 DefaultValuedAttr<BoolAttr, "false">:$nan)> {
+  let summary = "Redux Sync Op";
+  let description = [{
+    `redux.sync` performs a reduction operation `kind` of the 32 bit source 
+    register across all non-exited threads in the membermask.
+
+    The `abs` and `nan` attributes can be used in the case of f32 input type, 
+    where the `abs` attribute causes the absolute value of the input to be used 
+    in the reduction operation, and the `nan` attribute causes the reduction 
+    operation to return NaN if any of the inputs to participating threads are 
+    NaN.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
+  }];
   string llvmBuilder = [{
-      auto intId = getReduxIntrinsicId($_resultType, $kind);
+      auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
   }];
   let assemblyFormat = [{
@@ -2648,8 +2665,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc"> {
     the amount specified by `nCols` and writes the destination
     address to the `addr` argument. The `nCols` operand specifies the
     number of columns to be allocated and it must be a power-of-two.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins
@@ -2679,8 +2695,7 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc"> {
     specified by `tmemAddr`, which must be from a previous tensor
     memory allocation. The `nCols` operand specifies the number
     of columns to be de-allocated, and it must be a power-of-two.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins LLVM_PointerTensor:$taddr, I32:$nCols,
@@ -2708,8 +2723,7 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
     of the executing thread is relinquishing the right to allocate
     Tensor Memory. So, it is illegal for a CTA to perform `tcgen05.alloc`
     after any of its constituent threads execute `tcgen05.relinquish_alloc_permit`.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins
@@ -2733,8 +2747,7 @@ def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence"> {
     The `tcgen05.fence<after>` orders all subsequent async tcgen05 operations
     with respect to the prior tcgen05 and execution ordering operations.
 
-    [For more information refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence)
   }];
 
   let arguments = (ins Tcgen05FenceKindAttr:$kind);
@@ -2756,8 +2769,7 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait"> {
     have completed. Similarly, the `tcgen05.wait<store>` causes the executing
     thread to block until all prior `tcgen05.st` operations issued by the
     executing thread have completed.
-    [For more information refer PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait)
   }];
 
   let arguments = (ins Tcgen05WaitKindAttr:$kind);
@@ -2782,8 +2794,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit"> {
     when present, specifies the destination CTAs in the cluster such
     that each bit position in the 16-bit `multicastMask` operand
     corresponds to the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
-    [For more information refer PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
   }];
 
   let arguments = (ins
