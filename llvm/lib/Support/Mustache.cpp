@@ -59,31 +59,49 @@ public:
     Comment,
   };
 
-  Token(std::string Str);
+  Token(std::string Str)
+      : TokenType(Type::Text), RawBody(std::move(Str)), TokenBody(RawBody),
+        Accessor({}), Indentation(0){};
 
-  Token(std::string RawBody, std::string TokenBody, char Identifier);
+  Token(std::string RawBody, std::string TokenBody, char Identifier)
+      : RawBody(std::move(RawBody)), TokenBody(std::move(TokenBody)),
+        Indentation(0) {
+    TokenType = getTokenType(Identifier);
+    if (TokenType == Type::Comment)
+      return;
+    StringRef AccessorStr(this->TokenBody);
+    if (TokenType != Type::Variable)
+      AccessorStr = AccessorStr.substr(1);
+    Accessor = splitMustacheString(StringRef(AccessorStr).trim());
+  }
 
-  StringRef getTokenBody() const { return TokenBody; };
+  Accessor getAccessor() const { return Accessor; }
 
-  StringRef getRawBody() const { return RawBody; };
+  Type getType() const { return TokenType; }
 
-  std::string takeTokenBody() { return std::move(TokenBody); }
+  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; }
 
-  std::string takeRawBody() { return std::move(RawBody); }
+  size_t getIndentation() const { return Indentation; }
 
-  void setTokenBody(std::string NewBody) { TokenBody = std::move(NewBody); };
+  static Type getTokenType(char Identifier) {
+    switch (Identifier) {
+    case '#':
+      return Type::SectionOpen;
+    case '/':
+      return Type::SectionClose;
+    case '^':
+      return Type::InvertSectionOpen;
+    case '!':
+      return Type::Comment;
+    case '>':
+      return Type::Partial;
+    case '&':
+      return Type::UnescapeVariable;
+    default:
+      return Type::Variable;
+    }
+  }
 
-  Accessor getAccessor() const { return Accessor; };
-
-  Type getType() const { return TokenType; };
-
-  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
-
-  size_t getIndentation() const { return Indentation; };
-
-  static Type getTokenType(char Identifier);
-
-private:
   Type TokenType;
   // RawBody is the original string that was tokenized.
   std::string RawBody;
@@ -220,7 +238,7 @@ bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
     return true;
 
   const Token &PrevToken = Tokens[PrevIdx];
-  StringRef TokenBody = PrevToken.getRawBody().rtrim(" \r\t\v");
+  StringRef TokenBody = StringRef(PrevToken.RawBody).rtrim(" \r\t\v");
   return !TokenBody.ends_with("\n") && !(TokenBody.empty() && Idx == 1);
 }
 
@@ -236,7 +254,7 @@ bool hasTextAhead(size_t Idx, const ArrayRef<Token> &Tokens) {
     return true;
 
   const Token &NextToken = Tokens[NextIdx];
-  StringRef TokenBody = NextToken.getRawBody().ltrim(" ");
+  StringRef TokenBody = StringRef(NextToken.RawBody).ltrim(" ");
   return !TokenBody.starts_with("\r\n") && !TokenBody.starts_with("\n");
 }
 
@@ -255,12 +273,12 @@ bool requiresCleanUp(Token::Type T) {
 //  " Line 2"
 void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
-  StringRef NextTokenBody = NextToken.getTokenBody();
+  StringRef NextTokenBody = NextToken.TokenBody;
   // Cut off the leading newline which could be \n or \r\n.
   if (NextTokenBody.starts_with("\r\n"))
-    NextToken.setTokenBody(NextTokenBody.substr(2).str());
+    NextToken.TokenBody = std::move(NextTokenBody.substr(2).str());
   else if (NextTokenBody.starts_with("\n"))
-    NextToken.setTokenBody(NextTokenBody.substr(1).str());
+    NextToken.TokenBody = std::move(NextTokenBody.substr(1).str());
 }
 
 // Adjust previous token body if there no text behind.
@@ -274,11 +292,11 @@ void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
 void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
                       Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
-  StringRef PrevTokenBody = PrevToken.getTokenBody();
+  StringRef PrevTokenBody = PrevToken.TokenBody;
   StringRef Unindented = PrevTokenBody.rtrim(" \r\t\v");
   size_t Indentation = PrevTokenBody.size() - Unindented.size();
   if (CurrentType != Token::Type::Partial)
-    PrevToken.setTokenBody(Unindented.str());
+    PrevToken.TokenBody = std::move(Unindented.str());
   CurrentToken.setIndentation(Indentation);
 }
 
@@ -416,42 +434,6 @@ private:
   llvm::raw_ostream &WrappedStream;
 };
 
-Token::Token(std::string RawBody, std::string TokenBody, char Identifier)
-    : RawBody(std::move(RawBody)), TokenBody(std::move(TokenBody)),
-      Indentation(0) {
-  TokenType = getTokenType(Identifier);
-  if (TokenType == Type::Comment)
-    return;
-
-  StringRef AccessorStr(this->TokenBody);
-  if (TokenType != Type::Variable)
-    AccessorStr = AccessorStr.substr(1);
-  Accessor = splitMustacheString(StringRef(AccessorStr).trim());
-}
-
-Token::Token(std::string Str)
-    : TokenType(Type::Text), RawBody(std::move(Str)), TokenBody(RawBody),
-      Accessor({}), Indentation(0) {}
-
-Token::Type Token::getTokenType(char Identifier) {
-  switch (Identifier) {
-  case '#':
-    return Type::SectionOpen;
-  case '/':
-    return Type::SectionClose;
-  case '^':
-    return Type::InvertSectionOpen;
-  case '!':
-    return Type::Comment;
-  case '>':
-    return Type::Partial;
-  case '&':
-    return Type::UnescapeVariable;
-  default:
-    return Type::Variable;
-  }
-}
-
 class Parser {
 public:
   Parser(StringRef TemplateStr, BumpPtrAllocator &Allocator)
@@ -507,8 +489,8 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
     switch (CurrentToken.getType()) {
     case Token::Type::Text: {
       CurrentNode =
-          createTextNode(Node, std::move(CurrentToken.takeTokenBody()), Parent,
-                         Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+          createTextNode(Node, std::move(CurrentToken.TokenBody), Parent, Alloc,
+                         Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
@@ -543,7 +525,7 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
       const size_t End = CurrentPtr - 1;
       std::string RawBody;
       for (std::size_t I = Start; I < End; I++)
-        RawBody += Tokens[I].takeRawBody();
+        RawBody += Tokens[I].RawBody;
       CurrentNode->setRawBody(std::move(RawBody));
       Parent->addChild(CurrentNode);
       break;
@@ -557,7 +539,7 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
       const size_t End = CurrentPtr - 1;
       std::string RawBody;
       for (size_t Idx = Start; Idx < End; Idx++)
-        RawBody += Tokens[Idx].takeRawBody();
+        RawBody += Tokens[Idx].RawBody;
       CurrentNode->setRawBody(std::move(RawBody));
       Parent->addChild(CurrentNode);
       break;
