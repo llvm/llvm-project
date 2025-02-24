@@ -8,7 +8,7 @@ import lldb
 
 @lldb.command()
 def fzf_history(debugger, cmdstr, ctx, result, _):
-    if sys.platform != 'darwin':
+    if sys.platform != "darwin":
         result.SetError("fzf_history supports macOS only")
         return
 
