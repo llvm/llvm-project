@@ -468,6 +468,9 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (!valueTy)
+    return emitOpError("Expecting a vector type result.\n");
+
   if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
@@ -522,6 +525,10 @@ LogicalResult StoreScatterOp::verify() {
 
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
+
+  if (!valueTy)
+    return emitOpError("Expecting a vector type for the value.\n");
+
   auto maskShape = getShapeOf(maskTy);
   auto tdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);

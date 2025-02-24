@@ -244,6 +244,7 @@ LogicalResult TensorDescType::verify(
     llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
     mlir::Attribute encoding, mlir::Attribute sg_map) {
   size_t rank = shape.size();
+  // Low-pressure types are packed in 32-bit units.
   unsigned packingFactor = 32 / elementType.getIntOrFloatBitWidth();
   if (rank != 1 && rank != 2)
     return emitError() << "expected 1D or 2D tensor";
