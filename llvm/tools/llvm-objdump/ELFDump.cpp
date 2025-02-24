@@ -64,7 +64,7 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
     return DynamicEntriesOrError.takeError();
 
   typename ELFT::Xword StringTableSize{0};
-  const uint8_t *MappedAddr{nullptr};
+  const uint8_t *MappedAddr = nullptr;
   for (const typename ELFT::Dyn &Dyn : *DynamicEntriesOrError) {
     if (Dyn.d_tag == ELF::DT_STRTAB) {
       auto MappedAddrOrError = Elf.toMappedAddr(Dyn.getPtr());
