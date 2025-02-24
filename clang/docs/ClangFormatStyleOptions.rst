@@ -4782,7 +4782,13 @@ the configuration (without a prefix: ``Auto``).
 .. _Language:
 
 **Language** (``LanguageKind``) :versionbadge:`clang-format 3.5` :ref:`¶ <Language>`
-  Language, this format style is targeted at.
+  The language that this format style targets.
+
+  .. note::
+
+   You can also specify the language (``Cpp`` or ``ObjC``) for ``.h`` files
+   by adding a ``// clang-format Language:`` line before the first
+   non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
 
   Possible values:
 
