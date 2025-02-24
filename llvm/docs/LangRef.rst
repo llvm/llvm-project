@@ -3295,7 +3295,8 @@ that is :ref:`based on <pointeraliasing>` the allocation value. If a pointer
 that is not based on the object tries to read or write to the object, it is
 undefined behavior.
 
-The following properties hold for all allocated objects:
+The following properties hold for all allocated objects, otherwise the
+behavior is undefined:
 
 -  no allocated object may cross the unsigned address space boundary (including
    the pointer after the end of the object),
@@ -11718,8 +11719,9 @@ For ``nuw`` (no unsigned wrap):
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
 
- * The base pointer has an *in bounds* address of the allocated object that it
-   is :ref:`based <pointeraliasing>` on. This means that it points into that
+ * The base pointer has an *in bounds* address of the
+   :ref:`allocated object<allocatedobjects>` that it is
+   :ref:`based <pointeraliasing>` on. This means that it points into that
    allocated object, or to its end. Note that the object does not have to be
    live anymore; being in-bounds of a deallocated object is sufficient.
  * During the successive addition of offsets to the address, the resulting
@@ -11729,9 +11731,6 @@ Note that ``getelementptr`` with all-zero indices is always considered to be
 ``inbounds``, even if the base pointer does not point to an allocated object.
 As a corollary, the only pointer in bounds of the null pointer in the default
 address space is the null pointer itself.
-
-These rules are based on the assumption for
-:ref:`allocated object<allocatedobjects>`.
 
 If ``inbounds`` is present on a ``getelementptr`` instruction, the ``nusw``
 attribute will be automatically set as well. For this reason, the ``nusw``
@@ -26468,7 +26467,7 @@ can belong to any address space.
 Overview:
 """""""""
 
-The '``llvm.invariant.end``' intrinsic specifies that the contents of a
+The '``llvm.invariant.end``' intrinsic specifies that the contents of an
 :ref:`allocated object<allocatedobjects>` are mutable.
 
 Arguments:
