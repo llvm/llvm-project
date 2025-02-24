@@ -4150,6 +4150,7 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
 Value *OpenMPIRBuilder::calculateCanonicalLoopTripCount(
     const LocationDescription &Loc, Value *Start, Value *Stop, Value *Step,
     bool IsSigned, bool InclusiveStop, const Twine &Name) {
+
   // Consider the following difficulties (assuming 8-bit signed integers):
   //  * Adding \p Step to the loop counter which passes \p Stop may overflow:
   //      DO I = 1, 100, 50
@@ -9302,44 +9303,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy
-OpenMPIRBuilder::createDistribute(const LocationDescription &Loc,
-                                  InsertPointTy OuterAllocaIP,
-                                  BodyGenCallbackTy BodyGenCB) {
-  if (!updateToLocation(Loc))
-    return InsertPointTy();
-
-  BasicBlock *OuterAllocaBB = OuterAllocaIP.getBlock();
-
-  if (OuterAllocaBB == Builder.GetInsertBlock()) {
-    BasicBlock *BodyBB =
-        splitBB(Builder, /*CreateBranch=*/true, "distribute.entry");
-    Builder.SetInsertPoint(BodyBB, BodyBB->begin());
-  }
-  BasicBlock *ExitBB =
-      splitBB(Builder, /*CreateBranch=*/true, "distribute.exit");
-  BasicBlock *BodyBB =
-      splitBB(Builder, /*CreateBranch=*/true, "distribute.body");
-  BasicBlock *AllocaBB =
-      splitBB(Builder, /*CreateBranch=*/true, "distribute.alloca");
-
-  // Generate the body of distribute clause
-  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
-  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
-  if (Error Err = BodyGenCB(AllocaIP, CodeGenIP))
-    return Err;
-
-  OutlineInfo OI;
-  OI.OuterAllocaBB = OuterAllocaIP.getBlock();
-  OI.EntryBB = AllocaBB;
-  OI.ExitBB = ExitBB;
-
-  addOutlineInfo(std::move(OI));
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
-
-  return Builder.saveIP();
-}
-
-OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB, Value *NumTeamsLower,
                              Value *NumTeamsUpper, Value *ThreadLimit,
@@ -9479,6 +9442,44 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
 
   addOutlineInfo(std::move(OI));
 
+  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createDistribute(const LocationDescription &Loc,
+                                  InsertPointTy OuterAllocaIP,
+                                  BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
+
+  BasicBlock *OuterAllocaBB = OuterAllocaIP.getBlock();
+
+  if (OuterAllocaBB == Builder.GetInsertBlock()) {
+    BasicBlock *BodyBB =
+        splitBB(Builder, /*CreateBranch=*/true, "distribute.entry");
+    Builder.SetInsertPoint(BodyBB, BodyBB->begin());
+  }
+  BasicBlock *ExitBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.exit");
+  BasicBlock *BodyBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.body");
+  BasicBlock *AllocaBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.alloca");
+
+  // Generate the body of distribute clause
+  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
+  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
+  if (Error Err = BodyGenCB(AllocaIP, CodeGenIP))
+    return Err;
+
+  OutlineInfo OI;
+  OI.OuterAllocaBB = OuterAllocaIP.getBlock();
+  OI.EntryBB = AllocaBB;
+  OI.ExitBB = ExitBB;
+
+  addOutlineInfo(std::move(OI));
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 
   return Builder.saveIP();

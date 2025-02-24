@@ -2703,12 +2703,13 @@ public:
 
   /// Generator for `#omp distribute`
   ///
-  /// \param Loc The location where the teams construct was encountered.
+  /// \param Loc The location where the distribute construct was encountered.
   /// \param AllocaIP The insertion points to be used for alloca instructions.
   /// \param BodyGenCB Callback that will generate the region code.
   InsertPointOrErrorTy createDistribute(const LocationDescription &Loc,
                                         InsertPointTy AllocaIP,
                                         BodyGenCallbackTy BodyGenCB);
+
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
   /// copies.
