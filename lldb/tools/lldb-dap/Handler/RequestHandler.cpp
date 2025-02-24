@@ -225,4 +225,11 @@ void RequestHandler::PrintWelcomeMessage() {
 #endif
 }
 
+bool RequestHandler::HasInstructionGranularity(
+    const llvm::json::Object &arguments) {
+  if (std::optional<llvm::StringRef> value = arguments.getString("granularity"))
+    return value == "instruction";
+  return false;
+}
+
 } // namespace lldb_dap
