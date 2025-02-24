@@ -373,77 +373,6 @@ void request_modules(DAP &dap, const llvm::json::Object &request) {
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-// Check if the step-granularity is `instruction`
-static bool hasInstructionGranularity(const llvm::json::Object &requestArgs) {
-  if (std::optional<llvm::StringRef> value =
-          requestArgs.getString("granularity"))
-    return value == "instruction";
-  return false;
-}
-
-// "NextRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Next request; value of command field is 'next'. The
-//                     request starts the debuggee to run again for one step.
-//                     The debug adapter first sends the NextResponse and then
-//                     a StoppedEvent (event type 'step') after the step has
-//                     completed.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "next" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/NextArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "NextArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'next' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Execute 'next' for this thread."
-//     },
-//     "granularity": {
-//       "$ref": "#/definitions/SteppingGranularity",
-//       "description": "Stepping granularity. If no granularity is specified, a
-//                       granularity of `statement` is assumed."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "NextResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'next' request. This is just an
-//                     acknowledgement, so no body field is required."
-//   }]
-// }
-void request_next(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
-  if (thread.IsValid()) {
-    // Remember the thread ID that caused the resume so we can set the
-    // "threadCausedFocus" boolean value in the "stopped" events.
-    dap.focus_tid = thread.GetThreadID();
-    if (hasInstructionGranularity(*arguments)) {
-      thread.StepInstruction(/*step_over=*/true);
-    } else {
-      thread.StepOver();
-    }
-  } else {
-    response["success"] = llvm::json::Value(false);
-  }
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
 // "PauseRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -1375,269 +1304,6 @@ void request_stackTrace(DAP &dap, const llvm::json::Object &request) {
 
   body.try_emplace("stackFrames", std::move(stack_frames));
   response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "StepInRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "StepIn request; value of command field is 'stepIn'. The
-//     request starts the debuggee to step into a function/method if possible.
-//     If it cannot step into a target, 'stepIn' behaves like 'next'. The debug
-//     adapter first sends the StepInResponse and then a StoppedEvent (event
-//     type 'step') after the step has completed. If there are multiple
-//     function/method calls (or other targets) on the source line, the optional
-//     argument 'targetId' can be used to control into which target the 'stepIn'
-//     should occur. The list of possible targets for a given source line can be
-//     retrieved via the 'stepInTargets' request.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "stepIn" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/StepInArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "StepInArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'stepIn' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Execute 'stepIn' for this thread."
-//     },
-//     "targetId": {
-//       "type": "integer",
-//       "description": "Optional id of the target to step into."
-//     },
-//     "granularity": {
-//       "$ref": "#/definitions/SteppingGranularity",
-//       "description": "Stepping granularity. If no granularity is specified, a
-//                       granularity of `statement` is assumed."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "StepInResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'stepIn' request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// }
-void request_stepIn(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-
-  std::string step_in_target;
-  uint64_t target_id = GetUnsigned(arguments, "targetId", 0);
-  auto it = dap.step_in_targets.find(target_id);
-  if (it != dap.step_in_targets.end())
-    step_in_target = it->second;
-
-  const bool single_thread = GetBoolean(arguments, "singleThread", false);
-  lldb::RunMode run_mode =
-      single_thread ? lldb::eOnlyThisThread : lldb::eOnlyDuringStepping;
-  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
-  if (thread.IsValid()) {
-    // Remember the thread ID that caused the resume so we can set the
-    // "threadCausedFocus" boolean value in the "stopped" events.
-    dap.focus_tid = thread.GetThreadID();
-    if (hasInstructionGranularity(*arguments)) {
-      thread.StepInstruction(/*step_over=*/false);
-    } else {
-      thread.StepInto(step_in_target.c_str(), run_mode);
-    }
-  } else {
-    response["success"] = llvm::json::Value(false);
-  }
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "StepInTargetsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "This request retrieves the possible step-in targets for
-//     the specified stack frame.\nThese targets can be used in the `stepIn`
-//     request.\nClients should only call this request if the corresponding
-//     capability `supportsStepInTargetsRequest` is true.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "stepInTargets" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/StepInTargetsArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "StepInTargetsArguments": {
-//   "type": "object",
-//   "description": "Arguments for `stepInTargets` request.",
-//   "properties": {
-//     "frameId": {
-//       "type": "integer",
-//       "description": "The stack frame for which to retrieve the possible
-//       step-in targets."
-//     }
-//   },
-//   "required": [ "frameId" ]
-// },
-// "StepInTargetsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `stepInTargets` request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "targets": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/StepInTarget"
-//             },
-//             "description": "The possible step-in targets of the specified
-//             source location."
-//           }
-//         },
-//         "required": [ "targets" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void request_stepInTargets(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-
-  dap.step_in_targets.clear();
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  if (frame.IsValid()) {
-    lldb::SBAddress pc_addr = frame.GetPCAddress();
-    lldb::SBAddress line_end_addr =
-        pc_addr.GetLineEntry().GetSameLineContiguousAddressRangeEnd(true);
-    lldb::SBInstructionList insts = dap.target.ReadInstructions(
-        pc_addr, line_end_addr, /*flavor_string=*/nullptr);
-
-    if (!insts.IsValid()) {
-      response["success"] = false;
-      response["message"] = "Failed to get instructions for frame.";
-      dap.SendJSON(llvm::json::Value(std::move(response)));
-      return;
-    }
-
-    llvm::json::Array step_in_targets;
-    const auto num_insts = insts.GetSize();
-    for (size_t i = 0; i < num_insts; ++i) {
-      lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
-      if (!inst.IsValid())
-        break;
-
-      lldb::addr_t inst_addr = inst.GetAddress().GetLoadAddress(dap.target);
-
-      // Note: currently only x86/x64 supports flow kind.
-      lldb::InstructionControlFlowKind flow_kind =
-          inst.GetControlFlowKind(dap.target);
-      if (flow_kind == lldb::eInstructionControlFlowKindCall) {
-        // Use call site instruction address as id which is easy to debug.
-        llvm::json::Object step_in_target;
-        step_in_target["id"] = inst_addr;
-
-        llvm::StringRef call_operand_name = inst.GetOperands(dap.target);
-        lldb::addr_t call_target_addr;
-        if (call_operand_name.getAsInteger(0, call_target_addr))
-          continue;
-
-        lldb::SBAddress call_target_load_addr =
-            dap.target.ResolveLoadAddress(call_target_addr);
-        if (!call_target_load_addr.IsValid())
-          continue;
-
-        // The existing ThreadPlanStepInRange only accept step in target
-        // function with debug info.
-        lldb::SBSymbolContext sc = dap.target.ResolveSymbolContextForAddress(
-            call_target_load_addr, lldb::eSymbolContextFunction);
-
-        // The existing ThreadPlanStepInRange only accept step in target
-        // function with debug info.
-        std::string step_in_target_name;
-        if (sc.IsValid() && sc.GetFunction().IsValid())
-          step_in_target_name = sc.GetFunction().GetDisplayName();
-
-        // Skip call sites if we fail to resolve its symbol name.
-        if (step_in_target_name.empty())
-          continue;
-
-        dap.step_in_targets.try_emplace(inst_addr, step_in_target_name);
-        step_in_target.try_emplace("label", step_in_target_name);
-        step_in_targets.emplace_back(std::move(step_in_target));
-      }
-    }
-    llvm::json::Object body;
-    body.try_emplace("targets", std::move(step_in_targets));
-    response.try_emplace("body", std::move(body));
-  } else {
-    response["success"] = llvm::json::Value(false);
-    response["message"] = "Failed to get frame for input frameId.";
-  }
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
-// "StepOutRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "StepOut request; value of command field is 'stepOut'. The
-//     request starts the debuggee to run again for one step. The debug adapter
-//     first sends the StepOutResponse and then a StoppedEvent (event type
-//     'step') after the step has completed.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "stepOut" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/StepOutArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "StepOutArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'stepOut' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Execute 'stepOut' for this thread."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "StepOutResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'stepOut' request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// }
-void request_stepOut(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  lldb::SBThread thread = dap.GetLLDBThread(*arguments);
-  if (thread.IsValid()) {
-    // Remember the thread ID that caused the resume so we can set the
-    // "threadCausedFocus" boolean value in the "stopped" events.
-    dap.focus_tid = thread.GetThreadID();
-    thread.StepOut();
-  } else {
-    response["success"] = llvm::json::Value(false);
-  }
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 
@@ -2783,16 +2449,19 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
-  dap.RegisterRequest<ContinueRequestHandler>();
   dap.RegisterRequest<ConfigurationDoneRequestHandler>();
+  dap.RegisterRequest<ContinueRequestHandler>();
   dap.RegisterRequest<DisconnectRequestHandler>();
   dap.RegisterRequest<EvaluateRequestHandler>();
   dap.RegisterRequest<ExceptionInfoRequestHandler>();
   dap.RegisterRequest<InitializeRequestHandler>();
   dap.RegisterRequest<LaunchRequestHandler>();
+  dap.RegisterRequest<NextRequestHandler>();
   dap.RegisterRequest<RestartRequestHandler>();
+  dap.RegisterRequest<StepInRequestHandler>();
+  dap.RegisterRequest<StepInTargetsRequestHandler>();
+  dap.RegisterRequest<StepOutRequestHandler>();
 
-  dap.RegisterRequestCallback("next", request_next);
   dap.RegisterRequestCallback("pause", request_pause);
   dap.RegisterRequestCallback("scopes", request_scopes);
   dap.RegisterRequestCallback("setBreakpoints", request_setBreakpoints);
@@ -2805,9 +2474,6 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequestCallback("setVariable", request_setVariable);
   dap.RegisterRequestCallback("source", request_source);
   dap.RegisterRequestCallback("stackTrace", request_stackTrace);
-  dap.RegisterRequestCallback("stepIn", request_stepIn);
-  dap.RegisterRequestCallback("stepInTargets", request_stepInTargets);
-  dap.RegisterRequestCallback("stepOut", request_stepOut);
   dap.RegisterRequestCallback("threads", request_threads);
   dap.RegisterRequestCallback("variables", request_variables);
   dap.RegisterRequestCallback("locations", request_locations);
