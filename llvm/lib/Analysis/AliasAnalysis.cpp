@@ -54,8 +54,8 @@
 
 using namespace llvm;
 
-STATISTIC(NumNoAlias,   "Number of NoAlias results");
-STATISTIC(NumMayAlias,  "Number of MayAlias results");
+STATISTIC(NumNoAlias, "Number of NoAlias results");
+STATISTIC(NumMayAlias, "Number of MayAlias results");
 STATISTIC(NumMustAlias, "Number of MustAlias results");
 
 namespace llvm {
@@ -116,8 +116,8 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   if (EnableAATrace) {
     for (unsigned I = 0; I < AAQI.Depth; ++I)
       dbgs() << "  ";
-    dbgs() << "Start " << *LocA.Ptr << " @ " << LocA.Size << ", "
-           << *LocB.Ptr << " @ " << LocB.Size << "\n";
+    dbgs() << "Start " << *LocA.Ptr << " @ " << LocA.Size << ", " << *LocB.Ptr
+           << " @ " << LocB.Size << "\n";
   }
 
   AAQI.Depth++;
@@ -131,8 +131,8 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   if (EnableAATrace) {
     for (unsigned I = 0; I < AAQI.Depth; ++I)
       dbgs() << "  ";
-    dbgs() << "End " << *LocA.Ptr << " @ " << LocA.Size << ", "
-           << *LocB.Ptr << " @ " << LocB.Size << " = " << Result << "\n";
+    dbgs() << "End " << *LocA.Ptr << " @ " << LocA.Size << ", " << *LocB.Ptr
+           << " @ " << LocB.Size << " = " << Result << "\n";
   }
 
   if (AAQI.Depth == 0) {
@@ -548,7 +548,8 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // Acquire/Release atomicrmw has properties that matter for arbitrary addresses.
+  // Acquire/Release atomicrmw has properties that matter for arbitrary
+  // addresses.
   if (isStrongerThanMonotonic(RMW->getOrdering()))
     return ModRefInfo::ModRef;
 
@@ -610,8 +611,7 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
 /// with a smarter AA in place, this test is just wasting compile time.
 ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
                                          const MemoryLocation &MemLoc,
-                                         DominatorTree *DT,
-                                         AAQueryInfo &AAQI) {
+                                         DominatorTree *DT, AAQueryInfo &AAQI) {
   if (!DT)
     return ModRefInfo::ModRef;
 
@@ -679,7 +679,7 @@ bool AAResults::canInstructionRangeModRef(const Instruction &I1,
          "Instructions not in same basic block!");
   BasicBlock::const_iterator I = I1.getIterator();
   BasicBlock::const_iterator E = I2.getIterator();
-  ++E;  // Convert from inclusive to exclusive range.
+  ++E; // Convert from inclusive to exclusive range.
 
   for (; I != E; ++I) // Check every instruction in range
     if (isModOrRefSet(getModRefInfo(&*I, Loc) & Mode))

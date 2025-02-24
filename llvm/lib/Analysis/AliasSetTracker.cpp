@@ -47,7 +47,7 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
 
   // Update the alias and access types of this set...
   Access |= AS.Access;
-  Alias  |= AS.Alias;
+  Alias |= AS.Alias;
 
   if (Alias == SetMustAlias) {
     // Check that these two merged sets really are must aliases. If we cannot
@@ -69,7 +69,7 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
   }
 
   bool ASHadUnknownInsts = !AS.UnknownInsts.empty();
-  if (UnknownInsts.empty()) {            // Merge call sites...
+  if (UnknownInsts.empty()) { // Merge call sites...
     if (ASHadUnknownInsts) {
       std::swap(UnknownInsts, AS.UnknownInsts);
       addRef();
@@ -133,8 +133,9 @@ void AliasSet::addUnknownInst(Instruction *I, BatchAAResults &AA) {
   // Guards are marked as modifying memory for control flow modelling purposes,
   // but don't actually modify any specific memory location.
   using namespace PatternMatch;
-  bool MayWriteMemory = I->mayWriteToMemory() && !isGuard(I) &&
-    !(I->use_empty() && match(I, m_Intrinsic<Intrinsic::invariant_start>()));
+  bool MayWriteMemory =
+      I->mayWriteToMemory() && !isGuard(I) &&
+      !(I->use_empty() && match(I, m_Intrinsic<Intrinsic::invariant_start>()));
   if (!MayWriteMemory) {
     Alias = SetMayAlias;
     Access |= RefAccess;
@@ -510,17 +511,26 @@ AliasSet &AliasSetTracker::addMemoryLocation(MemoryLocation Loc,
 //===----------------------------------------------------------------------===//
 
 void AliasSet::print(raw_ostream &OS) const {
-  OS << "  AliasSet[" << (const void*)this << ", " << RefCount << "] ";
+  OS << "  AliasSet[" << (const void *)this << ", " << RefCount << "] ";
   OS << (Alias == SetMustAlias ? "must" : "may") << " alias, ";
   switch (Access) {
-  case NoAccess:     OS << "No access "; break;
-  case RefAccess:    OS << "Ref       "; break;
-  case ModAccess:    OS << "Mod       "; break;
-  case ModRefAccess: OS << "Mod/Ref   "; break;
-  default: llvm_unreachable("Bad value for Access!");
+  case NoAccess:
+    OS << "No access ";
+    break;
+  case RefAccess:
+    OS << "Ref       ";
+    break;
+  case ModAccess:
+    OS << "Mod       ";
+    break;
+  case ModRefAccess:
+    OS << "Mod/Ref   ";
+    break;
+  default:
+    llvm_unreachable("Bad value for Access!");
   }
   if (Forward)
-    OS << " forwarding to " << (void*)Forward;
+    OS << " forwarding to " << (void *)Forward;
 
   if (!MemoryLocs.empty()) {
     ListSeparator LS;

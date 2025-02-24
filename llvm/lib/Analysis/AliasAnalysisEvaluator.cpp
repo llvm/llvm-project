@@ -22,7 +22,8 @@ static cl::opt<bool> PrintAll("print-all-alias-modref-info", cl::ReallyHidden);
 
 static cl::opt<bool> PrintNoAlias("print-no-aliases", cl::ReallyHidden);
 static cl::opt<bool> PrintMayAlias("print-may-aliases", cl::ReallyHidden);
-static cl::opt<bool> PrintPartialAlias("print-partial-aliases", cl::ReallyHidden);
+static cl::opt<bool> PrintPartialAlias("print-partial-aliases",
+                                       cl::ReallyHidden);
 static cl::opt<bool> PrintMustAlias("print-must-aliases", cl::ReallyHidden);
 
 static cl::opt<bool> PrintNoModRef("print-no-modref", cl::ReallyHidden);
@@ -66,9 +67,9 @@ static void PrintResults(AliasResult AR, bool P,
   }
 }
 
-static inline void PrintModRefResults(
-    const char *Msg, bool P, Instruction *I,
-    std::pair<const Value *, Type *> Loc, Module *M) {
+static inline void PrintModRefResults(const char *Msg, bool P, Instruction *I,
+                                      std::pair<const Value *, Type *> Loc,
+                                      Module *M) {
   if (PrintAll || P) {
     errs() << "  " << Msg << ":  Ptr: ";
     Loc.second->print(errs(), false, /* NoDetails */ true);
@@ -113,8 +114,8 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
       Pointers.insert({LI->getPointerOperand(), LI->getType()});
       Loads.insert(LI);
     } else if (auto *SI = dyn_cast<StoreInst>(&Inst)) {
-      Pointers.insert({SI->getPointerOperand(),
-                       SI->getValueOperand()->getType()});
+      Pointers.insert(
+          {SI->getPointerOperand(), SI->getValueOperand()->getType()});
       Stores.insert(SI);
     } else if (auto *CB = dyn_cast<CallBase>(&Inst))
       Calls.insert(CB);
@@ -169,7 +170,8 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
           ++MayAliasCount;
           break;
         case AliasResult::PartialAlias:
-          PrintLoadStoreResults(AR, PrintPartialAlias, Load, Store, F.getParent());
+          PrintLoadStoreResults(AR, PrintPartialAlias, Load, Store,
+                                F.getParent());
           ++PartialAliasCount;
           break;
         case AliasResult::MustAlias:
