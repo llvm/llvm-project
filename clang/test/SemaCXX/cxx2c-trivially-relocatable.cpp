@@ -73,7 +73,12 @@ static_assert(__builtin_is_cpp_trivially_relocatable(Trivial[]));
 struct WithConst {
     const int i;
 };
-static_assert(__builtin_is_cpp_trivially_relocatable(WithConst));
+static_assert(!__builtin_is_cpp_trivially_relocatable(WithConst));
+
+struct WithConstExplicit trivially_relocatable_if_eligible {
+    const int i;
+};
+static_assert(__builtin_is_cpp_trivially_relocatable(WithConstExplicit));
 
 struct UserDtr {
     ~UserDtr();
@@ -110,7 +115,7 @@ struct UserCopyDefault{
 
 
 struct UserDeletedMove{
-    UserDeletedMove(UserDeletedMove&) = delete;
+    UserDeletedMove(UserDeletedMove&&) = delete;
     UserDeletedMove(const UserDeletedMove&) = default;
 };
 
@@ -154,6 +159,34 @@ union U {
 };
 static_assert(!__is_trivially_copyable(U));
 static_assert(__builtin_is_cpp_trivially_relocatable(U));
+
+
+template <typename T>
+struct S {
+    T t;
+};
+static_assert(__builtin_is_cpp_trivially_relocatable(S<int>));
+static_assert(__builtin_is_cpp_trivially_relocatable(S<volatile int>));
+static_assert(!__builtin_is_cpp_trivially_relocatable(S<const int>));
+static_assert(!__builtin_is_cpp_trivially_relocatable(S<const int&>));
+static_assert(!__builtin_is_cpp_trivially_relocatable(S<int&>));
+static_assert(__builtin_is_cpp_trivially_relocatable(S<int[2]>));
+static_assert(!__builtin_is_cpp_trivially_relocatable(S<const int[2]>));
+static_assert(__builtin_is_cpp_trivially_relocatable(S<int[]>));
+
+
+template <typename T>
+struct SExplicit trivially_relocatable_if_eligible{
+    T t;
+};
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int>));
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<volatile int>));
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<const int>));
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<const int&>));
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int&>));
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int[2]>));
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<const int[2]>));
+static_assert(__builtin_is_cpp_trivially_relocatable(SExplicit<int[]>));
 
 
 namespace replaceable {
@@ -210,12 +243,14 @@ static_assert(!__builtin_is_replaceable(UserProvidedMove));
 static_assert(!__builtin_is_replaceable(UserProvidedCopy));
 static_assert(!__builtin_is_replaceable(UserProvidedMoveAssign));
 
-using NotReplaceable = DeletedMove;
-
-template <typename T>
-struct S {
-    T t;
+struct DeletedCopyTpl {
+    template <typename U>
+    DeletedCopyTpl(const U&) = delete;
 };
+static_assert(__builtin_is_replaceable(DeletedCopyTpl));
+
+
+using NotReplaceable = DeletedMove;
 
 template <typename T>
 struct WithBase : T{};
