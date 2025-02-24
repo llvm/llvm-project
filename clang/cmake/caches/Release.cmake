@@ -140,7 +140,7 @@ set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRIN
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
 endif()
-+# We want to generate an installer on Windows.
+# We want to generate an installer on Windows.
 if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 endif()
