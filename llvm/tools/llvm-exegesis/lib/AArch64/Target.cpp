@@ -49,7 +49,7 @@ static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
   // For PPR, we typically use PTRUE instruction to set predicate registers
   return MCInstBuilder(AArch64::PTRUE_B)
       .addReg(Reg)
-      .addImm(0xFFFF); // All lanes true for 16 bits
+      .addImm(31); // All lanes true for 16 bits
 }
 
 // Generates instruction to load an FP immediate value into a register.
