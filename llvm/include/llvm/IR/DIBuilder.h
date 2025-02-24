@@ -677,6 +677,26 @@ namespace llvm {
     /// If \p Implicit is true, also set FlagArtificial.
     static DIType *createObjectPointerType(DIType *Ty, bool Implicit);
 
+    /// Create a type describing a subrange of another type.
+    /// \param Scope          Scope in which this set is defined.
+    /// \param Name           Set name.
+    /// \param File           File where this set is defined.
+    /// \param LineNo         Line number.
+    /// \param SizeInBits     Size.
+    /// \param AlignInBits    Alignment.
+    /// \param Flags          Flags to encode attributes.
+    /// \param Ty             Base type.
+    /// \param LowerBound     Lower bound.
+    /// \param UpperBound     Upper bound.
+    /// \param Stride         Stride, if any.
+    /// \param Bias           Bias, if any.
+    DISubrangeType *
+    createSubrangeType(StringRef Name, DIFile *File, unsigned LineNo,
+                       DIScope *Scope, uint64_t SizeInBits,
+                       uint32_t AlignInBits, DINode::DIFlags Flags, DIType *Ty,
+                       Metadata *LowerBound, Metadata *UpperBound,
+                       Metadata *Stride, Metadata *Bias);
+
     /// Create a permanent forward-declared type.
     DICompositeType *
     createForwardDecl(unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F,
