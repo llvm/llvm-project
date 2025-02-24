@@ -494,9 +494,10 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
 
   auto getSlideOpcode = [&](int SlideAmt) {
     assert(SlideAmt != 0);
+    bool IsVI = isUInt<5>(std::abs(SlideAmt));
     if (SlideAmt < 0)
-      return SlideAmt > -32 ? RISCV::VSLIDEDOWN_VI : RISCV::VSLIDEDOWN_VX;
-    return SlideAmt < 32 ? RISCV::VSLIDEUP_VI : RISCV::VSLIDEUP_VX;
+      return IsVI ? RISCV::VSLIDEDOWN_VI : RISCV::VSLIDEDOWN_VX;
+    return IsVI ? RISCV::VSLIDEUP_VI : RISCV::VSLIDEUP_VX;
   };
 
   std::pair<int, int> SrcInfo[2];
