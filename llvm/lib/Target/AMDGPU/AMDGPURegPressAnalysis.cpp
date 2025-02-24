@@ -38,7 +38,7 @@ AMDGPURegPressAnalysis::getPressure(const MachineBasicBlock *MBB) const {
 
 bool AMDGPURegPressAnalysis::runOnMachineFunction(MachineFunction &MF) {
 
-  // Reset trackers, or else they will carry across shaders in a pipeline.
+  // Reset trackers, or else they will carry across functions in a module.
   BlockPressure.clear();
   MaxPressure.clear();
 
