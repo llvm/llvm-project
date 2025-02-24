@@ -107,6 +107,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* `-mcpu=xiangshan-kunminghu` was added.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
