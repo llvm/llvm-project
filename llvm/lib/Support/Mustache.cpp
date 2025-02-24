@@ -60,7 +60,7 @@ public:
 
   Token(std::string Str)
       : TokenType(Type::Text), RawBody(std::move(Str)), TokenBody(RawBody),
-        Accessor({}), Indentation(0){};
+        Accessor({}), Indentation(0) {};
 
   Token(std::string RawBody, std::string TokenBody, char Identifier)
       : RawBody(std::move(RawBody)), TokenBody(std::move(TokenBody)),
