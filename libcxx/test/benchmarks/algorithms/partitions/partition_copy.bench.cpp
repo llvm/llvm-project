@@ -40,7 +40,8 @@ int main(int argc, char** argv) {
           Container c;
           std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
 
-          std::vector<ValueType> yes(size), no(size);
+          std::vector<ValueType> yes(size);
+          std::vector<ValueType> no(size);
           ValueType median = compute_median(c.begin(), c.end());
           auto pred        = [median](auto const& element) { return element < median; };
 
@@ -53,6 +54,7 @@ int main(int argc, char** argv) {
           }
         })
         ->Arg(32)
+        ->Arg(50) // non power-of-two
         ->Arg(1024)
         ->Arg(8192);
   };
