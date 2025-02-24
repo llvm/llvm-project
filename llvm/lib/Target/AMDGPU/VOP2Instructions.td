@@ -922,6 +922,9 @@ let isReMaterializable = 1 in {
 let SubtargetPredicate = isGFX1250Plus in {
 let SchedRW = [Write64Bit] in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
+// We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
+let isCommutable = 0 in
+defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SchedRW = [Write64Bit]
 let SchedRW = [WriteDouble] in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
@@ -929,13 +932,6 @@ defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1
 
 } // End isCommutable = 1
-
-let isReMaterializable = 1 in {
-  let SubtargetPredicate = isGFX1250Plus in {
-    let SchedRW = [Write64Bit] in
-      defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
-  } // End SubtargetPredicate = HasGFX1250Insts
-} // End isReMaterializable = 1
 
 // These are special and do not read the exec mask.
 let isConvergent = 1, Uses = []<Register> in {
