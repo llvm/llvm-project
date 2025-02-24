@@ -16,8 +16,6 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
-set(TELEMETRY_DEPS Telemetry)
-
 # TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
 add_lldb_library(lldbCore
   Address.cpp
@@ -82,7 +80,7 @@ add_lldb_library(lldbCore
     Support
     Demangle
     TargetParser
-    ${TELEMETRY_DEPS}
+    Telemetry
   )
 
 add_dependencies(lldbCore

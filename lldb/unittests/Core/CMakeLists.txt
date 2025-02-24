@@ -1,7 +1,4 @@
 
-set(TELEMETRY_DEPS Telemetry)
-
-
 add_lldb_unittest(LLDBCoreTests
   CommunicationTest.cpp
   DiagnosticEventTest.cpp
@@ -31,5 +28,5 @@ add_lldb_unittest(LLDBCoreTests
     LLVMTestingSupport
   LINK_COMPONENTS
     Support
-    ${TELEMETRY_DEPS}
+    Telemetry
   )

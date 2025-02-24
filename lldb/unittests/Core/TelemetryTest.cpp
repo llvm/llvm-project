@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/Config/llvm-config.h"
-
-#ifdef LLVM_BUILD_TELEMETRY
-
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
@@ -94,5 +89,3 @@ TEST(TelemetryTest, PluginTest) {
 
   ASSERT_EQ("FakeTelemetryPlugin", ins->GetInstanceName());
 }
-
-#endif // LLVM_BUILD_TELEMETRY
