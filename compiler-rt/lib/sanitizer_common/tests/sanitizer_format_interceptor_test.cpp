@@ -131,7 +131,6 @@ TEST(SanitizerCommonInterceptors, Scanf) {
   testScanf("a%%%%b", 0);
   testScanf("a%%b%%", 0);
   testScanf("a%%%%%%b", 0);
-  testScanf("a%%%%%b", 0);
   testScanf("a%%%%%f", 1, F);
   testScanf("a%%%lxb", 1, L);
   testScanf("a%lf%%%lxb", 2, D, L);
@@ -207,6 +206,14 @@ TEST(SanitizerCommonInterceptors, Scanf) {
   testScanfPartial("%d%n%n%d %s %s", 3, 5, I, I, I, I, test_buf_size);
   testScanfPartial("%d%n%n%d %s %s", 4, 6, I, I, I, I, test_buf_size,
                    test_buf_size);
+
+#if defined(__GLIBC__)
+  testScanf("%b", 1, I);
+  testScanf("%zb", 1, Z);
+  testScanf("a%%%%%b", 1, I);
+#else
+  testScanf("a%%%%%b", 0);
+#endif
 }
 
 TEST(SanitizerCommonInterceptors, ScanfAllocate) {
