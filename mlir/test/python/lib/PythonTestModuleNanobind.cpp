@@ -11,9 +11,12 @@
 #include "PythonTestCAPI.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/Diagnostics.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "nanobind/nanobind.h"
 
 namespace nb = nanobind;
 using namespace mlir::python::nanobind_adaptors;
@@ -44,6 +47,15 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
         mlirDialectHandleInsertDialect(pythonTestDialect, registry);
       },
       nb::arg("registry"));
+
+  m.def("test_diagnostics_with_errors_and_notes", [](MlirContext ctx) {
+    mlirContextPrintStackTraceOnDiagnostic(ctx, true);
+    mlir::python::CollectDiagnosticsToStringScope handler(ctx);
+
+    auto loc = mlirLocationUnknownGet(ctx);
+    mlirEmitError(loc, "created error");
+    throw nb::value_error(handler.takeMessage().c_str());
+  });
 
   mlir_attribute_subclass(m, "TestAttr",
                           mlirAttributeIsAPythonTestTestAttribute,

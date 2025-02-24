@@ -2,6 +2,7 @@
 
 import gc
 from mlir.ir import *
+from mlir._mlir_libs._mlirPythonTestNanobind import test_diagnostics_with_errors_and_notes
 
 
 def run(f):
@@ -222,3 +223,16 @@ def testDiagnosticReturnFalseDoesNotHandle():
     # CHECK: CALLBACK2: foobar
     # CHECK: CALLBACK1: foobar
     loc.emit_error("foobar")
+
+# CHECK-LABEL: TEST: testBuiltInDiagnosticsHandler
+@run
+def testBuiltInDiagnosticsHandler():
+    ctx = Context()
+
+    try:
+        test_diagnostics_with_errors_and_notes(ctx)
+    except ValueError as e:
+        # CHECK: created error
+        # CHECK: MLIRPythonCAPI
+        print(e)
+
