@@ -112,7 +112,7 @@ extern "C" {
  * passed to operations must be disjoint, together with all the @p
  * amd_comgr_data_t handles that have been added to it. The exception is that
  * the default device library data object handles can be non-disjoint as they
- * are imutable.
+ * are immutable.
  *
  * The library supports generating and inspecting code objects that
  * contain machine code for a certain set of instruction set
@@ -134,6 +134,15 @@ extern "C" {
  * information that controls the action. These are then passed to @p
  * amd_comgr_do_action to perform an action specified by
  * @p amd_comgr_action_kind_t.
+ *
+ * Data objects are reference counted and are destroyed when the
+ * reference count reaches 0. When a data object is created, its
+ * reference count is 1, it has 0 bytes of data, it has an empty name,
+ * and it has no metadata.
+ *
+ * Mutating a data object is only permitted before it is used as part of
+ * the input to an action. A data object which is the result of an action
+ * must not be mutated.
  *
  * Some data objects can have associated metadata. There are
  * operations for querying this metadata.
@@ -159,7 +168,6 @@ extern "C" {
  * - @p AMD_COMGR_EMIT_VERBOSE_LOGS: If this is set, and is not "0", logs will
  *   include additional Comgr-specific informational messages.
  */
-
 
 /** \defgroup symbol_versions_group Symbol Versions
  *
@@ -558,11 +566,6 @@ amd_comgr_get_isa_metadata(
 /**
  * @brief Create a data object that can hold data of a specified kind.
  *
- * Data objects are reference counted and are destroyed when the
- * reference count reaches 0. When a data object is created its
- * reference count is 1, it has 0 bytes of data, it has an empty name,
- * and it has no metadata.
- *
  * @param[in] kind The kind of data the object is intended to hold.
  *
  * @param[out] data A handle to the data object created. Its reference
@@ -583,11 +586,15 @@ amd_comgr_create_data(
   amd_comgr_data_kind_t kind,
   amd_comgr_data_t *data) AMD_COMGR_VERSION_1_8;
 
- /**
+/**
  * @brief Indicate that no longer using a data object handle.
  *
  * The reference count of the associated data object is
  * decremented. If it reaches 0 it is destroyed.
+ *
+ * @note Although this may lead to the destruction of a data object, it is not
+ * considered a mutation for the purposes of the restrictions described in @ref
+ * codeobjectmanager.
  *
  * @param[in] data The data object to release.
  *
@@ -634,6 +641,9 @@ amd_comgr_get_data_kind(
  * associated with the data object is also replaced which invalidates
  * all metadata handles to the old metadata.
  *
+ * @warning This function mutates the data object; see @ref codeobjectmanager
+ * for restrictions.
+ *
  * @param[in] data The data object to update.
  *
  * @param[in] size The number of bytes in the data specified by @p bytes.
@@ -662,6 +672,9 @@ amd_comgr_set_data(
  * file into the data object. The slice is specified by @p offset and @p size.
  * Internally this API calls amd_comgr_set_data and resets data object's
  * current state.
+ *
+ * @warning This function mutates the data object; see @ref codeobjectmanager
+ * for restrictions.
  *
  * @param[in, out] data The data object to update.
  *
@@ -696,6 +709,9 @@ amd_comgr_set_data_from_file_slice(
  * reference the contents of the include data object with the same
  * name. The name may also be used for other data objects in log and
  * diagnostic output.
+ *
+ * @warning This function mutates the data object; see @ref codeobjectmanager
+ * for restrictions.
  *
  * @param[in] data The data object to update.
  *
