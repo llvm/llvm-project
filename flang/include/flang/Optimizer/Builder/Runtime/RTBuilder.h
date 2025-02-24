@@ -21,7 +21,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Runtime/io-api-consts.h"
 #include "flang/Runtime/reduce.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -587,33 +586,6 @@ constexpr TypeBuilderFunc getModel<void>() {
   };
 }
 
-// Define additional runtime type models specific to IO.
-template <>
-constexpr TypeBuilderFunc getModel<Fortran::runtime::io::IoStatementState *>() {
-  return getModel<char *>();
-}
-template <>
-constexpr TypeBuilderFunc getModel<Fortran::runtime::io::Iostat>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(context,
-                                  8 * sizeof(Fortran::runtime::io::Iostat));
-  };
-}
-template <>
-constexpr TypeBuilderFunc
-getModel<const Fortran::runtime::io::NamelistGroup &>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::ReferenceType::get(mlir::TupleType::get(context));
-  };
-}
-template <>
-constexpr TypeBuilderFunc
-getModel<const Fortran::runtime::io::NonTbpDefinedIoTable *>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::ReferenceType::get(mlir::TupleType::get(context));
-  };
-}
-
 REDUCTION_REF_OPERATION_MODEL(std::int8_t)
 REDUCTION_VALUE_OPERATION_MODEL(std::int8_t)
 REDUCTION_REF_OPERATION_MODEL(std::int16_t)
@@ -806,22 +778,16 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 /// argument is intended to be of the form: <mkRTKey(runtime function name)>.
 template <typename RuntimeEntry>
 static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         bool isIO = false) {
+                                         fir::FirOpBuilder &builder) {
   using namespace Fortran::runtime;
   auto name = RuntimeEntry::name;
   auto func = builder.getNamedFunction(name);
   if (func)
     return func;
   auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
-  return builder.createRuntimeFunction(loc, name, funTy, isIO);
-}
-
-/// Get (or generate) the MLIR FuncOp for a given IO runtime function.
-template <typename E>
-static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
-                                           fir::FirOpBuilder &builder) {
-  return getRuntimeFunc<E>(loc, builder, /*isIO=*/true);
+  func = builder.createFunction(loc, name, funTy);
+  func->setAttr(FIROpsDialect::getFirRuntimeAttrName(), builder.getUnitAttr());
+  return func;
 }
 
 namespace helper {

@@ -211,9 +211,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 
-  if (pc.OptLevel.isOptimizingForSpeed())
-    pm.addPass(fir::createSetRuntimeCallAttributes());
-
   // Last Optimizer EP Callback
   pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
 }
