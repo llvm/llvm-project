@@ -979,7 +979,7 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
   unsigned NumOperands = MI->getNumOperands();
   int SrcIdx;
   switch (MI->getOpcode()) {
-    CASE_FPCLASS_PACKED(FPCLASSPBF16, r)
+    CASE_FPCLASS_PACKED(FPCLASSBF16, r)
     CASE_FPCLASS_PACKED(FPCLASSPH, r)
     CASE_FPCLASS_PACKED(FPCLASSPS, r)
     CASE_FPCLASS_PACKED(FPCLASSPD, r)
@@ -989,7 +989,7 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
       SrcIdx = NumOperands - 2;
       break;
     }
-    CASE_FPCLASS_PACKED_MEM(FPCLASSPBF16)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSBF16)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPH)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPS)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPD)

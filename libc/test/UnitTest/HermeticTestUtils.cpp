@@ -33,6 +33,8 @@ int atexit(void (*func)(void));
 
 } // namespace LIBC_NAMESPACE_DECL
 
+constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
+
 namespace {
 
 // Integration tests cannot use the SCUDO standalone allocator as SCUDO pulls
@@ -42,7 +44,7 @@ namespace {
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
 static constexpr uint64_t MEMORY_SIZE = 65336;
-static uint8_t memory[MEMORY_SIZE];
+alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
 
 } // anonymous namespace
@@ -73,8 +75,6 @@ void *memset(void *ptr, int value, size_t count) {
 
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
-
-constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
 
 void *malloc(size_t s) {
   // Keep the bump pointer aligned on an eight byte boundary.

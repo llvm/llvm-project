@@ -185,7 +185,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
     DT.changeImmediateDominator(ExitBB, HeaderBB);
 
   // The loop body should be added here.
-  Builder.SetInsertPoint(HeaderBB->getFirstNonPHI());
+  Builder.SetInsertPoint(HeaderBB->getFirstNonPHIIt());
   return IV;
 }
 

@@ -327,8 +327,6 @@ LLVM_13 {
     clang_getRange;
     clang_getRangeEnd;
     clang_getRangeStart;
-    clang_getRemappings;
-    clang_getRemappingsFromFileList;
     clang_getResultType;
     clang_getSkippedRanges;
     clang_getSpecializedCursorTemplate;
@@ -389,9 +387,6 @@ LLVM_13 {
     clang_parseTranslationUnit;
     clang_parseTranslationUnit2;
     clang_parseTranslationUnit2FullArgv;
-    clang_remap_dispose;
-    clang_remap_getFilenames;
-    clang_remap_getNumFiles;
     clang_reparseTranslationUnit;
     clang_saveTranslationUnit;
     clang_sortCodeCompletionResults;

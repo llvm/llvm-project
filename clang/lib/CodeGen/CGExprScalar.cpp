@@ -1949,6 +1949,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
 
     llvm::Value *Zero = llvm::Constant::getNullValue(SrcTy);
     if (SrcEltTy->isFloatingPointTy()) {
+      CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
       return Builder.CreateFCmpUNE(Src, Zero, "tobool");
     } else {
       return Builder.CreateICmpNE(Src, Zero, "tobool");
@@ -1975,6 +1976,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   } else {
     assert(SrcEltTy->isFloatingPointTy() && DstEltTy->isFloatingPointTy() &&
            "Unknown real conversion");
+    CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
     if (DstEltTy->getTypeID() < SrcEltTy->getTypeID())
       Res = Builder.CreateFPTrunc(Src, DstTy, "conv");
     else
@@ -2267,6 +2269,42 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
   }
 
   return true;
+}
+
+// RHS is an aggregate type
+static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, Address RHSVal,
+                                      QualType RHSTy, QualType LHSTy,
+                                      SourceLocation Loc) {
+  SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
+  SmallVector<QualType, 16> SrcTypes; // Flattened type
+  CGF.FlattenAccessAndType(RHSVal, RHSTy, LoadGEPList, SrcTypes);
+  // LHS is either a vector or a builtin?
+  // if its a vector create a temp alloca to store into and return that
+  if (auto *VecTy = LHSTy->getAs<VectorType>()) {
+    assert(SrcTypes.size() >= VecTy->getNumElements() &&
+           "Flattened type on RHS must have more elements than vector on LHS.");
+    llvm::Value *V =
+        CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
+    // write to V.
+    for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
+      llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[I].first, "load");
+      llvm::Value *Idx = LoadGEPList[I].second;
+      Load = Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract")
+                 : Load;
+      llvm::Value *Cast = CGF.EmitScalarConversion(
+          Load, SrcTypes[I], VecTy->getElementType(), Loc);
+      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    }
+    return V;
+  }
+  // i its a builtin just do an extract element or load.
+  assert(LHSTy->isBuiltinType() &&
+         "Destination type must be a vector or builtin type.");
+  llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[0].first, "load");
+  llvm::Value *Idx = LoadGEPList[0].second;
+  Load =
+      Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract") : Load;
+  return CGF.EmitScalarConversion(Load, LHSTy, SrcTypes[0], Loc);
 }
 
 // VisitCastExpr - Emit code for an explicit or implicit cast.  Implicit casts
@@ -2607,6 +2645,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   }
+    // CK_HLSLAggregateSplatCast only handles splatting to vectors from a vec1
+    // Casts were inserted in Sema to Cast the Src Expr to a Scalar and
+    // To perform any necessary Scalar Cast, so this Cast can be handled
+    // by the regular Vector Splat cast code.
+  case CK_HLSLAggregateSplatCast:
   case CK_VectorSplat: {
     llvm::Type *DstTy = ConvertType(DestTy);
     Value *Elt = Visit(const_cast<Expr *>(E));
@@ -2759,7 +2802,16 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
+  case CK_HLSLElementwiseCast: {
+    RValue RV = CGF.EmitAnyExpr(E);
+    SourceLocation Loc = CE->getExprLoc();
+    QualType SrcTy = E->getType();
 
+    assert(RV.isAggregate() && "Not a valid HLSL Elementwise Cast.");
+    // RHS is an aggregate
+    Address SrcVal = RV.getAggregateAddress();
+    return EmitHLSLElementwiseCast(CGF, SrcVal, SrcTy, DestTy, Loc);
+  }
   } // end of switch
 
   llvm_unreachable("unknown scalar cast");
@@ -3043,7 +3095,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       llvm::Value *numElts = CGF.getVLASize(vla).NumElts;
       if (!isInc) numElts = Builder.CreateNSWNeg(numElts, "vla.negsize");
       llvm::Type *elemTy = CGF.ConvertTypeForMem(vla->getElementType());
-      if (CGF.getLangOpts().isSignedOverflowDefined())
+      if (CGF.getLangOpts().PointerOverflowDefined)
         value = Builder.CreateGEP(elemTy, value, numElts, "vla.inc");
       else
         value = CGF.EmitCheckedInBoundsGEP(
@@ -3054,7 +3106,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     } else if (type->isFunctionType()) {
       llvm::Value *amt = Builder.getInt32(amount);
 
-      if (CGF.getLangOpts().isSignedOverflowDefined())
+      if (CGF.getLangOpts().PointerOverflowDefined)
         value = Builder.CreateGEP(CGF.Int8Ty, value, amt, "incdec.funcptr");
       else
         value =
@@ -3066,7 +3118,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     } else {
       llvm::Value *amt = Builder.getInt32(amount);
       llvm::Type *elemTy = CGF.ConvertTypeForMem(type);
-      if (CGF.getLangOpts().isSignedOverflowDefined())
+      if (CGF.getLangOpts().PointerOverflowDefined)
         value = Builder.CreateGEP(elemTy, value, amt, "incdec.ptr");
       else
         value = CGF.EmitCheckedInBoundsGEP(
@@ -3179,7 +3231,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *sizeValue =
       llvm::ConstantInt::get(CGF.SizeTy, size.getQuantity());
 
-    if (CGF.getLangOpts().isSignedOverflowDefined())
+    if (CGF.getLangOpts().PointerOverflowDefined)
       value = Builder.CreateGEP(CGF.Int8Ty, value, sizeValue, "incdec.objptr");
     else
       value = CGF.EmitCheckedInBoundsGEP(
@@ -4075,7 +4127,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
     llvm::Type *elemTy = CGF.ConvertTypeForMem(vla->getElementType());
-    if (CGF.getLangOpts().isSignedOverflowDefined()) {
+    if (CGF.getLangOpts().PointerOverflowDefined) {
       index = CGF.Builder.CreateMul(index, numElements, "vla.index");
       pointer = CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
     } else {
@@ -4096,7 +4148,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   else
     elemTy = CGF.ConvertTypeForMem(elementType);
 
-  if (CGF.getLangOpts().isSignedOverflowDefined())
+  if (CGF.getLangOpts().PointerOverflowDefined)
     return CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
 
   return CGF.EmitCheckedInBoundsGEP(

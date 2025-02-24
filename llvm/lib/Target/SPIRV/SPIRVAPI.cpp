@@ -8,6 +8,7 @@
 
 #include "SPIRVCommandLine.h"
 #include "SPIRVSubtarget.h"
+#include "SPIRVTargetMachine.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -40,24 +41,6 @@ using namespace llvm;
 
 namespace {
 
-// Mimic limited number of command line flags from llc to provide a better
-// user experience when passing options into the translate API call.
-static cl::opt<char> SpvOptLevel(" O", cl::Hidden, cl::Prefix, cl::init('0'));
-static cl::opt<std::string> SpvTargetTriple(" mtriple", cl::Hidden,
-                                            cl::init(""));
-
-// Utility to accept options in a command line style.
-void parseSPIRVCommandLineOptions(const std::vector<std::string> &Options,
-                                  raw_ostream *Errs) {
-  static constexpr const char *Origin = "SPIRVTranslateModule";
-  if (!Options.empty()) {
-    std::vector<const char *> Argv(1, Origin);
-    for (const auto &Arg : Options)
-      Argv.push_back(Arg.c_str());
-    cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Origin, Errs);
-  }
-}
-
 std::once_flag InitOnceFlag;
 void InitializeSPIRVTarget() {
   std::call_once(InitOnceFlag, []() {
@@ -74,35 +57,15 @@ namespace llvm {
 // The goal of this function is to facilitate integration of SPIRV Backend into
 // tools and libraries by means of exposing an API call that translate LLVM
 // module to SPIR-V and write results into a string as binary SPIR-V output,
-// providing diagnostics on fail and means of configuring translation in a style
-// of command line options.
+// providing diagnostics on fail and means of configuring translation.
 extern "C" LLVM_EXTERNAL_VISIBILITY bool
-SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
-                     const std::vector<std::string> &AllowExtNames,
-                     const std::vector<std::string> &Opts) {
+SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
+               const std::vector<std::string> &AllowExtNames,
+               llvm::CodeGenOptLevel OLevel, Triple TargetTriple) {
   // Fallbacks for option values.
   static const std::string DefaultTriple = "spirv64-unknown-unknown";
   static const std::string DefaultMArch = "";
 
-  // Parse Opts as if it'd be command line arguments.
-  std::string Errors;
-  raw_string_ostream ErrorStream(Errors);
-  parseSPIRVCommandLineOptions(Opts, &ErrorStream);
-  if (!Errors.empty()) {
-    ErrMsg = Errors;
-    return false;
-  }
-
-  llvm::CodeGenOptLevel OLevel;
-  if (auto Level = CodeGenOpt::parseLevel(SpvOptLevel)) {
-    OLevel = *Level;
-  } else {
-    ErrMsg = "Invalid optimization level!";
-    return false;
-  }
-
-  // Overrides/ammends `-spirv-ext` command line switch (if present) by the
-  // explicit list of allowed SPIR-V extensions.
   std::set<SPIRV::Extension::Extension> AllowedExtIds;
   StringRef UnknownExt =
       SPIRVExtensionsParser::checkExtensions(AllowExtNames, AllowedExtIds);
@@ -110,14 +73,10 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
     ErrMsg = "Unknown SPIR-V extension: " + UnknownExt.str();
     return false;
   }
-  SPIRVSubtarget::addExtensionsToClOpt(AllowedExtIds);
 
   // SPIR-V-specific target initialization.
   InitializeSPIRVTarget();
 
-  Triple TargetTriple(SpvTargetTriple.empty()
-                          ? M->getTargetTriple()
-                          : Triple::normalize(SpvTargetTriple));
   if (TargetTriple.getTriple().empty()) {
     TargetTriple.setTriple(DefaultTriple);
     M->setTargetTriple(DefaultTriple);
@@ -140,6 +99,11 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
     ErrMsg = "Could not allocate target machine!";
     return false;
   }
+
+  // Set available extensions.
+  SPIRVTargetMachine *STM = static_cast<SPIRVTargetMachine *>(Target.get());
+  const_cast<SPIRVSubtarget *>(STM->getSubtargetImpl())
+      ->initAvailableExtensions(AllowedExtIds);
 
   if (M->getCodeModel())
     Target->setCodeModel(*M->getCodeModel());
@@ -174,6 +138,32 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   SpirvObj = OutBuffer.str();
 
   return true;
+}
+
+// TODO: Remove this wrapper after existing clients switch into a newer
+// implementation of SPIRVTranslate().
+extern "C" LLVM_EXTERNAL_VISIBILITY bool
+SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
+                     const std::vector<std::string> &AllowExtNames,
+                     const std::vector<std::string> &Opts) {
+  // optional: Opts[0] is a string representation of Triple,
+  // take Module triple otherwise
+  Triple TargetTriple(Opts.empty() || Opts[0].empty()
+                          ? M->getTargetTriple()
+                          : Triple::normalize(Opts[0]));
+  // optional: Opts[1] is a string representation of CodeGenOptLevel,
+  // no optimization otherwise
+  llvm::CodeGenOptLevel OLevel = CodeGenOptLevel::None;
+  if (Opts.size() > 1 && !Opts[1].empty()) {
+    if (auto Level = CodeGenOpt::parseLevel(Opts[1][0])) {
+      OLevel = *Level;
+    } else {
+      ErrMsg = "Invalid optimization level!";
+      return false;
+    }
+  }
+  return SPIRVTranslate(M, SpirvObj, ErrMsg, AllowExtNames, OLevel,
+                        TargetTriple);
 }
 
 } // namespace llvm

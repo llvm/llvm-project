@@ -36,7 +36,7 @@ define internal void @bar(ptr byval(%pair) %Data) {
 
 define void @zed(ptr byval(%pair) %Data) {
 ; TUNIT-LABEL: define {{[^@]+}}@zed
-; TUNIT-SAME: (ptr noalias nocapture nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
+; TUNIT-SAME: (ptr noalias nonnull readonly byval([[PAIR:%.*]]) captures(none) dereferenceable(8) [[DATA:%.*]]) {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DATA]], align 1
 ; TUNIT-NEXT:    [[DATA_B4:%.*]] = getelementptr i8, ptr [[DATA]], i64 4
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DATA_B4]], align 1
@@ -44,7 +44,7 @@ define void @zed(ptr byval(%pair) %Data) {
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@zed
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull readonly byval([[PAIR:%.*]]) captures(none) dereferenceable(8) [[DATA:%.*]]) {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DATA]], align 1
 ; CGSCC-NEXT:    [[DATA_B4:%.*]] = getelementptr i8, ptr [[DATA]], i64 4
 ; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DATA_B4]], align 1

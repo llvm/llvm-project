@@ -453,14 +453,15 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
     for (OpOperand &use : bbArg.getUses())
       bbArgUses.push_back(&use);
 
+    Type tensorType = bbArg.getType();
     // Change the bbArg type to memref.
     bbArg.setType(type);
 
     // Replace all uses of the original tensor bbArg.
     rewriter.setInsertionPointToStart(block);
     if (!bbArgUses.empty()) {
-      Value toTensorOp =
-          rewriter.create<bufferization::ToTensorOp>(bbArg.getLoc(), bbArg);
+      Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
+          bbArg.getLoc(), tensorType, bbArg);
       for (OpOperand *use : bbArgUses)
         use->set(toTensorOp);
     }

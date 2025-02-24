@@ -428,8 +428,10 @@ public:
     if (j == fdes.begin() || j[-1].inputOff + j[-1].size <= off) {
       while (i != cies.end() && i->inputOff <= off)
         ++i;
-      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off)
-        Fatal(ctx) << ".eh_frame: relocation is not in any piece";
+      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
+        Err(ctx) << ".eh_frame: relocation is not in any piece";
+        return 0;
+      }
       it = i;
     }
 

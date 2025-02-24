@@ -17,6 +17,8 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include <optional>
 
@@ -121,6 +123,13 @@ public:
   aliasAnalysisGetModRefInfo(BatchAAResults &BatchAA, const Instruction *I,
                              const std::optional<MemoryLocation> &OptLoc) {
     return BatchAA.getModRefInfo(cast<llvm::Instruction>(I->Val), OptLoc);
+  }
+
+  /// Equivalent to llvm::verifyFunction().
+  /// \Returns true if the IR is broken.
+  static bool verifyFunction(const Function *F, raw_ostream &OS) {
+    const auto &LLVMF = *cast<llvm::Function>(F->Val);
+    return llvm::verifyFunction(LLVMF, &OS);
   }
 };
 

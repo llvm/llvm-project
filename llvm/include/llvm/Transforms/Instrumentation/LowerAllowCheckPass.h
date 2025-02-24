@@ -25,7 +25,7 @@ namespace llvm {
 class LowerAllowCheckPass : public PassInfoMixin<LowerAllowCheckPass> {
 public:
   struct Options {
-    std::vector<unsigned int> placeholder; // TODO: cutoffs
+    std::vector<unsigned int> cutoffs;
   };
 
   explicit LowerAllowCheckPass(LowerAllowCheckPass::Options Opts)
@@ -33,6 +33,8 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool IsRequested();
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   LowerAllowCheckPass::Options Opts;

@@ -1,4 +1,7 @@
 #include <clc/clc.h>
+#include <clc/integer/clc_hadd.h>
 
-#define __CLC_BODY <hadd.inc>
+#define FUNCTION hadd
+#define __CLC_BODY <clc/shared/binary_def.inc>
+
 #include <clc/integer/gentype.inc>

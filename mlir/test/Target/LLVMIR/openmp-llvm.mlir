@@ -700,7 +700,7 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
 // CHECK-LABEL: @simd_simple_multiple
 llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd {
-    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) inclusive step (%step1, %step2) {
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right metadata is added and collapsed
@@ -2801,12 +2801,7 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
 llvm.func @foo(!llvm.ptr) -> ()
 llvm.func @destroy(!llvm.ptr) -> ()
 
-omp.private {type = firstprivate} @privatizer : !llvm.ptr alloc {
-^bb0(%arg0 : !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @privatizer : i32 copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.load %arg0 : !llvm.ptr -> i32
   llvm.store %0, %arg1 : i32, !llvm.ptr
@@ -2829,19 +2824,24 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 // CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_12:.*]], align 8
 // CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_11]], i32 0, i32 0
 // CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
-// CHECK:         %[[VAL_15:.*]] = alloca i32, i64 1, align 4
-// CHECK:         br label %omp.private.latealloc
-// CHECK:       omp.private.latealloc:                            ; preds = %task.alloca
+// CHECK:         %[[VAL_15:.*]] = alloca i32, align 4
+// CHECK:         br label %omp.region.after_alloca
+
+// CHECK:       omp.region.after_alloca:
+// CHECK:         br label %task.body
+
+// CHECK:       task.body:                                        ; preds = %omp.region.after_alloca
+// CHECK:         br label %omp.private.init
+
+// CHECK:       omp.private.init:                                 ; preds = %task.body
 // CHECK:         br label %omp.private.copy
-// CHECK:       omp.private.copy:                                 ; preds = %omp.private.latealloc
+
+// CHECK:       omp.private.copy:                                 ; preds = %omp.private.init
 // CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
 // CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
-// CHECK:         br label %[[VAL_20:.*]]
-// CHECK:       [[VAL_20]]:
-// CHECK:         br label %task.body
-// CHECK:       task.body:                                        ; preds = %[[VAL_20]]
 // CHECK:         br label %omp.task.region
-// CHECK:       omp.task.region:                                  ; preds = %task.body
+
+// CHECK:       omp.task.region:                                  ; preds = %omp.private.copy
 // CHECK:         call void @foo(ptr %[[VAL_15]])
 // CHECK:         br label %omp.region.cont
 // CHECK:       omp.region.cont:                                  ; preds = %omp.task.region

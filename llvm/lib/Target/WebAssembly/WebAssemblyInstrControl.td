@@ -144,7 +144,7 @@ defm THROW_REF : I<(outs), (ins EXNREF:$exn), (outs), (ins), [],
                    "throw_ref \t$exn", "throw_ref", 0x0a>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
-// Region within which an exception is caught: try / end_try
+// Region within which an exception is caught: try_table / end_try_table
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
 defm TRY_TABLE : I<(outs), (ins Signature:$sig, variable_ops),
                    (outs), (ins Signature:$sig, catch_list:$cal), [],

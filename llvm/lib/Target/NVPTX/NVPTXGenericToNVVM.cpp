@@ -86,7 +86,7 @@ bool GenericToNVVM::runOnModule(Module &M) {
     if (F.isDeclaration()) {
       continue;
     }
-    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(&*F.getEntryBlock().getFirstNonPHIOrDbg());
     for (BasicBlock &BB : F) {
       for (Instruction &II : BB) {
         for (unsigned i = 0, e = II.getNumOperands(); i < e; ++i) {

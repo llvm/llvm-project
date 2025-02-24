@@ -190,8 +190,8 @@ Value *ShapeCalculator::getRowFromCol(Instruction *II, Value *V,
 
 Value *ShapeCalculator::getColFromRow(Instruction *II, Value *V,
                                       unsigned Granularity) {
-  if (Row2Col.count(V))
-    return Row2Col[V];
+  if (auto It = Row2Col.find(V); It != Row2Col.end())
+    return It->second;
   IRBuilder<> Builder(II);
   Value *RealCol = nullptr;
   if (isa<ConstantInt>(V))
@@ -939,10 +939,10 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
         Instruction *NewInst = Builder.CreateIntrinsic(
             Intrinsic::x86_tilezero_internal, {}, {Row, Col});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
                                           {IncValue->getType()}, {NewInst});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         // Replace InValue with new Value.
         OldPN->setIncomingValue(I, NewInst);
         IncValue = NewInst;

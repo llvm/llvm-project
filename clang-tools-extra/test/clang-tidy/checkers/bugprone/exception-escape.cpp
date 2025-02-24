@@ -665,6 +665,7 @@ int indirectly_recursive(int n) noexcept;
 
 int recursion_helper(int n) {
   indirectly_recursive(n);
+  return 0;
 }
 
 int indirectly_recursive(int n) noexcept {

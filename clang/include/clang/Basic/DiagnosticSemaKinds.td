@@ -82,11 +82,11 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "conversion from %0 to %1 in converted constant expression would "
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
-  "%select{case value|enumerator value|non-type template argument|"
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
   "array size|explicit specifier argument|noexcept specifier argument|"
   "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
-  "%select{case value|enumerator value|non-type template argument|"
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
   "array size|explicit specifier argument|noexcept specifier argument|"
   "call to 'size()'|call to 'data()'}0 %select{cannot be narrowed from "
   "type %2 to %3|evaluates to %2, which cannot be narrowed to type %3}1">,
@@ -350,10 +350,11 @@ def warn_arm_interrupt_vfp_clobber : Warning<
   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
-def warn_interrupt_attribute_invalid : Warning<
-   "%select{MIPS|MSP430|RISC-V}0 'interrupt' attribute only applies to "
-   "functions that have %select{no parameters|a 'void' return type}1">,
-   InGroup<IgnoredAttributes>;
+def warn_interrupt_signal_attribute_invalid : Warning<
+  "%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
+  "attribute only applies to functions that have "
+  "%select{no parameters|a 'void' return type}2">,
+  InGroup<IgnoredAttributes>;
 def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
 def note_riscv_repeated_interrupt_attribute : Note<
@@ -482,13 +483,15 @@ def ext_use_out_of_scope_declaration : ExtWarn<
   InGroup<DiagGroup<"out-of-scope-function">>;
 def err_inline_non_function : Error<
   "'inline' can only appear on functions%select{| and non-local variables}0">;
+def warn_ms_inline_non_function : ExtWarn<err_inline_non_function.Summary>,
+  InGroup<MicrosoftInlineOnNonFunction>;
 def err_noreturn_non_function : Error<
   "'_Noreturn' can only appear on functions">;
 def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 def warn_qual_base_type : Warning<
-  "'%0' qualifier%s1 on base class type %2 have no effect">,
+  "'%0' qualifier%s1 on base class type %2 %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 
 def warn_deprecated_redundant_constexpr_static_def : Warning<
@@ -710,13 +713,14 @@ def err_thread_non_global : Error<
 def err_thread_unsupported : Error<
   "thread-local storage is not supported for the current target">;
 
-// FIXME: Combine fallout warnings to just one warning.
-def warn_maybe_falloff_nonvoid_function : Warning<
-  "non-void function does not return a value in all control paths">,
+def warn_falloff_nonvoid : Warning<
+  "non-void "
+  "%enum_select<FalloffFunctionKind>{%Function{function}|%Block{block}|%Lambda{lambda}|%Coroutine{coroutine}}0"
+  " does not return a value%select{| in all control paths}1">,
   InGroup<ReturnType>;
-def warn_falloff_nonvoid_function : Warning<
-  "non-void function does not return a value">,
-  InGroup<ReturnType>;
+def err_falloff_nonvoid : Error<
+  "non-void %select{function|block|lambda|coroutine}0 "
+  "does not return a value%select{| in all control paths}1">;
 def warn_const_attr_with_pure_attr : Warning<
   "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
   InGroup<IgnoredAttributes>;
@@ -724,16 +728,6 @@ def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
 
-def err_maybe_falloff_nonvoid_block : Error<
-  "non-void block does not return a value in all control paths">;
-def err_falloff_nonvoid_block : Error<
-  "non-void block does not return a value">;
-def warn_maybe_falloff_nonvoid_coroutine : Warning<
-  "non-void coroutine does not return a value in all control paths">,
-  InGroup<ReturnType>;
-def warn_falloff_nonvoid_coroutine : Warning<
-  "non-void coroutine does not return a value">,
-  InGroup<ReturnType>;
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
   InGroup<MissingNoreturn>, DefaultIgnore;
@@ -2953,9 +2947,15 @@ def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
 def err_attr_cond_never_constant_expr : Error<
   "%0 attribute expression never produces a constant expression">;
+def err_diagnose_if_unknown_warning : Error<"unknown warning group '%0'">;
 def err_diagnose_if_invalid_diagnostic_type : Error<
   "invalid diagnostic type for 'diagnose_if'; use \"error\" or \"warning\" "
   "instead">;
+def err_diagnose_if_unknown_option : Error<"unknown diagnostic option">;
+def err_diagnose_if_expected_equals : Error<
+  "expected '=' after diagnostic option">;
+def err_diagnose_if_unexpected_value : Error<
+  "unexpected value; use 'true' or 'false'">;
 def err_constexpr_body_no_return : Error<
   "no return statement in %select{constexpr|consteval}0 function">;
 def err_constexpr_return_missing_expr : Error<
@@ -3824,6 +3824,9 @@ def warn_type_attribute_wrong_type : Warning<
   "'%0' only applies to %select{function|pointer|"
   "Objective-C object or block pointer}1 types; type here is %2">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_on_void_param: Warning<
+  "attribute %0 cannot be applied to a 'void' parameter">,
+  InGroup<IgnoredAttributes>;
 def err_type_attribute_wrong_type : Error<
   warn_type_attribute_wrong_type.Summary>;
 def warn_incomplete_encoded_type : Warning<
@@ -3864,6 +3867,9 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
+def err_sme_openmp_captured_region : Error<
+  "OpenMP captured regions are not yet supported in "
+  "%select{streaming functions|functions with ZA state|functions with ZT0 state}0">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
   " streaming-mode is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime">,
@@ -5323,6 +5329,13 @@ def note_template_arg_refers_here_func : Note<
 def err_template_arg_template_params_mismatch : Error<
   "template template argument has different template parameters than its "
   "corresponding template template parameter">;
+def note_template_arg_template_params_mismatch : Note<
+  "template template argument has different template parameters than its "
+  "corresponding template template parameter">;
+def err_non_deduced_mismatch : Error<
+  "could not match %diff{$ against $|types}0,1">;
+def err_inconsistent_deduction : Error<
+  "conflicting deduction %diff{$ against $|types}0,1 for parameter">;
 def err_template_arg_not_integral_or_enumeral : Error<
   "non-type template argument of type %0 must have an integral or enumeration"
   " type">;
@@ -5929,6 +5942,9 @@ def warn_cxx23_pack_indexing : Warning<
   "pack indexing is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
 
+def err_pack_outside_template : Error<
+  "pack declaration outside of template">;
+
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
 def err_fold_expression_empty : Error<
@@ -6092,6 +6108,8 @@ def note_deleted_special_member_class_subobject : Note<
   "destructor}5"
   "%select{||s||}4"
   "|is an ObjC pointer}6">;
+def note_default_constructed_field
+    : Note<"default constructed field %0 declared here">;
 def note_deleted_default_ctor_uninit_field : Note<
   "%select{default constructor of|constructor inherited by}0 "
   "%1 is implicitly deleted because field %2 of "
@@ -6145,6 +6163,15 @@ def warn_static_local_in_extern_inline : Warning<
   "in different files">, InGroup<StaticLocalInInline>;
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
+
+def warn_possible_object_duplication_mutable : Warning<
+  "%0 may be duplicated when built into a shared library: "
+  "it is mutable, has hidden visibility, and external linkage">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_init : Warning<
+  "initializeation of %0 may run twice when built into a shared library: "
+  "it has hidden visibility and external linkage">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,
@@ -7099,7 +7126,7 @@ def note_precedence_conditional_first : Note<
 
 def warn_consecutive_comparison : Warning<
   "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
-  InGroup<Parentheses>;
+  InGroup<Parentheses>, DefaultError;
 
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
@@ -7377,6 +7404,11 @@ def warn_c23_compat_utf8_string : Warning<
 def note_cxx20_c23_compat_utf8_string_remove_u8 : Note<
   "remove 'u8' prefix to avoid a change of behavior; "
   "Clang encodes unprefixed narrow string literals as UTF-8">;
+def warn_c23_compat_restrict_on_array_of_pointers : Warning<
+  "'restrict' qualifier on an array of pointers is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def ext_restrict_on_array_of_pointers_c23 : Extension<
+  "'restrict' qualifier on an array of pointers is a C23 extension">, InGroup<C23>;
 def err_array_init_different_type : Error<
   "cannot initialize array %diff{of type $ with array of type $|"
   "with different type of array}0,1">;
@@ -8365,14 +8397,6 @@ let CategoryName = "Lambda Issue" in {
     "lambda expression in default argument cannot capture any entity">;
   def err_lambda_incomplete_result : Error<
     "incomplete result type %0 in lambda expression">;
-  def err_noreturn_lambda_has_return_expr : Error<
-    "lambda declared 'noreturn' should not return">;
-  def warn_maybe_falloff_nonvoid_lambda : Warning<
-    "non-void lambda does not return a value in all control paths">,
-    InGroup<ReturnType>;
-  def warn_falloff_nonvoid_lambda : Warning<
-    "non-void lambda does not return a value">,
-    InGroup<ReturnType>;
   def err_access_lambda_capture : Error<
     // The ERRORs represent other special members that aren't constructors, in
     // hopes that someone will bother noticing and reporting if they appear
@@ -9161,6 +9185,8 @@ def err_cuda_device_exceptions : Error<
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, __shared__, and __managed__ variables">;
+def err_cuda_ctor_dtor_attrs
+    : Error<"CUDA does not support global %0 for __device__ functions">;
 def err_shared_var_init : Error<
     "initialization is not supported for __shared__ variables">;
 def err_cuda_vla : Error<
@@ -10560,11 +10586,16 @@ def err_ctor_dtor_returns_void : Error<
 def warn_noreturn_function_has_return_expr : Warning<
   "function %0 declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
-def warn_falloff_noreturn_function : Warning<
-  "function declared 'noreturn' should not return">,
+def warn_noreturn_has_return_expr : Warning<
+  "%select{function|block|lambda|coroutine}0 "
+  "declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
-def err_noreturn_block_has_return_expr : Error<
-  "block declared 'noreturn' should not return">;
+def err_noreturn_has_return_expr : Error<
+  "%select{function|block|lambda|coroutine}0 "
+  "declared 'noreturn' should not return">;
+def warn_noreturn_coroutine : Warning<
+  "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
+  InGroup<InvalidNoreturn>;
 def err_carries_dependency_missing_on_first_decl : Error<
   "%select{function|parameter}0 declared '[[carries_dependency]]' "
   "after its first declaration">;
@@ -12457,7 +12488,8 @@ def err_sycl_entry_point_invalid : Error<
   "'sycl_kernel_entry_point' attribute cannot be applied to a"
   " %select{non-static member function|variadic function|deleted function|"
            "defaulted function|constexpr function|consteval function|"
-           "function declared with the 'noreturn' attribute|coroutine}0">;
+           "function declared with the 'noreturn' attribute|coroutine|"
+           "function defined with a function try block}0">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "'sycl_kernel_entry_point' kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}0,1">;
@@ -12582,6 +12614,9 @@ def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
 def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used only on HLSL intangible type %1">;
+def err_hlsl_incorrect_num_initializers: Error<
+  "too %select{few|many}0 initializers in list for type %1 "
+  "(expected %2 but found %3)">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
@@ -12881,6 +12916,48 @@ def err_acc_update_as_body
     : Error<"OpenACC 'update' construct may not appear in place of the "
             "statement following a%select{n if statement| while statement| do "
             "statement| switch statement| label statement}0">;
+def err_acc_invalid_atomic
+    : Error<"statement associated with OpenACC 'atomic%select{| "
+            "%1}0' directive is invalid">;
+def note_acc_atomic_expr_must_be
+    : Note<"expected "
+           "%enum_select<OACCAtomicExpr>{%Assign{assignment}|%UnaryCompAssign{"
+           "assignment, compound assignment, increment, or decrement}}0 "
+           "expression">;
+def note_acc_atomic_unsupported_unary_operator
+    : Note<"unary operator not supported, only increment and decrement "
+           "operations permitted">;
+def note_acc_atomic_unsupported_binary_operator
+    : Note<"binary operator not supported, only +, *, -, /, &, ^, |, <<, or >> "
+           "are permitted">;
+def note_acc_atomic_unsupported_compound_binary_operator
+    : Note<"compound binary operator not supported, only +=, *=, -=, /=, &=, "
+           "^=, |=, <<=, or >>= are permitted">;
+
+def note_acc_atomic_operand_lvalue_scalar
+    : Note<"%select{left |right |}0operand to "
+           "%enum_select<OACCAtomicOpKind>{%Assign{assignment}|%CompoundAssign{"
+           "compound assignment}|%Inc{increment}|"
+           "%Dec{decrement}}1 "
+           "expression must be "
+           "%enum_select<OACCLValScalar>{%LVal{an l-value}|%Scalar{of scalar "
+           "type (was %3)}}2">;
+def note_acc_atomic_too_many_stmts
+    : Note<"'atomic capture' with a compound statement only supports two "
+           "statements">;
+def note_acc_atomic_expected_binop : Note<"expected binary operation on right "
+                                          "hand side of assignment operator">;
+def note_acc_atomic_mismatch_operand
+    : Note<"left hand side of assignment operation('%0') must match one side "
+           "of the sub-operation on the right hand side('%1' and '%2')">;
+def note_acc_atomic_mismatch_compound_operand
+    : Note<"variable %select{|in unary expression|on right hand side of "
+           "assignment|on left hand side of assignment|on left hand side of "
+           "compound assignment|on left hand side of assignment}2('%3') must "
+           "match variable used %select{|in unary expression|on right hand "
+           "side of assignment|<not possible>|on left hand side of compound "
+           "assignment|on left hand side of assignment}0('%1') from the first "
+           "statement">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

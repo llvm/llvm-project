@@ -476,7 +476,7 @@ define half @load_atomic_f16__seq_cst(ptr %ptr) {
 ; PPC32-NEXT:    cmpw cr7, r3, r3
 ; PPC32-NEXT:    bne- cr7, .+4
 ; PPC32-NEXT:    isync
-; PPC32-NEXT:    bl __gnu_h2f_ieee
+; PPC32-NEXT:    bl __extendhfsf2
 ; PPC32-NEXT:    lwz r0, 20(r1)
 ; PPC32-NEXT:    addi r1, r1, 16
 ; PPC32-NEXT:    mtlr r0
@@ -494,7 +494,7 @@ define half @load_atomic_f16__seq_cst(ptr %ptr) {
 ; PPC64-NEXT:    cmpd cr7, r3, r3
 ; PPC64-NEXT:    bne- cr7, .+4
 ; PPC64-NEXT:    isync
-; PPC64-NEXT:    bl __gnu_h2f_ieee
+; PPC64-NEXT:    bl __extendhfsf2
 ; PPC64-NEXT:    nop
 ; PPC64-NEXT:    addi r1, r1, 112
 ; PPC64-NEXT:    ld r0, 16(r1)
@@ -582,7 +582,7 @@ define void @store_atomic_f16__seq_cst(ptr %ptr, half %val1) {
 ; PPC32-NEXT:    .cfi_offset r30, -8
 ; PPC32-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
 ; PPC32-NEXT:    mr r30, r3
-; PPC32-NEXT:    bl __gnu_f2h_ieee
+; PPC32-NEXT:    bl __truncsfhf2
 ; PPC32-NEXT:    sync
 ; PPC32-NEXT:    sth r3, 0(r30)
 ; PPC32-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
@@ -601,7 +601,7 @@ define void @store_atomic_f16__seq_cst(ptr %ptr, half %val1) {
 ; PPC64-NEXT:    .cfi_offset r30, -16
 ; PPC64-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; PPC64-NEXT:    mr r30, r3
-; PPC64-NEXT:    bl __gnu_f2h_ieee
+; PPC64-NEXT:    bl __truncsfhf2
 ; PPC64-NEXT:    nop
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:    sth r3, 0(r30)

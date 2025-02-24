@@ -23,13 +23,13 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_abs.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
+#include <clc/math/clc_subnormal_config.h>
+#include <clc/math/math.h>
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
-
-#include "config.h"
-#include "math.h"
 
 // Returns sqrt(x*x + y*y) with no overflow or underflow unless the result
 // warrants it
@@ -81,7 +81,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_hypot(double x, double y) {
   double ay = y * preadjust;
 
   // The post adjust may overflow, but this can't be avoided in any case
-  double r = sqrt(fma(ax, ax, ay * ay)) * postadjust;
+  double r = sqrt(__clc_fma(ax, ax, ay * ay)) * postadjust;
 
   // If the difference in exponents between x and y is large
   double s = x + y;

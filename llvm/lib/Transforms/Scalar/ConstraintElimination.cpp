@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
-#include <cmath>
 #include <optional>
 #include <string>
 
@@ -313,7 +312,8 @@ public:
   /// New variables that need to be added to the system are collected in
   /// \p NewVariables.
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
-                             SmallVectorImpl<Value *> &NewVariables) const;
+                             SmallVectorImpl<Value *> &NewVariables,
+                             bool ForceSignedSystem = false) const;
 
   /// Turns a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints using getConstraint. Returns an empty constraint if the result
@@ -330,6 +330,14 @@ public:
   void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack);
+
+private:
+  /// Adds facts into constraint system. \p ForceSignedSystem can be set when
+  /// the \p Pred is eq/ne, and signed constraint system is used when it's
+  /// specified.
+  void addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
+                   unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack,
+                   bool ForceSignedSystem);
 };
 
 /// Represents a (Coefficient * Variable) entry after IR decomposition.
@@ -636,12 +644,16 @@ static Decomposition decompose(Value *V,
 
 ConstraintTy
 ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
-                              SmallVectorImpl<Value *> &NewVariables) const {
+                              SmallVectorImpl<Value *> &NewVariables,
+                              bool ForceSignedSystem) const {
   assert(NewVariables.empty() && "NewVariables must be empty when passed in");
+  assert((!ForceSignedSystem || CmpInst::isEquality(Pred)) &&
+         "signed system can only be forced on eq/ne");
+
   bool IsEq = false;
   bool IsNe = false;
 
-  // Try to convert Pred to one of ULE/SLT/SLE/SLT.
+  // Try to convert Pred to one of ULE/ULT/SLE/SLT.
   switch (Pred) {
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_UGE:
@@ -652,7 +664,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     break;
   }
   case CmpInst::ICMP_EQ:
-    if (match(Op1, m_Zero())) {
+    if (!ForceSignedSystem && match(Op1, m_Zero())) {
       Pred = CmpInst::ICMP_ULE;
     } else {
       IsEq = true;
@@ -660,7 +672,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     }
     break;
   case CmpInst::ICMP_NE:
-    if (match(Op1, m_Zero())) {
+    if (!ForceSignedSystem && match(Op1, m_Zero())) {
       Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
       std::swap(Op0, Op1);
     } else {
@@ -677,7 +689,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     return {};
 
   SmallVector<ConditionTy, 4> Preconditions;
-  bool IsSigned = CmpInst::isSigned(Pred);
+  bool IsSigned = ForceSignedSystem || CmpInst::isSigned(Pred);
   auto &Value2Index = getValue2Index(IsSigned);
   auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(),
                         Preconditions, IsSigned, DL);
@@ -737,7 +749,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   int64_t OffsetSum;
   if (AddOverflow(Offset1, Offset2, OffsetSum))
     return {};
-  if (Pred == (IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT))
+  if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT)
     if (AddOverflow(OffsetSum, int64_t(-1), OffsetSum))
       return {};
   R[0] = OffsetSum;
@@ -1340,7 +1352,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
       Instruction *Cloned = I->clone();
       Old2New[I] = Cloned;
       Old2New[I]->setName(I->getName());
-      Cloned->insertBefore(&*Builder.GetInsertPoint());
+      Cloned->insertBefore(Builder.GetInsertPoint());
       Cloned->dropUnknownNonDebugMetadata();
       Cloned->setDebugLoc({});
     }
@@ -1415,7 +1427,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
 }
 
 static bool checkAndReplaceCondition(
-    CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
+    ICmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
     Instruction *ContextInst, Module *ReproducerModule,
     ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
     SmallVectorImpl<Instruction *> &ToRemove) {
@@ -1448,6 +1460,15 @@ static bool checkAndReplaceCondition(
           checkCondition(Cmp->getPredicate(), Cmp->getOperand(0),
                          Cmp->getOperand(1), Cmp, Info))
     return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
+
+  // When the predicate is samesign and unsigned, we can also make use of the
+  // signed predicate information.
+  if (Cmp->hasSameSign() && Cmp->isUnsigned())
+    if (auto ImpliedCondition =
+            checkCondition(Cmp->getSignedPredicate(), Cmp->getOperand(0),
+                           Cmp->getOperand(1), Cmp, Info))
+      return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
+
   return false;
 }
 
@@ -1580,10 +1601,20 @@ static bool checkOrAndOpImpliedByOther(
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
+  addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, false);
+  // If the Pred is eq/ne, also add the fact to signed system.
+  if (CmpInst::isEquality(Pred))
+    addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, true);
+}
+
+void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
+                                 unsigned NumIn, unsigned NumOut,
+                                 SmallVectorImpl<StackEntry> &DFSInStack,
+                                 bool ForceSignedSystem) {
   // If the constraint has a pre-condition, skip the constraint if it does not
   // hold.
   SmallVector<Value *> NewVariables;
-  auto R = getConstraint(Pred, A, B, NewVariables);
+  auto R = getConstraint(Pred, A, B, NewVariables, ForceSignedSystem);
 
   // TODO: Support non-equality for facts as well.
   if (!R.isValid(*this) || R.isNe())

@@ -27,6 +27,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -160,13 +161,13 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       return;
     }
 
-    unsigned VendorID = AArch64BuildAttributes::getVendorID(VendorName);
+    unsigned VendorID = AArch64BuildAttrs::getVendorID(VendorName);
 
     switch (VendorID) {
     default:
       assert(0 && "Subsection name error");
       break;
-    case AArch64BuildAttributes::VENDOR_UNKNOWN:
+    case AArch64BuildAttrs::VENDOR_UNKNOWN:
       if (unsigned(-1) != Value) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
@@ -179,7 +180,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       }
       break;
     // Note: AEABI_FEATURE_AND_BITS takes only unsigned values
-    case AArch64BuildAttributes::AEABI_FEATURE_AND_BITS:
+    case AArch64BuildAttrs::AEABI_FEATURE_AND_BITS:
       switch (Tag) {
       default: // allow emitting any attribute by number
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
@@ -188,19 +189,18 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
-      case AArch64BuildAttributes::TAG_FEATURE_BTI:
-      case AArch64BuildAttributes::TAG_FEATURE_GCS:
-      case AArch64BuildAttributes::TAG_FEATURE_PAC:
+      case AArch64BuildAttrs::TAG_FEATURE_BTI:
+      case AArch64BuildAttrs::TAG_FEATURE_GCS:
+      case AArch64BuildAttrs::TAG_FEATURE_PAC:
         OS << "\t.aeabi_attribute" << "\t"
-           << AArch64BuildAttributes::getFeatureAndBitsTagsStr(Tag) << ", "
-           << Value;
+           << AArch64BuildAttrs::getFeatureAndBitsTagsStr(Tag) << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
       }
       break;
     // Note: AEABI_PAUTHABI takes only unsigned values
-    case AArch64BuildAttributes::AEABI_PAUTHABI:
+    case AArch64BuildAttrs::AEABI_PAUTHABI:
       switch (Tag) {
       default: // allow emitting any attribute by number
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
@@ -209,10 +209,10 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
-      case AArch64BuildAttributes::TAG_PAUTH_PLATFORM:
-      case AArch64BuildAttributes::TAG_PAUTH_SCHEMA:
+      case AArch64BuildAttrs::TAG_PAUTH_PLATFORM:
+      case AArch64BuildAttrs::TAG_PAUTH_SCHEMA:
         OS << "\t.aeabi_attribute" << "\t"
-           << AArch64BuildAttributes::getPauthABITagsStr(Tag) << ", " << Value;
+           << AArch64BuildAttrs::getPauthABITagsStr(Tag) << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
@@ -223,19 +223,18 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   }
 
   void emitAtributesSubsection(
-      StringRef SubsectionName,
-      AArch64BuildAttributes::SubsectionOptional Optional,
-      AArch64BuildAttributes::SubsectionType ParameterType) override {
+      StringRef SubsectionName, AArch64BuildAttrs::SubsectionOptional Optional,
+      AArch64BuildAttrs::SubsectionType ParameterType) override {
     // The AArch64 build attributes assembly subsection header format:
     // ".aeabi_subsection name, optional, parameter type"
     // optional: required (0) optional (1)
     // parameter type: uleb128 or ULEB128 (0) ntbs or NTBS (1)
-    unsigned SubsectionID = AArch64BuildAttributes::getVendorID(SubsectionName);
+    unsigned SubsectionID = AArch64BuildAttrs::getVendorID(SubsectionName);
 
     assert((0 == Optional || 1 == Optional) &&
-           AArch64BuildAttributes::getSubsectionOptionalUnknownError().data());
+           AArch64BuildAttrs::getSubsectionOptionalUnknownError().data());
     assert((0 == ParameterType || 1 == ParameterType) &&
-           AArch64BuildAttributes::getSubsectionTypeUnknownError().data());
+           AArch64BuildAttrs::getSubsectionTypeUnknownError().data());
 
     std::string SubsectionTag = ".aeabi_subsection";
     StringRef OptionalStr = getOptionalStr(Optional);
@@ -246,20 +245,20 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       // Treated as a private subsection
       break;
     }
-    case AArch64BuildAttributes::AEABI_PAUTHABI: {
-      assert(AArch64BuildAttributes::REQUIRED == Optional &&
+    case AArch64BuildAttrs::AEABI_PAUTHABI: {
+      assert(AArch64BuildAttrs::REQUIRED == Optional &&
              "subsection .aeabi-pauthabi should be marked as "
              "required and not as optional");
-      assert(AArch64BuildAttributes::ULEB128 == ParameterType &&
+      assert(AArch64BuildAttrs::ULEB128 == ParameterType &&
              "subsection .aeabi-pauthabi should be "
              "marked as uleb128 and not as ntbs");
       break;
     }
-    case AArch64BuildAttributes::AEABI_FEATURE_AND_BITS: {
-      assert(AArch64BuildAttributes::OPTIONAL == Optional &&
+    case AArch64BuildAttrs::AEABI_FEATURE_AND_BITS: {
+      assert(AArch64BuildAttrs::OPTIONAL == Optional &&
              "subsection .aeabi_feature_and_bits should be "
              "marked as optional and not as required");
-      assert(AArch64BuildAttributes::ULEB128 == ParameterType &&
+      assert(AArch64BuildAttrs::ULEB128 == ParameterType &&
              "subsection .aeabi_feature_and_bits should "
              "be marked as uleb128 and not as ntbs");
       break;
@@ -326,6 +325,10 @@ public:
       LastEMS = EMS_None;
 
     MCELFStreamer::changeSection(Section, Subsection);
+
+    // Section alignment of 4 to match GNU Assembler
+    if (Section->isText())
+      Section->ensureMinAlignment(Align(4));
   }
 
   // Reset state between object emissions
@@ -421,8 +424,8 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
 }
 
 void AArch64TargetELFStreamer::emitAtributesSubsection(
-    StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
-    AArch64BuildAttributes::SubsectionType ParameterType) {
+    StringRef VendorName, AArch64BuildAttrs::SubsectionOptional IsOptional,
+    AArch64BuildAttrs::SubsectionType ParameterType) {
   AArch64TargetStreamer::emitAtributesSubsection(VendorName, IsOptional,
                                                  ParameterType);
 }
@@ -504,6 +507,23 @@ void AArch64TargetELFStreamer::finish() {
       for (auto &F : S.getWriter().getFileNames())
         F.second += llvm::lower_bound(Idx, F.second) - Idx.begin();
     }
+  }
+
+  // The mix of execute-only and non-execute-only at link time is
+  // non-execute-only. To avoid the empty implicitly created .text
+  // section from making the whole .text section non-execute-only, we
+  // mark it execute-only if it is empty and there is at least one
+  // execute-only section in the object.
+  if (any_of(Asm, [](const MCSection &Sec) {
+        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_AARCH64_PURECODE;
+      })) {
+    auto *Text =
+        static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
+    for (auto &F : *Text)
+      if (auto *DF = dyn_cast<MCDataFragment>(&F))
+        if (!DF->getContents().empty())
+          return;
+    Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
   }
 
   MCSectionELF *MemtagSec = nullptr;

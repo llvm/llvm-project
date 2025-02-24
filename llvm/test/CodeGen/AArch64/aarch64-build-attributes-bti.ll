@@ -1,8 +1,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc %s -filetype=obj -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
-; ASM: .text
-; ASM-NEXT:      .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
+; ASM:      .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_BTI, 1
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_PAC, 0
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_GCS, 0

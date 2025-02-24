@@ -833,7 +833,7 @@ DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N,
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
   return SoftenFloatRes_UnaryWithTwoFPResults(
-      N, RTLIB::getFSINCOS(N->getValueType(0)));
+      N, RTLIB::getSINCOS(N->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {
@@ -1569,6 +1569,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP: ExpandFloatRes_XINT_TO_FP(N, Lo, Hi); break;
   case ISD::STRICT_FREM:
   case ISD::FREM:       ExpandFloatRes_FREM(N, Lo, Hi); break;
+  case ISD::FMODF:   ExpandFloatRes_FMODF(N); break;
     // clang-format on
   }
 
@@ -1617,6 +1618,23 @@ void DAGTypeLegalizer::ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
   GetPairElements(Tmp.first, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FMODF(SDNode *N) {
+  ExpandFloatRes_UnaryWithTwoFPResults(N, RTLIB::getMODF(N->getValueType(0)),
+                                       /*CallRetResNo=*/0);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
+    SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
+  assert(!N->isStrictFPOpcode() && "strictfp not implemented");
+  SmallVector<SDValue> Results;
+  DAG.expandMultipleResultFPLibCall(LC, N, Results, CallRetResNo);
+  for (auto [ResNo, Res] : enumerate(Results)) {
+    SDValue Lo, Hi;
+    GetPairElements(Res, Lo, Hi);
+    SetExpandedFloat(SDValue(N, ResNo), Lo, Hi);
+  }
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FABS(SDNode *N, SDValue &Lo,
@@ -2766,10 +2784,11 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FLDEXP:     R = PromoteFloatRes_ExpOp(N); break;
     case ISD::FFREXP:     R = PromoteFloatRes_FFREXP(N); break;
 
+    case ISD::FMODF:
     case ISD::FSINCOS:
+    case ISD::FSINCOSPI:
       R = PromoteFloatRes_UnaryWithTwoFPResults(N);
       break;
-
     case ISD::FP_ROUND:   R = PromoteFloatRes_FP_ROUND(N); break;
     case ISD::STRICT_FP_ROUND:
       R = PromoteFloatRes_STRICT_FP_ROUND(N);
@@ -3228,7 +3247,9 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FFREXP:      R = SoftPromoteHalfRes_FFREXP(N); break;
 
+  case ISD::FMODF:
   case ISD::FSINCOS:
+  case ISD::FSINCOSPI:
     R = SoftPromoteHalfRes_UnaryWithTwoFPResults(N);
     break;
 

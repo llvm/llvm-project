@@ -1,7 +1,8 @@
 ## This test checks how we handle the --bb-addr-map option on relocatable
 ## object files.
 
-# RUN: yaml2obj %s -o %t1.o
+# RUN: yaml2obj -D RELOCATION_SECTION_NAME=.rela.llvm_bb_addr_map \
+# RUN:   -D RELOCATION_SECTION_TYPE=SHT_RELA %s -o %t1.o
 # RUN: llvm-readobj %t1.o --bb-addr-map | FileCheck %s
 
 # CHECK:      BBAddrMap [
@@ -77,8 +78,8 @@ Sections:
                AddressOffset:   0x0
                Size:            0x11
                Metadata:        0x8
-  - Name:  .rela.llvm_bb_addr_map
-    Type:  SHT_RELA
+  - Name:  [[RELOCATION_SECTION_NAME]]
+    Type:  [[RELOCATION_SECTION_TYPE]]
     Flags: [ SHF_INFO_LINK ]
     Link:  .symtab
     Info:  .llvm_bb_addr_map
@@ -228,3 +229,55 @@ Sections:
 # ET-DYN-NO-WARNING:     ]
 # ET-DYN-NO-WARNING:   }
 # ET-DYN-NO-WARNING: ]
+
+## Check that we can correctly decode a BBAddrMap in a reloctable object file
+## with CREL relocations.
+
+# RUN: yaml2obj -D RELOCATION_SECTION_NAME=.crel.llvm_bb_addr_map \
+# RUN:   -D RELOCATION_SECTION_TYPE=SHT_CREL %s -o %t6.o
+# RUN: llvm-readobj %t6.o --bb-addr-map | FileCheck %s --check-prefix=CREL
+
+# CREL:      BBAddrMap [
+# CREL-NEXT:   Function {
+# CREL-NEXT:     At: 0x0
+# CREL-NEXT:     Name: <?>
+# CREL-NEXT:     BB Ranges [
+# CREL-NEXT:       {
+# CREL-NEXT:         Base Address: 0x0
+# CREL-NEXT:         BB Entries [
+# CREL-NEXT:           {
+# CREL-NEXT:             ID: 0
+# CREL-NEXT:             Offset: 0x0
+# CREL-NEXT:             Size: 0xF
+# CREL-NEXT:             HasReturn: Yes
+# CREL-NEXT:             HasTailCall: No
+# CREL-NEXT:             IsEHPad: No
+# CREL-NEXT:             CanFallThrough: No
+# CREL-NEXT:             HasIndirectBranch: No
+# CREL-NEXT:           }
+# CREL-NEXT:         ]
+# CREL-NEXT:       }
+# CREL-NEXT:     ]
+# CREL-NEXT:   }
+# CREL-NEXT:   Function {
+# CREL-NEXT:     At: 0x10
+# CREL-NEXT:     Name: <?>
+# CREL-NEXT:     BB Ranges [
+# CREL-NEXT:       {
+# CREL-NEXT:         Base Address: 0x10
+# CREL-NEXT:         BB Entries [
+# CREL-NEXT:           {
+# CREL-NEXT:             ID: 0
+# CREL-NEXT:             Offset: 0x0
+# CREL-NEXT:             Size: 0x11
+# CREL-NEXT:             HasReturn: No
+# CREL-NEXT:             HasTailCall: No
+# CREL-NEXT:             IsEHPad: No
+# CREL-NEXT:             CanFallThrough: Yes
+# CREL-NEXT:             HasIndirectBranch: No
+# CREL-NEXT:           }
+# CREL-NEXT:         ]
+# CREL-NEXT:       }
+# CREL-NEXT:     ]
+# CREL-NEXT:   }
+# CREL-NEXT: ]

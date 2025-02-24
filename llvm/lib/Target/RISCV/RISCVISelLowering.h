@@ -823,7 +823,7 @@ public:
   // Return the value of VLMax for the given vector type (i.e. SEW and LMUL)
   SDValue computeVLMax(MVT VecVT, const SDLoc &DL, SelectionDAG &DAG) const;
 
-  static RISCVII::VLMUL getLMUL(MVT VT);
+  static RISCVVType::VLMUL getLMUL(MVT VT);
   inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,
                                       unsigned MinSize) {
     // Original equation:
@@ -839,7 +839,7 @@ public:
   static std::pair<unsigned, unsigned>
   computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
 
-  static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
+  static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
   static std::pair<unsigned, unsigned>
@@ -905,12 +905,18 @@ public:
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(
-      IntrinsicInst *II, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
+
+  bool lowerDeinterleavedIntrinsicToVPLoad(
+      VPIntrinsic *Load, Value *Mask,
+      ArrayRef<Value *> DeinterleaveRes) const override;
+
+  bool lowerInterleavedIntrinsicToVPStore(
+      VPIntrinsic *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveOps) const override;
 
   bool supportKCFIBundles() const override { return true; }
 

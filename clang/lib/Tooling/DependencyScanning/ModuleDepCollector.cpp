@@ -214,9 +214,6 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   CI.getDependencyOutputOpts().Targets.clear();
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
-  CI.getFrontendOpts().ARCMTAction = FrontendOptions::ARCMT_None;
-  CI.getFrontendOpts().ObjCMTAction = FrontendOptions::ObjCMT_None;
-  CI.getFrontendOpts().MTMigrateDir.clear();
   CI.getLangOpts().ModuleName.clear();
 
   // Remove any macro definitions that are explicitly ignored.
@@ -397,9 +394,91 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   }
 }
 
+static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
+  // Check if the command line input uses relative paths.
+  // It is not safe to ignore the current working directory if any of the
+  // command line inputs use relative paths.
+#define IF_RELATIVE_RETURN_FALSE(PATH)                                         \
+  do {                                                                         \
+    if (!PATH.empty() && !llvm::sys::path::is_absolute(PATH))                  \
+      return false;                                                            \
+  } while (0)
+
+#define IF_ANY_RELATIVE_RETURN_FALSE(PATHS)                                    \
+  do {                                                                         \
+    if (llvm::any_of(PATHS, [](const auto &P) {                                \
+          return !P.empty() && !llvm::sys::path::is_absolute(P);               \
+        }))                                                                    \
+      return false;                                                            \
+  } while (0)
+
+  // Header search paths.
+  const auto &HeaderSearchOpts = CI.getHeaderSearchOpts();
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.Sysroot);
+  for (auto &Entry : HeaderSearchOpts.UserEntries)
+    if (Entry.IgnoreSysRoot)
+      IF_RELATIVE_RETURN_FALSE(Entry.Path);
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.ResourceDir);
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.ModuleCachePath);
+  IF_RELATIVE_RETURN_FALSE(HeaderSearchOpts.ModuleUserBuildPath);
+  for (auto I = HeaderSearchOpts.PrebuiltModuleFiles.begin(),
+            E = HeaderSearchOpts.PrebuiltModuleFiles.end();
+       I != E;) {
+    auto Current = I++;
+    IF_RELATIVE_RETURN_FALSE(Current->second);
+  }
+  IF_ANY_RELATIVE_RETURN_FALSE(HeaderSearchOpts.PrebuiltModulePaths);
+  IF_ANY_RELATIVE_RETURN_FALSE(HeaderSearchOpts.VFSOverlayFiles);
+
+  // Preprocessor options.
+  const auto &PPOpts = CI.getPreprocessorOpts();
+  IF_ANY_RELATIVE_RETURN_FALSE(PPOpts.MacroIncludes);
+  IF_ANY_RELATIVE_RETURN_FALSE(PPOpts.Includes);
+  IF_RELATIVE_RETURN_FALSE(PPOpts.ImplicitPCHInclude);
+
+  // Frontend options.
+  const auto &FrontendOpts = CI.getFrontendOpts();
+  for (const FrontendInputFile &Input : FrontendOpts.Inputs) {
+    if (Input.isBuffer())
+      continue; // FIXME: Can this happen when parsing command-line?
+
+    IF_RELATIVE_RETURN_FALSE(Input.getFile());
+  }
+  IF_RELATIVE_RETURN_FALSE(FrontendOpts.CodeCompletionAt.FileName);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ModuleMapFiles);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ModuleFiles);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ModulesEmbedFiles);
+  IF_ANY_RELATIVE_RETURN_FALSE(FrontendOpts.ASTMergeFiles);
+  IF_RELATIVE_RETURN_FALSE(FrontendOpts.OverrideRecordLayoutsFile);
+  IF_RELATIVE_RETURN_FALSE(FrontendOpts.StatsFile);
+
+  // Filesystem options.
+  const auto &FileSystemOpts = CI.getFileSystemOpts();
+  IF_RELATIVE_RETURN_FALSE(FileSystemOpts.WorkingDir);
+
+  // Codegen options.
+  const auto &CodeGenOpts = CI.getCodeGenOpts();
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.DebugCompilationDir);
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.CoverageCompilationDir);
+
+  // Sanitizer options.
+  IF_ANY_RELATIVE_RETURN_FALSE(CI.getLangOpts().NoSanitizeFiles);
+
+  // Coverage mappings.
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.ProfileInstrumentUsePath);
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.SampleProfileFile);
+  IF_RELATIVE_RETURN_FALSE(CodeGenOpts.ProfileRemappingFile);
+
+  // Dependency output options.
+  for (auto &ExtraDep : CI.getDependencyOutputOpts().ExtraDeps)
+    IF_RELATIVE_RETURN_FALSE(ExtraDep.first);
+
+  return true;
+}
+
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules,
+                                        bool EagerLoadModules, bool IgnoreCWD,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
@@ -410,8 +489,11 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
-  if (CWD)
+  auto &FSOpts = const_cast<FileSystemOptions &>(CI.getFileSystemOpts());
+  if (CWD && !IgnoreCWD)
     HashBuilder.add(*CWD);
+  else
+    FSOpts.WorkingDir.clear();
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
@@ -443,8 +525,11 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, ModuleDeps &Deps) {
-  Deps.ID.ContextHash = getModuleContextHash(
-      Deps, CI, EagerLoadModules, ScanInstance.getVirtualFileSystem());
+  bool IgnoreCWD = any(OptimizeArgs & ScanningOptimizations::IgnoreCWD) &&
+                   isSafeToIgnoreCWD(CI);
+  Deps.ID.ContextHash =
+      getModuleContextHash(Deps, CI, EagerLoadModules, IgnoreCWD,
+                           ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");

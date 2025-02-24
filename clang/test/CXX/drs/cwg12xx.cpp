@@ -155,6 +155,8 @@ namespace cwg1295 { // cwg1295: 4
   // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#cwg1295-Y {{template parameter is declared here}}
   // since-cxx17-error@#cwg1295-y {{reference cannot bind to bit-field in converted constant expression}}
+  //   since-cxx17-note@#cwg1295-Y {{template parameter is declared here}}
+
 
 #if __cplusplus >= 201103L
   const unsigned other = 0;

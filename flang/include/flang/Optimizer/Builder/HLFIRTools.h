@@ -125,7 +125,7 @@ public:
   bool isSimplyContiguous() const {
     // If this can be described without a fir.box in FIR, this must
     // be contiguous.
-    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()))
+    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()) || isScalar())
       return true;
     // Otherwise, if this entity has a visible declaration in FIR,
     // or is the dereference of an allocatable or contiguous pointer
@@ -150,10 +150,7 @@ public:
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
-  bool isOptional() const {
-    auto varIface = getIfVariableInterface();
-    return varIface ? varIface.isOptional() : false;
-  }
+  bool mayBeOptional() const;
 
   bool isParameter() const {
     auto varIface = getIfVariableInterface();
@@ -210,7 +207,8 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         Entity entity, bool contiguousHint = false);
+                         Entity entity, bool contiguousHint = false,
+                         bool keepScalarOptionalBoxed = false);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects

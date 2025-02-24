@@ -250,6 +250,28 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double4);
 
 //===----------------------------------------------------------------------===//
+// and builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool and(bool x, bool y)
+/// \brief Logically ands two boolean vectors elementwise and produces a bool
+/// vector output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/127851
+//
+// clang-format off
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool and(bool x, bool y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2 and(bool2 x, bool2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3 and(bool3 x, bool3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4 and(bool4 x, bool4 y);
+// clang-format on
+
+//===----------------------------------------------------------------------===//
 // any builtins
 //===----------------------------------------------------------------------===//
 
@@ -2467,6 +2489,105 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) double3 WaveReadLaneAt(double3, int32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) double4 WaveReadLaneAt(double4, int32_t);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveMax builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half WaveActiveMax(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half2 WaveActiveMax(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half3 WaveActiveMax(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half4 WaveActiveMax(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t WaveActiveMax(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t2 WaveActiveMax(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t3 WaveActiveMax(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t4 WaveActiveMax(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t WaveActiveMax(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t2 WaveActiveMax(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t3 WaveActiveMax(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t4 WaveActiveMax(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int WaveActiveMax(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int2 WaveActiveMax(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int3 WaveActiveMax(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int4 WaveActiveMax(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint WaveActiveMax(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint2 WaveActiveMax(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint3 WaveActiveMax(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint4 WaveActiveMax(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t WaveActiveMax(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t2 WaveActiveMax(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t3 WaveActiveMax(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t4 WaveActiveMax(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t WaveActiveMax(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t2 WaveActiveMax(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t3 WaveActiveMax(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t4 WaveActiveMax(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float WaveActiveMax(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float2 WaveActiveMax(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float3 WaveActiveMax(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float4 WaveActiveMax(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double WaveActiveMax(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double2 WaveActiveMax(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double3 WaveActiveMax(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double4 WaveActiveMax(double4);
 
 //===----------------------------------------------------------------------===//
 // WaveActiveSum builtins

@@ -145,6 +145,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   Address dynamic_address;
   bool found_dynamic_type = false;
   Value::ValueType value_type;
+  llvm::ArrayRef<uint8_t> local_buffer;
 
   LanguageRuntime *runtime = nullptr;
 
@@ -157,7 +158,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
       // Try the preferred runtime first.
       found_dynamic_type = preferred_runtime->GetDynamicTypeAndAddress(
           *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
-          value_type);
+          value_type, local_buffer);
       if (found_dynamic_type)
         // Set the operative `runtime` for later use in this function.
         runtime = preferred_runtime;
@@ -166,20 +167,20 @@ bool ValueObjectDynamicValue::UpdateValue() {
       // Fallback to the runtime for `known_type`.
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(
           *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
-          value_type);
+          value_type, local_buffer);
   } else {
     runtime = process->GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus);
     if (runtime)
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(
           *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
-          value_type);
+          value_type, local_buffer);
 
     if (!found_dynamic_type) {
       runtime = process->GetLanguageRuntime(lldb::eLanguageTypeObjC);
       if (runtime)
         found_dynamic_type = runtime->GetDynamicTypeAndAddress(
             *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
-            value_type);
+            value_type, local_buffer);
     }
   }
 
@@ -239,11 +240,29 @@ bool ValueObjectDynamicValue::UpdateValue() {
     if (m_address.IsValid())
       SetValueDidChange(true);
 
-    // We've moved, so we should be fine...
-    m_address = dynamic_address;
-    lldb::TargetSP target_sp(GetTargetSP());
-    lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
-    m_value.GetScalar() = load_address;
+    // If we found a host address, and the dynamic type fits in the local buffer
+    // that was found, point to that buffer. Later on this function will copy
+    // the buffer over.
+    if (value_type == Value::ValueType::HostAddress && !local_buffer.empty()) {
+      auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
+      // If we found a host address but it doesn't fit in the buffer, there's
+      // nothing we can do.
+      if (local_buffer.size() <
+          m_dynamic_type_info.GetCompilerType().GetByteSize(exe_scope)) {
+        SetValueIsValid(false);
+        return false;
+      }
+
+      m_value.GetScalar() = (uint64_t)local_buffer.data();
+      m_address = LLDB_INVALID_ADDRESS;
+    } else {
+      // Otherwise we have a legitimate address on the target. Point to the load
+      // address.
+      m_address = dynamic_address;
+      lldb::TargetSP target_sp(GetTargetSP());
+      lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
+      m_value.GetScalar() = load_address;
+    }
   }
 
   if (runtime)
@@ -258,7 +277,11 @@ bool ValueObjectDynamicValue::UpdateValue() {
     LLDB_LOGF(log, "[%s %p] has a new dynamic type %s", GetName().GetCString(),
               static_cast<void *>(this), GetTypeName().GetCString());
 
-  if (m_address.IsValid() && m_dynamic_type_info) {
+  // m_address could be invalid but we could still have a local buffer
+  // containing the dynamic value.
+  if ((m_address.IsValid() ||
+       m_value.GetValueType() == Value::ValueType::HostAddress) &&
+      m_dynamic_type_info) {
     // The variable value is in the Scalar value inside the m_value. We can
     // point our m_data right to it.
     m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());

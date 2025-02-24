@@ -1,6 +1,5 @@
 // RUN: llvm-mc -triple=aarch64 %s -o - | FileCheck %s --check-prefix=ASM
 
-// ASM: .text
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
 // ASM: .aeabi_attribute	0, 1
 // ASM: .aeabi_attribute	Tag_PAuth_Platform, 1
@@ -24,7 +23,6 @@
 // ELF-NEXT: 0x00000040 01010102 01030104 010501
 
 
-.text
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute	0, 1
 .aeabi_attribute	1, 1

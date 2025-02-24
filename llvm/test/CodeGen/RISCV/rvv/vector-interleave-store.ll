@@ -121,13 +121,6 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
   ret void
 }
 
-declare <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i16> @llvm.vector.interleave2.nxv16i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
-declare <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64>, <vscale x 2 x i64>)
-declare <vscale x 8 x i64> @llvm.vector.interleave2.nxv8i64(<vscale x 4 x i64>, <vscale x 4 x i64>)
-declare <vscale x 16 x i64> @llvm.vector.interleave2.nxv16i64(<vscale x 8 x i64>, <vscale x 8 x i64>)
-
 ; Floats
 
 define void @vector_interleave_store_nxv4bf16_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, ptr %p) {
@@ -246,10 +239,34 @@ define void @vector_interleave_store_nxv4p0_nxv2p0(<vscale x 2 x ptr> %a, <vscal
   ret void
 }
 
-declare <vscale x 4 x half> @llvm.vector.interleave2.nxv4f16(<vscale x 2 x half>, <vscale x 2 x half>)
-declare <vscale x 8 x half> @llvm.vector.interleave2.nxv8f16(<vscale x 4 x half>, <vscale x 4 x half>)
-declare <vscale x 4 x float> @llvm.vector.interleave2.nxv4f32(<vscale x 2 x float>, <vscale x 2 x float>)
-declare <vscale x 16 x half> @llvm.vector.interleave2.nxv16f16(<vscale x 8 x half>, <vscale x 8 x half>)
-declare <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double>, <vscale x 2 x double>)
-declare <vscale x 4 x ptr> @llvm.vector.interleave2.nxv4p0(<vscale x 2 x ptr>, <vscale x 2 x ptr>)
+define void @vector_interleave_store_factor4(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %c)
+  %v1 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %b, <vscale x 4 x i32> %d)
+  %v2 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %v0, <vscale x 8 x i32> %v1)
+  store <vscale x 16 x i32> %v2, ptr %p
+  ret void
+}
+
+define void @vector_interleave_store_factor8(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g, <vscale x 2 x i32> %h, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg8e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %e)
+  %v1 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %c, <vscale x 2 x i32> %g)
+  %v2 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1)
+
+  %v3 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> %f)
+  %v4 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %d, <vscale x 2 x i32> %h)
+  %v5 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %v3, <vscale x 4 x i32> %v4)
+
+  %v6 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %v2, <vscale x 8 x i32> %v5)
+  store <vscale x 16 x i32> %v6, ptr %p
+  ret void
+}

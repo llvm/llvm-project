@@ -85,20 +85,12 @@ define i1 @icmp_samesign_xor_v4i32(<4 x i32> %a) {
 ; add is not canonical (should be xor), but that is ok.
 
 define i1 @icmp_add_v8i32(<8 x i32> %a) {
-; SSE-LABEL: @icmp_add_v8i32(
-; SSE-NEXT:    [[E1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 7
-; SSE-NEXT:    [[E2:%.*]] = extractelement <8 x i32> [[A]], i32 2
-; SSE-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[E1]], 42
-; SSE-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[E2]], -8
-; SSE-NEXT:    [[R:%.*]] = add i1 [[CMP1]], [[CMP2]]
-; SSE-NEXT:    ret i1 [[R]]
-;
-; AVX-LABEL: @icmp_add_v8i32(
-; AVX-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i32> [[A:%.*]], <i32 poison, i32 poison, i32 -8, i32 poison, i32 poison, i32 poison, i32 poison, i32 42>
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <8 x i32> <i32 poison, i32 poison, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = add <8 x i1> [[SHIFT]], [[TMP1]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <8 x i1> [[TMP2]], i64 2
-; AVX-NEXT:    ret i1 [[R]]
+; CHECK-LABEL: @icmp_add_v8i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i32> [[A:%.*]], <i32 poison, i32 poison, i32 -8, i32 poison, i32 poison, i32 poison, i32 poison, i32 42>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <8 x i32> <i32 poison, i32 poison, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i1> [[SHIFT]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <8 x i1> [[TMP2]], i64 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e1 = extractelement <8 x i32> %a, i32 7
   %e2 = extractelement <8 x i32> %a, i32 2

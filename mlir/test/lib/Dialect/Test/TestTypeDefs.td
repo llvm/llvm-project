@@ -398,4 +398,9 @@ def TestTypeVerification : Test_Type<"TestTypeVerification"> {
   let assemblyFormat = "`<` $param `>`";
 }
 
+def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
+    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAsmName", "getAlias"]>]> {
+  let mnemonic = "op_asm_type_interface";
+}
+
 #endif // TEST_TYPEDEFS

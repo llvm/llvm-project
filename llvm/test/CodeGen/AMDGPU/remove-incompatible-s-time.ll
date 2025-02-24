@@ -7,7 +7,6 @@
 ; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1030 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=COMPATIBLE,REALTIME,MEMTIME %s
 ; RUN: FileCheck -allow-empty --check-prefixes=WARN-REALTIME,WARN-MEMTIME %s < %t
-; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1102 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=INCOMPATIBLE,NOREALTIME,NOMEMTIME %s
@@ -17,7 +16,6 @@
 ; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1102 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=INCOMPATIBLE,NOREALTIME,NOMEMTIME %s
 ; RUN: FileCheck --check-prefixes=WARN-NOREALTIME,WARN-NOMEMTIME %s < %t
-; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1102 -verify-machineinstrs < %s
 
 ; Note: This test checks the IR, but also has a run line to codegen the file just to check we
 ; do not crash when trying to select those functions.

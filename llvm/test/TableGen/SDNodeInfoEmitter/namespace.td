@@ -19,8 +19,9 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // EMPTY-EMPTY:
 // EMPTY-NEXT:   } // namespace llvm::EmptyISD
 
-// EMPTY:        static const char MyTargetSDNodeNames[] =
-// EMPTY-NEXT:     "\0";
+// EMPTY:        static constexpr char MyTargetSDNodeNamesStorage[] =
+// EMPTY-NEXT:     "\0"
+// EMPTY-NEXT:     ;
 
 // EMPTY:        static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // EMPTY-NEXT:     /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
@@ -43,9 +44,10 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // COMMON-EMPTY:
 // COMMON-NEXT:  } // namespace llvm::[[NS]]
 
-// COMMON:       static const char MyTargetSDNodeNames[] =
+// COMMON:       static constexpr char MyTargetSDNodeNamesStorage[] =
+// COMMON-NEXT:    "\0"
 // COMMON-NEXT:    "[[NS]]::NODE\0"
-// COMMON-NEXT:    "\0";
+// COMMON-NEXT:    ;
 
 // COMMON:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // TARGET-NEXT:    /* 0 */ {SDTCisVT, 0, 0, MVT::i1},
@@ -53,8 +55,8 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // COMMON-NEXT:  };
 // COMMON-EMPTY:
 // COMMON-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// TARGET-NEXT:      {1, 0, 0, 0, 0, 0, 0, 1}, // NODE
-// CUSTOM-NEXT:      {0, 1, 0, 0, 0, 0, 0, 1}, // NODE
+// TARGET-NEXT:      {1, 0, 0, 0, 0, 1, 0, 1}, // NODE
+// CUSTOM-NEXT:      {0, 1, 0, 0, 0, 1, 0, 1}, // NODE
 // COMMON-NEXT:  };
 // COMMON-EMPTY:
 // COMMON-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(

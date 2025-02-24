@@ -97,7 +97,6 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1082,10 +1081,10 @@ RegsForValue::getRegsAndSizes() const {
   return OutVec;
 }
 
-void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis *aa,
+void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
                                AssumptionCache *ac,
                                const TargetLibraryInfo *li) {
-  AA = aa;
+  BatchAA = aa;
   AC = ac;
   GFI = gfi;
   LibInfo = li;
@@ -1856,7 +1855,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
       if (isa<ArrayType>(CDS->getType()))
         return DAG.getMergeValues(Ops, getCurSDLoc());
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (C->getType()->isStructTy() || C->getType()->isArrayTy()) {
@@ -1899,14 +1898,13 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (VT.isRISCVVectorTuple()) {
       assert(C->isNullValue() && "Can only zero this target type!");
-      return NodeMap[V] = DAG.getNode(
-                 ISD::BITCAST, getCurSDLoc(), VT,
-                 DAG.getNode(
-                     ISD::SPLAT_VECTOR, getCurSDLoc(),
-                     EVT::getVectorVT(*DAG.getContext(), MVT::i8,
-                                      VT.getSizeInBits().getKnownMinValue() / 8,
-                                      true),
-                     DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
+      return DAG.getNode(
+          ISD::BITCAST, getCurSDLoc(), VT,
+          DAG.getNode(
+              ISD::SPLAT_VECTOR, getCurSDLoc(),
+              EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                               VT.getSizeInBits().getKnownMinValue() / 8, true),
+              DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
     VectorType *VecTy = cast<VectorType>(V->getType());
@@ -1919,7 +1917,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       for (unsigned i = 0; i != NumElements; ++i)
         Ops.push_back(getValue(CV->getOperand(i)));
 
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (isa<ConstantAggregateZero>(C)) {
@@ -1932,7 +1930,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       else
         Op = DAG.getConstant(0, getCurSDLoc(), EltVT);
 
-      return NodeMap[V] = DAG.getSplat(VT, getCurSDLoc(), Op);
+      return DAG.getSplat(VT, getCurSDLoc(), Op);
     }
 
     llvm_unreachable("Unknown vector constant");
@@ -2063,7 +2061,7 @@ static void findWasmUnwindDestinations(
     SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
         &UnwindDests) {
   while (EHPadBB) {
-    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads.
       UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
@@ -2111,7 +2109,7 @@ static void findUnwindDestinations(
   }
 
   while (EHPadBB) {
-    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     BasicBlock *NewEHPadBB = nullptr;
     if (isa<LandingPadInst>(Pad)) {
       // Stop on landingpads. They are not funclets.
@@ -4585,8 +4583,8 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     Root = getRoot();
   else if (NumValues > MaxParallelChains)
     Root = getMemoryRoot();
-  else if (AA &&
-           AA->pointsToConstantMemory(MemoryLocation(
+  else if (BatchAA &&
+           BatchAA->pointsToConstantMemory(MemoryLocation(
                SV,
                LocationSize::precise(DAG.getDataLayout().getTypeStoreSize(Ty)),
                AAInfo))) {
@@ -4688,8 +4686,8 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
   const Value *SV = I.getOperand(0);
   Type *Ty = I.getType();
   assert(
-      (!AA ||
-       !AA->pointsToConstantMemory(MemoryLocation(
+      (!BatchAA ||
+       !BatchAA->pointsToConstantMemory(MemoryLocation(
            SV, LocationSize::precise(DAG.getDataLayout().getTypeStoreSize(Ty)),
            I.getAAMetadata()))) &&
       "load_from_swift_error should not be constant memory");
@@ -4998,7 +4996,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
@@ -6283,15 +6281,6 @@ static unsigned FixedPointIntrinsicToOpcode(unsigned Intrinsic) {
   }
 }
 
-void SelectionDAGBuilder::lowerCallToExternalSymbol(const CallInst &I,
-                                           const char *FunctionName) {
-  assert(FunctionName && "FunctionName must not be nullptr");
-  SDValue Callee = DAG.getExternalSymbol(
-      FunctionName,
-      DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
-  LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
-}
-
 /// Given a @llvm.call.preallocated.setup, return the corresponding
 /// preallocated call.
 static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
@@ -6534,7 +6523,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                /* AlwaysInline */ false, &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
-                               I.getAAMetadata(), AA);
+                               I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -6555,7 +6544,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                /* AlwaysInline */ true, &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
-                               I.getAAMetadata(), AA);
+                               I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -6608,7 +6597,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                 /* OverrideTailCall */ std::nullopt,
                                 MachinePointerInfo(I.getArgOperand(0)),
                                 MachinePointerInfo(I.getArgOperand(1)),
-                                I.getAAMetadata(), AA);
+                                I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MM);
     return;
   }
@@ -6977,7 +6966,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  case Intrinsic::modf:
   case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::frexp: {
     unsigned Opcode;
     switch (Intrinsic) {
@@ -6985,6 +6976,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       llvm_unreachable("unexpected intrinsic");
     case Intrinsic::sincos:
       Opcode = ISD::FSINCOS;
+      break;
+    case Intrinsic::sincospi:
+      Opcode = ISD::FSINCOSPI;
+      break;
+    case Intrinsic::modf:
+      Opcode = ISD::FMODF;
       break;
     case Intrinsic::frexp:
       Opcode = ISD::FFREXP;
@@ -8118,15 +8115,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
-
-    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
-                                         getValue(I.getOperand(0)),
-                                         getValue(I.getOperand(1))));
+    SDValue Acc = getValue(I.getOperand(0));
+    SDValue Input = getValue(I.getOperand(1));
+    setValue(&I,
+             DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, Acc.getValueType(), Acc,
+                         Input, DAG.getConstant(1, sdl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -8251,10 +8248,28 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitCallBrLandingPad(I);
     return;
   case Intrinsic::vector_interleave2:
-    visitVectorInterleave(I);
+    visitVectorInterleave(I, 2);
+    return;
+  case Intrinsic::vector_interleave3:
+    visitVectorInterleave(I, 3);
+    return;
+  case Intrinsic::vector_interleave5:
+    visitVectorInterleave(I, 5);
+    return;
+  case Intrinsic::vector_interleave7:
+    visitVectorInterleave(I, 7);
     return;
   case Intrinsic::vector_deinterleave2:
-    visitVectorDeinterleave(I);
+    visitVectorDeinterleave(I, 2);
+    return;
+  case Intrinsic::vector_deinterleave3:
+    visitVectorDeinterleave(I, 3);
+    return;
+  case Intrinsic::vector_deinterleave5:
+    visitVectorDeinterleave(I, 5);
+    return;
+  case Intrinsic::vector_deinterleave7:
+    visitVectorDeinterleave(I, 7);
     return;
   case Intrinsic::experimental_vector_compress:
     setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,
@@ -8435,7 +8450,7 @@ void SelectionDAGBuilder::visitVPLoad(
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT);
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
@@ -8564,7 +8579,7 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(VPIntrin);
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
@@ -9005,10 +9020,6 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
         Type::getIntNTy(PtrVal->getContext(), LoadVT.getScalarSizeInBits());
     if (LoadVT.isVector())
       LoadTy = FixedVectorType::get(LoadTy, LoadVT.getVectorNumElements());
-
-    LoadInput = ConstantExpr::getBitCast(const_cast<Constant *>(LoadInput),
-                                         PointerType::getUnqual(LoadTy));
-
     if (const Constant *LoadCst =
             ConstantFoldLoadFromConstPtr(const_cast<Constant *>(LoadInput),
                                          LoadTy, Builder.DAG.getDataLayout()))
@@ -9021,7 +9032,7 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
   bool ConstantMemory = false;
 
   // Do not serialize (non-volatile) loads of constant memory with anything.
-  if (Builder.AA && Builder.AA->pointsToConstantMemory(PtrVal)) {
+  if (Builder.BatchAA && Builder.BatchAA->pointsToConstantMemory(PtrVal)) {
     Root = Builder.DAG.getEntryNode();
     ConstantMemory = true;
   } else {
@@ -9346,13 +9357,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 
   if (Function *F = I.getCalledFunction()) {
     if (F->isDeclaration()) {
-      // Is this an LLVM intrinsic or a target-specific intrinsic?
-      unsigned IID = F->getIntrinsicID();
-      if (!IID)
-        if (const TargetIntrinsicInfo *II = TM.getIntrinsicInfo())
-          IID = II->getIntrinsicID(F);
-
-      if (IID) {
+      // Is this an LLVM intrinsic?
+      if (unsigned IID = F->getIntrinsicID()) {
         visitIntrinsicCall(I, IID);
         return;
       }
@@ -12569,26 +12575,31 @@ void SelectionDAGBuilder::visitVectorReverse(const CallInst &I) {
   setValue(&I, DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), Mask));
 }
 
-void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I) {
+void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
+                                                  unsigned Factor) {
   auto DL = getCurSDLoc();
   SDValue InVec = getValue(I.getOperand(0));
-  EVT OutVT =
-      InVec.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
 
+  SmallVector<EVT, 4> ValueVTs;
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(), I.getType(),
+                  ValueVTs);
+
+  EVT OutVT = ValueVTs[0];
   unsigned OutNumElts = OutVT.getVectorMinNumElements();
 
-  // ISD Node needs the input vectors split into two equal parts
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
-                           DAG.getVectorIdxConstant(0, DL));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
-                           DAG.getVectorIdxConstant(OutNumElts, DL));
+  SmallVector<SDValue, 4> SubVecs(Factor);
+  for (unsigned i = 0; i != Factor; ++i) {
+    assert(ValueVTs[i] == OutVT && "Expected VTs to be the same");
+    SubVecs[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
+                             DAG.getVectorIdxConstant(OutNumElts * i, DL));
+  }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors to benefit from existing
-  // legalisation and combines.
-  if (OutVT.isFixedLengthVector()) {
-    SDValue Even = DAG.getVectorShuffle(OutVT, DL, Lo, Hi,
+  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
+  // from existing legalisation and combines.
+  if (OutVT.isFixedLengthVector() && Factor == 2) {
+    SDValue Even = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
                                         createStrideMask(0, 2, OutNumElts));
-    SDValue Odd = DAG.getVectorShuffle(OutVT, DL, Lo, Hi,
+    SDValue Odd = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
                                        createStrideMask(1, 2, OutNumElts));
     SDValue Res = DAG.getMergeValues({Even, Odd}, getCurSDLoc());
     setValue(&I, Res);
@@ -12596,32 +12607,43 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I) {
   }
 
   SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                            DAG.getVTList(OutVT, OutVT), Lo, Hi);
+                            DAG.getVTList(ValueVTs), SubVecs);
   setValue(&I, Res);
 }
 
-void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I) {
+void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
+                                                unsigned Factor) {
   auto DL = getCurSDLoc();
-  EVT InVT = getValue(I.getOperand(0)).getValueType();
-  SDValue InVec0 = getValue(I.getOperand(0));
-  SDValue InVec1 = getValue(I.getOperand(1));
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT InVT = getValue(I.getOperand(0)).getValueType();
   EVT OutVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors to benefit from existing
-  // legalisation and combines.
-  if (OutVT.isFixedLengthVector()) {
+  SmallVector<SDValue, 8> InVecs(Factor);
+  for (unsigned i = 0; i < Factor; ++i) {
+    InVecs[i] = getValue(I.getOperand(i));
+    assert(InVecs[i].getValueType() == InVecs[0].getValueType() &&
+           "Expected VTs to be the same");
+  }
+
+  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
+  // from existing legalisation and combines.
+  if (OutVT.isFixedLengthVector() && Factor == 2) {
     unsigned NumElts = InVT.getVectorMinNumElements();
-    SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVec0, InVec1);
+    SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVecs);
     setValue(&I, DAG.getVectorShuffle(OutVT, DL, V, DAG.getUNDEF(OutVT),
                                       createInterleaveMask(NumElts, 2)));
     return;
   }
 
-  SDValue Res = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
-                            DAG.getVTList(InVT, InVT), InVec0, InVec1);
-  Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Res.getValue(0),
-                    Res.getValue(1));
+  SmallVector<EVT, 8> ValueVTs(Factor, InVT);
+  SDValue Res =
+      DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, DAG.getVTList(ValueVTs), InVecs);
+
+  SmallVector<SDValue, 8> Results(Factor);
+  for (unsigned i = 0; i < Factor; ++i)
+    Results[i] = Res.getValue(i);
+
+  Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Results);
   setValue(&I, Res);
 }
 

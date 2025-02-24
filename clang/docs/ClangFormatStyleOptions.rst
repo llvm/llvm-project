@@ -2182,6 +2182,24 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
+.. _BinPackLongBracedList:
+
+**BinPackLongBracedList** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BinPackLongBracedList>`
+  If ``BinPackLongBracedList`` is ``true`` it overrides
+  ``BinPackArguments`` if there are 20 or more items in a braced
+  initializer list.
+
+  .. code-block:: c++
+
+     BinPackLongBracedList: false  vs.    BinPackLongBracedList: true
+     vector<int> x{                       vector<int> x{1, 2, ...,
+                                                        20, 21};
+                 1,
+                 2,
+                 ...,
+                 20,
+                 21};
+
 .. _BinPackParameters:
 
 **BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
@@ -3420,6 +3438,35 @@ the configuration (without a prefix: ``Auto``).
                     : val);
 
 
+
+.. _BreakBeforeTemplateCloser:
+
+**BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
+  If ``true``, break before a template closing bracket (``>``) when there is
+  a line break after the matching opening bracket (``<``).
+
+  .. code-block:: c++
+
+     true:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar
+     >
+
+     false:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar>
 
 .. _BreakBeforeTernaryOperators:
 
@@ -4735,15 +4782,24 @@ the configuration (without a prefix: ``Auto``).
 .. _Language:
 
 **Language** (``LanguageKind``) :versionbadge:`clang-format 3.5` :ref:`¶ <Language>`
-  Language, this format style is targeted at.
+  The language that this format style targets.
+
+  .. note::
+
+   You can specify the language (``C``, ``Cpp``, or ``ObjC``) for ``.h``
+   files by adding a ``// clang-format Language:`` line before the first
+   non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
 
   Possible values:
 
   * ``LK_None`` (in configuration: ``None``)
     Do not use.
 
+  * ``LK_C`` (in configuration: ``C``)
+    Should be used for C.
+
   * ``LK_Cpp`` (in configuration: ``Cpp``)
-    Should be used for C, C++.
+    Should be used for C++.
 
   * ``LK_CSharp`` (in configuration: ``CSharp``)
     Should be used for C#.
@@ -5197,6 +5253,11 @@ the configuration (without a prefix: ``Auto``).
 
 **PenaltyBreakBeforeFirstCallParameter** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakBeforeFirstCallParameter>`
   The penalty for breaking a function call after ``call(``.
+
+.. _PenaltyBreakBeforeMemberAccess:
+
+**PenaltyBreakBeforeMemberAccess** (``Unsigned``) :versionbadge:`clang-format 20` :ref:`¶ <PenaltyBreakBeforeMemberAccess>`
+  The penalty for breaking before a member access operator (``.``, ``->``).
 
 .. _PenaltyBreakComment:
 

@@ -24,7 +24,7 @@ using namespace llvm;
 #define DEBUG_TYPE "nvptx-reg-info"
 
 namespace llvm {
-std::string getNVPTXRegClassName(TargetRegisterClass const *RC) {
+StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
   if (RC == &NVPTX::Float32RegsRegClass)
     return ".f32";
   if (RC == &NVPTX::Float64RegsRegClass)
@@ -62,7 +62,7 @@ std::string getNVPTXRegClassName(TargetRegisterClass const *RC) {
   return "INTERNAL";
 }
 
-std::string getNVPTXRegClassStr(TargetRegisterClass const *RC) {
+StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
   if (RC == &NVPTX::Float32RegsRegClass)
     return "%f";
   if (RC == &NVPTX::Float64RegsRegClass)
@@ -81,7 +81,7 @@ std::string getNVPTXRegClassStr(TargetRegisterClass const *RC) {
     return "!Special!";
   return "INTERNAL";
 }
-}
+} // namespace llvm
 
 NVPTXRegisterInfo::NVPTXRegisterInfo()
     : NVPTXGenRegisterInfo(0), StrPool(StrAlloc) {}
@@ -144,11 +144,10 @@ void NVPTXRegisterInfo::clearDebugRegisterMap() const {
   debugRegisterMap.clear();
 }
 
-static uint64_t encodeRegisterForDwarf(std::string registerName) {
-  if (registerName.length() > 8) {
+static uint64_t encodeRegisterForDwarf(StringRef RegisterName) {
+  if (RegisterName.size() > 8)
     // The name is more than 8 characters long, and so won't fit into 64 bits.
     return 0;
-  }
 
   // Encode the name string into a DWARF register number using cuda-gdb's
   // encoding.  See cuda_check_dwarf2_reg_ptx_virtual_register in cuda-tdep.c,
@@ -157,14 +156,14 @@ static uint64_t encodeRegisterForDwarf(std::string registerName) {
   // number, which is stored in ULEB128, but in practice must be no more than 8
   // bytes (excluding null terminator, which is not included).
   uint64_t result = 0;
-  for (unsigned char c : registerName)
+  for (unsigned char c : RegisterName)
     result = (result << 8) | c;
   return result;
 }
 
 void NVPTXRegisterInfo::addToDebugRegisterMap(
-    uint64_t preEncodedVirtualRegister, std::string registerName) const {
-  uint64_t mapped = encodeRegisterForDwarf(registerName);
+    uint64_t preEncodedVirtualRegister, StringRef RegisterName) const {
+  uint64_t mapped = encodeRegisterForDwarf(RegisterName);
   if (mapped == 0)
     return;
   debugRegisterMap.insert({preEncodedVirtualRegister, mapped});
@@ -172,13 +171,13 @@ void NVPTXRegisterInfo::addToDebugRegisterMap(
 
 int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   if (RegNum.isPhysical()) {
-    std::string name = NVPTXInstPrinter::getRegisterName(RegNum.id());
+    StringRef Name = NVPTXInstPrinter::getRegisterName(RegNum.id());
     // In NVPTXFrameLowering.cpp, we do arrange for %Depot to be accessible from
     // %SP. Using the %Depot register doesn't provide any debug info in
     // cuda-gdb, but switching it to %SP does.
     if (RegNum.id() == NVPTX::VRDepot)
-      name = "%SP";
-    return encodeRegisterForDwarf(name);
+      Name = "%SP";
+    return encodeRegisterForDwarf(Name);
   }
   uint64_t lookup = debugRegisterMap.lookup(RegNum.id());
   if (lookup)

@@ -1,7 +1,6 @@
 // RUN: llvm-mc -triple=aarch64 %s -o - | FileCheck %s --check-prefix=ASM
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
-// ASM: .text
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
 // ASM: .aeabi_attribute	Tag_Feature_BTI, 1
@@ -29,7 +28,6 @@
 // ELF-NEXT: 0x00000040 01
 
 
-.text
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_subsection aeabi_feature_and_bits, optional, uleb128
 .aeabi_attribute Tag_Feature_BTI, 1

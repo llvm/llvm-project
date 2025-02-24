@@ -19,11 +19,13 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
+#include "VPlanVerifier.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -391,7 +393,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       R.moveBefore(*PredVPBB, PredVPBB->end());
     VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-    auto *ParentRegion = cast_or_null<VPRegionBlock>(VPBB->getParent());
+    auto *ParentRegion = VPBB->getParent();
     if (ParentRegion && ParentRegion->getExiting() == VPBB)
       ParentRegion->setExiting(PredVPBB);
     for (auto *Succ : to_vector(VPBB->successors())) {
@@ -589,7 +591,7 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
+  bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
   VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
@@ -962,12 +964,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
 }
 
-/// Try to simplify the recipes in \p Plan. Use \p CanonicalIVTy as type for all
-/// un-typed live-ins in VPTypeAnalysis.
-static void simplifyRecipes(VPlan &Plan, Type *CanonicalIVTy) {
+void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  VPTypeAnalysis TypeInfo(CanonicalIVTy);
+  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -1029,7 +1029,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
     VPBlockUtils::connectBlocks(Preheader, Header);
     VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
-    simplifyRecipes(Plan, CanIVTy);
+    simplifyRecipes(Plan, *CanIVTy);
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
@@ -1041,7 +1041,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   }
 
   Term->eraseFromParent();
-  VPlanTransforms::removeDeadRecipes(Plan);
 
   Plan.setVF(BestVF);
   Plan.setUF(BestUF);
@@ -1241,9 +1240,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       LoopBuilder.setInsertPoint(InsertBlock,
                                  std::next(Previous->getIterator()));
 
-    auto *RecurSplice = cast<VPInstruction>(
+    auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                                 {FOR, FOR->getBackedgeValue()}));
+                                 {FOR, FOR->getBackedgeValue()});
 
     FOR->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to FOR again, after replacing
@@ -1439,19 +1438,19 @@ void VPlanTransforms::truncateToMinimalBitwidths(
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
-  removeRedundantCanonicalIVs(Plan);
-  removeRedundantInductionCasts(Plan);
+  runPass(removeRedundantCanonicalIVs, Plan);
+  runPass(removeRedundantInductionCasts, Plan);
 
-  simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
-  removeDeadRecipes(Plan);
-  legalizeAndOptimizeInductions(Plan);
-  removeRedundantExpandSCEVRecipes(Plan);
-  simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
-  removeDeadRecipes(Plan);
+  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(removeDeadRecipes, Plan);
+  runPass(legalizeAndOptimizeInductions, Plan);
+  runPass(removeRedundantExpandSCEVRecipes, Plan);
+  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(removeDeadRecipes, Plan);
 
-  createAndOptimizeReplicateRegions(Plan);
-  mergeBlocksIntoPredecessors(Plan);
-  licm(Plan);
+  runPass(createAndOptimizeReplicateRegions, Plan);
+  runPass(mergeBlocksIntoPredecessors, Plan);
+  runPass(licm, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
@@ -1663,40 +1662,10 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(S->getMask());
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
       })
-      .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
-        unsigned Opcode = W->getOpcode();
-        if (!Instruction::isBinaryOp(Opcode) && !Instruction::isUnaryOp(Opcode))
-          return nullptr;
-        return new VPWidenEVLRecipe(*W, EVL);
-      })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
-      .Case<VPWidenIntrinsicRecipe, VPWidenCastRecipe>(
-          [&](auto *CR) -> VPRecipeBase * {
-            Intrinsic::ID VPID;
-            if (auto *CallR = dyn_cast<VPWidenIntrinsicRecipe>(CR)) {
-              VPID =
-                  VPIntrinsic::getForIntrinsic(CallR->getVectorIntrinsicID());
-            } else {
-              auto *CastR = cast<VPWidenCastRecipe>(CR);
-              VPID = VPIntrinsic::getForOpcode(CastR->getOpcode());
-            }
-
-            // Not all intrinsics have a corresponding VP intrinsic.
-            if (VPID == Intrinsic::not_intrinsic)
-              return nullptr;
-            assert(VPIntrinsic::getMaskParamPos(VPID) &&
-                   VPIntrinsic::getVectorLengthParamPos(VPID) &&
-                   "Expected VP intrinsic to have mask and EVL");
-
-            SmallVector<VPValue *> Ops(CR->operands());
-            Ops.push_back(&AllOneMask);
-            Ops.push_back(&EVL);
-            return new VPWidenIntrinsicRecipe(
-                VPID, Ops, TypeInfo.inferScalarType(CR), CR->getDebugLoc());
-          })
       .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
         SmallVector<VPValue *> Ops(Sel->operands());
         Ops.push_back(&EVL);
@@ -1871,7 +1840,8 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
-    VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication) {
+    VPlan &Plan,
+    const std::function<bool(BasicBlock *)> &BlockNeedsPredication) {
   // Collect recipes in the backward slice of `Root` that may generate a poison
   // value that is used after vectorization.
   SmallPtrSet<VPRecipeBase *, 16> Visited;
@@ -1971,7 +1941,7 @@ void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
-    VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed) {
+    VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed) {
   if (InterleaveGroups.empty())
     return;
 
@@ -2099,11 +2069,42 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
 
   VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
+  VPBasicBlock *VectorEarlyExitVPBB =
+      Plan.createVPBasicBlock("vector.early.exit");
   VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
-  VPBlockUtils::connectBlocks(NewMiddle, VPEarlyExitBlock);
+  VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
   NewMiddle->swapSuccessors();
 
+  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
+
+  // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
+  VPBuilder EarlyExitB(VectorEarlyExitVPBB);
+  for (VPRecipeBase &R : *VPEarlyExitBlock) {
+    auto *ExitIRI = cast<VPIRInstruction>(&R);
+    auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
+    if (!ExitPhi)
+      break;
+
+    VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
+        ExitPhi->getIncomingValueForBlock(UncountableExitingBlock));
+
+    if (OrigLoop->getUniqueExitBlock()) {
+      // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
+      // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
+      // which is coming from the original latch.
+      VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
+          ExitPhi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+      ExitIRI->addOperand(IncomingFromLatch);
+      ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
+    }
+    // Add the incoming value from the early exit.
+    if (!IncomingFromEarlyExit->isLiveIn())
+      IncomingFromEarlyExit =
+          EarlyExitB.createNaryOp(VPInstruction::ExtractFirstActive,
+                                  {IncomingFromEarlyExit, EarlyExitTakenCond});
+    ExitIRI->addOperand(IncomingFromEarlyExit);
+  }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 
   // Replace the condition controlling the non-early exit from the vector loop

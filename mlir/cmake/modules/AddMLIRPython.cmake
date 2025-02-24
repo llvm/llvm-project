@@ -671,8 +671,11 @@ function(add_mlir_python_extension libname extname)
       ${ARG_SOURCES}
     )
 
-    if (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
-      # Avoids warnings from upstream nanobind.
+    if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
+        AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+      # Avoid some warnings from upstream nanobind.
+      # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
+      # the super project handle compile options as it wishes.
       set(nanobind_target "nanobind-static")
       if (NOT TARGET ${nanobind_target})
         # Get correct nanobind target name: nanobind-static-ft or something else
@@ -706,7 +709,7 @@ function(add_mlir_python_extension libname extname)
       # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
       # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
       # for downstream users that do not do something like `-undefined dynamic_lookup`.
-      set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-U -Wl,_PyClassMethod_New")
+      target_link_options(${libname} PUBLIC "LINKER:-U,_PyClassMethod_New")
     endif()
   endif()
 

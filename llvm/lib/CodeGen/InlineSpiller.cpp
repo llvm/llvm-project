@@ -1285,8 +1285,7 @@ void InlineSpiller::spillAll() {
 void InlineSpiller::spill(LiveRangeEdit &edit) {
   ++NumSpilledRanges;
   Edit = &edit;
-  assert(!Register::isStackSlot(edit.getReg()) &&
-         "Trying to spill a stack slot.");
+  assert(!edit.getReg().isStack() && "Trying to spill a stack slot.");
   // Share a stack slot among all descendants of Original.
   Original = VRM.getOriginal(edit.getReg());
   StackSlot = VRM.getStackSlot(Original);
@@ -1320,13 +1319,16 @@ void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
   LiveInterval &OrigLI = LIS.getInterval(Original);
   // save a copy of LiveInterval in StackSlotToOrigLI because the original
   // LiveInterval may be cleared after all its references are spilled.
-  if (!StackSlotToOrigLI.contains(StackSlot)) {
+
+  auto [Place, Inserted] = StackSlotToOrigLI.try_emplace(StackSlot);
+  if (Inserted) {
     auto LI = std::make_unique<LiveInterval>(OrigLI.reg(), OrigLI.weight());
     LI->assign(OrigLI, Allocator);
-    StackSlotToOrigLI[StackSlot] = std::move(LI);
+    Place->second = std::move(LI);
   }
+
   SlotIndex Idx = LIS.getInstructionIndex(Spill);
-  VNInfo *OrigVNI = StackSlotToOrigLI[StackSlot]->getVNInfoAt(Idx.getRegSlot());
+  VNInfo *OrigVNI = Place->second->getVNInfoAt(Idx.getRegSlot());
   std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
   MergeableSpills[MIdx].insert(&Spill);
 }
@@ -1529,10 +1531,12 @@ void HoistSpillHelper::runHoistSpills(
     MachineBasicBlock *Block = (*RIt)->getBlock();
 
     // If Block contains an original spill, simply continue.
-    if (SpillsToKeep.contains(*RIt) && !SpillsToKeep[*RIt]) {
-      SpillsInSubTreeMap[*RIt].first.insert(*RIt);
-      // SpillsInSubTreeMap[*RIt].second contains the cost of spill.
-      SpillsInSubTreeMap[*RIt].second = MBFI.getBlockFreq(Block);
+    if (auto It = SpillsToKeep.find(*RIt);
+        It != SpillsToKeep.end() && !It->second) {
+      auto &SIt = SpillsInSubTreeMap[*RIt];
+      SIt.first.insert(*RIt);
+      // Sit.second contains the cost of spill.
+      SIt.second = MBFI.getBlockFreq(Block);
       continue;
     }
 
@@ -1541,24 +1545,22 @@ void HoistSpillHelper::runHoistSpills(
     for (MachineDomTreeNode *Child : (*RIt)->children()) {
       if (!SpillsInSubTreeMap.contains(Child))
         continue;
-      // The stmt "SpillsInSubTree = SpillsInSubTreeMap[*RIt].first" below
-      // should be placed before getting the begin and end iterators of
+      // The stmt:
+      // "auto &[SpillsInSubTree, SubTreeCost] = SpillsInSubTreeMap[*RIt]"
+      // below should be placed before getting the begin and end iterators of
       // SpillsInSubTreeMap[Child].first, or else the iterators may be
       // invalidated when SpillsInSubTreeMap[*RIt] is seen the first time
       // and the map grows and then the original buckets in the map are moved.
-      SmallPtrSet<MachineDomTreeNode *, 16> &SpillsInSubTree =
-          SpillsInSubTreeMap[*RIt].first;
-      BlockFrequency &SubTreeCost = SpillsInSubTreeMap[*RIt].second;
-      SubTreeCost += SpillsInSubTreeMap[Child].second;
-      auto BI = SpillsInSubTreeMap[Child].first.begin();
-      auto EI = SpillsInSubTreeMap[Child].first.end();
+      auto &[SpillsInSubTree, SubTreeCost] = SpillsInSubTreeMap[*RIt];
+      auto ChildIt = SpillsInSubTreeMap.find(Child);
+      SubTreeCost += ChildIt->second.second;
+      auto BI = ChildIt->second.first.begin();
+      auto EI = ChildIt->second.first.end();
       SpillsInSubTree.insert(BI, EI);
-      SpillsInSubTreeMap.erase(Child);
+      SpillsInSubTreeMap.erase(ChildIt);
     }
 
-    SmallPtrSet<MachineDomTreeNode *, 16> &SpillsInSubTree =
-          SpillsInSubTreeMap[*RIt].first;
-    BlockFrequency &SubTreeCost = SpillsInSubTreeMap[*RIt].second;
+    auto &[SpillsInSubTree, SubTreeCost] = SpillsInSubTreeMap[*RIt];
     // No spills in subtree, simply continue.
     if (SpillsInSubTree.empty())
       continue;
@@ -1578,7 +1580,8 @@ void HoistSpillHelper::runHoistSpills(
       for (auto *const SpillBB : SpillsInSubTree) {
         // When SpillBB is a BB contains original spill, insert the spill
         // to SpillsToRm.
-        if (SpillsToKeep.contains(SpillBB) && !SpillsToKeep[SpillBB]) {
+        if (auto It = SpillsToKeep.find(SpillBB);
+            It != SpillsToKeep.end() && !It->second) {
           MachineInstr *SpillToRm = SpillBBToSpill[SpillBB];
           SpillsToRm.push_back(SpillToRm);
         }

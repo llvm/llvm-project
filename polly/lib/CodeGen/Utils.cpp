@@ -46,7 +46,7 @@ static BasicBlock *splitEdge(BasicBlock *Prev, BasicBlock *Succ,
   // llvm::SplitCriticalEdge is more efficient than
   // llvm::SplitBlockPredecessors, which is more general. In the future we might
   // either modify llvm::SplitCriticalEdge to allow skipping the critical edge
-  // check; or Copy&Pase it here.
+  // check; or Copy&Paste it here.
   BasicBlock *MiddleBlock = SplitBlockPredecessors(
       Succ, ArrayRef<BasicBlock *>(Prev), Suffix, DT, LI);
 

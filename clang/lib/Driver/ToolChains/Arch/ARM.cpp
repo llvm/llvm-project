@@ -443,14 +443,13 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::EABIHF:
       return FloatABI::Hard;
+    case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
     case llvm::Triple::GNUEABIT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::EABI:
       // EABI is always AAPCS, and if it was not marked 'hard', it's softfp
       return FloatABI::SoftFP;
-    case llvm::Triple::Android:
-      return (SubArch >= 7) ? FloatABI::SoftFP : FloatABI::Soft;
     default:
       return FloatABI::Invalid;
     }
