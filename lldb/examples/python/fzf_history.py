@@ -18,7 +18,7 @@ def fzf_history(debugger, cmdstr, ctx, result, _):
     if sys.platform != "darwin":
         # The ability to integrate fzf's result into lldb uses copy and paste.
         # In absense of copy and paste, do the basics and forgo features.
-        fzf_command = ("fzf", "--no-sort", f"--query={query}")
+        fzf_command = ("fzf", "--no-sort", f"--query={cmdstr}")
         subprocess.run(fzf_command, input=history, text=True)
         return
 
