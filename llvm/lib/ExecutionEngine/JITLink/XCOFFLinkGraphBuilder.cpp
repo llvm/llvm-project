@@ -377,7 +377,6 @@ Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
       else
         S = Scope::Local;
     }
-    
 
     // TODO(HJ): not sure what is Scope::SideEffectsOnly
     Linkage L = Weak ? Linkage::Weak : Linkage::Strong;
@@ -430,7 +429,8 @@ Error XCOFFLinkGraphBuilder::processRelocations() {
                         << format_hex(B->getAddress().getValue(), 16) << "\n");
 
       // TODO(HJ): correctly map edge kind and figure out if we need addend
-      auto TargetBlockOffset = S->getAddress() - B->getAddress();
+      auto TargetBlockOffset = Section.getAddress() + Relocation.getOffset() -
+                               B->getAddress().getValue();
       switch (Relocation.getType()) {
       case XCOFF::R_POS:
         B->addEdge(ppc64::EdgeKind_ppc64::Pointer64, TargetBlockOffset, *S, 0);
@@ -438,8 +438,8 @@ Error XCOFFLinkGraphBuilder::processRelocations() {
       default:
         SmallString<16> RelocType;
         Relocation.getTypeName(RelocType);
-        return make_error<StringError>("Unsupported Relocation Type: " +
-                                       RelocType, std::error_code());
+        return make_error<StringError>(
+            "Unsupported Relocation Type: " + RelocType, std::error_code());
       }
     }
   }
