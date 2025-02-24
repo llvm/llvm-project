@@ -5,6 +5,7 @@
 
 from argparse import ArgumentParser
 
+
 def add_verbosity_arguments(parser: ArgumentParser) -> None:
     """Adds the arguments for verbosity to the ArgumentParser
 
@@ -19,4 +20,3 @@ def add_verbosity_arguments(parser: ArgumentParser) -> None:
         nargs="?",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
     )
-

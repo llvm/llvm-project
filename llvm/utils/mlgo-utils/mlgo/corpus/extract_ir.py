@@ -30,6 +30,7 @@ import logging
 from mlgo.corpus import extract_ir_lib
 from mlgo.corpus import flags
 
+
 def parse_args_and_run():
     parser = argparse.ArgumentParser(
         description="A tool for making a corpus from build artifacts"
