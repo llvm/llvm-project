@@ -1630,6 +1630,36 @@ def INT_NVVM_ADD_RM_D : F_MATH_2<"add.rm.f64 \t$dst, $src0, $src1;",
 def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_add_rp_d>;
 
+// packed f32 ops (sm_100+)
+
+def fadd32x2_nvptx : SDNode<"NVPTXISD::FADD_F32X2", SDTIntBinOp>;
+def fsub32x2_nvptx : SDNode<"NVPTXISD::FSUB_F32X2", SDTIntBinOp>;
+def fmul32x2_nvptx : SDNode<"NVPTXISD::FMUL_F32X2", SDTIntBinOp>;
+def fma32x2_nvptx  : SDNode<"NVPTXISD::FMA_F32X2", SDTIntTernaryOp>;
+
+class F32x2Op2<string OpcStr, SDNode Op, Predicate Pred>
+: NVPTXInst<(outs Int64Regs:$res),
+            (ins Int64Regs:$a, Int64Regs:$b),
+            OpcStr # ".f32x2 \t$res, $a, $b;",
+            [(set i64:$res, (Op i64:$a, i64:$b))]>,
+  Requires<[hasF32x2Instructions, Pred]>;
+class F32x2Op3<string OpcStr, SDNode Op, Predicate Pred>
+: NVPTXInst<(outs Int64Regs:$res),
+            (ins Int64Regs:$a, Int64Regs:$b, Int64Regs:$c),
+            OpcStr # ".f32x2 \t$res, $a, $b, $c;",
+            [(set i64:$res, (Op i64:$a, i64:$b, i64:$c))]>,
+  Requires<[hasF32x2Instructions, Pred]>;
+
+def FADD32x2     : F32x2Op2<"add.rn", fadd32x2_nvptx, doNoF32FTZ>;
+def FSUB32x2     : F32x2Op2<"sub.rn", fsub32x2_nvptx, doNoF32FTZ>;
+def FMUL32x2     : F32x2Op2<"mul.rn", fmul32x2_nvptx, doNoF32FTZ>;
+def FMA32x2      : F32x2Op3<"fma.rn", fma32x2_nvptx,  doNoF32FTZ>;
+
+def FADD32x2_ftz : F32x2Op2<"add.rn.ftz", fadd32x2_nvptx, doF32FTZ>;
+def FSUB32x2_ftz : F32x2Op2<"sub.rn.ftz", fsub32x2_nvptx, doF32FTZ>;
+def FMUL32x2_ftz : F32x2Op2<"mul.rn.ftz", fmul32x2_nvptx, doF32FTZ>;
+def FMA32x2_ftz  : F32x2Op3<"fma.rn.ftz", fma32x2_nvptx,  doF32FTZ>;
+
 //
 // BFIND
 //

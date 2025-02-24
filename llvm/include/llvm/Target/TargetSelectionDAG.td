@@ -115,6 +115,9 @@ def SDTPtrAddOp : SDTypeProfile<1, 2, [     // ptradd
 def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>
 ]>;
+def SDTIntTernaryOp : SDTypeProfile<1, 3, [  // fma32x2
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<0>
+]>;
 def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>
 ]>;
@@ -817,6 +820,10 @@ def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
                        [SDTCisVec<0>, SDTCisInt<1>]>, []>;
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
+
+def build_pair : SDNode<"ISD::BUILD_PAIR", SDTypeProfile<1, 2,
+                        [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>, []>;
+
 
 // vector_extract/vector_insert are deprecated. extractelt/insertelt
 // are preferred.

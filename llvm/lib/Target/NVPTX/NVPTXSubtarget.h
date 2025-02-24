@@ -97,6 +97,7 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
+
   // Tcgen05 instructions in Blackwell family
   bool hasTcgen05Instructions() const {
     bool HasTcgen05 = false;
@@ -111,6 +112,8 @@ public:
 
     return HasTcgen05 && PTXVersion >= 86;
   }
+
+  bool hasF32x2Instructions() const { return SmVersion >= 100; }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow

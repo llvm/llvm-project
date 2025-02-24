@@ -192,6 +192,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
       SelectI128toV2I64(N);
       return;
     }
+    if (N->getOperand(1).getValueType() == MVT::i64 &&
+        N->getValueType(0) == MVT::f32 && N->getValueType(1) == MVT::f32) {
+      // {f32,f32} = mov i64
+      SelectI64ToV2F32(N);
+      return;
+    }
     break;
   }
   case ISD::FADD:
@@ -2441,6 +2447,19 @@ void NVPTXDAGToDAGISel::SelectI128toV2I64(SDNode *N) {
       {MVT::i64, MVT::i64, Ch.getValueType(), Glue.getValueType()},
       {Src, Ch, Glue});
 
+  ReplaceNode(N, Mov);
+}
+
+void NVPTXDAGToDAGISel::SelectI64ToV2F32(SDNode *N) {
+  SDValue Ch = N->getOperand(0);
+  SDValue Src = N->getOperand(1);
+  assert(N->getValueType(0) == MVT::f32 && N->getValueType(1) == MVT::f32 &&
+         "expected {f32,f32} = CopyFromReg i64");
+  SDLoc DL(N);
+
+  SDNode *Mov = CurDAG->getMachineNode(NVPTX::I64toV2F32, DL,
+                                       {MVT::f32, MVT::f32, Ch.getValueType()},
+                                       {Src, Ch});
   ReplaceNode(N, Mov);
 }
 
