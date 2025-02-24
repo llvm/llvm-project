@@ -213,7 +213,7 @@ Constant Evaluation
 
 Type aware allocation functions declared in the global scope are considered
 usual deallocation functions if the only difference between the type aware
-declaration and a _usual deallocation function_ is the type-identity parameter.
+declaration and a usual deallocation function is the type-identity parameter.
 This eases the use of dynamic allocation of types with type aware allocation
 functions within constant contexts. Unfortunately this does not resolve the
 problem of class-scoped new and delete in constant contexts, as the existence of
