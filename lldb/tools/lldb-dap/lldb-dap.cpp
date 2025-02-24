@@ -80,6 +80,7 @@
 #include <windows.h>
 #undef GetObject
 #include <io.h>
+typedef int socklen_t;
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -89,13 +90,6 @@
 
 #if defined(__linux__)
 #include <sys/prctl.h>
-#endif
-
-#if defined(_WIN32)
-#ifndef PATH_MAX
-#define PATH_MAX MAX_PATH
-#endif
-typedef int socklen_t;
 #endif
 
 using namespace lldb_dap;
