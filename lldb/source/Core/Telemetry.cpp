@@ -55,8 +55,7 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
 }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
-    : m_config(std::move(config))
-}
+    : m_config(std::move(config)) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // Do nothing for now.
@@ -66,7 +65,11 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 }
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
-TelemetryManager *TelemetryManager::getInstance() { return g_instance.get(); }
+TelemetryManager *TelemetryManager::getInstance() {
+  if (!Config::BuildTimeEnableTelemetry)
+    return nullptr;
+  return g_instance.get();
+}
 
 void TelemetryManager::setInstance(std::unique_ptr<TelemetryManager> manager) {
   g_instance = std::move(manager);

@@ -65,9 +65,9 @@ public:
 /// points specific to a vendor's implementation.
 struct Config {
 #ifdef LLVM_ENABLE_TELEMETRY
-  static bool BuildTimeEnableTelemetry = true;
+  static const bool BuildTimeEnableTelemetry = true;
 #else
-  static bool BuildTimeEnableTelemetry = false;
+  static const bool BuildTimeEnableTelemetry = false;
 #endif
   virtual ~Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
 
