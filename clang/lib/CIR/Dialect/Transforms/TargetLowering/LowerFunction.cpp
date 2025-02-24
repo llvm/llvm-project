@@ -612,7 +612,7 @@ llvm::LogicalResult LowerFunction::buildFunctionProlog(
                 Ptr.getLoc(), PointerType::get(STy, ptrType.getAddrSpace()),
                 CastKind::bitcast, Ptr);
           } else {
-            cir_cconv_unreachable("NYI");
+            addrToStoreInto = createTmpAlloca(*this, Ptr.getLoc(), STy);
           }
 
           assert(STy.getNumElements() == NumIRArgs);
@@ -628,7 +628,7 @@ llvm::LogicalResult LowerFunction::buildFunctionProlog(
           }
 
           if (srcSize > dstSize) {
-            cir_cconv_unreachable("NYI");
+            createMemCpy(*this, Ptr, addrToStoreInto, dstSize);
           }
         }
       } else {
@@ -1126,9 +1126,47 @@ mlir::Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
+      // As an example, if we have SrcTy = struct { i32, i32, i32 }, then the
+      // coerced type can be STy = struct { u64, i32 }. Hence a function with
+      // a single argument SrcTy will be rewritten to take two arguments,
+      // namely u64 and i32.
       StructType STy = mlir::dyn_cast<StructType>(ArgInfo.getCoerceToType());
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
-        cir_cconv_unreachable("NYI");
+        mlir::Type SrcTy = Src.getType();
+        llvm::TypeSize SrcTypeSize = LM.getDataLayout().getTypeAllocSize(SrcTy);
+        llvm::TypeSize DstTypeSize = LM.getDataLayout().getTypeAllocSize(STy);
+
+        if (SrcTypeSize.isScalable()) {
+          cir_cconv_unreachable("NYI");
+        } else {
+          size_t SrcSize = SrcTypeSize.getFixedValue();
+          size_t DstSize = DstTypeSize.getFixedValue();
+
+          // Create a new temporary space and copy src in the front bits of it.
+          // Other bits will be left untouched.
+          // Note in OG, Src is of type Address, while here it is mlir::Value.
+          // Here we need to first create another alloca to convert it into a
+          // PointerType, so that we can call memcpy.
+          if (SrcSize < DstSize) {
+            auto Alloca = createTmpAlloca(*this, loc, STy);
+            auto SrcAlloca = createTmpAlloca(*this, loc, SrcTy);
+            rewriter.create<cir::StoreOp>(loc, Src, SrcAlloca);
+            createMemCpy(*this, Alloca, SrcAlloca, SrcSize);
+            Src = Alloca;
+          } else {
+            cir_cconv_unreachable("NYI");
+          }
+
+          assert(NumIRArgs == STy.getNumElements());
+          for (unsigned I = 0; I != STy.getNumElements(); ++I) {
+            mlir::Value Member = rewriter.create<cir::GetMemberOp>(
+                loc, PointerType::get(STy.getMembers()[I]), Src, /*name=*/"",
+                /*index=*/I);
+            mlir::Value Load = rewriter.create<cir::LoadOp>(loc, Member);
+            cir_cconv_assert(!cir::MissingFeatures::argHasMaybeUndefAttr());
+            IRCallArgs[FirstIRArg + I] = Load;
+          }
+        }
       } else {
         // In the simple case, just pass the coerced loaded value.
         cir_cconv_assert(NumIRArgs == 1);

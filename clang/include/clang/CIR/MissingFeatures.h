@@ -347,6 +347,7 @@ struct MissingFeatures {
   static bool undef() { return false; }
   static bool noFPClass() { return false; }
   static bool llvmIntrinsicElementTypeSupport() { return false; }
+  static bool argHasMaybeUndefAttr() { return false; }
 
   //-- Missing parts of the CIRGenModule::Release skeleton.
   static bool emitModuleInitializers() { return false; }

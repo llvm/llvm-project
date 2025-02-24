@@ -182,6 +182,8 @@ void X86_64ABIInfo::classify(mlir::Type Ty, uint64_t OffsetBase, Class &Lo,
       return;
     } else if (mlir::isa<BoolType>(Ty)) {
       Current = Class::Integer;
+    } else if (mlir::isa<PointerType>(Ty)) {
+      Current = Class::Integer;
     } else if (const auto RT = mlir::dyn_cast<StructType>(Ty)) {
       uint64_t Size = getContext().getTypeSize(Ty);
 
@@ -397,7 +399,11 @@ mlir::Type X86_64ABIInfo::GetINTEGERTypeAtOffset(mlir::Type DestTy,
   // returning an 8-byte unit starting with it. See if we can safely use it.
   if (IROffset == 0) {
     // Pointers and int64's always fill the 8-byte unit.
-    cir_cconv_assert(!mlir::isa<PointerType>(DestTy) && "Ptrs are NYI");
+    if (auto ptrTy = mlir::dyn_cast<PointerType>(DestTy)) {
+      if (ptrTy.getTypeSizeInBits(getDataLayout().layout, {}) == 64)
+        return DestTy;
+      cir_cconv_unreachable("NYI");
+    }
 
     // If we have a 1/2/4-byte integer, we can use it only if the rest of the
     // goodness in the source type is just tail padding.  This is allowed to
@@ -406,6 +412,10 @@ mlir::Type X86_64ABIInfo::GetINTEGERTypeAtOffset(mlir::Type DestTy,
     // have to do this analysis on the source type because we can't depend on
     // unions being lowered a specific way etc.
     if (auto intTy = mlir::dyn_cast<IntType>(DestTy)) {
+      // Pointers and int64's always fill the 8-byte unit.
+      if (intTy.getWidth() == 64)
+        return DestTy;
+
       if (intTy.getWidth() == 8 || intTy.getWidth() == 16 ||
           intTy.getWidth() == 32) {
         unsigned BitWidth = intTy.getWidth();
