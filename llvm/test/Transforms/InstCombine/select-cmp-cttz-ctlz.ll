@@ -657,6 +657,73 @@ define i16 @test_multiuse_trunc_undef(i64 %x, ptr %p) {
   ret i16 %cond
 }
 
+define i64 @test_pr128441(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441(
+; CHECK-NEXT:    [[ISZERO_NOT:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 true)
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO_NOT]], i64 64, i64 [[CTTZ]]
+; CHECK-NEXT:    ret i64 [[SEL]]
+;
+  %iszero = icmp ne i64 %x, %y
+  %xor = xor i64 %x, %y
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 %cttz, i64 64
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted1(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted1(
+; CHECK-NEXT:    [[ISZERO_NOT:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 true)
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO_NOT]], i64 64, i64 [[CTTZ]]
+; CHECK-NEXT:    ret i64 [[SEL]]
+;
+  %iszero = icmp ne i64 %x, %y
+  %xor = xor i64 %y, %x
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 %cttz, i64 64
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted2(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted2(
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 true)
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO]], i64 64, i64 [[CTTZ]]
+; CHECK-NEXT:    ret i64 [[SEL]]
+;
+  %iszero = icmp eq i64 %x, %y
+  %xor = xor i64 %x, %y
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 64, i64 %cttz
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted3_negative(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted3_negative(
+; CHECK-NEXT:    ret i64 64
+;
+  %iszero = icmp eq i64 %x, %y
+  %xor = xor i64 %y, %x
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 %cttz, i64 64
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted4_negative(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted4_negative(
+; CHECK-NEXT:    ret i64 64
+;
+  %iszero = icmp ne i64 %x, %y
+  %xor = xor i64 %x, %y
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 64, i64 %cttz
+  ret i64 %sel
+}
+
 declare i16 @llvm.ctlz.i16(i16, i1)
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)
