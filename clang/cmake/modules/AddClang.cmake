@@ -138,10 +138,6 @@ macro(add_clang_library name)
           ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
           RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
-        if (LLVM_ENABLE_PDB)
-          install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name} OPTIONAL)
-        endif()
-
         if (NOT LLVM_ENABLE_IDE)
           add_llvm_install_targets(install-${lib}
                                    DEPENDS ${lib}

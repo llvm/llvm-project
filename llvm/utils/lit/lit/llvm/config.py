@@ -169,8 +169,14 @@ class LLVMConfig(object):
                 features.add("target-aarch64")
             elif re.match(r"^arm.*", target_triple):
                 features.add("target-arm")
-            if re.match(r'^ppc64le.*-linux', target_triple):
-                features.add('target=powerpc64le-linux')
+            elif re.match(r"^ppc64le.*-linux", target_triple):
+                features.add("target=powerpc64le-linux")
+            elif re.match(r"^riscv64-.*-elf", target_triple):
+                features.add("target-riscv64")
+            elif re.match(r"^riscv32-.*-elf.", target_triple):
+                features.add("target-riscv32")
+            elif re.match(r"^loongarch64.*", target_triple):
+                features.add("target-loongarch64")
 
         if not user_is_root():
             features.add("non-root-user")
