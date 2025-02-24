@@ -107,6 +107,9 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
+  extension.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
