@@ -2626,6 +2626,23 @@ mlir::Value CIRGenFunction::emitTargetBuiltinExpr(unsigned BuiltinID,
                                    getTarget().getTriple().getArch());
 }
 
+mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned ICEArguments,
+                                                        unsigned Idx,
+                                                        const CallExpr *E) {
+  mlir::Value Arg = {};
+  if ((ICEArguments & (1 << Idx)) == 0) {
+    Arg = emitScalarExpr(E->getArg(Idx));
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    std::optional<llvm::APSInt> Result =
+        E->getArg(Idx)->getIntegerConstantExpr(getContext());
+    assert(Result && "Expected argument to be a constant");
+    Arg = builder.getConstInt(getLoc(E->getSourceRange()), *Result);
+  }
+  return Arg;
+}
+
 void CIRGenFunction::emitVAStartEnd(mlir::Value ArgValue, bool IsStart) {
   // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
   // early, defer to LLVM lowering.
