@@ -253,6 +253,9 @@ public:
   struct ErrorCapture;
 
 private:
+  void _clearOperationLocked(MlirOperation op);
+  void _clearOperationAndInsideLocked(PyOperationBase &op);
+
   // Interns the mapping of live MlirContext::ptr to PyMlirContext instances,
   // preserving the relationship that an MlirContext maps to a single
   // PyMlirContext wrapper. This could be replaced in the future with an
@@ -646,8 +649,8 @@ public:
   }
 
   /// Gets the backing operation.
-  operator MlirOperation() const { return get(); }
-  MlirOperation get() const {
+  operator MlirOperation() { return get(); }
+  MlirOperation get() {
     checkValid();
     return operation;
   }
@@ -665,7 +668,7 @@ public:
     assert(attached && "operation already detached");
     attached = false;
   }
-  void checkValid() const;
+  void checkValid();
 
   /// Gets the owning block or raises an exception if the operation has no
   /// owning block.
@@ -700,7 +703,10 @@ public:
   void erase();
 
   /// Invalidate the operation.
-  void setInvalid() { valid = false; }
+  void setInvalid() {
+    nanobind::ft_lock_guard lock(opMutex);
+    valid = false;
+  }
 
   /// Clones this operation.
   nanobind::object clone(const nanobind::object &ip);
@@ -723,6 +729,8 @@ private:
   nanobind::object parentKeepAlive;
   bool attached = true;
   bool valid = true;
+
+  nanobind::ft_mutex opMutex;
 
   friend class PyOperationBase;
   friend class PySymbolTable;
