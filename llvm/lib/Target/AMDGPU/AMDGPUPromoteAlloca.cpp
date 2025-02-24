@@ -394,9 +394,9 @@ static Value *calculateVectorIndex(
   auto I = GEPIdx.find(GEP);
   assert(I != GEPIdx.end() && "Must have entry for GEP!");
 
-    Value *IndexValue = I->second;
-    assert(IndexValue && "index value missing from GEP index map");
-    return IndexValue;
+  Value *IndexValue = I->second;
+  assert(IndexValue && "index value missing from GEP index map");
+  return IndexValue;
 }
 
 static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
