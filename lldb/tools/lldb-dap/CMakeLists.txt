@@ -57,9 +57,10 @@ add_lldb_tool(lldb-dap
   Handler/SetDataBreakpointsRequestHandler.cpp
   Handler/SetExceptionBreakpointsRequestHandler.cpp
   Handler/SetFunctionBreakpointsRequestHandler.cpp
-  Handler/SetInstructionBreakpointsRequestHandler.cpp Handler/StepOutRequestHandler.cpp
+  Handler/SetInstructionBreakpointsRequestHandler.cpp
   Handler/StepInRequestHandler.cpp
   Handler/StepInTargetsRequestHandler.cpp
+  Handler/StepOutRequestHandler.cpp
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
 
   LINK_LIBS
