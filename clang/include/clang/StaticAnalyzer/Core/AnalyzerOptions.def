@@ -483,6 +483,14 @@ ANALYZER_OPTION(
     "behavior, set the option to 0.",
     5)
 
+ANALYZER_OPTION(
+    unsigned, RegionStoreMaxBindingFanOut, "region-store-max-binding-fanout",
+    "This option limits how many sub-bindings a single binding operation can "
+    "scatter into. For example, binding an array would scatter into binding "
+    "each individual element. Setting this to zero means unlimited, but then "
+    "modelling large array initializers may take proportional time to their "
+    "size.", 128)
+
 //===----------------------------------------------------------------------===//
 // String analyzer options.
 //===----------------------------------------------------------------------===//
