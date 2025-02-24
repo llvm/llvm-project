@@ -49,7 +49,7 @@ namespace lldb_dap {
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-void PauseRequestHandler::operator()(const llvm::json::Object &request) {
+void PauseRequestHandler::operator()(const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   lldb::SBProcess process = dap.target.GetProcess();

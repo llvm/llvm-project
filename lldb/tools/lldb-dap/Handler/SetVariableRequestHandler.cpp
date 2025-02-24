@@ -106,7 +106,8 @@ namespace lldb_dap {
 //     "required": [ "body" ]
 //   }]
 // }
-void SetVariableRequestHandler::operator()(const llvm::json::Object &request) {
+void SetVariableRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array variables;
