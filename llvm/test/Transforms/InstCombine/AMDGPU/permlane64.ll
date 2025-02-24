@@ -12,9 +12,9 @@ define i32 @test_constant() {
 
 define i32 @test_bitcast_f32_to_i32_permlane64(float %val) {
 ; CHECK-LABEL: @test_bitcast_f32_to_i32_permlane64(
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlane64.i32(i32 [[BITCAST]])
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.permlane64.f32(float [[VAL1:%.*]])
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
+; CHECK-NEXT:    ret i32 [[BITCAST]]
 ;
   %bitcast = bitcast float %val to i32
   %result = call i32 @llvm.amdgcn.permlane64.i32(i32 %bitcast)

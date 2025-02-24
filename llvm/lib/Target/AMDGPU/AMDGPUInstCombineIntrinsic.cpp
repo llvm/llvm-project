@@ -1128,9 +1128,25 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
 
+    // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
+    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse()) {
+      Value *BCSrc = BC->getOperand(0);
+
+      // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
+      if (isTypeLegal(BCSrc->getType())) {
+        SmallVector<Value *, 2> Args(II.args());
+        Args[0] = BCSrc;
+        CallInst *NewCall = IC.Builder.CreateIntrinsic(
+            II.getIntrinsicID(), {BCSrc->getType()}, Args);
+        NewCall->takeName(&II);
+        return new BitCastInst(NewCall, II.getType());
+      }
+    }
+
     return std::nullopt;
   }
   case Intrinsic::amdgcn_writelane: {
+    // TODO: Fold bitcast like readlane.
     if (simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
     return std::nullopt;

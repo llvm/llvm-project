@@ -4,8 +4,8 @@
 define i32 @test_bitcast_f32_to_i32_readfirstlane(float %val) {
 ; CHECK-LABEL: define i32 @test_bitcast_f32_to_i32_readfirstlane(
 ; CHECK-SAME: float [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.amdgcn.readfirstlane.f32(float [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast float [[RESULT1]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %bitcast = bitcast float %val to i32
@@ -16,9 +16,9 @@ define i32 @test_bitcast_f32_to_i32_readfirstlane(float %val) {
 define i32 @test_bitcast_f32_to_i32_readfirstlane_multi_use_store(float %val, ptr %use.ptr) {
 ; CHECK-LABEL: define i32 @test_bitcast_f32_to_i32_readfirstlane_multi_use_store(
 ; CHECK-SAME: float [[VAL:%.*]], ptr [[USE_PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
 ; CHECK-NEXT:    store float [[VAL]], ptr [[USE_PTR]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[BITCAST]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.amdgcn.readfirstlane.f32(float [[VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[RESULT]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %bitcast = bitcast float %val to i32
@@ -46,9 +46,7 @@ define i32 @test_bitcast_f32_to_i32_readfirstlane_multi_use_call(float %val) {
 define float @test_bitcast_f32_to_i32_readfirstlane_bitcast(float %val) {
 ; CHECK-LABEL: define float @test_bitcast_f32_to_i32_readfirstlane_bitcast(
 ; CHECK-SAME: float [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[BITCAST]])
-; CHECK-NEXT:    [[RESULT:%.*]] = bitcast i32 [[CALL]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.amdgcn.readfirstlane.f32(float [[VAL]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %bitcast = bitcast float %val to i32
@@ -60,8 +58,8 @@ define float @test_bitcast_f32_to_i32_readfirstlane_bitcast(float %val) {
 define i32 @test_bitcast_v2f16_to_i32_readfirstlane(<2 x half> %val) {
 ; CHECK-LABEL: define i32 @test_bitcast_v2f16_to_i32_readfirstlane(
 ; CHECK-SAME: <2 x half> [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <2 x half> [[VAL]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call <2 x half> @llvm.amdgcn.readfirstlane.v2f16(<2 x half> [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <2 x half> [[RESULT1]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %bitcast = bitcast <2 x half> %val to i32
@@ -72,8 +70,8 @@ define i32 @test_bitcast_v2f16_to_i32_readfirstlane(<2 x half> %val) {
 define i32 @test_bitcast_v2bf16_to_i32_readfirstlane(<2 x bfloat> %val) {
 ; CHECK-LABEL: define i32 @test_bitcast_v2bf16_to_i32_readfirstlane(
 ; CHECK-SAME: <2 x bfloat> [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <2 x bfloat> [[VAL]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call <2 x bfloat> @llvm.amdgcn.readfirstlane.v2bf16(<2 x bfloat> [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <2 x bfloat> [[RESULT1]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %bitcast = bitcast <2 x bfloat> %val to i32
@@ -84,8 +82,8 @@ define i32 @test_bitcast_v2bf16_to_i32_readfirstlane(<2 x bfloat> %val) {
 define i64 @test_bitcast_f64_to_i64_readfirstlane(double %val) {
 ; CHECK-LABEL: define i64 @test_bitcast_f64_to_i64_readfirstlane(
 ; CHECK-SAME: double [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast double [[VAL]] to i64
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.readfirstlane.i64(i64 [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast double [[RESULT1]] to i64
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %bitcast = bitcast double %val to i64
@@ -96,8 +94,8 @@ define i64 @test_bitcast_f64_to_i64_readfirstlane(double %val) {
 define <2 x i32> @test_bitcast_f64_to_v2i32_readfirstlane(double %val) {
 ; CHECK-LABEL: define <2 x i32> @test_bitcast_f64_to_v2i32_readfirstlane(
 ; CHECK-SAME: double [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast double [[VAL]] to <2 x i32>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x i32> @llvm.amdgcn.readfirstlane.v2i32(<2 x i32> [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast double [[RESULT1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
 ;
   %bitcast = bitcast double %val to <2 x i32>
@@ -108,8 +106,8 @@ define <2 x i32> @test_bitcast_f64_to_v2i32_readfirstlane(double %val) {
 define i64 @test_bitcast_v4i16_to_i64_readfirstlane(<4 x i16> %val) {
 ; CHECK-LABEL: define i64 @test_bitcast_v4i16_to_i64_readfirstlane(
 ; CHECK-SAME: <4 x i16> [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <4 x i16> [[VAL]] to i64
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.amdgcn.readfirstlane.i64(i64 [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call <4 x i16> @llvm.amdgcn.readfirstlane.v4i16(<4 x i16> [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <4 x i16> [[RESULT1]] to i64
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %bitcast = bitcast <4 x i16> %val to i64
@@ -145,8 +143,8 @@ define i32 @test_bitcast_v8i4_to_i32_readfirstlane(<8 x i4> %val) {
 define float @test_bitcast_i32_to_f32_readfirstlane(i32 %val) {
 ; CHECK-LABEL: define float @test_bitcast_i32_to_f32_readfirstlane(
 ; CHECK-SAME: i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32 [[VAL]] to float
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.amdgcn.readfirstlane.f32(float [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast i32 [[RESULT1]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %bitcast = bitcast i32 %val to float
@@ -157,8 +155,8 @@ define float @test_bitcast_i32_to_f32_readfirstlane(i32 %val) {
 define i16 @test_bitcast_f16_to_i16_readfirstlane(half %val) {
 ; CHECK-LABEL: define i16 @test_bitcast_f16_to_i16_readfirstlane(
 ; CHECK-SAME: half [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast half [[VAL]] to i16
-; CHECK-NEXT:    [[RESULT:%.*]] = call i16 @llvm.amdgcn.readfirstlane.i16(i16 [[BITCAST]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call half @llvm.amdgcn.readfirstlane.f16(half [[VAL]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast half [[RESULT1]] to i16
 ; CHECK-NEXT:    ret i16 [[RESULT]]
 ;
   %bitcast = bitcast half %val to i16
@@ -181,8 +179,8 @@ define i16 @test_bitcast_v2i8_to_i16_readfirstlane(<2 x i8> %val) {
 define <16 x i32> @test_bitcast_v16f32_to_v16i32_readfirstlane(<16 x float> %val) {
 ; CHECK-LABEL: define <16 x i32> @test_bitcast_v16f32_to_v16i32_readfirstlane(
 ; CHECK-SAME: <16 x float> [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <16 x float> [[VAL]] to <16 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i32> @llvm.amdgcn.readfirstlane.v16i32(<16 x i32> [[BITCAST]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.readfirstlane.v16f32(<16 x float> [[VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x float> [[RESULT]] to <16 x i32>
 ; CHECK-NEXT:    ret <16 x i32> [[TMP1]]
 ;
   %bitcast = bitcast <16 x float> %val to <16 x i32>
@@ -193,8 +191,8 @@ define <16 x i32> @test_bitcast_v16f32_to_v16i32_readfirstlane(<16 x float> %val
 define <8 x i64> @test_bitcast_v16f32_to_v8i64_readfirstlane(<16 x float> %val) {
 ; CHECK-LABEL: define <8 x i64> @test_bitcast_v16f32_to_v8i64_readfirstlane(
 ; CHECK-SAME: <16 x float> [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <16 x float> [[VAL]] to <8 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> @llvm.amdgcn.readfirstlane.v8i64(<8 x i64> [[BITCAST]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call <16 x float> @llvm.amdgcn.readfirstlane.v16f32(<16 x float> [[VAL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x float> [[RESULT]] to <8 x i64>
 ; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %bitcast = bitcast <16 x float> %val to <8 x i64>
@@ -205,8 +203,8 @@ define <8 x i64> @test_bitcast_v16f32_to_v8i64_readfirstlane(<16 x float> %val) 
 define i32 @test_bitcast_f32_to_i32_readlane(float %val, i32 inreg %lane.index) {
 ; CHECK-LABEL: define i32 @test_bitcast_f32_to_i32_readlane(
 ; CHECK-SAME: float [[VAL:%.*]], i32 inreg [[LANE_INDEX:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[BITCAST]], i32 [[LANE_INDEX]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[VAL]], i32 [[LANE_INDEX]])
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast float [[RESULT1]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %bitcast = bitcast float %val to i32
