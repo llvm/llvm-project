@@ -307,7 +307,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     same time.
 
     In SIMT mode, LoadNdOp expects the tensor descriptor to be augmented with `SGMapAttr`
-    which describes the mapping of the tensor to the work items. In this case, input
+    which describes the mapping of the tensor to the work items. In this case, result
     vector represents the data to be loaded by each work-item.
 
     Example 1:
@@ -483,7 +483,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
 
     In SIMT mode, similar to `create_nd_tdesc` the resulting tensor descriptor is augmented
     with `SGMapAttr` which describes the mapping of the tensor descriptor to the work items.
-    In this case, first dimension of the tensor descriptor represents the work-items, and
+    In this case, the first dimension of the tensor descriptor represents the work-items, and
     the second dimension represents the chunk size.
 
     Example 1: It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
@@ -624,7 +624,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
     In SIMT mode, LoadGatherOp expects the tensor descriptor to be augmented with `SGMapAttr`
-    which describes the mapping of the tensor to the work items. In this case, input vector
+    which describes the mapping of the tensor to the work items. In this case, result vector
     represents the data to be loaded by each work-item. Each work-item recieves a `chunk_size`
     number of elements.
 
@@ -711,7 +711,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
 
   Example 1:
   ```mlir
-    %3 = xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
+    xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
           : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scattered_tdesc_attr<>>, vector<16xi1>
@@ -719,7 +719,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
 
   Example 2:
   ```mlir
-    %3 = xegpu.store %0, %1, %2 {transpose,
+    xegpu.store %0, %1, %2 {transpose,
                                  l1_hint = #xegpu.cache_hint<uncached>,
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
@@ -727,7 +727,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
   ```
   Example 3 (SIMT mode):
   ```mlir
-    %3 = xegpu.store %0, %1, %2 {transpose,
+    xegpu.store %0, %1, %2 {transpose,
                                  l1_hint = #xegpu.cache_hint<uncached>,
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
