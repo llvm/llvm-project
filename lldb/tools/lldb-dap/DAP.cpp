@@ -850,7 +850,7 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 
   SendTerminatedEvent();
 
-  // Stop forward the debugger output and error file handle.
+  // Stop forwarding the debugger output and error handles.
   out.Stop();
   err.Stop();
 
