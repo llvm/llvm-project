@@ -2454,7 +2454,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   // Try to evict a less worthy live range, but only for ranges from the primary
   // queue. The RS_Split ranges already failed to do this, and they should not
   // get a second chance until they have been split.
-  if (Stage != RS_Split)
+  if (Stage != RS_Split) {
     if (MCRegister PhysReg =
             tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit,
                      FixedRegisters)) {
@@ -2468,6 +2468,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
         SetOfBrokenHints.insert(&VirtReg);
       return PhysReg;
     }
+  }
 
   assert((NewVRegs.empty() || Depth) && "Cannot append to existing NewVRegs");
 
@@ -2708,9 +2709,6 @@ bool RAGreedy::hasVirtRegAlloc() {
   for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     if (MRI->reg_nodbg_empty(Reg))
-      continue;
-    const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-    if (!RC)
       continue;
     if (shouldAllocateRegister(Reg))
       return true;
