@@ -2407,6 +2407,7 @@ typeindex compare
 typeindex cstddef
 typeindex cstdint
 typeindex cstdlib
+typeindex cstring
 typeindex initializer_list
 typeindex iosfwd
 typeindex limits
