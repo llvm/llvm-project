@@ -552,7 +552,7 @@ for.end:
 ;}
 define dso_local void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr #0 {
 ; SCALAR_TAIL_FOLDING-LABEL: define dso_local void @masked_strided_factor4
-; SCALAR_TAIL_FOLDING-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SCALAR_TAIL_FOLDING-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SCALAR_TAIL_FOLDING-NEXT:  entry:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -661,7 +661,7 @@ define dso_local void @masked_strided_factor4(ptr noalias nocapture readonly %p,
 ; SCALAR_TAIL_FOLDING-NEXT:    ret void
 ;
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided_factor4
-; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.ph:
