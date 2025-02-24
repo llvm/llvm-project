@@ -7290,8 +7290,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   checkClassLevelDLLAttribute(Record);
   checkClassLevelCodeSegAttribute(Record);
 
-  CheckCXX2CTriviallyRelocatable(Record);
-  CheckCXX2CReplaceable(Record);
+  CheckCXX2CRelocatableAndReplaceable(Record);
 
   bool ClangABICompat4 =
       Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver4;
@@ -7372,82 +7371,116 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
 }
 
-static bool hasSuitableConstructorForRelocation(CXXRecordDecl *D,
+static CXXMethodDecl *
+LookupSpecialMemberFromXValue(Sema &SemaRef, CXXRecordDecl *RD, bool Assign) {
+  RD = RD->getDefinition();
+  SourceLocation LookupLoc = RD->getLocation();
+
+  CanQualType CanTy = SemaRef.getASTContext().getCanonicalType(
+      SemaRef.getASTContext().getTagDeclType(RD));
+  DeclarationName Name;
+  Expr *Arg = nullptr;
+  unsigned NumArgs;
+
+  QualType ArgType = CanTy;
+  ExprValueKind VK = clang::VK_XValue;
+
+  if (Assign)
+    Name =
+        SemaRef.getASTContext().DeclarationNames.getCXXOperatorName(OO_Equal);
+  else
+    Name =
+        SemaRef.getASTContext().DeclarationNames.getCXXConstructorName(CanTy);
+
+  OpaqueValueExpr FakeArg(LookupLoc, ArgType, VK);
+  NumArgs = 1;
+  Arg = &FakeArg;
+
+  // Create the object argument
+  QualType ThisTy = CanTy;
+  Expr::Classification Classification =
+      OpaqueValueExpr(LookupLoc, ThisTy, VK_LValue)
+          .Classify(SemaRef.getASTContext());
+
+  // Now we perform lookup on the name we computed earlier and do overload
+  // resolution. Lookup is only performed directly into the class since there
+  // will always be a (possibly implicit) declaration to shadow any others.
+  OverloadCandidateSet OCS(LookupLoc, OverloadCandidateSet::CSK_Normal);
+  DeclContext::lookup_result R = RD->lookup(Name);
+
+  if (R.empty())
+    return nullptr;
+
+  // Copy the candidates as our processing of them may load new declarations
+  // from an external source and invalidate lookup_result.
+  SmallVector<NamedDecl *, 8> Candidates(R.begin(), R.end());
+
+  for (NamedDecl *CandDecl : Candidates) {
+    if (CandDecl->isInvalidDecl())
+      continue;
+
+    DeclAccessPair Cand = DeclAccessPair::make(CandDecl, clang::AS_none);
+    auto CtorInfo = getConstructorInfo(Cand);
+    if (CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(Cand->getUnderlyingDecl())) {
+      if (Assign)
+        SemaRef.AddMethodCandidate(M, Cand, RD, ThisTy, Classification,
+                                   llvm::ArrayRef(&Arg, NumArgs), OCS, true);
+      else {
+        assert(CtorInfo);
+        SemaRef.AddOverloadCandidate(CtorInfo.Constructor, CtorInfo.FoundDecl,
+                                     llvm::ArrayRef(&Arg, NumArgs), OCS,
+                                     /*SuppressUserConversions*/ true);
+      }
+    } else if (FunctionTemplateDecl *Tmpl =
+                   dyn_cast<FunctionTemplateDecl>(Cand->getUnderlyingDecl())) {
+      if (Assign)
+        SemaRef.AddMethodTemplateCandidate(
+            Tmpl, Cand, RD, nullptr, ThisTy, Classification,
+            llvm::ArrayRef(&Arg, NumArgs), OCS, true);
+      else {
+        assert(CtorInfo);
+        SemaRef.AddTemplateOverloadCandidate(
+            CtorInfo.ConstructorTmpl, CtorInfo.FoundDecl, nullptr,
+            llvm::ArrayRef(&Arg, NumArgs), OCS, true);
+      }
+    }
+  }
+
+  OverloadCandidateSet::iterator Best;
+  switch (OCS.BestViableFunction(SemaRef, LookupLoc, Best)) {
+  case OR_Success:
+    return cast<CXXMethodDecl>(Best->Function);
+  default:
+    return nullptr;
+  }
+}
+
+static bool hasSuitableConstructorForRelocation(Sema &SemaRef, CXXRecordDecl *D,
                                                 bool AllowUserDefined) {
   assert(D->hasDefinition() && !D->isInvalidDecl());
 
-  bool HasDeletedMoveConstructor = false;
-  bool HasDeletedCopyConstructor = false;
-  bool HasMoveConstructor = D->needsImplicitMoveConstructor();
-  bool HasCopyConstructor = D->needsImplicitCopyConstructor();
-  bool HasDefaultedMoveConstructor = D->needsImplicitMoveConstructor();
-  bool HasDefaultedCopyConstructor = D->needsImplicitCopyConstructor();
+  if (D->hasSimpleMoveConstructor() || D->hasSimpleCopyConstructor())
+    return true;
 
-  for (const Decl *D : D->decls()) {
-    auto *MD = dyn_cast<CXXConstructorDecl>(D);
-    if (!MD || MD->isIneligibleOrNotSelected())
-      continue;
-
-    if (MD->isMoveConstructor()) {
-      HasMoveConstructor = true;
-      if (MD->isDefaulted())
-        HasDefaultedMoveConstructor = true;
-      if (MD->isDeleted())
-        HasDeletedMoveConstructor = true;
-    } else if (MD->isCopyConstructor()) {
-      HasCopyConstructor = true;
-      if (MD->isDefaulted())
-        HasDefaultedCopyConstructor = true;
-      if (MD->isDeleted())
-        HasDeletedCopyConstructor = true;
-    }
-  }
-
-  if (HasMoveConstructor)
-    return !HasDeletedMoveConstructor &&
-           (AllowUserDefined ? true : HasDefaultedMoveConstructor);
-  return HasCopyConstructor && !HasDeletedCopyConstructor &&
-         (AllowUserDefined ? true : HasDefaultedCopyConstructor);
+  CXXMethodDecl *Decl =
+      LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false);
+  return Decl && Decl->isUserProvided() == AllowUserDefined;
 }
 
 static bool
-hasSuitableMoveAssignmentOperatorForRelocation(CXXRecordDecl *D,
+hasSuitableMoveAssignmentOperatorForRelocation(Sema &SemaRef, CXXRecordDecl *D,
                                                bool AllowUserDefined) {
   assert(D->hasDefinition() && !D->isInvalidDecl());
 
-  if (D->hasExplicitlyDeletedMoveAssignment())
+  if (D->hasSimpleMoveAssignment() || D->hasSimpleCopyAssignment())
+    return true;
+
+  CXXMethodDecl *Decl =
+      LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/true);
+  if (!Decl)
     return false;
 
-  bool HasDeletedMoveAssignment = false;
-  bool HasDeletedCopyAssignment = false;
-  bool HasMoveAssignment = D->needsImplicitMoveAssignment();
-  bool HasDefaultedMoveAssignment = D->needsImplicitMoveAssignment();
-  bool HasDefaultedCopyAssignment = D->needsImplicitCopyAssignment();
-
-  for (const Decl *D : D->decls()) {
-    auto *MD = dyn_cast<CXXMethodDecl>(D);
-    if (!MD || MD->isIneligibleOrNotSelected())
-      continue;
-
-    if (MD->isMoveAssignmentOperator()) {
-      HasMoveAssignment = true;
-      if (MD->isDefaulted())
-        HasDefaultedMoveAssignment = true;
-      if (MD->isDeleted())
-        HasDeletedMoveAssignment = true;
-    } else if (MD->isCopyAssignmentOperator()) {
-      if (MD->isDefaulted())
-        HasDefaultedCopyAssignment = true;
-      if (MD->isDeleted())
-        HasDeletedCopyAssignment = true;
-    }
-  }
-
-  if (HasMoveAssignment)
-    return !HasDeletedMoveAssignment &&
-           (AllowUserDefined ? true : HasDefaultedMoveAssignment);
-  return !HasDeletedCopyAssignment &&
-         (AllowUserDefined ? true : HasDefaultedCopyAssignment);
+  return Decl && Decl->isUserProvided() == AllowUserDefined;
 }
 
 // [C++26][class.prop]
@@ -7459,12 +7492,13 @@ hasSuitableMoveAssignmentOperatorForRelocation(CXXRecordDecl *D,
 // type C selects an assignment operator function that is a direct member of C
 // and is neither user-provided nor deleted, and C has a destructor that is
 // neither user-provided nor deleted.
-static bool isDefaultMovable(CXXRecordDecl *D) {
-  if (!hasSuitableConstructorForRelocation(D, /*AllowUserDefined=*/false))
+static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D) {
+  if (!hasSuitableConstructorForRelocation(SemaRef, D,
+                                           /*AllowUserDefined=*/false))
     return false;
 
   if (!hasSuitableMoveAssignmentOperatorForRelocation(
-          D, /*AllowUserDefined=*/false))
+          SemaRef, D, /*AllowUserDefined=*/false))
     return false;
 
   const auto *Dtr = D->getDestructor();
@@ -7506,51 +7540,13 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
       continue;
     // ... has a non-static data member of an object type that is not
     // of a trivially relocatable type
-    QualType T = SemaRef.getASTContext().getBaseElementType(
-        Field->getType().getUnqualifiedType());
-    if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
-      if (!RD->isTriviallyRelocatable())
-        return false;
-    }
+    if (!Field->getType().isCppTriviallyRelocatableType(
+            SemaRef.getASTContext()))
+      return false;
   }
 
   // ...has a deleted destructor
   return !hasDeletedDestructor(D);
-}
-
-// [C++26][class.prop]
-// A class C is a trivially relocatable class if
-void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
-  if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
-    return;
-
-  assert(D->hasDefinition());
-
-  bool MarkedTriviallyRelocatable =
-      D->getTriviallyRelocatableSpecifier().isSet();
-
-  bool IsTriviallyRelocatable = [&] {
-    // if it is eligible for trivial relocation
-
-    if (!isEligibleForTrivialRelocation(*this, D))
-      return false;
-
-    // has the trivially_relocatable_if_eligible class-property-specifier,
-    if (D->isDependentType() || MarkedTriviallyRelocatable)
-      return true;
-
-    // is a union with no user-declared special member functions, or
-    if (D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
-        !D->hasUserDeclaredCopyAssignment() &&
-        !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor()) {
-      return true;
-    }
-
-    // is default-movable.
-    return isDefaultMovable(D);
-  }();
-
-  D->setIsTriviallyRelocatable(IsTriviallyRelocatable);
 }
 
 // [C++26][class.prop]
@@ -7579,41 +7575,81 @@ static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
   return !hasDeletedDestructor(D);
 }
 
-// [C++26][class.prop] A class C is a replaceable class if...
-void Sema::CheckCXX2CReplaceable(CXXRecordDecl *D) {
+void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
   if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
     return;
 
   assert(D->hasDefinition());
 
   bool MarkedCXX2CReplaceable = D->getReplaceableSpecifier().isSet();
+  bool MarkedTriviallyRelocatable =
+      D->getTriviallyRelocatableSpecifier().isSet();
 
   // This is part of "eligible for replacement", however we defer it
   // to avoid extraneous computations.
   auto HasSuitableSMP = [&] {
-    return hasSuitableConstructorForRelocation(D, /*AllowUserDefined=*/true) &&
+    return hasSuitableConstructorForRelocation(*this, D,
+                                               /*AllowUserDefined=*/true) &&
            hasSuitableMoveAssignmentOperatorForRelocation(
-               D, /*AllowUserDefined=*/true);
+               *this, D, /*AllowUserDefined=*/true);
   };
 
+  auto IsUnion = [&, Is = std::optional<bool>{}]() mutable {
+    if (!Is.has_value())
+      Is = D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
+           !D->hasUserDeclaredCopyAssignment() &&
+           !D->hasUserDeclaredMoveOperation() &&
+           !D->hasUserDeclaredDestructor();
+    return *Is;
+  };
+
+  auto IsDefaultMovable = [&, Is = std::optional<bool>{}]() mutable {
+    if (!Is.has_value())
+      Is = isDefaultMovable(*this, D);
+    return *Is;
+  };
+
+  bool IsTriviallyRelocatable = [&] {
+    if (D->isDependentType())
+      return false;
+
+    // if it is eligible for trivial relocation
+    if (!isEligibleForTrivialRelocation(*this, D))
+      return false;
+
+    // has the trivially_relocatable_if_eligible class-property-specifier,
+    if (MarkedTriviallyRelocatable)
+      return true;
+
+    // is a union with no user-declared special member functions, or
+    if (IsUnion()) {
+      return true;
+    }
+    // is default-movable.
+    return IsDefaultMovable();
+  }();
+
+  D->setIsTriviallyRelocatable(IsTriviallyRelocatable);
+
   bool IsReplaceable = [&] {
+    if (D->isDependentType())
+      return false;
+
     // A class C is a replaceable class if it is eligible for replacement
     if (!isEligibleForReplacement(*this, D))
       return false;
 
     // has the replaceable_if_eligible class-property-specifier
-    if (D->isDependentType() || MarkedCXX2CReplaceable)
+    if (MarkedCXX2CReplaceable)
       return HasSuitableSMP();
 
     // is a union with no user-declared special member functions, or
-    if (D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
-        !D->hasUserDeclaredCopyAssignment() &&
-        !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor()) {
+    if (IsUnion()) {
       return HasSuitableSMP();
     }
 
     // is default-movable.
-    return isDefaultMovable(D);
+    return IsDefaultMovable();
   }();
 
   D->setIsReplaceable(IsReplaceable);
