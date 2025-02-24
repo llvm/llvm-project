@@ -834,7 +834,7 @@ option(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH "Disable searching for external 
 mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
 
 if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
-    add_definitions(-DSANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+    add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
 endif()
 
 add_subdirectory(lib)

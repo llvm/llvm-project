@@ -444,7 +444,7 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
 
   // Otherwise symbolizer program is unknown, let's search $PATH
 #ifdef SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH
-   VReport(2, "Symbolizer path search is disabled\n");
+   VReport(2, "Symbolizer path search is disabled in the runtime build configuration\n");
    return nullptr;
 #else 
   CHECK(path == nullptr);
