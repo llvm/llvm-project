@@ -3428,7 +3428,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
 
   // In C++14, the next parameter can be a 'std::size_t' for sized delete.
   bool IsSizedDelete = false;
-  if (Ctx.getLangOpts().SizedDeallocation &&
+  if ((IsTypeAware || Ctx.getLangOpts().SizedDeallocation) &&
       (getDeclName().getCXXOverloadedOperator() == OO_Delete ||
        getDeclName().getCXXOverloadedOperator() == OO_Array_Delete) &&
       Ctx.hasSameType(Ty, Ctx.getSizeType())) {
@@ -3438,7 +3438,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
 
   // In C++17, the next parameter can be a 'std::align_val_t' for aligned
   // new/delete.
-  if (Ctx.getLangOpts().AlignedAllocation && !Ty.isNull() && Ty->isAlignValT()) {
+  if ((IsTypeAware || Ctx.getLangOpts().AlignedAllocation) && !Ty.isNull() && Ty->isAlignValT()) {
     Consume();
     if (AlignmentParam)
       *AlignmentParam = Params;

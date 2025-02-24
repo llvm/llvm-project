@@ -1,5 +1,12 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions                                             -fsized-deallocation    -faligned-allocation 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions                                          -fno-sized-deallocation    -faligned-allocation 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions                                             -fsized-deallocation -fno-aligned-allocation 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions                                          -fno-sized-deallocation -fno-aligned-allocation 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fexperimental-new-constant-interpreter     -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fexperimental-new-constant-interpreter  -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fexperimental-new-constant-interpreter     -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fexperimental-new-constant-interpreter  -fno-sized-deallocation -fno-aligned-allocation
+
 
 namespace std {
   template <class T> struct type_identity {};

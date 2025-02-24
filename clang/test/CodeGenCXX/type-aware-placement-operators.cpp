@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation    -faligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-sized-deallocation    -faligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation -fno-aligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-aligned-allocation -fno-sized-deallocation -o - | FileCheck %s
 
 namespace std {
   template <class T> struct type_identity {};
