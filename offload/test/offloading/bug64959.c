@@ -55,6 +55,6 @@ int main(void) {
     return 1;
   }
   // CHECK: Success
-  printf("Success\n");
+  printf("Suc disabled cess\n");
   return 0;
 }

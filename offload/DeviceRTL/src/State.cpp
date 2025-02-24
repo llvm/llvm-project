@@ -160,7 +160,7 @@ void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
 
 } // namespace
 
-void *memory::getDynamicBuffer() { return DynamicSharedBuffer; }
+void *memory::getDynamicBuffer() { return (void *)DynamicSharedBuffer; }
 
 void *memory::allocShared(uint64_t Bytes, const char *Reason) {
   return SharedMemorySmartStack.push(Bytes);
@@ -219,6 +219,7 @@ bool state::TeamStateTy::operator==(const TeamStateTy &Other) const {
 
 void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ICVState.assertEqual(Other.ICVState);
+  // Other.ICVState.assertEqual(ICVState);
   ASSERT(ParallelTeamSize == Other.ParallelTeamSize, nullptr);
   ASSERT(HasThreadState == Other.HasThreadState, nullptr);
 }
@@ -273,7 +274,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState = static_cast<ThreadStateTy *>(
       memory::allocGlobal(sizeof(ThreadStateTy), "ThreadStates alloc"));
-  uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
+  uintptr_t *ThreadStatesBitsPtr = (uintptr_t *)(&ThreadStates);
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
     uint32_t Bytes =
         sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
@@ -313,18 +314,22 @@ void state::resetStateForThread(uint32_t TId) {
 }
 
 void state::runAndCheckState(void(Func(void))) {
-  TeamStateTy OldTeamState = TeamState;
-  OldTeamState.assertEqual(TeamState);
+  // TeamStateTy OldTeamState = TeamState;
+  TeamStateTy OldTeamState;
+  __builtin_memcpy(&OldTeamState,
+                   &TeamState,
+                   sizeof(TeamStateTy));
+  OldTeamState.assertEqual((TeamStateTy&)TeamState);
 
   Func();
 
-  OldTeamState.assertEqual(TeamState);
+  OldTeamState.assertEqual((TeamStateTy&)TeamState);
 }
 
 void state::assumeInitialState(bool IsSPMD) {
   TeamStateTy InitialTeamState;
   InitialTeamState.init(IsSPMD);
-  InitialTeamState.assertEqual(TeamState);
+  InitialTeamState.assertEqual((TeamStateTy&)TeamState);
   ASSERT(mapping::isSPMDMode() == IsSPMD, nullptr);
 }
 
@@ -461,7 +466,7 @@ constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
 
 void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
   if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
-    SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
+    SharedMemVariableSharingSpacePtr = (void**)&SharedMemVariableSharingSpace[0];
   } else {
     SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
         nArgs * sizeof(void *), "new extended args");
@@ -472,7 +477,7 @@ void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
 }
 
 void __kmpc_end_sharing_variables() {
-  if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
+  if ((void*)SharedMemVariableSharingSpacePtr != (void*)&SharedMemVariableSharingSpace[0])
     memory::freeGlobal(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 
