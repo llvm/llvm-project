@@ -216,17 +216,11 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
       for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
         // Tag already exists
         if (Item.Tag == Tag) {
-          // New value for existing tag: update tag
-          if ((unsigned(-1) != Value && Item.IntValue != Value) ||
-              ("" != String && Item.StringValue != String)) {
-            Item.Type = unsigned(-1) != Value
-                            ? MCELFStreamer::AttributeItem::NumericAttribute
-                            : MCELFStreamer::AttributeItem::TextAttribute;
-            Item.IntValue = unsigned(-1) != Value ? Value : unsigned(-1);
-            Item.StringValue = unsigned(-1) != Value ? "" : String;
-            return;
-          }
-          // Same value for existing tag: do nothing
+          Item.Type = unsigned(-1) != Value
+                          ? MCELFStreamer::AttributeItem::NumericAttribute
+                          : MCELFStreamer::AttributeItem::TextAttribute;
+          Item.IntValue = unsigned(-1) != Value ? Value : unsigned(-1);
+          Item.StringValue = unsigned(-1) != Value ? "" : String;
           return;
         }
       }
