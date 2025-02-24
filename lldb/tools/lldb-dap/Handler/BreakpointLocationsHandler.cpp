@@ -125,7 +125,7 @@ namespace lldb_dap {
 //   "required": [ "line" ]
 // },
 void BreakpointLocationsRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
