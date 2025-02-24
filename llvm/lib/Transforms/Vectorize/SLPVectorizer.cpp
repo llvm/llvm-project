@@ -13968,15 +13968,31 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (!DemandedElements.isZero())
-    Cost +=
-        TTI->getScalarizationOverhead(VecTy, DemandedElements, /*Insert=*/true,
-                                      /*Extract=*/false, CostKind, VL);
+  if (!DemandedElements.isZero()) {
+    if (isa<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "Only supported by REVEC.");
+      // We don't need to insert elements one by one. Instead, we can insert the
+      // entire vector into the destination.
+      Cost = 0;
+      unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+      for (unsigned I : seq<unsigned>(VL.size()))
+        if (DemandedElements[I])
+          Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, {},
+                                   CostKind, I * ScalarTyNumElements,
+                                   cast<FixedVectorType>(ScalarTy));
+    } else {
+      Cost += TTI->getScalarizationOverhead(VecTy, DemandedElements,
+                                            /*Insert=*/true,
+                                            /*Extract=*/false, CostKind, VL);
+    }
+  }
   if (ForPoisonSrc) {
     if (isa<FixedVectorType>(ScalarTy)) {
       assert(SLPReVec && "Only supported by REVEC.");
       // We don't need to insert elements one by one. Instead, we can insert the
       // entire vector into the destination.
+      assert(DemandedElements.isZero() &&
+             "Need to consider the cost from DemandedElements.");
       Cost = 0;
       unsigned ScalarTyNumElements = getNumElements(ScalarTy);
       for (unsigned I : seq<unsigned>(VL.size()))
