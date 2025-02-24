@@ -52,7 +52,7 @@ class MIMGBaseOpcode : PredicateControl {
   bit BVH = 0;
   bit A16 = 0;
   bit NoReturn = 0;
-  bit PointSampleAccel = 0; // Opcode eligable for gfx11.5 point sample acceleration
+  bit PointSampleAccel = 0; // Opcode eligible for gfx11.5 point sample acceleration
 }
 
 def MIMGBaseOpcode : GenericEnum {

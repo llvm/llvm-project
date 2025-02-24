@@ -833,7 +833,7 @@ void WaitcntBrackets::setScoreByOperand(const MachineInstr *MI,
 // Return true if the subtarget is one that enables Point Sample Acceleration
 // and the MachineInstr passed in is one to which it might be applied (the
 // hardware makes this decision based on several factors, but we can't determine
-// this at compile time, so we have to assume it will be applied if the
+// this at compile time, so we have to assume it might be applied if the
 // instruction supports it).
 bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
   if (!ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
@@ -845,6 +845,11 @@ bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
   return BaseInfo->PointSampleAccel;
 }
 
+// Return true if the subtarget enables Point Sample Acceleration, the supplied
+// MachineInstr is one to which it might be applied and the supplied interval is
+// one that has outstanding writes to vmem-types different than VMEM_NOSAMPLER
+// (this is the type that a point sample accelerated instruction effectively
+// becomes)
 bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
     const MachineInstr &MI, RegInterval Interval) const {
   if (!hasPointSampleAccel(MI))
