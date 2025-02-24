@@ -22,8 +22,8 @@ namespace clang::tidy::performance {
 class NoexceptFunctionBaseCheck : public ClangTidyCheck {
 public:
   NoexceptFunctionBaseCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context)
-      , AllowFalseEvaluated(Options.get("AllowFalseEvaluated", false)) {}
+      : ClangTidyCheck(Name, Context),
+        AllowFalseEvaluated(Options.get("AllowFalseEvaluated", false)) {}
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11 && LangOpts.CXXExceptions;
