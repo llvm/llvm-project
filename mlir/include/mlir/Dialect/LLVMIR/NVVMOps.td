@@ -257,11 +257,13 @@ def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
 def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
 def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
 def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
+def ReduxKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
+def ReduxKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
 
 /// Enum attribute of the different kinds.
 def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
   [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
-    ReduxKindUmax, ReduxKindUmin, ReduxKindXor]> {
+   ReduxKindUmax, ReduxKindUmin, ReduxKindXor, ReduxKindFmin, ReduxKindFmax]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -273,9 +275,24 @@ def NVVM_ReduxOp :
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_Type:$val,
                  ReduxKindAttr:$kind,
-                 I32:$mask_and_clamp)> {
+                 I32:$mask_and_clamp,
+                 DefaultValuedAttr<BoolAttr, "false">:$abs,
+                 DefaultValuedAttr<BoolAttr, "false">:$nan)> {
+  let summary = "Redux Sync Op";
+  let description = [{
+    `redux.sync` performs a reduction operation `kind` of the 32 bit source 
+    register across all non-exited threads in the membermask.
+
+    The `abs` and `nan` attributes can be used in the case of f32 input type, 
+    where the `abs` attribute causes the absolute value of the input to be used 
+    in the reduction operation, and the `nan` attribute causes the reduction 
+    operation to return NaN if any of the inputs to participating threads are 
+    NaN.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
+  }];
   string llvmBuilder = [{
-      auto intId = getReduxIntrinsicId($_resultType, $kind);
+      auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
   }];
   let assemblyFormat = [{
