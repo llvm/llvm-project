@@ -60,11 +60,11 @@ static mlir::LLVM::MemoryEffectsAttr getGenericMemoryAttr(fir::CallOp callOp) {
   for (auto arg : callOp.getArgOperands()) {
     mlir::Type argType = arg.getType();
     if (mlir::isa<fir::BaseBoxType>(argType)) {
-      // If it is a null box, then this particular call
+      // If it is a null/absent box, then this particular call
       // cannot access memory indirectly through the box's
       // base_addr.
       auto def = arg.getDefiningOp();
-      if (!def || !mlir::isa<fir::ZeroOp>(def)) {
+      if (!mlir::isa_and_nonnull<fir::ZeroOp, fir::AbsentOp>(def)) {
         maybeIndirectAccess = true;
         break;
       }
