@@ -207,6 +207,7 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME)
 #endif
 DUMMY_MACHINE_MODULE_PASS("machine-outliner", MachineOutlinerPass)
+DUMMY_MACHINE_MODULE_PASS("static-data-annotator", StaticDataAnnotator)
 DUMMY_MACHINE_MODULE_PASS("pseudo-probe-inserter", PseudoProbeInserterPass)
 DUMMY_MACHINE_MODULE_PASS("mir-debugify", DebugifyMachineModule)
 DUMMY_MACHINE_MODULE_PASS("mir-check-debugify", CheckDebugMachineModulePass)
