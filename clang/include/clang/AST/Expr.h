@@ -451,15 +451,11 @@ public:
     return (OK == OK_Ordinary || OK == OK_BitField);
   }
 
-  bool isInsideCondition() const {
-    return IsInsideCondition;
-  }
+  bool isInsideCondition() const { return IsInsideCondition; }
 
   /// setValueKind - Mark this expression to be inside a condition.
   /// necessary for `warn_assignment_bool_context` diagnostic
-  void setIsInsideCondition() {
-    IsInsideCondition = true;
-  }
+  void setIsInsideCondition() { IsInsideCondition = true; }
 
   /// setValueKind - Set the value kind produced by this expression.
   void setValueKind(ExprValueKind Cat) { ExprBits.ValueKind = Cat; }

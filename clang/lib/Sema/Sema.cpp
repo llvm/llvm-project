@@ -703,7 +703,8 @@ void Sema::DiagnoseAssignmentBoolContext(Expr *E, QualType Ty) {
       E = ICE->getSubExpr();
     }
 
-    // Condition-assignment warnings are already handled by `DiagnoseAssignmentAsCondition()`
+    // Condition-assignment warnings are already handled by
+    // `DiagnoseAssignmentAsCondition()`
     if (E->isInsideCondition())
       return;
 
@@ -714,8 +715,7 @@ void Sema::DiagnoseAssignmentBoolContext(Expr *E, QualType Ty) {
       // only does for regular assignment.
       if (Op->getOpcode() == BO_Assign) {
         SourceLocation Loc = Op->getOperatorLoc();
-        Diag(Loc, diag::warn_assignment_bool_context)
-            << E->getSourceRange();
+        Diag(Loc, diag::warn_assignment_bool_context) << E->getSourceRange();
 
         SourceLocation Open = E->getBeginLoc();
         SourceLocation Close =
