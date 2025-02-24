@@ -1918,6 +1918,7 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   if (!C1VecTy || !C2VecTy)
     return false;
 
+  // SelectInsts must have the same FMF.
   auto *Select0 = cast<Instruction>(I.getOperand(0));
   if (auto *SI0FOp = dyn_cast<FPMathOperator>(Select0))
     if (auto *SI1FOp = dyn_cast<FPMathOperator>((I.getOperand(1))))
@@ -1951,6 +1952,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   Value *ShuffleTrue = Builder.CreateShuffleVector(T1, T2, Mask);
   Value *ShuffleFalse = Builder.CreateShuffleVector(F1, F2, Mask);
   Value *NewSel = Builder.CreateSelect(ShuffleCmp, ShuffleTrue, ShuffleFalse);
+
+  // We presuppose that the SelectInsts have the same FMF.
   if (isa<FPMathOperator>(NewSel))
     cast<Instruction>(NewSel)->setFastMathFlags(Select0->getFastMathFlags());
 
