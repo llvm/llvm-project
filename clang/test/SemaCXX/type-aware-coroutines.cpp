@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fcoroutines -fexceptions -Wall -Wpedantic
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fcoroutines -fexceptions -Wall -Wpedantic
 
 
 #include "Inputs/std-coroutine.h"

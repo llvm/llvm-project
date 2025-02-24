@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DTADD -std=c++23 -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete -fexceptions
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -DTADD -std=c++23 -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete -fexceptions
 
 namespace std {
   template <class T> struct type_identity {};
