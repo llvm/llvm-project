@@ -41,7 +41,6 @@ static Accessor splitMustacheString(StringRef Str) {
   }
   return Tokens;
 }
-
 } // namespace
 
 namespace llvm::mustache {
@@ -195,7 +194,7 @@ ASTNode *createRootNode(void *Node, llvm::BumpPtrAllocator &Alloc,
                         llvm::StringMap<SectionLambda> &SectionLambdas,
                         llvm::DenseMap<char, std::string> &Escapes) {
   return new (Node) ASTNode(Alloc, Partials, Lambdas, SectionLambdas, Escapes);
-};
+}
 
 ASTNode *createNode(void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
                     llvm::BumpPtrAllocator &Alloc,
@@ -205,7 +204,7 @@ ASTNode *createNode(void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
                     llvm::DenseMap<char, std::string> &Escapes) {
   return new (Node) ASTNode(T, std::move(A), Parent, Alloc, Partials, Lambdas,
                             SectionLambdas, Escapes);
-};
+}
 
 ASTNode *createTextNode(void *Node, std::string Body, ASTNode *Parent,
                         llvm::BumpPtrAllocator &Alloc,
@@ -215,7 +214,7 @@ ASTNode *createTextNode(void *Node, std::string Body, ASTNode *Parent,
                         llvm::DenseMap<char, std::string> &Escapes) {
   return new (Node) ASTNode(std::move(Body), Parent, Alloc, Partials, Lambdas,
                             SectionLambdas, Escapes);
-};
+}
 
 // Function to check if there is meaningful text behind.
 // We determine if a token has meaningful text behind
