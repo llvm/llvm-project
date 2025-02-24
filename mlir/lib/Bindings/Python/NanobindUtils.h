@@ -140,11 +140,11 @@ public:
   PyFileAccumulator(const nanobind::object &fileOrStringObject, bool binary)
       : binary(binary) {
     std::string filePath;
-    if (nb::try_cast<std::string>(fileOrStringObject, filePath)) {
+    if (nanobind::try_cast<std::string>(fileOrStringObject, filePath)) {
       std::error_code ec;
       writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
       if (ec) {
-        throw nb::value_error("Unable to open file for writing");
+        throw nanobind::value_error("Unable to open file for writing");
       }
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
@@ -152,7 +152,8 @@ public:
   }
 
   MlirStringCallback getCallback() {
-    return writeTarget.index == 0 ? getPyWriteCallback() : getOstreamCallback();
+    return writeTarget.index() == 0 ? getPyWriteCallback()
+                                    : getOstreamCallback();
   }
 
   void *getUserData() { return this; }
@@ -165,11 +166,11 @@ private:
       if (accum->binary) {
         // Note: Still has to copy and not avoidable with this API.
         nanobind::bytes pyBytes(part.data, part.length);
-        accum->pyWriteFunction(pyBytes);
+        std::get<nanobind::object>(accum->writeTarget)(pyBytes);
       } else {
         nanobind::str pyStr(part.data,
                             part.length); // Decodes as UTF-8 by default.
-        accum->pyWriteFunction(pyStr);
+        std::get<nanobind::object>(accum->writeTarget)(pyStr);
       }
     };
   }
@@ -177,8 +178,8 @@ private:
   MlirStringCallback getOstreamCallback() {
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
-      accum->writeTarget.get<llvm::raw_fd_ostream>().write(part.data,
-                                                           part.length);
+      std::get<llvm::raw_fd_ostream>(accum->writeTarget)
+          .write(part.data, part.length);
     };
   }
 
