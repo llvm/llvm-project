@@ -1332,45 +1332,26 @@ void PyOperationBase::print(PyAsmState &state, nb::object fileObject,
                               accum.getUserData());
 }
 
-template <typename T>
-static void
-writeBytecodeForOperation(T &accumulator, MlirOperation operation,
-                          const std::optional<int64_t> &bytecodeVersion) {
+void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
+                                    std::optional<int64_t> bytecodeVersion) {
+  PyOperation &operation = getOperation();
+  operation.checkValid();
+  PyFileAccumulator accum(fileOrStringObject, /*binary=*/true);
+
   if (!bytecodeVersion.has_value())
-    return mlirOperationWriteBytecode(operation, accumulator.getCallback(),
-                                      accumulator.getUserData());
+    return mlirOperationWriteBytecode(operation, accum.getCallback(),
+                                      accum.getUserData());
 
   MlirBytecodeWriterConfig config = mlirBytecodeWriterConfigCreate();
   mlirBytecodeWriterConfigDesiredEmitVersion(config, *bytecodeVersion);
   MlirLogicalResult res = mlirOperationWriteBytecodeWithConfig(
-      operation, config, accumulator.getCallback(), accumulator.getUserData());
+      operation, config, accum.getCallback(), accum.getUserData());
   mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
     throw nb::value_error((Twine("Unable to honor desired bytecode version ") +
                            Twine(*bytecodeVersion))
                               .str()
                               .c_str());
-}
-
-void PyOperationBase::writeBytecode(const nb::object &fileObject,
-                                    std::optional<int64_t> bytecodeVersion) {
-  PyOperation &operation = getOperation();
-  operation.checkValid();
-
-  std::string filePath;
-  if (nb::try_cast<std::string>(fileObject, filePath)) {
-    std::error_code ec;
-    llvm::raw_fd_ostream ostream(filePath, ec);
-    if (ec) {
-      throw nb::value_error("Unable to open file for writing");
-    }
-
-    OstreamAccumulator accum(ostream);
-    writeBytecodeForOperation(accum, operation, bytecodeVersion);
-  } else {
-    PyFileAccumulator accum(fileObject, /*binary=*/true);
-    writeBytecodeForOperation(accum, operation, bytecodeVersion);
-  }
 }
 
 void PyOperationBase::walk(

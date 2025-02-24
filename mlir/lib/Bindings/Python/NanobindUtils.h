@@ -18,6 +18,9 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <string>
+#include <variant>
+
 template <>
 struct std::iterator_traits<nanobind::detail::fast_iterator> {
   using value_type = nanobind::handle;
@@ -130,16 +133,32 @@ struct PyPrintAccumulator {
   }
 };
 
-/// Accumulates into a python file-like object, either writing text (default)
-/// or binary.
+/// Accumulates into a file, either writing text (default)
+/// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
 public:
-  PyFileAccumulator(const nanobind::object &fileObject, bool binary)
-      : pyWriteFunction(fileObject.attr("write")), binary(binary) {}
+  PyFileAccumulator(const nanobind::object &fileOrStringObject, bool binary)
+      : binary(binary) {
+    std::string filePath;
+    if (nb::try_cast<std::string>(fileOrStringObject, filePath)) {
+      std::error_code ec;
+      writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
+      if (ec) {
+        throw nb::value_error("Unable to open file for writing");
+      }
+    } else {
+      writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
+    }
+  }
+
+  MlirStringCallback getCallback() {
+    return writeTarget.index == 0 ? getPyWriteCallback() : getOstreamCallback();
+  }
 
   void *getUserData() { return this; }
 
-  MlirStringCallback getCallback() {
+private:
+  MlirStringCallback getPyWriteCallback() {
     return [](MlirStringRef part, void *userData) {
       nanobind::gil_scoped_acquire acquire;
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
@@ -155,27 +174,16 @@ public:
     };
   }
 
-private:
-  nanobind::object pyWriteFunction;
-  bool binary;
-};
-
-/// Accumulates into a LLVM ostream.
-class OstreamAccumulator {
-public:
-  OstreamAccumulator(llvm::raw_ostream &ostream) : ostream(ostream) {}
-
-  void *getUserData() { return this; }
-
-  MlirStringCallback getCallback() {
+  MlirStringCallback getOstreamCallback() {
     return [](MlirStringRef part, void *userData) {
-      OstreamAccumulator *accum = static_cast<OstreamAccumulator *>(userData);
-      accum->ostream << llvm::StringRef(part.data, part.length);
+      PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
+      accum->writeTarget.get<llvm::raw_fd_ostream>().write(part.data,
+                                                           part.length);
     };
   }
 
-private:
-  llvm::raw_ostream &ostream;
+  std::variant<nanobind::object, llvm::raw_fd_ostream> writeTarget;
+  bool binary;
 };
 
 /// Accumulates into a python string from a method that is expected to make
