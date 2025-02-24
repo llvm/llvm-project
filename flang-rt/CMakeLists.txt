@@ -229,7 +229,7 @@ endif ()
 
 # Build with _XOPEN_SOURCE on AIX to avoid errors caused by _ALL_SOURCE.
 # We need to enable the large-file API as well.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
   add_compile_definitions(_XOPEN_SOURCE=700)
   add_compile_definitions(_LARGE_FILE_API)
 endif ()
