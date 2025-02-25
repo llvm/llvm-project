@@ -69,7 +69,7 @@ struct Config {
   // If true, telemetry will be enabled.
   const bool EnableTelemetry;
 
-  virtual Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
+  explicit Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
 
   // Telemetry can only be enabled if both the runtime and buildtime flag
   // are set.
