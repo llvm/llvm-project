@@ -133,6 +133,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   WebKit/MemoryUnsafeCastChecker.cpp
   WebKit/PtrTypesSemantics.cpp
   WebKit/RefCntblBaseVirtualDtorChecker.cpp
+  WebKit/RetainPtrCtorAdoptChecker.cpp
   WebKit/RawPtrRefCallArgsChecker.cpp
   WebKit/UncountedLambdaCapturesChecker.cpp
   WebKit/RawPtrRefLocalVarsChecker.cpp
