@@ -64,7 +64,7 @@ namespace lldb_dap {
 //     "required": [ "body" ]
 //   }]
 // }
-void ScopesRequestHandler::operator()(const llvm::json::Object &request) {
+void ScopesRequestHandler::operator()(const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;

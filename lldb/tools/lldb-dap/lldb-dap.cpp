@@ -123,8 +123,6 @@ public:
                                    InfoTable, true) {}
 };
 
-typedef void (*RequestCallback)(const llvm::json::Object &command);
-
 void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
