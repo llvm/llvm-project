@@ -496,7 +496,7 @@ Changes to the LLVM tools
 
 * llvm-cxxfilt now supports demangling call expressions encoded using `cp` instead of `cl`.
 
-* llvm-objdump now supports printing the file header, load section header and auxillary header for XCOFF object files under the ``--private-headers`` option.
+* llvm-objdump now supports printing the file header, load section header and auxiliary header for XCOFF object files under the ``--private-headers`` option.
 
 Changes to LLDB
 ---------------------------------
