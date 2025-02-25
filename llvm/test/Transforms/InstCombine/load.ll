@@ -454,8 +454,7 @@ define i32 @load_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
 
 define i16 @load_select_with_null_gep2(i1 %cond, ptr %p, i64 %x) {
 ; CHECK-LABEL: @load_select_with_null_gep2(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL]], i64 -2
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    ret i16 [[RES]]
@@ -469,8 +468,7 @@ define i16 @load_select_with_null_gep2(i1 %cond, ptr %p, i64 %x) {
 
 define i16 @load_select_with_null_ge3(i1 %cond, ptr %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @load_select_with_null_ge3(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL]], i64 -2
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[GEP]], i64 [[Y:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP2]], align 2
