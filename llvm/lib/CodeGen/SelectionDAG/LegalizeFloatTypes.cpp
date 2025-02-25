@@ -1570,6 +1570,8 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FREM:
   case ISD::FREM:       ExpandFloatRes_FREM(N, Lo, Hi); break;
   case ISD::FMODF:   ExpandFloatRes_FMODF(N); break;
+  case ISD::FSINCOS: ExpandFloatRes_FSINCOS(N); break;
+  case ISD::FSINCOSPI: ExpandFloatRes_FSINCOSPI(N); break;
     // clang-format on
   }
 
@@ -1623,6 +1625,15 @@ void DAGTypeLegalizer::ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
 void DAGTypeLegalizer::ExpandFloatRes_FMODF(SDNode *N) {
   ExpandFloatRes_UnaryWithTwoFPResults(N, RTLIB::getMODF(N->getValueType(0)),
                                        /*CallRetResNo=*/0);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FSINCOS(SDNode *N) {
+  ExpandFloatRes_UnaryWithTwoFPResults(N, RTLIB::getSINCOS(N->getValueType(0)));
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FSINCOSPI(SDNode *N) {
+  ExpandFloatRes_UnaryWithTwoFPResults(N,
+                                       RTLIB::getSINCOSPI(N->getValueType(0)));
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(

@@ -4956,6 +4956,12 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
       (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 16) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 32) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 64) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))
@@ -5023,9 +5029,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Reverse, MVT::v4f32, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v2f64, 1}, // EXT
         {TTI::SK_Reverse, MVT::v8f16, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v8bf16, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v8i16, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v16i8, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v4f16, 1}, // REV64
+        {TTI::SK_Reverse, MVT::v4bf16, 1}, // REV64
         {TTI::SK_Reverse, MVT::v4i16, 1}, // REV64
         {TTI::SK_Reverse, MVT::v8i8, 1},  // REV64
         // Splice can all be lowered as `ext`.
@@ -5039,8 +5047,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Splice, MVT::v8bf16, 1},
         {TTI::SK_Splice, MVT::v8i16, 1},
         {TTI::SK_Splice, MVT::v16i8, 1},
-        {TTI::SK_Splice, MVT::v4bf16, 1},
         {TTI::SK_Splice, MVT::v4f16, 1},
+        {TTI::SK_Splice, MVT::v4bf16, 1},
         {TTI::SK_Splice, MVT::v4i16, 1},
         {TTI::SK_Splice, MVT::v8i8, 1},
         // Broadcast shuffle kinds for scalable vectors

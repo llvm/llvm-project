@@ -1,5 +1,5 @@
 ; RUN: not llc -verify-machineinstrs -O0 < %s 2>&1 | FileCheck %s
-; RUN: not llc -verify-machineinstrs -O2 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-O2
+; RUN: not --crash llc -verify-machineinstrs -O2 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-O2
 ; CHECK: error: inline assembly requires more registers than available
 ; CHECK: .size   main, .Lfunc_end0-main
 ; CHECK-O2: error: inline assembly requires more registers than available

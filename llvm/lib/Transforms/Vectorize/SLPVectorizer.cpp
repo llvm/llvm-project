@@ -13320,9 +13320,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   Entries.clear();
   // TODO: currently checking only for Scalars in the tree entry, need to count
   // reused elements too for better cost estimation.
-  const EdgeInfo &TEUseEI = TE == VectorizableTree.front().get()
-                                ? EdgeInfo(const_cast<TreeEntry *>(TE), 0)
-                                : TE->UserTreeIndex;
+  auto GetUserEntry = [&](const TreeEntry *TE) {
+    while (TE->UserTreeIndex && TE->UserTreeIndex.EdgeIdx == UINT_MAX)
+      TE = TE->UserTreeIndex.UserTE;
+    if (TE == VectorizableTree.front().get())
+      return EdgeInfo(const_cast<TreeEntry *>(TE), 0);
+    return TE->UserTreeIndex;
+  };
+  const EdgeInfo TEUseEI = GetUserEntry(TE);
+  if (!TEUseEI)
+    return std::nullopt;
   const Instruction *TEInsertPt = &getLastInstructionInBundle(TEUseEI.UserTE);
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
@@ -13874,15 +13881,13 @@ BoUpSLP::isGatherShuffledEntry(
   assert(VL.size() % NumParts == 0 &&
          "Number of scalars must be divisible by NumParts.");
   if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->isGather() &&
-      TE->UserTreeIndex.EdgeIdx == UINT_MAX) {
-    assert(
-        (TE->Idx == 0 ||
-         (TE->hasState() && TE->getOpcode() == Instruction::ExtractElement) ||
-         isSplat(TE->Scalars) ||
-         getSameValuesTreeEntry(TE->getMainOp(), TE->Scalars)) &&
-        "Expected splat or extractelements only node.");
+      TE->UserTreeIndex.EdgeIdx == UINT_MAX &&
+      (TE->Idx == 0 ||
+       (TE->hasState() && TE->getOpcode() == Instruction::ExtractElement) ||
+       isSplat(TE->Scalars) ||
+       (TE->hasState() &&
+        getSameValuesTreeEntry(TE->getMainOp(), TE->Scalars))))
     return {};
-  }
   unsigned SliceSize = getPartNumElems(VL.size(), NumParts);
   SmallVector<std::optional<TTI::ShuffleKind>> Res;
   for (unsigned Part : seq<unsigned>(NumParts)) {
@@ -13963,15 +13968,31 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (!DemandedElements.isZero())
-    Cost +=
-        TTI->getScalarizationOverhead(VecTy, DemandedElements, /*Insert=*/true,
-                                      /*Extract=*/false, CostKind, VL);
+  if (!DemandedElements.isZero()) {
+    if (isa<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "Only supported by REVEC.");
+      // We don't need to insert elements one by one. Instead, we can insert the
+      // entire vector into the destination.
+      Cost = 0;
+      unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+      for (unsigned I : seq<unsigned>(VL.size()))
+        if (DemandedElements[I])
+          Cost += ::getShuffleCost(*TTI, TTI::SK_InsertSubvector, VecTy, {},
+                                   CostKind, I * ScalarTyNumElements,
+                                   cast<FixedVectorType>(ScalarTy));
+    } else {
+      Cost += TTI->getScalarizationOverhead(VecTy, DemandedElements,
+                                            /*Insert=*/true,
+                                            /*Extract=*/false, CostKind, VL);
+    }
+  }
   if (ForPoisonSrc) {
     if (isa<FixedVectorType>(ScalarTy)) {
       assert(SLPReVec && "Only supported by REVEC.");
       // We don't need to insert elements one by one. Instead, we can insert the
       // entire vector into the destination.
+      assert(DemandedElements.isZero() &&
+             "Need to consider the cost from DemandedElements.");
       Cost = 0;
       unsigned ScalarTyNumElements = getNumElements(ScalarTy);
       for (unsigned I : seq<unsigned>(VL.size()))
@@ -15304,7 +15325,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
           if (ExtractMask[I] == PoisonMaskElem)
             continue;
-          if (isa<UndefValue>(E->Scalars[I]))
+          if (isa<UndefValue>(StoredGS[I]))
             continue;
           auto *EI = cast<ExtractElementInst>(StoredGS[I]);
           Value *VecOp = EI->getVectorOperand();

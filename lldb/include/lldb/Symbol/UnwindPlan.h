@@ -175,13 +175,13 @@ public:
 
       void SetIsDWARFExpression(const uint8_t *opcodes, uint32_t len);
 
-      const uint8_t *GetDWARFExpressionBytes() {
+      const uint8_t *GetDWARFExpressionBytes() const {
         if (m_type == atDWARFExpression || m_type == isDWARFExpression)
           return m_location.expr.opcodes;
         return nullptr;
       }
 
-      int GetDWARFExpressionLength() {
+      int GetDWARFExpressionLength() const {
         if (m_type == atDWARFExpression || m_type == isDWARFExpression)
           return m_location.expr.length;
         return 0;
@@ -308,13 +308,13 @@ public:
         }
       }
 
-      const uint8_t *GetDWARFExpressionBytes() {
+      const uint8_t *GetDWARFExpressionBytes() const {
         if (m_type == isDWARFExpression)
           return m_value.expr.opcodes;
         return nullptr;
       }
 
-      int GetDWARFExpressionLength() {
+      int GetDWARFExpressionLength() const {
         if (m_type == isDWARFExpression)
           return m_value.expr.length;
         return 0;
@@ -362,8 +362,10 @@ public:
 
     void SlideOffset(lldb::addr_t offset) { m_offset += offset; }
 
+    const FAValue &GetCFAValue() const { return m_cfa_value; }
     FAValue &GetCFAValue() { return m_cfa_value; }
 
+    const FAValue &GetAFAValue() const { return m_afa_value; }
     FAValue &GetAFAValue() { return m_afa_value; }
 
     bool SetRegisterLocationToAtCFAPlusOffset(uint32_t reg_num, int32_t offset,
@@ -464,7 +466,7 @@ public:
   // unknown - the final row in the UnwindPlan is returned. In practice, the
   // UnwindPlan for a function with no known start address will be the
   // architectural default UnwindPlan which will only have one row.
-  UnwindPlan::RowSP GetRowForFunctionOffset(int offset) const;
+  const UnwindPlan::Row *GetRowForFunctionOffset(int offset) const;
 
   lldb::RegisterKind GetRegisterKind() const { return m_register_kind; }
 
@@ -495,9 +497,9 @@ public:
 
   bool IsValidRowIndex(uint32_t idx) const;
 
-  const UnwindPlan::RowSP GetRowAtIndex(uint32_t idx) const;
+  const UnwindPlan::Row *GetRowAtIndex(uint32_t idx) const;
 
-  const UnwindPlan::RowSP GetLastRow() const;
+  const UnwindPlan::Row *GetLastRow() const;
 
   lldb_private::ConstString GetSourceName() const;
 

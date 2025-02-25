@@ -1,7 +1,10 @@
-# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -start-before=greedy,1 -stop-after=virtregrewriter,2 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs=0 -start-before=greedy,1 -stop-after=virtregrewriter,2 %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -start-before=greedy,1 -stop-after=virtregrewriter,2 %s -o /dev/null 2>&1 | FileCheck -check-prefixes=ERR,VERIFIER %s
+
+# FIXME: We should not produce a verifier error after erroring
 
 # ERR: error: inline assembly requires more registers than available
-# ERR-NOT: Bad machine code
+# VERIFIER: *** Bad machine code: Using an undefined physical register ***
 
 # This testcase cannot be compiled with the enforced register
 # budget. Previously, tryLastChanceRecoloring would assert here. It
