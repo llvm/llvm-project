@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -48,7 +49,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 #include <numeric>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -4359,7 +4359,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     const std::string prefix_amdgcn = "amdgcn.";
     const std::string prefix_dbg = "dbg.";
 
-    std::unordered_map<StringRef, UpgradeFunc> lookupTable;
+    DenseMap<StringRef, UpgradeFunc> lookupTable;
     lookupTable[prefix_x86] = upgradeX86IntrinsicCall;
     lookupTable[prefix_nvvm] = upgradeNVVMIntrinsicCall;
     lookupTable[prefix_aarch64] = upgradeAArch64IntrinsicCall;
