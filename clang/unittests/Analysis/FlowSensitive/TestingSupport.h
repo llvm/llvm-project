@@ -102,7 +102,7 @@ struct AnalysisOutputs {
   /// function and is analyzed.
   const AdornedCFG &ACFG;
   /// The analysis to be run.
-  TypeErasedDataflowAnalysis &Analysis;
+  DataflowAnalysis &Analysis;
   /// Initial state to start the analysis.
   const Environment &InitEnv;
   // Stores the state of a CFG block if it has been evaluated by the analysis.
@@ -254,8 +254,8 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           AI.Callbacks.Before(
               Context, Element,
               TransferStateForDiagnostics<typename AnalysisT::Lattice>(
-                  llvm::any_cast<const typename AnalysisT::Lattice &>(
-                      State.Lattice.Value),
+                  *llvm::cast<const typename AnalysisT::Lattice>(
+                      State.Lattice.get()),
                   State.Env));
         };
   }
@@ -266,8 +266,8 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           AI.Callbacks.After(
               Context, Element,
               TransferStateForDiagnostics<typename AnalysisT::Lattice>(
-                  llvm::any_cast<const typename AnalysisT::Lattice &>(
-                      State.Lattice.Value),
+                  *llvm::cast<const typename AnalysisT::Lattice>(
+                      State.Lattice.get()),
                   State.Env));
         };
   }

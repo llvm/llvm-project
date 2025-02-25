@@ -28,13 +28,13 @@ struct TextualLogger final : Logger {
   unsigned CurrentElementIndex;
   bool ShowColors;
   llvm::DenseMap<const CFGBlock *, unsigned> VisitCount;
-  TypeErasedDataflowAnalysis *CurrentAnalysis;
+  DataflowAnalysis *CurrentAnalysis;
 
   TextualLogger(llvm::raw_ostream &OS)
       : OS(OS), ShowColors(llvm::WithColor::defaultAutoDetectFunction()(OS)) {}
 
   virtual void beginAnalysis(const AdornedCFG &ACFG,
-                             TypeErasedDataflowAnalysis &Analysis) override {
+                             DataflowAnalysis &Analysis) override {
     {
       llvm::WithColor Header(OS, llvm::raw_ostream::Colors::RED, /*Bold=*/true);
       OS << "=== Beginning data flow analysis ===\n";
