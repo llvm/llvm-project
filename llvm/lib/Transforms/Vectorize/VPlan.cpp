@@ -989,9 +989,11 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 }
 
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
-  return *find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
+  auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
     return VPIRBB->getIRBasicBlock() == IRBB;
   });
+  assert(Iter != getExitBlocks().end() && "no exit block found");
+  return *Iter;
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {

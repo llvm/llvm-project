@@ -3427,8 +3427,8 @@ class VPlan {
   VPIRBasicBlock *ScalarHeader;
 
   /// Immutable list of VPIRBasicBlocks wrapping the exit blocks of the original
-  /// scalar loop. Note that some exit blocks may be unreachable, e.g. if the
-  /// scalar epilogue always executes
+  /// scalar loop. Note that some exit blocks may be unreachable at the moment,
+  /// e.g. if the scalar epilogue always executes.
   SmallVector<VPIRBasicBlock *, 2> ExitBlocks;
 
   /// Holds the VFs applicable to this VPlan.
