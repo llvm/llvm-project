@@ -1,16 +1,20 @@
 @class NSString;
 @class NSArray;
 @class NSMutableArray;
+#define nil ((id)0)
 #define CF_BRIDGED_TYPE(T) __attribute__((objc_bridge(T)))
 #define CF_BRIDGED_MUTABLE_TYPE(T) __attribute__((objc_bridge_mutable(T)))
 typedef CF_BRIDGED_TYPE(id) void * CFTypeRef;
+typedef signed char BOOL;
 typedef signed long CFIndex;
+typedef unsigned long NSUInteger;
 typedef const struct CF_BRIDGED_TYPE(id) __CFAllocator * CFAllocatorRef;
 typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
 typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
 extern const CFAllocatorRef kCFAllocatorDefault;
+typedef struct _NSZone NSZone;
 CFMutableArrayRef CFArrayCreateMutable(CFAllocatorRef allocator, CFIndex capacity);
 extern void CFArrayAppendValue(CFMutableArrayRef theArray, const void *value);
 CFArrayRef CFArrayCreate(CFAllocatorRef allocator, const void **values, CFIndex numValues);
@@ -24,9 +28,61 @@ extern void CFRelease(CFTypeRef cf);
 __attribute__((objc_root_class))
 @interface NSObject
 + (instancetype) alloc;
++ (Class) class;
++ (Class) superclass;
 - (instancetype) init;
 - (instancetype)retain;
 - (void)release;
+- (BOOL)isKindOfClass:(Class)aClass;
+@end
+
+@protocol NSCopying
+- (id)copyWithZone:(NSZone *)zone;
+@end
+
+@protocol NSFastEnumeration
+- (int)countByEnumeratingWithState:(void *)state objects:(id *)objects count:(unsigned)count;
+- (void)protocolMethod;
+@end
+
+@interface NSEnumerator <NSFastEnumeration>
+@end
+
+@interface NSDictionary : NSObject <NSCopying>
+- (NSUInteger)count;
+- (id)objectForKey:(id)aKey;
+- (id)objectForKeyedSubscript:(id)aKey;
+- (NSEnumerator *)keyEnumerator;
++ (id)dictionary;
++ (id)dictionaryWithObject:(id)object forKey:(id <NSCopying>)key;
++ (instancetype)dictionaryWithObjects:(const id [])objects forKeys:(const id <NSCopying> [])keys count:(NSUInteger)cnt;
+@end
+
+@interface NSArray : NSObject <NSCopying, NSFastEnumeration>
+- (NSUInteger)count;
+- (NSEnumerator *)objectEnumerator;
++ (NSArray *)arrayWithObjects:(const id [])objects count:(NSUInteger)count;
+@end
+
+@interface NSString : NSObject <NSCopying>
+- (NSUInteger)length;
+- (NSString *)stringByAppendingString:(NSString *)aString;
+- ( const char *)UTF8String;
+- (id)initWithUTF8String:(const char *)nullTerminatedCString;
++ (id)stringWithUTF8String:(const char *)nullTerminatedCString;
+@end
+
+@interface NSMutableString : NSString
+@end
+
+@interface NSValue : NSObject <NSCopying>
+- (void)getValue:(void *)value;
+@end
+
+@interface NSNumber : NSValue
+- (char)charValue;
+- (id)initWithInt:(int)value;
++ (NSNumber *)numberWithInt:(int)value;
 @end
 
 @interface SomeObj : NSObject

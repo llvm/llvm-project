@@ -308,8 +308,14 @@ namespace call_with_adopt_ref {
 }
 
 namespace call_with_cf_constant {
+  static const NSArray *array = @[@"hello"];
+  static const NSDictionary *dict = @{@"hello": @3};
+  void bar(const NSArray *);
+  void baz(const NSDictionary *);
   void foo() {
-    CFArrayCreateMutable(kCFAllocatorDefault, 10);    
+    CFArrayCreateMutable(kCFAllocatorDefault, 10);
+    bar(array);
+    baz(dict);
   }
 }
 
@@ -329,8 +335,15 @@ namespace call_with_ns_string {
 
 namespace bridge_cast_arg {
   void bar(NSString *);
-  void foo(CFStringRef arg) {
+  void baz(NSString *);
+  extern const CFStringRef kCFBundleNameKey;
+
+  NSObject *foo(CFStringRef arg) {
     bar((NSString *)bridge_cast((CFTypeRef)arg));
+    auto dict = @{
+      @"hello": @1,
+    };
+    return dict[(__bridge NSString *)kCFBundleNameKey];
   }
 }
 
@@ -338,5 +351,19 @@ namespace alloc_init_pair {
   void foo() {
     auto obj = adoptNS([[SomeObj alloc] init]);
     [obj doWork];
+  }
+}
+
+namespace alloc_class {
+  bool foo(NSObject *obj) {
+    return [obj isKindOfClass:SomeObj.class];
+  }
+
+  bool bar(NSObject *obj) {
+    return [obj isKindOfClass:[SomeObj class]];
+  }
+
+  bool baz(NSObject *obj) {
+    return [obj isKindOfClass:[SomeObj superclass]];
   }
 }

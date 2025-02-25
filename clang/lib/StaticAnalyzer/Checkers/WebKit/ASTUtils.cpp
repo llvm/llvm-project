@@ -37,6 +37,10 @@ bool tryToFindPtrOrigin(
           QT.isConstQualified()) {
         return callback(E, true);
       }
+      if (auto *VD = dyn_cast<VarDecl>(ValDecl)) {
+        if (auto *Init = VD->getInit())
+          E = Init->IgnoreParenCasts();
+      }
     }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
       E = tempExpr->getSubExpr();
@@ -61,6 +65,10 @@ bool tryToFindPtrOrigin(
     }
     if (auto *tempExpr = dyn_cast<ParenExpr>(E)) {
       E = tempExpr->getSubExpr();
+      continue;
+    }
+    if (auto *OpaqueValue = dyn_cast<OpaqueValueExpr>(E)) {
+      E = OpaqueValue->getSourceExpr();
       continue;
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
@@ -137,7 +145,18 @@ bool tryToFindPtrOrigin(
         if (isSafePtrType(Method->getReturnType()))
           return callback(E, true);
       }
+      auto Selector = ObjCMsgExpr->getSelector();
+      auto NameForFirstSlot = Selector.getNameForSlot(0);
+      if ((NameForFirstSlot == "class" || NameForFirstSlot == "superclass") &&
+          !Selector.getNumArgs())
+        return callback(E, true);
     }
+    if (auto *ObjCDict = dyn_cast<ObjCDictionaryLiteral>(E))
+      return callback(ObjCDict, true);
+    if (auto *ObjCArray = dyn_cast<ObjCArrayLiteral>(E))
+      return callback(ObjCArray, true);
+    if (auto *ObjCStr = dyn_cast<ObjCStringLiteral>(E))
+      return callback(ObjCStr, true);
     if (auto *unaryOp = dyn_cast<UnaryOperator>(E)) {
       // FIXME: Currently accepts ANY unary operator. Is it OK?
       E = unaryOp->getSubExpr();
