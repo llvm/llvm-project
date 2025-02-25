@@ -27,21 +27,21 @@ int main(int argc, char** argv) {
     return std::is_permutation(first1, last1, first2, last2);
   };
   auto std_is_permutation_3leg_pred = [](auto first1, auto last1, auto first2, auto) {
-    return std::is_permutation(first1, last1, first2, [](auto& x, auto& y) {
+    return std::is_permutation(first1, last1, first2, [](auto x, auto y) {
       benchmark::DoNotOptimize(x);
       benchmark::DoNotOptimize(y);
       return x == y;
     });
   };
   auto std_is_permutation_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::is_permutation(first1, last1, first2, last2, [](auto& x, auto& y) {
+    return std::is_permutation(first1, last1, first2, last2, [](auto x, auto y) {
       benchmark::DoNotOptimize(x);
       benchmark::DoNotOptimize(y);
       return x == y;
     });
   };
   auto ranges_is_permutation_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::is_permutation(first1, last1, first2, last2, [](auto& x, auto& y) {
+    return std::ranges::is_permutation(first1, last1, first2, last2, [](auto x, auto y) {
       benchmark::DoNotOptimize(x);
       benchmark::DoNotOptimize(y);
       return x == y;
