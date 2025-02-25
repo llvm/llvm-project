@@ -4,7 +4,7 @@
 # CHECK: unimp
 
 [0x8b,0x30,0x31,0x46]
-# CHECK: qc.shladd x1, x2, x3, {{\d+}}
+# CHECK-NOT: qc.shladd x1, x2, x3, {{[0-9]+}}
 
 [0x00,0x00]
 # CHECK: unimp
