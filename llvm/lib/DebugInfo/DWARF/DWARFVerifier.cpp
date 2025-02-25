@@ -1298,7 +1298,7 @@ void DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
   // each Name is reachable from the appropriate bucket.
   std::vector<BucketInfo> BucketStarts;
   BucketStarts.reserve(NI.getBucketCount() + 1);
-  const unsigned OrigNumberOfErrors = ErrorCategory.GetNumErrors();
+  const uint64_t OrigNumberOfErrors = ErrorCategory.GetNumErrors();
   for (uint32_t Bucket = 0, End = NI.getBucketCount(); Bucket < End; ++Bucket) {
     uint32_t Index = NI.getBucketArrayEntry(Bucket);
     if (Index > NI.getNameCount()) {
@@ -1516,12 +1516,16 @@ void DWARFVerifier::verifyNameIndexAbbrevs(
   }
 }
 
-static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
-                                            bool IncludeStrippedTemplateNames,
-                                            bool IncludeObjCNames = true,
-                                            bool IncludeLinkageName = true) {
+SmallVector<std::string, 3>
+DWARFVerifier::getNames(const DWARFDie &DIE, bool IncludeStrippedTemplateNames,
+                        bool IncludeObjCNames, bool IncludeLinkageName) {
   SmallVector<std::string, 3> Result;
-  if (const char *Str = DIE.getShortName()) {
+  const char *Str = nullptr;
+  {
+    std::lock_guard<std::mutex> Lock(AccessMutex);
+    Str = DIE.getShortName();
+  }
+  if (Str) {
     StringRef Name(Str);
     Result.emplace_back(Name);
     if (IncludeStrippedTemplateNames) {
@@ -1695,15 +1699,12 @@ void DWARFVerifier::verifyNameIndexEntries(
       // NonSkeletonUnitDie to point to the actual type unit in the .dwo/.dwp.
       NonSkeletonUnit =
           NonSkeletonDCtx.getTypeUnitForHash(TypeSig, /*IsDWO=*/true);
-      DWARFDie NonSkeletonUnitDie = DWARFDie();
-      {
-        std::lock_guard<std::mutex> Lock(AccessMutex);
-        NonSkeletonUnitDie = NonSkeletonUnit->getUnitDIE(true);
-      }
       // If we have foreign type unit in a DWP file, then we need to ignore
       // any entries from type units that don't match the one that made it into
       // the .dwp file.
       if (NonSkeletonDCtx.isDWP()) {
+        std::lock_guard<std::mutex> Lock(AccessMutex);
+        DWARFDie NonSkeletonUnitDie = NonSkeletonUnit->getUnitDIE(true);
         StringRef DUDwoName = dwarf::toStringRef(
             UnitDie.find({DW_AT_dwo_name, DW_AT_GNU_dwo_name}));
         StringRef TUDwoName = dwarf::toStringRef(
@@ -1960,7 +1961,7 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
                          [&]() { error() << Msg << '\n'; });
     return;
   }
-  const unsigned OriginalNumErrors = ErrorCategory.GetNumErrors();
+  const uint64_t OriginalNumErrors = ErrorCategory.GetNumErrors();
   verifyDebugNamesCULists(AccelTable);
   for (const auto &NI : AccelTable)
     verifyNameIndexBuckets(NI, StrData);

@@ -783,7 +783,8 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     if (filterArch(*Obj)) {
       std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
           *Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
-          RecoverableErrorHandler, WithColor::defaultWarningHandler, true);
+          RecoverableErrorHandler, WithColor::defaultWarningHandler,
+          /*ThreadSafe=*/true);
       DICtx->setParseCUTUIndexManually(ManuallyGenerateUnitIndex);
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
