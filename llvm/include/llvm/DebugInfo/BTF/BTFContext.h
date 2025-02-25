@@ -48,6 +48,12 @@ public:
   std::vector<DILocal>
   getLocalsForAddress(object::SectionedAddress Address) override;
 
+  std::optional<DILineInfo> getOptionalLineInfoForAddress(
+      object::SectionedAddress Address,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
+  std::optional<DILineInfo>
+  getOptionalLineInfoForDataAddress(object::SectionedAddress Address) override;
+
   static std::unique_ptr<BTFContext> create(
       const object::ObjectFile &Obj,
       std::function<void(Error)> ErrorHandler = WithColor::defaultErrorHandler);

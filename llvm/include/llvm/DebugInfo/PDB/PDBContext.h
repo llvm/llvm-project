@@ -57,6 +57,12 @@ namespace pdb {
     std::vector<DILocal>
     getLocalsForAddress(object::SectionedAddress Address) override;
 
+    std::optional<DILineInfo> getOptionalLineInfoForAddress(
+        object::SectionedAddress Address,
+        DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
+    std::optional<DILineInfo> getOptionalLineInfoForDataAddress(
+        object::SectionedAddress Address) override;
+
   private:
     std::string getFunctionName(uint64_t Address, DINameKind NameKind) const;
     std::unique_ptr<IPDBSession> Session;

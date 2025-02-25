@@ -401,6 +401,12 @@ public:
   std::vector<DILocal>
   getLocalsForAddress(object::SectionedAddress Address) override;
 
+  std::optional<DILineInfo> getOptionalLineInfoForAddress(
+      object::SectionedAddress Address,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
+  std::optional<DILineInfo>
+  getOptionalLineInfoForDataAddress(object::SectionedAddress Address) override;
+
   bool isLittleEndian() const { return DObj->isLittleEndian(); }
   static unsigned getMaxSupportedVersion() { return 5; }
   static bool isSupportedVersion(unsigned version) {
