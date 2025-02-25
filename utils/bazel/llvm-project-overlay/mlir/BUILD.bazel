@@ -3910,6 +3910,7 @@ cc_library(
         ":MaskableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":Support",
         ":VectorDialect",
         ":ViewLikeInterface",
         ":XeGPUEnumsIncGen",
@@ -4358,6 +4359,7 @@ cc_library(
         ":IndexToLLVM",
         ":IndexToSPIRV",
         ":LinalgToStandard",
+        ":MPIToLLVM",
         ":MathToEmitC",
         ":MathToFuncs",
         ":MathToLLVM",
@@ -5032,6 +5034,7 @@ cc_library(
         ":IndexToLLVM",
         ":LLVMToLLVMIRTranslation",
         ":LinalgTransformOps",
+        ":MPIToLLVM",
         ":MathToLLVM",
         ":MemRefToLLVM",
         ":MemRefTransformOps",
@@ -14065,6 +14068,22 @@ cc_library(
         ":MPITypesIncGen",
         ":MemRefDialect",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MPIToLLVM",
+    srcs = ["lib/Conversion/MPIToLLVM/MPIToLLVM.cpp"],
+    hdrs = ["include/mlir/Conversion/MPIToLLVM/MPIToLLVM.h"],
+    includes = ["include"],
+    deps = [
+        ":ConvertToLLVMInterface",
+        ":DLTIDialect",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MPIDialect",
+        ":TransformUtils",
     ],
 )
 

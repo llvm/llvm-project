@@ -889,10 +889,20 @@ bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
   return false;
 }
 
+/// Returns true if \p F is either weak_odr or linkonce_odr.
+static bool isODR(const Function *F) {
+  return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
+}
+
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
-  if (F->isInterposable()) {
-    assert(G->isInterposable());
+
+  // Create a new thunk that both F and G can call, if F cannot call G directly.
+  // That is the case if F is either interposable or if G is either weak_odr or
+  // linkonce_odr.
+  if (F->isInterposable() || (isODR(F) && isODR(G))) {
+    assert((!isODR(G) || isODR(F)) &&
+           "if G is ODR, F must also be ODR due to ordering");
 
     // Both writeThunkOrAlias() calls below must succeed, either because we can
     // create aliases for G and NewF, or because a thunk for F is profitable.
@@ -912,6 +922,13 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     copyMetadataIfPresent(F, NewF, "kcfi_type");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
+
+    // If G or NewF are (weak|linkonce)_odr, update all callers to call the
+    // thunk.
+    if (isODR(G))
+      replaceDirectCallers(G, F);
+    if (isODR(F))
+      replaceDirectCallers(NewF, F);
 
     // We collect alignment before writeThunkOrAlias that overwrites NewF and
     // G's content.
@@ -986,16 +1003,24 @@ void MergeFunctions::replaceFunctionInTree(const FunctionNode &FN,
 
 // Ordering for functions that are equal under FunctionComparator
 static bool isFuncOrderCorrect(const Function *F, const Function *G) {
+  if (isODR(F) != isODR(G)) {
+    // ODR functions before non-ODR functions. A ODR function can call a non-ODR
+    // function if it is not interposable, but not the other way around.
+    return isODR(G);
+  }
+
   if (F->isInterposable() != G->isInterposable()) {
     // Strong before weak, because the weak function may call the strong
     // one, but not the other way around.
     return !F->isInterposable();
   }
+
   if (F->hasLocalLinkage() != G->hasLocalLinkage()) {
     // External before local, because we definitely have to keep the external
     // function, but may be able to drop the local one.
     return !F->hasLocalLinkage();
   }
+
   // Impose a total order (by name) on the replacement of functions. This is
   // important when operating on more than one module independently to prevent
   // cycles of thunks calling each other when the modules are linked together.

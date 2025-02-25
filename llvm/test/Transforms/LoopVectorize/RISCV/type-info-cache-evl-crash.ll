@@ -44,15 +44,15 @@ define void @type_info_cache_clobber(ptr %dstv, ptr %src, i64 %wide.trip.count) 
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP14]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]]), !alias.scope [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i32.nxv8i8(<vscale x 8 x i8> [[VP_OP_LOAD]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])
-; CHECK-NEXT:    [[VP_OP:%.*]] = call <vscale x 8 x i32> @llvm.vp.mul.nxv8i32(<vscale x 8 x i32> [[TMP15]], <vscale x 8 x i32> zeroinitializer, <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])
-; CHECK-NEXT:    [[VP_OP2:%.*]] = call <vscale x 8 x i32> @llvm.vp.ashr.nxv8i32(<vscale x 8 x i32> [[TMP15]], <vscale x 8 x i32> zeroinitializer, <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])
-; CHECK-NEXT:    [[VP_OP3:%.*]] = call <vscale x 8 x i32> @llvm.vp.or.nxv8i32(<vscale x 8 x i32> [[VP_OP2]], <vscale x 8 x i32> zeroinitializer, <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP15:%.*]] = zext <vscale x 8 x i8> [[VP_OP_LOAD]] to <vscale x 8 x i32>
+; CHECK-NEXT:    [[VP_OP:%.*]] = mul <vscale x 8 x i32> [[TMP15]], zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = ashr <vscale x 8 x i32> [[TMP15]], zeroinitializer
+; CHECK-NEXT:    [[VP_OP3:%.*]] = or <vscale x 8 x i32> [[TMP23]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <vscale x 8 x i32> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x i32> @llvm.vp.select.nxv8i32(<vscale x 8 x i1> [[TMP16]], <vscale x 8 x i32> [[VP_OP3]], <vscale x 8 x i32> zeroinitializer, i32 [[TMP11]])
-; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i8> @llvm.vp.trunc.nxv8i8.nxv8i32(<vscale x 8 x i32> [[TMP17]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP18]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 8 x i16> @llvm.vp.trunc.nxv8i16.nxv8i32(<vscale x 8 x i32> [[VP_OP]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP24:%.*]] = trunc <vscale x 8 x i32> [[TMP17]] to <vscale x 8 x i8>
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP24]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc <vscale x 8 x i32> [[VP_OP]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> [[TMP19]], <vscale x 8 x ptr> align 2 zeroinitializer, <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]

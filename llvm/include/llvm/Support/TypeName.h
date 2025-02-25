@@ -13,6 +13,17 @@
 
 #include "llvm/ADT/StringRef.h"
 
+// Versions of GCC prior to GCC 9 don't declare __PRETTY_FUNCTION__ as constexpr
+#if defined(__clang__) || defined(_MSC_VER) ||                                 \
+    (defined(__GNUC__) && __GNUC__ >= 9)
+#define LLVM_GET_TYPE_NAME_CONSTEXPR constexpr
+#define LLVM_GET_TYPE_NAME_STATIC_ASSERT 1
+#else
+#define LLVM_GET_TYPE_NAME_CONSTEXPR
+#define LLVM_GET_TYPE_NAME_STATIC_ASSERT 0
+#include <cassert>
+#endif
+
 namespace llvm {
 
 /// We provide a function which tries to compute the (demangled) name of a type
@@ -25,50 +36,65 @@ namespace llvm {
 /// The returned StringRef will point into a static storage duration string.
 /// However, it may not be null terminated and may be some strangely aligned
 /// inner substring of a larger string.
-template <typename DesiredTypeName> inline constexpr StringRef getTypeName() {
+template <typename DesiredTypeName>
+inline LLVM_GET_TYPE_NAME_CONSTEXPR StringRef getTypeName() {
 #if defined(__clang__) || defined(__GNUC__)
-  constexpr std::string_view Name = __PRETTY_FUNCTION__;
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Name = __PRETTY_FUNCTION__;
 
-  constexpr std::string_view Key = "DesiredTypeName = ";
-  constexpr std::string_view TemplateParamsStart = Name.substr(Name.find(Key));
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Key = "DesiredTypeName = ";
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view TemplateParamsStart =
+      Name.substr(Name.find(Key));
+#if LLVM_GET_TYPE_NAME_STATIC_ASSERT
   static_assert(!TemplateParamsStart.empty(),
                 "Unable to find the template parameter!");
-  constexpr std::string_view SubstitutionKey =
+#else
+  assert(!TemplateParamsStart.empty() &&
+         "Unable to find the template parameter!");
+#endif
+
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view SubstitutionKey =
       TemplateParamsStart.substr(Key.size());
 
+#if LLVM_GET_TYPE_NAME_STATIC_ASSERT
   // ends_with() is only available in c++20
   static_assert(!SubstitutionKey.empty() && SubstitutionKey.back() == ']',
                 "Name doesn't end in the substitution key!");
+#else
+  assert(!SubstitutionKey.empty() && SubstitutionKey.back() == ']' &&
+         "Name doesn't end in the substitution key!");
+#endif
+
   return SubstitutionKey.substr(0, SubstitutionKey.size() - 1);
 #elif defined(_MSC_VER)
-  constexpr std::string_view Name = __FUNCSIG__;
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Name = __FUNCSIG__;
 
-  constexpr std::string_view Key = "getTypeName<";
-  constexpr std::string_view GetTypeNameStart = Name.substr(Name.find(Key));
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Key = "getTypeName<";
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view GetTypeNameStart =
+      Name.substr(Name.find(Key));
   static_assert(!GetTypeNameStart.empty(),
                 "Unable to find the template parameter!");
-  constexpr std::string_view SubstitutionKey =
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view SubstitutionKey =
       GetTypeNameStart.substr(Key.size());
 
   // starts_with() only available in c++20
-  constexpr std::string_view RmPrefixClass =
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view RmPrefixClass =
       SubstitutionKey.find("class ") == 0
           ? SubstitutionKey.substr(sizeof("class ") - 1)
           : SubstitutionKey;
-  constexpr std::string_view RmPrefixStruct =
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view RmPrefixStruct =
       RmPrefixClass.find("struct ") == 0
           ? RmPrefixClass.substr(sizeof("struct ") - 1)
           : RmPrefixClass;
-  constexpr std::string_view RmPrefixUnion =
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view RmPrefixUnion =
       RmPrefixStruct.find("union ") == 0
           ? RmPrefixStruct.substr(sizeof("union ") - 1)
           : RmPrefixStruct;
-  constexpr std::string_view RmPrefixEnum =
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view RmPrefixEnum =
       RmPrefixUnion.find("enum ") == 0
           ? RmPrefixUnion.substr(sizeof("enum ") - 1)
           : RmPrefixUnion;
 
-  constexpr auto AnglePos = RmPrefixEnum.rfind('>');
+  LLVM_GET_TYPE_NAME_CONSTEXPR auto AnglePos = RmPrefixEnum.rfind('>');
   static_assert(AnglePos != std::string_view::npos,
                 "Unable to find the closing '>'!");
   return RmPrefixEnum.substr(0, AnglePos);
@@ -80,5 +106,9 @@ template <typename DesiredTypeName> inline constexpr StringRef getTypeName() {
 }
 
 } // namespace llvm
+
+// Don't leak out of this header file
+#undef LLVM_GET_TYPE_NAME_CONSTEXPR
+#undef LLVM_GET_TYPE_NAME_STATIC_ASSERT
 
 #endif

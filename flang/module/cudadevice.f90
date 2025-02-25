@@ -557,59 +557,117 @@ implicit none
     end function
   end interface
 
+  interface atomiccas
+    attributes(device) pure integer function atomiccasi(address, val, val2)
+  !dir$ ignore_tkr (rd) address, (d) val, (d) val2
+    integer, intent(inout) :: address
+    integer, value :: val, val2
+    end function
+    attributes(device) pure integer(8) function atomiccasul(address, val, val2)
+  !dir$ ignore_tkr (rd) address, (dk) val, (dk) val2
+    integer(8), intent(inout) :: address
+    integer(8), value :: val, val2
+    end function
+    attributes(device) pure real function atomiccasf(address, val, val2)
+  !dir$ ignore_tkr (rd) address, (d) val, (d) val2
+    real, intent(inout) :: address
+    real, value :: val, val2
+    end function
+    attributes(device) pure double precision function atomiccasd(address, val, val2)
+  !dir$ ignore_tkr (rd) address, (d) val, (d) val2
+    double precision, intent(inout) :: address
+    double precision, value :: val, val2
+    end function
+  end interface
+
+  interface atomicexch
+    attributes(device) pure integer function atomicexchi(address, val)
+  !dir$ ignore_tkr (rd) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+    attributes(device) pure integer(8) function atomicexchul(address, val)
+  !dir$ ignore_tkr (rd) address, (dk) val
+    integer(8), intent(inout) :: address
+    integer(8), value :: val
+    end function
+    attributes(device) pure real function atomicexchf(address, val)
+  !dir$ ignore_tkr (rd) address, (d) val
+    real, intent(inout) :: address
+    real, value :: val
+    end function
+    attributes(device) pure double precision function atomicexchd(address, val)
+  !dir$ ignore_tkr (rd) address, (d) val
+    double precision, intent(inout) :: address
+    double precision, value :: val
+    end function
+  end interface
+
+  interface atomicxor
+    attributes(device) pure integer function atomicxori(address, val)
+  !dir$ ignore_tkr (rd) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+  end interface
+
+  ! Time function
+
   interface
     attributes(device) integer(8) function clock64()
     end function
   end interface
 
-interface match_all_sync
-  attributes(device) integer function match_all_syncjj(mask, val, pred)
-!dir$ ignore_tkr(d) mask, (d) val, (d) pred
-  integer(4), value :: mask
-  integer(4), value :: val
-  integer(4)        :: pred
-  end function
-  attributes(device) integer function match_all_syncjx(mask, val, pred)
-!dir$ ignore_tkr(d) mask, (d) val, (d) pred
-  integer(4), value :: mask
-  integer(8), value :: val
-  integer(4)        :: pred
-  end function
-  attributes(device) integer function match_all_syncjf(mask, val, pred)
-!dir$ ignore_tkr(d) mask, (d) val, (d) pred
-  integer(4), value :: mask
-  real(4), value    :: val
-  integer(4)        :: pred
-  end function
-  attributes(device) integer function match_all_syncjd(mask, val, pred)
-!dir$ ignore_tkr(d) mask, (d) val, (d) pred
-  integer(4), value :: mask
-  real(8), value    :: val
-  integer(4)        :: pred
-  end function
-end interface
+  ! Warp Match Functions
 
-interface match_any_sync
-  attributes(device) integer function match_any_syncjj(mask, val)
-!dir$ ignore_tkr(d) mask, (d) val
-  integer(4), value :: mask
-  integer(4), value :: val
-  end function
-  attributes(device) integer function match_any_syncjx(mask, val)
-!dir$ ignore_tkr(d) mask, (d) val
-  integer(4), value :: mask
-  integer(8), value :: val
-  end function
-  attributes(device) integer function match_any_syncjf(mask, val)
-!dir$ ignore_tkr(d) mask, (d) val
-  integer(4), value :: mask
-  real(4), value    :: val
-  end function
-  attributes(device) integer function match_any_syncjd(mask, val)
-!dir$ ignore_tkr(d) mask, (d) val
-  integer(4), value :: mask
-  real(8), value    :: val
-  end function
-end interface
+  interface match_all_sync
+    attributes(device) integer function match_all_syncjj(mask, val, pred)
+  !dir$ ignore_tkr(d) mask, (d) val, (d) pred
+    integer(4), value :: mask
+    integer(4), value :: val
+    integer(4)        :: pred
+    end function
+    attributes(device) integer function match_all_syncjx(mask, val, pred)
+  !dir$ ignore_tkr(d) mask, (d) val, (d) pred
+    integer(4), value :: mask
+    integer(8), value :: val
+    integer(4)        :: pred
+    end function
+    attributes(device) integer function match_all_syncjf(mask, val, pred)
+  !dir$ ignore_tkr(d) mask, (d) val, (d) pred
+    integer(4), value :: mask
+    real(4), value    :: val
+    integer(4)        :: pred
+    end function
+    attributes(device) integer function match_all_syncjd(mask, val, pred)
+  !dir$ ignore_tkr(d) mask, (d) val, (d) pred
+    integer(4), value :: mask
+    real(8), value    :: val
+    integer(4)        :: pred
+    end function
+  end interface
+
+  interface match_any_sync
+    attributes(device) integer function match_any_syncjj(mask, val)
+  !dir$ ignore_tkr(d) mask, (d) val
+    integer(4), value :: mask
+    integer(4), value :: val
+    end function
+    attributes(device) integer function match_any_syncjx(mask, val)
+  !dir$ ignore_tkr(d) mask, (d) val
+    integer(4), value :: mask
+    integer(8), value :: val
+    end function
+    attributes(device) integer function match_any_syncjf(mask, val)
+  !dir$ ignore_tkr(d) mask, (d) val
+    integer(4), value :: mask
+    real(4), value    :: val
+    end function
+    attributes(device) integer function match_any_syncjd(mask, val)
+  !dir$ ignore_tkr(d) mask, (d) val
+    integer(4), value :: mask
+    real(8), value    :: val
+    end function
+  end interface
 
 end module
