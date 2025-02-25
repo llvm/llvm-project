@@ -5600,8 +5600,8 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
 
   QualType BaseElementType = getASTContext().getBaseElementType(Type);
 
-  if(Type->isVariableArrayType())
-      return false;
+  if (Type->isVariableArrayType())
+    return false;
 
   if (BaseElementType.hasNonTrivialObjCLifetime())
     return false;
@@ -5632,8 +5632,8 @@ bool Sema::IsCXXReplaceableType(QualType Type) {
   if (Type.isConstQualified() || Type.isVolatileQualified())
     return false;
 
-  if(Type->isVariableArrayType())
-      return false;
+  if (Type->isVariableArrayType())
+    return false;
 
   QualType BaseElementType =
       getASTContext().getBaseElementType(Type.getUnqualifiedType());
