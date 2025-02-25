@@ -17,9 +17,6 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMTypesIncGen
   MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMInterfacesIncGen
-  MLIRLLVMConversionsIncGen
-  MLIRLLVMIntrinsicConversionsIncGen
-  MLIRLLVMIntrinsicUnregisteredIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
 

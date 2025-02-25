@@ -19,7 +19,6 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -565,46 +564,6 @@ static bool emitConvertibleIntrinsics(const RecordKeeper &records,
   return false;
 }
 
-static void emitOneUnregisteredIntrinsic(const Record &record, raw_ostream &os,
-                                         StringRef targetName) {
-  StringRef targetPrefix = record.getValueAsString("TargetPrefix");
-
-  // Not interested in target specific intrinsics in the generic namespace.
-  if (targetName.empty() && !targetPrefix.empty())
-    return;
-
-  // Skip unknown targets.
-  if (!targetName.empty() && targetPrefix != targetName)
-    return;
-
-  StringRef defName = record.getName();
-  ArrayRef<SMLoc> defLoc = record.getLoc();
-
-  // Sanity check the input.
-  if (!defName.starts_with("int_"))
-    PrintFatalError(defLoc,
-                    "Intrinsic '" + defName + "' does not start with 'int_'!");
-
-  StringRef enumName = defName.substr(4);
-
-  os << "llvm::Intrinsic::";
-  if (!targetName.empty())
-    os << StringRef(targetName).upper() << "Intrinsics::";
-  os << enumName << ",\n";
-}
-
-// Emit the list of LLVM IR intrinsics enums, both target and generic. Those
-// are used for LLVMImporter's convenience when looking at intrinsics while
-// being up-to-date with new additions to LLVM.
-static bool emitUnregisteredIntrinsics(const RecordKeeper &records,
-                                       raw_ostream &os, StringRef targetName) {
-
-  for (const Record *def : records.getAllDerivedDefinitions("Intrinsic"))
-    emitOneUnregisteredIntrinsic(*def, os, targetName);
-
-  return false;
-}
-
 static mlir::GenRegistration
     genLLVMIRConversions("gen-llvmir-conversions",
                          "Generate LLVM IR conversions", emitBuilders);
@@ -631,19 +590,3 @@ static mlir::GenRegistration genConvertibleLLVMIRIntrinsics(
     "gen-convertible-llvmir-intrinsics",
     "Generate list of convertible LLVM IR intrinsics",
     emitConvertibleIntrinsics);
-
-static llvm::cl::OptionCategory
-    genUnregIntrinsicCat("Options for -gen-unregistered-llvmir-intrinsics");
-static llvm::cl::opt<std::string> unregIntrinsicPrefix(
-    "intrinsic-prefix",
-    cl::desc("Specify target to generate intrinsic information"),
-    cl::value_desc("target prefix"), cl::cat(genUnregIntrinsicCat));
-
-static mlir::GenRegistration genUnregisteredLLVMIRIntrinsics(
-    "gen-unregistered-llvmir-intrinsics",
-    "Generate enum list of target specific or generic intrinsics according to "
-    "enums defined in LLVM by other tablegen backends",
-    [](const RecordKeeper &records, raw_ostream &os) {
-      return emitUnregisteredIntrinsics(records, os,
-                                        unregIntrinsicPrefix.getValue());
-    });

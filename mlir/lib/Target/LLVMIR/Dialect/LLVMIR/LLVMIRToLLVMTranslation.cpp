@@ -24,24 +24,6 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAArch64.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsARM.h"
-#include "llvm/IR/IntrinsicsBPF.h"
-#include "llvm/IR/IntrinsicsDirectX.h"
-#include "llvm/IR/IntrinsicsHexagon.h"
-#include "llvm/IR/IntrinsicsLoongArch.h"
-#include "llvm/IR/IntrinsicsMips.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/IR/IntrinsicsRISCV.h"
-#include "llvm/IR/IntrinsicsS390.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/IntrinsicsVE.h"
-#include "llvm/IR/IntrinsicsWebAssembly.h"
-#include "llvm/IR/IntrinsicsX86.h"
-#include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/Support/ModRef.h"
 
 using namespace mlir;
@@ -74,70 +56,14 @@ static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
   return convertibleIntrinsics;
 }
 
-/// Returns true if the LLVM IR intrinsic is convertible to llvm.intrinsic_call
-/// Returns false otherwise.
-static bool isConvertibleUnregisteredIntrinsic(llvm::Intrinsic::ID id) {
-  static const DenseSet<unsigned> convertibleTargetIntrinsics = {
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredAArch64LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredAMDGPULLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredARMLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredBPFLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredDirectXLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredHexagonLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredLoongArchLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredMipsLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredNVPTXLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredPowerPCLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredR600LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredRISCVLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredS390LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredSPIRVLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredVELLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredWebAssemblyLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredX86LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredXCoreLLVMIRIntrinsics.inc"
-  };
-  return convertibleTargetIntrinsics.contains(id);
-}
-
-/// Returns the list of LLVM IR intrinsic identifiers that are not registered
-/// by any dialect but can be convertible to llvm.intrinsic_call operation.
-static ArrayRef<unsigned> getUnregisteredIntrinsicsImpl() {
-  static const SmallVector<unsigned> convertibleTargetIntrinsics = {
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredAArch64LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredAMDGPULLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredARMLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredBPFLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredDirectXLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredHexagonLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredLoongArchLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredMipsLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredNVPTXLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredPowerPCLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredR600LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredRISCVLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredS390LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredSPIRVLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredVELLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredWebAssemblyLLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredX86LLVMIRIntrinsics.inc"
-#include "mlir/Dialect/LLVMIR/LLVMUnregisteredXCoreLLVMIRIntrinsics.inc"
-  };
-  return convertibleTargetIntrinsics;
-}
-
 /// Converts the LLVM intrinsic to a generic LLVM intrinsic call using
 /// llvm.intrinsic_call. Returns failure otherwise.
 static LogicalResult
 convertUnregisteredIntrinsicImpl(OpBuilder &odsBuilder, llvm::CallInst *inst,
                                  LLVM::ModuleImport &moduleImport) {
-  llvm::Intrinsic::ID intrinsicID = inst->getIntrinsicID();
   StringRef intrinName = inst->getCalledFunction()->getName();
 
   // Sanity check the intrinsic ID.
-  assert(isConvertibleUnregisteredIntrinsic(intrinsicID));
   SmallVector<llvm::Value *> args(inst->args());
   ArrayRef<llvm::Value *> llvmOperands(args);
 
@@ -192,7 +118,7 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
       llvmOpBundles.push_back(inst->getOperandBundleAt(i));
 
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
-  } else if (isConvertibleUnregisteredIntrinsic(intrinsicID)) {
+  } else if (intrinsicID != llvm::Intrinsic::not_intrinsic) {
     return convertUnregisteredIntrinsicImpl(odsBuilder, inst, moduleImport);
   }
 
@@ -541,11 +467,8 @@ public:
     return getSupportedIntrinsicsImpl();
   }
 
-  /// Returns the list of LLVM IR intrinsic identifiers that are unsupported
-  /// by existing dialects by are convertible to generic llvm.call_intrinsic.
-  ArrayRef<unsigned> getUnregisteredIntrinsics() const final {
-    return getUnregisteredIntrinsicsImpl();
-  }
+  /// Cnvertible to generic llvm.call_intrinsic.
+  bool getUnregisteredIntrinsics() const final { return true; }
 
   /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR
   /// LLVM dialect attributes.
