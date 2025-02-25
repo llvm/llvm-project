@@ -3438,7 +3438,8 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
 
   // In C++17, the next parameter can be a 'std::align_val_t' for aligned
   // new/delete.
-  if ((IsTypeAware || Ctx.getLangOpts().AlignedAllocation) && !Ty.isNull() && Ty->isAlignValT()) {
+  if ((IsTypeAware || Ctx.getLangOpts().AlignedAllocation) && !Ty.isNull() &&
+      Ty->isAlignValT()) {
     Consume();
     if (AlignmentParam)
       *AlignmentParam = Params;

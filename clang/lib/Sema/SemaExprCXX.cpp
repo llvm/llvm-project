@@ -1753,8 +1753,10 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
       FD->getOverloadedOperator() != OO_Array_Delete)
     return false;
 
-  if (S.getLangOpts().TypeAwareAllocators && FD->isTypeAwareOperatorNewOrDelete()) {
-    unsigned UsualParams = /* type-identity */ 1 + /* address */ 1 + /* size */ 1 + /* align*/ 1;
+  if (S.getLangOpts().TypeAwareAllocators &&
+      FD->isTypeAwareOperatorNewOrDelete()) {
+    unsigned UsualParams =
+        /* type-identity */ 1 + /* address */ 1 + /* size */ 1 + /* align*/ 1;
     return UsualParams == FD->getNumParams();
   }
 
