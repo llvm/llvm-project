@@ -13,23 +13,23 @@ qc.cm.mva01s a1, a2
 # CHECK-ERROR: error: invalid register list, {ra, s0-s10} or {x1, x8-x9, x18-x26} is not supported
 qc.cm.popretz {ra, s0-s10}, 112
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
 qc.cm.popretz {ra, s0-s1}, 112
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
 qc.cm.push {ra}, 16
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
 qc.cm.pushfp {ra, s0}, 16
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
 qc.cm.pop {ra, s0-s1}, -32
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
 qc.cm.push {ra}, -15
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
 qc.cm.push {ra, s0}, -15
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
 qc.cm.pop {ra, s0-s1}, -33

@@ -1682,6 +1682,17 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
+  case Match_InvalidStackAdj: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    StringRef SpecName = "Zc";
+    if (getSTI().hasFeature(RISCV::FeatureVendorXqccmp))
+      SpecName = "Xqccmp";
+
+    return Error(
+        ErrorLoc,
+        "stack adjustment is invalid for this instruction and register list; "
+        "refer to " + SpecName + " spec for a detailed range of stack adjustment");
+  }
   }
 
   if (const char *MatchDiag = getMatchKindDiag((RISCVMatchResultTy)Result)) {
