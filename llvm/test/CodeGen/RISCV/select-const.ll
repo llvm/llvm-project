@@ -114,7 +114,7 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    li a1, 32
 ; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
-; RV64ZICOND-NEXT:    addi a0, a0, 6
+; RV64ZICOND-NEXT:    addiw a0, a0, 6
 ; RV64ZICOND-NEXT:    ret
   %1 = select i1 %a, i32 6, i32 38
   ret i32 %1
