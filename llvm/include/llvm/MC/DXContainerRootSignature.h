@@ -20,11 +20,6 @@ struct RootSignatureDesc {
   SmallVector<dxbc::RootParameter> Parameters;
 
   Error write(raw_ostream &OS) const;
-
-  uint32_t getSizeInBytes() const {
-    // Header Size + accounting for parameter offset + parameters size
-    return 24 + (Parameters.size() * 4) + Parameters.size_in_bytes();
-  }
 };
 } // namespace mcdxbc
 } // namespace llvm
