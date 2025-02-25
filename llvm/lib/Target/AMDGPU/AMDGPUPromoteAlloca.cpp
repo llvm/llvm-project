@@ -759,6 +759,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     return false;
   }
 
+  Type *VecEltTy = VectorTy->getElementType();
+  constexpr unsigned SIZE_OF_BYTE = 8;
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
+  // FIXME: The non-byte type like i1 can be packed and be supported, but
+  // currently we do not handle them.
+  if (ElementSizeInBits % SIZE_OF_BYTE != 0)
+    return false;
+
   std::map<GetElementPtrInst *, WeakTrackingVH> GEPVectorIdx;
   SmallVector<Instruction *> WorkList;
   SmallVector<Instruction *> UsersToRemove;
@@ -776,8 +784,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
-  Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
+  unsigned ElementSize = ElementSizeInBits / SIZE_OF_BYTE;
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
