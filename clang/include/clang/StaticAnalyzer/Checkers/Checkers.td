@@ -1766,6 +1766,10 @@ def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,
   Documentation<HasDocumentation>;
 
+def UnretainedLambdaCapturesChecker : Checker<"UnretainedLambdaCapturesChecker">,
+  HelpText<"Check unretained lambda captures.">,
+  Documentation<HasDocumentation>;
+
 def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
   HelpText<"Check uncounted call arguments.">,
   Documentation<HasDocumentation>;

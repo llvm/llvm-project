@@ -3487,6 +3487,18 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
 
 See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
 
+alpha.webkit.UnretainedLambdaCapturesChecker
+""""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to unretained types can't be captured in lambdas. Only RetainPtr is allowed.
+
+.. code-block:: cpp
+
+ void foo(NSObject *a, NSObject *b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
+
 .. _alpha-webkit-UncountedCallArgsChecker:
 
 alpha.webkit.UncountedCallArgsChecker
