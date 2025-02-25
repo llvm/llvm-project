@@ -201,12 +201,14 @@ template <typename T> const T *XCOFFObjectFile::sectionHeaderTable() const {
   return static_cast<const T *>(SectionHeaderTable);
 }
 
-const XCOFFSectionHeader32 *XCOFFObjectFile::sectionHeaderTable32() const {
+const XCOFFSectionHeader32 *
+XCOFFObjectFile::sectionHeaderTable32() const {
   assert(!is64Bit() && "32-bit interface called on 64-bit object file.");
   return static_cast<const XCOFFSectionHeader32 *>(SectionHeaderTable);
 }
 
-const XCOFFSectionHeader64 *XCOFFObjectFile::sectionHeaderTable64() const {
+const XCOFFSectionHeader64 *
+XCOFFObjectFile::sectionHeaderTable64() const {
   assert(is64Bit() && "64-bit interface called on a 32-bit object file.");
   return static_cast<const XCOFFSectionHeader64 *>(SectionHeaderTable);
 }
@@ -414,7 +416,7 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
   else
     OffsetToRaw = toSection32(Sec)->FileOffsetToRawData;
 
-  const uint8_t *ContentStart = base() + OffsetToRaw;
+  const uint8_t * ContentStart = base() + OffsetToRaw;
   uint64_t SectionSize = getSectionSize(Sec);
   if (Error E = Binary::checkOffset(
           Data, reinterpret_cast<uintptr_t>(ContentStart), SectionSize))
@@ -769,8 +771,8 @@ size_t XCOFFObjectFile::getFileHeaderSize() const {
 }
 
 size_t XCOFFObjectFile::getSectionHeaderSize() const {
-  return is64Bit() ? sizeof(XCOFFSectionHeader64)
-                   : sizeof(XCOFFSectionHeader32);
+  return is64Bit() ? sizeof(XCOFFSectionHeader64) :
+                     sizeof(XCOFFSectionHeader32);
 }
 
 bool XCOFFObjectFile::is64Bit() const {
