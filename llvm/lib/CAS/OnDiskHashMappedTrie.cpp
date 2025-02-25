@@ -722,16 +722,13 @@ OnDiskHashMappedTrie::find(ArrayRef<uint8_t> Hash) const {
     // Try to set the content.
     SubtrieSlotValue V = S.load(Index);
     if (!V)
-      return const_pointer(S.getFileOffset(),
-                           HintT(this, Index, *IndexGen.StartBit));
+      return const_pointer();
 
     // Check for an exact match.
     if (V.isData()) {
       HashMappedTrieHandle::RecordData D = Trie.getRecord(V);
-      return D.Proxy.Hash == Hash
-                 ? const_pointer(D.getFileOffset(), D.Proxy)
-                 : const_pointer(S.getFileOffset(),
-                                 HintT(this, Index, *IndexGen.StartBit));
+      return D.Proxy.Hash == Hash ? const_pointer(D.getFileOffset(), D.Proxy)
+                                  : const_pointer();
     }
 
     Index = IndexGen.next();
@@ -750,7 +747,7 @@ void SubtrieHandle::reinitialize(uint32_t StartBit, uint32_t NumBits) {
 }
 
 Expected<OnDiskHashMappedTrie::pointer>
-OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
+OnDiskHashMappedTrie::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
   HashMappedTrieHandle Trie = Impl->Trie;
@@ -763,14 +760,7 @@ OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
     return std::move(Err);
 
   IndexGenerator IndexGen = Trie.getIndexGen(*S, Hash);
-
-  size_t Index;
-  if (std::optional<HintT> H = Hint.getHint(*this)) {
-    S = SubtrieHandle::getFromFileOffset(Trie.getRegion(), Hint.getOffset());
-    Index = IndexGen.hint(H->I, H->B);
-  } else {
-    Index = IndexGen.next();
-  }
+  size_t Index = IndexGen.next();
 
   // FIXME: Add non-assertion based checks for data corruption that would
   // otherwise cause infinite loops in release builds, instead calling
@@ -1440,7 +1430,7 @@ OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
 }
 
 Expected<OnDiskHashMappedTrie::pointer>
-OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
+OnDiskHashMappedTrie::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
   report_fatal_error("not supported");

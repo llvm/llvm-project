@@ -97,31 +97,6 @@ public:
     MutableArrayRef<char> Data;
   };
 
-private:
-  struct HintT {
-    explicit operator ValueProxy() const {
-      ValueProxy Value;
-      Value.Data = MutableArrayRef<char>(
-          const_cast<char *>(reinterpret_cast<const char *>(P)), I);
-      Value.Hash = ArrayRef<uint8_t>(nullptr, B);
-      return Value;
-    }
-
-    explicit HintT(ConstValueProxy Value)
-        : P(Value.Data.data()), I(Value.Data.size()), B(Value.Hash.size()) {
-      // Spot-check that this really was a hint.
-      assert(Value.Data.size() <= UINT16_MAX);
-      assert(Value.Hash.size() <= UINT16_MAX);
-      assert(Value.Hash.data() == nullptr);
-    }
-
-    HintT(const void *P, uint16_t I, uint16_t B) : P(P), I(I), B(B) {}
-
-    const void *P = nullptr;
-    uint16_t I = 0;
-    uint16_t B = 0;
-  };
-
 public:
   template <class ProxyT> class PointerImpl {
   public:
@@ -133,29 +108,24 @@ public:
 
     const ProxyT &operator*() const {
       assert(IsValue);
-      return ValueOrHint;
+      return Value;
     }
     const ProxyT *operator->() const {
       assert(IsValue);
-      return &ValueOrHint;
+      return &Value;
     }
 
     PointerImpl() = default;
 
   protected:
     PointerImpl(FileOffset Offset, ProxyT Value)
-        : PointerImpl(Value, Offset, /*IsHint=*/false, /*IsValue=*/true) {}
+        : PointerImpl(Value, Offset, /*IsValue=*/true) {}
 
-    explicit PointerImpl(FileOffset Offset, HintT H)
-        : PointerImpl(ValueProxy(H), Offset, /*IsHint=*/true,
-                      /*IsValue=*/false) {}
-
-    PointerImpl(ProxyT ValueOrHint, FileOffset Offset, bool IsHint,
-                bool IsValue)
-        : ValueOrHint(ValueOrHint), OffsetLow32((uint64_t)Offset.get()),
-          OffsetHigh16((uint64_t)Offset.get() >> 32), IsHint(IsHint),
-          IsValue(IsValue) {
-      checkOffset(Offset);
+    PointerImpl(ProxyT Value, FileOffset Offset, bool IsValue)
+        : Value(Value), OffsetLow32((uint64_t)Offset.get()),
+          OffsetHigh16((uint64_t)Offset.get() >> 32), IsValue(IsValue) {
+      if (IsValue)
+        checkOffset(Offset);
     }
 
     static void checkOffset(FileOffset Offset) {
@@ -163,20 +133,9 @@ public:
       assert((uint64_t)Offset.get() < (1LL << 48));
     }
 
-    std::optional<HintT> getHint(const OnDiskHashMappedTrie &This) const {
-      if (!IsHint)
-        return std::nullopt;
-      HintT H(ValueOrHint);
-      assert(H.P == &This && "Expected hint to be for This");
-      if (H.P != &This)
-        return std::nullopt;
-      return H;
-    }
-
-    ProxyT ValueOrHint;
+    ProxyT Value;
     uint32_t OffsetLow32 = 0;
     uint16_t OffsetHigh16 = 0;
-    bool IsHint = false;
     bool IsValue = false;
   };
 
@@ -194,7 +153,7 @@ public:
   class pointer : public PointerImpl<ValueProxy> {
   public:
     operator const_pointer() const {
-      return const_pointer(ValueOrHint, getOffset(), IsHint, IsValue);
+      return const_pointer(Value, getOffset(), IsValue);
     }
 
     pointer() = default;
@@ -205,8 +164,6 @@ public:
   };
 
   pointer getMutablePointer(const_pointer CP) {
-    if (std::optional<HintT> H = CP.getHint(*this))
-      return pointer(CP.getOffset(), *H);
     if (!CP)
       return pointer();
     ValueProxy V{CP->Hash, MutableArrayRef(const_cast<char *>(CP->Data.data()),
@@ -254,24 +211,16 @@ public:
   /// The in-memory \a HashMappedTrie uses LazyAtomicPointer to synchronize
   /// simultaneous writes, but that seems dangerous to use in a memory-mapped
   /// file in case a process crashes in the busy state.
-  Expected<pointer> insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
-                               LazyInsertOnConstructCB OnConstruct = nullptr,
-                               LazyInsertOnLeakCB OnLeak = nullptr);
   Expected<pointer> insertLazy(ArrayRef<uint8_t> Hash,
                                LazyInsertOnConstructCB OnConstruct = nullptr,
-                               LazyInsertOnLeakCB OnLeak = nullptr) {
-    return insertLazy(const_pointer(), Hash, OnConstruct, OnLeak);
-  }
+                               LazyInsertOnLeakCB OnLeak = nullptr);
 
-  Expected<pointer> insert(const_pointer Hint, const ConstValueProxy &Value) {
-    return insertLazy(Hint, Value.Hash, [&](FileOffset, ValueProxy Allocated) {
+  Expected<pointer> insert(const ConstValueProxy &Value) {
+    return insertLazy(Value.Hash, [&](FileOffset, ValueProxy Allocated) {
       assert(Allocated.Hash == Value.Hash);
       assert(Allocated.Data.size() == Value.Data.size());
       llvm::copy(Value.Data, Allocated.Data.begin());
     });
-  }
-  Expected<pointer> insert(const ConstValueProxy &Value) {
-    return insert(const_pointer(), Value);
   }
 
   size_t size() const;
