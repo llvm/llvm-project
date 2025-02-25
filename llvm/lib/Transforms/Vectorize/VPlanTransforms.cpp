@@ -393,7 +393,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       R.moveBefore(*PredVPBB, PredVPBB->end());
     VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-    auto *ParentRegion = cast_or_null<VPRegionBlock>(VPBB->getParent());
+    auto *ParentRegion = VPBB->getParent();
     if (ParentRegion && ParentRegion->getExiting() == VPBB)
       ParentRegion->setExiting(PredVPBB);
     for (auto *Succ : to_vector(VPBB->successors())) {
@@ -1240,9 +1240,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       LoopBuilder.setInsertPoint(InsertBlock,
                                  std::next(Previous->getIterator()));
 
-    auto *RecurSplice = cast<VPInstruction>(
+    auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                                 {FOR, FOR->getBackedgeValue()}));
+                                 {FOR, FOR->getBackedgeValue()});
 
     FOR->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to FOR again, after replacing
