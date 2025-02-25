@@ -121,7 +121,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
-  for (auto T : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64}) {
+  for (auto T : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64, MVT::v8f16}) {
+    if (!Subtarget->hasFP16() && T == MVT::v8f16) {
+      continue;
+    }
     // Don't expand the floating-point types to constant pools.
     setOperationAction(ISD::ConstantFP, T, Legal);
     // Expand floating-point comparisons.
@@ -140,16 +143,14 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
-    // WebAssembly currently has no builtin f16 support.
-    setOperationAction(ISD::FP16_TO_FP, T, Expand);
-    setOperationAction(ISD::FP_TO_FP16, T, Expand);
+    // When experimental v8f16 support is enabled these instructions don't need
+    // to be expanded.
+    if (T != MVT::v8f16) {
+      setOperationAction(ISD::FP16_TO_FP, T, Expand);
+      setOperationAction(ISD::FP_TO_FP16, T, Expand);
+    }
     setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
     setTruncStoreAction(T, MVT::f16, Expand);
-  }
-
-  if (Subtarget->hasFP16()) {
-    setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
 
   // Expand unavailable integer operations.
