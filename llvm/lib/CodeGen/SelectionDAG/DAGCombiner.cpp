@@ -14906,20 +14906,18 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   if (ExtType == ISD::NON_EXTLOAD) {
     const MDNode *OldRanges = LN0->getRanges();
     const MDNode *NewRanges = nullptr;
-    /* If LSBs are loaded and the truncated ConstantRange for the OldRanges
-       metadata is not the full-set for the NewWidth then create a NewRanges
-       metadata for the truncated load */
+    // If LSBs are loaded and the truncated ConstantRange for the OldRanges
+    // metadata is not the full-set for the NewWidth then create a NewRanges
+    // metadata for the truncated load
     if (ShAmt == 0 && OldRanges) {
-      Type *NewTy = VT.getTypeForEVT(*DAG.getContext());
-      const unsigned NewWidth = NewTy->getIntegerBitWidth();
-      const ConstantRange CR = getConstantRangeFromMetadata(*OldRanges);
-      const ConstantRange TruncatedCR = CR.truncate(NewWidth);
+      ConstantRange CR = getConstantRangeFromMetadata(*OldRanges);
+      ConstantRange TruncatedCR = CR.truncate(VT.getScalarSizeInBits());
 
       if (!TruncatedCR.isFullSet()) {
         Metadata *Bounds[2] = {ConstantAsMetadata::get(ConstantInt::get(
-                                   NewTy, TruncatedCR.getLower())),
+                                   *DAG.getContext(), TruncatedCR.getLower())),
                                ConstantAsMetadata::get(ConstantInt::get(
-                                   NewTy, TruncatedCR.getUpper()))};
+                                   *DAG.getContext(), TruncatedCR.getUpper()))};
         NewRanges = MDNode::get(*DAG.getContext(), Bounds);
       }
     }
