@@ -570,6 +570,27 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
 
 static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
 
+/// Check if the link command contains a symbol export directive.
+static bool hasExportSymbolDirective(const ArgList &Args) {
+  for (Arg *A : Args) {
+    if (A->getOption().matches(options::OPT_exported__symbols__list))
+      return true;
+    if (!A->getOption().matches(options::OPT_Wl_COMMA) &&
+        !A->getOption().matches(options::OPT_Xlinker))
+      continue;
+    if (A->containsValue("-exported_symbols_list") ||
+        A->containsValue("-exported_symbol"))
+      return true;
+  }
+  return false;
+}
+
+/// Add an export directive for \p Symbol to the link command.
+static void addExportedSymbol(ArgStringList &CmdArgs, const char *Symbol) {
+  CmdArgs.push_back("-exported_symbol");
+  CmdArgs.push_back(Symbol);
+}
+
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -733,6 +754,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-allow_stack_execute");
 
   getMachOToolChain().addProfileRTLibs(Args, CmdArgs);
+
+  if (Args.hasArg(options::OPT_fmemory_profile_runtime_default_options_EQ))
+    if (hasExportSymbolDirective(Args))
+      addExportedSymbol(CmdArgs, "___memprof_default_options_str");
 
   StringRef Parallelism = getLTOParallelism(Args, getToolChain().getDriver());
   if (!Parallelism.empty()) {
@@ -1431,27 +1456,6 @@ StringRef Darwin::getOSLibraryNameSuffix(bool IgnoreSim) const {
     return "driverkit";
   }
   llvm_unreachable("Unsupported platform");
-}
-
-/// Check if the link command contains a symbol export directive.
-static bool hasExportSymbolDirective(const ArgList &Args) {
-  for (Arg *A : Args) {
-    if (A->getOption().matches(options::OPT_exported__symbols__list))
-      return true;
-    if (!A->getOption().matches(options::OPT_Wl_COMMA) &&
-        !A->getOption().matches(options::OPT_Xlinker))
-      continue;
-    if (A->containsValue("-exported_symbols_list") ||
-        A->containsValue("-exported_symbol"))
-      return true;
-  }
-  return false;
-}
-
-/// Add an export directive for \p Symbol to the link command.
-static void addExportedSymbol(ArgStringList &CmdArgs, const char *Symbol) {
-  CmdArgs.push_back("-exported_symbol");
-  CmdArgs.push_back(Symbol);
 }
 
 /// Add a sectalign directive for \p Segment and \p Section to the maximum

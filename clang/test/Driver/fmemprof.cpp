@@ -17,3 +17,10 @@
 
 // RUN: not %clangxx --target=x86_64-linux-gnu -fprofile-generate -fmemory-profile-use=foo %s -### 2>&1 | FileCheck %s --check-prefix=CONFLICTWITHPGOINSTR
 // CONFLICTWITHPGOINSTR: error: invalid argument '-fmemory-profile-use=foo' not allowed with '-fprofile-generate'
+
+// RUN: %clangxx -target arm64-apple-ios -fmemory-profile -fmemory-profile-runtime-default-options="verbose=1" %s -### 2>&1 | FileCheck %s --check-prefix=OPTS
+// RUN: %clangxx -target arm64-apple-ios -fmemory-profile -fmemory-profile-runtime-default-options "verbose=1" %s -### 2>&1 | FileCheck %s --check-prefix=OPTS
+// RUN: %clangxx -target arm64-apple-ios -fmemory-profile -fmemory-profile-runtime-default-options="verbose=1" -exported_symbols_list /dev/null %s -### 2>&1 | FileCheck %s --check-prefixes=OPTS,OPTS-EXPORT
+// RUN: %clangxx -target arm64-apple-ios -fmemory-profile -fmemory-profile-runtime-default-options "verbose=1" -exported_symbols_list /dev/null %s -### 2>&1 | FileCheck %s --check-prefixes=OPTS,OPTS-EXPORT
+// OPTS: "-mllvm" "-memprof-runtime-default-options=verbose=1"
+// OPTS-EXPORT: "-exported_symbol" "___memprof_default_options_str"

@@ -5456,6 +5456,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << MemProfUseArg->getAsString(Args) << PGOInstrArg->getAsString(Args);
     MemProfUseArg->render(Args, CmdArgs);
   }
+  StringRef MemprofOptionsStr = Args.getLastArgValue(
+      options::OPT_fmemory_profile_runtime_default_options_EQ);
+  if (!MemprofOptionsStr.empty()) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-memprof-runtime-default-options=" +
+                                         MemprofOptionsStr));
+  }
 
   // Embed-bitcode option.
   // Only white-listed flags below are allowed to be embedded.

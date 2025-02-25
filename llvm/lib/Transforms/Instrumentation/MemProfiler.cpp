@@ -566,6 +566,8 @@ void createMemprofHistogramFlagVar(Module &M) {
 }
 
 void createMemprofDefaultOptionsVar(Module &M) {
+  if (!MemprofRuntimeDefaultOptions.getNumOccurrences())
+    return;
   Constant *OptionsConst = ConstantDataArray::getString(
       M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
   GlobalVariable *OptionsVar =

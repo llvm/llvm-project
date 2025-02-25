@@ -2288,6 +2288,15 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     MetaVarName<"<pathname>">,
     HelpText<"Use memory profile for profile-guided memory optimization">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
+def fmemory_profile_runtime_default_options_EQ
+    : Joined<["-"], "fmemory-profile-runtime-default-options=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MetaVarName<"<options>">,
+      HelpText<"Set the default memprof runtime options to <options>">;
+def fmemory_profile_runtime_default_options
+    : Separate<["-"], "fmemory-profile-runtime-default-options">,
+      Alias<fmemory_profile_runtime_default_options_EQ>;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
