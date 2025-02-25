@@ -1269,6 +1269,8 @@ CUDA Support
 
 AIX Support
 ^^^^^^^^^^^
+- Fixed the ``-print-runtime-dir`` option.
+- Enable continuous profile syncing feature on AIX.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
