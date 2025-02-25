@@ -32,15 +32,13 @@ int main(int argc, char** argv) {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
-            ValueType y            = Generate<ValueType>::random();
-            Container c(size, y);
+            Container c(size, x);
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(x);
               fill_n(c.begin(), size, x);
               benchmark::DoNotOptimize(c);
-              std::swap(x, y);
             }
           })
           ->Arg(32)
@@ -61,15 +59,13 @@ int main(int argc, char** argv) {
       benchmark::RegisterBenchmark(name, [fill_n](auto& st) {
         std::size_t const size = st.range(0);
         bool x                 = true;
-        bool y                 = false;
-        std::vector<bool> c(size, y);
+        std::vector<bool> c(size, x);
 
         for ([[maybe_unused]] auto _ : st) {
           benchmark::DoNotOptimize(c);
           benchmark::DoNotOptimize(x);
           fill_n(c.begin(), size, x);
           benchmark::DoNotOptimize(c);
-          std::swap(x, y);
         }
       })->Range(64, 1 << 20);
     };
