@@ -419,7 +419,6 @@ static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
 
 // Helper to wrap conditionally Coro passes.
 static CoroConditionalWrapper buildCoroWrapper(ThinOrFullLTOPhase Phase) {
-  // TODO: Skip passes according to Phase.
   ModulePassManager CoroPM;
   if (!isLTOPostLink(Phase))
     CoroPM.addPass(CoroEarlyPass());
