@@ -21,19 +21,17 @@
  */
 
 #if __CLC_FPSIZE == 64
-#define __CLC_NAN __builtin_nan("")
-#define ZERO 0.0
+#define __CLC_NAN DBL_NAN
 #elif __CLC_FPSIZE == 32
-#define __CLC_NAN NAN
-#define ZERO 0.0f
+#define __CLC_NAN FLT_NAN
 #elif __CLC_FPSIZE == 16
-#define __CLC_NAN (half)NAN
-#define ZERO 0.0h
+#define __CLC_NAN HALF_NAN
 #endif
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_sqrt(__CLC_GENTYPE val) {
-  return val < ZERO ? __CLC_NAN : __clc_llvm_intr_sqrt(val);
+__attribute__((weak)) _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
+__clc_sqrt(__CLC_GENTYPE val) {
+  return val < __CLC_FP_LIT(0.0) ? (__CLC_GENTYPE)__CLC_NAN
+                                 : __builtin_elementwise_sqrt(val);
 }
 
 #undef __CLC_NAN
-#undef ZERO
