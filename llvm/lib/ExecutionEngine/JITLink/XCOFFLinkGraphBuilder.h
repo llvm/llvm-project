@@ -47,10 +47,14 @@ private:
 
   Section* UndefSection;
 
-  DenseMap<uint16_t, Section *> SectionMap;
-  DenseMap<uint16_t, object::SectionRef> SectionDataMap;
-  DenseMap<uint32_t, Block *> CsectMap;
-  DenseMap<uint32_t, Symbol *> SymbolIdxMap;
+  struct SectionEntry {
+    jitlink::Section* Section;
+    object::SectionRef SectionData;
+  };
+
+  DenseMap<uint16_t, SectionEntry> SectionTable;
+  DenseMap<uint32_t, Block *> CsectTable;
+  DenseMap<uint32_t, Symbol *> SymbolIndexTable;
 };
 
 } // namespace jitlink

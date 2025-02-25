@@ -693,10 +693,6 @@ private:
       : JD(RT->getJITDylib()), RT(std::move(RT)),
         SymbolFlags(std::move(SymbolFlags)), InitSymbol(std::move(InitSymbol)) {
     assert(!this->SymbolFlags.empty() && "Materializing nothing?");
-    for (auto &KV : this->SymbolFlags) {
-      dbgs() << "@@@ Init MR " << KV.first << " "
-             << format_hex(KV.second.getRawFlagsValue(), 8) << "\n";
-    }
   }
 
   JITDylib &JD;

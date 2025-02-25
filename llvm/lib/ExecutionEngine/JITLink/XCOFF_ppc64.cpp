@@ -65,7 +65,8 @@ public:
                        std::unique_ptr<LinkGraph> G,
                        PassConfiguration PassConfig)
       : JITLinkerBase(std::move(Ctx), std::move(G), std::move(PassConfig)) {
-    // Post allocation pass define TOC base
+    // FIXME: Post allocation pass define TOC base, this is temporary to support
+    // building until we can build the required toc entries
     defineTOCSymbol(getGraph());
   }
 

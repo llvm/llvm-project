@@ -429,13 +429,12 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
-  // SCUI - Copied from MC/XCOFFObjectWriter.cpp
+  // TODO: Copied from MC/XCOFFObjectWriter.cpp
   // Sections other than DWARF section use DefaultSectionAlign as the default
   // alignment, while DWARF sections have their own alignments. DWARF section
   // alignment is bigger than DefaultSectionAlign.
-  if (isDebugSection(Sec)) {
-    return 8; // SCUI - just a number for now.
-  }
+  if (isDebugSection(Sec))
+    return 8;
   return 4;
 }
 
