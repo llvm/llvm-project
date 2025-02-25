@@ -1067,7 +1067,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI map(const map& __m, const allocator_type& __alloc) : __tree_(__m.__tree_, __alloc) {}
 
-  _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~map() _LIBCPP_DIAGNOSE_ASSOCIATIVE_CONTAINER_REQUIREMENTS(value_type, key_compare) = default;
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1773,9 +1773,8 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI multimap(const multimap& __m, const allocator_type& __a) : __tree_(__m.__tree_, __a) {}
 
-  _LIBCPP_HIDE_FROM_ABI ~multimap() {
-    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
-  }
+  _LIBCPP_HIDE_FROM_ABI ~multimap()
+      _LIBCPP_DIAGNOSE_ASSOCIATIVE_CONTAINER_REQUIREMENTS(value_type, key_compare) = default;
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }

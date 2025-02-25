@@ -701,7 +701,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI set& operator=(set&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~set() _LIBCPP_DIAGNOSE_ASSOCIATIVE_CONTAINER_REQUIREMENTS(value_type, key_compare) = default;
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1176,9 +1176,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI multiset& operator=(multiset&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~multiset() {
-    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
-  }
+  _LIBCPP_HIDE_FROM_ABI ~multiset()
+      _LIBCPP_DIAGNOSE_ASSOCIATIVE_CONTAINER_REQUIREMENTS(value_type, key_compare) = default;
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }

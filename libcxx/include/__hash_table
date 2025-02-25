@@ -594,15 +594,21 @@ struct __enforce_unordered_container_requirements {
   typedef int type;
 };
 
+#define _LIBCPP_DIAGNOSE_UNORDERED_CONTAINER_REQUIREMENTS(Key, Hash, Equal)                                            \
+  _LIBCPP_DIAGNOSE_IF(                                                                                                 \
+      !__is_invocable_v<Equal const&, Key const&, Key const&>,                                                         \
+      "the specified comparator type does not provide a viable const call operator",                                   \
+      "warning",                                                                                                       \
+      "discard-qual")                                                                                                  \
+  _LIBCPP_DIAGNOSE_IF(                                                                                                 \
+      !__is_invocable_v<Hash const&, Key const&>,                                                                      \
+      "the specified hash functor does not provide a viable const call operator",                                      \
+      "warning",                                                                                                       \
+      "discard-qual")
+
 template <class _Key, class _Hash, class _Equal>
-#ifndef _LIBCPP_CXX03_LANG
-_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Equal const&, _Key const&, _Key const&>,
-                         "the specified comparator type does not provide a viable const call operator")
-_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Hash const&, _Key const&>,
-                         "the specified hash functor does not provide a viable const call operator")
-#endif
-    typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
-    __diagnose_unordered_container_requirements(int);
+typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
+__diagnose_unordered_container_requirements(int);
 
 // This dummy overload is used so that the compiler won't emit a spurious
 // "no matching function for call to __diagnose_unordered_xxx" diagnostic
