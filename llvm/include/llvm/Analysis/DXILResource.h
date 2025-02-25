@@ -207,7 +207,7 @@ public:
 
   Type *getWrappedType() const { return getTypeParameter(0); }
   uint32_t getSize() const { return getIntParameter(0); }
-  uint32_t getIndexOfElement(int I) const { return getIntParameter(I + 1); }
+  uint32_t getOffsetOfElement(int I) const { return getIntParameter(I + 1); }
 
   static bool classof(const TargetExtType *T) {
     return T->getName() == "dx.Layout";
