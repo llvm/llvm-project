@@ -539,9 +539,10 @@ class MetadataLoader::MetadataLoaderImpl {
       if (!Visited.insert(S).second)
         break;
     }
-    ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
 
-    return ParentSubprogram[InitialScope];
+    auto &PS = ParentSubprogram[InitialScope];
+    PS = llvm::dyn_cast_or_null<DISubprogram>(S);
+    return PS;
   }
 
   /// Move local imports from DICompileUnit's 'imports' field to
