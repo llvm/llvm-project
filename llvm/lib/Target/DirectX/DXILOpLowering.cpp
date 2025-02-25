@@ -778,7 +778,8 @@ public:
       case Intrinsic::not_intrinsic:
         continue;
       default: {
-        DiagnosticInfoUnsupported Diag(F, "Unknown intrinsic?");
+        DiagnosticInfoUnsupported Diag(
+            F, "Unsupported intrinsic for DXIL lowering");
         M.getContext().diagnose(Diag);
         HasErrors |= true;
         break;
