@@ -37,9 +37,9 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
-// Zcmp
-let DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp],
-    hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp] in {
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
 def QC_CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
                               (ins SR07:$rs1, SR07:$rs2), "qc.cm.mva01s", "$rs1, $rs2">,
@@ -49,9 +49,8 @@ let Uses = [X10, X11] in
 def QC_CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
                               (ins), "qc.cm.mvsa01", "$rs1, $rs2">,
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
-} // DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp]...
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Uses = [X2], Defs = [X2] in
 def QC_CM_PUSH : RVInstZcCPPP<0b11000, "qc.cm.push", negstackadj>,
                  Sched<[WriteIALU, ReadIALU, ReadStoreData, ReadStoreData,
@@ -87,7 +86,8 @@ def QC_CM_POP : RVInstZcCPPP<0b11010, "qc.cm.pop">,
                 Sched<[WriteIALU, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                        WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                        WriteLDW, WriteLDW, WriteLDW, ReadIALU]>;
-} // DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp]...
+
+} // DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp]
 
 //===----------------------------------------------------------------------===//
 // Aliases
