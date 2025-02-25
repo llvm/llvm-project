@@ -3703,61 +3703,95 @@ FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
   return ::new (Context) FormatAttr(Context, CI, Format, FormatIdx, FirstArg);
 }
 
+FormatMatchesAttr *Sema::mergeFormatMatchesAttr(Decl *D,
+                                                const AttributeCommonInfo &CI,
+                                                IdentifierInfo *Format,
+                                                int FormatIdx,
+                                                StringLiteral *FormatStr) {
+  // Check whether we already have an equivalent FormatMatches attribute.
+  for (auto *F : D->specific_attrs<FormatMatchesAttr>()) {
+    if (F->getType() == Format && F->getFormatIdx() == FormatIdx) {
+      if (!CheckFormatStringsCompatible(GetFormatStringType(Format->getName()),
+                                        F->getFormatString(), FormatStr))
+        return nullptr;
+
+      // If we don't have a valid location for this attribute, adopt the
+      // location.
+      if (F->getLocation().isInvalid())
+        F->setRange(CI.getRange());
+      return nullptr;
+    }
+  }
+
+  return ::new (Context)
+      FormatMatchesAttr(Context, CI, Format, FormatIdx, FormatStr);
+}
+
+struct FormatAttrCommon {
+  FormatAttrKind Kind;
+  IdentifierInfo *Identifier;
+  unsigned NumArgs;
+  unsigned FormatStringIdx;
+};
+
 /// Handle __attribute__((format(type,idx,firstarg))) attributes based on
 /// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
-static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
+                                   FormatAttrCommon *Info) {
+  // Checks the first two arguments of the attribute; this is shared between
+  // Format and FormatMatches attributes.
+
   if (!AL.isArgIdent(0)) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
         << AL << 1 << AANT_ArgumentIdentifier;
-    return;
+    return false;
   }
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
   bool HasImplicitThisParam = isInstanceMethod(D);
-  unsigned NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
+  Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
 
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
-  StringRef Format = II->getName();
+  Info->Identifier = AL.getArgAsIdent(0)->Ident;
+  StringRef Format = Info->Identifier->getName();
 
   if (normalizeName(Format)) {
     // If we've modified the string name, we need a new identifier for it.
-    II = &S.Context.Idents.get(Format);
+    Info->Identifier = &S.Context.Idents.get(Format);
   }
 
   // Check for supported formats.
-  FormatAttrKind Kind = getFormatAttrKind(Format);
+  Info->Kind = getFormatAttrKind(Format);
 
-  if (Kind == IgnoredFormat)
-    return;
+  if (Info->Kind == IgnoredFormat)
+    return false;
 
-  if (Kind == InvalidFormat) {
+  if (Info->Kind == InvalidFormat) {
     S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << II->getName();
-    return;
+        << AL << Info->Identifier->getName();
+    return false;
   }
 
   // checks for the 2nd argument
   Expr *IdxExpr = AL.getArgAsExpr(1);
-  uint32_t Idx;
-  if (!S.checkUInt32Argument(AL, IdxExpr, Idx, 2))
-    return;
+  if (!S.checkUInt32Argument(AL, IdxExpr, Info->FormatStringIdx, 2))
+    return false;
 
-  if (Idx < 1 || Idx > NumArgs) {
+  if (Info->FormatStringIdx < 1 || Info->FormatStringIdx > Info->NumArgs) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_bounds)
         << AL << 2 << IdxExpr->getSourceRange();
-    return;
+    return false;
   }
 
   // FIXME: Do we need to bounds check?
-  unsigned ArgIdx = Idx - 1;
+  unsigned ArgIdx = Info->FormatStringIdx - 1;
 
   if (HasImplicitThisParam) {
     if (ArgIdx == 0) {
       S.Diag(AL.getLoc(),
              diag::err_format_attribute_implicit_this_format_string)
-        << IdxExpr->getSourceRange();
-      return;
+          << IdxExpr->getSourceRange();
+      return false;
     }
     ArgIdx--;
   }
@@ -3769,9 +3803,18 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       (!Ty->isPointerType() ||
        !Ty->castAs<PointerType>()->getPointeeType()->isCharType())) {
     S.Diag(AL.getLoc(), diag::err_format_attribute_not)
-      << IdxExpr->getSourceRange() << getFunctionOrMethodParamRange(D, ArgIdx);
-    return;
+        << IdxExpr->getSourceRange()
+        << getFunctionOrMethodParamRange(D, ArgIdx);
+    return false;
   }
+
+  return true;
+}
+
+static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  FormatAttrCommon Info;
+  if (!handleFormatAttrCommon(S, D, AL, &Info))
+    return;
 
   // check the 3rd argument
   Expr *FirstArgExpr = AL.getArgAsExpr(2);
@@ -3781,7 +3824,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // FirstArg == 0 is is always valid.
   if (FirstArg != 0) {
-    if (Kind == StrftimeFormat) {
+    if (Info.Kind == StrftimeFormat) {
       // If the kind is strftime, FirstArg must be 0 because strftime does not
       // use any variadic arguments.
       S.Diag(AL.getLoc(), diag::err_format_strftime_third_parameter)
@@ -3792,17 +3835,17 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       // Else, if the function is variadic, then FirstArg must be 0 or the
       // "position" of the ... parameter. It's unusual to use 0 with variadic
       // functions, so the fixit proposes the latter.
-      if (FirstArg != NumArgs + 1) {
+      if (FirstArg != Info.NumArgs + 1) {
         S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_bounds)
             << AL << 3 << FirstArgExpr->getSourceRange()
             << FixItHint::CreateReplacement(FirstArgExpr->getSourceRange(),
-                                            std::to_string(NumArgs + 1));
+                                            std::to_string(Info.NumArgs + 1));
         return;
       }
     } else {
       // Inescapable GCC compatibility diagnostic.
       S.Diag(D->getLocation(), diag::warn_gcc_requires_variadic_function) << AL;
-      if (FirstArg <= Idx) {
+      if (FirstArg <= Info.FormatStringIdx) {
         // Else, the function is not variadic, and FirstArg must be 0 or any
         // parameter after the format parameter. We don't offer a fixit because
         // there are too many possible good values.
@@ -3813,9 +3856,31 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  FormatAttr *NewAttr = S.mergeFormatAttr(D, AL, II, Idx, FirstArg);
+  FormatAttr *NewAttr =
+      S.mergeFormatAttr(D, AL, Info.Identifier, Info.FormatStringIdx, FirstArg);
   if (NewAttr)
     D->addAttr(NewAttr);
+}
+
+static void handleFormatMatchesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  FormatAttrCommon Info;
+  if (!handleFormatAttrCommon(S, D, AL, &Info))
+    return;
+
+  Expr *FormatStrExpr = AL.getArgAsExpr(2)->IgnoreParenImpCasts();
+  if (auto *SL = dyn_cast<StringLiteral>(FormatStrExpr)) {
+    Sema::FormatStringType FST =
+        S.GetFormatStringType(Info.Identifier->getName());
+    if (S.ValidateFormatString(FST, SL))
+      if (auto *NewAttr = S.mergeFormatMatchesAttr(D, AL, Info.Identifier,
+                                                   Info.FormatStringIdx, SL))
+        D->addAttr(NewAttr);
+    return;
+  }
+
+  S.Diag(AL.getLoc(), diag::err_format_nonliteral)
+      << FormatStrExpr->getSourceRange();
+  return;
 }
 
 /// Handle __attribute__((callback(CalleeIdx, PayloadIdx0, ...))) attributes.
@@ -6851,6 +6916,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Format:
     handleFormatAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_FormatMatches:
+    handleFormatMatchesAttr(S, D, AL);
     break;
   case ParsedAttr::AT_FormatArg:
     handleFormatArgAttr(S, D, AL);

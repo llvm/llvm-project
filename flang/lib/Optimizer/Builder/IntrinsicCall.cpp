@@ -2728,15 +2728,22 @@ mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 3);
-  assert(args[1].getType() == args[2].getType());
   auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
   auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
+
+  mlir::Value arg1 = args[1];
+  mlir::Value arg2 = args[2];
+  if (arg1.getType() != arg2.getType()) {
+    // arg1 and arg2 need to have the same type in AtomicCmpXchgOp.
+    arg2 = builder.createConvert(loc, arg1.getType(), arg2);
+  }
+
   auto address =
       builder.create<mlir::UnrealizedConversionCastOp>(loc, llvmPtrTy, args[0])
           .getResult(0);
   auto cmpxchg = builder.create<mlir::LLVM::AtomicCmpXchgOp>(
-      loc, address, args[1], args[2], successOrdering, failureOrdering);
+      loc, address, arg1, arg2, successOrdering, failureOrdering);
   return builder.create<mlir::LLVM::ExtractValueOp>(loc, cmpxchg, 1);
 }
 
@@ -2753,7 +2760,7 @@ mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
                                             llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(args[1].getType().isIntOrFloat());
 
   mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
@@ -5519,13 +5526,33 @@ void IntrinsicLibrary::genIeeeSetRoundingMode(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   // Set the current floating point rounding mode to the value of arg
   // ROUNDING_VALUE. Values are llvm.get.rounding encoding values.
-  // Generate an error if the value of optional arg RADIX is not 2.
+  // Modes ieee_to_zero, ieee_nearest, ieee_up, and ieee_down are supported.
+  // Modes ieee_away and ieee_other are not supported, and are treated as
+  // ieee_nearest. Generate an error if the optional RADIX arg is not 2.
   assert(args.size() == 1 || args.size() == 2);
   if (args.size() == 2)
     checkRadix(builder, loc, fir::getBase(args[1]), "ieee_set_rounding_mode");
-  auto [fieldRef, ignore] = getFieldRef(builder, loc, fir::getBase(args[0]));
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(builder);
   mlir::Value mode = builder.create<fir::LoadOp>(loc, fieldRef);
+  static_assert(
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO <= 3 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST <= 3 && _FORTRAN_RUNTIME_IEEE_UP >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_UP <= 3 && _FORTRAN_RUNTIME_IEEE_DOWN >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_DOWN <= 3 && "unexpected rounding mode mapping");
+  mlir::Value mask = builder.create<mlir::arith::ShLIOp>(
+      loc, builder.createAllOnesInteger(loc, fieldTy),
+      builder.createIntegerConstant(loc, fieldTy, 2));
+  mlir::Value modeIsSupported = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq,
+      builder.create<mlir::arith::AndIOp>(loc, mode, mask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  mlir::Value nearest = builder.createIntegerConstant(
+      loc, fieldTy, _FORTRAN_RUNTIME_IEEE_NEAREST);
+  mode = builder.create<mlir::arith::SelectOp>(loc, modeIsSupported, mode,
+                                               nearest);
   mode = builder.create<fir::ConvertOp>(
       loc, setRound.getFunctionType().getInput(0), mode);
   builder.create<fir::CallOp>(loc, setRound, mode);
