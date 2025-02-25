@@ -2436,8 +2436,8 @@ def Tosa_IfOp : Tosa_Op<"cond_if",
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Profile<[]>,
+    Extension<[Tosa_EXT_CONTROLFLOW]>,
   ];
 
   let regions = (region
@@ -2477,8 +2477,8 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Profile<[]>,
+    Extension<[Tosa_EXT_CONTROLFLOW]>,
   ];
 
   let regions = (region
