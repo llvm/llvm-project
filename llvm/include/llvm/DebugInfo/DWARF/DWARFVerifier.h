@@ -35,7 +35,7 @@ class OutputCategoryAggregator {
 private:
   std::mutex WriteMutex;
   std::map<std::string, unsigned> Aggregation;
-  unsigned NumErrors = 0;
+  uint64_t NumErrors = 0;
   bool IncludeDetail;
 
 public:
@@ -46,7 +46,7 @@ public:
   void Report(StringRef s, std::function<void()> detailCallback);
   void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
   /// Return the number of errors that have been reported.
-  unsigned GetNumErrors() const { return NumErrors; }
+  uint64_t GetNumErrors() const { return NumErrors; }
 };
 
 /// A class that verifies DWARF debug information given a DWARF Context.
@@ -306,6 +306,13 @@ private:
   /// \returns The number of errors occurred during verification
   void verifyDebugNames(const DWARFSection &AccelSection,
                         const DataExtractor &StrData);
+
+  /// Constructs a full name for a DIE. Potentially it does recursive lookup on
+  /// DIEs. This can lead to extraction of DIEs in a different CU or TU.
+  SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
+                                       bool IncludeStrippedTemplateNames,
+                                       bool IncludeObjCNames = true,
+                                       bool IncludeLinkageName = true);
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,
