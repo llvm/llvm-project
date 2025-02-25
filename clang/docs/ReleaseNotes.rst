@@ -196,6 +196,8 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
