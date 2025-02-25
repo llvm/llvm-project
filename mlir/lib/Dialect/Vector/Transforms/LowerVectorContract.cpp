@@ -221,7 +221,7 @@ namespace {
 /// ```
 /// `vector.matmul` later lowers to `llvm.matrix.multiply`.
 //
-/// This only kicks in when VectorTransformsOptions is set to Matmul and
+/// This only kicks in when vectorContractLowering is set to Matmul and
 /// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToMatmulOpLowering
     : public vector::MaskableOpRewritePattern<vector::ContractionOp> {
@@ -266,7 +266,7 @@ private:
 ///    %cK = vector.outerproduct %atRowK, %bRowK, %cK-1
 /// ```
 ///
-/// This only kicks in when VectorTransformsOptions is set to OuterProduct and
+/// This only kicks in when vectorContractLowering is set to OuterProduct and
 /// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToOuterProductOpLowering
     : public MaskableOpRewritePattern<vector::ContractionOp> {
@@ -636,7 +636,7 @@ private:
 ///    %cK = vector.outerproduct %atRowK, %bRowK, %cK-1
 /// ```
 ///
-/// This only kicks in when VectorTransformsOptions is set to OuterProduct but
+/// This only kicks in when vectorContractLowering is set to OuterProduct but
 /// otherwise supports any layout permutation of the matrix-multiply.
 FailureOr<Value>
 ContractionOpToOuterProductOpLowering::matchAndRewriteMaskableOp(
@@ -911,7 +911,7 @@ private:
 /// until a pure contraction is reached (no free/batch dimensions),
 /// which is replaced by a dot-product.
 ///
-/// This only kicks in when either VectorTransformsOptions is set
+/// This only kicks in when either vectorContractLoweringOption is set
 /// to DOT or when other contraction patterns fail.
 //
 // TODO: break down into transpose/reshape/cast ops
@@ -1278,7 +1278,7 @@ public:
 /// ```
 /// `vector.matmul` later lowers to `llvm.matrix.multiply`.
 //
-/// This only kicks in when VectorTransformsOptions is set to `Matmul`.
+/// This only kicks in when vectorContractLowering is set to `Matmul`.
 /// vector.transpose operations are inserted if the vector.contract op is not a
 /// row-major matrix multiply.
 ///
