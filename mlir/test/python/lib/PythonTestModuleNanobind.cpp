@@ -52,8 +52,7 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
     mlirContextPrintStackTraceOnDiagnostic(ctx, true);
     mlir::python::CollectDiagnosticsToStringScope handler(ctx);
 
-    auto loc = mlirLocationUnknownGet(ctx);
-    mlirEmitError(loc, "created error");
+    mlirPythonTestEmitDiagnosticWithNote(ctx);
     throw nb::value_error(handler.takeMessage().c_str());
   });
 
