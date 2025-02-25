@@ -5649,14 +5649,20 @@ bool Sema::IsCXXReplaceableType(QualType Type) {
 static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   QualType BaseElementType = SemaRef.getASTContext().getBaseElementType(T);
 
-  if (SemaRef.IsCXXTriviallyRelocatableType(T))
-    return true;
-
-  if (BaseElementType->isIncompleteType() || !BaseElementType->isObjectType())
+  if (BaseElementType->isIncompleteType())
     return false;
+  if (!BaseElementType->isObjectType())
+    return false;
+
+  if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
+      RD && !RD->isPolymorphic() && IsCXXTriviallyRelocatableType(SemaRef, RD))
+    return true;
 
   if (const auto *RD = BaseElementType->getAsRecordDecl())
     return RD->canPassInRegisters();
+
+  if (BaseElementType.isTriviallyCopyableType(SemaRef.getASTContext()))
+    return true;
 
   switch (T.isNonTrivialToPrimitiveDestructiveMove()) {
   case QualType::PCK_Trivial:

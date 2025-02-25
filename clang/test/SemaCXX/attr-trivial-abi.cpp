@@ -28,18 +28,25 @@ static_assert(__is_trivially_relocatable(S1), "");
 struct __attribute__((trivial_abi)) S3 { // expected-warning {{'trivial_abi' cannot be applied to 'S3'}} expected-note {{is polymorphic}}
   virtual void m();
 };
-static_assert(__is_trivially_relocatable(S3), "");
+static_assert(!__is_trivially_relocatable(S3), "");
 
 struct S3_2 {
   virtual void m();
 } __attribute__((trivial_abi)); // expected-warning {{'trivial_abi' cannot be applied to 'S3_2'}} expected-note {{is polymorphic}}
-static_assert(__is_trivially_relocatable(S3_2), "");
+static_assert(!__is_trivially_relocatable(S3_2), "");
 
 struct __attribute__((trivial_abi)) S3_3 { // expected-warning {{'trivial_abi' cannot be applied to 'S3_3'}} expected-note {{has a field of a non-trivial class type}}
   S3_3(S3_3 &&);
   S3_2 s32;
 };
+#ifdef __ORBIS__
+// The ClangABI4OrPS4 calling convention kind passes classes in registers if the
+// copy constructor is trivial for calls *or deleted*, while other platforms do
+// not accept deleted constructors.
+static_assert(__is_trivially_relocatable(S3_3), "");
+#else
 static_assert(!__is_trivially_relocatable(S3_3), "");
+#endif
 
 // Diagnose invalid trivial_abi even when the type is templated because it has a non-trivial field.
 template <class T>
@@ -111,7 +118,11 @@ struct __attribute__((trivial_abi)) CopyMoveDeleted { // expected-warning {{'tri
   CopyMoveDeleted(const CopyMoveDeleted &) = delete;
   CopyMoveDeleted(CopyMoveDeleted &&) = delete;
 };
+#ifdef __ORBIS__
+static_assert(__is_trivially_relocatable(CopyMoveDeleted), "");
+#else
 static_assert(!__is_trivially_relocatable(CopyMoveDeleted), "");
+#endif
 
 struct __attribute__((trivial_abi)) S18 { // expected-warning {{'trivial_abi' cannot be applied to 'S18'}} expected-note {{copy constructors and move constructors are all deleted}}
   CopyMoveDeleted a;
