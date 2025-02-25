@@ -48,6 +48,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(output, f"Hello {name}!\r\n")
         self.dap_server.request_disconnect()
 
+    @skipIfWindows
     def test_server_port(self):
         """
         Test launching a binary with a lldb-dap in server mode on a specific port.

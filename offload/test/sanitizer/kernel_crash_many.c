@@ -37,36 +37,36 @@ int main(void) {
 // CHECK: Kernel 1: {{.*}} (__omp_offloading_{{.*}}_main_l22)
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c
+// DEBUG:     main {{.*}}kernel_crash_many.c:
 //
 // CHECK: Kernel 2: {{.*}} (__omp_offloading_{{.*}}_main_l22)
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c
+// DEBUG:     main {{.*}}kernel_crash_many.c:
 //
 // CHECK: Kernel 3: {{.*}} (__omp_offloading_{{.*}}_main_l22)
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c
+// DEBUG:     main {{.*}}kernel_crash_many.c:
 //
 // CHECK: Kernel 4: {{.*}} (__omp_offloading_{{.*}}_main_l22)
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c
+// DEBUG:     main {{.*}}kernel_crash_many.c:
 //
 // CHECK: Kernel 5: {{.*}} (__omp_offloading_{{.*}}_main_l22)
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c
+// DEBUG:     main {{.*}}kernel_crash_many.c:
 //
 // CHECK: Kernel 6: {{.*}} (__omp_offloading_{{.*}}_main_l22)
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c
+// DEBUG:     main {{.*}}kernel_crash_many.c:
 //
 // CHECK: Kernel 7: {{.*}} (__omp_offloading_{{.*}}_main_l22)
 // CHECK:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_many.c
+// DEBUG:     main {{.*}}kernel_crash_many.c:
 //
 // CHECK-NOT: Kernel {{[[0-9]]+}}:

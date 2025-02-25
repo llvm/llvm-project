@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: @nvvm_tcgen05_cp_128x256b
 llvm.func @nvvm_tcgen05_cp_128x256b(%taddr : !llvm.ptr<6>, %smem_desc : i64) {
