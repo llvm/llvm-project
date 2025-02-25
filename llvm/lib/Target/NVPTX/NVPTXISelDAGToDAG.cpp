@@ -1106,9 +1106,6 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                           std::nullopt, NVPTX::LDV_f32_v4_asi, std::nullopt);
       break;
     }
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64) {
       SelectADDRri64(Op1.getNode(), Op1, Base, Offset);
@@ -1148,10 +1145,10 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
         break;
       }
     }
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
   }
+  if (!Opcode)
+    return false;
+  Ops.append({Base, Offset, Chain});
   LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
 
   MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
@@ -1202,63 +1199,59 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   std::optional<unsigned> Opcode;
   SDLoc DL(N);
   SDNode *LD;
-  SDValue Base, Offset, Addr;
+  SDValue Base, Offset;
 
-  if (SelectDirectAddr(Op1, Addr)) {
+  if (SelectADDRsi(Op1.getNode(), Op1, Base, Offset)) {
     switch (N->getOpcode()) {
     default:
       return false;
     case ISD::LOAD:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8avar,
-          NVPTX::INT_PTX_LDG_GLOBAL_i16avar, NVPTX::INT_PTX_LDG_GLOBAL_i32avar,
-          NVPTX::INT_PTX_LDG_GLOBAL_i64avar, NVPTX::INT_PTX_LDG_GLOBAL_f32avar,
-          NVPTX::INT_PTX_LDG_GLOBAL_f64avar);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8asi,
+          NVPTX::INT_PTX_LDG_GLOBAL_i16asi, NVPTX::INT_PTX_LDG_GLOBAL_i32asi,
+          NVPTX::INT_PTX_LDG_GLOBAL_i64asi, NVPTX::INT_PTX_LDG_GLOBAL_f32asi,
+          NVPTX::INT_PTX_LDG_GLOBAL_f64asi);
       break;
     case ISD::INTRINSIC_W_CHAIN:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8avar,
-          NVPTX::INT_PTX_LDU_GLOBAL_i16avar, NVPTX::INT_PTX_LDU_GLOBAL_i32avar,
-          NVPTX::INT_PTX_LDU_GLOBAL_i64avar, NVPTX::INT_PTX_LDU_GLOBAL_f32avar,
-          NVPTX::INT_PTX_LDU_GLOBAL_f64avar);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8asi,
+          NVPTX::INT_PTX_LDU_GLOBAL_i16asi, NVPTX::INT_PTX_LDU_GLOBAL_i32asi,
+          NVPTX::INT_PTX_LDU_GLOBAL_i64asi, NVPTX::INT_PTX_LDU_GLOBAL_f32asi,
+          NVPTX::INT_PTX_LDU_GLOBAL_f64asi);
       break;
     case NVPTXISD::LoadV2:
       Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                               NVPTX::INT_PTX_LDG_G_v2i8_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2i16_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2i32_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2i64_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2f32_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2f64_ELE_avar);
+                               NVPTX::INT_PTX_LDG_G_v2i8_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2i16_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2i32_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2i64_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2f32_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2f64_ELE_asi);
       break;
     case NVPTXISD::LDUV2:
       Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                               NVPTX::INT_PTX_LDU_G_v2i8_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2i16_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2i32_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2i64_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2f32_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2f64_ELE_avar);
+                               NVPTX::INT_PTX_LDU_G_v2i8_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2i16_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2i32_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2i64_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2f32_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2f64_ELE_asi);
       break;
     case NVPTXISD::LoadV4:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_avar,
-          NVPTX::INT_PTX_LDG_G_v4i16_ELE_avar,
-          NVPTX::INT_PTX_LDG_G_v4i32_ELE_avar, std::nullopt,
-          NVPTX::INT_PTX_LDG_G_v4f32_ELE_avar, std::nullopt);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_asi,
+          NVPTX::INT_PTX_LDG_G_v4i16_ELE_asi,
+          NVPTX::INT_PTX_LDG_G_v4i32_ELE_asi, std::nullopt,
+          NVPTX::INT_PTX_LDG_G_v4f32_ELE_asi, std::nullopt);
       break;
     case NVPTXISD::LDUV4:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE_avar,
-          NVPTX::INT_PTX_LDU_G_v4i16_ELE_avar,
-          NVPTX::INT_PTX_LDU_G_v4i32_ELE_avar, std::nullopt,
-          NVPTX::INT_PTX_LDU_G_v4f32_ELE_avar, std::nullopt);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE_asi,
+          NVPTX::INT_PTX_LDU_G_v4i16_ELE_asi,
+          NVPTX::INT_PTX_LDU_G_v4i32_ELE_asi, std::nullopt,
+          NVPTX::INT_PTX_LDU_G_v4f32_ELE_asi, std::nullopt);
       break;
     }
-    if (!Opcode)
-      return false;
-    SDValue Ops[] = { Addr, Chain };
-    LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
   } else {
     if (TM.is64Bit()) {
       SelectADDRri64(Op1.getNode(), Op1, Base, Offset);
@@ -1369,11 +1362,11 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
         break;
       }
     }
-    if (!Opcode)
-      return false;
-    SDValue Ops[] = {Base, Offset, Chain};
-    LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
   }
+  if (!Opcode)
+    return false;
+  SDValue Ops[] = {Base, Offset, Chain};
+  LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
 
   // For automatic generation of LDG (through SelectLoad[Vector], not the
   // intrinsics), we may have an extending load like:
@@ -1577,7 +1570,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
                           std::nullopt, NVPTX::STV_f32_v4_asi, std::nullopt);
       break;
     }
-    Ops.append({Base, Offset});
   } else {
     if (PointerSize == 64) {
       SelectADDRri64(N2.getNode(), N2, Base, Offset);
@@ -1617,12 +1609,10 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
         break;
       }
     }
-    Ops.append({Base, Offset});
   }
   if (!Opcode)
     return false;
-
-  Ops.push_back(Chain);
+  Ops.append({Base, Offset, Chain});
 
   ST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
 
