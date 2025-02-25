@@ -38,7 +38,8 @@ class Ptr_Type<string name, string typeMnemonic, list<Trait> traits = []>
 def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     MemRefElementTypeInterface,
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "getIndexBitwidth", "verifyEntries"]>
+      "areCompatible", "getIndexBitwidth", "verifyEntries",
+      "getPreferredAlignment"]>
   ]> {
   let summary = "pointer type";
   let description = [{
