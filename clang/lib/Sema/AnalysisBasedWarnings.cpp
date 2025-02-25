@@ -2566,6 +2566,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   // The Callback function that performs analyses:
   auto CallAnalyzers = [&](const Decl *Node) -> void {
+    if (Node->hasAttr<UnsafeBufferUsageAttr>())
+      return;
+
     // Perform unsafe buffer usage analysis:
     if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
                          Node->getBeginLoc()) ||
