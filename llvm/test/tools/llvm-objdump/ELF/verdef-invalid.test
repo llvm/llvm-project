@@ -2,9 +2,8 @@
 ## Check that we report a warning when a SHT_GNU_verdef section contains a version definition
 ## that refers to an auxiliary entry that goes past the end of the section.
 
-# RUN: yaml2obj %s -o %t5
-# RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --check-prefix=AUX-PAST-END -DFILE=%t5
-# RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --check-prefix=AUX-PAST-END -DFILE=%t5
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -p %t 2>&1 | FileCheck %s --check-prefix=AUX-PAST-END -DFILE=%t
 
 # AUX-PAST-END: warning: '[[FILE]]': invalid SHT_GNU_verdef section with index 1: version definition 1 refers to an auxiliary entry that goes past the end of the section
 
@@ -25,9 +24,8 @@ DynamicSymbols:
 
 ## Check we report a warning when a version definition is not correctly aligned in memory.
 
-# RUN: yaml2obj %s --docnum=2 -o %t7
-# RUN: llvm-objdump -p %t7 2>&1 | FileCheck %s --check-prefix=MISALIGNED-DEF -DFILE=%t7
-# RUN: llvm-objdump -p %t7 2>&1 | FileCheck %s --check-prefix=MISALIGNED-DEF -DFILE=%t7
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-objdump -p %t2 2>&1 | FileCheck %s --check-prefix=MISALIGNED-DEF -DFILE=%t2
 
 # MISALIGNED-DEF: warning: '[[FILE]]': invalid SHT_GNU_verdef section with index 1: found a misaligned version definition entry at offset 0x0
 
@@ -48,3 +46,31 @@ Sections:
           - FOO
 DynamicSymbols:
   - Name: foo
+
+## Check we report "invalid vda_name" when vda_name = size(.dynstr)
+
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: llvm-objdump -p %t3 2>&1 | FileCheck %s --check-prefix=VDANAME-PAST-END --implicit-check-not=warning:
+
+# VDANAME-PAST-END:      Version definitions:
+# VDANAME-PAST-END-NEXT: 0 0x00 0x00000000 V0
+# VDANAME-PAST-END-NEXT:         <invalid vda_name: 7>
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:  .gnu.version_d
+    Type:  SHT_GNU_verdef
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Info:  0x1
+## The byte offset to the auxiliary entry is 0x13, i.e. it is not correctly aligned in memory.
+    Content: "010000000000020000000000140000000000000004000000080000000700000000000000"
+DynamicSymbols:
+  - Name:    V1
+    Binding: STB_GLOBAL
+  - Name:    V0
+    Binding: STB_GLOBAL

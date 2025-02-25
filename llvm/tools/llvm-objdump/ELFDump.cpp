@@ -78,8 +78,8 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
     return SectionsOrError.takeError();
 
   for (const typename ELFT::Shdr &Sec : *SectionsOrError) {
-    if (Sec.sh_type == ELF::SHT_DYNSYM)
-      return Elf.getStringTableForSymtab(Sec);
+    if (Sec.sh_type == ELF::SHT_DYNAMIC)
+      return Elf.getLinkAsStrtab(Sec);
   }
 
   return createError("dynamic string table not found");
