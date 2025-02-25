@@ -64,11 +64,12 @@ public:
 /// This struct can be extended as needed to add additional configuration
 /// points specific to a vendor's implementation.
 struct Config {
-  static const bool BuildTimeEnableTelemetry = LLVM_ENABLE_TELEMETRY;
-  virtual ~Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
+  static constexpr bool BuildTimeEnableTelemetry = LLVM_ENABLE_TELEMETRY;
 
   // If true, telemetry will be enabled.
   const bool EnableTelemetry;
+
+  virtual Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
 
   // Telemetry can only be enabled if both the runtime and buildtime flag
   // are set.
