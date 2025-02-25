@@ -196,6 +196,9 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 
+- Added ``-Wstatic-downcast`` to diagnose potentially dangerous uses of ``static_cast`` that perform a base-to-derived cast
+  on pointers and references of polymorphic types.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
