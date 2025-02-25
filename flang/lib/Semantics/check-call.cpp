@@ -1049,8 +1049,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
     SemanticsContext &context, bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
-  auto restorer{
-      messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
+  parser::CharBlock location{arg.sourceLocation().value_or(messages.at())};
+  auto restorer{messages.SetLocation(location)};
   const characteristics::Procedure &interface { dummy.procedure.value() };
   if (const auto *expr{arg.UnwrapExpr()}) {
     bool dummyIsPointer{
@@ -1175,22 +1175,30 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
             dummyName);
       }
     }
-    if (dummyIsPointer && dummy.intent != common::Intent::In) {
-      const Symbol *last{GetLastSymbol(*expr)};
-      if (last && IsProcedurePointer(*last)) {
-        if (dummy.intent != common::Intent::Default &&
-            IsIntentIn(last->GetUltimate())) { // 19.6.8
-          messages.Say(
-              "Actual argument associated with procedure pointer %s may not be INTENT(IN)"_err_en_US,
-              dummyName);
-        }
-      } else if (!(dummy.intent == common::Intent::Default &&
-                     IsNullProcedurePointer(*expr))) {
-        // 15.5.2.9(5) -- dummy procedure POINTER
-        // Interface compatibility has already been checked above
+    if (dummyIsPointer) {
+      if (dummy.intent == common::Intent::In) {
+        // need not be definable, can be a target
+      } else if (!IsProcedurePointer(*expr)) {
         messages.Say(
-            "Actual argument associated with procedure pointer %s must be a pointer unless INTENT(IN)"_err_en_US,
+            "Actual argument associated with procedure pointer %s is not a procedure pointer"_err_en_US,
             dummyName);
+      } else if (dummy.intent == common::Intent::Default) {
+        // ok, needs to be definable only if defined at run time
+      } else {
+        DefinabilityFlags flags{DefinabilityFlag::PointerDefinition};
+        if (dummy.intent != common::Intent::Out) {
+          flags.set(DefinabilityFlag::DoNotNoteDefinition);
+        }
+        if (auto whyNot{WhyNotDefinable(
+                location, context.FindScope(location), flags, *expr)}) {
+          if (auto *msg{messages.Say(
+                  "Actual argument associated with INTENT(%s) procedure pointer %s is not definable"_err_en_US,
+                  dummy.intent == common::Intent::Out ? "OUT" : "IN OUT",
+                  dummyName)}) {
+            msg->Attach(
+                std::move(whyNot->set_severity(parser::Severity::Because)));
+          }
+        }
       }
     }
   } else {
