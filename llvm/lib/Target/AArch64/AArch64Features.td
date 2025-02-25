@@ -669,6 +669,9 @@ def FeatureExynosCheapAsMoveHandling : SubtargetFeature<"exynos-cheap-as-move",
     "HasExynosCheapAsMoveHandling", "true",
     "Use Exynos specific handling of cheap instructions">;
 
+def FeatureDisablePreRAScheduler : SubtargetFeature<"use-prera-scheduler",
+    "DisablePreRAScheduler", "true", "Disable scheduling before register allocation">;
+
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
