@@ -555,7 +555,7 @@ def err_decomp_decl_template : Error<
 def err_decomp_decl_not_alone : Error<
   "decomposition declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
-  "decomposition declaration %0 requires an initializer, but got %1 instead">;
+  "decomposition declaration %0 requires an initializer">;
 def err_decomp_decl_wrong_number_bindings : Error<
   "type %0 decomposes into %3 %plural{1:element|:elements}2, but "
   "%select{%plural{0:no|:only %1}1|%1}4 "

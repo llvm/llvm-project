@@ -2932,6 +2932,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     break;
   }
   case InitKind::Uninitialized: {
+    if (D.isDecompositionDeclarator())
+      Diag(Tok, diag::err_expected_init) << PP.getSpelling(Tok);
     Actions.ActOnUninitializedDecl(ThisDecl);
     break;
   }

@@ -193,6 +193,7 @@ Improvements to Clang's diagnostics
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
+- Added a clearer diagnostic for uninitialized decomposition declarations.
 
 Improvements to Clang's time-trace
 ----------------------------------
