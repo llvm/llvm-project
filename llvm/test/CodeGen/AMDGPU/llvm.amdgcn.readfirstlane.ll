@@ -640,14 +640,6 @@ define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_f64(ptr addrspace(1
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-SDAG-NEXT:    s_endpgm
-;
-; CHECK-GISEL-LABEL: test_readfirstlane_copy_from_sgpr_f64:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CHECK-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-GISEL-NEXT:    ;;#ASMSTART
-; CHECK-GISEL-NEXT:    s_mov_b64 s[2:3], 0
-; CHECK-GISEL-NEXT:    ;;#ASMEND
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)

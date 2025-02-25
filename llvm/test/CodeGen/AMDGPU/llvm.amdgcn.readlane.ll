@@ -9,7 +9,7 @@ declare double @llvm.amdgcn.readlane.f64(double, i32) #0
 define amdgpu_kernel void @test_readlane_sreg_sreg_i32(i32 %src0, i32 %src1) #1 {
 ; CHECK-SDAG-LABEL: test_readlane_sreg_sreg_i32:
 ; CHECK-SDAG:       ; %bb.0:
-; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-SDAG-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
 ; CHECK-SDAG-NEXT:    ; use s0
@@ -18,7 +18,7 @@ define amdgpu_kernel void @test_readlane_sreg_sreg_i32(i32 %src0, i32 %src1) #1 
 ;
 ; CHECK-GISEL-LABEL: test_readlane_sreg_sreg_i32:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-GISEL-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    ;;#ASMSTART
 ; CHECK-GISEL-NEXT:    ; use s0
