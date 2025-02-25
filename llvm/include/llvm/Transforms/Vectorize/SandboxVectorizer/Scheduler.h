@@ -112,8 +112,11 @@ private:
   ContainerTy Nodes;
 
   /// Called by the DGNode destructor to avoid accessing freed memory.
-  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
-  friend DGNode::~DGNode(); // For eraseFromBundle().
+  void eraseFromBundle(DGNode *N) {
+    Nodes.erase(std::remove(Nodes.begin(), Nodes.end(), N), Nodes.end());
+  }
+  friend void DGNode::setSchedBundle(SchedBundle &); // For eraseFromBunde().
+  friend DGNode::~DGNode();                          // For eraseFromBundle().
 
 public:
   SchedBundle() = default;
@@ -130,6 +133,10 @@ public:
       N->clearSchedBundle();
   }
   bool empty() const { return Nodes.empty(); }
+  /// Singleton bundles are created when scheduling instructions temporarily to
+  /// fill in the schedule until we schedule the vector bundle. These are
+  /// non-vector bundles containing just a single instruction.
+  bool isSingleton() const { return Nodes.size() == 1u; }
   DGNode *back() const { return Nodes.back(); }
   using iterator = ContainerTy::iterator;
   using const_iterator = ContainerTy::const_iterator;
@@ -187,10 +194,12 @@ class Scheduler {
   /// The scheduling state of the instructions in the bundle.
   enum class BndlSchedState {
     NoneScheduled, ///> No instruction in the bundle was previously scheduled.
-    PartiallyOrDifferentlyScheduled, ///> Only some of the instrs in the bundle
-                                     /// were previously scheduled, or all of
-                                     /// them were but not in the same
-                                     /// SchedBundle.
+    AlreadyScheduled, ///> At least one instruction in the bundle belongs to a
+                      /// different non-singleton scheduling bundle.
+    TemporarilyScheduled, ///> Instructions were temporarily scheduled as
+                          /// singleton bundles or some of them were not
+                          /// scheduled at all. None of them were in a vector
+                          ///(non-singleton) bundle.
     FullyScheduled, ///> All instrs in the bundle were previously scheduled and
                     /// were in the same SchedBundle.
   };
@@ -243,6 +252,11 @@ public:
 class SchedulerInternalsAttorney {
 public:
   static DependencyGraph &getDAG(Scheduler &Sched) { return Sched.DAG; }
+  using BndlSchedState = Scheduler::BndlSchedState;
+  static BndlSchedState getBndlSchedState(const Scheduler &Sched,
+                                          ArrayRef<Instruction *> Instrs) {
+    return Sched.getBndlSchedState(Instrs);
+  }
 };
 
 } // namespace llvm::sandboxir

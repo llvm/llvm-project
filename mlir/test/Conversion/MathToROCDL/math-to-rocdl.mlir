@@ -518,6 +518,20 @@ module {
 
 module @test_module {
   // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
+  // CHECK-LABEL: func @math_sin_vector_0d
+  func.func @math_sin_vector_0d(%arg : vector<f16>) -> vector<f16> {
+    // CHECK: llvm.extractelement {{.*}} : vector<1xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<1xf16>
+    %result = math.sin %arg : vector<f16>
+    func.return %result : vector<f16>
+  }
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
   // CHECK-LABEL: func @math_sin_vector_1d
   func.func @math_sin_vector_1d(%arg : vector<4xf16>) -> vector<4xf16> {
     // CHECK: llvm.extractelement {{.*}} : vector<4xf16>

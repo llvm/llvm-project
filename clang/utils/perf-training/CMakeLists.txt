@@ -9,7 +9,7 @@ set(CLANG_PGO_TRAINING_DEPS "" CACHE STRING "Extra dependencies needed to build 
 option(CLANG_PGO_TRAINING_USE_LLVM_BUILD "Use LLVM build for generating PGO data" ON)
 
 llvm_canonicalize_cmake_booleans(
-  CLANG_PGO_TRAINING_USE_LLVM
+  CLANG_PGO_TRAINING_USE_LLVM_BUILD
 )
 
 if(LLVM_BUILD_INSTRUMENTED)

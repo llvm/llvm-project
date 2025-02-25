@@ -7126,7 +7126,7 @@ def note_precedence_conditional_first : Note<
 
 def warn_consecutive_comparison : Warning<
   "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
-  InGroup<Parentheses>;
+  InGroup<Parentheses>, DefaultError;
 
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
@@ -7764,6 +7764,7 @@ def warn_format_nonliteral_noargs : Warning<
 def warn_format_nonliteral : Warning<
   "format string is not a string literal">,
   InGroup<FormatNonLiteral>, DefaultIgnore;
+def err_format_nonliteral : Error<"format string is not a string literal">;
 
 def err_unexpected_interface : Error<
   "unexpected interface name %0: expected expression">;
@@ -10066,6 +10067,8 @@ def note_previous_declaration_as : Note<
 
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;
+def warn_format_cmp_specifier_arity : Warning<
+  "%select{fewer|more}0 specifiers in format string than expected">, InGroup<FormatInsufficientArgs>;
 def warn_printf_data_arg_not_used : Warning<
   "data argument not used by format string">, InGroup<FormatExtraArgs>;
 def warn_format_invalid_conversion : Warning<
@@ -10183,6 +10186,27 @@ def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
 def note_printf_c_str: Note<"did you mean to call the %0 method?">;
 def note_format_security_fixit: Note<
   "treat the string as an argument to avoid this">;
+def warn_format_string_type_incompatible : Warning<
+  "passing '%0' format string where '%1' format string is expected">,
+  InGroup<Format>;
+def warn_format_cmp_role_mismatch : Warning<
+  "format argument is %select{a value|an indirect field width|an indirect "
+  "precision|an auxiliary value}0, but it should be %select{a value|an indirect "
+  "field width|an indirect precision|an auxiliary value}1">, InGroup<Format>;
+def warn_format_cmp_modifierfor_mismatch : Warning<
+  "format argument modifies specifier at position %0, but it should modify "
+  "specifier at position %1">, InGroup<Format>;
+def warn_format_cmp_sensitivity_mismatch : Warning<
+  "argument sensitivity is %select{unspecified|private|public|sensitive}0, but "
+  "it should be %select{unspecified|private|public|sensitive}1">, InGroup<Format>;
+def warn_format_cmp_specifier_mismatch : Warning<
+  "format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_sign_mismatch : Warning<
+  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_mismatch_pedantic : Extension<
+  warn_format_cmp_specifier_sign_mismatch.Summary>, InGroup<FormatPedantic>;
+def note_format_cmp_with : Note<
+  "comparing with this %select{specifier|format string}0">;
 
 def warn_null_arg : Warning<
   "null passed to a callee that requires a non-null argument">,

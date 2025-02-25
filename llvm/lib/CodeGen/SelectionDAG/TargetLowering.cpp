@@ -8488,8 +8488,7 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
 }
 
 SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
-                                              SelectionDAG &DAG,
-                                              bool ShouldCanonicalize) const {
+                                              SelectionDAG &DAG) const {
   if (SDValue Expanded = expandVectorNaryOpBySplitting(Node, DAG))
     return Expanded;
 
@@ -8506,7 +8505,7 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
     SDValue Quiet0 = Node->getOperand(0);
     SDValue Quiet1 = Node->getOperand(1);
 
-    if (ShouldCanonicalize && !Node->getFlags().hasNoNaNs()) {
+    if (!Node->getFlags().hasNoNaNs()) {
       // Insert canonicalizes if it's possible we need to quiet to get correct
       // sNaN behavior.
       if (!DAG.isKnownNeverSNaN(Quiet0)) {

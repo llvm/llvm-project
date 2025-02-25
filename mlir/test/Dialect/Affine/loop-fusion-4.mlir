@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer}))' -split-input-file | FileCheck %s --check-prefix=PRODUCER-CONSUMER
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer fusion-maximal}))' -split-input-file | FileCheck %s --check-prefix=PRODUCER-CONSUMER-MAXIMAL
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal mode=sibling}))' -split-input-file | FileCheck %s --check-prefix=SIBLING-MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer maximal}))' -split-input-file | FileCheck %s --check-prefix=PRODUCER-CONSUMER-MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{maximal mode=sibling}))' -split-input-file | FileCheck %s --check-prefix=SIBLING-MAXIMAL
 // All fusion: producer-consumer and sibling.
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s --check-prefix=ALL
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(spirv.func(affine-loop-fusion{mode=producer}))' -split-input-file | FileCheck %s --check-prefix=SPIRV
@@ -493,5 +493,54 @@ func.func @test_add_slice_bounds() {
       }
     }
   }
+  return
+}
+
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func @producer_reduction_no_fusion
+func.func @producer_reduction_no_fusion(%input : memref<10xf32>, %output : memref<10xf32>, %reduc : memref<1xf32>) {
+  %zero = arith.constant 0. : f32
+  %one = arith.constant 1. : f32
+  // This producer can't be fused into inside %i without a violation of
+  // semantics.
+  // PRODUCER-CONSUMER-MAXIMAL: affine.for %{{.*}} = 0 to 10
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %input[%i] : memref<10xf32>
+    %1 = affine.load %reduc[0] : memref<1xf32>
+    %2 = arith.addf %0, %1 : f32
+    affine.store %2, %reduc[0] : memref<1xf32>
+  }
+  // PRODUCER-CONSUMER-MAXIMAL: affine.for %{{.*}} = 0 to 10
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %reduc[0] : memref<1xf32>
+    %2 = arith.addf %0, %one : f32
+    affine.store %2, %output[%i] : memref<10xf32>
+  }
+  return
+}
+
+// SIBLING-MAXIMAL-LABEL: func @sibling_reduction
+func.func @sibling_reduction(%input : memref<10xf32>, %output : memref<10xf32>, %reduc : memref<10xf32>) {
+  %zero = arith.constant 0. : f32
+  %one = arith.constant 1. : f32
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %input[%i] : memref<10xf32>
+    %2 = arith.addf %0, %one : f32
+    affine.store %2, %output[%i] : memref<10xf32>
+  }
+  // Ensure that the fusion happens at the right depth.
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %input[%i] : memref<10xf32>
+    %1 = affine.load %reduc[0] : memref<10xf32>
+    %2 = arith.addf %0, %1 : f32
+    affine.store %2, %reduc[0] : memref<10xf32>
+  }
+  // SIBLING-MAXIMAL:      affine.for %{{.*}} = 0 to 10
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   addf
+  // SIBLING-MAXIMAL-NEXT:   affine.store
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   addf
+  // SIBLING-MAXIMAL-NEXT:   affine.store
   return
 }

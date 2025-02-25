@@ -1428,10 +1428,6 @@ public:
   // \returns true if the target has IEEE fminimum/fmaximum instructions
   bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
 
-  // \returns true if the target has IEEE fminimum_num/fmaximum_num
-  // instructions
-  bool hasIEEEMinNumMaxNum() const { return getGeneration() >= GFX12; }
-
   // \returns true if the target has IEEE fminimum3/fmaximum3 instructions
   bool hasIEEEMinMax3() const { return hasIEEEMinMax(); }
 
