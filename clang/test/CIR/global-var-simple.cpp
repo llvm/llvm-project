@@ -58,6 +58,9 @@ _BitInt(20) sb20;
 unsigned _BitInt(48) ub48;
 // CHECK: cir.global @ub48 : !cir.int<u, 48>
 
+bool boolfalse = false;
+// CHECK: cir.global @boolfalse = #false
+
 _Float16 f16;
 // CHECK: cir.global @f16 : !cir.f16
 
