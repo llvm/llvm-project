@@ -1088,9 +1088,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map(const map& __m, const allocator_type& __alloc)
       : __tree_(__m.__tree_, __alloc) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~map() {
-    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~map()
+      _LIBCPP_DIAGNOSE_NON_CONST_COMPARATOR(key_compare, key_type) {}
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() _NOEXCEPT {
     return __tree_.begin();
@@ -1868,9 +1867,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap(const multimap& __m, const allocator_type& __a)
       : __tree_(__m.__tree_, __a) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~multimap() {
-    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~multimap()
+      _LIBCPP_DIAGNOSE_NON_CONST_COMPARATOR(key_compare, key_type) {}
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() _NOEXCEPT {
     return __tree_.begin();
