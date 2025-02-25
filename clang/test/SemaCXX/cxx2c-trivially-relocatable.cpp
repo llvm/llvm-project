@@ -279,6 +279,14 @@ static_assert(!__builtin_is_replaceable(WithVBase<S<const int>>));
 static_assert(!__builtin_is_replaceable(WithVBase<UserProvidedMove>));
 static_assert(__builtin_is_replaceable(WithVirtual));
 
+int n = 4; // expected-note 2{{declared here}}
+static_assert(!__builtin_is_cpp_trivially_relocatable(int[n]));
+// expected-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+// expected-note@-2 {{read of non-const variable 'n' is not allowed in a constant expression}}
+static_assert(!__builtin_is_replaceable(int[n]));
+// expected-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+// expected-note@-2 {{read of non-const variable 'n' is not allowed in a constant expression}}
+
 
 struct U1 replaceable_if_eligible {
     ~U1() = delete;
