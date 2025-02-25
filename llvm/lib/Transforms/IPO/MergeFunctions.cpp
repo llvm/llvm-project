@@ -901,7 +901,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
   // That is the case if F is either interposable or if G is either weak_odr or
   // linkonce_odr.
   if (F->isInterposable() || (isODR(F) && isODR(G))) {
-    assert((!isODR(G) || isODR(F)) && "if G is ODR, F must also be ODR due to ordering");
+    assert((!isODR(G) || isODR(F)) &&
+           "if G is ODR, F must also be ODR due to ordering");
 
     // Both writeThunkOrAlias() calls below must succeed, either because we can
     // create aliases for G and NewF, or because a thunk for F is profitable.
