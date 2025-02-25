@@ -72,15 +72,15 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
         return MappedAddrOrError.takeError();
       MappedAddr = *MappedAddrOrError;
     }
-    if (Dyn.d_tag == ELF::DT_STRSZ) {
+    if (Dyn.d_tag == ELF::DT_STRSZ)
       StringTableSize = Dyn.getVal();
-    }
   }
   if (MappedAddr && StringTableSize)
     return StringRef(reinterpret_cast<const char *>(MappedAddr),
                      StringTableSize);
 
-  // If the dynamic segment is not present, we fall back on the sections.
+  // If the dynamic segment is not present, or is missing the important tags, we
+  // fall back on the sections.
   auto SectionsOrError = Elf.sections();
   if (!SectionsOrError)
     return SectionsOrError.takeError();
