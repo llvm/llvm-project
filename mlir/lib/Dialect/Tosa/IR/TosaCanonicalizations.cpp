@@ -680,10 +680,11 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
       return getInput1();
   }
 
-  if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat()) {
-    if (llvm::isa<IntegerType>(resultETy)) {
-      APInt l = lhsAttr.getSplatValue<APInt>();
-      APInt r = rhsAttr.getSplatValue<APInt>();
+  if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat() &&
+      llvm::isa<IntegerType>(resultETy)) {
+    APInt l = lhsAttr.getSplatValue<APInt>();
+    APInt r = rhsAttr.getSplatValue<APInt>();
+    if (!r.isZero()) {
       APInt result = l.sdiv(r);
       return DenseElementsAttr::get(resultTy, result);
     }
