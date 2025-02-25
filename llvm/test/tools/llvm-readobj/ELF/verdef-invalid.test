@@ -128,7 +128,8 @@ Sections:
     Entries:
       - Names:
           - FOO
-    ShSize: 21
+    ## The correct sh_size is 28.
+    ShSize: 27
 DynamicSymbols:
   - Name: foo
 
