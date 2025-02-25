@@ -29,7 +29,8 @@ int main(int argc, char** argv) {
       benchmark::RegisterBenchmark(name, [move](auto& st) {
         std::size_t const size = st.range(0);
         using ValueType        = typename Container::value_type;
-        Container c1(size), c2(size);
+        Container c1(size);
+        Container c2(size);
         std::generate_n(c1.begin(), size, [] { return Generate<ValueType>::random(); });
 
         Container* in  = &c1;
