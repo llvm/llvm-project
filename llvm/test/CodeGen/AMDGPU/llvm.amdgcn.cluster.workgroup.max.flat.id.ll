@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 -verify-machineinstrs %s -o - | FileCheck -check-prefixes=CHECK-MESA3D %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs %s -o - | FileCheck --check-prefixes=CHECK-G-UNKNOWN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 -verify-machineinstrs %s -o - | FileCheck -check-prefixes=CHECK-G-MESA3D %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GFX13-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GFX13-GISEL %s
 
 declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id() #0
 
@@ -182,6 +184,26 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-G-MESA3D-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-G-MESA3D-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; CHECK-G-MESA3D-NEXT:    s_endpgm
+;
+; GFX13-SDAG-LABEL: test_workgroup_max_flat_id:
+; GFX13-SDAG:       ; %bb.0:
+; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-SDAG-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: test_workgroup_max_flat_id:
+; GFX13-GISEL:       ; %bb.0:
+; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
   store i32 %id, ptr addrspace(1) %out
   ret void
