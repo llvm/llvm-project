@@ -136,6 +136,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let isMoveImm = 1;
   let SchedRW = [Write64Bit];
   let Size = 4;
+  let VOP1 = 1; // Not entirely correct, but close enough.
   let UseNamedOperandTable = 1;
 }
 
