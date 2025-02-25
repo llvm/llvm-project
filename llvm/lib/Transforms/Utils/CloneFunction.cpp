@@ -135,6 +135,10 @@ void llvm::CloneFunctionAttributesInto(Function *NewFunc,
 DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
                                                CloneFunctionChangeType Changes,
                                                DebugInfoFinder &DIFinder) {
+  // CloneModule takes care of cloning debug info.
+  if (Changes == CloneFunctionChangeType::ClonedModule)
+    return nullptr;
+
   DISubprogram *SPClonedWithinModule = nullptr;
   if (Changes < CloneFunctionChangeType::DifferentModule) {
     SPClonedWithinModule = F.getSubprogram();
@@ -143,7 +147,7 @@ DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
     DIFinder.processSubprogram(SPClonedWithinModule);
 
   const Module *M = F.getParent();
-  if (Changes != CloneFunctionChangeType::ClonedModule && M) {
+  if (M) {
     // Inspect instructions to process e.g. DILexicalBlocks of inlined functions
     for (const auto &I : instructions(F))
       DIFinder.processInstruction(*M, I);
