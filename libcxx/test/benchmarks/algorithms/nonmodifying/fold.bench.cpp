@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     bm.operator()<std::deque<int>>("rng::fold_left(deque<int>)", std::ranges::fold_left);
     bm.operator()<std::list<int>>("rng::fold_left(list<int>)", std::ranges::fold_left);
 
-    // fold_right not implemented yet
+    // TODO: fold_right not implemented yet
     // bm.operator()<std::vector<int>>("rng::fold_right(vector<int>)", std::ranges::fold_right);
     // bm.operator()<std::deque<int>>("rng::fold_right(deque<int>)", std::ranges::fold_right);
     // bm.operator()<std::list<int>>("rng::fold_right(list<int>)", std::ranges::fold_right);
