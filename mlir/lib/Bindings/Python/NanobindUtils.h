@@ -144,7 +144,9 @@ public:
       std::error_code ec;
       writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
       if (ec) {
-        throw nanobind::value_error("Unable to open file for writing");
+        throw nanobind::value_error(
+            (std::string("Unable to open file for writing: ") + ec.message())
+                .c_str());
       }
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
