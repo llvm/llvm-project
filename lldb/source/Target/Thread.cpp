@@ -462,6 +462,10 @@ void Thread::ResetStopInfo() {
 }
 
 void Thread::SetStopInfo(const lldb::StopInfoSP &stop_info_sp) {
+  if (stop_info_sp &&
+      stop_info_sp->GetStopReason() == lldb::eStopReasonBreakpoint)
+    SetThreadHitBreakpointSite();
+
   m_stop_info_sp = stop_info_sp;
   if (m_stop_info_sp) {
     m_stop_info_sp->MakeStopInfoValid();

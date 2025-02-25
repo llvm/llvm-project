@@ -66,6 +66,7 @@ ThreadMemory::CreateRegisterContextForFrame(StackFrame *frame) {
 }
 
 bool ThreadMemory::CalculateStopInfo() {
+  DetectThreadStoppedAtUnexecutedBP();
   if (m_backing_thread_sp) {
     lldb::StopInfoSP backing_stop_info_sp(
         m_backing_thread_sp->GetPrivateStopInfo());
