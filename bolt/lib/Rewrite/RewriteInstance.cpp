@@ -2443,20 +2443,27 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     BinaryFunction *Func =
         BC->getBinaryFunctionContainingAddress(ReferencedAddress);
 
-    if (Func) {
-      if (!Func->isInConstantIsland(ReferencedAddress)) {
-        if (const uint64_t ReferenceOffset =
-                ReferencedAddress - Func->getAddress()) {
-          Func->addEntryPointAtOffset(ReferenceOffset);
-        } else if (ReferencedAddress < Func->getAddress()) {
-          BC->errs() << "BOLT-ERROR: Unable to compute symbol offset.\n";
+    if (Relocation::isRelative(RType) && SymbolAddress == 0) {
+      if (Func) {
+        if (!Func->isInConstantIsland(ReferencedAddress)) {
+          if (const uint64_t ReferenceOffset =
+                  ReferencedAddress - Func->getAddress()) {
+            Func->addEntryPointAtOffset(ReferenceOffset);
+          } else if (ReferencedAddress < Func->getAddress()) {
+            BC->errs() << "BOLT-ERROR: Unable to compute symbol offset.\n";
+            exit(1);
+          }
+        } else {
+          BC->errs() << "BOLT-ERROR: referenced address: " << ReferencedAddress
+                     << " is in constant island of function : " << *Func
+                     << "\n";
           exit(1);
         }
-      } else {
-        BC->errs() << "BOLT-ERROR: Referenced address: " << ReferencedAddress
-                   << " is in constant island of function : " << Func << ".\n";
-        exit(1);
       }
+    } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
+      BC->errs() << "BOLT-ERROR: SymbolAddress non zero for RELATIVE "
+                    "relocation type.\n";
+      exit(1);
     }
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
