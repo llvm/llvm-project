@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   // Benchmark ranges::contains where we bail out early (after visiting 25% of the elements).
@@ -25,14 +26,18 @@ int main(int argc, char** argv) {
           name,
           [](auto& st) {
             std::size_t const size = st.range(0);
-            Container c(size, 1);
-            *std::next(c.begin(), size / 4) = 42; // bail out after checking 25% of values
+            using ValueType        = typename Container::value_type;
+            ValueType x            = Generate<ValueType>::random();
+            ValueType y            = random_different_from({x});
+            Container c(size, x);
+            *std::next(c.begin(), size / 4) = y; // bail out after checking 25% of values
             auto first                      = c.begin();
             auto last                       = c.end();
 
             for (auto _ : st) {
               benchmark::DoNotOptimize(c);
-              auto result = std::ranges::contains(first, last, 42);
+              benchmark::DoNotOptimize(y);
+              auto result = std::ranges::contains(first, last, y);
               benchmark::DoNotOptimize(result);
             }
           })
@@ -53,13 +58,17 @@ int main(int argc, char** argv) {
           name,
           [](auto& st) {
             std::size_t const size = st.range(0);
-            Container c(size, 1);
+            using ValueType        = typename Container::value_type;
+            ValueType x            = Generate<ValueType>::random();
+            ValueType y            = random_different_from({x});
+            Container c(size, x);
             auto first = c.begin();
             auto last  = c.end();
 
             for (auto _ : st) {
               benchmark::DoNotOptimize(c);
-              auto result = std::ranges::contains(first, last, 42);
+              benchmark::DoNotOptimize(y);
+              auto result = std::ranges::contains(first, last, y);
               benchmark::DoNotOptimize(result);
             }
           })

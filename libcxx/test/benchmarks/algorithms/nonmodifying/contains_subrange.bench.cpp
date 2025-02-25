@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   // Benchmark ranges::contains_subrange where we find our target starting at 25% of the elements
@@ -25,8 +26,11 @@ int main(int argc, char** argv) {
           name,
           [](auto& st) {
             std::size_t const size = st.range(0);
-            Container c(size, 1);
-            Container subrange(size / 10, 42); // subrange of length 10% of the full range
+            using ValueType        = typename Container::value_type;
+            ValueType x            = Generate<ValueType>::random();
+            ValueType y            = random_different_from({x});
+            Container c(size, x);
+            Container subrange(size / 10, y); // subrange of length 10% of the full range
 
             // At 25% of the range, put the subrange we're going to find
             std::ranges::copy(subrange, std::next(c.begin(), c.size() / 4));
@@ -55,8 +59,11 @@ int main(int argc, char** argv) {
           name,
           [](auto& st) {
             std::size_t const size = st.range(0);
-            Container c(size, 1);
-            Container subrange(size / 10, 42); // subrange of length 10% of the full range, but we'll never find it
+            using ValueType        = typename Container::value_type;
+            ValueType x            = Generate<ValueType>::random();
+            ValueType y            = random_different_from({x});
+            Container c(size, x);
+            Container subrange(size / 10, y); // subrange of length 10% of the full range, but we'll never find it
 
             for (auto _ : st) {
               benchmark::DoNotOptimize(c);
