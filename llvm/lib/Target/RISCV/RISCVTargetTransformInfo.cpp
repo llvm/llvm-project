@@ -492,7 +492,7 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   if (LT.first != 1)
     return InstructionCost::getInvalid();
 
-  auto getSlideOpcode = [&](int SlideAmt) {
+  auto GetSlideOpcode = [&](int SlideAmt) {
     assert(SlideAmt != 0);
     bool IsVI = isUInt<5>(std::abs(SlideAmt));
     if (SlideAmt < 0)
@@ -509,7 +509,7 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
 
   InstructionCost FirstSlideCost = 0;
   if (SrcInfo[0].second != 0) {
-    unsigned Opcode = getSlideOpcode(SrcInfo[0].second);
+    unsigned Opcode = GetSlideOpcode(SrcInfo[0].second);
     FirstSlideCost = getRISCVInstructionCost(Opcode, LT.second, CostKind);
   }
 
@@ -518,7 +518,7 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
 
   InstructionCost SecondSlideCost = 0;
   if (SrcInfo[1].second != 0) {
-    unsigned Opcode = getSlideOpcode(SrcInfo[1].second);
+    unsigned Opcode = GetSlideOpcode(SrcInfo[1].second);
     SecondSlideCost = getRISCVInstructionCost(Opcode, LT.second, CostKind);
   } else {
     SecondSlideCost =
