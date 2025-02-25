@@ -124,8 +124,8 @@ void loop_all_accesses_in_bounds_variable_start_2_add(int* __counted_by(n) dst,
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP2]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
-// CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+// CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+// CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 // CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]], {{!llvm.loop ![0-9]+}}
 //
 void loop_all_accesses_in_bounds_variable_start_3_modulo(int* __counted_by(n) dst,
