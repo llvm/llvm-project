@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
