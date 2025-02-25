@@ -4352,12 +4352,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     assert(Name.starts_with("llvm.") && "Intrinsic doesn't start with 'llvm.'");
     Name = Name.substr(5);
 
-    const std::string prefix_x86 = "x86.";
-    const std::string prefix_nvvm = "nvvm.";
-    const std::string prefix_aarch64 = "aarch64.";
-    const std::string prefix_arm = "arm.";
-    const std::string prefix_amdgcn = "amdgcn.";
-    const std::string prefix_dbg = "dbg.";
+    const StringRef prefix_x86 = "x86.";
+    const StringRef prefix_nvvm = "nvvm.";
+    const StringRef prefix_aarch64 = "aarch64.";
+    const StringRef prefix_arm = "arm.";
+    const StringRef prefix_amdgcn = "amdgcn.";
+    const StringRef prefix_dbg = "dbg.";
 
     DenseMap<StringRef, UpgradeFunc> lookupTable;
     lookupTable[prefix_x86] = upgradeX86IntrinsicCall;
