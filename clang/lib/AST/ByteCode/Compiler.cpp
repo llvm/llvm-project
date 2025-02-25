@@ -1689,14 +1689,17 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   if (!Success)
     return false;
 
-  PrimType IndexT = classifyPrim(Index->getType());
+  std::optional<PrimType> IndexT = classify(Index->getType());
+  // In error-recovery cases, the index expression has a dependent type.
+  if (!IndexT)
+    return this->emitError(E);
   // If the index is first, we need to change that.
   if (LHS == Index) {
-    if (!this->emitFlip(PT_Ptr, IndexT, E))
+    if (!this->emitFlip(PT_Ptr, *IndexT, E))
       return false;
   }
 
-  return this->emitArrayElemPtrPop(IndexT, E);
+  return this->emitArrayElemPtrPop(*IndexT, E);
 }
 
 template <class Emitter>

@@ -449,7 +449,7 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
     }
 
     if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-        !PointerMayBeCaptured(Addr, true, true)) {
+        !PointerMayBeCaptured(Addr, /*ReturnCaptures=*/true)) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race
       // (see llvm/Analysis/CaptureTracking.h for details).

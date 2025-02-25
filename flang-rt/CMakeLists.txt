@@ -227,6 +227,12 @@ if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
 endif ()
 
+# Build with _XOPEN_SOURCE on AIX to avoid errors caused by _ALL_SOURCE.
+# We need to enable the large-file API as well.
+if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
+  add_compile_definitions(_XOPEN_SOURCE=700)
+  add_compile_definitions(_LARGE_FILE_API)
+endif ()
 
 # Check whether the compiler can undefine a macro using the "-U" flag.
 # Aternatively, we could use
