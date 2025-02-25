@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
+#include "CIRGenValue.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "mlir/IR/Value.h"
 
@@ -52,6 +54,19 @@ public:
     return {};
   }
 
+  /// Emits the address of the l-value, then loads and returns the result.
+  mlir::Value emitLoadOfLValue(const Expr *e) {
+    LValue lv = cgf.emitLValue(e);
+    // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
+    return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+  }
+
+  // l-values
+  mlir::Value VisitDeclRefExpr(DeclRefExpr *e) {
+    // TODO: Handle constant emission
+    return emitLoadOfLValue(e);
+  }
+
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
@@ -65,7 +80,27 @@ public:
         cgf.getLoc(e->getExprLoc()), type,
         builder.getCIRBoolAttr(e->getValue()));
   }
+
+  mlir::Value VisitCastExpr(CastExpr *E);
+
+  /// Emit a conversion from the specified type to the specified destination
+  /// type, both of which are CIR scalar types.
+  /// TODO: do we need ScalarConversionOpts here? Should be done in another
+  /// pass.
+  mlir::Value emitScalarConversion(mlir::Value src, QualType srcType,
+                                   QualType dstType, SourceLocation loc) {
+    // No sort of type conversion is implemented yet, but the path for implicit
+    // paths goes through here even if the type isn't being changed.
+    srcType = cgf.getContext().getCanonicalType(srcType);
+    dstType = cgf.getContext().getCanonicalType(dstType);
+    if (srcType == dstType)
+      return src;
+
+    cgf.getCIRGenModule().errorNYI(loc,
+                                   "emitScalarConversion for unequal types");
+  }
 };
+
 } // namespace
 
 /// Emit the computation of the specified expression of scalar type.
@@ -74,4 +109,35 @@ mlir::Value CIRGenFunction::emitScalarExpr(const Expr *e) {
          "Invalid scalar expression to emit");
 
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
+}
+
+// Emit code for an explicit or implicit cast.  Implicit
+// casts have to handle a more broad range of conversions than explicit
+// casts, as they handle things like function to ptr-to-function decay
+// etc.
+mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
+  Expr *e = ce->getSubExpr();
+  QualType destTy = ce->getType();
+  CastKind kind = ce->getCastKind();
+
+  // Since almost all cast kinds apply to scalars, this switch doesn't have a
+  // default case, so the compiler will warn on a missing case. The cases are
+  // in the same order as in the CastKind enum.
+  switch (kind) {
+  case CK_LValueToRValue:
+    assert(cgf.getContext().hasSameUnqualifiedType(e->getType(), destTy));
+    assert(e->isGLValue() && "lvalue-to-rvalue applied to r-value!");
+    return Visit(const_cast<Expr *>(e));
+
+  case CK_IntegralCast: {
+    assert(!cir::MissingFeatures::scalarConversionOpts());
+    return emitScalarConversion(Visit(e), e->getType(), destTy,
+                                ce->getExprLoc());
+  }
+
+  default:
+    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                   "CastExpr: ", ce->getCastKindName());
+  }
+  return {};
 }

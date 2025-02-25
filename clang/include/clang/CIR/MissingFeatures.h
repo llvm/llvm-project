@@ -36,6 +36,24 @@ struct MissingFeatures {
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
   static bool opGlobalLinkage() { return false; }
+
+  // Load attributes
+  static bool opLoadThreadLocal() { return false; }
+  static bool opLoadEmitScalarRangeCheck() { return false; }
+  static bool opLoadBooleanRepresentation() { return false; }
+
+  // AllocaOp handling
+  static bool opAllocaVarDeclContext() { return false; }
+  static bool opAllocaStaticLocal() { return false; }
+  static bool opAllocaNonGC() { return false; }
+  static bool opAllocaImpreciseLifetime() { return false; }
+  static bool opAllocaTLS() { return false; }
+  static bool opAllocaOpenMPThreadPrivate() { return false; }
+  static bool opAllocaEscapeByReference() { return false; }
+  static bool opAllocaReference() { return false; }
+
+  // Options for casts
+  static bool scalarConversionOpts() { return false; }
 };
 
 } // namespace cir

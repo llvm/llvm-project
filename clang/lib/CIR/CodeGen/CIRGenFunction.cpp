@@ -153,6 +153,7 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
     emitCompoundStmtWithoutScope(*block);
   else
     result = emitStmt(body, /*useCurrentScope=*/true);
+
   return result;
 }
 
@@ -215,6 +216,22 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   finishFunction(bodyRange.getEnd());
 
   return fn;
+}
+
+/// Emit code to compute a designator that specifies the location
+/// of the expression.
+/// FIXME: document this function better.
+LValue CIRGenFunction::emitLValue(const Expr *e) {
+  // FIXME: ApplyDebugLocation DL(*this, e);
+  switch (e->getStmtClass()) {
+  default:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               std::string("l-value not implemented for '") +
+                                   e->getStmtClassName() + "'");
+    break;
+  case Expr::DeclRefExprClass:
+    return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  }
 }
 
 } // namespace clang::CIRGen

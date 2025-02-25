@@ -68,6 +68,8 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
   default:
     // Only compound and return statements are supported right now.
     return mlir::failure();
+  case Stmt::DeclStmtClass:
+    return emitDeclStmt(cast<DeclStmt>(*s));
   case Stmt::CompoundStmtClass:
     if (useCurrentScope)
       emitCompoundStmtWithoutScope(cast<CompoundStmt>(*s));
@@ -76,6 +78,16 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     break;
   case Stmt::ReturnStmtClass:
     return emitReturnStmt(cast<ReturnStmt>(*s));
+  }
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
+  assert(builder.getInsertionBlock() && "expected valid insertion point");
+
+  for (const auto *I : s.decls()) {
+    emitDecl(*I);
   }
 
   return mlir::success();

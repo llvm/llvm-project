@@ -16,8 +16,12 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenModule.h"
 #include "CIRGenTypeCache.h"
+#include "CIRGenValue.h"
+
+#include "Address.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -49,12 +53,23 @@ public:
   /// for.
   mlir::Operation *curFn = nullptr;
 
+  using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
+  /// This keeps track of the CIR allocas or globals for local C
+  /// delcs.
+  DeclMapTy LocalDeclMap;
+
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
   CIRGenBuilderTy &getBuilder() { return builder; }
 
   CIRGenModule &getCIRGenModule() { return cgm; }
   const CIRGenModule &getCIRGenModule() const { return cgm; }
+
+  mlir::Block *getCurFunctionEntryBlock() {
+    auto fn = mlir::dyn_cast<cir::FuncOp>(curFn);
+    assert(fn && "other callables NYI");
+    return &fn.getRegion().front();
+  }
 
   mlir::Type convertTypeForMem(QualType T);
 
@@ -77,6 +92,10 @@ public:
   CIRGenTypes &getTypes() const { return cgm.getTypes(); }
 
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+
+  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
+                         mlir::Location loc, clang::CharUnits alignment,
+                         mlir::Value arraySize = nullptr);
 
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
@@ -121,7 +140,45 @@ public:
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
 
+  mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
+
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+
+  /// Given an expression that represents a value lvalue, this method emits
+  /// the address of the lvalue, then loads the result as an rvalue,
+  /// returning the rvalue.
+  RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
+
+  /// EmitLoadOfScalar - Load a scalar value from an address, taking
+  /// care to appropriately convert from the memory representation to
+  /// the LLVM value representation.  The l-value must be a simple
+  /// l-value.
+  mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
+
+  /// Emit code to compute a designator that specifies the location
+  /// of the expression.
+  /// FIXME: document this function better.
+  LValue emitLValue(const clang::Expr *e);
+
+  void emitDecl(const clang::Decl &d);
+
+  LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+
+  /// Emit code and set up symbol table for a variable declaration with auto,
+  /// register, or no storage class specifier. These turn into simple stack
+  /// objects, globals depending on target.
+  void emitAutoVarDecl(const clang::VarDecl &d);
+
+  /// This method handles emission of any variable declaration
+  /// inside a function, including static vars etc.
+  void emitVarDecl(const clang::VarDecl &d);
+
+  /// Set the address of a local variable.
+  void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
+    assert(!LocalDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
+    LocalDeclMap.insert({vd, addr});
+    // TODO: Add symbol table support
+  }
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
@@ -134,8 +191,11 @@ public:
   void startFunction(clang::GlobalDecl gd, clang::QualType retTy,
                      cir::FuncOp fn, cir::FuncType funcType,
                      clang::SourceLocation loc, clang::SourceLocation startLoc);
-};
 
+  Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr);
+};
 } // namespace clang::CIRGen
 
 #endif
