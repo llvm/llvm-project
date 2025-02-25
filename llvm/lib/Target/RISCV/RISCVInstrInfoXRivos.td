@@ -18,10 +18,10 @@
 let Predicates = [HasVendorXRivosVizip], DecoderNamespace = "XRivos",
   Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather,
   Inst<6-0> = OPC_CUSTOM_2.Value in  {
-defm RV_VZIPEVEN_V : VALU_IV_V<"rv.vzipeven", 0b001100>;
-defm RV_VZIPODD_V : VALU_IV_V<"rv.vzipodd", 0b011100>;
-defm RV_VZIP2A_V : VALU_IV_V<"rv.vzip2a", 0b000100>;
-defm RV_VZIP2B_V : VALU_IV_V<"rv.vzip2b", 0b010100>;
-defm RV_VUNZIP2A_V : VALU_IV_V<"rv.vunzip2a", 0b001000>;
-defm RV_VUNZIP2B_V : VALU_IV_V<"rv.vunzip2b", 0b011000>;
+defm RI_VZIPEVEN_V : VALU_IV_V<"ri.vzipeven", 0b001100>;
+defm RI_VZIPODD_V : VALU_IV_V<"ri.vzipodd", 0b011100>;
+defm RI_VZIP2A_V : VALU_IV_V<"ri.vzip2a", 0b000100>;
+defm RI_VZIP2B_V : VALU_IV_V<"ri.vzip2b", 0b010100>;
+defm RI_VUNZIP2A_V : VALU_IV_V<"ri.vunzip2a", 0b001000>;
+defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
 }
