@@ -382,6 +382,13 @@ void StmtPrinter::VisitWhileStmt(WhileStmt *Node) {
   PrintStmt(Node->getBody());
 }
 
+void StmtPrinter::VisitWhenStmt(WhenStmt* Node){
+  Indent() << "_When (";
+  PrintExpr(Node->getCondition());
+  OS << ") ";
+  PrintStmt(Node->getBody());
+}
+
 void StmtPrinter::VisitDoStmt(DoStmt *Node) {
   Indent() << "do ";
   if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {

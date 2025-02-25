@@ -1452,6 +1452,19 @@ public:
                               SourceLocation RParenLoc, Stmt *Body) {
     return getSema().ActOnWhileStmt(WhileLoc, LParenLoc, Cond, RParenLoc, Body);
   }
+  
+  /// Build a new when statement.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildWhenStmt(SourceLocation WhenLoc,
+                            Sema::ConditionResult Cond,
+                            Stmt *Body) {
+    IdentifierInfo *VarName = nullptr;
+    SourceLocation VarLoc;
+    bool IsAccept = false;  
+    return getSema().ActOnWhenStatement(WhenLoc, Cond, IsAccept, VarName, VarLoc, Body);
+  }
 
   /// Build a new do-while statement.
   ///
@@ -8243,6 +8256,32 @@ TreeTransform<Derived>::TransformWhileStmt(WhileStmt *S) {
   return getDerived().RebuildWhileStmt(S->getWhileLoc(), S->getLParenLoc(),
                                        Cond, S->getRParenLoc(), Body.get());
 }
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformWhenStmt(WhenStmt *S) {
+    // Transform the condition expression
+    Sema::ConditionResult Cond = getDerived().TransformCondition(
+      S->getWhenLoc(), /*Var=*/nullptr, S->getCondition(), 
+      Sema::ConditionKind::Boolean);
+    if (Cond.isInvalid())
+        return StmtError();
+
+    // Transform the body statement
+    StmtResult Body = getDerived().TransformStmt(S->getBody());
+    if (Body.isInvalid())
+        return StmtError();
+
+    // If there are no modifications, return the original node
+    if (!getDerived().AlwaysRebuild() &&
+        Cond.get().second == S->getCondition() &&
+        Body.get() == S->getBody()) {
+        return S;
+    }
+
+    // Rebuild the transformed WhenStmt
+    return getDerived().RebuildWhenStmt(S->getBeginLoc(), Cond, Body.get());
+}
+
 
 template<typename Derived>
 StmtResult

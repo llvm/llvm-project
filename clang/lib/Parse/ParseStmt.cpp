@@ -323,6 +323,8 @@ Retry:
     return Actions.ActOnNullStmt(ConsumeToken(), HasLeadingEmptyMacro);
   }
 
+  case tok::kw__When:                  // C99 6.8.4.1: if-statement
+    return ParseWhenStatement(TrailingElseLoc);
   case tok::kw_if:                  // C99 6.8.4.1: if-statement
     return ParseIfStatement(TrailingElseLoc);
   case tok::kw_switch:              // C99 6.8.4.2: switch-statement
@@ -1743,6 +1745,56 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 
   return Actions.ActOnIfStmt(IfLoc, Kind, LParen, InitStmt.get(), Cond, RParen,
                              ThenStmt.get(), ElseLoc, ElseStmt.get());
+}
+
+
+StmtResult Parser::ParseWhenStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw__When) && "Not a _When stmt!");
+  SourceLocation WhenLoc = ConsumeToken(); // Eat `_When`
+
+  if (Tok.isNot(tok::l_paren)) {
+    Diag(Tok, diag::err_expected_lparen_after) << "_When";
+    return StmtError();
+  }
+  
+  Sema::ConditionResult Cond;
+  SourceLocation LParen;
+  SourceLocation RParen;
+  if (ParseParenExprOrCondition(nullptr, Cond, WhenLoc,
+                                Sema::ConditionKind::Boolean, LParen, RParen))
+    return StmtError();
+
+  // // Parse either _Accept or _Select
+  // if (Tok.isNot(tok::_Accept) && Tok.isNot(tok::_Select)) {
+  //   Diag(Tok, diag::err_expected_accept_or_select);
+  //   return StmtError();
+  // }
+
+  // bool IsAccept = Tok.is(tok::_Accept);
+  // SourceLocation KeywordLoc = ConsumeToken(); // Eat `_Accept` or `_Select`
+
+  // if (Tok.isNot(tok::identifier)) {
+  //   Diag(Tok, diag::err_expected_variable);
+  //   return StmtError();
+  // }
+
+  // IdentifierInfo *VarName = Tok.getIdentifierInfo();
+  // SourceLocation VarLoc = ConsumeToken(); // Eat the variable name
+
+  if (Tok.isNot(tok::l_brace))
+    return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
+
+  StmtResult Block(ParseCompoundStatement());
+
+  if(Block.isInvalid())
+    return Block;
+
+  IdentifierInfo *VarName = nullptr;
+  SourceLocation VarLoc;
+  bool IsAccept = false;
+  
+  return Actions.ActOnWhenStatement(WhenLoc, Cond, IsAccept, VarName,
+                                    VarLoc, Block.get());
 }
 
 /// ParseSwitchStatement

@@ -289,6 +289,15 @@ void ASTStmtReader::VisitWhileStmt(WhileStmt *S) {
   S->setRParenLoc(readSourceLocation());
 }
 
+void ASTStmtReader::VisitWhenStmt(WhenStmt *S) {
+  VisitStmt(S);
+
+  S->setCondition(Record.readSubExpr());
+  S->setBody(Record.readSubStmt());
+
+  S->setWhenLoc(readSourceLocation());
+}
+
 void ASTStmtReader::VisitDoStmt(DoStmt *S) {
   VisitStmt(S);
   S->setCond(Record.readSubExpr());
@@ -3007,6 +3016,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = WhileStmt::CreateEmpty(
           Context,
           /* HasVar=*/Record[ASTStmtReader::NumStmtFields]);
+      break;
+
+    case STMT_WHEN:
+      S = WhenStmt::CreateEmpty(Context);
       break;
 
     case STMT_DO:

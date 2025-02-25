@@ -10683,6 +10683,9 @@ public:
                          SourceLocation LParenLoc, Stmt *InitStmt,
                          ConditionResult Cond, SourceLocation RParenLoc,
                          Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
+  StmtResult ActOnWhenStatement(SourceLocation WhenLoc, ConditionResult Cond, bool IsAccept,
+                                IdentifierInfo *VarName, SourceLocation VarLoc, 
+                                Stmt *Body);
   StmtResult BuildIfStmt(SourceLocation IfLoc, IfStatementKind StatementKind,
                          SourceLocation LParenLoc, Stmt *InitStmt,
                          ConditionResult Cond, SourceLocation RParenLoc,

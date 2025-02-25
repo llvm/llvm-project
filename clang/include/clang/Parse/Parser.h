@@ -2201,6 +2201,7 @@ private:
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseWhenStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseDoStatement();
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseGotoStatement();

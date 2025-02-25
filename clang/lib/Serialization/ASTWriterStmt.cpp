@@ -272,6 +272,15 @@ void ASTStmtWriter::VisitWhileStmt(WhileStmt *S) {
   Code = serialization::STMT_WHILE;
 }
 
+void ASTStmtWriter::VisitWhenStmt(WhenStmt *S) {
+  VisitStmt(S);
+
+  Record.AddStmt(S->getCondition());
+  Record.AddStmt(S->getBody());
+  Record.AddSourceLocation(S->getWhenLoc());
+  Code = serialization::STMT_WHEN;
+}
+
 void ASTStmtWriter::VisitDoStmt(DoStmt *S) {
   VisitStmt(S);
   Record.AddStmt(S->getCond());
