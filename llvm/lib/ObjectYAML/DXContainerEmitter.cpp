@@ -272,7 +272,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.Parameters = std::move(P.RootSignature->Parameters);
 
       RS.write(OS);
-
       break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
