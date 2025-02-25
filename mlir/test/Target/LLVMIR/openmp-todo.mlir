@@ -66,10 +66,70 @@ llvm.func @do_simd(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @distribute(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: omp.distribute}}
+llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
+  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
+  omp.parallel {
+    // expected-error@below {{not yet implemented: composite omp.distribute + omp.wsloop}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
+    omp.distribute {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      } {omp.composite}
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+  llvm.return
+}
+
+// -----
+
+llvm.func @distribute_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.distribute operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
-  omp.distribute {
+  omp.distribute allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @distribute_dist_schedule(%lb : i32, %ub : i32, %step : i32, %x : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause dist_schedule with chunk_size in omp.distribute operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
+  omp.distribute dist_schedule_static dist_schedule_chunk_size(%x : i32) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause order in omp.distribute operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
+  omp.distribute order(concurrent) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+omp.private {type = private} @x.privatizer : !llvm.ptr
+
+llvm.func @distribute_private(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.distribute operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
+  omp.distribute private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }

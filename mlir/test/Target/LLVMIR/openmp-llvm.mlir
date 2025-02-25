@@ -3270,3 +3270,40 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 // -----
 
 module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}
+
+// -----
+
+llvm.func @distribute() {
+  %0 = llvm.mlir.constant(42 : index) : i64
+  %1 = llvm.mlir.constant(10 : index) : i64
+  %2 = llvm.mlir.constant(1 : index) : i64
+  omp.distribute {
+    omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @distribute
+// CHECK:         call void @[[OUTLINED:.*]]({{.*}})
+// CHECK-NEXT:    br label %[[EXIT:.*]]
+// CHECK:       [[EXIT]]:
+// CHECK:         ret void
+
+// CHECK:       define internal void @[[OUTLINED]]({{.*}})
+// CHECK:         %[[LASTITER:.*]] = alloca i32
+// CHECK:         %[[LB:.*]] = alloca i64
+// CHECK:         %[[UB:.*]] = alloca i64
+// CHECK:         %[[STRIDE:.*]] = alloca i64
+// CHECK:         br label %[[BODY:.*]]
+// CHECK:       [[BODY]]:
+// CHECK-NEXT:    br label %[[REGION:.*]]
+// CHECK:       [[REGION]]:
+// CHECK-NEXT:    br label %[[PREHEADER:.*]]
+// CHECK:       [[PREHEADER]]:
+// CHECK:         store i64 0, ptr %[[LB]]
+// CHECK:         store i64 31, ptr %[[UB]]
+// CHECK:         store i64 1, ptr %[[STRIDE]]
+// CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK:         call void @__kmpc_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 92, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[STRIDE]], i64 1, i64 0)
