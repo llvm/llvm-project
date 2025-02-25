@@ -129,10 +129,9 @@ static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
   Opts.Remarks.clear();
 }
 
-static void optimizeCWD(FileSystemOptions &FSOpts, CodeGenOptions &CGOpts,
-                        const std::string &CWD) {
-  FSOpts.WorkingDir.clear();
-  if (CGOpts.DwarfVersion) {
+static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
+  BuildInvocation.getMutFileSystemOpts().WorkingDir.clear();
+  if (BuildInvocation.getCodeGenOpts().DwarfVersion) {
     // It is necessary to explicitly set the DebugCompilationDir
     // to a common directory (e.g. root) if IgnoreCWD is true.
     // When IgnoreCWD is true, the module's content should not
@@ -145,7 +144,16 @@ static void optimizeCWD(FileSystemOptions &FSOpts, CodeGenOptions &CGOpts,
     // ignore the CWD. Thus in such cases,
     // CGOpts.DebugCompilationDir is explicitly set to a common
     // directory.
-    CGOpts.DebugCompilationDir = llvm::sys::path::root_path(CWD);
+    // FIXME: It is still excessive to create a copy of
+    // CodeGenOpts for each module. Since we do not modify the
+    // CodeGenOpts otherwise per module, the following code
+    // ends up generating identical CodeGenOpts for each module
+    // with DebugCompilationDir pointing to the root directory.
+    // We can optimize this away by creating a _single_ copy of
+    // CodeGenOpts whose DebugCompilationDir points to the root
+    // directory and reuse it across modules.
+    BuildInvocation.getMutCodeGenOpts().DebugCompilationDir =
+        llvm::sys::path::root_path(CWD);
   }
 }
 
@@ -765,8 +773,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                   MDC.ScanInstance.getVirtualFileSystem()
                       .getCurrentWorkingDirectory();
               if (CWD)
-                optimizeCWD(BuildInvocation.getMutFileSystemOpts(),
-                            BuildInvocation.getMutCodeGenOpts(), *CWD);
+                optimizeCWD(BuildInvocation, *CWD);
             }
           });
 
