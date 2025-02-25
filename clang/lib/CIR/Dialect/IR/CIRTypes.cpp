@@ -385,12 +385,6 @@ bool FuncType::isVoid() const { return mlir::isa<VoidType>(getReturnType()); }
 // BoolType
 //===----------------------------------------------------------------------===//
 
-Type BoolType::parse(mlir::AsmParser &parser) {
-  return get(parser.getContext());
-}
-
-void BoolType::print(mlir::AsmPrinter &printer) const {}
-
 llvm::TypeSize
 BoolType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                             ::mlir::DataLayoutEntryListRef params) const {
