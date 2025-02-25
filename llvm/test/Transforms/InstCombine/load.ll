@@ -466,8 +466,8 @@ define i16 @load_select_with_null_gep2(i1 %cond, ptr %p, i64 %x) {
   ret i16 %res
 }
 
-define i16 @load_select_with_null_ge3(i1 %cond, ptr %p, i64 %x, i64 %y) {
-; CHECK-LABEL: @load_select_with_null_ge3(
+define i16 @load_select_with_null_gep3(i1 %cond, ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @load_select_with_null_gep3(
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[GEP]], i64 [[Y:%.*]]
