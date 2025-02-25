@@ -3,10 +3,10 @@
 namespace llvm {
 
 std::unique_ptr<CXXABI> CXXABI::Create(Triple &TT) {
-  if (TT.getOS() == Triple::Linux)
-    return std::make_unique<Itanium>();
-
-  return nullptr;
+  // TODO: Introduce new module flags to distinguish between the
+  // Itanium and Microsoft C++ ABIs. In this factory method, 
+  // check the flag to return the corresponding CXXABI object.
+  return std::make_unique<Itanium>();
 }
 
 std::string CXXABI::getTypeNameFromTypeInfo(StringRef TypeInfo) {
