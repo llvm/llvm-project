@@ -7532,7 +7532,7 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
       continue;
     // ... has a non-static data member of an object type that is not
     // of a trivially relocatable type
-    if (!Field->getType().isCppTriviallyRelocatableType(
+    if (!Field->getType().isCXXTriviallyRelocatableType(
             SemaRef.getASTContext()))
       return false;
   }
@@ -7568,10 +7568,6 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
     return;
 
   assert(D->hasDefinition());
-
-  bool MarkedCXX2CReplaceable = D->hasAttr<ReplaceableAttr>();
-  bool MarkedTriviallyRelocatable = D->hasAttr<TriviallyRelocatableAttr>();
-
 
   // This is part of "eligible for replacement", however we defer it
   // to avoid extraneous computations.
@@ -7615,7 +7611,7 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
         return false;
 
     // has the trivially_relocatable_if_eligible class-property-specifier,
-    if (MarkedTriviallyRelocatable)
+    if (D->hasAttr<TriviallyRelocatableAttr>())
       return true;
 
     // is a union with no user-declared special member functions, or
@@ -7640,7 +7636,7 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
         return false;
 
     // has the replaceable_if_eligible class-property-specifier
-    if (MarkedCXX2CReplaceable)
+    if (D->hasAttr<ReplaceableAttr>())
       return HasSuitableSMP();
 
     // is a union with no user-declared special member functions, or

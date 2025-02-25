@@ -1136,7 +1136,7 @@ public:
   /// Return true if this is a trivially relocatable type.
   bool isTriviallyRelocatableType(const ASTContext &Context) const;
 
-  bool isCppTriviallyRelocatableType(const ASTContext &Context) const;
+  bool isCXXTriviallyRelocatableType(const ASTContext &Context) const;
 
   bool isReplaceableType(const ASTContext &Context) const;
 

@@ -1940,7 +1940,7 @@ static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
     return ExprError();
 
   if (T.isConstQualified() ||
-      !T.isCppTriviallyRelocatableType(S.getASTContext()) ||
+      !T.isCXXTriviallyRelocatableType(S.getASTContext()) ||
       T->isIncompleteArrayType()) {
     S.Diag(TheCall->getArg(0)->getExprLoc(),
            diag::err_builtin_trivially_relocate_invalid_arg_type)

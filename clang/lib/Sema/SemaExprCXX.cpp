@@ -6008,7 +6008,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsBitwiseCloneable:
     return T.isBitwiseCloneableType(C);
   case UTT_IsCppTriviallyRelocatable:
-    return T.isCppTriviallyRelocatableType(C);
+    return T.isCXXTriviallyRelocatableType(C);
   case UTT_IsReplaceable:
     return T.isReplaceableType(C);
   case UTT_CanPassInRegs:

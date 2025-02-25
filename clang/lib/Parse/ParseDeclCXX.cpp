@@ -3872,7 +3872,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   bool IsFinalSpelledSealed = false;
   bool IsAbstract = false;
   SourceLocation TriviallyRelocatable;
-  SourceLocation Replacable;
+  SourceLocation Replaceable;
 
   // Parse the optional 'final' keyword.
   if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
@@ -3889,19 +3889,19 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
             ParseCXX2CTriviallyRelocatableSpecifier(TriviallyRelocatable);
           }
           continue;
-        } else if (isCXX2CReplaceableKeyword(Tok)) {
-          if (Replacable.isValid()) {
+        }
+        if (isCXX2CReplaceableKeyword(Tok)) {
+          if (Replaceable.isValid()) {
             auto Skipped = Tok;
             ConsumeToken();
             Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
-                << /*replaceable*/ 1 << Replacable;
+                << /*replaceable*/ 1 << Replaceable;
           } else {
-            ParseCXX2CReplaceableSpecifier(Replacable);
+            ParseCXX2CReplaceableSpecifier(Replaceable);
           }
           continue;
-        } else {
-          break;
         }
+        break;
       }
       if (isCXX11FinalKeyword()) {
         if (FinalLoc.isValid()) {
@@ -3939,7 +3939,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
         Diag(FinalLoc, diag::ext_warn_gnu_final);
     }
     assert((FinalLoc.isValid() || AbstractLoc.isValid() ||
-            TriviallyRelocatable.isValid() || Replacable.isValid()) &&
+            TriviallyRelocatable.isValid() || Replaceable.isValid()) &&
            "not a class definition");
 
     // Parse any C++11 attributes after 'final' keyword.
@@ -4014,7 +4014,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   if (TagDecl)
     Actions.ActOnStartCXXMemberDeclarations(
         getCurScope(), TagDecl, FinalLoc, IsFinalSpelledSealed, IsAbstract,
-        TriviallyRelocatable, Replacable, T.getOpenLocation());
+        TriviallyRelocatable, Replaceable, T.getOpenLocation());
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union
