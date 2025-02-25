@@ -1,4 +1,4 @@
-//=======- RefCntblBaseVirtualDtor.cpp ---------------------------*- C++ -*-==//
+//=======- RetainPtrCtorAdoptChecker.cpp -------------------------*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,12 +12,12 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/Analysis/RetainSummaryManager.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include <optional>
@@ -37,8 +37,7 @@ private:
 
 public:
   RetainPtrCtorAdoptChecker()
-      : Bug(this,
-            "Correct use of RetainPtr, adoptNS, and adoptCF",
+      : Bug(this, "Correct use of RetainPtr, adoptNS, and adoptCF",
             "WebKit coding guidelines") {}
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -68,7 +67,7 @@ public:
           DeclWithIssue = D;
         return Base::TraverseDecl(D);
       }
-      
+
       bool TraverseClassTemplateDecl(ClassTemplateDecl *CTD) {
         if (safeGetName(CTD) == "RetainPtr")
           return true; // Skip the contents of RetainPtr.
@@ -95,8 +94,9 @@ public:
     };
 
     LocalVisitor visitor(this);
-    Summaries = std::make_unique<RetainSummaryManager>(TUD->getASTContext(),
-        true /* trackObjCAndCFObjects */, false /* trackOSObjects */);
+    Summaries = std::make_unique<RetainSummaryManager>(
+        TUD->getASTContext(), true /* trackObjCAndCFObjects */,
+        false /* trackOSObjects */);
     RTC.visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
@@ -112,7 +112,7 @@ public:
     return Name == "adoptNS" || Name == "adoptNSArc";
   }
 
-  void visitCallExpr(const CallExpr *CE, const Decl* DeclWithIssue) const {
+  void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -138,7 +138,7 @@ public:
   }
 
   void visitConstructExpr(const CXXConstructExpr *CE,
-                          const Decl* DeclWithIssue) const {
+                          const Decl *DeclWithIssue) const {
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -215,20 +215,20 @@ public:
         auto Summary = Summaries->getSummary(AnyCall(ObjCMsgExpr));
         auto RetEffect = Summary->getRetEffect();
         switch (RetEffect.getKind()) {
-          case RetEffect::NoRet:
-            return IsOwnedResult::Unknown;
-          case RetEffect::OwnedSymbol:
-            return IsOwnedResult::Owned;
-          case RetEffect::NotOwnedSymbol:
-            return IsOwnedResult::NotOwned;
-          case RetEffect::OwnedWhenTrackedReceiver:
-            if (auto *Receiver = ObjCMsgExpr->getInstanceReceiver()) {
-              E = Receiver->IgnoreParenCasts();
-              continue;
-            }
-            return IsOwnedResult::Unknown;
-          case RetEffect::NoRetHard:
-            return IsOwnedResult::Unknown;
+        case RetEffect::NoRet:
+          return IsOwnedResult::Unknown;
+        case RetEffect::OwnedSymbol:
+          return IsOwnedResult::Owned;
+        case RetEffect::NotOwnedSymbol:
+          return IsOwnedResult::NotOwned;
+        case RetEffect::OwnedWhenTrackedReceiver:
+          if (auto *Receiver = ObjCMsgExpr->getInstanceReceiver()) {
+            E = Receiver->IgnoreParenCasts();
+            continue;
+          }
+          return IsOwnedResult::Unknown;
+        case RetEffect::NoRetHard:
+          return IsOwnedResult::Unknown;
         }
       }
       if (auto *CXXCE = dyn_cast<CXXMemberCallExpr>(E)) {
@@ -262,16 +262,16 @@ public:
         auto Summary = Summaries->getSummary(AnyCall(CE));
         auto RetEffect = Summary->getRetEffect();
         switch (RetEffect.getKind()) {
-          case RetEffect::NoRet:
-            return IsOwnedResult::Unknown;
-          case RetEffect::OwnedSymbol:
-            return IsOwnedResult::Owned;
-          case RetEffect::NotOwnedSymbol:
-            return IsOwnedResult::NotOwned;
-          case RetEffect::OwnedWhenTrackedReceiver:
-            return IsOwnedResult::Unknown;
-          case RetEffect::NoRetHard:
-            return IsOwnedResult::Unknown;
+        case RetEffect::NoRet:
+          return IsOwnedResult::Unknown;
+        case RetEffect::OwnedSymbol:
+          return IsOwnedResult::Owned;
+        case RetEffect::NotOwnedSymbol:
+          return IsOwnedResult::NotOwned;
+        case RetEffect::OwnedWhenTrackedReceiver:
+          return IsOwnedResult::Unknown;
+        case RetEffect::NoRetHard:
+          return IsOwnedResult::Unknown;
         }
       }
       break;
@@ -280,8 +280,8 @@ public:
   }
 
   template <typename ExprType>
-  void reportUnknown(std::string& Name, const ExprType *CE,
-                     const Decl* DeclWithIssue) const {
+  void reportUnknown(std::string &Name, const ExprType *CE,
+                     const Decl *DeclWithIssue) const {
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
@@ -295,9 +295,9 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  void reportUseAfterFree(std::string& Name, const CallExpr *CE,
-                          const Decl* DeclWithIssue,
-                          const char* condition = nullptr) const {
+  void reportUseAfterFree(std::string &Name, const CallExpr *CE,
+                          const Decl *DeclWithIssue,
+                          const char *condition = nullptr) const {
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
@@ -315,14 +315,14 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  void reportLeak(std::string& Name, const CXXConstructExpr *CE,
-                  const Decl* DeclWithIssue,
-                  const char* condition = nullptr) const {
+  void reportLeak(std::string &Name, const CXXConstructExpr *CE,
+                  const Decl *DeclWithIssue,
+                  const char *condition = nullptr) const {
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "Incorrect use of " << Name <<
-      ". The argument is +1 and results in a memory leak";
+    Os << "Incorrect use of " << Name
+       << ". The argument is +1 and results in a memory leak";
     if (condition)
       Os << " " << condition;
     Os << ".";
@@ -341,7 +341,6 @@ void ento::registerRetainPtrCtorAdoptChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<RetainPtrCtorAdoptChecker>();
 }
 
-bool ento::shouldRegisterRetainPtrCtorAdoptChecker(
-    const CheckerManager &mgr) {
+bool ento::shouldRegisterRetainPtrCtorAdoptChecker(const CheckerManager &mgr) {
   return true;
 }
