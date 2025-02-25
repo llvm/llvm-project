@@ -4956,8 +4956,19 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
 
 void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
   assert(I.hasMetadata(LLVMContext::MD_DIAssignID));
-  bool ExpectedInstTy =
-      isa<AllocaInst>(I) || isa<StoreInst>(I) || isa<MemIntrinsic>(I);
+  // DIAssignID metadata must be attached to either an alloca or some form of
+  // store/memory-writing instruction.
+  // FIXME: Is there any simpler way to express this property than manually
+  // enumerating all instructions that could perform a store?
+  bool ExpectedInstTy = isa<AllocaInst>(I) || isa<StoreInst>(I);
+  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    const static Intrinsic::ID StoreIntrinsics[] = {
+        Intrinsic::vp_store, Intrinsic::vp_scatter,
+        Intrinsic::experimental_vp_strided_store, Intrinsic::masked_store,
+        Intrinsic::masked_scatter};
+    ExpectedInstTy |= is_contained(StoreIntrinsics, II->getIntrinsicID()) ||
+                      isa<MemIntrinsic>(II);
+  }
   CheckDI(ExpectedInstTy, "!DIAssignID attached to unexpected instruction kind",
           I, MD);
   // Iterate over the MetadataAsValue uses of the DIAssignID - these should
