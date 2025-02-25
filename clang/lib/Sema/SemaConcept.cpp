@@ -713,9 +713,9 @@ bool Sema::addInstantiatedCapturesToScope(
 
   // FIXME: This is a workaround for not having deferred lambda body
   // instantiation.
-  // When transforming a lambda's body, if we encounter another call to an
-  // inline lambda that contains a constraint expression, we add all of the
-  // parent lambda's instantiated captures to the current instantiation scope to
+  // When transforming a lambda's body, if we encounter another call to a
+  // nested lambda that contains a constraint expression, we add all of the
+  // outer lambda's instantiated captures to the current instantiation scope to
   // facilitate constraint evaluation. However, these captures don't appear in
   // the CXXRecordDecl until after the lambda expression is rebuilt, so we
   // pull them out from the corresponding LSI.
