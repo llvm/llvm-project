@@ -46,6 +46,20 @@ svuint8x2_t test_svuzp_u8_x2(svuint8x2_t zn) __arm_streaming {
   return SVE_ACLE_FUNC(svuzp,_u8_x2)(zn);
 }
 
+// CHECK-LABEL: @test_svuzp_mf8_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.uzp.x2.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]])
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z17test_svuzp_mf8_x213svmfloat8x2_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.uzp.x2.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]])
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+svmfloat8x2_t test_svuzp_mf8_x2(svmfloat8x2_t zn) __arm_streaming {
+  return SVE_ACLE_FUNC(svuzp,_mf8_x2)(zn);
+}
+
 // 16-bit UZPs
 
 // CHECK-LABEL: @test_svuzp_s16_x2(
@@ -220,6 +234,20 @@ svint8x2_t test_svuzpq_s8_x2(svint8x2_t zn) __arm_streaming {
 //
 svuint8x2_t test_svuzpq_u8_x2(svuint8x2_t zn) __arm_streaming {
   return SVE_ACLE_FUNC(svuzpq,_u8_x2)(zn);
+}
+
+// CHECK-LABEL: @test_svuzpq_mf8_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.uzpq.x2.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]])
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svuzpq_mf8_x213svmfloat8x2_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.uzpq.x2.nxv16i8(<vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]])
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
+//
+svmfloat8x2_t test_svuzpq_mf8_x2(svmfloat8x2_t zn) __arm_streaming {
+  return SVE_ACLE_FUNC(svuzpq,_mf8_x2)(zn);
 }
 
 // CHECK-LABEL: @test_svuzpq_s16_x2(

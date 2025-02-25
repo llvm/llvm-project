@@ -74,30 +74,33 @@ inline const bool __is_nothrow_swappable_with_v<_Tp, _Up, true> =
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Tp, class _Up>
-inline constexpr bool is_swappable_with_v = __is_swappable_with_v<_Tp, _Up>;
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_swappable_with_v = __is_swappable_with_v<_Tp, _Up>;
 
 template <class _Tp, class _Up>
-struct _LIBCPP_TEMPLATE_VIS is_swappable_with : bool_constant<is_swappable_with_v<_Tp, _Up>> {};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_swappable_with
+    : bool_constant<is_swappable_with_v<_Tp, _Up>> {};
 
 template <class _Tp>
-inline constexpr bool is_swappable_v =
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_swappable_v =
     is_swappable_with_v<__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<_Tp>>;
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_swappable : bool_constant<is_swappable_v<_Tp>> {};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_swappable : bool_constant<is_swappable_v<_Tp>> {};
 
 template <class _Tp, class _Up>
-inline constexpr bool is_nothrow_swappable_with_v = __is_nothrow_swappable_with_v<_Tp, _Up>;
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_swappable_with_v = __is_nothrow_swappable_with_v<_Tp, _Up>;
 
 template <class _Tp, class _Up>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_swappable_with : bool_constant<is_nothrow_swappable_with_v<_Tp, _Up>> {};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_nothrow_swappable_with
+    : bool_constant<is_nothrow_swappable_with_v<_Tp, _Up>> {};
 
 template <class _Tp>
-inline constexpr bool is_nothrow_swappable_v =
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_swappable_v =
     is_nothrow_swappable_with_v<__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<_Tp>>;
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_swappable : bool_constant<is_nothrow_swappable_v<_Tp>> {};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_nothrow_swappable
+    : bool_constant<is_nothrow_swappable_v<_Tp>> {};
 
 #endif // _LIBCPP_STD_VER >= 17
 

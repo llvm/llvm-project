@@ -850,8 +850,8 @@ TEST(InstructionsTest, GEPIndices) {
     Builder.getInt32(13),
     Builder.getInt32(42) };
 
-  Value *V = Builder.CreateGEP(ArrTy, UndefValue::get(PointerType::getUnqual(ArrTy)),
-                               Indices);
+  Value *V = Builder.CreateGEP(
+      ArrTy, UndefValue::get(PointerType::getUnqual(Context)), Indices);
   ASSERT_TRUE(isa<GetElementPtrInst>(V));
 
   auto *GEPI = cast<GetElementPtrInst>(V);
@@ -1716,7 +1716,7 @@ TEST(InstructionsTest, DropLocation) {
         cast<Function>(M->getNamedValue("no_parent_scope"));
     BasicBlock &BB = NoParentScopeF->front();
 
-    auto *I1 = BB.getFirstNonPHI();
+    auto *I1 = &*BB.getFirstNonPHIIt();
     auto *I2 = I1->getNextNode();
     auto *I3 = BB.getTerminator();
 
@@ -1738,7 +1738,7 @@ TEST(InstructionsTest, DropLocation) {
         cast<Function>(M->getNamedValue("with_parent_scope"));
     BasicBlock &BB = WithParentScopeF->front();
 
-    auto *I2 = BB.getFirstNonPHI()->getNextNode();
+    auto *I2 = BB.getFirstNonPHIIt()->getNextNode();
 
     MDNode *Scope = cast<MDNode>(WithParentScopeF->getSubprogram());
     EXPECT_EQ(I2->getDebugLoc().getLine(), 2U);

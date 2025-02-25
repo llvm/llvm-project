@@ -557,6 +557,12 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
     return make_error<StringError>(ErrStream.str());
   }
 
+  ORC_RT_DEBUG({
+    printdbg("  UnwindInfo: %s, UseCallbackStyleUnwindInfo: %s\n",
+             UnwindInfo ? "true" : "false",
+             UseCallbackStyleUnwindInfo ? "true" : "false");
+  });
+
   if (UnwindInfo && UseCallbackStyleUnwindInfo) {
     ORC_RT_DEBUG({
       printdbg("  Registering new-style unwind info for:\n"

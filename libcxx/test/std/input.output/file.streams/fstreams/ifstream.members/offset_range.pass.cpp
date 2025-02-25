@@ -11,12 +11,6 @@
 // Test that we can seek using offsets larger than 32 bit, and that we can
 // retrieve file offsets larger than 32 bit.
 
-// On MSVC targets, we only use the 32 bit fseek/ftell functions. For MinGW
-// targets, we use fseeko/ftello, but the user needs to define
-// _FILE_OFFSET_BITS=64 to make them 64 bit.
-//
-// XFAIL: target={{.*}}-windows{{.*}}
-
 // On 32 bit Android platforms, off_t is 32 bit by default. By defining
 // _FILE_OFFSET_BITS=64, one gets a 64 bit off_t, but the corresponding
 // 64 bit ftello/fseeko functions are only available since Android API 24 (7.0).

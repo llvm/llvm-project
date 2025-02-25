@@ -21,10 +21,6 @@
 
 #include "include/config_elast.h"
 
-#if defined(__ANDROID__)
-#  include <android/api-level.h>
-#endif
-
 #if defined(_LIBCPP_WIN32API)
 #  include <windows.h>
 #  include <winerror.h>

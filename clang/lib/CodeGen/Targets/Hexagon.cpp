@@ -105,14 +105,16 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
       HexagonAdjustRegsLeft(Size, RegsLeft);
 
     if (Size > 64 && Ty->isBitIntType())
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/true);
 
     return isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                              : ABIArgInfo::getDirect();
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Ignore empty records.
   if (isEmptyRecord(getContext(), Ty, true))
@@ -122,7 +124,8 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
   unsigned Align = getContext().getTypeAlign(Ty);
 
   if (Size > 64)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/true);
 
   if (HexagonAdjustRegsLeft(Size, RegsLeft))
     Align = Size <= 32 ? 32 : 64;
@@ -151,7 +154,8 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
     }
     // Large vector types should be returned via memory.
     if (Size > 64)
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
   }
 
   if (!isAggregateTypeForABI(RetTy)) {
@@ -160,7 +164,8 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
       RetTy = EnumTy->getDecl()->getIntegerType();
 
     if (Size > 64 && RetTy->isBitIntType())
-      return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+      return getNaturalAlignIndirect(
+          RetTy, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
 
     return isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                 : ABIArgInfo::getDirect();
@@ -176,7 +181,8 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
     Size = llvm::bit_ceil(Size);
     return ABIArgInfo::getDirect(llvm::Type::getIntNTy(getVMContext(), Size));
   }
-  return getNaturalAlignIndirect(RetTy, /*ByVal=*/true);
+  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/true);
 }
 
 Address HexagonABIInfo::EmitVAArgFromMemory(CodeGenFunction &CGF,
@@ -336,10 +342,6 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   // Implement the block where argument is in register saved area
   CGF.EmitBlock(InRegBlock);
 
-  llvm::Type *PTy = CGF.ConvertType(Ty);
-  llvm::Value *__saved_reg_area_p = CGF.Builder.CreateBitCast(
-      __current_saved_reg_area_pointer, llvm::PointerType::getUnqual(PTy));
-
   CGF.Builder.CreateStore(__new_saved_reg_area_pointer,
                           __current_saved_reg_area_pointer_p);
 
@@ -388,22 +390,16 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   CGF.Builder.CreateStore(__new_overflow_area_pointer,
                           __current_saved_reg_area_pointer_p);
 
-  // Bitcast the overflow area pointer to the type of argument.
-  llvm::Type *OverflowPTy = CGF.ConvertTypeForMem(Ty);
-  llvm::Value *__overflow_area_p = CGF.Builder.CreateBitCast(
-      __overflow_area_pointer, llvm::PointerType::getUnqual(OverflowPTy));
-
   CGF.EmitBranch(ContBlock);
-
   // Get the correct pointer to load the variable argument
   // Implement the ContBlock
   CGF.EmitBlock(ContBlock);
 
   llvm::Type *MemTy = CGF.ConvertTypeForMem(Ty);
-  llvm::Type *MemPTy = llvm::PointerType::getUnqual(MemTy);
-  llvm::PHINode *ArgAddr = CGF.Builder.CreatePHI(MemPTy, 2, "vaarg.addr");
-  ArgAddr->addIncoming(__saved_reg_area_p, InRegBlock);
-  ArgAddr->addIncoming(__overflow_area_p, OnStackBlock);
+  llvm::PHINode *ArgAddr = CGF.Builder.CreatePHI(
+      llvm::PointerType::getUnqual(MemTy->getContext()), 2, "vaarg.addr");
+  ArgAddr->addIncoming(__current_saved_reg_area_pointer, InRegBlock);
+  ArgAddr->addIncoming(__overflow_area_pointer, OnStackBlock);
 
   return Address(ArgAddr, MemTy, CharUnits::fromQuantity(ArgAlign));
 }

@@ -17,25 +17,16 @@ namespace clang::tidy::utils::lexer {
 std::pair<Token, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments) {
+  const std::optional<Token> Tok =
+      Lexer::findPreviousToken(Location, SM, LangOpts, !SkipComments);
+
+  if (Tok.has_value()) {
+    return {*Tok, Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts)};
+  }
+
   Token Token;
   Token.setKind(tok::unknown);
-
-  Location = Location.getLocWithOffset(-1);
-  if (Location.isInvalid())
-    return {Token, Location};
-
-  const auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
-  while (Location != StartOfFile) {
-    Location = Lexer::GetBeginningOfToken(Location, SM, LangOpts);
-    if (!Lexer::getRawToken(Location, Token, SM, LangOpts) &&
-        (!SkipComments || !Token.is(tok::comment))) {
-      break;
-    }
-    if (Location == StartOfFile)
-      return {Token, Location};
-    Location = Location.getLocWithOffset(-1);
-  }
-  return {Token, Location};
+  return {Token, SourceLocation()};
 }
 
 Token getPreviousToken(SourceLocation Location, const SourceManager &SM,

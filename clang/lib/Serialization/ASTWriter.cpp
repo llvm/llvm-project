@@ -37,7 +37,6 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
-#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
@@ -3265,7 +3264,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
         // Skip default mappings. We have a mapping for every diagnostic ever
         // emitted, regardless of whether it was customized.
         if (!I.second.isPragma() &&
-            I.second == DiagnosticIDs::getDefaultMapping(I.first))
+            I.second == Diag.getDiagnosticIDs()->getDefaultMapping(I.first))
           continue;
         Mappings.push_back(I);
       }
@@ -5156,14 +5155,15 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 
 void ASTRecordWriter::AddAttr(const Attr *A) {
   auto &Record = *this;
-  if (!A)
+  // FIXME: Clang can't handle the serialization/deserialization of
+  // preferred_name properly now. See
+  // https://github.com/llvm/llvm-project/issues/56490 for example.
+  if (!A || (isa<PreferredNameAttr>(A) &&
+             Writer->isWritingStdCXXNamedModules()))
     return Record.push_back(0);
 
   Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
 
-  auto SkipIdx = Record.size();
-  // Add placeholder for the size of deferred attribute.
-  Record.push_back(0);
   Record.AddIdentifierRef(A->getAttrName());
   Record.AddIdentifierRef(A->getScopeName());
   Record.AddSourceRange(A->getRange());
@@ -5174,12 +5174,6 @@ void ASTRecordWriter::AddAttr(const Attr *A) {
   Record.push_back(A->isRegularKeywordAttribute());
 
 #include "clang/Serialization/AttrPCHWrite.inc"
-
-  if (A->shouldDeferDeserialization()) {
-    // Record the actual size of deferred attribute (+ 1 to count the attribute
-    // kind).
-    Record[SkipIdx] = Record.size() - SkipIdx + 1;
-  }
 }
 
 /// Emit the list of attributes to the specified record.
@@ -5364,7 +5358,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
-  Sema *SemaPtr = Subject.dyn_cast<Sema *>();
+  Sema *SemaPtr = dyn_cast<Sema *>(Subject);
   Preprocessor &PPRef =
       SemaPtr ? SemaPtr->getPreprocessor() : *cast<Preprocessor *>(Subject);
 
@@ -6671,14 +6665,6 @@ MacroID ASTWriter::getMacroRef(MacroInfo *MI, const IdentifierInfo *Name) {
   return ID;
 }
 
-MacroID ASTWriter::getMacroID(MacroInfo *MI) {
-  if (!MI || MI->isBuiltinMacro())
-    return 0;
-
-  assert(MacroIDs.contains(MI) && "Macro not emitted!");
-  return MacroIDs[MI];
-}
-
 uint32_t ASTWriter::getMacroDirectivesOffset(const IdentifierInfo *Name) {
   return IdentMacroDirectivesOffsetMap.lookup(Name);
 }
@@ -7198,6 +7184,8 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   bool ModulesCodegen =
       !D->isDependentType() &&
+      D->getTemplateSpecializationKind() !=
+          TSK_ExplicitInstantiationDeclaration &&
       (Writer->getLangOpts().ModulesDebugInfo || D->isInNamedModule());
   Record->push_back(ModulesCodegen);
   if (ModulesCodegen)
@@ -7888,6 +7876,9 @@ void OMPClauseWriter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
 
 void OMPClauseWriter::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseWriter::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {}
 
 void OMPClauseWriter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
 

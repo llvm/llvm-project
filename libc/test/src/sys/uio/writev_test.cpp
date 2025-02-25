@@ -6,16 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/struct_iovec.h"
 #include "src/fcntl/open.h"
 #include "src/sys/uio/writev.h"
 #include "src/unistd/close.h"
+#include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST(LlvmLibcSysUioWritevTest, SmokeTest) {
-  int fd = LIBC_NAMESPACE::open("/dev/null", O_WRONLY);
+  const char *filename = "./LlvmLibcSysUioWritevTest";
+  int fd = LIBC_NAMESPACE::open(filename, O_WRONLY | O_CREAT, 0644);
   ASSERT_THAT(fd, returns(GT(0)).with_errno(EQ(0)));
   const char *data = "Hello, World!\n";
   struct iovec iov[2];
@@ -26,4 +29,6 @@ TEST(LlvmLibcSysUioWritevTest, SmokeTest) {
   ASSERT_THAT(LIBC_NAMESPACE::writev(fd, iov, 2),
               returns(EQ(15)).with_errno(EQ(0)));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(filename),
+              returns(EQ(0)).with_errno(EQ(0)));
 }

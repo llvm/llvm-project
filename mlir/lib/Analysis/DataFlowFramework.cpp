@@ -10,6 +10,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Casting.h"
@@ -104,6 +105,10 @@ Location LatticeAnchor::getLoc() const {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
+  // Enable enqueue to the worklist.
+  isRunning = true;
+  auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
+
   // Initialize the analyses.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
     DATAFLOW_DEBUG(llvm::dbgs()
@@ -113,27 +118,25 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   }
 
   // Run the analysis until fixpoint.
-  do {
-    // Exhaust the worklist.
-    while (!worklist.empty()) {
-      auto [point, analysis] = worklist.front();
-      worklist.pop();
+  // Iterate until all states are in some initialized state and the worklist
+  // is exhausted.
+  while (!worklist.empty()) {
+    auto [point, analysis] = worklist.front();
+    worklist.pop();
 
-      DATAFLOW_DEBUG(llvm::dbgs() << "Invoking '" << analysis->debugName
-                                  << "' on: " << point << "\n");
-      if (failed(analysis->visit(point)))
-        return failure();
-    }
-
-    // Iterate until all states are in some initialized state and the worklist
-    // is exhausted.
-  } while (!worklist.empty());
+    DATAFLOW_DEBUG(llvm::dbgs() << "Invoking '" << analysis->debugName
+                                << "' on: " << point << "\n");
+    if (failed(analysis->visit(point)))
+      return failure();
+  }
 
   return success();
 }
 
 void DataFlowSolver::propagateIfChanged(AnalysisState *state,
                                         ChangeResult changed) {
+  assert(isRunning &&
+         "DataFlowSolver is not running, should not use propagateIfChanged");
   if (changed == ChangeResult::Change) {
     DATAFLOW_DEBUG(llvm::dbgs() << "Propagating update to " << state->debugName
                                 << " of " << state->anchor << "\n"

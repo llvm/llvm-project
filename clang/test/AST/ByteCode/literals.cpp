@@ -914,12 +914,18 @@ namespace TypeTraits {
 }
 
 #if __cplusplus >= 201402L
+namespace SomeNS {
+  using MyInt = int;
+}
+
 constexpr int ignoredDecls() {
   static_assert(true, "");
   struct F { int a; };
   enum E { b };
   using A = int;
   typedef int Z;
+  namespace NewNS = SomeNS;
+  using NewNS::MyInt;
 
   return F{12}.a;
 }

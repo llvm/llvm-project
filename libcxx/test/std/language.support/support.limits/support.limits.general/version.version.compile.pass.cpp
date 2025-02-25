@@ -88,6 +88,8 @@
                                                             201902L [C++20]
     __cpp_lib_expected                                      202211L [C++23]
     __cpp_lib_filesystem                                    201703L [C++17]
+    __cpp_lib_flat_map                                      202207L [C++23]
+    __cpp_lib_flat_set                                      202207L [C++23]
     __cpp_lib_format                                        202110L [C++20]
     __cpp_lib_format_path                                   202403L [C++26]
     __cpp_lib_format_ranges                                 202207L [C++23]
@@ -526,6 +528,14 @@
 
 # ifdef __cpp_lib_filesystem
 #   error "__cpp_lib_filesystem should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_format
@@ -1397,6 +1407,14 @@
 
 # ifdef __cpp_lib_filesystem
 #   error "__cpp_lib_filesystem should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_format
@@ -2390,6 +2408,14 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
 # endif
@@ -3256,17 +3282,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++20"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++20"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++20"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -3651,11 +3671,25 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_format
-#   error "__cpp_lib_format should be defined in c++20"
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
 # endif
-# if __cpp_lib_format != 202110L
-#   error "__cpp_lib_format should have the value 202110L in c++20"
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
+# endif
+
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++20"
+#   endif
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++20"
+#   endif
+# else
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -4434,7 +4468,7 @@
 #   error "__cpp_lib_submdspan should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++20"
 #   endif
@@ -4443,7 +4477,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
@@ -4667,17 +4701,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++23"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++23"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++23"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -5092,11 +5120,37 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_format
-#   error "__cpp_lib_format should be defined in c++23"
+# ifndef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should be defined in c++23"
 # endif
-# if __cpp_lib_format != 202110L
-#   error "__cpp_lib_format should have the value 202110L in c++23"
+# if __cpp_lib_flat_map != 202207L
+#   error "__cpp_lib_flat_map should have the value 202207L in c++23"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should be defined in c++23"
+#   endif
+#   if __cpp_lib_flat_set != 202207L
+#     error "__cpp_lib_flat_set should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++23"
+#   endif
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -5625,11 +5679,17 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_print
-#   error "__cpp_lib_print should be defined in c++23"
-# endif
-# if __cpp_lib_print != 202207L
-#   error "__cpp_lib_print should have the value 202207L in c++23"
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_print
+#     error "__cpp_lib_print should be defined in c++23"
+#   endif
+#   if __cpp_lib_print != 202207L
+#     error "__cpp_lib_print should have the value 202207L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_print
+#     error "__cpp_lib_print should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
@@ -6040,7 +6100,7 @@
 #   error "__cpp_lib_submdspan should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++23"
 #   endif
@@ -6049,7 +6109,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
@@ -6297,17 +6357,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++26"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++26"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -6779,11 +6833,37 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_format
-#   error "__cpp_lib_format should be defined in c++26"
+# ifndef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should be defined in c++26"
 # endif
-# if __cpp_lib_format != 202110L
-#   error "__cpp_lib_format should have the value 202110L in c++26"
+# if __cpp_lib_flat_map != 202207L
+#   error "__cpp_lib_flat_map should have the value 202207L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should be defined in c++26"
+#   endif
+#   if __cpp_lib_flat_set != 202207L
+#     error "__cpp_lib_flat_set should have the value 202207L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++26"
+#   endif
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7483,11 +7563,17 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_print
-#   error "__cpp_lib_print should be defined in c++26"
-# endif
-# if __cpp_lib_print != 202207L
-#   error "__cpp_lib_print should have the value 202207L in c++26"
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_print
+#     error "__cpp_lib_print should be defined in c++26"
+#   endif
+#   if __cpp_lib_print != 202207L
+#     error "__cpp_lib_print should have the value 202207L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_print
+#     error "__cpp_lib_print should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
@@ -7961,7 +8047,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++26"
 #   endif
@@ -7970,7 +8056,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 

@@ -1292,17 +1292,12 @@ bool Process::HasAssignedIndexIDToThread(uint64_t thread_id) {
 }
 
 uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
-  uint32_t result = 0;
-  std::map<uint64_t, uint32_t>::iterator iterator =
-      m_thread_id_to_index_id_map.find(thread_id);
-  if (iterator == m_thread_id_to_index_id_map.end()) {
-    result = ++m_thread_index_id;
-    m_thread_id_to_index_id_map[thread_id] = result;
-  } else {
-    result = iterator->second;
-  }
+  auto [iterator, inserted] =
+      m_thread_id_to_index_id_map.try_emplace(thread_id, m_thread_index_id + 1);
+  if (inserted)
+    ++m_thread_index_id;
 
-  return result;
+  return iterator->second;
 }
 
 StateType Process::GetState() {
@@ -1669,7 +1664,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       Address symbol_address = symbol->GetAddress();
       load_addr = ResolveIndirectFunction(&symbol_address, error);
       if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetErrorStream().Printf(
+        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
             "warning: failed to resolve indirect function at 0x%" PRIx64
             " for breakpoint %i.%i: %s\n",
             symbol->GetLoadAddress(&GetTarget()),
@@ -1708,7 +1703,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
         } else {
           if (show_error || use_hardware) {
             // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetErrorStream().Printf(
+            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64
                 " for breakpoint %i.%i: %s\n",
                 load_addr, constituent->GetBreakpoint().GetID(),
@@ -2748,10 +2743,9 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 
     // Now that we know the process type, update its signal responses from the
     // ones stored in the Target:
-    if (m_unix_signals_sp) {
-      StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
-      GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
-    }
+    if (m_unix_signals_sp)
+      GetTarget().UpdateSignalsFromDummy(
+          m_unix_signals_sp, GetTarget().GetDebugger().GetAsyncErrorStream());
 
     DynamicLoader *dyld = GetDynamicLoader();
     if (dyld)
@@ -3136,10 +3130,9 @@ void Process::CompleteAttach() {
   }
   // Now that we know the process type, update its signal responses from the
   // ones stored in the Target:
-  if (m_unix_signals_sp) {
-    StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
-    GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
-  }
+  if (m_unix_signals_sp)
+    GetTarget().UpdateSignalsFromDummy(
+        m_unix_signals_sp, GetTarget().GetDebugger().GetAsyncErrorStream());
 
   // We have completed the attach, now it is time to find the dynamic loader
   // plug-in
@@ -6682,11 +6675,8 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
 
   for (const auto &range : regions) {
     auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry) {
-      ranges.Append(range.GetRange().GetRangeBase(),
-                    range.GetRange().GetByteSize(),
-                    CreateCoreFileMemoryRange(range));
-    }
+    if (entry)
+      AddRegion(range, true, ranges);
   }
 }
 

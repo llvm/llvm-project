@@ -387,7 +387,7 @@ static int computeHostNumPhysicalCores() {
 static int computeHostNumPhysicalCores() {
   return sysconf(_SC_NPROCESSORS_ONLN);
 }
-#elif defined(__linux__) && !defined(__ANDROID__)
+#elif defined(__linux__)
 static int computeHostNumPhysicalCores() {
   cpu_set_t Affinity;
   if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)

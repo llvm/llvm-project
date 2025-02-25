@@ -465,12 +465,12 @@ public:
 
   bool useAA() const { return getST()->useAA(); }
 
-  bool isTypeLegal(Type *Ty) {
+  bool isTypeLegal(Type *Ty) const {
     EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isTypeLegal(VT);
   }
 
-  unsigned getRegUsageForType(Type *Ty) {
+  unsigned getRegUsageForType(Type *Ty) const {
     EVT ETy = getTLI()->getValueType(DL, Ty);
     return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
@@ -1468,6 +1468,15 @@ public:
                                        true, CostKind);
   }
 
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) {
+    // Treat expand load/compress store as gather/scatter operation.
+    // TODO: implement more precise cost estimation for these intrinsics.
+    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
+                                       /*IsGatherScatter*/ true, CostKind);
+  }
+
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
@@ -1666,7 +1675,8 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
+            ICA.getID() == Intrinsic::vp_fneg) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
         }
@@ -1776,6 +1786,21 @@ public:
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
     }
+    case Intrinsic::masked_compressstore: {
+      const Value *Data = Args[0];
+      const Value *Mask = Args[2];
+      Align Alignment = I->getParamAlign(1).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(
+          Instruction::Store, Data->getType(), !isa<Constant>(Mask), Alignment,
+          CostKind, I);
+    }
+    case Intrinsic::masked_expandload: {
+      const Value *Mask = Args[1];
+      Align Alignment = I->getParamAlign(0).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(Instruction::Load, RetTy,
+                                                    !isa<Constant>(Mask),
+                                                    Alignment, CostKind, I);
+    }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
       const Value *Ptr = Args[1];
@@ -1867,10 +1892,6 @@ public:
       const TTI::OperandValueInfo OpInfoX = TTI::getOperandInfo(X);
       const TTI::OperandValueInfo OpInfoY = TTI::getOperandInfo(Y);
       const TTI::OperandValueInfo OpInfoZ = TTI::getOperandInfo(Z);
-      const TTI::OperandValueInfo OpInfoBW =
-        {TTI::OK_UniformConstantValue,
-         isPowerOf2_32(RetTy->getScalarSizeInBits()) ? TTI::OP_PowerOf2
-         : TTI::OP_None};
 
       // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
       // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
@@ -1885,10 +1906,15 @@ public:
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
           {OpInfoZ.Kind, TTI::OP_None});
-      // Non-constant shift amounts requires a modulo.
+      // Non-constant shift amounts requires a modulo. If the typesize is a
+      // power-2 then this will be converted to an and, otherwise it will use a
+      // urem.
       if (!OpInfoZ.isConstant())
-        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::URem, RetTy,
-                                                CostKind, OpInfoZ, OpInfoBW);
+        Cost += thisT()->getArithmeticInstrCost(
+            isPowerOf2_32(RetTy->getScalarSizeInBits()) ? BinaryOperator::And
+                                                        : BinaryOperator::URem,
+            RetTy, CostKind, OpInfoZ,
+            {TTI::OK_UniformConstantValue, TTI::OP_None});
       // For non-rotates (X != Y) we must add shift-by-zero handling costs.
       if (X != Y) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
@@ -2077,6 +2103,12 @@ public:
     case Intrinsic::sincos:
       ISD = ISD::FSINCOS;
       break;
+    case Intrinsic::sincospi:
+      ISD = ISD::FSINCOSPI;
+      break;
+    case Intrinsic::modf:
+      ISD = ISD::FMODF;
+      break;
     case Intrinsic::tan:
       ISD = ISD::FTAN;
       break;
@@ -2204,6 +2236,20 @@ public:
       return thisT()->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign, 0,
                                             CostKind);
     }
+    case Intrinsic::experimental_vp_strided_store: {
+      auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Store, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
+    case Intrinsic::experimental_vp_strided_load: {
+      auto *Ty = cast<VectorType>(ICA.getReturnType());
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Load, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
@@ -2257,6 +2303,12 @@ public:
     }
     case Intrinsic::abs:
       ISD = ISD::ABS;
+      break;
+    case Intrinsic::fshl:
+      ISD = ISD::FSHL;
+      break;
+    case Intrinsic::fshr:
+      ISD = ISD::FSHR;
       break;
     case Intrinsic::smax:
       ISD = ISD::SMAX;
@@ -2545,6 +2597,35 @@ public:
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::Sub, RetTy, CostKind,
           {TTI::OK_UniformConstantValue, TTI::OP_None});
+      return Cost;
+    }
+    case Intrinsic::fshl:
+    case Intrinsic::fshr: {
+      // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost = 0;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
+                                              CostKind);
+      // Non-constant shift amounts requires a modulo. If the typesize is a
+      // power-2 then this will be converted to an and, otherwise it will use a
+      // urem.
+      Cost += thisT()->getArithmeticInstrCost(
+          isPowerOf2_32(RetTy->getScalarSizeInBits()) ? BinaryOperator::And
+                                                      : BinaryOperator::URem,
+          RetTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      // Shift-by-zero handling.
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
       return Cost;
     }
     case Intrinsic::fptosi_sat:

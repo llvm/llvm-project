@@ -513,7 +513,7 @@ int WinEHStatePass::getBaseStateForBB(
   assert(BBColors.size() == 1 && "multi-color BB not removed by preparation");
   BasicBlock *FuncletEntryBB = BBColors.front();
   if (auto *FuncletPad =
-          dyn_cast<FuncletPadInst>(FuncletEntryBB->getFirstNonPHI())) {
+          dyn_cast<FuncletPadInst>(FuncletEntryBB->getFirstNonPHIIt())) {
     auto BaseStateI = FuncInfo.FuncletBaseStateMap.find(FuncletPad);
     if (BaseStateI != FuncInfo.FuncletBaseStateMap.end())
       BaseState = BaseStateI->second;
@@ -741,7 +741,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   for (BasicBlock *BB : RPOT) {
     auto &BBColors = BlockColors[BB];
     BasicBlock *FuncletEntryBB = BBColors.front();
-    if (isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHI()))
+    if (isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHIIt()))
       continue;
 
     int PrevState = getPredState(FinalStates, F, ParentBaseState, BB);
@@ -783,7 +783,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   for (CallBase *Call : SetJmp3Calls) {
     auto &BBColors = BlockColors[Call->getParent()];
     BasicBlock *FuncletEntryBB = BBColors.front();
-    bool InCleanup = isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHI());
+    bool InCleanup = isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHIIt());
 
     IRBuilder<> Builder(Call);
     Value *State;

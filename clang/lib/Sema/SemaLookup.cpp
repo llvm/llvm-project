@@ -1614,7 +1614,7 @@ bool Sema::isUsableModule(const Module *M) {
 
   // Otherwise, the global module fragment from other translation unit is not
   // directly usable.
-  if (M->isGlobalModule())
+  if (M->isExplicitGlobalModule())
     return false;
 
   Module *Current = getCurrentModule();
@@ -1628,6 +1628,8 @@ bool Sema::isUsableModule(const Module *M) {
   // module should be visible to the decls in the implicit global module.
   if (Current->isImplicitGlobalModule())
     Current = Current->getTopLevelModule();
+  if (M->isImplicitGlobalModule())
+    M = M->getTopLevelModule();
 
   // If M is the module we're parsing or M and the current module unit lives in
   // the same module, M should be usable.
@@ -2912,7 +2914,57 @@ static void CollectEnclosingNamespace(Sema::AssociatedNamespaceSet &Namespaces,
   while (!Ctx->isFileContext() || Ctx->isInlineNamespace())
     Ctx = Ctx->getParent();
 
-  Namespaces.insert(Ctx->getPrimaryContext());
+  // Actually it is fine to always do `Namespaces.insert(Ctx);` simply. But it
+  // may cause more allocations in Namespaces and more unnecessary lookups. So
+  // we'd like to insert the representative namespace only.
+  DeclContext *PrimaryCtx = Ctx->getPrimaryContext();
+  Decl *PrimaryD = cast<Decl>(PrimaryCtx);
+  Decl *D = cast<Decl>(Ctx);
+  ASTContext &AST = D->getASTContext();
+
+  // TODO: Technically it is better to insert one namespace per module. e.g.,
+  //
+  // ```
+  // //--- first.cppm
+  // export module first;
+  // namespace ns { ... } // first namespace
+  //
+  // //--- m-partA.cppm
+  // export module m:partA;
+  // import first;
+  //
+  // namespace ns { ... }
+  // namespace ns { ... }
+  //
+  // //--- m-partB.cppm
+  // export module m:partB;
+  // import first;
+  // import :partA;
+  //
+  // namespace ns { ... }
+  // namespace ns { ... }
+  //
+  // ...
+  //
+  // //--- m-partN.cppm
+  // export module m:partN;
+  // import first;
+  // import :partA;
+  // ...
+  // import :part$(N-1);
+  //
+  // namespace ns { ... }
+  // namespace ns { ... }
+  //
+  // consume(ns::any_decl); // the lookup
+  // ```
+  //
+  // We should only insert once for all namespaces in module m.
+  if (D->isInNamedModule() &&
+      !AST.isInSameModule(D->getOwningModule(), PrimaryD->getOwningModule()))
+    Namespaces.insert(Ctx);
+  else
+    Namespaces.insert(PrimaryCtx);
 }
 
 // Add the associated classes and namespaces for argument-dependent
@@ -3669,11 +3721,11 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         // is a well-formed template argument for the template parameter.
         if (StringLit) {
           SFINAETrap Trap(*this);
-          SmallVector<TemplateArgument, 1> SugaredChecked, CanonicalChecked;
+          CheckTemplateArgumentInfo CTAI;
           TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
-                  0, SugaredChecked, CanonicalChecked, CTAK_Specified) ||
+                  /*ArgumentPackIndex=*/0, CTAI, CTAK_Specified) ||
               Trap.hasErrorOccurred())
             IsTemplate = false;
         }

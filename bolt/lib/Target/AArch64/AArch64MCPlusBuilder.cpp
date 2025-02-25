@@ -23,6 +23,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
@@ -181,6 +182,88 @@ public:
 
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
     return false;
+  }
+
+  ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::AUTIAZ:
+    case AArch64::AUTIBZ:
+    case AArch64::AUTIASP:
+    case AArch64::AUTIBSP:
+    case AArch64::AUTIASPPCi:
+    case AArch64::AUTIBSPPCi:
+    case AArch64::AUTIASPPCr:
+    case AArch64::AUTIBSPPCr:
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
+      return AArch64::LR;
+
+    case AArch64::AUTIA1716:
+    case AArch64::AUTIB1716:
+    case AArch64::AUTIA171615:
+    case AArch64::AUTIB171615:
+      return AArch64::X17;
+
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+      // The ERETA{A,B} instructions use either register ELR_EL1, ELR_EL2 or
+      // ELR_EL3, depending on the current Exception Level at run-time.
+      //
+      // Furthermore, these registers are not modelled by LLVM as a regular
+      // MCPhysReg.... So there is no way to indicate that through the current
+      // API.
+      //
+      // Therefore, return an error to indicate that LLVM/BOLT cannot model
+      // this.
+      return make_error_code(std::errc::result_out_of_range);
+
+    case AArch64::AUTIA:
+    case AArch64::AUTIB:
+    case AArch64::AUTDA:
+    case AArch64::AUTDB:
+    case AArch64::AUTIZA:
+    case AArch64::AUTIZB:
+    case AArch64::AUTDZA:
+    case AArch64::AUTDZB:
+      return Inst.getOperand(0).getReg();
+
+      // FIXME: BL?RA(A|B)Z? and LDRA(A|B) should probably be handled here too.
+
+    default:
+      return getNoRegister();
+    }
+  }
+
+  bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
+    if (Reg == getNoRegister())
+      return false;
+    ErrorOr<MCPhysReg> AuthenticatedReg = getAuthenticatedReg(Inst);
+    return AuthenticatedReg.getError() ? false : *AuthenticatedReg == Reg;
+  }
+
+  ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const override {
+    assert(isReturn(Inst));
+    switch (Inst.getOpcode()) {
+    case AArch64::RET:
+      return Inst.getOperand(0).getReg();
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
+      return AArch64::LR;
+    case AArch64::ERET:
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+      return make_error_code(std::errc::result_out_of_range);
+    default:
+      llvm_unreachable("Unhandled return instruction");
+    }
   }
 
   bool isADRP(const MCInst &Inst) const override {
@@ -834,6 +917,8 @@ public:
   ///                                   #  of this BB)
   ///   br      x0                      # Indirect jump instruction
   ///
+  /// Return true on successful jump table instruction sequence match, false
+  /// otherwise.
   bool analyzeIndirectBranchFragment(
       const MCInst &Inst,
       DenseMap<const MCInst *, SmallVector<MCInst *, 4>> &UDChain,
@@ -841,6 +926,8 @@ public:
       MCInst *&PCRelBase) const {
     // Expect AArch64 BR
     assert(Inst.getOpcode() == AArch64::BR && "Unexpected opcode");
+
+    JumpTable = nullptr;
 
     // Match the indirect branch pattern for aarch64
     SmallVector<MCInst *, 4> &UsesRoot = UDChain[&Inst];
@@ -879,8 +966,8 @@ public:
       // Parsed as ADDXrs reg:x8 reg:x8 reg:x12 imm:0
       return false;
     }
-    assert(DefAdd->getOpcode() == AArch64::ADDXrx &&
-           "Failed to match indirect branch!");
+    if (DefAdd->getOpcode() != AArch64::ADDXrx)
+      return false;
 
     // Validate ADD operands
     int64_t OperandExtension = DefAdd->getOperand(3).getImm();
@@ -897,8 +984,8 @@ public:
       //   ldr     w7, [x6]
       //   add     x6, x6, w7, sxtw => no shift amount
       //   br      x6
-      errs() << "BOLT-WARNING: "
-                "Failed to match indirect branch: ShiftVAL != 2 \n";
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: "
+                           "failed to match indirect branch: ShiftVAL != 2\n");
       return false;
     }
 
@@ -909,7 +996,7 @@ public:
     else if (ExtendType == AArch64_AM::SXTW)
       ScaleValue = 4LL;
     else
-      llvm_unreachable("Failed to match indirect branch! (fragment 3)");
+      return false;
 
     // Match an ADR to load base address to be used when addressing JT targets
     SmallVector<MCInst *, 4> &UsesAdd = UDChain[DefAdd];
@@ -920,18 +1007,15 @@ public:
       return false;
     }
     MCInst *DefBaseAddr = UsesAdd[1];
-    assert(DefBaseAddr->getOpcode() == AArch64::ADR &&
-           "Failed to match indirect branch pattern! (fragment 3)");
+    if (DefBaseAddr->getOpcode() != AArch64::ADR)
+      return false;
 
     PCRelBase = DefBaseAddr;
     // Match LOAD to load the jump table (relative) target
     const MCInst *DefLoad = UsesAdd[2];
-    assert(mayLoad(*DefLoad) &&
-           "Failed to match indirect branch load pattern! (1)");
-    assert((ScaleValue != 1LL || isLDRB(*DefLoad)) &&
-           "Failed to match indirect branch load pattern! (2)");
-    assert((ScaleValue != 2LL || isLDRH(*DefLoad)) &&
-           "Failed to match indirect branch load pattern! (3)");
+    if (!mayLoad(*DefLoad) || (ScaleValue == 1LL && !isLDRB(*DefLoad)) ||
+        (ScaleValue == 2LL && !isLDRH(*DefLoad)))
+      return false;
 
     // Match ADD that calculates the JumpTable Base Address (not the offset)
     SmallVector<MCInst *, 4> &UsesLoad = UDChain[DefLoad];
@@ -941,7 +1025,6 @@ public:
         isRegToRegMove(*DefJTBaseAdd, From, To)) {
       // Sometimes base address may have been defined in another basic block
       // (hoisted). Return with no jump table info.
-      JumpTable = nullptr;
       return true;
     }
 
@@ -953,24 +1036,27 @@ public:
       //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
       //  add     x13, x12, w13, sxth #2
       //  br      x13
-      errs() << "BOLT-WARNING: Failed to match indirect branch: "
-                "nop/adr instead of adrp/add \n";
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: failed to match indirect branch: "
+                           "nop/adr instead of adrp/add\n");
       return false;
     }
 
-    assert(DefJTBaseAdd->getOpcode() == AArch64::ADDXri &&
-           "Failed to match jump table base address pattern! (1)");
+    if (DefJTBaseAdd->getOpcode() != AArch64::ADDXri) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: failed to match jump table base "
+                           "address pattern! (1)\n");
+      return false;
+    }
 
     if (DefJTBaseAdd->getOperand(2).isImm())
       Offset = DefJTBaseAdd->getOperand(2).getImm();
     SmallVector<MCInst *, 4> &UsesJTBaseAdd = UDChain[DefJTBaseAdd];
     const MCInst *DefJTBasePage = UsesJTBaseAdd[1];
     if (DefJTBasePage == nullptr || isLoadFromStack(*DefJTBasePage)) {
-      JumpTable = nullptr;
       return true;
     }
-    assert(DefJTBasePage->getOpcode() == AArch64::ADRP &&
-           "Failed to match jump table base page pattern! (2)");
+    if (DefJTBasePage->getOpcode() != AArch64::ADRP)
+      return false;
+
     if (DefJTBasePage->getOperand(1).isExpr())
       JumpTable = DefJTBasePage->getOperand(1).getExpr();
     return true;
@@ -1263,7 +1349,7 @@ public:
     return true;
   }
 
-  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
                                             const MCSymbol *TargetLocation,
                                             MCContext *Ctx) override {
     const bool IsTailCall = isTailCall(DirectCall);
@@ -1297,8 +1383,7 @@ public:
     MCInst InstCall;
     InstCall.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
     InstCall.addOperand(MCOperand::createReg(AArch64::X17));
-    if (IsTailCall)
-      setTailCall(InstCall);
+    moveAnnotations(std::move(DirectCall), InstCall);
     Code.emplace_back(InstCall);
 
     return Code;

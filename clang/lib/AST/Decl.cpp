@@ -1747,6 +1747,10 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       }
     }
 
+    // Suppress transparent contexts like export or HLSLBufferDecl context
+    if (Ctx->isTransparentContext())
+      continue;
+
     // Skip non-named contexts such as linkage specifications and ExportDecls.
     const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
     if (!ND)
@@ -2447,7 +2451,7 @@ bool VarDecl::isOutOfLine() const {
 }
 
 void VarDecl::setInit(Expr *I) {
-  if (auto *Eval = Init.dyn_cast<EvaluatedStmt *>()) {
+  if (auto *Eval = dyn_cast_if_present<EvaluatedStmt *>(Init)) {
     Eval->~EvaluatedStmt();
     getASTContext().Deallocate(Eval);
   }
@@ -2527,7 +2531,7 @@ bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
 /// form, which contains extra information on the evaluated value of the
 /// initializer.
 EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
-  auto *Eval = Init.dyn_cast<EvaluatedStmt *>();
+  auto *Eval = dyn_cast_if_present<EvaluatedStmt *>(Init);
   if (!Eval) {
     // Note: EvaluatedStmt contains an APValue, which usually holds
     // resources not allocated from the ASTContext.  We need to do some
@@ -2541,7 +2545,7 @@ EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
 }
 
 EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
-  return Init.dyn_cast<EvaluatedStmt *>();
+  return dyn_cast_if_present<EvaluatedStmt *>(Init);
 }
 
 APValue *VarDecl::evaluateValue() const {
@@ -2657,10 +2661,6 @@ bool VarDecl::checkForConstantInitialization(
     Eval->WasEvaluated = false;
 
   return Eval->HasConstantInitialization;
-}
-
-bool VarDecl::isParameterPack() const {
-  return isa<PackExpansionType>(getType());
 }
 
 template<typename DeclT>
@@ -2784,8 +2784,8 @@ SourceLocation VarDecl::getPointOfInstantiation() const {
 }
 
 VarTemplateDecl *VarDecl::getDescribedVarTemplate() const {
-  return getASTContext().getTemplateOrSpecializationInfo(this)
-      .dyn_cast<VarTemplateDecl *>();
+  return dyn_cast_if_present<VarTemplateDecl *>(
+      getASTContext().getTemplateOrSpecializationInfo(this));
 }
 
 void VarDecl::setDescribedVarTemplate(VarTemplateDecl *Template) {
@@ -2875,8 +2875,8 @@ MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
   if (isStaticDataMember())
     // FIXME: Remove ?
     // return getASTContext().getInstantiatedFromStaticDataMember(this);
-    return getASTContext().getTemplateOrSpecializationInfo(this)
-        .dyn_cast<MemberSpecializationInfo *>();
+    return dyn_cast_if_present<MemberSpecializationInfo *>(
+        getASTContext().getTemplateOrSpecializationInfo(this));
   return nullptr;
 }
 
@@ -3069,6 +3069,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsIneligibleOrNotSelected = false;
   FunctionDeclBits.HasImplicitReturnZero = false;
   FunctionDeclBits.IsLateTemplateParsed = false;
+  FunctionDeclBits.IsInstantiatedFromMemberTemplate = false;
   FunctionDeclBits.ConstexprKind = static_cast<uint64_t>(ConstexprKind);
   FunctionDeclBits.BodyContainsImmediateEscalatingExpression = false;
   FunctionDeclBits.InstantiationIsPending = false;
@@ -3283,6 +3284,11 @@ bool FunctionDecl::isImmediateEscalating() const {
   // consteval specifier,
   if (isDefaulted() && !isConsteval())
     return true;
+
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(this);
+      CD && CD->isInheritingConstructor())
+    return CD->getInheritedConstructor().getConstructor();
+
   // - a function that results from the instantiation of a templated entity
   // defined with the constexpr specifier.
   TemplatedKind TK = getTemplatedKind();
@@ -3301,6 +3307,16 @@ bool FunctionDecl::isImmediateFunction() const {
   // - an immediate-escalating function F whose function body contains an
   // immediate-escalating expression
   if (isImmediateEscalating() && BodyContainsImmediateEscalatingExpressions())
+    return true;
+
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(this);
+      CD && CD->isInheritingConstructor())
+    return CD->getInheritedConstructor()
+        .getConstructor()
+        ->isImmediateFunction();
+
+  if (FunctionDecl *P = getTemplateInstantiationPattern();
+      P && P->isImmediateFunction())
     return true;
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(this);
@@ -4003,7 +4019,7 @@ const IdentifierInfo *FunctionDecl::getLiteralIdentifier() const {
 FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
   if (TemplateOrSpecialization.isNull())
     return TK_NonTemplate;
-  if (const auto *ND = TemplateOrSpecialization.dyn_cast<NamedDecl *>()) {
+  if (const auto *ND = dyn_cast<NamedDecl *>(TemplateOrSpecialization)) {
     if (isa<FunctionDecl>(ND))
       return TK_DependentNonTemplate;
     assert(isa<FunctionTemplateDecl>(ND) &&
@@ -4029,11 +4045,11 @@ FunctionDecl *FunctionDecl::getInstantiatedFromMemberFunction() const {
 }
 
 MemberSpecializationInfo *FunctionDecl::getMemberSpecializationInfo() const {
-  if (auto *MSI =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+  if (auto *MSI = dyn_cast_if_present<MemberSpecializationInfo *>(
+          TemplateOrSpecialization))
     return MSI;
-  if (auto *FTSI = TemplateOrSpecialization
-                       .dyn_cast<FunctionTemplateSpecializationInfo *>())
+  if (auto *FTSI = dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+          TemplateOrSpecialization))
     return FTSI->getMemberSpecializationInfo();
   return nullptr;
 }
@@ -4051,7 +4067,7 @@ FunctionDecl::setInstantiationOfMemberFunction(ASTContext &C,
 
 FunctionTemplateDecl *FunctionDecl::getDescribedFunctionTemplate() const {
   return dyn_cast_if_present<FunctionTemplateDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast_if_present<NamedDecl *>(TemplateOrSpecialization));
 }
 
 void FunctionDecl::setDescribedFunctionTemplate(
@@ -4170,9 +4186,9 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
 }
 
 FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
-  if (FunctionTemplateSpecializationInfo *Info
-        = TemplateOrSpecialization
-            .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *Info =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->getTemplate();
   }
   return nullptr;
@@ -4180,15 +4196,15 @@ FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
 
 FunctionTemplateSpecializationInfo *
 FunctionDecl::getTemplateSpecializationInfo() const {
-  return TemplateOrSpecialization
-      .dyn_cast<FunctionTemplateSpecializationInfo *>();
+  return dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+      TemplateOrSpecialization);
 }
 
 const TemplateArgumentList *
 FunctionDecl::getTemplateSpecializationArgs() const {
-  if (FunctionTemplateSpecializationInfo *Info
-        = TemplateOrSpecialization
-            .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *Info =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->TemplateArguments;
   }
   return nullptr;
@@ -4196,14 +4212,14 @@ FunctionDecl::getTemplateSpecializationArgs() const {
 
 const ASTTemplateArgumentListInfo *
 FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
-  if (FunctionTemplateSpecializationInfo *Info
-        = TemplateOrSpecialization
-            .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *Info =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->TemplateArgumentsAsWritten;
   }
   if (DependentFunctionTemplateSpecializationInfo *Info =
-          TemplateOrSpecialization
-              .dyn_cast<DependentFunctionTemplateSpecializationInfo *>()) {
+          dyn_cast_if_present<DependentFunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->TemplateArgumentsAsWritten;
   }
   return nullptr;
@@ -4228,7 +4244,8 @@ void FunctionDecl::setFunctionTemplateSpecialization(
       FunctionTemplateSpecializationInfo::Create(
           C, this, Template, TSK, TemplateArgs, TemplateArgsAsWritten,
           PointOfInstantiation,
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>());
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
   Template->addSpecialization(Info, InsertPos);
 }
@@ -4245,8 +4262,8 @@ void FunctionDecl::setDependentTemplateSpecialization(
 
 DependentFunctionTemplateSpecializationInfo *
 FunctionDecl::getDependentSpecializationInfo() const {
-  return TemplateOrSpecialization
-      .dyn_cast<DependentFunctionTemplateSpecializationInfo *>();
+  return dyn_cast_if_present<DependentFunctionTemplateSpecializationInfo *>(
+      TemplateOrSpecialization);
 }
 
 DependentFunctionTemplateSpecializationInfo *
@@ -4277,12 +4294,13 @@ TemplateSpecializationKind FunctionDecl::getTemplateSpecializationKind() const {
   // For a function template specialization, query the specialization
   // information object.
   if (FunctionTemplateSpecializationInfo *FTSInfo =
-          TemplateOrSpecialization
-              .dyn_cast<FunctionTemplateSpecializationInfo *>())
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization))
     return FTSInfo->getTemplateSpecializationKind();
 
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getTemplateSpecializationKind();
 
   // A dependent function template specialization is an explicit specialization,
@@ -4320,15 +4338,16 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
   // of A<int>::f, and that A<int>::f<int> should be implicitly instantiated
   // from A::f<int> if a definition is needed.
   if (FunctionTemplateSpecializationInfo *FTSInfo =
-          TemplateOrSpecialization
-              .dyn_cast<FunctionTemplateSpecializationInfo *>()) {
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     if (auto *MSInfo = FTSInfo->getMemberSpecializationInfo())
       return MSInfo->getTemplateSpecializationKind();
     return FTSInfo->getTemplateSpecializationKind();
   }
 
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getTemplateSpecializationKind();
 
   if (isa<DependentFunctionTemplateSpecializationInfo *>(
@@ -4342,9 +4361,9 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
 void
 FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                                           SourceLocation PointOfInstantiation) {
-  if (FunctionTemplateSpecializationInfo *FTSInfo
-        = TemplateOrSpecialization.dyn_cast<
-                                    FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          dyn_cast<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     FTSInfo->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization &&
         PointOfInstantiation.isValid() &&
@@ -4353,8 +4372,9 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
       if (ASTMutationListener *L = getASTContext().getASTMutationListener())
         L->InstantiationRequested(this);
     }
-  } else if (MemberSpecializationInfo *MSInfo
-             = TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo*>()) {
+  } else if (MemberSpecializationInfo *MSInfo =
+                 dyn_cast<MemberSpecializationInfo *>(
+                     TemplateOrSpecialization)) {
     MSInfo->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization &&
         PointOfInstantiation.isValid() &&
@@ -5401,6 +5421,13 @@ bool ValueDecl::isInitCapture() const {
   return false;
 }
 
+bool ValueDecl::isParameterPack() const {
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(this))
+    return NTTP->isParameterPack();
+
+  return isa_and_nonnull<PackExpansionType>(getType().getTypePtrOrNull());
+}
+
 void ImplicitParamDecl::anchor() {}
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
@@ -5446,6 +5473,35 @@ BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
 
 BlockDecl *BlockDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) BlockDecl(nullptr, SourceLocation());
+}
+
+OutlinedFunctionDecl::OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams)
+    : Decl(OutlinedFunction, DC, SourceLocation()),
+      DeclContext(OutlinedFunction), NumParams(NumParams),
+      BodyAndNothrow(nullptr, false) {}
+
+OutlinedFunctionDecl *OutlinedFunctionDecl::Create(ASTContext &C,
+                                                   DeclContext *DC,
+                                                   unsigned NumParams) {
+  return new (C, DC, additionalSizeToAlloc<ImplicitParamDecl *>(NumParams))
+      OutlinedFunctionDecl(DC, NumParams);
+}
+
+OutlinedFunctionDecl *
+OutlinedFunctionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                         unsigned NumParams) {
+  return new (C, ID, additionalSizeToAlloc<ImplicitParamDecl *>(NumParams))
+      OutlinedFunctionDecl(nullptr, NumParams);
+}
+
+Stmt *OutlinedFunctionDecl::getBody() const {
+  return BodyAndNothrow.getPointer();
+}
+void OutlinedFunctionDecl::setBody(Stmt *B) { BodyAndNothrow.setPointer(B); }
+
+bool OutlinedFunctionDecl::isNothrow() const { return BodyAndNothrow.getInt(); }
+void OutlinedFunctionDecl::setNothrow(bool Nothrow) {
+  BodyAndNothrow.setInt(Nothrow);
 }
 
 CapturedDecl::CapturedDecl(DeclContext *DC, unsigned NumParams)
@@ -5665,7 +5721,7 @@ HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
                                SourceLocation IDLoc, SourceLocation LBrace)
     : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
       DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
-      IsCBuffer(CBuffer) {}
+      IsCBuffer(CBuffer), HasValidPackoffset(false), LayoutStruct(nullptr) {}
 
 HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
                                        DeclContext *LexicalParent, bool CBuffer,
@@ -5693,6 +5749,12 @@ HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID) {
   return new (C, ID) HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
                                     SourceLocation(), SourceLocation());
+}
+
+void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
+  assert(LayoutStruct == nullptr && "layout struct has already been set");
+  LayoutStruct = LS;
+  addDecl(LS);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5796,4 +5858,18 @@ bool clang::IsArmStreamingFunction(const FunctionDecl *FD,
         return true;
 
   return false;
+}
+
+bool clang::hasArmZAState(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZAState(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
+}
+
+bool clang::hasArmZT0State(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
 }

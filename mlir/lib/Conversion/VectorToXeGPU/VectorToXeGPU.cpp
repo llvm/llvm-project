@@ -179,10 +179,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (isTransposeLoad &&
         elementType.getIntOrFloatBitWidth() < minTransposeBitWidth)
       return rewriter.notifyMatchFailure(
-          readOp, "Unsupported data type for tranposition");
+          readOp, "Unsupported data type for transposition");
 
     // If load is transposed, get the base shape for the tensor descriptor.
-    SmallVector<int64_t> descShape{vecTy.getShape()};
+    SmallVector<int64_t> descShape(vecTy.getShape());
     if (isTransposeLoad)
       std::reverse(descShape.begin(), descShape.end());
     auto descType = xegpu::TensorDescType::get(
@@ -328,8 +328,4 @@ void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
                StoreLowering>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createConvertVectorToXeGPUPass() {
-  return std::make_unique<ConvertVectorToXeGPUPass>();
 }

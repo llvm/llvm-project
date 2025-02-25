@@ -58,15 +58,6 @@
 // LINK: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}[[CUBIN:.+]].o
 
 //
-// Test to ensure that we enable handling global constructors in a freestanding
-// Nvidia compilation.
-//
-// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_70 %s -### 2>&1 \
-// RUN:   | FileCheck -check-prefix=LOWERING %s
-
-// LOWERING: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-mllvm" "--nvptx-lower-global-ctor-dtor"
-
-//
 // Test passing arguments directly to nvlink.
 //
 // RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -march=sm_52 -### %s 2>&1 \

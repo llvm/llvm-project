@@ -17,6 +17,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
 namespace llvm::sandboxir {
@@ -81,6 +82,7 @@ enum class LegalityResultID {
   Widen,                   ///> Vectorize by combining scalars to a vector.
   DiamondReuse,            ///> Don't generate new code, reuse existing vector.
   DiamondReuseWithShuffle, ///> Reuse the existing vector but add a shuffle.
+  DiamondReuseMultiInput,  ///> Reuse more than one vector and/or scalars.
 };
 
 /// The reason for vectorizing or not vectorizing.
@@ -90,6 +92,8 @@ enum class ResultReason {
   DiffTypes,
   DiffMathFlags,
   DiffWrapFlags,
+  DiffBBs,
+  RepeatedInstrs,
   NotConsecutive,
   CantSchedule,
   Unimplemented,
@@ -108,6 +112,8 @@ struct ToStr {
       return "DiamondReuse";
     case LegalityResultID::DiamondReuseWithShuffle:
       return "DiamondReuseWithShuffle";
+    case LegalityResultID::DiamondReuseMultiInput:
+      return "DiamondReuseMultiInput";
     }
     llvm_unreachable("Unknown LegalityResultID enum");
   }
@@ -124,6 +130,10 @@ struct ToStr {
       return "DiffMathFlags";
     case ResultReason::DiffWrapFlags:
       return "DiffWrapFlags";
+    case ResultReason::DiffBBs:
+      return "DiffBBs";
+    case ResultReason::RepeatedInstrs:
+      return "RepeatedInstrs";
     case ResultReason::NotConsecutive:
       return "NotConsecutive";
     case ResultReason::CantSchedule:
@@ -197,22 +207,22 @@ public:
 
 class DiamondReuse final : public LegalityResult {
   friend class LegalityAnalysis;
-  Value *Vec;
-  DiamondReuse(Value *Vec)
+  Action *Vec;
+  DiamondReuse(Action *Vec)
       : LegalityResult(LegalityResultID::DiamondReuse), Vec(Vec) {}
 
 public:
   static bool classof(const LegalityResult *From) {
     return From->getSubclassID() == LegalityResultID::DiamondReuse;
   }
-  Value *getVector() const { return Vec; }
+  Action *getVector() const { return Vec; }
 };
 
 class DiamondReuseWithShuffle final : public LegalityResult {
   friend class LegalityAnalysis;
-  Value *Vec;
+  Action *Vec;
   ShuffleMask Mask;
-  DiamondReuseWithShuffle(Value *Vec, const ShuffleMask &Mask)
+  DiamondReuseWithShuffle(Action *Vec, const ShuffleMask &Mask)
       : LegalityResult(LegalityResultID::DiamondReuseWithShuffle), Vec(Vec),
         Mask(Mask) {}
 
@@ -220,7 +230,7 @@ public:
   static bool classof(const LegalityResult *From) {
     return From->getSubclassID() == LegalityResultID::DiamondReuseWithShuffle;
   }
-  Value *getVector() const { return Vec; }
+  Action *getVector() const { return Vec; }
   const ShuffleMask &getMask() const { return Mask; }
 };
 
@@ -241,18 +251,18 @@ public:
   /// Describes how to get a value element. If the value is a vector then it
   /// also provides the index to extract it from.
   class ExtractElementDescr {
-    Value *V;
+    PointerUnion<Action *, Value *> V = nullptr;
     /// The index in `V` that the value can be extracted from.
-    /// This is nullopt if we need to use `V` as a whole.
-    std::optional<int> ExtractIdx;
+    int ExtractIdx = 0;
 
   public:
-    ExtractElementDescr(Value *V, int ExtractIdx)
+    ExtractElementDescr(Action *V, int ExtractIdx)
         : V(V), ExtractIdx(ExtractIdx) {}
-    ExtractElementDescr(Value *V) : V(V), ExtractIdx(std::nullopt) {}
-    Value *getValue() const { return V; }
-    bool needsExtract() const { return ExtractIdx.has_value(); }
-    int getExtractIdx() const { return *ExtractIdx; }
+    ExtractElementDescr(Value *V) : V(V) {}
+    Action *getValue() const { return cast<Action *>(V); }
+    Value *getScalar() const { return cast<Value *>(V); }
+    bool needsExtract() const { return isa<Action *>(V); }
+    int getExtractIdx() const { return ExtractIdx; }
   };
 
   using DescrVecT = SmallVector<ExtractElementDescr, 4>;
@@ -263,11 +273,11 @@ public:
       : Descrs(std::move(Descrs)) {}
   /// If all elements come from a single vector input, then return that vector
   /// and also the shuffle mask required to get them in order.
-  std::optional<std::pair<Value *, ShuffleMask>> getSingleInput() const {
+  std::optional<std::pair<Action *, ShuffleMask>> getSingleInput() const {
     const auto &Descr0 = *Descrs.begin();
-    Value *V0 = Descr0.getValue();
     if (!Descr0.needsExtract())
       return std::nullopt;
+    auto *V0 = Descr0.getValue();
     ShuffleMask::IndicesVecT MaskIndices;
     MaskIndices.push_back(Descr0.getExtractIdx());
     for (const auto &Descr : drop_begin(Descrs)) {
@@ -285,6 +295,20 @@ public:
   const SmallVector<ExtractElementDescr, 4> &getDescrs() const {
     return Descrs;
   }
+};
+
+class DiamondReuseMultiInput final : public LegalityResult {
+  friend class LegalityAnalysis;
+  CollectDescr Descr;
+  DiamondReuseMultiInput(CollectDescr &&Descr)
+      : LegalityResult(LegalityResultID::DiamondReuseMultiInput),
+        Descr(std::move(Descr)) {}
+
+public:
+  static bool classof(const LegalityResult *From) {
+    return From->getSubclassID() == LegalityResultID::DiamondReuseMultiInput;
+  }
+  const CollectDescr &getCollectDescr() const { return Descr; }
 };
 
 /// Performs the legality analysis and returns a LegalityResult object.
@@ -312,8 +336,9 @@ public:
       : Sched(AA, Ctx), SE(SE), DL(DL), IMaps(IMaps) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
-  ResultT &createLegalityResult(ArgsT... Args) {
-    ResultPool.push_back(std::unique_ptr<ResultT>(new ResultT(Args...)));
+  ResultT &createLegalityResult(ArgsT &&...Args) {
+    ResultPool.push_back(
+        std::unique_ptr<ResultT>(new ResultT(std::move(Args)...)));
     return cast<ResultT>(*ResultPool.back());
   }
   /// Checks if it's legal to vectorize the instructions in \p Bndl.

@@ -408,8 +408,8 @@ static LogicalResult processParallelLoop(
   ArrayAttr mapping =
       parallelOp->getAttrOfType<ArrayAttr>(gpu::getMappingAttrName());
 
-  // TODO: Support reductions.
-  if (!mapping || parallelOp.getNumResults() != 0)
+  // TODO: Support multiple reductions.
+  if (!mapping || parallelOp.getNumResults() > 1)
     return failure();
 
   Location loc = parallelOp.getLoc();
@@ -556,6 +556,11 @@ static LogicalResult processParallelLoop(
 
   Block *body = parallelOp.getBody();
   worklist.reserve(worklist.size() + body->getOperations().size());
+  // Include scf.reduce terminator if exists and has an operand.
+  if (auto terminator = body->getTerminator();
+      isa<scf::ReduceOp>(terminator) && terminator->getOperands().size() == 1) {
+    worklist.push_back(terminator);
+  }
   for (Operation &op : llvm::reverse(body->without_terminator()))
     worklist.push_back(&op);
   return success();
@@ -648,6 +653,33 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       rewriter.setInsertionPointAfter(parent);
       leftNestingScope = true;
       seenSideeffects = false;
+    } else if (auto reduceOp = dyn_cast<scf::ReduceOp>(op)) {
+      // Convert scf.reduction op
+      auto parentLoop = op->getParentOfType<ParallelOp>();
+      if (!parentLoop || op->getOperands().size() != 1)
+        return failure();
+      auto operand = op->getOperands().front();
+      auto newValue = cloningMap.lookupOrNull(operand);
+      if (!newValue || !operand.getType().isSignlessIntOrFloat())
+        return failure();
+      // Ensure reduction region is isolated from above.
+      llvm::SetVector<Value> externalValues;
+      getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
+      if (externalValues.size())
+        return failure();
+      // Replace by gpu.all_reduce.
+      auto gpuRedOp = rewriter.create<gpu::AllReduceOp>(loc, newValue);
+      cloningMap.map(parentLoop->getResult(0), gpuRedOp.getResult());
+      // Copy region.
+      rewriter.inlineRegionBefore(reduceOp.getRegion(0), gpuRedOp.getRegion(),
+                                  gpuRedOp.getRegion().begin());
+      // Replace src.reduce.return with gpu.yield.
+      auto scfReturn = gpuRedOp.getRegion().front().getTerminator();
+      auto ip = rewriter.saveInsertionPoint();
+      rewriter.setInsertionPointToEnd(&gpuRedOp.getRegion().front());
+      rewriter.replaceOpWithNewOp<gpu::YieldOp>(
+          scfReturn, scfReturn->getOperands().front());
+      rewriter.restoreInsertionPoint(ip);
     } else {
       // Otherwise we copy it over.
       Operation *clone = rewriter.clone(*op, cloningMap);

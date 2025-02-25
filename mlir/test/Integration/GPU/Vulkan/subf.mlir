@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-vulkan-runner-pipeline \
-// RUN:   | mlir-cpu-runner - --shared-libs=%mlir_vulkan_runtime,%mlir_runner_utils --entry-point-result=void | FileCheck %s
+// RUN:   | mlir-runner - --shared-libs=%mlir_vulkan_runtime,%mlir_runner_utils --entry-point-result=void | FileCheck %s
 
 // CHECK-COUNT-32: [2.2, 2.2, 2.2, 2.2]
 module attributes {

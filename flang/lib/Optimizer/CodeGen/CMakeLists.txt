@@ -11,11 +11,13 @@ add_flang_library(FIRCodeGen
   TypeConverter.cpp
 
   DEPENDS
+  CUFAttrs
   FIRDialect
   FIROptCodeGenPassIncGen
   CGOpsIncGen
 
   LINK_LIBS
+  CUFAttrs
   FIRAnalysis
   FIRBuilder
   FIRDialect

@@ -61,8 +61,10 @@ enum class IRMemLocation {
   ArgMem = 0,
   /// Memory that is inaccessible via LLVM IR.
   InaccessibleMem = 1,
+  /// Errno memory.
+  ErrnoMem = 2,
   /// Any other memory.
-  Other = 2,
+  Other = 3,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
@@ -139,6 +141,16 @@ public:
     return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
+  /// Create MemoryEffectsBase that can only access errno memory.
+  static MemoryEffectsBase errnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ErrnoMem, MR);
+  }
+
+  /// Create MemoryEffectsBase that can only access other memory.
+  static MemoryEffectsBase otherMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::Other, MR);
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase
@@ -210,6 +222,11 @@ public:
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  }
+
+  /// Whether this function only (at most) accesses errno memory.
+  bool onlyAccessesErrnoMem() const {
+    return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses argument and inaccessible
@@ -327,6 +344,9 @@ public:
   CaptureInfo(CaptureComponents Components)
       : OtherComponents(Components), RetComponents(Components) {}
 
+  /// Create CaptureInfo that does not capture any components of the pointer
+  static CaptureInfo none() { return CaptureInfo(CaptureComponents::None); }
+
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
 
@@ -358,6 +378,20 @@ public:
   CaptureInfo operator&(CaptureInfo Other) const {
     return CaptureInfo(OtherComponents & Other.OtherComponents,
                        RetComponents & Other.RetComponents);
+  }
+
+  /// Compute union of CaptureInfos in-place.
+  CaptureInfo &operator|=(CaptureInfo Other) {
+    OtherComponents |= Other.OtherComponents;
+    RetComponents |= Other.RetComponents;
+    return *this;
+  }
+
+  /// Compute intersection of CaptureInfos in-place.
+  CaptureInfo &operator&=(CaptureInfo Other) {
+    OtherComponents &= Other.OtherComponents;
+    RetComponents &= Other.RetComponents;
+    return *this;
   }
 
   static CaptureInfo createFromIntValue(uint32_t Data) {

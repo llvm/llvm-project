@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran-features.h"
 #include "flang/Support/Timing.h"
 #include "mlir/Support/RawOstreamExtras.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -153,9 +153,6 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   CompilerInvocation &invoc = this->getInvocation();
 
   llvm::Triple targetTriple{llvm::Triple(invoc.getTargetOpts().triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
-    invoc.getDefaultKinds().set_quadPrecisionKind(10);
-  }
 
   // Set some sane defaults for the frontend.
   invoc.setDefaultFortranOpts();

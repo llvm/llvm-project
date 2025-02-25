@@ -622,6 +622,11 @@ public:
     /// Don't allow runtime unrolling if expanding the trip count takes more
     /// than SCEVExpansionBudget.
     unsigned SCEVExpansionBudget;
+    /// Allow runtime unrolling multi-exit loops. Should only be set if the
+    /// target determined that multi-exit unrolling is profitable for the loop.
+    /// Fall back to the generic logic to determine whether multi-exit unrolling
+    /// is profitable if set to false.
+    bool RuntimeUnrollMultiExit;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
@@ -1468,6 +1473,12 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index = -1) const;
 
+  /// \return The expected cost of aggregate inserts and extracts. This is
+  /// used when the instruction is not available; a typical use case is to
+  /// provision the cost of vectorization/scalarization in vectorizer passes.
+  InstructionCost getInsertExtractValueCost(unsigned Opcode,
+                                            TTI::TargetCostKind CostKind) const;
+
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
   /// \p ReplicationFactor times.
   ///
@@ -1510,6 +1521,19 @@ public:
   InstructionCost getGatherScatterOpCost(
       unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
       Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      const Instruction *I = nullptr) const;
+
+  /// \return The cost of Expand Load or Compress Store operation
+  /// \p Opcode - is a type of memory access Load or Store
+  /// \p Src - a vector type of the data to be loaded or stored
+  /// \p VariableMask - true when the memory access is predicated with a mask
+  ///                   that is not a compile-time constant
+  /// \p Alignment - alignment of single element
+  /// \p I - the optional original context instruction, if one exists, e.g. the
+  ///        load/store to transform or the call to the gather/scatter intrinsic
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
 
   /// \return The cost of strided memory operations.
@@ -1886,6 +1910,11 @@ public:
 
   /// @}
 
+  /// Collect kernel launch bounds for \p F into \p LB.
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
 private:
   /// The abstract base class used to type erase specific TTI
   /// implementations.
@@ -2026,8 +2055,8 @@ public:
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
   virtual bool isProfitableToHoist(Instruction *I) = 0;
   virtual bool useAA() = 0;
-  virtual bool isTypeLegal(Type *Ty) = 0;
-  virtual unsigned getRegUsageForType(Type *Ty) = 0;
+  virtual bool isTypeLegal(Type *Ty) const = 0;
+  virtual unsigned getRegUsageForType(Type *Ty) const = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
   virtual bool shouldBuildRelLookupTables() = 0;
@@ -2201,6 +2230,9 @@ public:
                             TTI::TargetCostKind CostKind) = 0;
 
   virtual InstructionCost
+  getInsertExtractValueCost(unsigned Opcode, TTI::TargetCostKind CostKind) = 0;
+
+  virtual InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace, TTI::TargetCostKind CostKind,
                   OperandValueInfo OpInfo, const Instruction *I) = 0;
@@ -2218,6 +2250,9 @@ public:
                          bool VariableMask, Align Alignment,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr) = 0;
+  virtual InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) = 0;
   virtual InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
                          bool VariableMask, Align Alignment,
@@ -2324,6 +2359,9 @@ public:
   virtual unsigned getMaxNumArgs() const = 0;
   virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
                                                Type *ArrayType) const = 0;
+  virtual void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const = 0;
 };
 
 template <typename T>
@@ -2607,8 +2645,8 @@ public:
     return Impl.isProfitableToHoist(I);
   }
   bool useAA() override { return Impl.useAA(); }
-  bool isTypeLegal(Type *Ty) override { return Impl.isTypeLegal(Ty); }
-  unsigned getRegUsageForType(Type *Ty) override {
+  bool isTypeLegal(Type *Ty) const override { return Impl.isTypeLegal(Ty); }
+  unsigned getRegUsageForType(Type *Ty) const override {
     return Impl.getRegUsageForType(Ty);
   }
   bool shouldBuildLookupTables() override {
@@ -2921,6 +2959,11 @@ public:
     return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
                                           DemandedDstElts, CostKind);
   }
+  InstructionCost
+  getInsertExtractValueCost(unsigned Opcode,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getInsertExtractValueCost(Opcode, CostKind);
+  }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
@@ -2949,6 +2992,12 @@ public:
                          const Instruction *I = nullptr) override {
     return Impl.getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                        Alignment, CostKind, I);
+  }
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) override {
+    return Impl.getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
+                                              Alignment, CostKind, I);
   }
   InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
@@ -3168,6 +3217,12 @@ public:
   unsigned getNumBytesToPadGlobalArray(unsigned Size,
                                        Type *ArrayType) const override {
     return Impl.getNumBytesToPadGlobalArray(Size, ArrayType);
+  }
+
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override {
+    Impl.collectKernelLaunchBounds(F, LB);
   }
 };
 

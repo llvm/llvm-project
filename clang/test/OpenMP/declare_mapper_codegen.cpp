@@ -23,7 +23,7 @@
 // Mapper function code generation and runtime interface.
 
 // CK0: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, ptr }
-// CK0: [[ENTRY:%.+]] = type { ptr, ptr, i[[SZ:32|64]], i32, i32 }
+// CK0: [[ENTRY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 // CK0: [[ANON_T:%.+]] = type { ptr }
 // CK0: [[ANON_T_0:%.+]] = type { ptr }
 // CK0: [[KMP_TASK_T_WITH_PRIVATES:%.+]] = type { [[KMP_TASK_T:%[^,]+]], [[KMP_PRIVATES_T:%.+]] }
@@ -235,7 +235,7 @@ void foo(int a){
 // CK0-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
 // CK0-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
 // CK0-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 0
-// CK0-DAG: [[MPR1:%.+]] = getelementptr inbounds {{.+}}[[MPR]], i[[sz]] 0, i[[sz]] 0
+// CK0-DAG: [[MPR1:%.+]] = getelementptr inbounds {{.+}}[[MPR]], i[[sz:32|64]] 0, i[[sz]] 0
 // CK0-DAG: store ptr [[VAL:%[^,]+]], ptr [[BP1]]
 // CK0-DAG: store ptr [[VAL]], ptr [[P1]]
 // CK0-DAG: store ptr [[MPRFUNC]], ptr [[MPR1]]
@@ -250,7 +250,7 @@ void foo(int a){
   // CK0: store ptr [[CADDR:%[^,]+]], ptr [[BP2GEP]], align
   // CK0: [[P2GEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[OFFLOAD_P2:%[^,]+]], i32 0, i32 0
   // CK0: store ptr [[CADDR]], ptr [[P2GEP]], align
-  // CK0: [[MAPPER2GEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[OFFLOAD_MAPPER2:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
+  // CK0: [[MAPPER2GEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[OFFLOAD_MAPPER2:%[^,]+]], i[[SZ:32|64]] 0, i[[SZ]] 0
   // CK0: store ptr [[MPRFUNC]], ptr [[MAPPER2GEP]], align
   // CK0: [[BP2:%.+]] = getelementptr inbounds [1 x ptr], ptr [[OFFLOAD_BP2]], i32 0, i32 0
   // CK0: [[P2:%.+]] = getelementptr inbounds [1 x ptr], ptr [[OFFLOAD_P2]], i32 0, i32 0

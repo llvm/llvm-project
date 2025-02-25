@@ -263,10 +263,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   }
 
   if (set_frame_base_loclist_addr && !ranges.empty()) {
-    // TODO: Use the first range instead.
-    dw_addr_t lowest_range_pc = llvm::min_element(ranges)->LowPC;
-    assert(lowest_range_pc >= cu->GetBaseAddress());
-    frame_base->SetFuncFileAddress(lowest_range_pc);
+    dw_addr_t file_addr = ranges.begin()->LowPC;
+    assert(file_addr >= cu->GetBaseAddress());
+    frame_base->SetFuncFileAddress(file_addr);
   }
 
   if (ranges.empty() || name == nullptr || mangled == nullptr) {

@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -193,8 +194,7 @@ public:
         {PlatformInstanceDecl, DSOHandle});
 
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
-    auto *AtExitCallbackTy = FunctionType::get(VoidTy, {}, false);
-    auto *AtExitCallbackPtrTy = PointerType::getUnqual(AtExitCallbackTy);
+    auto *AtExitCallbackPtrTy = PointerType::getUnqual(*Ctx);
     auto *AtExit = addHelperAndWrapper(
         *M, "atexit", FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
         GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
@@ -468,12 +468,9 @@ private:
         *M, GenericIRPlatformSupportTy, true, GlobalValue::ExternalLinkage,
         nullptr, "__lljit.platform_support_instance");
 
-    auto *Int8Ty = Type::getInt8Ty(*Ctx);
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
-    auto *VoidTy = Type::getVoidTy(*Ctx);
-    auto *BytePtrTy = PointerType::getUnqual(Int8Ty);
-    auto *CxaAtExitCallbackTy = FunctionType::get(VoidTy, {BytePtrTy}, false);
-    auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(CxaAtExitCallbackTy);
+    auto *BytePtrTy = PointerType::getUnqual(*Ctx);
+    auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(*Ctx);
 
     auto *CxaAtExit = addHelperAndWrapper(
         *M, "__cxa_atexit",
@@ -837,14 +834,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       CreateObjectLinkingLayer =
           [](ExecutionSession &ES,
              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
-        auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(ES);
-        if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
-          ObjLinkingLayer->addPlugin(
-              std::make_unique<EHFrameRegistrationPlugin>(
-                  ES, std::move(*EHFrameRegistrar)));
-        else
-          return EHFrameRegistrar.takeError();
-        return std::move(ObjLinkingLayer);
+        return std::make_unique<ObjectLinkingLayer>(ES);
       };
     }
   }
@@ -1058,12 +1048,9 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
-  if (S.PrePlatformSetup) {
-    if (auto Err2 = S.PrePlatformSetup(*this)) {
-      Err = std::move(Err2);
+  if (S.PrePlatformSetup)
+    if ((Err = S.PrePlatformSetup(*this)))
       return;
-    }
-  }
 
   if (!S.SetUpPlatform)
     S.SetUpPlatform = setUpGenericLLVMIRPlatform;
@@ -1231,6 +1218,49 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   auto &PlatformJD = J.getExecutionSession().createBareJITDylib("<Platform>");
   PlatformJD.addToLinkOrder(*ProcessSymbolsJD);
+
+  if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
+
+    bool UseEHFrames = true;
+
+    // Enable compact-unwind support if possible.
+    if (J.getTargetTriple().isOSDarwin() ||
+        J.getTargetTriple().isOSBinFormatMachO()) {
+
+      // Check if the bootstrap map says that we should force eh-frames:
+      // Older libunwinds require this as they don't have a dynamic
+      // registration API for compact-unwind.
+      std::optional<bool> ForceEHFrames;
+      if (auto Err = J.getExecutionSession().getBootstrapMapValue<bool, bool>(
+              "darwin-use-ehframes-only", ForceEHFrames))
+        return Err;
+      if (ForceEHFrames.has_value())
+        UseEHFrames = *ForceEHFrames;
+      else
+        UseEHFrames = false;
+
+      // If UseEHFrames hasn't been set then we're good to use compact-unwind.
+      if (!UseEHFrames) {
+        if (auto UIRP =
+                UnwindInfoRegistrationPlugin::Create(J.getExecutionSession())) {
+          OLL->addPlugin(std::move(*UIRP));
+          LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
+        } else
+          return UIRP.takeError();
+      }
+    }
+
+    // Otherwise fall back to standard unwind registration.
+    if (UseEHFrames) {
+      auto &ES = J.getExecutionSession();
+      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
+        OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            ES, std::move(*EHFrameRegistrar)));
+        LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
+      } else
+        return EHFrameRegistrar.takeError();
+    }
+  }
 
   J.setPlatformSupport(
       std::make_unique<GenericLLVMIRPlatformSupport>(J, PlatformJD));

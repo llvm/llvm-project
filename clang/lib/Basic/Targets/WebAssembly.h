@@ -42,6 +42,7 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // ptr32_uptr
     0,  // ptr64
     0,  // hlsl_groupshared
+    0,  // hlsl_constant
     20, // wasm_funcref
 };
 
@@ -120,7 +121,7 @@ private:
 
   bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const final;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
   BuiltinVaListKind getBuiltinVaListKind() const final {
     return VoidPtrBuiltinVaList;

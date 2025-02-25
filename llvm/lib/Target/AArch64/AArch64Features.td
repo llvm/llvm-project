@@ -473,13 +473,13 @@ def FeatureD128 : ExtensionWithMArch<"d128", "D128",
 //===----------------------------------------------------------------------===//
 
 def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
- "Enable FAMIN and FAMAX instructions">;
+ "Enable FAMIN and FAMAX instructions", [FeatureNEON]>;
 
 def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
- "Enable Lookup Table instructions">;
+ "Enable Lookup Table instructions", [FeatureNEON]>;
 
 def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
-  "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
+  "Enable FP8 instructions", [FeatureNEON]>;
 
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
   "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
@@ -488,10 +488,10 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
   "Enable SVE2 FP8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
-  "Enable FP8 4-way dot instructions", [FeatureNEON, FeatureFP8]>;
+  "Enable FP8 4-way dot instructions", [FeatureFP8]>;
 
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
-  "Enable FP8 2-way dot instructions", [FeatureNEON, FeatureFP8]>;
+  "Enable FP8 2-way dot instructions", [FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4", "FEAT_SSVE_FP8DOT4",
   "Enable SVE2 FP8 4-way dot product instructions", [FeatureSME2, FeatureFP8]>;
@@ -634,6 +634,11 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "RequiresStrictAlign", "true",
                                           "Disallow all unaligned memory "
                                           "access">;
+
+def FeatureExecuteOnly : SubtargetFeature<"execute-only",
+                                          "GenExecuteOnly", "true",
+                                          "Enable the generation of "
+                                          "execute only code.">;
 
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
@@ -805,9 +810,13 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
-def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
   "UseFixedOverScalableIfEqualCost", "true",
   "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
+
+// For performance reasons we prefer to use ldapr to ldapur on certain cores.
+def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
+  "Prefer add+ldapr to offset ldapur">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

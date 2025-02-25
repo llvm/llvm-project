@@ -10,11 +10,13 @@
 #define _LIBCPP___VECTOR_VECTOR_H
 
 #include <__algorithm/copy.h>
+#include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
+#include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/rotate.h>
 #include <__assert>
 #include <__config>
@@ -23,6 +25,7 @@
 #include <__fwd/vector.h>
 #include <__iterator/advance.h>
 #include <__iterator/bounded_iter.h>
+#include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -81,9 +84,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
-private:
-  typedef allocator<_Tp> __default_allocator_type;
-
 public:
   //
   // Types
@@ -555,7 +555,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
     if (__n > max_size())
-      __throw_length_error();
+      this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(this->__alloc_, __n);
     __begin_          = __allocation.ptr;
     __end_            = __allocation.ptr;
@@ -575,7 +575,7 @@ private:
 
     if (__n > 0) {
       __vallocate(__n);
-      __construct_at_end(__first, __last, __n);
+      __construct_at_end(std::move(__first), std::move(__last), __n);
     }
 
     __guard.__complete();
@@ -595,9 +595,12 @@ private:
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __assign_with_sentinel(_Iterator __first, _Sentinel __last);
 
-  template <class _ForwardIterator, class _Sentinel>
+  // The `_Iterator` in `*_with_size` functions can be input-only only if called from `*_range` (since C++23).
+  // Otherwise, `_Iterator` is a forward iterator.
+
+  template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __assign_with_size(_ForwardIterator __first, _Sentinel __last, difference_type __n);
+  __assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n);
 
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
@@ -777,14 +780,18 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __add_alignment_assumption(pointer __p) _NOEXCEPT {
-#ifndef _LIBCPP_CXX03_LANG
-    if constexpr (is_pointer<pointer>::value) {
-      if (!__libcpp_is_constant_evaluated()) {
-        return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
-      }
+  template <class _Ptr = pointer, __enable_if_t<is_pointer<_Ptr>::value, int> = 0>
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
+    if (!__libcpp_is_constant_evaluated()) {
+      return static_cast<pointer>(__builtin_assume_aligned(__p, _LIBCPP_ALIGNOF(decltype(*__p))));
     }
-#endif
+    return __p;
+  }
+
+  template <class _Ptr = pointer, __enable_if_t<!is_pointer<_Ptr>::value, int> = 0>
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     return __p;
   }
 };
@@ -918,7 +925,7 @@ template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ = std::__uninitialized_allocator_copy(this->__alloc_, __first, __last, __tx.__pos_);
+  __tx.__pos_ = std::__uninitialized_allocator_copy(this->__alloc_, std::move(__first), std::move(__last), __tx.__pos_);
 }
 
 //  Default constructs __n objects starting at __end_
@@ -1027,23 +1034,28 @@ vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __l
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator, class _Sentinel>
+template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-vector<_Tp, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel __last, difference_type __n) {
+vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
     if (__new_size > size()) {
-      _ForwardIterator __mid = std::next(__first, size());
+#if _LIBCPP_STD_VER >= 23
+      auto __mid = ranges::copy_n(std::move(__first), size(), this->__begin_).in;
+      __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
+#else
+      _Iterator __mid = std::next(__first, size());
       std::copy(__first, __mid, this->__begin_);
       __construct_at_end(__mid, __last, __new_size - size());
+#endif
     } else {
-      pointer __m = std::__copy(__first, __last, this->__begin_).second;
+      pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
       this->__destruct_at_end(__m);
     }
   } else {
     __vdeallocate();
     __vallocate(__recommend(__new_size));
-    __construct_at_end(__first, __last, __new_size);
+    __construct_at_end(std::move(__first), std::move(__last), __new_size);
   }
 }
 
@@ -1293,28 +1305,40 @@ template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::__insert_with_size(
     const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n) {
-  auto __insertion_size = __n;
-  pointer __p           = this->__begin_ + (__position - begin());
+  pointer __p = this->__begin_ + (__position - begin());
   if (__n > 0) {
     if (__n <= this->__cap_ - this->__end_) {
-      size_type __old_n    = __n;
       pointer __old_last   = this->__end_;
-      _Iterator __m        = std::next(__first, __n);
       difference_type __dx = this->__end_ - __p;
       if (__n > __dx) {
-        __m                    = __first;
-        difference_type __diff = this->__end_ - __p;
-        std::advance(__m, __diff);
-        __construct_at_end(__m, __last, __n - __diff);
-        __n = __dx;
-      }
-      if (__n > 0) {
-        __move_range(__p, __old_last, __p + __old_n);
-        std::copy(__first, __m, __p);
+#if _LIBCPP_STD_VER >= 23
+        if constexpr (!forward_iterator<_Iterator>) {
+          __construct_at_end(std::move(__first), std::move(__last), __n);
+          std::rotate(__p, __old_last, this->__end_);
+        } else
+#endif
+        {
+          _Iterator __m = std::next(__first, __dx);
+          __construct_at_end(__m, __last, __n - __dx);
+          if (__dx > 0) {
+            __move_range(__p, __old_last, __p + __n);
+            std::copy(__first, __m, __p);
+          }
+        }
+      } else {
+        __move_range(__p, __old_last, __p + __n);
+#if _LIBCPP_STD_VER >= 23
+        if constexpr (!forward_iterator<_Iterator>) {
+          ranges::copy_n(std::move(__first), __n, __p);
+        } else
+#endif
+        {
+          std::copy_n(__first, __n, __p);
+        }
       }
     } else {
       __split_buffer<value_type, allocator_type&> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
-      __v.__construct_at_end_with_size(__first, __insertion_size);
+      __v.__construct_at_end_with_size(std::move(__first), __n);
       __p = __swap_out_circular_buffer(__v, __p);
     }
   }

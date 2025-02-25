@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Parallel.h"
@@ -29,6 +30,7 @@
 
 using namespace llvm;
 using namespace llvm::COFF;
+using namespace llvm::object;
 using namespace llvm::support;
 
 namespace lld::coff {
@@ -54,6 +56,10 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
+    // FIXME: Remove this once we resolve all defineds before all undefineds in
+    //        ObjFile::initializeSymbols().
+    if (!file->lazy)
+      return;
     file->lazy = false;
     file->symtab.ctx.driver.addFile(file);
     break;
@@ -1251,6 +1257,78 @@ void SymbolTable::assignExportOrdinals() {
   if (max > std::numeric_limits<uint16_t>::max())
     Fatal(ctx) << "too many exported symbols (got " << max << ", max "
                << Twine(std::numeric_limits<uint16_t>::max()) << ")";
+}
+
+void SymbolTable::parseModuleDefs(StringRef path) {
+  llvm::TimeTraceScope timeScope("Parse def file");
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
+  COFFModuleDefinition m = check(parseCOFFModuleDefinition(
+      mb->getMemBufferRef(), machine, ctx.config.mingw));
+
+  // Include in /reproduce: output if applicable.
+  ctx.driver.takeBuffer(std::move(mb));
+
+  if (ctx.config.outputFile.empty())
+    ctx.config.outputFile = std::string(saver().save(m.OutputFile));
+  ctx.config.importName = std::string(saver().save(m.ImportName));
+  if (m.ImageBase)
+    ctx.config.imageBase = m.ImageBase;
+  if (m.StackReserve)
+    ctx.config.stackReserve = m.StackReserve;
+  if (m.StackCommit)
+    ctx.config.stackCommit = m.StackCommit;
+  if (m.HeapReserve)
+    ctx.config.heapReserve = m.HeapReserve;
+  if (m.HeapCommit)
+    ctx.config.heapCommit = m.HeapCommit;
+  if (m.MajorImageVersion)
+    ctx.config.majorImageVersion = m.MajorImageVersion;
+  if (m.MinorImageVersion)
+    ctx.config.minorImageVersion = m.MinorImageVersion;
+  if (m.MajorOSVersion)
+    ctx.config.majorOSVersion = m.MajorOSVersion;
+  if (m.MinorOSVersion)
+    ctx.config.minorOSVersion = m.MinorOSVersion;
+
+  for (COFFShortExport e1 : m.Exports) {
+    Export e2;
+    // Renamed exports are parsed and set as "ExtName = Name". If Name has
+    // the form "OtherDll.Func", it shouldn't be a normal exported
+    // function but a forward to another DLL instead. This is supported
+    // by both MS and GNU linkers.
+    if (!e1.ExtName.empty() && e1.ExtName != e1.Name &&
+        StringRef(e1.Name).contains('.')) {
+      e2.name = saver().save(e1.ExtName);
+      e2.forwardTo = saver().save(e1.Name);
+    } else {
+      e2.name = saver().save(e1.Name);
+      e2.extName = saver().save(e1.ExtName);
+    }
+    e2.exportAs = saver().save(e1.ExportAs);
+    e2.importName = saver().save(e1.ImportName);
+    e2.ordinal = e1.Ordinal;
+    e2.noname = e1.Noname;
+    e2.data = e1.Data;
+    e2.isPrivate = e1.Private;
+    e2.constant = e1.Constant;
+    e2.source = ExportSource::ModuleDefinition;
+    exports.push_back(e2);
+  }
+}
+
+// Parse a string of the form of "<from>=<to>".
+void SymbolTable::parseAlternateName(StringRef s) {
+  auto [from, to] = s.split('=');
+  if (from.empty() || to.empty())
+    Fatal(ctx) << "/alternatename: invalid argument: " << s;
+  auto it = alternateNames.find(from);
+  if (it != alternateNames.end() && it->second != to)
+    Fatal(ctx) << "/alternatename: conflicts: " << s;
+  alternateNames.insert(it, std::make_pair(from, to));
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name) {

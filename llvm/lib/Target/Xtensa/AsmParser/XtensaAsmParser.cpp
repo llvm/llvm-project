@@ -12,7 +12,6 @@
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
-#include "XtensaUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
@@ -628,7 +627,7 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
     return ParseStatus::NoMatch;
   }
 
-  if (!checkRegister(RegNo, getSTI().getFeatureBits()))
+  if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
     return ParseStatus::NoMatch;
 
   if (HadParens)
@@ -732,7 +731,7 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
 
-    if (!checkRegister(RegNo, getSTI().getFeatureBits()))
+    if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
       return Error(NameLoc, "invalid register name");
 
     // Parse operand

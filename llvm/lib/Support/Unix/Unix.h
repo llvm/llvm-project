@@ -39,9 +39,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-#ifdef HAVE_DLFCN_H
-# include <dlfcn.h>
-#endif
+#include <dlfcn.h>
 
 # include <fcntl.h>
 

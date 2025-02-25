@@ -377,7 +377,7 @@ add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
 
 # Build target agnostic offloading library.
-add_subdirectory(src)
+add_subdirectory(libomptarget)
 
 add_subdirectory(tools/offload-tblgen)
 add_subdirectory(liboffload)

@@ -583,7 +583,8 @@ class ObjCARCOpt {
       const ColorVector &CV = BlockEHColors.find(BB)->second;
       assert(CV.size() > 0 && "Uncolored block");
       for (BasicBlock *EHPadBB : CV)
-        if (auto *EHPad = dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHI())) {
+        if (auto *EHPad =
+                dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHIIt())) {
           OpBundles.emplace_back("funclet", EHPad);
           return;
         }
@@ -1762,21 +1763,15 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                            DenseMap<Value *, RRInfo> &Releases,
                            SmallVectorImpl<Instruction *> &DeadInsts,
                            Module *M) {
-  Type *ArgTy = Arg->getType();
-  Type *ParamTy = PointerType::getUnqual(Type::getInt8Ty(ArgTy->getContext()));
-
   LLVM_DEBUG(dbgs() << "== ObjCARCOpt::MoveCalls ==\n");
 
   // Insert the new retain and release calls.
   for (Instruction *InsertPt : ReleasesToMove.ReverseInsertPts) {
-    Value *MyArg = ArgTy == ParamTy ? Arg
-                                    : new BitCastInst(Arg, ParamTy, "",
-                                                      InsertPt->getIterator());
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
     CallInst *Call =
-        CallInst::Create(Decl, MyArg, BundleList, "", InsertPt->getIterator());
+        CallInst::Create(Decl, Arg, BundleList, "", InsertPt->getIterator());
     Call->setDoesNotThrow();
     Call->setTailCall();
 
@@ -1786,14 +1781,11 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                       << *InsertPt << "\n");
   }
   for (Instruction *InsertPt : RetainsToMove.ReverseInsertPts) {
-    Value *MyArg = ArgTy == ParamTy ? Arg
-                                    : new BitCastInst(Arg, ParamTy, "",
-                                                      InsertPt->getIterator());
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
     CallInst *Call =
-        CallInst::Create(Decl, MyArg, BundleList, "", InsertPt->getIterator());
+        CallInst::Create(Decl, Arg, BundleList, "", InsertPt->getIterator());
     // Attach a clang.imprecise_release metadata tag, if appropriate.
     if (MDNode *M = ReleasesToMove.ReleaseMetadata)
       Call->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease), M);

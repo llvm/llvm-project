@@ -31,7 +31,9 @@ end program
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           fir.if %[[VAL_7]] {
-! CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_4]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:             %[[C0:.*]] = arith.constant 0 : index
+! CHECK:             %[[SHAPE:.*]] = fir.shape %[[C0]]
+! CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_4]](%[[SHAPE]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:             fir.store %[[VAL_8]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 0 : index
