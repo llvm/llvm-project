@@ -20,7 +20,21 @@
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
-  auto std_unique_copy = [](auto first, auto last, auto out) { return std::unique_copy(first, last, out); };
+  auto std_unique_copy      = [](auto first, auto last, auto out) { return std::unique_copy(first, last, out); };
+  auto std_unique_copy_pred = [](auto first, auto last, auto out) {
+    return std::unique_copy(first, last, out, [](auto a, auto b) {
+      benchmark::DoNotOptimize(a);
+      benchmark::DoNotOptimize(b);
+      return a == b;
+    });
+  };
+  auto ranges_unique_copy_pred = [](auto first, auto last, auto out) {
+    return std::ranges::unique_copy(first, last, out, [](auto a, auto b) {
+      benchmark::DoNotOptimize(a);
+      benchmark::DoNotOptimize(b);
+      return a == b;
+    });
+  };
 
   // Create a sequence of the form xxxxxxxxxxyyyyyyyyyy and unique the
   // adjacent equal elements.
@@ -50,12 +64,21 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
+    // {std,ranges}::unique_copy(it, it, out)
     bm.operator()<std::vector<int>>("std::unique_copy(vector<int>) (contiguous)", std_unique_copy);
     bm.operator()<std::deque<int>>("std::unique_copy(deque<int>) (contiguous)", std_unique_copy);
     bm.operator()<std::list<int>>("std::unique_copy(list<int>) (contiguous)", std_unique_copy);
     bm.operator()<std::vector<int>>("rng::unique_copy(vector<int>) (contiguous)", std::ranges::unique_copy);
     bm.operator()<std::deque<int>>("rng::unique_copy(deque<int>) (contiguous)", std::ranges::unique_copy);
     bm.operator()<std::list<int>>("rng::unique_copy(list<int>) (contiguous)", std::ranges::unique_copy);
+
+    // {std,ranges}::unique_copy(it, it, out, pred)
+    bm.operator()<std::vector<int>>("std::unique_copy(vector<int>, pred) (contiguous)", std_unique_copy_pred);
+    bm.operator()<std::deque<int>>("std::unique_copy(deque<int>, pred) (contiguous)", std_unique_copy_pred);
+    bm.operator()<std::list<int>>("std::unique_copy(list<int>, pred) (contiguous)", std_unique_copy_pred);
+    bm.operator()<std::vector<int>>("rng::unique_copy(vector<int>, pred) (contiguous)", ranges_unique_copy_pred);
+    bm.operator()<std::deque<int>>("rng::unique_copy(deque<int>, pred) (contiguous)", ranges_unique_copy_pred);
+    bm.operator()<std::list<int>>("rng::unique_copy(list<int>, pred) (contiguous)", ranges_unique_copy_pred);
   }
 
   // Create a sequence of the form xxyyxxyyxxyyxxyyxxyy and unique
@@ -91,12 +114,21 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
+    // {std,ranges}::unique_copy(it, it, out)
     bm.operator()<std::vector<int>>("std::unique_copy(vector<int>) (sprinkled)", std_unique_copy);
     bm.operator()<std::deque<int>>("std::unique_copy(deque<int>) (sprinkled)", std_unique_copy);
     bm.operator()<std::list<int>>("std::unique_copy(list<int>) (sprinkled)", std_unique_copy);
     bm.operator()<std::vector<int>>("rng::unique_copy(vector<int>) (sprinkled)", std::ranges::unique_copy);
     bm.operator()<std::deque<int>>("rng::unique_copy(deque<int>) (sprinkled)", std::ranges::unique_copy);
     bm.operator()<std::list<int>>("rng::unique_copy(list<int>) (sprinkled)", std::ranges::unique_copy);
+
+    // {std,ranges}::unique_copy(it, it, out, pred)
+    bm.operator()<std::vector<int>>("std::unique_copy(vector<int>, pred) (sprinkled)", std_unique_copy_pred);
+    bm.operator()<std::deque<int>>("std::unique_copy(deque<int>, pred) (sprinkled)", std_unique_copy_pred);
+    bm.operator()<std::list<int>>("std::unique_copy(list<int>, pred) (sprinkled)", std_unique_copy_pred);
+    bm.operator()<std::vector<int>>("rng::unique_copy(vector<int>, pred) (sprinkled)", ranges_unique_copy_pred);
+    bm.operator()<std::deque<int>>("rng::unique_copy(deque<int>, pred) (sprinkled)", ranges_unique_copy_pred);
+    bm.operator()<std::list<int>>("rng::unique_copy(list<int>, pred) (sprinkled)", ranges_unique_copy_pred);
   }
 
   benchmark::Initialize(&argc, argv);
