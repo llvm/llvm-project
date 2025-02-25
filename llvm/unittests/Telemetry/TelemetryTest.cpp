@@ -213,6 +213,8 @@ std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
 }
 
 TEST(TelemetryTest, TelemetryDisabled) {
+  if (!Config::BuildTimeEnableTelemetry)
+    GTEST_SKIP();
   TestContext Context;
   Context.HasVendorPlugin = false;
 
@@ -222,6 +224,8 @@ TEST(TelemetryTest, TelemetryDisabled) {
 }
 
 TEST(TelemetryTest, TelemetryEnabled) {
+  if (!Config::BuildTimeEnableTelemetry)
+    GTEST_SKIP();
   const std::string ToolName = "TelemetryTestTool";
 
   // Preset some params.
