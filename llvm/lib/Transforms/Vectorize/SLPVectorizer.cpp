@@ -814,34 +814,14 @@ namespace {
 /// equivalent forms. For example, multiplication by a power of 2 can be
 /// interchanged with a left shift.
 ///
-/// Derived classes implement specific interchange patterns by overriding the
-/// virtual methods to define their interchange logic.
-///
 /// The class maintains a reference to the main instruction (MainOp) and
 /// provides methods to:
-/// - Check if another instruction is interchangeable (isSame)
+/// - Check if the incoming instruction can use the same instruction as MainOp
+/// (add)
 /// - Get the opcode for the interchangeable form (getOpcode)
 /// - Get the operands for the interchangeable form (getOperand)
-class InterchangeableInstruction {
-protected:
-  Instruction *const MainOp = nullptr;
-
-public:
-  InterchangeableInstruction(Instruction *MainOp) : MainOp(MainOp) {}
-  virtual bool isSame(Instruction *I) const {
-    return MainOp->getOpcode() == I->getOpcode();
-  }
-  virtual unsigned getOpcode() const { return MainOp->getOpcode(); }
-  virtual SmallVector<Value *> getOperand(Instruction *I) const {
-    assert(MainOp->getOpcode() == I->getOpcode() &&
-           "Cannot convert the instruction.");
-    return SmallVector<Value *>(MainOp->operands());
-  }
-  virtual ~InterchangeableInstruction() = default;
-};
-
-class InterchangeableBinOp final : public InterchangeableInstruction {
-  using MaskType = std::uint_fast8_t;
+class InterchangeableBinOp {
+  using MaskType = std::uint_fast16_t;
   // Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
@@ -855,15 +835,17 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
     And_BIT = 0b100000,
     Or_BIT = 0b1000000,
     Xor_BIT = 0b10000000,
+    MainOp_BIT = 0b100000000
   };
+  Instruction *MainOp = nullptr;
   // The bit it sets represents whether MainOp can be converted to.
-  mutable MaskType Mask = Xor_BIT | Or_BIT | And_BIT | Sub_BIT | Add_BIT |
-                          Mul_BIT | AShr_BIT | SHL_BIT;
+  MaskType Mask = MainOp_BIT | Xor_BIT | Or_BIT | And_BIT | Sub_BIT | Add_BIT |
+                  Mul_BIT | AShr_BIT | SHL_BIT;
   // We cannot create an interchangeable instruction that does not exist in VL.
   // For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0], but
   // 'shl' does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
   // SeenBefore is used to know what operations have been seen before.
-  mutable MaskType SeenBefore = 0;
+  MaskType SeenBefore = 0;
 
   /// Return a non-nullptr if either operand of I is a ConstantInt.
   static std::pair<ConstantInt *, unsigned>
@@ -910,7 +892,7 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
     llvm_unreachable("Unsupported opcode.");
   }
 
-  bool tryAnd(MaskType X) const {
+  bool trySet(MaskType X) {
     if (Mask & X) {
       Mask &= X;
       return true;
@@ -919,39 +901,47 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
   }
 
 public:
-  using InterchangeableInstruction::InterchangeableInstruction;
-  bool isSame(Instruction *I) const override {
+  InterchangeableBinOp(Instruction *MainOp) : MainOp(MainOp) {}
+  bool add(Instruction *I) {
     unsigned Opcode = I->getOpcode();
-    if (!binary_search(SupportedOp, Opcode))
+    assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
+    if (!binary_search(SupportedOp, Opcode)) {
+      if (MainOp->getOpcode() == Opcode)
+        return trySet(MainOp_BIT);
       return false;
+    }
     SeenBefore |= opcodeToMask(Opcode);
     ConstantInt *CI = isBinOpWithConstantInt(I).first;
     if (CI) {
+      constexpr MaskType CanBeAll = Xor_BIT | Or_BIT | And_BIT | Sub_BIT |
+                                    Add_BIT | Mul_BIT | AShr_BIT | SHL_BIT;
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
         if (CIValue.isZero())
-          return true;
-        return tryAnd(Mul_BIT | SHL_BIT);
+          return trySet(CanBeAll);
+        return trySet(Mul_BIT | SHL_BIT);
       case Instruction::Mul:
         if (CIValue.isOne())
-          return true;
+          return trySet(CanBeAll);
         if (CIValue.isPowerOf2())
-          return tryAnd(Mul_BIT | SHL_BIT);
+          return trySet(Mul_BIT | SHL_BIT);
         break;
       case Instruction::And:
         if (CIValue.isAllOnes())
-          return true;
+          return trySet(CanBeAll);
         break;
       default:
         if (CIValue.isZero())
-          return true;
+          return trySet(CanBeAll);
         break;
       }
     }
-    return tryAnd(opcodeToMask(Opcode));
+    return trySet(opcodeToMask(Opcode));
   }
-  unsigned getOpcode() const override {
+  unsigned getOpcode() const {
+    if (Mask & MainOp_BIT)
+      return MainOp->getOpcode();
     MaskType Candidate = Mask & SeenBefore;
     if (Candidate & SHL_BIT)
       return Instruction::Shl;
@@ -971,12 +961,12 @@ public:
       return Instruction::Xor;
     llvm_unreachable("Cannot find interchangeable instruction.");
   }
-  SmallVector<Value *> getOperand(Instruction *I) const override {
+  SmallVector<Value *> getOperand(Instruction *I) const {
     unsigned ToOpcode = I->getOpcode();
-    assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
     unsigned FromOpcode = MainOp->getOpcode();
     if (FromOpcode == ToOpcode)
       return SmallVector<Value *>(MainOp->operands());
+    assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
     auto [CI, Pos] = isBinOpWithConstantInt(MainOp);
     const APInt &FromCIValue = CI->getValue();
     unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
@@ -1023,27 +1013,12 @@ public:
   }
 };
 
-static SmallVector<std::unique_ptr<InterchangeableInstruction>>
-getInterchangeableInstruction(Instruction *MainOp) {
-  SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate;
-  Candidate.push_back(std::make_unique<InterchangeableInstruction>(MainOp));
-  if (MainOp->isBinaryOp())
-    Candidate.push_back(std::make_unique<InterchangeableBinOp>(MainOp));
-  return Candidate;
-}
-
-static bool getInterchangeableInstruction(
-    SmallVector<std::unique_ptr<InterchangeableInstruction>> &Candidate,
-    Instruction *I) {
-  auto Iter = std::stable_partition(
-      Candidate.begin(), Candidate.end(),
-      [&](const std::unique_ptr<InterchangeableInstruction> &C) {
-        return C->isSame(I);
-      });
-  if (Iter == Candidate.begin())
-    return false;
-  Candidate.erase(Iter, Candidate.end());
-  return true;
+static std::optional<InterchangeableBinOp> isConvertible(Instruction *From,
+                                                         Instruction *To) {
+  InterchangeableBinOp Converter(From);
+  if (Converter.add(From) && Converter.add(To))
+    return Converter;
+  return {};
 }
 
 static bool isConvertible(Instruction *I, Instruction *MainOp,
@@ -1056,16 +1031,7 @@ static bool isConvertible(Instruction *I, Instruction *MainOp,
     return true;
   if (!I->isBinaryOp())
     return false;
-  SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate(
-      getInterchangeableInstruction(I));
-  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
-    if (C->isSame(I) && C->isSame(MainOp))
-      return true;
-  Candidate = getInterchangeableInstruction(I);
-  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
-    if (C->isSame(I) && C->isSame(AltOp))
-      return true;
-  return false;
+  return isConvertible(I, MainOp) || isConvertible(I, AltOp);
 }
 
 static std::pair<Instruction *, SmallVector<Value *>>
@@ -1077,15 +1043,12 @@ convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   if (I->getOpcode() == AltOp->getOpcode())
     return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
   assert(I->isBinaryOp() && "Cannot convert the instruction.");
-  SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate(
-      getInterchangeableInstruction(I));
-  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
-    if (C->isSame(I) && C->isSame(MainOp))
-      return std::make_pair(MainOp, C->getOperand(MainOp));
-  Candidate = getInterchangeableInstruction(I);
-  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
-    if (C->isSame(I) && C->isSame(AltOp))
-      return std::make_pair(AltOp, C->getOperand(AltOp));
+  std::optional<InterchangeableBinOp> Converter(isConvertible(I, MainOp));
+  if (Converter)
+    return std::make_pair(MainOp, Converter->getOperand(MainOp));
+  Converter = isConvertible(I, AltOp);
+  if (Converter)
+    return std::make_pair(AltOp, Converter->getOperand(AltOp));
   llvm_unreachable("Cannot convert the instruction.");
 }
 
@@ -1209,11 +1172,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   unsigned Opcode = MainOp->getOpcode();
   unsigned AltOpcode = Opcode;
 
-  SmallVector<std::unique_ptr<InterchangeableInstruction>>
-      InterchangeableInstructionCandidate(
-          getInterchangeableInstruction(MainOp));
-  SmallVector<std::unique_ptr<InterchangeableInstruction>>
-      AlternateInterchangeableInstructionCandidate;
+  InterchangeableBinOp InterchangeableConverter(MainOp);
+  std::optional<InterchangeableBinOp> AlternateInterchangeableConverter;
   bool SwappedPredsCompatible = IsCmpOp && [&]() {
     SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
     UniquePreds.insert(BasePred);
@@ -1260,17 +1220,15 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       return InstructionsState::invalid();
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
-      if (getInterchangeableInstruction(InterchangeableInstructionCandidate, I))
+      if (InterchangeableConverter.add(I))
         continue;
-      if (AlternateInterchangeableInstructionCandidate.empty()) {
+      if (!AlternateInterchangeableConverter) {
         if (!isValidForAlternation(Opcode) ||
             !isValidForAlternation(InstOpcode))
           return InstructionsState::invalid();
-        AlternateInterchangeableInstructionCandidate =
-            getInterchangeableInstruction(I);
+        AlternateInterchangeableConverter = InterchangeableBinOp(I);
       }
-      if (getInterchangeableInstruction(
-              AlternateInterchangeableInstructionCandidate, I))
+      if (AlternateInterchangeableConverter->add(I))
         continue;
     } else if (IsCastOp && isa<CastInst>(I)) {
       Value *Op0 = MainOp->getOperand(0);
@@ -1374,25 +1332,22 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
 
   if (IsBinOp) {
     auto FindOp =
-        [&](ArrayRef<std::unique_ptr<InterchangeableInstruction>> Candidate) {
-          for (const std::unique_ptr<InterchangeableInstruction> &I :
-               Candidate) {
-            unsigned InterchangeableInstructionOpcode = I->getOpcode();
-            for (Value *V : VL) {
-              if (isa<PoisonValue>(V))
-                continue;
-              auto *Inst = cast<Instruction>(V);
-              if (Inst->getOpcode() == InterchangeableInstructionOpcode)
-                return Inst;
-            }
+        [&](const InterchangeableBinOp &Converter) {
+          unsigned InterchangeableInstructionOpcode = Converter.getOpcode();
+          for (Value *V : VL) {
+            if (isa<PoisonValue>(V))
+              continue;
+            auto *Inst = cast<Instruction>(V);
+            if (Inst->getOpcode() == InterchangeableInstructionOpcode)
+              return Inst;
           }
           llvm_unreachable(
               "Cannot find the candidate instruction for InstructionsState.");
         };
-    MainOp = FindOp(InterchangeableInstructionCandidate);
-    AltOp = AlternateInterchangeableInstructionCandidate.empty()
-                ? MainOp
-                : FindOp(AlternateInterchangeableInstructionCandidate);
+    MainOp = FindOp(InterchangeableConverter);
+    AltOp = AlternateInterchangeableConverter
+                ? FindOp(*AlternateInterchangeableConverter)
+                : MainOp;
   }
   return InstructionsState(MainOp, AltOp);
 }
