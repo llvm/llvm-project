@@ -59,8 +59,12 @@ static bool hasTypeIdLoadAtConstantOffset(const Module *M, Value *VPtr,
   for (const Use &U : VPtr->uses()) {
     Value *User = U.getUser();
     if (isa<BitCastInst>(User)) {
+      // Just skip the cast instruction.
       HasTypeIdLoad |= hasTypeIdLoadAtConstantOffset(M, User, Offset, CI, ABI);
     } else if (isa<LoadInst>(User)) {
+      // The LoadInst is the instruction that loads a vtable slot. If the offset
+      // from which it loads corresponds to the type id slot, then this load
+      // represents a type id load.
       if (Offset ==
           ABI->getOffsetFromTypeInfoSlotToAddressPoint(M->getDataLayout()))
         return true;
@@ -81,6 +85,7 @@ static bool hasTypeIdLoadAtConstantOffset(const Module *M, Value *VPtr,
         }
       }
     } else if (auto *Phi = dyn_cast<PHINode>(User)) {
+      // Continue search for PHINode.
       HasTypeIdLoad |= hasTypeIdLoadAtConstantOffset(M, User, Offset, CI, ABI);
     } else {
       HasTypeIdLoad = true;
