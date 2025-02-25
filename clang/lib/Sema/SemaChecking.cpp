@@ -7435,10 +7435,11 @@ bool DecomposePrintfHandler::GetSpecifiers(
   const char *Str = Data.data();
   llvm::SmallBitVector BV;
   UncoveredArgHandler UA;
+  const Expr *PrintfArgs[] = {FSL->getFormatString()};
   DecomposePrintfHandler H(S, FSL, FSL->getFormatString(), Type, 0, 0, IsObjC,
-                           Str, Sema::FAPK_Elsewhere, {FSL->getFormatString()},
-                           0, InFunctionCall, Sema::VariadicDoesNotApply, BV,
-                           UA, Args);
+                           Str, Sema::FAPK_Elsewhere, PrintfArgs, 0,
+                           InFunctionCall, Sema::VariadicDoesNotApply, BV, UA,
+                           Args);
 
   if (!analyze_format_string::ParsePrintfString(
           H, Str, Str + Data.size(), S.getLangOpts(), S.Context.getTargetInfo(),
@@ -7447,7 +7448,7 @@ bool DecomposePrintfHandler::GetSpecifiers(
   if (H.HadError)
     return false;
 
-  std::sort(
+  std::stable_sort(
       Args.begin(), Args.end(),
       [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
         return A.getPosition() < B.getPosition();
