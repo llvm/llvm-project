@@ -308,14 +308,12 @@ namespace call_with_adopt_ref {
 }
 
 namespace call_with_cf_constant {
-  static const NSArray *array = @[@"hello"];
-  static const NSDictionary *dict = @{@"hello": @3};
   void bar(const NSArray *);
   void baz(const NSDictionary *);
   void foo() {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
-    bar(array);
-    baz(dict);
+    bar(@[@"hello"]);
+    baz(@{@"hello": @3});
   }
 }
 

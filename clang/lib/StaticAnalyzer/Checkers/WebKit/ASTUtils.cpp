@@ -37,10 +37,6 @@ bool tryToFindPtrOrigin(
           QT.isConstQualified()) {
         return callback(E, true);
       }
-      if (auto *VD = dyn_cast<VarDecl>(ValDecl)) {
-        if (auto *Init = VD->getInit())
-          E = Init->IgnoreParenCasts();
-      }
     }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
       E = tempExpr->getSubExpr();
