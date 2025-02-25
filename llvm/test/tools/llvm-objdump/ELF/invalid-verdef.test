@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -p %t 2>&1 | FileCheck --check-prefix=BROKEN-VERDEF -DFILE=%t %s
+
+## Ensure we emit a warning when vd_aux offset field is invalid.
+
+# BROKEN-VERDEF: Version definitions:
+# BROKEN-VERDEF-NEXT: warning: '[[FILE]]': corrupted section: vd_aux value 69 in section verdef points past end of the section
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+Sections:
+  - Name:            .gnu.version_d
+    Type:            SHT_GNU_verdef
+    Entries:
+      - Version:         1
+        Flags:           0
+        VersionNdx:      0
+        VDAux:           69
+        Names:
+          - VERSION_1
+DynamicSymbols: []
+...
