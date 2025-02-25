@@ -746,8 +746,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
 
       if (i == 0) {
         // First, visit all predecessor edges.
-        NumTotalEdges = Predecessors[BB].size();
-        for (auto *Pred : Predecessors[BB]) {
+        auto &Preds = Predecessors[BB];
+        NumTotalEdges = Preds.size();
+        for (auto *Pred : Preds) {
           Edge E = std::make_pair(Pred, BB);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
           if (E.first == E.second)
@@ -758,8 +759,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
         }
       } else {
         // On the second round, visit all successor edges.
-        NumTotalEdges = Successors[BB].size();
-        for (auto *Succ : Successors[BB]) {
+        auto &Succs = Successors[BB];
+        NumTotalEdges = Succs.size();
+        for (auto *Succ : Succs) {
           Edge E = std::make_pair(BB, Succ);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
         }
