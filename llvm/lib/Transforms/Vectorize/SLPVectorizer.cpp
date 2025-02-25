@@ -1048,9 +1048,8 @@ convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   if (Converter)
     return std::make_pair(MainOp, Converter->getOperand(MainOp));
   Converter = isConvertible(I, AltOp);
-  if (Converter)
-    return std::make_pair(AltOp, Converter->getOperand(AltOp));
-  llvm_unreachable("Cannot convert the instruction.");
+  assert(Converter && "Cannot convert the instruction.");
+  return std::make_pair(AltOp, Converter->getOperand(AltOp));
 }
 
 /// Main data required for vectorization of instructions.
