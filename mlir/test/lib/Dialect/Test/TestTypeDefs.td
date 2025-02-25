@@ -148,8 +148,8 @@ def TestType : Test_Type<"Test", [
 }
 
 def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
-  DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getIndexBitwidth",
-                                                        "areCompatible"]>
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+    ["getIndexBitwidth", "areCompatible", "getPreferredAlignment"]>
 ]> {
   let mnemonic = "test_type_with_layout";
   let parameters = (ins "unsigned":$key);
