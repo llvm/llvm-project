@@ -1,4 +1,8 @@
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -faligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx     -fsized-deallocation    -faligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx  -fno-sized-deallocation    -faligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx  -fno-sized-deallocation -fno-aligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx     -fsized-deallocation -fno-aligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - | FileCheck %s
+
 // RUN: %clang_cc1 %s -triple arm64-apple-macosx -faligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fexperimental-new-constant-interpreter -o - | FileCheck %s
 
 using size_t = __SIZE_TYPE__;

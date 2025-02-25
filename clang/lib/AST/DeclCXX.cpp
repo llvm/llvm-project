@@ -2533,7 +2533,6 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
       getOverloadedOperator() != OO_Array_Delete)
     return false;
 
-  unsigned NumParams = getNumParams();
   bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
 
   // C++ [basic.stc.dynamic.deallocation]p2:
@@ -2551,23 +2550,28 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
     }
 
     FunctionDecl *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
-    for (unsigned Idx = 1; Idx < NumParams; ++Idx) {
+    // A type aware allocation function template is only valid if the first
+    // parameter is dependent
+    if (!SpecializedDecl->getParamDecl(0)->getType()->isDependentType())
+      return false;
+
+    // and none of the other parameters are dependent
+    for (unsigned Idx = 1; Idx < getNumParams(); ++Idx) {
       if (SpecializedDecl->getParamDecl(Idx)->getType()->isDependentType())
         return false;
     }
   }
 
-  unsigned UsualParams = 1;
-  if (IsTypeAware)
-    ++UsualParams;
-
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   If a class T has a member deallocation function named operator delete
-  //   with exactly one parameter or a type aware operator delete with two
-  //   arguments, then that function is a usual (non-placement)
+  //   with exactly one parameter, then that function is a usual (non-placement)
   //   deallocation function. [...]
-  if (getNumParams() == UsualParams)
+  if (getNumParams() == 1)
     return true;
+  unsigned UsualParams = 1;
+
+  if (IsTypeAware)
+    ++UsualParams;
 
   // C++ P0722:
   //   A destroying operator delete is a usual deallocation function if
@@ -2606,8 +2610,8 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   // FIXME(EricWF): Destroying Delete should be a language option. How do we
   // handle when destroying delete is used prior to C++17?
   if (Context.getLangOpts().CPlusPlus17 ||
-      Context.getLangOpts().AlignedAllocation ||
-      isDestroyingOperatorDelete())
+      Context.getLangOpts().AlignedAllocation || isDestroyingOperatorDelete() ||
+      IsTypeAware)
     return true;
 
   // This function is a usual deallocation function if there are no

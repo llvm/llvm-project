@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators -fno-sized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators    -fsized-deallocation -fno-aligned-allocation
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -DNO_TAA -std=c++23 -fno-experimental-cxx-type-aware-allocators
 
 namespace std {

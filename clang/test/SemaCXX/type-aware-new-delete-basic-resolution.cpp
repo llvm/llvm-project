@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation -fno-aligned-allocation
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -DTADD -std=c++23 -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete -fexceptions
 
 namespace std {
@@ -12,6 +15,12 @@ static_assert(__has_feature(cxx_type_aware_allocators));
 static_assert(__has_feature(cxx_type_aware_destroying_delete));
 #else
 static_assert(!__has_feature(cxx_type_aware_destroying_delete));
+#endif
+
+#if defined(__cpp_aligned_new)
+#define ALLOCATION_ALIGNMENT , std::align_val_t
+#else
+#define ALLOCATION_ALIGNMENT
 #endif
 
 using size_t = __SIZE_TYPE__;
@@ -36,8 +45,8 @@ void *operator new(std::type_identity<UntypedInclassNewOveraligned_NoAlignedAllo
 void operator delete(std::type_identity<UntypedInclassNewOveraligned_NoAlignedAlloc>, void *, size_t, std::align_val_t); // #8
 
 struct __attribute__((aligned(128))) UntypedInclassNewOveraligned_AlignedAlloc {
-  void *operator new(size_t, std::align_val_t) = delete; // #9
-  void  operator delete(void *, std::align_val_t) = delete; // #10
+  void *operator new(size_t ALLOCATION_ALIGNMENT) = delete; // #9
+  void  operator delete(void * ALLOCATION_ALIGNMENT) = delete; // #10
 };
 void *operator new(std::type_identity<UntypedInclassNewOveraligned_AlignedAlloc>, size_t, std::align_val_t); // #11
 void  operator delete(std::type_identity<UntypedInclassNewOveraligned_AlignedAlloc>, void *, size_t, std::align_val_t); // #12
@@ -327,13 +336,11 @@ void test() {
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#33 {{'operator delete' has been explicitly marked deleted here}}
 
-  // Are these reasonable? Should we ensure that declaration of new vs delete have consistent type
-  // semantics? How do we define consistent?
   // Constructor clean up invokes untyped delete if untyped delete was used
   InclassNew6 *O10 = new InclassNew6;
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#36 {{'operator delete' has been explicitly marked deleted here}}
-  // expected-error@-3 {{mismatched type aware allocation operators for constructor cleanup}}
+  // expected-error@-3 {{type aware allocation requires matching type aware operator new and type aware operator delete for exception cleanup}}
   // expected-note@#34 {{non-type aware 'operator new' declared here}}
   // expected-note@#36 {{type aware 'operator delete' declared here}}
   delete O10;
@@ -347,13 +354,13 @@ void test() {
   // expected-note@#39 {{'operator delete' has been explicitly marked deleted here}}
 
   InclassNew8 *O12 = new InclassNew8;
-  // expected-error@-1 {{mismatched type aware allocation operators for constructor cleanup}}
+  // expected-error@-1 {{type aware allocation requires matching type aware operator new and type aware operator delete for exception cleanup}}
   // expected-note@#40 {{type aware 'operator new' declared here}}
   // expected-note@#41 {{non-type aware 'operator delete' declared here}}
   delete O12;
 
   InclassNew9 *O13 = new InclassNew9;
-  // expected-error@-1 {{type aware 'operator new' requires matching cleanup 'operator delete' in 'InclassNew9'}}
+  // expected-error@-1 {{type aware 'operator new' requires there to be a corresponding cleanup 'operator delete' in 'InclassNew9'}}
 
   delete O13;
 
@@ -403,13 +410,13 @@ void test() {
   // expected-note@#59 {{member 'operator delete' declared here}}
 
   SubClass6_1 *O22 = new SubClass6_1;
-  // expected-error@-1 {{type aware 'operator new<SubClass6_1>' requires matching 'operator delete' in 'SubClass6_1'}}
+  // expected-error@-1 {{type aware 'operator new<SubClass6_1>' requires there to be a corresponding 'operator delete' in 'SubClass6_1'}}
   // expected-note@#62 {{type aware 'operator new<SubClass6_1>' found in 'SubClass6_1'}}
   // expected-note@#61 {{type aware 'operator delete<SubClass6_1>' found in 'BaseClass6'}}
   delete O22;
 
   SubClass6_2 *O23 = new SubClass6_2;
-  // expected-error@-1 {{type aware 'operator new<SubClass6_2>' requires matching 'operator delete' in 'BaseClass6'}}
+  // expected-error@-1 {{type aware 'operator new<SubClass6_2>' requires there to be a corresponding 'operator delete' in 'BaseClass6'}}
   // expected-note@#60 {{type aware 'operator new<SubClass6_2>' found in 'BaseClass6'}}
   // expected-note@#63 {{type aware 'operator delete<SubClass6_2>' found in 'SubClass6_2'}}
   delete O23;

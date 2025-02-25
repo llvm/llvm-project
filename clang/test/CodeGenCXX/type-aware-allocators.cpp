@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -faligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx    -fsized-deallocation    -faligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o -  | FileCheck --check-prefixes=CHECK,CHECK_SIZED_ALIGNED  %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fno-sized-deallocation    -faligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o -  | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_ALIGNED %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fno-sized-deallocation -fno-aligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o -  | FileCheck --check-prefixes=CHECK,CHECK_NO_SIZE_NO_ALIGN %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx    -fsized-deallocation -fno-aligned-allocation -fexperimental-cxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -o -  | FileCheck --check-prefixes=CHECK,CHECK_SIZED_NO_ALIGN %s
 
 
 namespace std {
@@ -45,15 +48,30 @@ extern "C" void test_no_type_aware_allocator() {
 // CHECK: [[ALLOC_RESULT:%.*]] = call {{.*}} @_Znwm(
 // CHECK: @_ZN2S1C1Ev({{.*}} [[ALLOC_RESULT]])
 // CHECK-NEXT: unwind label %[[S1LPAD:lpad]]
-// CHECK: @_ZdlPvm(
-// CHECK: [[ALIGNED_ALLOC_RESULT:%.*]] = call {{.*}} @_ZnwmSt11align_val_t(
+// CHECK_SIZED_ALIGNED: @_ZdlPvm(
+// CHECK_SIZED_NO_ALIGN: @_ZdlPvm(
+// CHECK_NO_SIZE_ALIGNED: @_ZdlPv(
+// CHECK_NO_SIZE_NO_ALIGN: @_ZdlPv(
+// CHECK_SIZED_ALIGNED: [[ALIGNED_ALLOC_RESULT:%.*]] = call {{.*}} @_ZnwmSt11align_val_t(
+// CHECK_NO_SIZE_ALIGNED: [[ALIGNED_ALLOC_RESULT:%.*]] = call {{.*}} @_ZnwmSt11align_val_t(
+// CHECK_SIZED_NO_ALIGN: [[ALIGNED_ALLOC_RESULT:%.*]] = call {{.*}} @_Znwm(
+// CHECK_NO_SIZE_NO_ALIGN: [[ALIGNED_ALLOC_RESULT:%.*]] = call {{.*}} @_Znwm(
 // CHECK: _ZN2S2C1Ev({{.*}} [[ALIGNED_ALLOC_RESULT]])
 // CHECK-NEXT: unwind label %[[S2LPAD:lpad3]]
-// CHECK: _ZdlPvmSt11align_val_t(
+// CHECK_SIZED_ALIGNED: _ZdlPvmSt11align_val_t(
+// CHECK_NO_SIZE_ALIGNED: _ZdlPvSt11align_val_t(
+// CHECK_SIZED_NO_ALIGN: _ZdlPvm(
+// CHECK_NO_SIZE_NO_ALIGN: _ZdlPv(
 // CHECK: [[S1LPAD]]:{{.*}};
-// CHECK: @_ZdlPvm({{.*}}[[ALLOC_RESULT]], {{.*}})
+// CHECK_SIZED_ALIGNED: @_ZdlPvm({{.*}}[[ALLOC_RESULT]], {{.*}})
+// CHECK_SIZED_NO_ALIGN: @_ZdlPvm({{.*}}[[ALLOC_RESULT]], {{.*}})
+// CHECK_NO_SIZE_ALIGNED: @_ZdlPv({{.*}}[[ALLOC_RESULT]])
+// CHECK_NO_SIZE_NO_ALIGN: @_ZdlPv({{.*}}[[ALLOC_RESULT]])
 // CHECK: [[S2LPAD]]:
-// CHECK: _ZdlPvSt11align_val_t({{.*}}[[ALIGNED_ALLOC_RESULT]], {{.*}})
+// CHECK_SIZED_ALIGNED: _ZdlPvSt11align_val_t({{.*}}[[ALIGNED_ALLOC_RESULT]], {{.*}})
+// CHECK_NO_SIZE_ALIGNED: _ZdlPvSt11align_val_t({{.*}}[[ALIGNED_ALLOC_RESULT]], {{.*}})
+// CHECK_SIZED_NO_ALIGN: _ZdlPvm({{.*}}[[ALIGNED_ALLOC_RESULT]], {{.*}})
+// CHECK_NO_SIZE_NO_ALIGN: _ZdlPv({{.*}}[[ALIGNED_ALLOC_RESULT]])
 
 template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t);
 template <typename T> void operator delete(std::type_identity<T>, void *, size_t, std::align_val_t);
@@ -179,8 +197,8 @@ extern "C" void test_ensure_type_aware_resolution_includes_location() {
 }
 
 // CHECK-LABEL: test_ensure_type_aware_resolution_includes_location
-// `177` in the next line is the line number from the test line in above
-// CHECK: %call = call noundef ptr @_ZN3S12nwIS_EEPvSt13type_identityIT_EmSt11align_val_tj({{.*}}, {{.*}}, {{.*}}, {{.*}} 177)
+// `180` in the next line is the line number from the test line in above
+// CHECK: %call = call noundef ptr @_ZN3S12nwIS_EEPvSt13type_identityIT_EmSt11align_val_tj({{.*}}, {{.*}}, {{.*}}, {{.*}})
 
 // CHECK-LABEL: @_ZN2S8D0Ev
 // CHECK: @_ZN2S8dlEPv(

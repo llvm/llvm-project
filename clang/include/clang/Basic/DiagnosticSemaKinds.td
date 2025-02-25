@@ -9795,9 +9795,9 @@ def err_type_aware_destroying_operator_delete : Error<
 def err_unsupported_type_aware_allocator : Error<
   "type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'">;
 def err_no_type_aware_cleanup_operator_delete : Error<
-  "type aware %0 requires matching cleanup %1 in %2">;
+  "type aware %0 requires there to be a corresponding cleanup %1 in %2">;
 def err_type_aware_cleanup_deallocator_context_mismatch : Error<
-  "type aware %0 requires matching %1 in %2">;
+  "type aware %0 requires there to be a corresponding %1 in %2">;
 def err_type_aware_allocator_missing_matching_operator : Error<
   "declaration of type aware %0 in %1 must have matching type aware %2"
 >;
@@ -9806,7 +9806,7 @@ def note_unmatched_type_aware_allocator_declared : Note<
 def note_type_aware_operator_found : Note<
   "type aware %0 found in %1">;
 def err_mismatching_type_aware_cleanup_deallocator : Error<
-  "mismatched type aware allocation operators for constructor cleanup">;
+  "type aware allocation requires matching type aware operator new and type aware operator delete for exception cleanup">;
 def note_type_aware_operator_declared : Note<
   "%select{non-|}0type aware %1 declared here">;
 def note_implicit_delete_this_in_destructor_here : Note<
