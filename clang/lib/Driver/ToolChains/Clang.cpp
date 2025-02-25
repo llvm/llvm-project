@@ -762,7 +762,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else {
       CmdArgs.push_back("-fprofile-continuous");
       // Platforms that require a bias variable:
-      if (T.isOSBinFormatELF() || T.isOSAIX()) {
+      if (T.isOSBinFormatELF() || T.isOSAIX() ||
+          T.isKnownWindowsMSVCEnvironment()) {
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-runtime-counter-relocation");
       }
