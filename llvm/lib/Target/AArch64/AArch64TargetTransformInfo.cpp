@@ -4956,6 +4956,12 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
       (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 16) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 32) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 64) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))

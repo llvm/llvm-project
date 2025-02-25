@@ -182,10 +182,16 @@ struct RuntimeFunction {
 // the KEY and a function name.
 template <typename KEY>
 struct RuntimeFactory {
-  static constexpr RuntimeFunction create(const std::string_view &name) {
-    return RuntimeFunction{name, MemoryAttrDesc<KEY>::get,
-                           NosyncAttrDesc<KEY>::get,
-                           NocallbackAttrDesc<KEY>::get};
+  static constexpr RuntimeFunction create(const char name[]) {
+    // GCC 7 does not recognize this as a constant expression:
+    //   ((const char *)RuntimeFunction<>::name) == nullptr
+    // This comparison comes from the basic_string_view(const char *)
+    // constructor. We have to use the other constructor
+    // that takes explicit length parameter.
+    return RuntimeFunction{
+        std::string_view{name, std::char_traits<char>::length(name)},
+        MemoryAttrDesc<KEY>::get, NosyncAttrDesc<KEY>::get,
+        NocallbackAttrDesc<KEY>::get};
   }
 };
 } // end anonymous namespace
