@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(z);
-              auto pred = [&x](auto& element) {
+              auto pred = [&x](auto element) {
                 benchmark::DoNotOptimize(element);
                 return element == x;
               };
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(z);
-              auto pred = [&x](auto& element) {
+              auto pred = [&x](auto element) {
                 benchmark::DoNotOptimize(element);
                 return element == x;
               };

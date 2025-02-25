@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 
             std::vector<ValueType> out(size);
 
-            auto pred = [](auto& a, auto& b) {
+            auto pred = [](auto a, auto b) {
               benchmark::DoNotOptimize(a);
               benchmark::DoNotOptimize(b);
               return a == b;
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 
             std::vector<ValueType> out(size);
 
-            auto pred = [](auto& a, auto& b) {
+            auto pred = [](auto a, auto b) {
               benchmark::DoNotOptimize(a);
               benchmark::DoNotOptimize(b);
               return a == b;

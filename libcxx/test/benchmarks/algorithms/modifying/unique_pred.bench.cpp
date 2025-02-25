@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
               std::fill_n(std::fill_n(c[i].begin(), half, x), half, y);
             }
 
-            auto pred = [](auto& a, auto& b) {
+            auto pred = [](auto a, auto b) {
               benchmark::DoNotOptimize(a);
               benchmark::DoNotOptimize(b);
               return a == b;
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
               alternate(c[i].begin(), size);
             }
 
-            auto pred = [](auto& a, auto& b) {
+            auto pred = [](auto a, auto b) {
               benchmark::DoNotOptimize(a);
               benchmark::DoNotOptimize(b);
               return a == b;

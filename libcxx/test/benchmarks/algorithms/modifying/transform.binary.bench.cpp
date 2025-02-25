@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
             std::vector<ValueType> out(size);
 
-            auto f = [](auto& x, auto& y) {
+            auto f = [](auto x, auto y) {
               benchmark::DoNotOptimize(x);
               benchmark::DoNotOptimize(y);
               return x + y;
