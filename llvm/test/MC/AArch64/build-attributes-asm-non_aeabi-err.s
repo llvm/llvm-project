@@ -15,6 +15,11 @@
 // ERR: error: active subsection type is NTBS (string), found ULEB128 (unsigned)
 // ERR-NEXT: .aeabi_attribute 324, 1
 
+.aeabi_attribute str_not_int, "1"
+// ERR: error: unrecognized Tag: 'str_not_int'
+// ERR-NEXT: Except for public subsections, tags have to be an unsigned int.
+// ERR-NEXT: .aeabi_attribute str_not_int, "1"
+
 .aeabi_subsection foo, optional, uleb128
 .aeabi_subsection bar, optional, uleb128
 .aeabi_subsection foo, required, uleb128
