@@ -30,7 +30,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -1154,17 +1156,25 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       if (socket_pipe.CanWrite())
         socket_pipe.CloseWriteFileDescriptor();
       if (socket_pipe.CanRead()) {
-        // The port number may be up to "65535\0".
-        char port_cstr[6] = {0};
-        size_t num_bytes = sizeof(port_cstr);
         // Read port from pipe with 10 second timeout.
-        error = socket_pipe.ReadWithTimeout(
-            port_cstr, num_bytes, std::chrono::seconds{10}, num_bytes);
+        std::string port_str;
+        while (error.Success()) {
+          char buf[10];
+          if (llvm::Expected<size_t> num_bytes = socket_pipe.Read(
+                  buf, std::size(buf), std::chrono::seconds(10))) {
+            port_str.append(buf, *num_bytes);
+            if (*num_bytes == 0)
+              break;
+          } else {
+            error = Status::FromError(num_bytes.takeError());
+          }
+        }
         if (error.Success() && (port != nullptr)) {
-          assert(num_bytes > 0 && port_cstr[num_bytes - 1] == '\0');
+          // NB: Deliberately using .c_str() to stop at embedded '\0's
+          llvm::StringRef port_ref = port_str.c_str();
           uint16_t child_port = 0;
           // FIXME: improve error handling
-          llvm::to_integer(port_cstr, child_port);
+          llvm::to_integer(port_ref, child_port);
           if (*port == 0 || *port == child_port) {
             *port = child_port;
             LLDB_LOGF(log,

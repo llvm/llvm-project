@@ -55,8 +55,6 @@ TEST_F(PipeTest, OpenAsReader) {
 }
 #endif
 
-// This test is flaky on Windows on Arm.
-#ifndef _WIN32
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
@@ -87,57 +85,53 @@ TEST_F(PipeTest, WriteWithTimeout) {
   char *read_ptr = reinterpret_cast<char *>(read_buf.data());
   size_t write_bytes = 0;
   size_t read_bytes = 0;
-  size_t num_bytes = 0;
 
   // Write to the pipe until it is full.
   while (write_bytes + write_chunk_size <= buf_size) {
-    Status error =
-        pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
-                              std::chrono::milliseconds(10), num_bytes);
-    if (error.Fail())
+    llvm::Expected<size_t> num_bytes =
+        pipe.Write(write_ptr + write_bytes, write_chunk_size,
+                   std::chrono::milliseconds(10));
+    if (num_bytes) {
+      write_bytes += *num_bytes;
+    } else {
+      ASSERT_THAT_ERROR(num_bytes.takeError(), llvm::Failed());
       break; // The write buffer is full.
-    write_bytes += num_bytes;
+    }
   }
   ASSERT_LE(write_bytes + write_chunk_size, buf_size)
       << "Pipe buffer larger than expected";
 
   // Attempt a write with a long timeout.
   auto start_time = std::chrono::steady_clock::now();
-  ASSERT_THAT_ERROR(pipe.WriteWithTimeout(write_ptr + write_bytes,
-                                          write_chunk_size,
-                                          std::chrono::seconds(2), num_bytes)
-                        .ToError(),
-                    llvm::Failed());
+  // TODO: Assert a specific error (EAGAIN?) here.
+  ASSERT_THAT_EXPECTED(pipe.Write(write_ptr + write_bytes, write_chunk_size,
+                                  std::chrono::seconds(2)),
+                       llvm::Failed());
   auto dur = std::chrono::steady_clock::now() - start_time;
   ASSERT_GE(dur, std::chrono::seconds(2));
 
   // Attempt a write with a short timeout.
   start_time = std::chrono::steady_clock::now();
-  ASSERT_THAT_ERROR(
-      pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
-                            std::chrono::milliseconds(200), num_bytes)
-          .ToError(),
-      llvm::Failed());
+  ASSERT_THAT_EXPECTED(pipe.Write(write_ptr + write_bytes, write_chunk_size,
+                                  std::chrono::milliseconds(200)),
+                       llvm::Failed());
   dur = std::chrono::steady_clock::now() - start_time;
   ASSERT_GE(dur, std::chrono::milliseconds(200));
   ASSERT_LT(dur, std::chrono::seconds(2));
 
   // Drain the pipe.
   while (read_bytes < write_bytes) {
-    ASSERT_THAT_ERROR(
-        pipe.ReadWithTimeout(read_ptr + read_bytes, write_bytes - read_bytes,
-                             std::chrono::milliseconds(10), num_bytes)
-            .ToError(),
-        llvm::Succeeded());
-    read_bytes += num_bytes;
+    llvm::Expected<size_t> num_bytes =
+        pipe.Read(read_ptr + read_bytes, write_bytes - read_bytes,
+                  std::chrono::milliseconds(10));
+    ASSERT_THAT_EXPECTED(num_bytes, llvm::Succeeded());
+    read_bytes += *num_bytes;
   }
 
   // Be sure the pipe is empty.
-  ASSERT_THAT_ERROR(pipe.ReadWithTimeout(read_ptr + read_bytes, 100,
-                                         std::chrono::milliseconds(10),
-                                         num_bytes)
-                        .ToError(),
-                    llvm::Failed());
+  ASSERT_THAT_EXPECTED(
+      pipe.Read(read_ptr + read_bytes, 100, std::chrono::milliseconds(10)),
+      llvm::Failed());
 
   // Check that we got what we wrote.
   ASSERT_EQ(write_bytes, read_bytes);
@@ -146,10 +140,7 @@ TEST_F(PipeTest, WriteWithTimeout) {
                          read_buf.begin()));
 
   // Write to the pipe again and check that it succeeds.
-  ASSERT_THAT_ERROR(pipe.WriteWithTimeout(write_ptr, write_chunk_size,
-                                          std::chrono::milliseconds(10),
-                                          num_bytes)
-                        .ToError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(
+      pipe.Write(write_ptr, write_chunk_size, std::chrono::milliseconds(10)),
+      llvm::Succeeded());
 }
-#endif /*ifndef _WIN32*/
