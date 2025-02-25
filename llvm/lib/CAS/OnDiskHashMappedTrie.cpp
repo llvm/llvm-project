@@ -326,8 +326,7 @@ class HashMappedTrieHandle;
 /// Subtrie layout:
 /// - 2-bytes: StartBit
 /// - 1-bytes: NumBits=lg(num-slots)
-/// - 1-bytes: NumUnusedBits=lg(num-slots-unused)
-/// - 4-bytes: 0-pad
+/// - 5-bytes: 0-pad
 /// - <slots>
 class SubtrieHandle {
 public:
@@ -338,11 +337,8 @@ public:
     /// The number of bits this subtrie handles. It has 2^NumBits slots.
     uint8_t NumBits;
 
-    /// The number of extra bits this allocation *could* handle, due to
-    /// over-allocation. It has 2^NumUnusedBits unused slots.
-    uint8_t NumUnusedBits;
-
     /// 0-pad to 8B.
+    uint8_t ZeroPad1B;
     uint32_t ZeroPad4B;
   };
 
@@ -408,11 +404,9 @@ public:
   Header &getHeader() const { return *H; }
   uint32_t getStartBit() const { return H->StartBit; }
   uint32_t getNumBits() const { return H->NumBits; }
-  uint32_t getNumUnusedBits() const { return H->NumUnusedBits; }
 
   static Expected<SubtrieHandle> create(MappedFileRegionBumpPtr &Alloc,
-                                        uint32_t StartBit, uint32_t NumBits,
-                                        uint32_t NumUnusedBits = 0);
+                                        uint32_t StartBit, uint32_t NumBits);
 
   static SubtrieHandle getFromFileOffset(MappedFileRegion &Region,
                                          FileOffset Offset) {
@@ -558,19 +552,17 @@ struct OnDiskHashMappedTrie::ImplType {
 
 Expected<SubtrieHandle> SubtrieHandle::create(MappedFileRegionBumpPtr &Alloc,
                                               uint32_t StartBit,
-                                              uint32_t NumBits,
-                                              uint32_t NumUnusedBits) {
+                                              uint32_t NumBits) {
   assert(StartBit <= HashMappedTrieHandle::MaxNumHashBits);
   assert(NumBits <= UINT8_MAX);
-  assert(NumUnusedBits <= UINT8_MAX);
-  assert(NumBits + NumUnusedBits <= HashMappedTrieHandle::MaxNumRootBits);
+  assert(NumBits <= HashMappedTrieHandle::MaxNumRootBits);
 
-  auto Mem = Alloc.allocate(getSize(NumBits + NumUnusedBits));
+  auto Mem = Alloc.allocate(getSize(NumBits));
   if (LLVM_UNLIKELY(!Mem))
     return Mem.takeError();
   auto *H =
       new (*Mem) SubtrieHandle::Header{(uint16_t)StartBit, (uint8_t)NumBits,
-                                       (uint8_t)NumUnusedBits, /*ZeroPad4B=*/0};
+                                       /*ZeroPad1B=*/0, /*ZeroPad4B=*/0};
   SubtrieHandle S(Alloc.getRegion(), *H);
   for (auto I = S.Slots.begin(), E = S.Slots.end(); I != E; ++I)
     new (I) SlotT(0);
