@@ -44,9 +44,9 @@ static cl::opt<bool> TypeBasedIntrinsicCost("type-based-intrinsic-cost",
     cl::desc("Calculate intrinsics cost based only on argument types"),
     cl::init(false));
 
-static cl::opt<bool> LibCallBasedIntrinsicCost(
-    "libcall-based-intrinsic-cost",
-    cl::desc("Calculate intrinsics cost using target library info"),
+static cl::opt<bool> PreferIntrinsicCost(
+    "prefer-intrinsic-cost",
+    cl::desc("Prefer using getIntrinsicInstrCost over getInstructionCost"),
     cl::init(false));
 
 #define CM_NAME "cost-model"
@@ -63,7 +63,7 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
       // which cost kind to print.
       InstructionCost Cost;
       auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (II && (LibCallBasedIntrinsicCost || TypeBasedIntrinsicCost)) {
+      if (II && (PreferIntrinsicCost || TypeBasedIntrinsicCost)) {
         IntrinsicCostAttributes ICA(
             II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
             /*TypeBasedOnly=*/TypeBasedIntrinsicCost, &TLI);

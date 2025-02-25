@@ -294,7 +294,7 @@ private:
   /// the cost, which includes the cost of the mask (if required), and the loads
   /// for values returned via output pointers. \p LC is the scalar libcall and
   /// \p CallRetElementIndex (optional) is the struct element which is mapped to
-  /// the call return value. If std::nullopt is returned, the no vector library
+  /// the call return value. If std::nullopt is returned, then no vector library
   /// call is available, so the intrinsic should be assigned the default cost
   /// (e.g. scalarization).
   std::optional<InstructionCost> getMultipleResultIntrinsicVectorLibCallCost(
