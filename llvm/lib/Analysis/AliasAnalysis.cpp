@@ -752,6 +752,11 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
   AAR.reset(
       new AAResults(getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F)));
 
+  // Add any target-specific alias analyses that should be run early.
+  auto *ExtWrapperPass = getAnalysisIfAvailable<ExternalAAWrapperPass>();
+  if (ExtWrapperPass && ExtWrapperPass->runEarly() && ExtWrapperPass->CB)
+    ExtWrapperPass->CB(*this, F, *AAR);
+
   // BasicAA is always available for function analyses. Also, we add it first
   // so that it can trump TBAA results when it proves MustAlias.
   // FIXME: TBAA should have an explicit mode to support this and then we
@@ -771,9 +776,8 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
 
   // If available, run an external AA providing callback over the results as
   // well.
-  if (auto *WrapperPass = getAnalysisIfAvailable<ExternalAAWrapperPass>())
-    if (WrapperPass->CB)
-      WrapperPass->CB(*this, F, *AAR);
+  if (ExtWrapperPass && !ExtWrapperPass->runEarly() && ExtWrapperPass->CB)
+    ExtWrapperPass->CB(*this, F, *AAR);
 
   // Analyses don't mutate the IR, so return false.
   return false;
