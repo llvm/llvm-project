@@ -303,7 +303,7 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     Current += sizeof(dxbc::RootParameterType);
 
     NewParam.ShaderVisibility =
-        support::endian::read<dxbc::ShaderVisibility, 
+        support::endian::read<dxbc::ShaderVisibility,
                               llvm::endianness::little>(Current);
     if (!dxbc::RootSignatureValidations::isValidShaderVisibility(NewParam.ShaderVisibility))
       return validationFailed("unsupported shader visility flag value read: " +
