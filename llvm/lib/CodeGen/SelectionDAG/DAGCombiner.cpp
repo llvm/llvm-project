@@ -566,10 +566,8 @@ namespace {
 
     SDValue visitVPUDIV(SDNode *N);
     SDValue visitVPUDIVLike(SDValue N0, SDValue N1, SDNode *N);
-    SDValue BuildVPUDIV(SDNode *N);
     SDValue visitVPSDIV(SDNode *N);
     SDValue visitVPSDIVLike(SDValue N0, SDValue N1, SDNode *N);
-    SDValue BuildVPSDIV(SDNode *N);
     SDValue visitVPREM(SDNode *N);
 
     SDValue XformToShuffleWithZero(SDNode *N);
@@ -27280,42 +27278,6 @@ SDValue DAGCombiner::visitVP_FSUB(SDNode *N) {
   return SDValue();
 }
 
-SDValue DAGCombiner::BuildVPUDIV(SDNode *N) {
-  // when optimising for minimum size, we don't want to expand a div to a mul
-  // and a shift.
-  if (DAG.getMachineFunction().getFunction().hasMinSize())
-    return SDValue();
-
-  SmallVector<SDNode *, 8> Built;
-  if (SDValue S = TLI.BuildVPUDIV(N, DAG, LegalOperations, Built)) {
-    for (SDNode *N : Built)
-      AddToWorklist(N);
-    return S;
-  }
-
-  return SDValue();
-}
-
-/// Given an ISD::VP_SDIV node expressing a divide by constant, return
-/// a DAG expression to select that will generate the same value by multiplying
-/// by a magic number.
-/// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-SDValue DAGCombiner::BuildVPSDIV(SDNode *N) {
-  // when optimising for minimum size, we don't want to expand a div to a mul
-  // and a shift.
-  if (DAG.getMachineFunction().getFunction().hasMinSize())
-    return SDValue();
-
-  SmallVector<SDNode *, 8> Built;
-  if (SDValue S = TLI.BuildVPSDIV(N, DAG, LegalOperations, Built)) {
-    for (SDNode *N : Built)
-      AddToWorklist(N);
-    return S;
-  }
-
-  return SDValue();
-}
-
 SDValue DAGCombiner::visitVPUDIV(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -27417,7 +27379,7 @@ SDValue DAGCombiner::visitVPUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isConstantOrConstantVector(N1) &&
       !TLI.isIntDivCheap(N->getValueType(0), Attr)) {
-    if (SDValue Op = BuildVPUDIV(N))
+    if (SDValue Op = BuildUDIV(N))
       return Op;
   }
   return SDValue();
@@ -27537,7 +27499,7 @@ SDValue DAGCombiner::visitVPSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isConstantOrConstantVector(N1) &&
       !TLI.isIntDivCheap(N->getValueType(0), Attr))
-    if (SDValue Op = BuildVPSDIV(N))
+    if (SDValue Op = BuildSDIV(N))
       return Op;
 
   return SDValue();
@@ -28640,7 +28602,13 @@ SDValue DAGCombiner::BuildSDIV(SDNode *N) {
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;
-  if (SDValue S = TLI.BuildSDIV(N, DAG, LegalOperations, LegalTypes, Built)) {
+  SDValue S;
+  if (N->isVPOpcode())
+    S = TLI.BuildVPSDIV(N, DAG, LegalOperations, Built);
+  else
+    S = TLI.BuildSDIV(N, DAG, LegalOperations, LegalTypes, Built);
+
+  if (S) {
     for (SDNode *N : Built)
       AddToWorklist(N);
     return S;
@@ -28681,7 +28649,13 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
     return SDValue();
 
   SmallVector<SDNode *, 8> Built;
-  if (SDValue S = TLI.BuildUDIV(N, DAG, LegalOperations, LegalTypes, Built)) {
+  SDValue S;
+  if (N->isVPOpcode())
+    S = TLI.BuildVPUDIV(N, DAG, LegalOperations, Built);
+  else
+    S = TLI.BuildUDIV(N, DAG, LegalOperations, LegalTypes, Built);
+
+  if (S) {
     for (SDNode *N : Built)
       AddToWorklist(N);
     return S;
