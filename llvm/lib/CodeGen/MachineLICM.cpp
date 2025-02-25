@@ -639,6 +639,21 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop,
     if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
       applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, Mask);
 
+    // EH landing pads clobber exception pointer/selector registers
+    if (BB->isEHPad()) {
+      const MachineFunction &MF = *BB->getParent();
+      if (MF.getFunction().hasPersonalityFn()) {
+        auto PersonalityFn = MF.getFunction().getPersonalityFn();
+        const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
+        if (unsigned Reg = TLI.getExceptionPointerRegister(PersonalityFn))
+          for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
+            RUClobbers.set(*RUI);
+        if (unsigned Reg = TLI.getExceptionSelectorRegister(PersonalityFn))
+          for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
+            RUClobbers.set(*RUI);
+      }
+    }
+
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : *BB)
       ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates, CurLoop);
