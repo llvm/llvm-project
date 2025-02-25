@@ -127,6 +127,7 @@ static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
   Opts.Warnings.clear();
   Opts.UndefPrefixes.clear();
   Opts.Remarks.clear();
+  Opts.UnknownAttributeNamespaces.clear();
 }
 
 static std::vector<std::string> splitString(std::string S, char Separator) {

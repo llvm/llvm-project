@@ -178,6 +178,9 @@ related warnings within the method body.
   ``format_matches`` accepts an example valid format string as its third
   argument. For more information, see the Clang attributes documentation.
 
+- Clang now diagnoses unknown attribute namespaces. Added the ``-Wunknown-namespace-attributes=`` option to
+  specify a comma-separated list of allowed unknown attribute namespaces (#GH120875).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
