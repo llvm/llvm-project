@@ -22288,8 +22288,7 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
 
   bool IsFABS = (Op.getOpcode() == ISD::FABS);
   SDLoc dl(Op);
-  MVT VT 
-  = Op.getSimpleValueType();
+  MVT VT = Op.getSimpleValueType();
 
   // Handle scalar _Float16 (f16) directly via integer bitwise operations.
   if (VT == MVT::f16) {
@@ -22306,13 +22305,13 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
     APInt MaskVal;
     unsigned LogicOp;
     if (IsFABS) {
-      MaskVal = APInt(16, 0x7FFF);  // Clear sign bit.
+      MaskVal = APInt(16, 0x7FFF); // Clear sign bit.
       LogicOp = ISD::AND;
     } else if (IsFNABS) {
-      MaskVal = APInt(16, 0x8000);  // Combine masks via OR.
+      MaskVal = APInt(16, 0x8000); // Combine masks via OR.
       LogicOp = ISD::OR;
     } else {
-      MaskVal = APInt(16, 0x8000);  // Flip sign bit.
+      MaskVal = APInt(16, 0x8000); // Flip sign bit.
       LogicOp = ISD::XOR;
     }
 
