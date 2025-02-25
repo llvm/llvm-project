@@ -172,6 +172,16 @@ define <8 x i1> @compare_oge_v8f16 (<8 x half> %x, <8 x half> %y) {
   ret <8 x i1> %res
 }
 
+; CHECK-LABEL: compare_ule_v8f16:
+; CHECK-NEXT: .functype compare_ule_v8f16 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f16x8.gt $push[[T0:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: v128.not $push[[R:[0-9]+]]=, $pop[[T0]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define <8 x i1> @compare_ule_v8f16 (<8 x half> %x, <8 x half> %y) {
+  %res = fcmp ule <8 x half> %x, %y
+  ret <8 x i1> %res
+}
+
 ; CHECK-LABEL: abs_v8f16:
 ; CHECK-NEXT:  .functype abs_v8f16 (v128) -> (v128)
 ; CHECK-NEXT:  f16x8.abs $push0=, $0
