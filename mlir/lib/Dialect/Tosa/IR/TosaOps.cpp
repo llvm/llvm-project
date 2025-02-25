@@ -291,12 +291,10 @@ static LogicalResult verifyConvOp(T op) {
   ElementsAttr weightZpAttr;
   if (!matchPattern(op.getInputZp(), m_Constant(&inputZpAttr)) ||
       !matchPattern(op.getWeightZp(), m_Constant(&weightZpAttr))) {
-    op.emitOpError(
-        "bail out if the actual value of zero points cannot be determined");
-    return failure();
+    return success();
   }
 
-  // Get and verify explicit zero points.
+  // Get and verify explicit constant zero points.
   int64_t inputZpVal;
   int64_t weightZpVal;
 

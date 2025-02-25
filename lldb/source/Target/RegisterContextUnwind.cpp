@@ -207,7 +207,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
   m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
 
-  UnwindPlan::RowSP active_row;
+  const UnwindPlan::Row *active_row;
   lldb::RegisterKind row_register_kind = eRegisterKindGeneric;
 
   // If we have LanguageRuntime UnwindPlan for this unwind, use those
@@ -246,7 +246,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     active_row =
         m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
-    if (active_row.get() && log) {
+    if (active_row && log) {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
@@ -254,7 +254,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     }
   }
 
-  if (!active_row.get()) {
+  if (!active_row) {
     UnwindLogMsg("could not find an unwindplan row for this frame's pc");
     m_frame_type = eNotAValidFrame;
     return;
@@ -442,8 +442,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       m_current_offset = -1;
       m_current_offset_backed_up_one = -1;
       RegisterKind row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
-      UnwindPlan::RowSP row = m_full_unwind_plan_sp->GetRowForFunctionOffset(0);
-      if (row.get()) {
+      if (const UnwindPlan::Row *row =
+              m_full_unwind_plan_sp->GetRowForFunctionOffset(0)) {
         if (!ReadFrameAddress(row_register_kind, row->GetCFAValue(), m_cfa)) {
           UnwindLogMsg("failed to get cfa value");
           if (m_frame_type != eSkipFrame) // don't override eSkipFrame
@@ -593,7 +593,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     }
   }
 
-  UnwindPlan::RowSP active_row;
+  const UnwindPlan::Row *active_row;
   RegisterKind row_register_kind = eRegisterKindGeneric;
 
   // If we have LanguageRuntime UnwindPlan for this unwind, use those
@@ -640,7 +640,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = m_fast_unwind_plan_sp->GetRegisterKind();
     PropagateTrapHandlerFlagFromUnwindPlan(m_fast_unwind_plan_sp);
-    if (active_row.get() && log) {
+    if (active_row && log) {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
@@ -655,7 +655,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
           m_current_offset_backed_up_one);
       row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
       PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
-      if (active_row.get() && log) {
+      if (active_row && log) {
         StreamString active_row_strm;
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
                          &m_thread,
@@ -667,7 +667,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     }
   }
 
-  if (!active_row.get()) {
+  if (!active_row) {
     m_frame_type = eNotAValidFrame;
     UnwindLogMsg("could not find unwind row for this pc");
     return;
@@ -1285,7 +1285,7 @@ RegisterContextUnwind::SavedLocationForRegister(
   RegisterKind unwindplan_registerkind = kNumRegisterKinds;
 
   if (m_fast_unwind_plan_sp) {
-    UnwindPlan::RowSP active_row =
+    const UnwindPlan::Row *active_row =
         m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     unwindplan_registerkind = m_fast_unwind_plan_sp->GetRegisterKind();
     if (regnum.GetAsKind(unwindplan_registerkind) == LLDB_INVALID_REGNUM) {
@@ -1326,12 +1326,12 @@ RegisterContextUnwind::SavedLocationForRegister(
       RegisterNumber pc_regnum(m_thread, eRegisterKindGeneric,
                                LLDB_REGNUM_GENERIC_PC);
 
-      UnwindPlan::RowSP active_row =
+      const UnwindPlan::Row *active_row =
           m_full_unwind_plan_sp->GetRowForFunctionOffset(
               m_current_offset_backed_up_one);
       unwindplan_registerkind = m_full_unwind_plan_sp->GetRegisterKind();
 
-      if (got_new_full_unwindplan && active_row.get() && log) {
+      if (got_new_full_unwindplan && active_row && log) {
         StreamString active_row_strm;
         ExecutionContext exe_ctx(m_thread.shared_from_this());
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
@@ -1455,7 +1455,7 @@ RegisterContextUnwind::SavedLocationForRegister(
         if (ForceSwitchToFallbackUnwindPlan()) {
           // Update for the possibly new unwind plan
           unwindplan_registerkind = m_full_unwind_plan_sp->GetRegisterKind();
-          UnwindPlan::RowSP active_row =
+          const UnwindPlan::Row *active_row =
               m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
 
           // Sanity check: Verify that we can fetch a pc value and CFA value
@@ -1799,7 +1799,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
 
   m_full_unwind_plan_sp = m_fallback_unwind_plan_sp;
 
-  UnwindPlan::RowSP active_row =
+  const UnwindPlan::Row *active_row =
       m_fallback_unwind_plan_sp->GetRowForFunctionOffset(
           m_current_offset_backed_up_one);
 
@@ -1885,7 +1885,7 @@ bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
     return false;
   }
 
-  UnwindPlan::RowSP active_row =
+  const UnwindPlan::Row *active_row =
       m_fallback_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
 
   if (active_row &&
@@ -1967,7 +1967,7 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
 }
 
 bool RegisterContextUnwind::ReadFrameAddress(
-    lldb::RegisterKind row_register_kind, UnwindPlan::Row::FAValue &fa,
+    lldb::RegisterKind row_register_kind, const UnwindPlan::Row::FAValue &fa,
     addr_t &address) {
   RegisterValue reg_value;
 

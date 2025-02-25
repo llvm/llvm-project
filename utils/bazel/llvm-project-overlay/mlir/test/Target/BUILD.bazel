@@ -9,6 +9,7 @@ package(default_visibility = ["//visibility:public"])
         name = "%s.test" % src,
         srcs = [src],
         data = [
+            "//llvm:split-file",
             "//mlir:mlir-opt",
             "//mlir:mlir-translate",
             "//mlir/test:lit_data",
