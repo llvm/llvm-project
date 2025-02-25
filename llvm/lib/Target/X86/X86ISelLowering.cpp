@@ -55736,14 +55736,11 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
       return SDValue();
   }
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  const DataLayout &DataLayout = DAG.getDataLayout();
-  MVT VecIdxTy = TLI.getVectorIdxTy(DataLayout);
   MVT BroadcastOpVT = Broadcast.getSimpleValueType().getVectorElementType();
   SDValue BroadcastOp;
   if (Broadcast.getOpcode() != X86ISD::VBROADCAST) {
     BroadcastOp = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, BroadcastOpVT,
-                              Broadcast, DAG.getConstant(0, DL, VecIdxTy));
+                              Broadcast, DAG.getVectorIdxConstant(0, DL));
   } else {
     BroadcastOp = Broadcast.getOperand(0);
     if (BroadcastOp.getValueType().isVector())
@@ -55762,6 +55759,8 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
   // not fit in an i16 and a vXi32 where X > 16 is more than 512 bits.
   SDValue Trunc = DAG.getAnyExtOrTrunc(Masked, DL, MVT::i16);
   SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, MVT::v16i1, Trunc);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DataLayout = DAG.getDataLayout();
   MVT PtrTy = TLI.getPointerTy(DataLayout);
 
   if (CC == ISD::SETEQ)
@@ -55772,7 +55771,7 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
 
   if (VT != MVT::v16i1)
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Bitcast,
-                       DAG.getConstant(0, DL, PtrTy));
+                       DAG.getVectorIdxConstant(0, DL));
 
   return Bitcast;
 }
