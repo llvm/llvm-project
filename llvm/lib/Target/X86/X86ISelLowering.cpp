@@ -55760,15 +55760,9 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
   // not fit in an i16 and a vXi32 where X > 16 is more than 512 bits.
   SDValue Trunc = DAG.getAnyExtOrTrunc(Masked, DL, MVT::i16);
   SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, MVT::v16i1, Trunc);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  const DataLayout &DataLayout = DAG.getDataLayout();
-  MVT PtrTy = TLI.getPointerTy(DataLayout);
 
   if (CC == ISD::SETEQ)
-    Bitcast =
-        DAG.getNode(ISD::XOR, DL, MVT::v16i1, Bitcast,
-                    DAG.getSplatBuildVector(MVT::v16i1, DL,
-                                            DAG.getAllOnesConstant(DL, PtrTy)));
+    Bitcast = DAG.getNOT(DL, Bitcast, MVT::v16i1);
 
   if (VT != MVT::v16i1)
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Bitcast,
