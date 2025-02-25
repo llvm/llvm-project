@@ -425,7 +425,7 @@ private:
         } else {
           llvm::errs() << "unknown TOSA extension name passed in: " << ext
                        << ", supported extension are int16, int4, bf16, "
-                       << "fp8e4m3, fp8e5m2, fft, and variable\n";
+                       << "fp8e4m3, fp8e5m2, fft, variable and controlflow\n";
           return signalPassFailure();
         }
       }
