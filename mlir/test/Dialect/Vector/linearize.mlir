@@ -32,6 +32,22 @@ func.func @test_linearize(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 
 // -----
 
+// ALL-LABEL: test_linearize_poison
+func.func @test_linearize_poison(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
+  // DEFAULT: %[[P:.*]] = ub.poison : vector<4xf32>
+  // DEFAULT: %[[RES:.*]] = vector.shape_cast %[[P]] : vector<4xf32> to vector<2x2xf32>
+
+  // BW-128: %[[P:.*]] = ub.poison : vector<4xf32>
+  // BW-128: %[[RES:.*]] = vector.shape_cast %[[P]] : vector<4xf32> to vector<2x2xf32>
+
+  // BW-0: %[[RES:.*]] = ub.poison : vector<2x2xf32>
+  %0 = ub.poison : vector<2x2xf32>
+  // ALL: return %[[RES]] : vector<2x2xf32>
+  return %0 : vector<2x2xf32>
+}
+
+// -----
+
 // ALL-LABEL: test_partial_linearize
 // ALL-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>, %[[ORIG_ARG2:.*]]: vector<4x4xf32>)
 func.func @test_partial_linearize(%arg0: vector<2x2xf32>, %arg1: vector<4x4xf32>) -> vector<2x2xf32> {
