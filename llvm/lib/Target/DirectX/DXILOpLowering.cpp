@@ -120,6 +120,30 @@ public:
     int Value;
   };
 
+  /// Replaces uses of a struct with uses of an equivalent named struct.
+  ///
+  /// DXIL operations that return structs give them well known names, so we need
+  /// to update uses when we switch from an LLVM intrinsic to an op.
+  Error replaceNamedStructUses(CallInst *Intrin, CallInst *DXILOp) {
+    auto *IntrinTy = cast<StructType>(Intrin->getType());
+    auto *DXILOpTy = cast<StructType>(DXILOp->getType());
+    if (!IntrinTy->isLayoutIdentical(DXILOpTy))
+      return make_error<StringError>(
+          "Type mismatch between intrinsic and DXIL op",
+          inconvertibleErrorCode());
+
+    for (Use &U : make_early_inc_range(Intrin->uses()))
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser()))
+        EVI->setOperand(0, DXILOp);
+      else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser()))
+        IVI->setOperand(0, DXILOp);
+      else
+        return make_error<StringError>("DXIL ops that return structs may only "
+                                       "be used by insert- and extractvalue",
+                                       inconvertibleErrorCode());
+    return Error::success();
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
@@ -154,32 +178,13 @@ public:
       if (Error E = OpCall.takeError())
         return E;
 
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
-  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
-      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
-      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
-      OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
+      if (isa<StructType>(CI->getType())) {
+        if (Error E = replaceNamedStructUses(CI, *OpCall))
+          return E;
       } else
-        Args.append(CI->arg_begin(), CI->arg_end());
+        CI->replaceAllUsesWith(*OpCall);
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-      if (Error E = ReplaceUses(CI, *OpCall))
-        return E;
-
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -812,16 +817,6 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
-        break;
-      // TODO: this can be removed when
-      // https://github.com/llvm/llvm-project/issues/113192 is fixed
-      case Intrinsic::dx_splitdouble:
-        HasErrors |= replaceFunctionWithNamedStructOp(
-            F, OpCode::SplitDouble,
-            OpBuilder.getSplitDoubleType(M.getContext()),
-            [&](CallInst *CI, CallInst *Op) {
-              return replaceAggregateTypeOfCallUsages(CI, Op);
-            });
         break;
       // TODO: this can be removed when
       // https://github.com/llvm/llvm-project/issues/113192 is fixed

@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @no_debug_info_test
+    @skipIf(compiler="clang", compiler_version=["<", "20.0"])
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
@@ -61,8 +62,44 @@ class TestCase(TestBase):
         self.assertEqual(template_param_value.GetTypeName(), "char")
         self.assertEqual(chr(template_param_value.GetValueAsSigned()), "v")
 
-        # FIXME: type should be Foo<float, 2.0f>
-        # FIXME: double/float NTTP parameter values currently not supported.
-        value = self.expect_expr("temp4", result_type="Foo<float, float>")
+        value = self.expect_expr("temp4", result_type="Foo<float, 2.000000e+00>")
         template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
-        self.assertFalse(template_param_value)
+        self.assertEqual(template_param_value.GetTypeName(), "float")
+        # FIXME: this should return a float
+        self.assertEqual(template_param_value.GetValueAsSigned(), 2)
+
+        value = self.expect_expr("temp5", result_type="Foo<double, -2.505000e+02>")
+        template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
+        self.assertEqual(template_param_value.GetTypeName(), "double")
+        # FIXME: this should return a float
+        self.assertEqual(template_param_value.GetValueAsSigned(), -250)
+
+        # FIXME: type should be Foo<int *, &temp1.member>
+        value = self.expect_expr("temp6", result_type="Foo<int *, int *>")
+        self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
+
+        # FIXME: support wider range of floating point types
+        value = self.expect_expr("temp7", result_type="Foo<__fp16, __fp16>")
+        self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
+
+        value = self.expect_expr("temp8", result_type="Foo<__fp16, __fp16>")
+        self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
+
+        value = self.expect_expr("temp9", result_type="Bar<double, 1.200000e+00>")
+        template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
+        self.assertEqual(template_param_value.GetTypeName(), "double")
+        # FIXME: this should return a float
+        self.assertEqual(template_param_value.GetValueAsSigned(), 1)
+
+        value = self.expect_expr(
+            "temp10", result_type="Bar<float, 1.000000e+00, 2.000000e+00>"
+        )
+        template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
+        self.assertEqual(template_param_value.GetTypeName(), "float")
+        # FIXME: this should return a float
+        self.assertEqual(template_param_value.GetValueAsSigned(), 1)
+
+        template_param_value = value.GetType().GetTemplateArgumentValue(target, 2)
+        self.assertEqual(template_param_value.GetTypeName(), "float")
+        # FIXME: this should return a float
+        self.assertEqual(template_param_value.GetValueAsSigned(), 2)

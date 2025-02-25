@@ -276,13 +276,13 @@ struct _LIBCPP_TEMPLATE_VIS array {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type __n) {
     if (__n >= _Size)
-      __throw_out_of_range("array::at");
+      std::__throw_out_of_range("array::at");
     return __elems_[__n];
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type __n) const {
     if (__n >= _Size)
-      __throw_out_of_range("array::at");
+      std::__throw_out_of_range("array::at");
     return __elems_[__n];
   }
 
@@ -407,12 +407,12 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type) {
-    __throw_out_of_range("array<T, 0>::at");
+    std::__throw_out_of_range("array<T, 0>::at");
     __libcpp_unreachable();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type) const {
-    __throw_out_of_range("array<T, 0>::at");
+    std::__throw_out_of_range("array<T, 0>::at");
     __libcpp_unreachable();
   }
 

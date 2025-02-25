@@ -658,49 +658,49 @@ struct __sanitizer_sigaction {
 };
 #else // !SANITIZER_ANDROID
 struct __sanitizer_sigaction {
-#if defined(__mips__) && !SANITIZER_FREEBSD
+#    if defined(__mips__) && !SANITIZER_FREEBSD && !SANITIZER_MUSL
   unsigned int sa_flags;
-#endif
+#    endif
   union {
     __sanitizer_sigactionhandler_ptr sigaction;
     __sanitizer_sighandler_ptr handler;
   };
-#if SANITIZER_FREEBSD
+#    if SANITIZER_FREEBSD
   int sa_flags;
   __sanitizer_sigset_t sa_mask;
-#else
-#if defined(__s390x__)
+#    else
+#      if defined(__s390x__)
   int sa_resv;
-#else
+#      else
   __sanitizer_sigset_t sa_mask;
-#endif
-#ifndef __mips__
-#if defined(__sparc__)
-#if __GLIBC_PREREQ (2, 20)
+#      endif
+#      if !defined(__mips__) || SANITIZER_MUSL
+#        if defined(__sparc__)
+#          if __GLIBC_PREREQ(2, 20)
   // On sparc glibc 2.19 and earlier sa_flags was unsigned long.
-#if defined(__arch64__)
+#            if defined(__arch64__)
   // To maintain ABI compatibility on sparc64 when switching to an int,
   // __glibc_reserved0 was added.
   int __glibc_reserved0;
-#endif
+#            endif
   int sa_flags;
-#else
+#          else
   unsigned long sa_flags;
-#endif
-#else
+#          endif
+#        else
   int sa_flags;
-#endif
-#endif
-#endif
-#if SANITIZER_LINUX
+#        endif
+#      endif
+#    endif
+#    if SANITIZER_LINUX
   void (*sa_restorer)();
-#endif
-#if defined(__mips__) && (SANITIZER_WORDSIZE == 32)
+#    endif
+#    if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL
   int sa_resv[1];
-#endif
-#if defined(__s390x__)
+#    endif
+#    if defined(__s390x__)
   __sanitizer_sigset_t sa_mask;
-#endif
+#    endif
 };
 #endif // !SANITIZER_ANDROID
 

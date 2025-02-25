@@ -545,10 +545,6 @@ StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
   return ::getResRetType(ElementTy);
 }
 
-StructType *DXILOpBuilder::getSplitDoubleType(LLVMContext &Context) {
-  return ::getSplitDoubleType(Context);
-}
-
 StructType *DXILOpBuilder::getBinaryWithCarryType(LLVMContext &Context) {
   return ::getBinaryWithCarryType(Context);
 }

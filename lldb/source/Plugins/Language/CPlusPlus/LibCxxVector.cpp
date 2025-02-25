@@ -33,8 +33,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -53,8 +51,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override { return true; }
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -151,11 +147,6 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
     }
   }
   return lldb::ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
