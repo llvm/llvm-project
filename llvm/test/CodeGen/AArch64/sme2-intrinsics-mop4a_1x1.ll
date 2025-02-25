@@ -44,6 +44,46 @@ define void @mop4s_za32_u8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) #0 {
   ret void
 }
 
+define void @mop4a_za32_s8_u8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) #0 {
+; CHECK-LABEL: mop4a_za32_s8_u8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    sumop4a za1.s, z0.b, z24.b
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  ret void
+}
+
+define void @mop4s_za32_s8_u8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) #0 {
+; CHECK-LABEL: mop4s_za32_s8_u8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    sumop4s za1.s, z0.b, z24.b
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  ret void
+}
+
+define void @mop4a_za32_u8_s8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) #0 {
+; CHECK-LABEL: mop4a_za32_u8_s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    usmop4a za1.s, z0.b, z24.b
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  ret void
+}
+
+define void @mop4s_za32_u8_s8(<vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm) #0 {
+; CHECK-LABEL: mop4s_za32_u8_s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    usmop4s za1.s, z0.b, z24.b
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+  ret void
+}
+
 define void @mop4a_za32_s16(<vscale x 8 x i16> %zn, <vscale x 8 x i16> %zm) #0 {
 ; CHECK-LABEL: mop4a_za32_s16:
 ; CHECK:       // %bb.0:
