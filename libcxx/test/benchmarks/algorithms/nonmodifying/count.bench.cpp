@@ -80,53 +80,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::list<int>>("rng::count_if(list<int>) (every other)", ranges_count_if);
   }
 
-  // Benchmark {std,ranges}::{count,count_if} on a sequence where only a few elements are counted.
-  // In theory, we could blaze through contiguous sequences where there are no elements to count.
-  {
-    auto bm = []<class Container>(std::string name, auto count) {
-      benchmark::RegisterBenchmark(
-          name,
-          [count](auto& st) {
-            std::size_t const size = st.range(0);
-            using ValueType        = typename Container::value_type;
-            ValueType x            = Generate<ValueType>::random();
-            ValueType y            = random_different_from({x});
-            Container c;
-            for (std::size_t i = 0; i != size; ++i) {
-              c.push_back(i % (size / 5) == 0 ? x : y); // intersperse 5 elements to count at regular intervals
-            }
-
-            for ([[maybe_unused]] auto _ : st) {
-              benchmark::DoNotOptimize(c);
-              benchmark::DoNotOptimize(x);
-              auto result = count(c.begin(), c.end(), x);
-              benchmark::DoNotOptimize(result);
-            }
-          })
-          ->Arg(8)
-          ->Arg(50) // non power-of-two
-          ->Arg(1024)
-          ->Arg(8192)
-          ->Arg(1 << 20);
-    };
-
-    // count
-    bm.operator()<std::vector<int>>("std::count(vector<int>) (sparse)", std_count);
-    bm.operator()<std::deque<int>>("std::count(deque<int>) (sparse)", std_count);
-    bm.operator()<std::list<int>>("std::count(list<int>) (sparse)", std_count);
-    bm.operator()<std::vector<int>>("rng::count(vector<int>) (sparse)", ranges_count);
-    bm.operator()<std::deque<int>>("rng::count(deque<int>) (sparse)", ranges_count);
-    bm.operator()<std::list<int>>("rng::count(list<int>) (sparse)", ranges_count);
-
-    // count_if
-    bm.operator()<std::vector<int>>("std::count_if(vector<int>) (sparse)", std_count_if);
-    bm.operator()<std::deque<int>>("std::count_if(deque<int>) (sparse)", std_count_if);
-    bm.operator()<std::list<int>>("std::count_if(list<int>) (sparse)", std_count_if);
-    bm.operator()<std::vector<int>>("rng::count_if(vector<int>) (sparse)", ranges_count_if);
-    bm.operator()<std::deque<int>>("rng::count_if(deque<int>) (sparse)", ranges_count_if);
-    bm.operator()<std::list<int>>("rng::count_if(list<int>) (sparse)", ranges_count_if);
-  }
-
   // Benchmark {std,ranges}::count(vector<bool>)
   {
     auto bm = [](std::string name, auto count) {
