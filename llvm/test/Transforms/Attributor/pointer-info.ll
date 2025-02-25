@@ -45,7 +45,6 @@ define void @bar(ptr noundef byval(%struct.test.a) align 8 %dev) {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (ptr noalias nofree noundef nonnull writeonly byval([[STRUCT_TEST_A:%.*]]) align 8 captures(none) dereferenceable(24) [[DEV:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_B:%.*]], ptr [[DEV]], i64 0, i32 1
-; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds %struct.test.b, ptr %dev, i64 0, i32 1

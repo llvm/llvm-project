@@ -20,10 +20,7 @@ define internal i32 @f(ptr byval(%struct.ss) %b, ptr byval(i32) %X, i32 %i) noun
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[B_PRIV]], align 8
 ; CHECK-NEXT:    [[VAL2:%.*]] = add i32 [[VAL1]], 1
 ; CHECK-NEXT:    store i32 [[VAL2]], ptr [[B_PRIV]], align 8
-; CHECK-NEXT:    store i32 0, ptr [[X_PRIV]], align 4
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[X_PRIV]], align 4
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[VAL2]]
-; CHECK-NEXT:    ret i32 [[A]]
+; CHECK-NEXT:    ret i32 [[VAL2]]
 ;
 entry:
 

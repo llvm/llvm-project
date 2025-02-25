@@ -398,7 +398,8 @@ static bool getPotentialCopiesOfMemoryValue(
     }
     // TODO: Use assumed noalias return.
     if (!isa<AllocaInst>(&Obj) && !isa<GlobalVariable>(&Obj) &&
-        !(IsLoad ? isAllocationFn(&Obj, TLI) : isNoAliasCall(&Obj))) {
+        !(IsLoad ? isAllocationFn(&Obj, TLI) : isNoAliasCall(&Obj)) &&
+        !(isa<Argument>(Obj) && cast<Argument>(Obj).hasByValAttr())) {
       LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << Obj
                         << "\n";);
       return false;

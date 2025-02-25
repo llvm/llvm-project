@@ -583,7 +583,6 @@ define internal void @test_byval(ptr byval(%struct.X) %a) {
 ; TUNIT-SAME: (ptr [[TMP0:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; TUNIT-NEXT:    store ptr [[TMP0]], ptr [[A_PRIV]], align 8
-; TUNIT-NEXT:    store ptr null, ptr [[A_PRIV]], align 8
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
@@ -591,7 +590,6 @@ define internal void @test_byval(ptr byval(%struct.X) %a) {
 ; CGSCC-SAME: (ptr nofree [[TMP0:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; CGSCC-NEXT:    store ptr [[TMP0]], ptr [[A_PRIV]], align 8
-; CGSCC-NEXT:    store ptr null, ptr [[A_PRIV]], align 8
 ; CGSCC-NEXT:    ret void
 ;
   store ptr null, ptr %a

@@ -15,10 +15,6 @@ define internal void @f(ptr byval(%struct.ss)  %b, ptr byval(i32) %X) nounwind  
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B_PRIV]], align 4
 ; CHECK-NEXT:    [[B_PRIV_B4:%.*]] = getelementptr i8, ptr [[B_PRIV]], i64 4
 ; CHECK-NEXT:    store i64 [[TMP1]], ptr [[B_PRIV_B4]], align 4
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[B_PRIV]], align 8
-; CHECK-NEXT:    [[VAL2:%.*]] = add i32 [[VAL1]], 1
-; CHECK-NEXT:    store i32 [[VAL2]], ptr [[B_PRIV]], align 8
-; CHECK-NEXT:    store i32 0, ptr [[X_PRIV]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -32,12 +28,11 @@ entry:
 
 define i32 @test(ptr %X) {
 ;
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@test
 ; TUNIT-SAME: (ptr nofree nonnull readonly captures(none) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
-; TUNIT-NEXT:    store i32 1, ptr [[S]], align 8
 ; TUNIT-NEXT:    [[VAL4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S]], align 8
 ; TUNIT-NEXT:    [[S_B4:%.*]] = getelementptr i8, ptr [[S]], i64 4
@@ -64,8 +59,8 @@ entry:
 }
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
