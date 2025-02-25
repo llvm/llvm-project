@@ -271,8 +271,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.Header.Version = P.RootSignature->Version;
       RS.Parameters = std::move(P.RootSignature->Parameters);
 
-      if (Error Err = RS.write(OS))
-        handleAllErrors(std::move(Err));
+      RS.write(OS);
 
       break;
     }

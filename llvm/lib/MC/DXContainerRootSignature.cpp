@@ -7,11 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/Error.h"
-#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
@@ -28,7 +24,7 @@ void rewriteOffset(buffer_ostream &Stream, uint32_t Offset) {
   support::endian::write(InsertPoint, Value, llvm::endianness::little);
 }
 
-Error RootSignatureDesc::write(raw_ostream &OS) const {
+void RootSignatureDesc::write(raw_ostream &OS) const {
   buffer_ostream Writer(OS);
   const uint32_t NumParameters = Parameters.size();
   const uint32_t Zero = 0;
@@ -75,6 +71,4 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
       llvm_unreachable("Invalid RootParameterType");
     }
   }
-
-  return Error::success();
 }
