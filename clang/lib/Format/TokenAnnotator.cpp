@@ -6202,6 +6202,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                     TT_ClassHeadName, tok::kw_operator)) {
     return true;
   }
+  if (Right.isAttribute())
+    return true;
   if (Left.is(TT_PointerOrReference))
     return false;
   if (Right.isTrailingComment()) {
@@ -6345,9 +6347,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return !Right.isOneOf(tok::l_brace, tok::semi, tok::equal, tok::l_paren,
                           tok::less, tok::coloncolon);
   }
-
-  if (Right.isAttribute())
-    return true;
 
   if (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))
     return Left.isNot(TT_AttributeSquare);
