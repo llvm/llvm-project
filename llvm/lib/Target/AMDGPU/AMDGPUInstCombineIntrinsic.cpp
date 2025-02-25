@@ -1134,12 +1134,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
       if (isTypeLegal(BCSrc->getType())) {
-        SmallVector<Value *, 2> Args(II.args());
-        Args[0] = BCSrc;
-        CallInst *NewCall = IC.Builder.CreateIntrinsic(
-            II.getIntrinsicID(), {BCSrc->getType()}, Args);
-        NewCall->takeName(&II);
-        return new BitCastInst(NewCall, II.getType());
+        Module *M = IC.Builder.GetInsertBlock()->getModule();
+        // Mutate the call in place to ensure operand bundles are preserved.
+        Function *Remangled =
+            Intrinsic::getOrInsertDeclaration(M, IID, {BCSrc->getType()});
+
+        II.setCalledFunction(Remangled);
+        IC.replaceOperand(II, 0, BCSrc);
+        return new BitCastInst(&II, II.getType());
       }
     }
 
