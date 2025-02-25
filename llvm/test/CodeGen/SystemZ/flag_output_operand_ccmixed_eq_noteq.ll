@@ -2269,6 +2269,8 @@ if.end:                                           ; preds = %entry, %if.then
 }
 
 ; Test (cc == 0) && ((cc != 1) ^ (cc != 3))
+; TODO: DAGCombiner is not able to optimize srl/ipm/cc sequence because of
+; switch table created by simplifyBranchOnICmpChain.
 define i64 @bar1a_013_XOR_AND_XOR_a() {
 ; CHECK-LABEL: bar1a_013_XOR_AND_XOR_a:
 ; CHECK:       # %bb.0: # %entry
@@ -2277,8 +2279,13 @@ define i64 @bar1a_013_XOR_AND_XOR_a() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB96_1: # %entry
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    chi %r0, 3
 ; CHECK-NEXT:    jglh dummy@PLT
-; CHECK-NEXT:  .LBB96_1: # %if.end
+; CHECK-NEXT:  .LBB96_2: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i32 asm "       alsi    $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr nonnull elementtype(i32) @a, ptr nonnull elementtype(i32) @a) #3
@@ -2315,6 +2322,8 @@ entry:
 }
 
 ; Test ((cc == 0) && (cc != 2)) ^ (cc != 3)
+; TODO: DAGCombiner is not able to optimize srl/ipm/cc sequence because of
+; switch table created by simplifyBranchOnICmpChain.
 define i64 @bar1a_023_XOR_AND() {
 ; CHECK-LABEL: bar1a_023_XOR_AND:
 ; CHECK:       # %bb.0: # %entry
@@ -2323,8 +2332,13 @@ define i64 @bar1a_023_XOR_AND() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB98_1: # %entry
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    chi %r0, 3
 ; CHECK-NEXT:    jglh dummy@PLT
-; CHECK-NEXT:  .LBB98_1: # %if.end
+; CHECK-NEXT:  .LBB98_2: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i32 asm "       alsi    $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr nonnull elementtype(i32) @a, ptr nonnull elementtype(i32) @a) #3
@@ -2344,6 +2358,8 @@ if.end:                                           ; preds = %entry, %entry, %if.
 }
 
 ; Test ((cc == 0) && (cc != 2)) ^ (cc != 3)
+; TODO: DAGCombiner is not able to optimize srl/ipm/cc sequence because of
+; switch table created by simplifyBranchOnICmpChain.
 define i64 @bar1a_023_AND_XOR_a() {
 ; CHECK-LABEL: bar1a_023_AND_XOR_a:
 ; CHECK:       # %bb.0: # %entry
@@ -2352,8 +2368,13 @@ define i64 @bar1a_023_AND_XOR_a() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB99_1: # %entry
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    chi %r0, 3
 ; CHECK-NEXT:    jglh dummy@PLT
-; CHECK-NEXT:  .LBB99_1: # %if.end
+; CHECK-NEXT:  .LBB99_2: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i32 asm "       alsi    $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr nonnull elementtype(i32) @a, ptr nonnull elementtype(i32) @a) #3
@@ -4969,6 +4990,8 @@ if.end:                                           ; preds = %entry, %if.then
 }
 
 ; Test (cc == 0) ^ ((cc == 1) || (cc != 3))
+; TODO: DAGCombiner is not able to optimize srl/ipm/cc sequence because of
+; switch table created by simplifyBranchOnICmpChain.
 define i64 @bar4a_013_XOR_OR_a() {
 ; CHECK-LABEL: bar4a_013_XOR_OR_a:
 ; CHECK:       # %bb.0: # %entry
@@ -4977,8 +5000,13 @@ define i64 @bar4a_013_XOR_OR_a() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB206_1: # %entry
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    chi %r0, 3
 ; CHECK-NEXT:    jglh dummy@PLT
-; CHECK-NEXT:  .LBB206_1: # %if.end
+; CHECK-NEXT:  .LBB206_2: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i32 asm sideeffect "       alsi    $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr nonnull elementtype(i32) @a, ptr nonnull elementtype(i32) @a) #3
@@ -5082,6 +5110,8 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test (cc == 0) ^ ((cc == 2) || (cc != 3))
+; TODO: DAGCombiner is not able to optimize srl/ipm/cc sequence because of
+; switch table created by simplifyBranchOnICmpChain.
 define i64 @bar4a_023_XOR_OR_a() {
 ; CHECK-LABEL: bar4a_023_XOR_OR_a:
 ; CHECK:       # %bb.0: # %entry
@@ -5090,8 +5120,13 @@ define i64 @bar4a_023_XOR_OR_a() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB210_1: # %entry
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    chi %r0, 3
 ; CHECK-NEXT:    jglh dummy@PLT
-; CHECK-NEXT:  .LBB210_1: # %if.end
+; CHECK-NEXT:  .LBB210_2: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i32 asm sideeffect "       alsi    $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr nonnull elementtype(i32) @a, ptr nonnull elementtype(i32) @a) #3

@@ -120,10 +120,8 @@ public:
 
   std::string convertConstraint(const char *&Constraint) const override {
     if (llvm::StringRef(Constraint) == "@cc") {
-      auto Len = llvm::StringRef("@cc").size();
-      std::string Converted = std::string("{@cc}");
-      Constraint += Len - 1;
-      return Converted;
+      Constraint += 2;
+      return std::string("{@cc}");
     }
     switch (Constraint[0]) {
     case 'p': // Keep 'p' constraint.

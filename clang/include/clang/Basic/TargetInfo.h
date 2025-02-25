@@ -1119,7 +1119,7 @@ public:
   public:
     ConstraintInfo(StringRef ConstraintStr, StringRef Name)
         : Flags(0), TiedOperand(-1), ConstraintStr(ConstraintStr.str()),
-          Name(Name.str()), FlagOutputCCUpperBound(2) {
+          Name(Name.str()), FlagOutputCCUpperBound(0) {
       ImmRange.Min = ImmRange.Max = 0;
       ImmRange.isConstrained = false;
     }

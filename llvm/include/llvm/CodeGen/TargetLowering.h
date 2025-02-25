@@ -5107,9 +5107,6 @@ public:
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
 
-  // Lower switch statement for flag output operand with SRL/IPM Sequence.
-  virtual bool canLowerSRL_IPM_Switch(SDValue Cond) const;
-
   // Lower custom output constraints. If invalid, return SDValue().
   virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Glue,
                                               const SDLoc &DL,

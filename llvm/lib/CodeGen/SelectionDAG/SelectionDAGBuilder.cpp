@@ -2837,34 +2837,7 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
       Opcode = Instruction::And;
     else if (match(BOp, m_LogicalOr(m_Value(BOp0), m_Value(BOp1))))
       Opcode = Instruction::Or;
-    auto &TLI = DAG.getTargetLoweringInfo();
-    const auto checkSRLIPM = [&TLI](const SDValue &Op) {
-      if (!Op.getNumOperands())
-        return false;
-      SDValue OpVal = Op.getOperand(0);
-      SDNode *N = OpVal.getNode();
-      if (N && N->getOpcode() == ISD::SRL)
-        return TLI.canLowerSRL_IPM_Switch(OpVal);
-      else if (N && OpVal.getNumOperands() &&
-               (N->getOpcode() == ISD::AND || N->getOpcode() == ISD::OR)) {
-        SDValue OpVal1 = OpVal.getOperand(0);
-        SDNode *N1 = OpVal1.getNode();
-        if (N1 && N1->getOpcode() == ISD::SRL)
-          return TLI.canLowerSRL_IPM_Switch(OpVal1);
-      }
-      return false;
-    };
-    // Incoming IR here is straight line code, FindMergedConditions splits
-    // condition code sequence across Basic Block. DAGCombiner can't combine
-    // across Basic Block. Identify SRL/IPM/CC sequence for SystemZ and avoid
-    // transformation in FindMergedConditions.
-    bool BrSrlIPM = false;
-    if (NodeMap.count(BOp0) && NodeMap[BOp0].getNode()) {
-      BrSrlIPM |= checkSRLIPM(getValue(BOp0));
-      if (NodeMap.count(BOp1) && NodeMap[BOp1].getNode())
-        BrSrlIPM &= checkSRLIPM(getValue(BOp1));
-    }
-    if (Opcode && !BrSrlIPM &&
+    if (Opcode &&
         !(match(BOp0, m_ExtractElt(m_Value(Vec), m_Value())) &&
           match(BOp1, m_ExtractElt(m_Specific(Vec), m_Value()))) &&
         !shouldKeepJumpConditionsTogether(
@@ -12138,36 +12111,19 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
       const APInt &SmallValue = Small.Low->getValue();
       const APInt &BigValue = Big.Low->getValue();
 
-      // Incoming IR is switch table.Identify SRL/IPM/CC sequence for SystemZ
-      // and we want to avoid splitting condition code sequence across basic
-      // block for cases like (CC == 0) || (CC == 2) || (CC == 3), or
-      // (CC == 0) || (CC == 1) ^ (CC == 3), there could potentially be
-      // more cases like this.
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      bool IsSrlIPM = false;
-      if (NodeMap.count(Cond) && NodeMap[Cond].getNode())
-        IsSrlIPM = TLI.canLowerSRL_IPM_Switch(getValue(Cond));
       // Check that there is only one bit different.
       APInt CommonBit = BigValue ^ SmallValue;
-      if (CommonBit.isPowerOf2() || IsSrlIPM) {
+      if (CommonBit.isPowerOf2()) {
         SDValue CondLHS = getValue(Cond);
         EVT VT = CondLHS.getValueType();
         SDLoc DL = getCurSDLoc();
         SDValue Cond;
 
-        if (CommonBit.isPowerOf2()) {
-          SDValue Or = DAG.getNode(ISD::OR, DL, VT, CondLHS,
-                                   DAG.getConstant(CommonBit, DL, VT));
-          Cond = DAG.getSetCC(DL, MVT::i1, Or,
-                              DAG.getConstant(BigValue | SmallValue, DL, VT),
-                              ISD::SETEQ);
-        } else if (IsSrlIPM && BigValue == 3 && SmallValue == 0) {
-          SDValue SetCC =
-              DAG.getSetCC(DL, MVT::i32, CondLHS,
-                           DAG.getConstant(SmallValue, DL, VT), ISD::SETEQ);
-          Cond = DAG.getSetCC(DL, MVT::i32, SetCC,
-                              DAG.getConstant(BigValue, DL, VT), ISD::SETEQ);
-        }
+        SDValue Or = DAG.getNode(ISD::OR, DL, VT, CondLHS,
+                                 DAG.getConstant(CommonBit, DL, VT));
+        Cond = DAG.getSetCC(DL, MVT::i1, Or,
+                            DAG.getConstant(BigValue | SmallValue, DL, VT),
+                            ISD::SETEQ);
 
         // Update successor info.
         // Both Small and Big will jump to Small.BB, so we sum up the

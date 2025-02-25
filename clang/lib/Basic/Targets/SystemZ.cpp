@@ -100,7 +100,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
     return true;
   case '@':
     // CC condition changes.
-    if (!StringRef("@cc").compare(Name)) {
+    if (StringRef(Name) == "@cc") {
       Name += 2;
       Info.setAllowsRegister();
       Info.setFlagOutputCCUpperBound(4);

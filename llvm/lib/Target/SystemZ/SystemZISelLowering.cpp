@@ -24,6 +24,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -8694,23 +8695,37 @@ SystemZTargetLowering::combineSELECT_CC_CCIPMMask(SDNode *N,
   return std::nullopt;
 }
 
-bool SystemZTargetLowering::canLowerSRL_IPM_Switch(SDValue Cond) const {
-  auto *SRL = Cond.getNode();
-  if (!SRL || SRL->getOpcode() != ISD::SRL)
+// Merging versus split in multiple branches cost.
+TargetLoweringBase::CondMergingParams
+SystemZTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
+                                                     const Value *Lhs,
+                                                     const Value *Rhs) const {
+  const auto isFlagOutOpCC = [](const Value *V) {
+    using namespace llvm::PatternMatch;
+    const Value *RHSVal;
+    const APInt *RHSC;
+    if (const auto *I = dyn_cast<Instruction>(V)) {
+      if (match(I->getOperand(0), m_And(m_Value(RHSVal), m_APInt(RHSC))) ||
+          match(I, m_Cmp(m_Value(RHSVal), m_APInt(RHSC)))) {
+        if (const auto *CB = dyn_cast<CallBase>(RHSVal)) {
+          if (CB->isInlineAsm()) {
+            const InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
+            return IA &&
+                   IA->getConstraintString().find("{@cc}") != std::string::npos;
+          }
+        }
+      }
+    }
     return false;
-  auto *SRLCount = dyn_cast<ConstantSDNode>(SRL->getOperand(1));
-  if (!SRLCount || SRLCount->getZExtValue() != SystemZ::IPM_CC)
-    return false;
-  auto *IPM = SRL->getOperand(0).getNode();
-  if (!IPM || IPM->getOpcode() != SystemZISD::IPM)
-    return false;
-  auto IPMOp0 = IPM->getOperand(0).getNode();
-  if (!IPMOp0 || IPMOp0->getNumOperands() < 2)
-    return false;
-  auto RN = dyn_cast<RegisterSDNode>(IPMOp0->getOperand(1));
-  if (!RN || !RN->getReg().isPhysical() || RN->getReg() != SystemZ::CC)
-    return false;
-  return true;
+  };
+  // Pattern (ICmp %asm) or (ICmp (And %asm)).
+  // Cost of longest dependency chain (ICmp, And) is 2. CostThreshold or
+  // BaseCost can be set >=2. If cost of instruction <= CostThreshold
+  // conditionals will be merged or else conditionals will be split.
+  if (isFlagOutOpCC(Lhs) && isFlagOutOpCC(Rhs))
+    return {3, 0, -1};
+  // Default.
+  return {-1, -1, -1};
 }
 
 SDValue SystemZTargetLowering::combineBR_CCMASK(

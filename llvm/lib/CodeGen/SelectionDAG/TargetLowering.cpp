@@ -5576,10 +5576,6 @@ const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
   return nullptr;
 }
 
-bool TargetLowering::canLowerSRL_IPM_Switch(SDValue Cond) const {
-  return false;
-}
-
 SDValue TargetLowering::LowerAsmOutputForConstraint(
     SDValue &Chain, SDValue &Glue, const SDLoc &DL,
     const AsmOperandInfo &OpInfo, SelectionDAG &DAG) const {

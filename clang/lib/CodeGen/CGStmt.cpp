@@ -2601,7 +2601,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
               const llvm::ArrayRef<LValue> ResultRegDests,
               const llvm::ArrayRef<QualType> ResultRegQualTys,
               const llvm::BitVector &ResultTypeRequiresCast,
-              const llvm::BitVector &ResultRegIsFlagReg) {
+              const std::vector<unsigned> &ResultRegIsFlagReg) {
   CGBuilderTy &Builder = CGF.Builder;
   CodeGenModule &CGM = CGF.CGM;
   llvm::LLVMContext &CTX = CGF.getLLVMContext();
@@ -2628,14 +2628,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
       // observed for select_cc on SystemZ unit tests for flag output operands.
       // For some cases for br_cc, generated IR was weird. e.g. switch table
       // for simple simple comparison terms for br_cc.
-      StringRef Name;
-      if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
-        Name = GAS->getOutputName(i);
-      TargetInfo::ConstraintInfo Info(S.getOutputConstraint(i), Name);
-      bool IsValid = CGF.getTarget().validateOutputConstraint(Info);
-      (void)IsValid;
-      assert(IsValid && "Failed to parse flag output operand constraint");
-      unsigned CCUpperBound = Info.getFlagOutputCCUpperBound();
+      unsigned CCUpperBound = ResultRegIsFlagReg[i];
       llvm::Constant *CCUpperBoundConst =
           llvm::ConstantInt::get(Tmp->getType(), CCUpperBound);
       llvm::Value *IsBooleanValue =
@@ -2766,7 +2759,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Type *> ArgElemTypes;
   std::vector<llvm::Value*> Args;
   llvm::BitVector ResultTypeRequiresCast;
-  llvm::BitVector ResultRegIsFlagReg;
+  std::vector<unsigned> ResultRegIsFlagReg;
 
   // Keep track of inout constraints.
   std::string InOutConstraints;
@@ -2824,8 +2817,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      bool IsFlagReg = llvm::StringRef(OutputConstraint).starts_with("{@cc");
-      ResultRegIsFlagReg.push_back(IsFlagReg);
+      ResultRegIsFlagReg.push_back(Info.getFlagOutputCCUpperBound());
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
       const bool RequiresCast = Info.allowsRegister() &&

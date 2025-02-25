@@ -746,6 +746,8 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test CC == 0 ^ CC != 3.
+; TODO: DAGCombiner is not able to optimize srl/ipm/cc sequence because of
+; switch table created by simplifyBranchOnICmpChain.
 define void @bar_03() {
 ; CHECK-LABEL: bar_03:
 ; CHECK:       # %bb.0: # %entry
@@ -754,8 +756,13 @@ define void @bar_03() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB30_1: # %entry
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    chi %r0, 3
 ; CHECK-NEXT:    jglh dummy@PLT
-; CHECK-NEXT:  .LBB30_1: # %if.end
+; CHECK-NEXT:  .LBB30_2: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i32 asm sideeffect "       alsi    $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr nonnull elementtype(i32) @a, ptr nonnull elementtype(i32) @a) #3

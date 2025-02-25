@@ -1464,6 +1464,8 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test ((cc == 0) ^ (cc != 1)) && (cc != 3).
+; TODO: DAGCombiner is not able to optimize srl/ipm/cc sequence because of
+; switch table created by simplifyBranchOnICmpChain.
 define i64 @bar1_012_AND_XOR_b() {
 ; CHECK-LABEL: bar1_012_AND_XOR_b:
 ; CHECK:       # %bb.0: # %entry
@@ -1472,8 +1474,13 @@ define i64 @bar1_012_AND_XOR_b() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB62_1: # %entry
+; CHECK-NEXT:    srl %r0, 28
+; CHECK-NEXT:    chi %r0, 3
 ; CHECK-NEXT:    jglh dummy@PLT
-; CHECK-NEXT:  .LBB62_1: # %if.end
+; CHECK-NEXT:  .LBB62_2: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i32 asm "       alsi    $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr nonnull elementtype(i32) @a, ptr nonnull elementtype(i32) @a) #3
