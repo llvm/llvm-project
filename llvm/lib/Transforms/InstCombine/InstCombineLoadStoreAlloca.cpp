@@ -1014,8 +1014,9 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
   if (auto *PHI = dyn_cast<PHINode>(V)) {
     bool Changed = false;
     for (Use &U : PHI->incoming_values()) {
-      if (auto *Res =
-              simplifyNonNullOperand(U.get(), HasDereferenceable, Depth + 1)) {
+      // We set Depth to RecursionLimit to avoid expensive recursion.
+      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
+                                             RecursionLimit)) {
         replaceUse(U, Res);
         Changed = true;
       }
