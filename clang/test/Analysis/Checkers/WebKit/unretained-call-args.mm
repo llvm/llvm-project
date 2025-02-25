@@ -354,7 +354,7 @@ namespace alloc_init_pair {
 
 namespace alloc_class {
   bool foo(NSObject *obj) {
-    return [obj isKindOfClass:SomeObj.class];
+    return [obj isKindOfClass:SomeObj.class] && [obj isKindOfClass:NSClassFromString(@"SomeObj")];
   }
 
   bool bar(NSObject *obj) {
@@ -365,3 +365,20 @@ namespace alloc_class {
     return [obj isKindOfClass:[SomeObj superclass]];
   }
 }
+
+@interface TestObject : NSObject
+- (void)doWork;
+- (void)doWorkOnSelf;
+@end
+
+@implementation TestObject
+
+- (void)doWork {
+  some_function();
+}
+
+- (void)doWorkOnSelf {
+  [self doWork];
+}
+
+@end

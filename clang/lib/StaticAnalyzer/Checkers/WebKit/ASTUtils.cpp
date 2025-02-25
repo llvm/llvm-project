@@ -132,7 +132,9 @@ bool tryToFindPtrOrigin(
           continue;
         }
 
-        if (safeGetName(callee) == "__builtin___CFStringMakeConstantString")
+        auto Name = safeGetName(callee);
+        if (Name == "__builtin___CFStringMakeConstantString" ||
+            Name == "NSClassFromString")
           return callback(E, true);
       }
     }
@@ -171,6 +173,14 @@ bool isASafeCallArg(const Expr *E) {
     if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
       if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
         return true;
+      if (auto *ImplicitP = dyn_cast<ImplicitParamDecl>(D)) {
+        auto Kind = ImplicitP->getParameterKind();
+        if (Kind == ImplicitParamKind::ObjCSelf ||
+            Kind == ImplicitParamKind::ObjCCmd ||
+            Kind == ImplicitParamKind::CXXThis ||
+            Kind == ImplicitParamKind::CXXVTT)
+          return true;
+      }
     }
   }
   if (isConstOwnerPtrMemberExpr(E))

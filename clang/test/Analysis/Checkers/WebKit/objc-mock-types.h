@@ -24,6 +24,7 @@ CFRunLoopRef CFRunLoopGetMain(void);
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
+extern Class NSClassFromString(NSString *aClassName);
 
 __attribute__((objc_root_class))
 @interface NSObject
