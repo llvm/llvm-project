@@ -335,3 +335,27 @@ define void @store_v8f16(<8 x half> %v, ptr %p) {
   store <8 x half> %v , ptr %p
   ret void
 }
+
+; ==============================================================================
+; Shuffle
+; ==============================================================================
+define <8 x half> @shuffle_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: shuffle_v8f16:
+; CHECK:         .functype shuffle_v8f16 (v128, v128) -> (v128)
+; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $1, 0, 1, 18, 19, 4, 5, 22, 23, 8, 9, 26, 27, 12, 13, 30, 31
+; CHECK-NEXT:    return $pop0
+  %res = shufflevector <8 x half> %x, <8 x half> %y,
+    <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x half> %res
+}
+
+define <8 x half> @shuffle_poison_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: shuffle_poison_v8f16:
+; CHECK:         .functype shuffle_poison_v8f16 (v128, v128) -> (v128)
+; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    return $pop0
+  %res = shufflevector <8 x half> %x, <8 x half> %y,
+    <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison,
+               i32 poison, i32 poison, i32 poison, i32 poison>
+  ret <8 x half> %res
+}
