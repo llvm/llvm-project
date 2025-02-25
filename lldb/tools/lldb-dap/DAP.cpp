@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
@@ -34,6 +35,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -223,10 +225,7 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   return llvm::Error::success();
 }
 
-void DAP::StopIO() {
-  out.Stop();
-  err.Stop();
-
+void DAP::StopEventHandlers() {
   if (event_thread.joinable()) {
     broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
     event_thread.join();
@@ -758,17 +757,9 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
 
-    // Try the new request handler first.
-    auto new_handler_pos = new_request_handlers.find(command);
-    if (new_handler_pos != new_request_handlers.end()) {
+    auto new_handler_pos = request_handlers.find(command);
+    if (new_handler_pos != request_handlers.end()) {
       (*new_handler_pos->second)(object);
-      return true; // Success
-    }
-
-    // FIXME: Remove request_handlers once everything has been migrated.
-    auto handler_pos = request_handlers.find(command);
-    if (handler_pos != request_handlers.end()) {
-      handler_pos->second(*this, object);
       return true; // Success
     }
 
@@ -780,10 +771,8 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
 
   if (packet_type == "response") {
     auto id = GetSigned(object, "request_seq", 0);
-    ResponseCallback response_handler = [](llvm::Expected<llvm::json::Value>) {
-      llvm::errs() << "Unhandled response\n";
-    };
 
+    std::unique_ptr<ResponseHandler> response_handler;
     {
       std::lock_guard<std::mutex> locker(call_mutex);
       auto inflight = inflight_reverse_requests.find(id);
@@ -793,19 +782,22 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       }
     }
 
+    if (!response_handler)
+      response_handler = std::make_unique<UnknownResponseHandler>("", id);
+
     // Result should be given, use null if not.
     if (GetBoolean(object, "success", false)) {
       llvm::json::Value Result = nullptr;
       if (auto *B = object.get("body")) {
         Result = std::move(*B);
       }
-      response_handler(Result);
+      (*response_handler)(Result);
     } else {
       llvm::StringRef message = GetString(object, "message");
       if (message.empty()) {
         message = "Unknown error, response failed";
       }
-      response_handler(llvm::createStringError(
+      (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
     }
 
@@ -853,13 +845,17 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 
   SendTerminatedEvent();
 
+  // Stop forwarding the debugger output and error handles.
+  out.Stop();
+  err.Stop();
+
   disconnecting = true;
 
   return error;
 }
 
 llvm::Error DAP::Loop() {
-  auto stop_io = llvm::make_scope_exit([this]() { StopIO(); });
+  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
@@ -880,29 +876,6 @@ llvm::Error DAP::Loop() {
   }
 
   return llvm::Error::success();
-}
-
-void DAP::SendReverseRequest(llvm::StringRef command,
-                             llvm::json::Value arguments,
-                             ResponseCallback callback) {
-  int64_t id;
-  {
-    std::lock_guard<std::mutex> locker(call_mutex);
-    id = ++reverse_request_seq;
-    inflight_reverse_requests.emplace(id, std::move(callback));
-  }
-
-  SendJSON(llvm::json::Object{
-      {"type", "request"},
-      {"seq", id},
-      {"command", command},
-      {"arguments", std::move(arguments)},
-  });
-}
-
-void DAP::RegisterRequestCallback(std::string request,
-                                  RequestCallback callback) {
-  request_handlers[request] = callback;
 }
 
 lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
@@ -1019,17 +992,10 @@ bool StartDebuggingRequestHandler::DoExecute(
     return false;
   }
 
-  dap.SendReverseRequest(
+  dap.SendReverseRequest<LogFailureResponseHandler>(
       "startDebugging",
       llvm::json::Object{{"request", request},
-                         {"configuration", std::move(*configuration)}},
-      [](llvm::Expected<llvm::json::Value> value) {
-        if (!value) {
-          llvm::Error err = value.takeError();
-          llvm::errs() << "reverse start debugging request failed: "
-                       << llvm::toString(std::move(err)) << "\n";
-        }
-      });
+                         {"configuration", std::move(*configuration)}});
 
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
 
@@ -1199,6 +1165,60 @@ DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
       return nullptr;
   }
   return inst_bp;
+}
+
+lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
+  switch (variablesReference) {
+  case VARREF_LOCALS:
+    return &locals;
+  case VARREF_GLOBALS:
+    return &globals;
+  case VARREF_REGS:
+    return &registers;
+  default:
+    return nullptr;
+  }
+}
+
+lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
+                                      llvm::StringRef name) {
+  lldb::SBValue variable;
+  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
+    bool is_duplicated_variable_name = name.contains(" @");
+    // variablesReference is one of our scopes, not an actual variable it is
+    // asking for a variable in locals or globals or registers
+    int64_t end_idx = top_scope->GetSize();
+    // Searching backward so that we choose the variable in closest scope
+    // among variables of the same name.
+    for (int64_t i = end_idx - 1; i >= 0; --i) {
+      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
+      std::string variable_name = CreateUniqueVariableNameForDisplay(
+          curr_variable, is_duplicated_variable_name);
+      if (variable_name == name) {
+        variable = curr_variable;
+        break;
+      }
+    }
+  } else {
+    // This is not under the globals or locals scope, so there are no duplicated
+    // names.
+
+    // We have a named item within an actual variable so we need to find it
+    // withing the container variable by name.
+    lldb::SBValue container = GetVariable(variablesReference);
+    variable = container.GetChildMemberWithName(name.data());
+    if (!variable.IsValid()) {
+      if (name.starts_with("[")) {
+        llvm::StringRef index_str(name.drop_front(1));
+        uint64_t index = 0;
+        if (!index_str.consumeInteger(0, index)) {
+          if (index_str == "]")
+            variable = container.GetChildAtIndex(index);
+        }
+      }
+    }
+  }
+  return variable;
 }
 
 } // namespace lldb_dap
