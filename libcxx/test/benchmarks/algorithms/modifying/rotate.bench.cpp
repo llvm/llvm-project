@@ -22,7 +22,52 @@
 int main(int argc, char** argv) {
   auto std_rotate = [](auto first, auto middle, auto last) { return std::rotate(first, middle, last); };
 
-  // {std,ranges}::rotate(normal container)
+  // Benchmark {std,ranges}::rotate where we rotate various fractions of the range. It is possible to
+  // special-case some of these fractions to cleverly perform swap_ranges.
+  {
+    auto bm = []<class Container>(std::string name, auto rotate, double fraction) {
+      benchmark::RegisterBenchmark(
+          name,
+          [=](auto& st) {
+            std::size_t const size = st.range(0);
+            using ValueType        = typename Container::value_type;
+            Container c;
+            std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
+
+            auto nth = std::next(c.begin(), static_cast<std::size_t>(size * fraction));
+            for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              auto result = rotate(c.begin(), nth, c.end());
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(32)
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+    bm.operator()<std::vector<int>>("std::rotate(vector<int>) (by 1/4)", std_rotate, 0.25);
+    bm.operator()<std::deque<int>>("std::rotate(deque<int>) (by 1/4)", std_rotate, 0.25);
+    bm.operator()<std::list<int>>("std::rotate(list<int>) (by 1/4)", std_rotate, 0.25);
+    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (by 1/4)", std::ranges::rotate, 0.25);
+    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (by 1/4)", std::ranges::rotate, 0.25);
+    bm.operator()<std::list<int>>("rng::rotate(list<int>) (by 1/4)", std::ranges::rotate, 0.25);
+
+    bm.operator()<std::vector<int>>("std::rotate(vector<int>) (by 1/3)", std_rotate, 0.33);
+    bm.operator()<std::deque<int>>("std::rotate(deque<int>) (by 1/3)", std_rotate, 0.33);
+    bm.operator()<std::list<int>>("std::rotate(list<int>) (by 1/3)", std_rotate, 0.33);
+    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (by 1/3)", std::ranges::rotate, 0.33);
+    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (by 1/3)", std::ranges::rotate, 0.33);
+    bm.operator()<std::list<int>>("rng::rotate(list<int>) (by 1/3)", std::ranges::rotate, 0.33);
+
+    bm.operator()<std::vector<int>>("std::rotate(vector<int>) (by 1/2)", std_rotate, 0.50);
+    bm.operator()<std::deque<int>>("std::rotate(deque<int>) (by 1/2)", std_rotate, 0.50);
+    bm.operator()<std::list<int>>("std::rotate(list<int>) (by 1/2)", std_rotate, 0.50);
+    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (by 1/2)", std::ranges::rotate, 0.50);
+    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (by 1/2)", std::ranges::rotate, 0.50);
+    bm.operator()<std::list<int>>("rng::rotate(list<int>) (by 1/2)", std::ranges::rotate, 0.50);
+  }
+
+  // Benchmark {std,ranges}::rotate where we rotate a single element from the beginning to the end of the range.
   {
     auto bm = []<class Container>(std::string name, auto rotate) {
       benchmark::RegisterBenchmark(
@@ -33,10 +78,10 @@ int main(int argc, char** argv) {
             Container c;
             std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
 
-            auto middle = std::next(c.begin(), size / 2);
+            auto pivot = std::next(c.begin());
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
-              auto result = rotate(c.begin(), middle, c.end());
+              auto result = rotate(c.begin(), pivot, c.end());
               benchmark::DoNotOptimize(result);
             }
           })
@@ -44,12 +89,42 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
-    bm.operator()<std::vector<int>>("std::rotate(vector<int>)", std_rotate);
-    bm.operator()<std::deque<int>>("std::rotate(deque<int>)", std_rotate);
-    bm.operator()<std::list<int>>("std::rotate(list<int>)", std_rotate);
-    bm.operator()<std::vector<int>>("rng::rotate(vector<int>)", std::ranges::rotate);
-    bm.operator()<std::deque<int>>("rng::rotate(deque<int>)", std::ranges::rotate);
-    bm.operator()<std::list<int>>("rng::rotate(list<int>)", std::ranges::rotate);
+    bm.operator()<std::vector<int>>("std::rotate(vector<int>) (1 element forward)", std_rotate);
+    bm.operator()<std::deque<int>>("std::rotate(deque<int>) (1 element forward)", std_rotate);
+    bm.operator()<std::list<int>>("std::rotate(list<int>) (1 element forward)", std_rotate);
+    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (1 element forward)", std::ranges::rotate);
+    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (1 element forward)", std::ranges::rotate);
+    bm.operator()<std::list<int>>("rng::rotate(list<int>) (1 element forward)", std::ranges::rotate);
+  }
+
+  // Benchmark {std,ranges}::rotate where we rotate a single element from the end to the beginning of the range.
+  {
+    auto bm = []<class Container>(std::string name, auto rotate) {
+      benchmark::RegisterBenchmark(
+          name,
+          [rotate](auto& st) {
+            std::size_t const size = st.range(0);
+            using ValueType        = typename Container::value_type;
+            Container c;
+            std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
+
+            auto pivot = std::next(c.begin(), size - 1);
+            for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              auto result = rotate(c.begin(), pivot, c.end());
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(32)
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+    bm.operator()<std::vector<int>>("std::rotate(vector<int>) (1 element backward)", std_rotate);
+    bm.operator()<std::deque<int>>("std::rotate(deque<int>) (1 element backward)", std_rotate);
+    bm.operator()<std::list<int>>("std::rotate(list<int>) (1 element backward)", std_rotate);
+    bm.operator()<std::vector<int>>("rng::rotate(vector<int>) (1 element backward)", std::ranges::rotate);
+    bm.operator()<std::deque<int>>("rng::rotate(deque<int>) (1 element backward)", std::ranges::rotate);
+    bm.operator()<std::list<int>>("rng::rotate(list<int>) (1 element backward)", std::ranges::rotate);
   }
 
   benchmark::Initialize(&argc, argv);
