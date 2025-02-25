@@ -1476,13 +1476,7 @@ llvm::Type *CGOpenMPRuntime::getIdentTyPointerTy() {
 }
 
 llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
-  if (!Kmpc_MicroTy) {
-    // Build void (*kmpc_micro)(kmp_int32 *global_tid, kmp_int32 *bound_tid,...)
-    llvm::Type *MicroParams[] = {llvm::PointerType::getUnqual(CGM.Int32Ty),
-                                 llvm::PointerType::getUnqual(CGM.Int32Ty)};
-    Kmpc_MicroTy = llvm::FunctionType::get(CGM.VoidTy, MicroParams, true);
-  }
-  return llvm::PointerType::getUnqual(Kmpc_MicroTy);
+  return llvm::PointerType::getUnqual(CGM.getLLVMContext());
 }
 
 static llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseKind
