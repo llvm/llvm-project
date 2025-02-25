@@ -58,7 +58,6 @@ jobs:
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
       ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
-      enable-pgo: ${{ steps.vars.outputs.enable-pgo }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
@@ -130,20 +129,22 @@ jobs:
           echo ccache=sccache >> $GITHUB_OUTPUT
         fi
 
-        # Detect necessary CMake flags
-        echo "enable-pgo=false" >> $GITHUB_OUTPUT
-        target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
         if [ "$RUNNER_OS" = "macOS" ]; then
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
           else
             arches=x86_64
+            # Disable Flang builds on macOS x86_64.  The FortranLower library takes
+            # 2-3 hours to build on macOS, much slower than on Linux.
+            # The long build time causes the release build to time out on x86_64,
+            # so we need to disable flang there.
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
 
         build_flang="true"
@@ -226,14 +227,6 @@ jobs:
       id: setup-stage
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
-    - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
-      with:
-        # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
-        max-size: 2G
-        key: ${{ needs.prepare.outputs.ccache }}-${{ runner.os }}-${{ runner.arch }}-release
-        variant: ${{ needs.prepare.outputs.ccache }}
-
     - name: Configure
       id: build
       shell: bash
@@ -246,14 +239,14 @@ jobs:
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=$CCACHE_BIN \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=$CCACHE_BIN
+            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+
     - name: Build
       shell: bash
       run: |
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
-        mv ${{ steps.setup-stage.outputs.build-prefix  }}/build/tools/clang/stage2-bins/${{ needs.prepare.outputs.release-binary-filename }} .
+        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
+        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
     
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
@@ -268,7 +261,7 @@ jobs:
       shell: bash
       run: |
         find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
-        rm -Rf ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/_CPack_Packages
+        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -prune -exec rm -r {} +
     
     - name: Save Stage
       uses: ./workflows-main/.github/workflows/release-binaries-save-stage

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Config.h"
-#include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
 
@@ -33,6 +32,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Thread.h"
@@ -41,6 +41,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -70,8 +72,7 @@ extern "C" PyObject *PyInit__lldb(void);
 // Don't mess with the signal handlers on Windows.
 #define LLDB_USE_PYTHON_SET_INTERRUPT 0
 #else
-// PyErr_SetInterrupt was introduced in 3.2.
-#define LLDB_USE_PYTHON_SET_INTERRUPT PY_VERSION_HEX >= 0x03020000
+#define LLDB_USE_PYTHON_SET_INTERRUPT 1
 #endif
 
 static ScriptInterpreterPythonImpl *GetPythonInterpreter(Debugger &debugger) {
@@ -91,10 +92,8 @@ namespace {
 struct InitializePythonRAII {
 public:
   InitializePythonRAII() {
-#if PY_VERSION_HEX >= 0x03080000
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
-#endif
 
 #if LLDB_EMBED_PYTHON_HOME
     static std::string g_python_home = []() -> std::string {
@@ -108,14 +107,7 @@ public:
       return spec.GetPath();
     }();
     if (!g_python_home.empty()) {
-#if PY_VERSION_HEX >= 0x03080000
       PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
-#else
-      size_t size = 0;
-      wchar_t *python_home_w = Py_DecodeLocale(g_python_home.c_str(), &size);
-      Py_SetPythonHome(python_home_w);
-      PyMem_RawFree(python_home_w);
-#endif
     }
 #endif
 
@@ -142,23 +134,10 @@ public:
       PyImport_AppendInittab("_lldb", LLDBSwigPyInit);
     }
 
-#if PY_VERSION_HEX >= 0x03080000
     config.install_signal_handlers = 0;
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
     InitializeThreadsPrivate();
-#else
-// Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
-// calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
-// call `PyEval_InitThreads` first, and >= 3.2 requires that you call it last.
-#if PY_VERSION_HEX >= 0x03020000
-    Py_InitializeEx(0);
-    InitializeThreadsPrivate();
-#else
-    InitializeThreadsPrivate();
-    Py_InitializeEx(0);
-#endif
-#endif
   }
 
   ~InitializePythonRAII() {
@@ -175,17 +154,17 @@ public:
 
 private:
   void InitializeThreadsPrivate() {
-// Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside itself,
-// so there is no way to determine whether the embedded interpreter
-// was already initialized by some external code. `PyEval_ThreadsInitialized`
-// would always return `true` and `PyGILState_Ensure/Release` flow would be
-// executed instead of unlocking GIL with `PyEval_SaveThread`. When
-// an another thread calls `PyGILState_Ensure` it would get stuck in deadlock.
-#if PY_VERSION_HEX >= 0x03070000
+    // Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside
+    // itself, so there is no way to determine whether the embedded interpreter
+    // was already initialized by some external code.
+    // `PyEval_ThreadsInitialized` would always return `true` and
+    // `PyGILState_Ensure/Release` flow would be executed instead of unlocking
+    // GIL with `PyEval_SaveThread`. When an another thread calls
+    // `PyGILState_Ensure` it would get stuck in deadlock.
+
     // The only case we should go further and acquire the GIL: it is unlocked.
     if (PyGILState_Check())
       return;
-#endif
 
 // `PyEval_ThreadsInitialized` was deprecated in Python 3.9 and removed in
 // Python 3.13. It has been returning `true` always since Python 3.7.
@@ -512,11 +491,11 @@ def function (frame, bp_loc, internal_dict):
     break;
   }
 
-  if (instructions) {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(instructions);
-      output_sp->Flush();
+  if (instructions && interactive) {
+    if (LockableStreamFileSP stream_sp = io_handler.GetOutputStreamFileSP()) {
+      LockedStreamFile locked_stream = stream_sp->Lock();
+      locked_stream.PutCString(instructions);
+      locked_stream.Flush();
     }
   }
 }
@@ -550,10 +529,9 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
         bp_options.SetCallback(
             ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
       } else if (!batch_mode) {
-        StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
-        if (error_sp) {
-          error_sp->Printf("Warning: No command attached to breakpoint.\n");
-          error_sp->Flush();
+        if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("Warning: No command attached to breakpoint.\n");
         }
       }
     }
@@ -573,10 +551,9 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
       wp_options->SetCallback(
           ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
     } else if (!batch_mode) {
-      StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
-      if (error_sp) {
-        error_sp->Printf("Warning: No command attached to breakpoint.\n");
-        error_sp->Flush();
+      if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream.Printf("Warning: No command attached to breakpoint.\n");
       }
     }
     m_active_io_handler = eIOHandlerNone;
@@ -703,7 +680,7 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
   PythonDictionary &sys_module_dict = GetSysModuleDictionary();
   if (sys_module_dict.IsValid()) {
     lldb::FileSP top_in_sp;
-    lldb::StreamFileSP top_out_sp, top_err_sp;
+    lldb::LockableStreamFileSP top_out_sp, top_err_sp;
     if (!in_sp || !out_sp || !err_sp || !*in_sp || !*out_sp || !*err_sp)
       m_debugger.AdoptTopIOHandlerFilesIfInvalid(top_in_sp, top_out_sp,
                                                  top_err_sp);
@@ -719,12 +696,14 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
 
     if (!SetStdHandle(out_sp, "stdout", m_saved_stdout, "w")) {
       if (top_out_sp)
-        SetStdHandle(top_out_sp->GetFileSP(), "stdout", m_saved_stdout, "w");
+        SetStdHandle(top_out_sp->GetUnlockedFileSP(), "stdout", m_saved_stdout,
+                     "w");
     }
 
     if (!SetStdHandle(err_sp, "stderr", m_saved_stderr, "w")) {
       if (top_err_sp)
-        SetStdHandle(top_err_sp->GetFileSP(), "stderr", m_saved_stderr, "w");
+        SetStdHandle(top_err_sp->GetUnlockedFileSP(), "stderr", m_saved_stderr,
+                     "w");
     }
   }
 
@@ -1933,10 +1912,10 @@ bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
             llvm::handleAllErrors(
                 maybe_ret_val.takeError(),
                 [&](PythonException &E) {
-                  debugger.GetErrorStream() << E.ReadBacktrace();
+                  *debugger.GetAsyncErrorStream() << E.ReadBacktrace();
                 },
                 [&](const llvm::ErrorInfoBase &E) {
-                  debugger.GetErrorStream() << E.message();
+                  *debugger.GetAsyncErrorStream() << E.message();
                 });
 
           } else {

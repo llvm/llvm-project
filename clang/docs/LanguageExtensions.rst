@@ -757,6 +757,9 @@ The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
 ``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
 
+No implicit promotion of integer types takes place. The mixing of integer types
+of different sizes and signs is forbidden in binary and ternary builtins.
+
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
 ============================================== ====================================================================== =========================================
@@ -1637,6 +1640,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+Packs in Structured Bindings                 __cpp_structured_bindings        C++26         C++03
 Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
 Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
@@ -1800,10 +1804,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
-* ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true if a type is referenceable, and false otherwise. A referenceable
-  type is a type that's either an object type, a reference type, or an unqualified
-  function type. This trait is deprecated and will be removed in Clang 21.
 * ``__is_rvalue_reference`` (C++, Embarcadero)
 * ``__is_same`` (C++, Embarcadero)
 * ``__is_same_as`` (GCC): Synonym for ``__is_same``.
@@ -2630,7 +2630,7 @@ with the current table size.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   size_t getSize() {
     return __builtin_wasm_table_size(table);
@@ -2652,10 +2652,10 @@ or -1. It will return -1 if not enough space could be allocated.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   // grow returns the new table size or -1 on error.
-  int grow(__funcref fn, int delta) {
+  int grow(funcref_t fn, int delta) {
     int prevSize = __builtin_wasm_table_grow(table, fn, delta);
     if (prevSize == -1)
       return -1;
@@ -2866,6 +2866,47 @@ passing the addresses of fields in the same struct, elements of the same array,
 etc.).
 
 Query for this feature with ``__has_builtin(__builtin_assume_separate_storage)``.
+
+``__builtin_assume_dereferenceable``
+-------------------------------------
+
+``__builtin_assume_dereferenceable`` is used to provide the optimizer with the
+knowledge that the pointer argument P is dereferenceable up to at least the
+specified number of bytes.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_assume_dereferenceable(const void *, size_t)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  int foo(int *x, int y) {
+      __builtin_assume_dereferenceable(x, sizeof(int));
+      int z = 0;
+      if (y == 1) {
+        // The optimizer may execute the load of x unconditionally due to
+        // __builtin_assume_dereferenceable guaranteeing sizeof(int) bytes can
+        // be loaded speculatively without trapping.
+        z = *x;
+      }
+      return z;
+  }
+
+**Description**:
+
+The arguments to this function provide a start pointer ``P`` and a size ``S``.
+``S`` must be at least 1 and a constant. The optimizer may assume that ``S``
+bytes are dereferenceable starting at ``P``. Note that this does not necessarily
+imply that ``P`` is non-null as ``nullptr`` can be dereferenced in some cases.
+The assumption also does not imply that ``P`` is not dereferenceable past ``S``
+bytes.
+
+
+Query for this feature with ``__has_builtin(__builtin_assume_dereferenceable)``.
 
 
 ``__builtin_offsetof``

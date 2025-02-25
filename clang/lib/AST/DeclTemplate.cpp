@@ -786,12 +786,16 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     QualType T, bool ParameterPack, TypeSourceInfo *TInfo) {
   AutoType *AT =
       C.getLangOpts().CPlusPlus20 ? T->getContainedAutoType() : nullptr;
-  return new (C, DC,
-              additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                    Expr *>(0,
-                                            AT && AT->isConstrained() ? 1 : 0))
-      NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, ParameterPack,
-                              TInfo);
+  const bool HasConstraint = AT && AT->isConstrained();
+  auto *NTTP =
+      new (C, DC,
+           additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
+               0, HasConstraint ? 1 : 0))
+          NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T,
+                                  ParameterPack, TInfo);
+  if (HasConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
+  return NTTP;
 }
 
 NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
@@ -800,23 +804,30 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
     ArrayRef<TypeSourceInfo *> ExpandedTInfos) {
   AutoType *AT = TInfo->getType()->getContainedAutoType();
-  return new (C, DC,
-              additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                    Expr *>(
-                  ExpandedTypes.size(), AT && AT->isConstrained() ? 1 : 0))
-      NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, TInfo,
-                              ExpandedTypes, ExpandedTInfos);
+  const bool HasConstraint = AT && AT->isConstrained();
+  auto *NTTP =
+      new (C, DC,
+           additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
+               ExpandedTypes.size(), HasConstraint ? 1 : 0))
+          NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, TInfo,
+                                  ExpandedTypes, ExpandedTInfos);
+  if (HasConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
+  return NTTP;
 }
 
 NonTypeTemplateParmDecl *
 NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                             bool HasTypeConstraint) {
-  return new (C, ID, additionalSizeToAlloc<std::pair<QualType,
-                                                     TypeSourceInfo *>,
-                                           Expr *>(0,
-                                                   HasTypeConstraint ? 1 : 0))
+  auto *NTTP =
+      new (C, ID,
+           additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
+               0, HasTypeConstraint ? 1 : 0))
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
                                   0, 0, nullptr, QualType(), false, nullptr);
+  if (HasTypeConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
+  return NTTP;
 }
 
 NonTypeTemplateParmDecl *
@@ -830,6 +841,8 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
                                   0, 0, nullptr, QualType(), nullptr, {}, {});
   NTTP->NumExpandedTypes = NumExpandedTypes;
+  if (HasTypeConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
   return NTTP;
 }
 
@@ -957,18 +970,17 @@ FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
 // ClassTemplateSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
 
-ClassTemplateSpecializationDecl::
-ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
-                                DeclContext *DC, SourceLocation StartLoc,
-                                SourceLocation IdLoc,
-                                ClassTemplateDecl *SpecializedTemplate,
-                                ArrayRef<TemplateArgument> Args,
-                                ClassTemplateSpecializationDecl *PrevDecl)
+ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(
+    ASTContext &Context, Kind DK, TagKind TK, DeclContext *DC,
+    SourceLocation StartLoc, SourceLocation IdLoc,
+    ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
+    bool StrictPackMatch, ClassTemplateSpecializationDecl *PrevDecl)
     : CXXRecordDecl(DK, TK, Context, DC, StartLoc, IdLoc,
                     SpecializedTemplate->getIdentifier(), PrevDecl),
-    SpecializedTemplate(SpecializedTemplate),
-    TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
-    SpecializationKind(TSK_Undeclared) {
+      SpecializedTemplate(SpecializedTemplate),
+      TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
+      SpecializationKind(TSK_Undeclared), StrictPackMatch(StrictPackMatch) {
+  assert(DK == Kind::ClassTemplateSpecialization || StrictPackMatch == false);
 }
 
 ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
@@ -977,18 +989,14 @@ ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
                     SourceLocation(), nullptr, nullptr),
       SpecializationKind(TSK_Undeclared) {}
 
-ClassTemplateSpecializationDecl *
-ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
-                                        DeclContext *DC,
-                                        SourceLocation StartLoc,
-                                        SourceLocation IdLoc,
-                                        ClassTemplateDecl *SpecializedTemplate,
-                                        ArrayRef<TemplateArgument> Args,
-                                   ClassTemplateSpecializationDecl *PrevDecl) {
-  auto *Result =
-      new (Context, DC) ClassTemplateSpecializationDecl(
-          Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
-          SpecializedTemplate, Args, PrevDecl);
+ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
+    ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
+    SourceLocation IdLoc, ClassTemplateDecl *SpecializedTemplate,
+    ArrayRef<TemplateArgument> Args, bool StrictPackMatch,
+    ClassTemplateSpecializationDecl *PrevDecl) {
+  auto *Result = new (Context, DC) ClassTemplateSpecializationDecl(
+      Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
+      SpecializedTemplate, Args, StrictPackMatch, PrevDecl);
   Result->setMayHaveOutOfDateDef(false);
 
   // If the template decl is incomplete, copy the external lexical storage from
@@ -1175,7 +1183,9 @@ ClassTemplatePartialSpecializationDecl::ClassTemplatePartialSpecializationDecl(
     ClassTemplatePartialSpecializationDecl *PrevDecl)
     : ClassTemplateSpecializationDecl(
           Context, ClassTemplatePartialSpecialization, TK, DC, StartLoc, IdLoc,
-          SpecializedTemplate, Args, PrevDecl),
+          // Tracking StrictPackMatch for Partial
+          // Specializations is not needed.
+          SpecializedTemplate, Args, /*StrictPackMatch=*/false, PrevDecl),
       TemplateParams(Params), InstantiatedFromMember(nullptr, false) {
   if (AdoptTemplateParameterList(Params, this))
     setInvalidDecl();

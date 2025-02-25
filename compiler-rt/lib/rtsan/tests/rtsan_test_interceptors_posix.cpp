@@ -197,6 +197,16 @@ TEST(TestRtsanInterceptors, MmapDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_LINUX
+TEST(TestRtsanInterceptors, MremapDiesWhenRealtime) {
+  void *addr = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  auto Func = [addr]() { void *_ = mremap(addr, 8, 16, 0); };
+  ExpectRealtimeDeath(Func, "mremap");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST(TestRtsanInterceptors, MunmapDiesWhenRealtime) {
   void *ptr = mmap(nullptr, 8, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -434,6 +444,36 @@ TEST(TestRtsanInterceptors, CloseDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "close");
   ExpectNonRealtimeSurvival(Func);
 }
+
+TEST(TestRtsanInterceptors, ChdirDiesWhenRealtime) {
+  auto Func = []() { chdir("."); };
+  ExpectRealtimeDeath(Func, "chdir");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, FchdirDiesWhenRealtime) {
+  auto Func = []() { fchdir(0); };
+  ExpectRealtimeDeath(Func, "fchdir");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+#if SANITIZER_INTERCEPT_READLINK
+TEST(TestRtsanInterceptors, ReadlinkDiesWhenRealtime) {
+  char buf[1024];
+  auto Func = [&buf]() { readlink("/proc/self", buf, sizeof(buf)); };
+  ExpectRealtimeDeath(Func, "readlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_READLINKAT
+TEST(TestRtsanInterceptors, ReadlinkatDiesWhenRealtime) {
+  char buf[1024];
+  auto Func = [&buf]() { readlinkat(0, "/proc/self", buf, sizeof(buf)); };
+  ExpectRealtimeDeath(Func, "readlinkat");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   auto Func = [this]() {
@@ -820,6 +860,18 @@ TEST_F(RtsanOpenedFileTest, FwriteDiesWhenRealtime) {
   const char *message = "Hello, world!";
   auto Func = [&]() { fwrite(&message, 1, 4, GetOpenFile()); };
   ExpectRealtimeDeath(Func, "fwrite");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkDiesWhenRealtime) {
+  auto Func = [&]() { unlink(GetTemporaryFilePath()); };
+  ExpectRealtimeDeath(Func, "unlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkatDiesWhenRealtime) {
+  auto Func = [&]() { unlinkat(0, GetTemporaryFilePath(), 0); };
+  ExpectRealtimeDeath(Func, "unlinkat");
   ExpectNonRealtimeSurvival(Func);
 }
 

@@ -12,6 +12,7 @@
 #include "DAPForward.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
+#include "Handler/RequestHandler.h"
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -50,7 +52,8 @@
 
 namespace lldb_dap {
 
-typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
+typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
+    SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
@@ -65,7 +68,6 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
 typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
@@ -113,6 +115,10 @@ struct Variables {
   /// \return variableReference assigned to this expandable variable.
   int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
 
+  lldb::SBValueList *GetTopLevelScope(int64_t variablesReference);
+
+  lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
+
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
 };
@@ -139,6 +145,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
+  std::string name;
   llvm::StringRef debug_adaptor_path;
   std::ofstream *log;
   InputStream input;
@@ -182,7 +189,7 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  std::map<std::string, RequestCallback, std::less<>> request_handlers;
+  llvm::StringMap<std::unique_ptr<RequestHandler>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -203,8 +210,9 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
-      StreamDescriptor input, StreamDescriptor output);
+  DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
@@ -215,10 +223,11 @@ struct DAP {
   ///
   /// Errors in this operation will be printed to the log file and the IDE's
   /// console output as well.
-  llvm::Error ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr);
+  llvm::Error ConfigureIO(std::FILE *overrideOut = nullptr,
+                          std::FILE *overrideErr = nullptr);
 
-  /// Stop the redirected IO threads and associated pipes.
-  void StopIO();
+  /// Stop event handler threads.
+  void StopEventHandlers();
 
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
@@ -298,10 +307,17 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  const std::map<std::string, RequestCallback> &GetRequestHandlers();
-
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
+
+  /// Disconnect the DAP session.
+  lldb::SBError Disconnect();
+
+  /// Disconnect the DAP session and optionally terminate the debuggee.
+  lldb::SBError Disconnect(bool terminateDebuggee);
+
+  /// Send a "terminated" event to indicate the process is done being debugged.
+  void SendTerminatedEvent();
 
   llvm::Error Loop();
 
@@ -318,16 +334,10 @@ struct DAP {
   void SendReverseRequest(llvm::StringRef command, llvm::json::Value arguments,
                           ResponseCallback callback);
 
-  /// Registers a callback handler for a Debug Adapter Protocol request
-  ///
-  /// \param[in] request
-  ///     The name of the request following the Debug Adapter Protocol
-  ///     specification.
-  ///
-  /// \param[in] callback
-  ///     The callback to execute when the given request is triggered by the
-  ///     IDE.
-  void RegisterRequestCallback(std::string request, RequestCallback callback);
+  /// Registers a request handler.
+  template <typename Handler> void RegisterRequest() {
+    request_handlers[Handler::getCommand()] = std::make_unique<Handler>(*this);
+  }
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }

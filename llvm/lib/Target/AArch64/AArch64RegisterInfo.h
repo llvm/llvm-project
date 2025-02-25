@@ -27,7 +27,7 @@ class AArch64RegisterInfo final : public AArch64GenRegisterInfo {
   const Triple &TT;
 
 public:
-  AArch64RegisterInfo(const Triple &TT);
+  AArch64RegisterInfo(const Triple &TT, unsigned HwMode);
 
   // FIXME: This should be tablegen'd like getDwarfRegNum is
   int getSEHRegNum(unsigned i) const {
@@ -140,7 +140,7 @@ public:
                              const LiveRegMatrix *Matrix) const override;
 
   unsigned getLocalAddressRegister(const MachineFunction &MF) const;
-  bool regNeedsCFI(unsigned Reg, unsigned &RegToUseForCFI) const;
+  bool regNeedsCFI(MCRegister Reg, MCRegister &RegToUseForCFI) const;
 
   /// SrcRC and DstRC will be morphed into NewRC if this returns true
   bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,

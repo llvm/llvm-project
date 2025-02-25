@@ -114,8 +114,11 @@ class ReachingDefAnalysis : public MachineFunctionPass {
 private:
   MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits = 0;
+  unsigned NumStackObjects = 0;
+  int ObjectIndexBegin = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,
@@ -139,6 +142,13 @@ private:
 
   MBBReachingDefsInfo MBBReachingDefs;
 
+  /// MBBFrameObjsReachingDefs[{i, j}] is a list of instruction indices
+  /// (relative to begining of MBB i) that define frame index j in MBB i. This
+  /// is used in answering reaching definition queries.
+  using MBBFrameObjsReachingDefsInfo =
+      DenseMap<std::pair<unsigned, int>, SmallVector<int>>;
+  MBBFrameObjsReachingDefsInfo MBBFrameObjsReachingDefs;
+
   /// Default values are 'nothing happened a long time ago'.
   const int ReachingDefDefaultVal = -(1 << 21);
 
@@ -158,6 +168,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  void printAllReachingDefs(MachineFunction &MF);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -177,6 +188,7 @@ public:
 
   /// Provides the instruction id of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
+  /// Note that Reg may represent a stack slot.
   int getReachingDef(MachineInstr *MI, Register Reg) const;
 
   /// Return whether A and B use the same def of Reg.
@@ -305,6 +317,7 @@ private:
 
   /// Provides the instruction of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
+  /// Note that Reg may represent a stack slot.
   MachineInstr *getReachingLocalMIDef(MachineInstr *MI, Register Reg) const;
 };
 

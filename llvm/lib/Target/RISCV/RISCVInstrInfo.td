@@ -125,6 +125,7 @@ def ImmZeroAsmOperand : AsmOperandClass {
   let Name = "ImmZero";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "immediate must be zero";
 }
 
 // A parse method for (${gpr}) or 0(${gpr}), where the 0 is be silently ignored.
@@ -323,6 +324,7 @@ def BareSymbol : AsmOperandClass {
   let Name = "BareSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidBareSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseBareSymbol";
 }
 
@@ -335,6 +337,7 @@ def CallSymbol : AsmOperandClass {
   let Name = "CallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidCallSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseCallSymbol";
 }
 
@@ -347,6 +350,7 @@ def PseudoJumpSymbol : AsmOperandClass {
   let Name = "PseudoJumpSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidPseudoJumpSymbol";
+  let DiagnosticString = "operand must be a valid jump target";
   let ParserMethod = "parsePseudoJumpSymbol";
 }
 
@@ -359,6 +363,7 @@ def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTPRelAddSymbol";
+  let DiagnosticString = "operand must be a symbol with %tprel_add modifier";
   let ParserMethod = "parseOperandWithModifier";
 }
 
@@ -1779,6 +1784,7 @@ def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTLSDESCCallSymbol";
+  let DiagnosticString = "operand must be a symbol with %tlsdesc_call modifier";
   let ParserMethod = "parseOperandWithModifier";
 }
 
@@ -1949,15 +1955,19 @@ class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
   return hasAllHUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
+}
 
 // PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
 // if only the lower 32 bits of their result is used.
 class binop_allwusers<SDPatternOperator operator>
-    : PatFrag<(ops node:$lhs, node:$rhs),
-              (i64 (operator node:$lhs, node:$rhs)), [{
+    : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
+              [{
   return hasAllWUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
+}
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
@@ -2138,6 +2148,7 @@ include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXMips.td"
+include "RISCVInstrInfoXRivos.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

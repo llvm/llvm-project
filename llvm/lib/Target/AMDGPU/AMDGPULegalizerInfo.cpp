@@ -2426,11 +2426,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
-  DiagnosticInfoUnsupported InvalidAddrSpaceCast(
-      MF.getFunction(), "invalid addrspacecast", B.getDebugLoc());
-
-  LLVMContext &Ctx = MF.getFunction().getContext();
-  Ctx.diagnose(InvalidAddrSpaceCast);
+  // Invalid casts are poison.
+  // TODO: Should return poison
   B.buildUndef(Dst);
   MI.eraseFromParent();
   return true;
@@ -4275,10 +4272,11 @@ verifyCFIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI, MachineInstr *&Br,
   return UseMI;
 }
 
-bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
-                                         const ArgDescriptor *Arg,
-                                         const TargetRegisterClass *ArgRC,
-                                         LLT ArgTy) const {
+void AMDGPULegalizerInfo::buildLoadInputValue(Register DstReg,
+                                              MachineIRBuilder &B,
+                                              const ArgDescriptor *Arg,
+                                              const TargetRegisterClass *ArgRC,
+                                              LLT ArgTy) const {
   MCRegister SrcReg = Arg->getRegister();
   assert(SrcReg.isPhysical() && "Physical register expected");
   assert(DstReg.isVirtual() && "Virtual register expected");
@@ -4304,8 +4302,6 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
   } else {
     B.buildCopy(DstReg, LiveIn);
   }
-
-  return true;
 }
 
 bool AMDGPULegalizerInfo::loadInputValue(
@@ -4369,7 +4365,8 @@ bool AMDGPULegalizerInfo::loadInputValue(
 
   if (!Arg->isRegister() || !Arg->getRegister().isValid())
     return false; // TODO: Handle these
-  return loadInputValue(DstReg, B, Arg, ArgRC, ArgTy);
+  buildLoadInputValue(DstReg, B, Arg, ArgRC, ArgTy);
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizePreloadedArgIntrin(
@@ -7403,13 +7400,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeKernargMemParameter(MI, B,  SI::KernelInputOffsets::LOCAL_SIZE_Y);
     // TODO: Could insert G_ASSERT_ZEXT from s16
   case Intrinsic::r600_read_local_size_z:
-    return legalizeKernargMemParameter(MI, B, SI::KernelInputOffsets::LOCAL_SIZE_Z);
-  case Intrinsic::r600_read_global_size_x:
-    return legalizeKernargMemParameter(MI, B, SI::KernelInputOffsets::GLOBAL_SIZE_X);
-  case Intrinsic::r600_read_global_size_y:
-    return legalizeKernargMemParameter(MI, B, SI::KernelInputOffsets::GLOBAL_SIZE_Y);
-  case Intrinsic::r600_read_global_size_z:
-    return legalizeKernargMemParameter(MI, B, SI::KernelInputOffsets::GLOBAL_SIZE_Z);
+    return legalizeKernargMemParameter(MI, B,
+                                       SI::KernelInputOffsets::LOCAL_SIZE_Z);
   case Intrinsic::amdgcn_fdiv_fast:
     return legalizeFDIVFastIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_is_shared:

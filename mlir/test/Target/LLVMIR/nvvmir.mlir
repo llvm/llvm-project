@@ -623,27 +623,25 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="8" }
+
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.minctasm"="16" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="16" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>,
@@ -651,13 +649,12 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.minctasm"="16" }
 // CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
 // CHECK: define ptx_kernel void @kernel_func
@@ -755,5 +752,74 @@ llvm.func @nvvm_wgmma_wait_group_aligned() {
   nvvm.wgmma.wait.group.sync.aligned 0
   // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 20)
   nvvm.wgmma.wait.group.sync.aligned 20
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_wait
+llvm.func @nvvm_griddepcontrol_wait() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.wait()
+  nvvm.griddepcontrol.wait
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_launch_dependents
+llvm.func @nvvm_griddepcontrol_launch_dependents() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.launch.dependents()
+  nvvm.griddepcontrol.launch.dependents
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_mapa
+llvm.func @nvvm_mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
+  // CHECK-LLVM: call ptr @llvm.nvvm.mapa(ptr %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
+  // CHECK-LLVM: call ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_redux_sync
+llvm.func @nvvm_redux_sync(%value: i32, %offset: i32) {
+  // CHECK: call i32 @llvm.nvvm.redux.sync.add(i32 %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.redux.sync add %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.umax(i32 %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.redux.sync umax %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.umin(i32 %{{.*}}, i32 %{{.*}})
+  %2 = nvvm.redux.sync umin %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.and(i32 %{{.*}}, i32 %{{.*}})
+  %3 = nvvm.redux.sync and %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.or(i32 %{{.*}}, i32 %{{.*}})
+  %4 = nvvm.redux.sync or %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.xor(i32 %{{.*}}, i32 %{{.*}})
+  %5 = nvvm.redux.sync xor %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.max(i32 %{{.*}}, i32 %{{.*}})
+  %6 = nvvm.redux.sync max %value, %offset: i32 -> i32
+  // CHECK: call i32 @llvm.nvvm.redux.sync.min(i32 %{{.*}}, i32 %{{.*}})
+  %7 = nvvm.redux.sync min %value, %offset: i32 -> i32
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_redux_sync_f32
+llvm.func @nvvm_redux_sync_f32(%value: f32, %offset: i32) {
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin(float %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin.abs(float %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.redux.sync fmin %value, %offset {abs = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin.NaN(float %{{.*}}, i32 %{{.*}})
+  %2 = nvvm.redux.sync fmin %value, %offset {nan = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmin.abs.NaN(float %{{.*}}, i32 %{{.*}})
+  %3 = nvvm.redux.sync fmin %value, %offset {abs = true, nan = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax(float %{{.*}}, i32 %{{.*}})
+  %4 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs(float %{{.*}}, i32 %{{.*}})
+  %5 = nvvm.redux.sync fmax %value, %offset {abs = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax.NaN(float %{{.*}}, i32 %{{.*}})
+  %6 = nvvm.redux.sync fmax %value, %offset {nan = true}: f32 -> f32
+  // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs.NaN(float %{{.*}}, i32 %{{.*}})
+  %7 = nvvm.redux.sync fmax %value, %offset {abs = true, nan = true}: f32 -> f32
   llvm.return
 }

@@ -19,7 +19,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: define void @foo(ptr nocapture %a, ptr nocapture readonly %c) #0 {
+; CHECK-LABEL: define void @foo(ptr captures(none) %a, ptr readonly captures(none) %c) #0 {
 ; CHECK: entry:
 ; CHECK:   call void @llvm.experimental.noalias.scope.decl
 ; CHECK:   [[TMP0:%.+]] = load float, ptr %c, align 4, !noalias !0
@@ -50,7 +50,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: define void @foo2(ptr nocapture %a, ptr nocapture %b, ptr nocapture readonly %c) #0 {
+; CHECK-LABEL: define void @foo2(ptr captures(none) %a, ptr captures(none) %b, ptr readonly captures(none) %c) #0 {
 ; CHECK: entry:
 ; CHECK:   call void @llvm.experimental.noalias.scope.decl(metadata !3)
 ; CHECK:   call void @llvm.experimental.noalias.scope.decl(metadata !6)

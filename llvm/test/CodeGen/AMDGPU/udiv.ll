@@ -2319,10 +2319,9 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readonly %arg) {
 ; SI-LABEL: fdiv_test_denormals:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s1, s0
 ; SI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
 ; SI-NEXT:    buffer_load_sbyte v1, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(1)
@@ -2345,10 +2344,9 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ;
 ; VI-LABEL: fdiv_test_denormals:
 ; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s1, s0
 ; VI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
 ; VI-NEXT:    buffer_load_sbyte v1, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(1)
@@ -2509,9 +2507,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; VI-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v5, s4, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v2, v0
 ; VI-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v4, s6, v[2:3]
-; VI-NEXT:    v_mov_b32_e32 v0, v1
-; VI-NEXT:    v_mov_b32_e32 v1, v3
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v1, v3
 ; VI-NEXT:    v_addc_u32_e64 v1, s[4:5], 0, 0, vcc
 ; VI-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v5, s6, v[0:1]
 ; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 7
@@ -2530,9 +2526,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GCN-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v5, s4, v[2:3]
 ; GCN-NEXT:    v_mov_b32_e32 v2, v0
 ; GCN-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v4, s6, v[2:3]
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
-; GCN-NEXT:    v_mov_b32_e32 v1, v3
-; GCN-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, v1, v3
 ; GCN-NEXT:    v_addc_u32_e64 v1, s[4:5], 0, 0, vcc
 ; GCN-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v5, s6, v[0:1]
 ; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, 7
@@ -2548,10 +2542,8 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GFX1030-NEXT:    v_mul_hi_u32 v2, 0x71b47843, v4
 ; GFX1030-NEXT:    v_mad_u64_u32 v[0:1], null, 0x71b47843, v5, v[2:3]
 ; GFX1030-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1030-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX1030-NEXT:    v_mad_u64_u32 v[2:3], null, 0xa7c5ac4, v4, v[2:3]
-; GFX1030-NEXT:    v_mov_b32_e32 v1, v3
-; GFX1030-NEXT:    v_add_co_u32 v0, s4, v0, v1
+; GFX1030-NEXT:    v_add_co_u32 v0, s4, v1, v3
 ; GFX1030-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, 0, s4
 ; GFX1030-NEXT:    v_mad_u64_u32 v[0:1], null, 0xa7c5ac4, v5, v[0:1]
 ; GFX1030-NEXT:    v_alignbit_b32 v0, v1, v0, 7

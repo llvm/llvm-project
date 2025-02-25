@@ -11,8 +11,8 @@
 
 #include "formatting.h"
 #include "type.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/reference.h"
+#include "flang/Support/default-kinds.h"
 #include <map>
 #include <vector>
 

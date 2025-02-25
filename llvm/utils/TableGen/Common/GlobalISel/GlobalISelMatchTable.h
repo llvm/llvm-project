@@ -145,14 +145,10 @@ public:
   /// A bitfield of RecordFlagsBits flags.
   unsigned Flags;
 
-  /// The actual run-time value, if known
-  int64_t RawValue;
-
   MatchTableRecord(std::optional<unsigned> LabelID_, StringRef EmitStr,
-                   unsigned NumElements, unsigned Flags,
-                   int64_t RawValue = std::numeric_limits<int64_t>::min())
+                   unsigned NumElements, unsigned Flags)
       : LabelID(LabelID_.value_or(~0u)), EmitStr(EmitStr),
-        NumElements(NumElements), Flags(Flags), RawValue(RawValue) {
+        NumElements(NumElements), Flags(Flags) {
     assert((!LabelID_ || LabelID != ~0u) &&
            "This value is reserved for non-labels");
   }
@@ -165,12 +161,6 @@ public:
     Flags &= ~MTRF_CommaFollows;
     NumElements = 0;
   }
-
-  /// For Jump Table generation purposes
-  bool operator<(const MatchTableRecord &Other) const {
-    return RawValue < Other.RawValue;
-  }
-  int64_t getRawValue() const { return RawValue; }
 
   void emit(raw_ostream &OS, bool LineBreakNextAfterThis,
             const MatchTable &Table) const;
@@ -202,12 +192,8 @@ public:
   static MatchTableRecord Comment(StringRef Comment);
   static MatchTableRecord Opcode(StringRef Opcode, int IndentAdjust = 0);
   static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue);
-  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue,
-                                     int64_t RawValue);
   static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
                                      StringRef NamedValue);
-  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
-                                     StringRef NamedValue, int64_t RawValue);
   static MatchTableRecord IntValue(unsigned NumBytes, int64_t IntValue);
   static MatchTableRecord ULEB128Value(uint64_t IntValue);
   static MatchTableRecord Label(unsigned LabelID);
@@ -400,6 +386,20 @@ private:
   bool candidateConditionMatches(const PredicateMatcher &Predicate) const;
 };
 
+/// MatchTableRecord and associated value, for jump table generation.
+struct RecordAndValue {
+  MatchTableRecord Record;
+  int64_t RawValue;
+
+  RecordAndValue(MatchTableRecord Record,
+                 int64_t RawValue = std::numeric_limits<int64_t>::min())
+      : Record(std::move(Record)), RawValue(RawValue) {}
+
+  bool operator<(const RecordAndValue &Other) const {
+    return RawValue < Other.RawValue;
+  }
+};
+
 class SwitchMatcher : public Matcher {
   /// All the nested matchers, representing distinct switch-cases. The first
   /// conditions (as Matcher::getFirstCondition() reports) of all the nested
@@ -414,7 +414,7 @@ class SwitchMatcher : public Matcher {
 
   /// Temporary set used to check that the case values don't repeat within the
   /// same switch.
-  std::set<MatchTableRecord> Values;
+  std::set<RecordAndValue> Values;
 
   /// An owning collection for any auxiliary matchers created while optimizing
   /// nested matchers contained.
@@ -874,7 +874,7 @@ public:
     return hasValue() && PredicateMatcher::isIdentical(B);
   }
 
-  virtual MatchTableRecord getValue() const {
+  virtual RecordAndValue getValue() const {
     assert(hasValue() && "Can not get a value of a value-less predicate!");
     llvm_unreachable("Not implemented yet");
   }
@@ -968,7 +968,7 @@ public:
            Ty == cast<LLTOperandMatcher>(&B)->Ty;
   }
 
-  MatchTableRecord getValue() const override;
+  RecordAndValue getValue() const override;
   bool hasValue() const override;
 
   LLTCodeGen getTy() const { return Ty; }
@@ -1378,7 +1378,7 @@ protected:
 
   static DenseMap<const CodeGenInstruction *, unsigned> OpcodeValues;
 
-  MatchTableRecord getInstValue(const CodeGenInstruction *I) const;
+  RecordAndValue getInstValue(const CodeGenInstruction *I) const;
 
 public:
   static void initOpcodeValuesMap(const CodeGenTarget &Target);
@@ -1405,7 +1405,7 @@ public:
 
   // TODO: This is used for the SwitchMatcher optimization. We should be able to
   // return a list of the opcodes to match.
-  MatchTableRecord getValue() const override;
+  RecordAndValue getValue() const override;
 
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;

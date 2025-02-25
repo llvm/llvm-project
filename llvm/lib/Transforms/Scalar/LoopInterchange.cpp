@@ -146,7 +146,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
         continue;
       // Track Output, Flow, and Anti dependencies.
-      if (auto D = DI->depends(Src, Dst, true)) {
+      if (auto D = DI->depends(Src, Dst)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
         // If the direction vector is negative, normalize it to
         // make it non-negative.
@@ -160,11 +160,16 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
+          // `DVEntry::LE` is converted to `*`. This is because `LE` means `<`
+          // or `=`, for which we don't have an equivalent representation, so
+          // that the conservative approximation is necessary. The same goes for
+          // `DVEntry::GE`.
+          // TODO: Use of fine-grained expressions allows for more accurate
+          // analysis.
           unsigned Dir = D->getDirection(II);
-          if (Dir == Dependence::DVEntry::LT || Dir == Dependence::DVEntry::LE)
+          if (Dir == Dependence::DVEntry::LT)
             Direction = '<';
-          else if (Dir == Dependence::DVEntry::GT ||
-                   Dir == Dependence::DVEntry::GE)
+          else if (Dir == Dependence::DVEntry::GT)
             Direction = '>';
           else if (Dir == Dependence::DVEntry::EQ)
             Direction = '=';
@@ -271,6 +276,27 @@ static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
   }
   return true;
 }
+
+static bool isComputableLoopNest(ScalarEvolution *SE,
+                                 ArrayRef<Loop *> LoopList) {
+  for (Loop *L : LoopList) {
+    const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
+    if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
+      LLVM_DEBUG(dbgs() << "Couldn't compute backedge count\n");
+      return false;
+    }
+    if (L->getNumBackEdges() != 1) {
+      LLVM_DEBUG(dbgs() << "NumBackEdges is not equal to 1\n");
+      return false;
+    }
+    if (!L->getExitingBlock()) {
+      LLVM_DEBUG(dbgs() << "Loop doesn't have unique exit block\n");
+      return false;
+    }
+  }
+  return true;
+}
+
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -426,25 +452,6 @@ struct LoopInterchange {
     return processLoopList(LoopList);
   }
 
-  bool isComputableLoopNest(ArrayRef<Loop *> LoopList) {
-    for (Loop *L : LoopList) {
-      const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
-      if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
-        LLVM_DEBUG(dbgs() << "Couldn't compute backedge count\n");
-        return false;
-      }
-      if (L->getNumBackEdges() != 1) {
-        LLVM_DEBUG(dbgs() << "NumBackEdges is not equal to 1\n");
-        return false;
-      }
-      if (!L->getExitingBlock()) {
-        LLVM_DEBUG(dbgs() << "Loop doesn't have unique exit block\n");
-        return false;
-      }
-    }
-    return true;
-  }
-
   unsigned selectLoopForInterchange(ArrayRef<Loop *> LoopList) {
     // TODO: Add a better heuristic to select the loop to be interchanged based
     // on the dependence matrix. Currently we select the innermost loop.
@@ -459,10 +466,6 @@ struct LoopInterchange {
            "Unsupported depth of loop nest.");
 
     unsigned LoopNestDepth = LoopList.size();
-    if (!isComputableLoopNest(LoopList)) {
-      LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
-      return false;
-    }
 
     LLVM_DEBUG(dbgs() << "Processing LoopList of size = " << LoopNestDepth
                       << "\n");
@@ -1756,10 +1759,23 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   // Ensure minimum depth of the loop nest to do the interchange.
   if (!hasSupportedLoopDepth(LoopList, ORE))
     return PreservedAnalyses::all();
+  // Ensure computable loop nest.
+  if (!isComputableLoopNest(&AR.SE, LoopList)) {
+    LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
+    return PreservedAnalyses::all();
+  }
+
+  ORE.emit([&]() {
+    return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
+                                      LN.getOutermostLoop().getStartLoc(),
+                                      LN.getOutermostLoop().getHeader())
+           << "Computed dependence info, invoking the transform.";
+  });
+
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
       CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
-  
+
   if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);

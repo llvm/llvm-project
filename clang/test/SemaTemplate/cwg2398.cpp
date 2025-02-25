@@ -1,14 +1,12 @@
-// RUN: %clang_cc1 %s -fsyntax-only -std=c++23                                     -verify=expected,new
-// RUN: %clang_cc1 %s -fsyntax-only -std=c++23 -fno-relaxed-template-template-args -verify=expected,old
+// RUN: %clang_cc1 %s -fsyntax-only -std=c++23 -verify
 
 namespace issue1 {
   template<class T, class U = T> class B {};
   template<template<class> class P, class T> void f(P<T>);
-  // new-note@-1 {{deduced type 'B<[...], (default) int>' of 1st parameter does not match adjusted type 'B<[...], float>' of argument [with P = B, T = int]}}
-  // old-note@-2 2{{template template argument has different template parameters}}
+  // expected-note@-1 {{deduced type 'B<[...], (default) int>' of 1st parameter does not match adjusted type 'B<[...], float>' of argument [with P = B, T = int]}}
 
   void g() {
-    f(B<int>()); // old-error {{no matching function for call}}
+    f(B<int>());
     f(B<int,float>()); // expected-error {{no matching function for call}}
   }
 } // namespace issue1
@@ -116,41 +114,32 @@ namespace gcc_issue {
   template<class T1, class T2> struct A;
 
   template<template<class T1> class TT1, class T2> struct A<TT1<T2>, typename TT1<T2>::type>;
-  // new-note@-1 {{partial specialization matches}}
+  // expected-note@-1 {{partial specialization matches}}
 
   template<template<class T3, class T4> class TT2, class T5, class T6>
   struct A<TT2<T5, T6>, typename TT2<T5, T5>::type>;
-  // new-note@-1 {{partial specialization matches}}
-  // old-note@-2 {{template is declared here}}
+  // expected-note@-1 {{partial specialization matches}}
 
   template <class T7, class T8 = T7> struct B { using type = int; };
 
   template struct A<B<int>, int>;
-  // new-error@-1 {{ambiguous partial specializations}}
-  // old-error@-2 {{explicit instantiation of undefined template}}
+  // expected-error@-1 {{ambiguous partial specializations}}
 } // namespace gcc_issue
 
 namespace ttp_defaults {
   template <template <class T1> class TT1> struct A {};
-  // old-note@-1 2{{previous template template parameter}}
 
   template <template <class T2> class TT2> void f(A<TT2>);
-  // new-note@-1 {{explicit instantiation candidate}}
-  // old-note@-2 {{invalid explicitly-specified argument for template parameter 'TT2'}}
+  // expected-note@-1 {{explicit instantiation candidate}}
 
   // FIXME: The default arguments on the TTP are not available during partial ordering.
   template <template <class T3, class T4 = float> class TT3> void f(A<TT3>) {};
-  // new-note@-1 {{explicit instantiation candidate}}
-  // old-error@-2 {{template template argument has different template parameters}}
-  // old-note@-3 {{too many template parameters}}
+  // expected-note@-1 {{explicit instantiation candidate}}
 
   template <class T5, class T6 = int> struct B;
-  // old-note@-1 {{too many template parameters}}
 
   template void f<B>(A<B>);
-  // new-error@-1 {{partial ordering for explicit instantiation of 'f' is ambiguous}}
-  // old-error@-2 {{template template argument has different template parameters}}
-  // old-error@-3 {{explicit instantiation of 'f' does not refer to a function template}}
+  // expected-error@-1 {{partial ordering for explicit instantiation of 'f' is ambiguous}}
 } // namespace ttp_defaults
 
 namespace ttp_only {
@@ -193,16 +182,16 @@ namespace consistency {
     template<template<class, class> class TT1,
              class T1, class T2, class T3, class T4>
     struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T4>>::type> {};
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template<template<class> class UU1,
              template<class> class UU2,
              class U1, class U2>
     struct A<UU1<U1>, UU2<U2>, typename nondeduced<UU1<U1>>::type>;
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template struct A<B<int>, B<int>, B<int>>;
-    // new-error@-1 {{ambiguous partial specializations}}
+    // expected-error@-1 {{ambiguous partial specializations}}
   } // namespace t2
   namespace t3 {
     template<class T1, class T2, class T3> struct A;
@@ -210,15 +199,15 @@ namespace consistency {
     template<template<class, class> class TT1,
              class T1, class T2, class T3, class T4>
     struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T2>>::type> {};
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template<template<class> class UU1,
              class U1, class U2>
     struct A<UU1<U1>, UU1<U2>, typename nondeduced<UU1<U1>>::type>;
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template struct A<B<int>, B<int>, B<int>>;
-    // new-error@-1 {{ambiguous partial specializations}}
+    // expected-error@-1 {{ambiguous partial specializations}}
   } // namespace t3
   namespace t4 {
     template<class T1, class T2, class T3> struct A;
@@ -226,15 +215,15 @@ namespace consistency {
     template<template<class, class> class TT1,
              class T1, class T2, class T3, class T4>
     struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T4>>::type> {};
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template<template<class> class UU1,
              class U1, class U2>
     struct A<UU1<U1>, UU1<U2>, typename nondeduced<UU1<U1>>::type>;
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template struct A<B<int>, B<int>, B<int>>;
-    // new-error@-1 {{ambiguous partial specializations}}
+    // expected-error@-1 {{ambiguous partial specializations}}
   } // namespace t4
   namespace t5 {
     template<class T1, class T2> struct A;
@@ -242,15 +231,15 @@ namespace consistency {
     template<template<class, class> class TT1,
              class T1, class T2, class T3, class T4>
     struct A<TT1<T1, T2>, TT1<T3, T4>> {};
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template<template<class> class UU1,
              class U1, class U2>
     struct A<UU1<U1>, UU1<U2>>;
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template struct A<B<int>, B<int>>;
-    // new-error@-1 {{ambiguous partial specializations}}
+    // expected-error@-1 {{ambiguous partial specializations}}
   } // namespace t5
   namespace t6 {
     template<class T1, class T2> struct A;
@@ -258,15 +247,15 @@ namespace consistency {
     template<template<class, class> class TT1,
              class T1, class T2, class T3>
     struct A<TT1<T1, T2>, TT1<T1, T3>> {};
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template<template<class> class UU1,
              class U1, class U2>
     struct A<UU1<U1>, UU1<U2>>;
-    // new-note@-1 {{partial specialization matches}}
+    // expected-note@-1 {{partial specialization matches}}
 
     template struct A<B<int>, B<int>>;
-    // new-error@-1 {{ambiguous partial specializations}}
+    // expected-error@-1 {{ambiguous partial specializations}}
   } // namespace t6
 } // namespace consistency
 
@@ -275,8 +264,7 @@ namespace classes {
     template<class T, class U> struct A {};
 
     template<template<class> class TT> auto f(TT<int> a) { return a; }
-    // old-note@-1 2{{template template argument has different template parameters}}
-    // new-note@-2 2{{substitution failure: too few template arguments}}
+    // expected-note@-1 2{{substitution failure: too few template arguments}}
 
     A<int, float> v1;
     A<int, double> v2;
@@ -292,8 +280,7 @@ namespace classes {
       static constexpr auto val = E1;
     };
     template <template <class T3> class TT> void f(TT<int> v) {
-      // old-note@-1 {{template template argument has different template parameters}}
-      // new-note@-2 {{substitution failure: too few template arguments}}
+      // expected-note@-1 {{substitution failure: too few template arguments}}
       static_assert(v.val == 3);
     };
     void test() {
@@ -307,8 +294,7 @@ namespace classes {
     };
 
     template <template <class T3> class TT> void f(TT<int> v) {
-      // old-note@-1 {{template template argument has different template parameters}}
-      // new-note@-2 {{deduced type 'A<[...], (no argument), (no argument), (no argument)>' of 1st parameter does not match adjusted type 'A<[...], void, void, void>' of argument [with TT = A]}}
+      // expected-note@-1 {{deduced type 'A<[...], (no argument), (no argument), (no argument)>' of 1st parameter does not match adjusted type 'A<[...], void, void, void>' of argument [with TT = A]}}
       static_assert(v.val == 3);
     };
     void test() {
@@ -327,8 +313,7 @@ namespace classes {
     }
 
     template <template <class T2, int V3> class TT2> auto g(TT2<double, 1>) {
-      // new-note@-1 {{too few template arguments for class template 'A'}}
-      // old-note@-2 {{template template argument has different template parameters}}
+      // expected-note@-1 {{too few template arguments for class template 'A'}}
       return f(TT2<int, 2>());
     }
 
@@ -346,13 +331,11 @@ namespace classes {
     };
 
     template <template <class> class TT> TT<float> f(TT<int>);
-    // new-note@-1  {{deduced type 'A<[...], (default) int *>' of 1st parameter does not match adjusted type 'A<[...], double *>' of argument [with TT = A]}}
-    // old-note@-2 2{{template template argument has different template parameters}}
+    // expected-note@-1  {{deduced type 'A<[...], (default) int *>' of 1st parameter does not match adjusted type 'A<[...], double *>' of argument [with TT = A]}}
 
-    using X = int*; // new-note {{previous definition is here}}
+    using X = int*; // expected-note {{previous definition is here}}
     using X = decltype(f(A<int>()))::type;
-    // new-error@-1 {{different types ('decltype(f(A<int>()))::type' (aka 'float *') vs 'int *')}}
-    // old-error@-2 {{no matching function for call}}
+    // expected-error@-1 {{different types ('decltype(f(A<int>()))::type' (aka 'float *') vs 'int *')}}
 
     using Y = double*;
     using Y = decltype(f(A<int, double*>()))::type;
@@ -363,59 +346,39 @@ namespace classes {
 namespace packs {
   namespace t1 {
     template<template<int, int...> class> struct A {};
-    // new-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
-    // new-note@-2 {{previous template template parameter is here}}
-    // old-note@-3 {{previous non-type template parameter with type 'int' is here}}
+    // expected-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
+    // expected-note@-2 {{previous template template parameter is here}}
 
     template<char> struct B;
-    // old-note@-1 {{template non-type parameter has a different type 'char' in template argument}}
-
     template struct A<B>;
-    // new-note@-1 {{has different template parameters}}
-    // old-error@-2 {{has different template parameters}}
+    // expected-note@-1 {{has different template parameters}}
   } // namespace t1
   namespace t2 {
     template<template<char, int...> class> struct A {};
-    // old-note@-1 {{previous non-type template parameter with type 'char' is here}}
-
     template<int> struct B;
-    // old-note@-1 {{template non-type parameter has a different type 'int' in template argument}}
-
     template struct A<B>;
-    // old-error@-1 {{has different template parameters}}
   } // namespace t2
   namespace t3 {
     template<template<int...> class> struct A {};
-    // new-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
-    // new-note@-2 {{previous template template parameter is here}}
-    // old-note@-3 {{previous non-type template parameter with type 'int' is here}}
+    // expected-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
+    // expected-note@-2 {{previous template template parameter is here}}
 
     template<char> struct B;
-    // old-note@-1 {{template non-type parameter has a different type 'char' in template argument}}
-
     template struct A<B>;
-    // new-note@-1 {{has different template parameters}}
-    // old-error@-2 {{has different template parameters}}
+    // expected-note@-1 {{has different template parameters}}
   } // namespace t3
   namespace t4 {
     template<template<char...> class> struct A {};
-    // old-note@-1 {{previous non-type template parameter with type 'char' is here}}
-
     template<int> struct B;
-    // old-note@-1 {{template non-type parameter has a different type 'int' in template argument}}
-
     template struct A<B>;
-    // old-error@-1 {{has different template parameters}}
   } // namespace t4
 } // namespace packs
 
 namespace fun_tmpl_call {
   namespace match_func {
     template <template <class> class TT> void f(TT<int>) {};
-    // old-note@-1 {{has different template parameters}}
     template <class...> struct A {};
     void test() { f(A<int>()); }
-    // old-error@-1 {{no matching function for call to 'f'}}
   } // namespace match_func
   namespace order_func_nonpack {
     template <template <class> class TT> void f(TT<int>) {}
@@ -427,26 +390,21 @@ namespace fun_tmpl_call {
   namespace order_func_pack {
     template <template <class> class TT> void f(TT<int>) = delete;
     template <template <class...> class TT> void f(TT<int>) {}
-
     template <class...> struct A {};
     void test() { f(A<int>()); }
   } // namespace order_func_pack
   namespace match_enum {
     enum A {};
     template<template<A> class TT1> void f(TT1<{}>) {}
-    // old-note@-1 {{invalid explicitly-specified argument}}
     template<int> struct B {};
     template void f<B>(B<{}>);
-    // old-error@-1 {{does not refer to a function template}}
   } // namespace match_enum
   namespace match_method {
     struct A {
       template <template <class> class TT> void f(TT<int>) {};
-      // old-note@-1 {{has different template parameters}}
     };
     template <class...> struct B {};
     void test() { A().f(B<int>()); }
-    // old-error@-1 {{no matching member function for call to 'f'}}
   } // namespace match_method
   namespace order_method_nonpack {
     struct A {
@@ -467,12 +425,9 @@ namespace fun_tmpl_call {
   namespace match_conv {
     struct A {
       template <template <class> class TT> operator TT<int>() { return {}; }
-      // old-note@-1 {{different template parameters}}
     };
     template <class...> struct B {};
-    // old-note@-1 2{{not viable}}
     void test() { B<int> b = A(); }
-    // old-error@-1 {{no viable conversion from 'A' to 'B<int>'}}
   } // namespace match_conv
   namespace order_conv_nonpack {
     struct A {
@@ -536,21 +491,21 @@ namespace regression1 {
 
 namespace constraints {
   template <class T> concept C1 = true;
-  // new-note@-1 {{similar constraint expression here}}
-  // new-note@-2 2{{similar constraint expressions not considered equivalent}}
+  // expected-note@-1 {{similar constraint expression here}}
+  // expected-note@-2 2{{similar constraint expressions not considered equivalent}}
 
   template <class T> concept C2 = C1<T> && true;
-  // new-note@-1 2{{similar constraint expression here}}
+  // expected-note@-1 2{{similar constraint expression here}}
 
   template <class T> concept D1 = true;
-  // new-note@-1 {{similar constraint expressions not considered equivalent}}
+  // expected-note@-1 {{similar constraint expressions not considered equivalent}}
 
   namespace t1 {
-    template<template<C1, class... T1s> class TT1> // new-note {{TT1' declared here}}
+    template<template<C1, class... T1s> class TT1> // expected-note {{TT1' declared here}}
     struct A {};
-    template<D1, class T2> struct B {}; // new-note {{'B' declared here}}
+    template<D1, class T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
-    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+    // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t1
   namespace t2 {
     template<template<C2, class... T1s> class TT1> struct A {};
@@ -558,34 +513,34 @@ namespace constraints {
     template struct A<B>;
   } // namespace t2
   namespace t3 {
-    template<template<C1, class... T1s> class TT1> // new-note {{'TT1' declared here}}
+    template<template<C1, class... T1s> class TT1> // expected-note {{'TT1' declared here}}
     struct A {};
-    template<C2, class T2> struct B {}; // new-note {{'B' declared here}}
+    template<C2, class T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
-    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+    // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t2
   namespace t4 {
     // FIXME: This should be accepted.
-    template<template<C1... T1s> class TT1> // new-note {{'TT1' declared here}}
+    template<template<C1... T1s> class TT1> // expected-note {{'TT1' declared here}}
     struct A {};
-    template<C1 T2> struct B {}; // new-note {{'B' declared here}}
+    template<C1 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
-    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+    // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t4
   namespace t5 {
     // FIXME: This should be accepted
-    template<template<C2... T1s> class TT1> // new-note {{'TT1' declared here}}
+    template<template<C2... T1s> class TT1> // expected-note {{'TT1' declared here}}
     struct A {};
-    template<C1 T2> struct B {}; // new-note {{'B' declared here}}
+    template<C1 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
-    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+    // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t5
   namespace t6 {
-    template<template<C1... T1s> class TT1> // new-note {{'TT1' declared here}}
+    template<template<C1... T1s> class TT1> // expected-note {{'TT1' declared here}}
     struct A {};
-    template<C2 T2> struct B {}; // new-note {{'B' declared here}}
+    template<C2 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
-    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+    // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t6
   namespace t7 {
     template<template<class... T1s> class TT1>
@@ -600,19 +555,19 @@ namespace constraints {
     template struct A<B>;
   } // namespace t8
   namespace t9 {
-    template<template<C1... T1s> class TT1> // new-note {{'TT1' declared here}}
+    template<template<C1... T1s> class TT1> // expected-note {{'TT1' declared here}}
     struct A {};
-    template<D1 T2> struct B {}; // new-note {{'B' declared here}}
+    template<D1 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
-    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+    // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t9
   namespace t10 {
-    template<template<class...> requires C1<int> class TT1> // new-note {{'TT1' declared here}}
+    template<template<class...> requires C1<int> class TT1> // expected-note {{'TT1' declared here}}
     struct A {};
 
-    template<class> requires C2<int> struct B {}; // new-note {{'B' declared here}}
+    template<class> requires C2<int> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
-    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+    // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t10
   namespace t11 {
     template<template<class...> requires C2<int> class TT1> struct A {};
@@ -630,6 +585,23 @@ namespace regression2 {
   template <typename, int> struct Matrix;
   template struct D<Matrix<double, 3>>;
 } // namespace regression2
+namespace regression3 {
+  struct None {};
+  template<class T> struct Node { using type = T; };
+
+  template <template<class> class TT, class T>
+  struct A {
+    static_assert(!__is_same(T, None));
+    using type2 = typename A<TT, typename T::type>::type2;
+  };
+
+  template <template<class> class TT> struct A<TT, None> {
+    using type2 = void;
+  };
+
+  template <class...> class B {};
+  template struct A<B, Node<None>>;
+} // namespace regression3
 
 namespace nttp_auto {
   namespace t1 {
@@ -640,24 +612,22 @@ namespace nttp_auto {
   namespace t2 {
     // FIXME: Shouldn't accept parameters after a parameter pack.
     template<template<auto... Va1, auto Va2> class> struct A {};
-    // new-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
+    // expected-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
     // expected-note@-2 {{previous template template parameter is here}}
     template<int... Vi> struct B;
-    // new-note@-1 {{template parameter is declared here}}
-    // old-note@-2 {{too few template parameters}}
+    // expected-note@-1 {{template parameter is declared here}}
     template struct A<B>;
-    // new-note@-1 {{different template parameters}}
-    // old-error@-2 {{different template parameters}}
+    // expected-note@-1 {{different template parameters}}
   } // namespace t2
   namespace t3 {
     // FIXME: Shouldn't accept parameters after a parameter pack.
     template<template<auto... Va1, auto... Va2> class> struct A {};
-    // new-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
-    // new-note@-2 {{previous template template parameter is here}}
+    // expected-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
+    // expected-note@-2 {{previous template template parameter is here}}
     template<int... Vi> struct B;
-    // new-note@-1 {{template parameter is declared here}}
+    // expected-note@-1 {{template parameter is declared here}}
     template struct A<B>;
-    // new-note@-1 {{different template parameters}}
+    // expected-note@-1 {{different template parameters}}
   } // namespace t3
 } // namespace nttp_auto
 
@@ -697,15 +667,11 @@ namespace nttp_partial_order {
     template void f<B>(B<&A::m>);
   } // namespace t5
   namespace t6 {
-    // FIXME: This should pick the second overload.
     struct A {};
     using nullptr_t = decltype(nullptr);
     template<template<nullptr_t> class TT2> void f(TT2<nullptr>);
-    // new-note@-1 {{here}}
     template<template<A*>        class TT1> void f(TT1<nullptr>) {}
-    // new-note@-1 {{here}}
     template<A*> struct B {};
     template void f<B>(B<nullptr>);
-    // new-error@-1 {{ambiguous}}
   } // namespace t6
 } // namespace nttp_partial_order
