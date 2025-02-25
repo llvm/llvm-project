@@ -359,3 +359,251 @@ define i64 @cmpxchg64(ptr %p) {
   %res.0 = extractvalue { i64, i1 } %res, 0
   ret i64 %res.0
 }
+
+define void @trunc_store8(ptr %p, i32 %val) {
+; NO-ATOMIC32-LABEL: trunc_store8:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r7, lr}
+; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    movs r2, #5
+; NO-ATOMIC32-NEXT:    bl __atomic_store_1
+; NO-ATOMIC32-NEXT:    pop {r7, pc}
+;
+; ATOMIC32-LABEL: trunc_store8:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    strb r1, [r0]
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bx lr
+  %trunc = trunc i32 %val to i8
+  store atomic i8 %trunc, ptr %p seq_cst, align 1
+  ret void
+}
+
+define i8 @trunc_rmw8(ptr %p, i32 %val) {
+; NO-ATOMIC32-LABEL: trunc_rmw8:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r7, lr}
+; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    movs r2, #5
+; NO-ATOMIC32-NEXT:    bl __atomic_fetch_add_1
+; NO-ATOMIC32-NEXT:    pop {r7, pc}
+;
+; ATOMIC32-LABEL: trunc_rmw8:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    .save {r7, lr}
+; ATOMIC32-NEXT:    push {r7, lr}
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bl __sync_fetch_and_add_1
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    pop {r7, pc}
+  %trunc = trunc i32 %val to i8
+  %v = atomicrmw add ptr %p, i8 %trunc seq_cst, align 1
+  ret i8 %v
+}
+
+define i8 @trunc_rmw8_signed(ptr %p, i32 %val) {
+; NO-ATOMIC32-LABEL: trunc_rmw8_signed:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r4, r5, r6, lr}
+; NO-ATOMIC32-NEXT:    push {r4, r5, r6, lr}
+; NO-ATOMIC32-NEXT:    .pad #8
+; NO-ATOMIC32-NEXT:    sub sp, #8
+; NO-ATOMIC32-NEXT:    mov r4, r1
+; NO-ATOMIC32-NEXT:    mov r5, r0
+; NO-ATOMIC32-NEXT:    ldrb r2, [r0]
+; NO-ATOMIC32-NEXT:    b .LBB18_2
+; NO-ATOMIC32-NEXT:  .LBB18_1: @ %atomicrmw.start
+; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB18_2 Depth=1
+; NO-ATOMIC32-NEXT:    mov r0, r5
+; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_1
+; NO-ATOMIC32-NEXT:    ldr r2, [sp, #4]
+; NO-ATOMIC32-NEXT:    cmp r0, #0
+; NO-ATOMIC32-NEXT:    bne .LBB18_4
+; NO-ATOMIC32-NEXT:  .LBB18_2: @ %atomicrmw.start
+; NO-ATOMIC32-NEXT:    @ =>This Inner Loop Header: Depth=1
+; NO-ATOMIC32-NEXT:    add r1, sp, #4
+; NO-ATOMIC32-NEXT:    strb r2, [r1]
+; NO-ATOMIC32-NEXT:    movs r3, #5
+; NO-ATOMIC32-NEXT:    str r3, [sp]
+; NO-ATOMIC32-NEXT:    sxtb r0, r4
+; NO-ATOMIC32-NEXT:    sxtb r6, r2
+; NO-ATOMIC32-NEXT:    cmp r6, r0
+; NO-ATOMIC32-NEXT:    bgt .LBB18_1
+; NO-ATOMIC32-NEXT:  @ %bb.3: @ %atomicrmw.start
+; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB18_2 Depth=1
+; NO-ATOMIC32-NEXT:    mov r2, r4
+; NO-ATOMIC32-NEXT:    b .LBB18_1
+; NO-ATOMIC32-NEXT:  .LBB18_4: @ %atomicrmw.end
+; NO-ATOMIC32-NEXT:    mov r0, r2
+; NO-ATOMIC32-NEXT:    add sp, #8
+; NO-ATOMIC32-NEXT:    pop {r4, r5, r6, pc}
+;
+; ATOMIC32-LABEL: trunc_rmw8_signed:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    .save {r7, lr}
+; ATOMIC32-NEXT:    push {r7, lr}
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bl __sync_fetch_and_max_1
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    pop {r7, pc}
+  %trunc = trunc i32 %val to i8
+  %v = atomicrmw max ptr %p, i8 %trunc seq_cst, align 1
+  ret i8 %v
+}
+
+define i8 @trunc_cmpxchg8(ptr %p, i32 %cmp, i32 %new) {
+; NO-ATOMIC32-LABEL: trunc_cmpxchg8:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r4, lr}
+; NO-ATOMIC32-NEXT:    push {r4, lr}
+; NO-ATOMIC32-NEXT:    .pad #8
+; NO-ATOMIC32-NEXT:    sub sp, #8
+; NO-ATOMIC32-NEXT:    add r4, sp, #4
+; NO-ATOMIC32-NEXT:    strb r1, [r4]
+; NO-ATOMIC32-NEXT:    movs r3, #5
+; NO-ATOMIC32-NEXT:    str r3, [sp]
+; NO-ATOMIC32-NEXT:    mov r1, r4
+; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_1
+; NO-ATOMIC32-NEXT:    ldr r0, [sp, #4]
+; NO-ATOMIC32-NEXT:    add sp, #8
+; NO-ATOMIC32-NEXT:    pop {r4, pc}
+;
+; ATOMIC32-LABEL: trunc_cmpxchg8:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    .save {r7, lr}
+; ATOMIC32-NEXT:    push {r7, lr}
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bl __sync_val_compare_and_swap_1
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    pop {r7, pc}
+  %trunc_cmp = trunc i32 %cmp to i8
+  %trunc_new = trunc i32 %new to i8
+  %res = cmpxchg ptr %p, i8 %trunc_cmp, i8 %trunc_new seq_cst seq_cst, align 1
+  %res.0 = extractvalue { i8, i1 } %res, 0
+  ret i8 %res.0
+}
+
+define void @trunc_store16(ptr %p, i32 %val) {
+; NO-ATOMIC32-LABEL: trunc_store16:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r7, lr}
+; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    movs r2, #5
+; NO-ATOMIC32-NEXT:    bl __atomic_store_2
+; NO-ATOMIC32-NEXT:    pop {r7, pc}
+;
+; ATOMIC32-LABEL: trunc_store16:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    strh r1, [r0]
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bx lr
+  %trunc = trunc i32 %val to i16
+  store atomic i16 %trunc, ptr %p seq_cst, align 2
+  ret void
+}
+
+define i16 @trunc_rmw16(ptr %p, i32 %val) {
+; NO-ATOMIC32-LABEL: trunc_rmw16:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r7, lr}
+; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    movs r2, #5
+; NO-ATOMIC32-NEXT:    bl __atomic_fetch_add_2
+; NO-ATOMIC32-NEXT:    pop {r7, pc}
+;
+; ATOMIC32-LABEL: trunc_rmw16:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    .save {r7, lr}
+; ATOMIC32-NEXT:    push {r7, lr}
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bl __sync_fetch_and_add_2
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    pop {r7, pc}
+  %trunc = trunc i32 %val to i16
+  %v = atomicrmw add ptr %p, i16 %trunc seq_cst, align 2
+  ret i16 %v
+}
+
+define i16 @trunc_rmw16_signed(ptr %p, i32 %val) {
+; NO-ATOMIC32-LABEL: trunc_rmw16_signed:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r4, r5, r6, lr}
+; NO-ATOMIC32-NEXT:    push {r4, r5, r6, lr}
+; NO-ATOMIC32-NEXT:    .pad #8
+; NO-ATOMIC32-NEXT:    sub sp, #8
+; NO-ATOMIC32-NEXT:    mov r4, r1
+; NO-ATOMIC32-NEXT:    mov r5, r0
+; NO-ATOMIC32-NEXT:    ldrh r2, [r0]
+; NO-ATOMIC32-NEXT:    b .LBB22_2
+; NO-ATOMIC32-NEXT:  .LBB22_1: @ %atomicrmw.start
+; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB22_2 Depth=1
+; NO-ATOMIC32-NEXT:    mov r0, r5
+; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_2
+; NO-ATOMIC32-NEXT:    ldr r2, [sp, #4]
+; NO-ATOMIC32-NEXT:    cmp r0, #0
+; NO-ATOMIC32-NEXT:    bne .LBB22_4
+; NO-ATOMIC32-NEXT:  .LBB22_2: @ %atomicrmw.start
+; NO-ATOMIC32-NEXT:    @ =>This Inner Loop Header: Depth=1
+; NO-ATOMIC32-NEXT:    add r1, sp, #4
+; NO-ATOMIC32-NEXT:    strh r2, [r1]
+; NO-ATOMIC32-NEXT:    movs r3, #5
+; NO-ATOMIC32-NEXT:    str r3, [sp]
+; NO-ATOMIC32-NEXT:    sxth r0, r4
+; NO-ATOMIC32-NEXT:    sxth r6, r2
+; NO-ATOMIC32-NEXT:    cmp r6, r0
+; NO-ATOMIC32-NEXT:    bgt .LBB22_1
+; NO-ATOMIC32-NEXT:  @ %bb.3: @ %atomicrmw.start
+; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB22_2 Depth=1
+; NO-ATOMIC32-NEXT:    mov r2, r4
+; NO-ATOMIC32-NEXT:    b .LBB22_1
+; NO-ATOMIC32-NEXT:  .LBB22_4: @ %atomicrmw.end
+; NO-ATOMIC32-NEXT:    mov r0, r2
+; NO-ATOMIC32-NEXT:    add sp, #8
+; NO-ATOMIC32-NEXT:    pop {r4, r5, r6, pc}
+;
+; ATOMIC32-LABEL: trunc_rmw16_signed:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    .save {r7, lr}
+; ATOMIC32-NEXT:    push {r7, lr}
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bl __sync_fetch_and_max_2
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    pop {r7, pc}
+  %trunc = trunc i32 %val to i16
+  %v = atomicrmw max ptr %p, i16 %trunc seq_cst, align 2
+  ret i16 %v
+}
+
+define i16 @trunc_cmpxchg16(ptr %p, i32 %cmp, i32 %new) {
+; NO-ATOMIC32-LABEL: trunc_cmpxchg16:
+; NO-ATOMIC32:       @ %bb.0:
+; NO-ATOMIC32-NEXT:    .save {r4, lr}
+; NO-ATOMIC32-NEXT:    push {r4, lr}
+; NO-ATOMIC32-NEXT:    .pad #8
+; NO-ATOMIC32-NEXT:    sub sp, #8
+; NO-ATOMIC32-NEXT:    add r4, sp, #4
+; NO-ATOMIC32-NEXT:    strh r1, [r4]
+; NO-ATOMIC32-NEXT:    movs r3, #5
+; NO-ATOMIC32-NEXT:    str r3, [sp]
+; NO-ATOMIC32-NEXT:    mov r1, r4
+; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_2
+; NO-ATOMIC32-NEXT:    ldr r0, [sp, #4]
+; NO-ATOMIC32-NEXT:    add sp, #8
+; NO-ATOMIC32-NEXT:    pop {r4, pc}
+;
+; ATOMIC32-LABEL: trunc_cmpxchg16:
+; ATOMIC32:       @ %bb.0:
+; ATOMIC32-NEXT:    .save {r7, lr}
+; ATOMIC32-NEXT:    push {r7, lr}
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    bl __sync_val_compare_and_swap_2
+; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    pop {r7, pc}
+  %trunc_cmp = trunc i32 %cmp to i16
+  %trunc_new = trunc i32 %new to i16
+  %res = cmpxchg ptr %p, i16 %trunc_cmp, i16 %trunc_new seq_cst seq_cst, align 2
+  %res.0 = extractvalue { i16, i1 } %res, 0
+  ret i16 %res.0
+}
