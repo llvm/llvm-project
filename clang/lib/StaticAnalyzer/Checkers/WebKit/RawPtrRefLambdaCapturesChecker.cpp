@@ -75,8 +75,8 @@ public:
       }
 
       bool shouldCheckThis() {
-        auto result = !ClsType.isNull() ?
-            Checker->isUnsafePtr(ClsType) : std::nullopt;
+        auto result =
+            !ClsType.isNull() ? Checker->isUnsafePtr(ClsType) : std::nullopt;
         return result && *result;
       }
 
@@ -138,9 +138,8 @@ public:
             if (auto *L = findLambdaInArg(Arg)) {
               LambdasToIgnore.insert(L);
               if (!Param->hasAttr<NoEscapeAttr>())
-                Checker->visitLambdaExpr(L, shouldCheckThis() &&
-                                                !hasProtectedThis(L),
-                                         ClsType);
+                Checker->visitLambdaExpr(
+                    L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
             }
             ++ArgIndex;
           }
@@ -160,9 +159,8 @@ public:
             if (auto *L = findLambdaInArg(Arg)) {
               LambdasToIgnore.insert(L);
               if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
-                Checker->visitLambdaExpr(L, shouldCheckThis() &&
-                                                !hasProtectedThis(L),
-                                         ClsType);
+                Checker->visitLambdaExpr(
+                    L, shouldCheckThis() && !hasProtectedThis(L), ClsType);
             }
             ++ArgIndex;
           }
@@ -328,8 +326,7 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitLambdaExpr(LambdaExpr *L, bool shouldCheckThis,
-                       const QualType T,
+  void visitLambdaExpr(LambdaExpr *L, bool shouldCheckThis, const QualType T,
                        bool ignoreParamVarDecl = false) const {
     if (TFA.isTrivial(L->getBody()))
       return;
@@ -353,7 +350,7 @@ public:
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
                  const QualType T) const {
     assert(CapturedVar);
-    
+
     if (isa<ImplicitParamDecl>(CapturedVar) && !Capture.getLocation().isValid())
       return; // Ignore implicit captruing of self.
 
@@ -421,7 +418,6 @@ public:
       return "uncounted";
     return "unchecked";
   }
-
 };
 
 class UnretainedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
@@ -436,9 +432,7 @@ public:
     return RTC->isUnretained(QT);
   }
 
-  const char *ptrKind(QualType QT) const final {
-    return "unretained";
-  }
+  const char *ptrKind(QualType QT) const final { return "unretained"; }
 };
 
 } // namespace
