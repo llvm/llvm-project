@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 // I'm not sure this should go in ctype_utils since the specific ordering of
 // base64 is so very implementation specific, and also this set is unusual.
 // Returns -1 on any char without a specified value.
-constexpr int32_t b64_char_to_int(char ch) {
+constexpr static int32_t b64_char_to_int(char ch) {
   // from the standard: "The characters used to represent digits are '.' (dot)
   // for 0, '/' for 1, '0' through '9' for [2,11], 'A' through 'Z' for [12,37],
   // and 'a' through 'z' for [38,63]."
