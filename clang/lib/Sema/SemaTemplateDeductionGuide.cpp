@@ -377,8 +377,12 @@ struct ConvertConstructorToDeductionGuideTransform {
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         auto [Depth, Index] = getDepthAndIndex(Param);
+        assert(Depth ||
+               cast<ClassTemplateSpecializationDecl>(FTD->getDeclContext())
+                   ->isExplicitSpecialization());
         NamedDecl *NewParam = transformTemplateParameter(
-            SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment, Depth - 1);
+            SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment,
+            Depth ? Depth - 1 : 0);
         if (!NewParam)
           return nullptr;
         // Constraints require that we substitute depth-1 arguments
