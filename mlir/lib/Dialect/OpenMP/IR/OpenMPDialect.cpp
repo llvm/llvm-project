@@ -508,6 +508,7 @@ struct ReductionParseArgs {
 };
 
 struct AllRegionParseArgs {
+  std::optional<MapParseArgs> hasDeviceAddrArgs;
   std::optional<MapParseArgs> hostEvalArgs;
   std::optional<ReductionParseArgs> inReductionArgs;
   std::optional<MapParseArgs> mapArgs;
@@ -666,6 +667,11 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                        AllRegionParseArgs args) {
   llvm::SmallVector<OpAsmParser::Argument> entryBlockArgs;
 
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "has_device_addr",
+                                 args.hasDeviceAddrArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `has_device_addr` format";
+
   if (failed(parseBlockArgClause(parser, entryBlockArgs, "host_eval",
                                  args.hostEvalArgs)))
     return parser.emitError(parser.getCurrentLocation())
@@ -709,8 +715,12 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
   return parser.parseRegion(region, entryBlockArgs);
 }
 
-static ParseResult parseHostEvalInReductionMapPrivateRegion(
+// See custom<HasDeviceAddrHostEvalInReductionMapPrivateRegion> in the
+// definition of TargetOp.
+static ParseResult parseHasDeviceAddrHostEvalInReductionMapPrivateRegion(
     OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hasDeviceAddrVars,
+    SmallVectorImpl<Type> &hasDeviceAddrTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hostEvalVars,
     SmallVectorImpl<Type> &hostEvalTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
@@ -722,6 +732,7 @@ static ParseResult parseHostEvalInReductionMapPrivateRegion(
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
     DenseI64ArrayAttr &privateMaps) {
   AllRegionParseArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
@@ -731,6 +742,7 @@ static ParseResult parseHostEvalInReductionMapPrivateRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+// See custom<InReductionPrivateRegion> in the definition of TaskOp.
 static ParseResult parseInReductionPrivateRegion(
     OpAsmParser &parser, Region &region,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
@@ -745,6 +757,8 @@ static ParseResult parseInReductionPrivateRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+// See custom<InReductionPrivateReductionRegion> in the definition of
+// TaskloopOp.
 static ParseResult parseInReductionPrivateReductionRegion(
     OpAsmParser &parser, Region &region,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
@@ -765,6 +779,7 @@ static ParseResult parseInReductionPrivateReductionRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+// See custom<PrivateRegion> in the definition of SingleOp.
 static ParseResult parsePrivateRegion(
     OpAsmParser &parser, Region &region,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
@@ -774,6 +789,7 @@ static ParseResult parsePrivateRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+// See custom<PrivateReductionRegion> in the definition of LoopOp.
 static ParseResult parsePrivateReductionRegion(
     OpAsmParser &parser, Region &region,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
@@ -789,6 +805,7 @@ static ParseResult parsePrivateReductionRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+// See custom<TaskReductionRegion> in the definition of TaskgroupOp.
 static ParseResult parseTaskReductionRegion(
     OpAsmParser &parser, Region &region,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &taskReductionVars,
@@ -800,6 +817,8 @@ static ParseResult parseTaskReductionRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+// See custom<UseDeviceAddrUseDevicePtrRegion> in the definition of
+// TargetDataOp.
 static ParseResult parseUseDeviceAddrUseDevicePtrRegion(
     OpAsmParser &parser, Region &region,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &useDeviceAddrVars,
@@ -842,6 +861,7 @@ struct ReductionPrintArgs {
       : vars(vars), types(types), byref(byref), syms(syms), modifier(mod) {}
 };
 struct AllRegionPrintArgs {
+  std::optional<MapPrintArgs> hasDeviceAddrArgs;
   std::optional<MapPrintArgs> hostEvalArgs;
   std::optional<ReductionPrintArgs> inReductionArgs;
   std::optional<MapPrintArgs> mapArgs;
@@ -935,6 +955,9 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op);
   MLIRContext *ctx = op->getContext();
 
+  printBlockArgClause(p, ctx, "has_device_addr",
+                      iface.getHasDeviceAddrBlockArgs(),
+                      args.hasDeviceAddrArgs);
   printBlockArgClause(p, ctx, "host_eval", iface.getHostEvalBlockArgs(),
                       args.hostEvalArgs);
   printBlockArgClause(p, ctx, "in_reduction", iface.getInReductionBlockArgs(),
@@ -957,14 +980,19 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
-static void printHostEvalInReductionMapPrivateRegion(
-    OpAsmPrinter &p, Operation *op, Region &region, ValueRange hostEvalVars,
-    TypeRange hostEvalTypes, ValueRange inReductionVars,
-    TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
-    ArrayAttr inReductionSyms, ValueRange mapVars, TypeRange mapTypes,
-    ValueRange privateVars, TypeRange privateTypes, ArrayAttr privateSyms,
+// See custom<HasDeviceAddrHostEvalInReductionMapPrivateRegion> in the
+// definition of TargetOp.
+static void printHasDeviceAddrHostEvalInReductionMapPrivateRegion(
+    OpAsmPrinter &p, Operation *op, Region &region,
+    ValueRange hasDeviceAddrVars, TypeRange hasDeviceAddrTypes,
+    ValueRange hostEvalVars, TypeRange hostEvalTypes,
+    ValueRange inReductionVars, TypeRange inReductionTypes,
+    DenseBoolArrayAttr inReductionByref, ArrayAttr inReductionSyms,
+    ValueRange mapVars, TypeRange mapTypes, ValueRange privateVars,
+    TypeRange privateTypes, ArrayAttr privateSyms,
     DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
@@ -973,6 +1001,7 @@ static void printHostEvalInReductionMapPrivateRegion(
   printBlockArgRegion(p, op, region, args);
 }
 
+// See custom<InReductionPrivateRegion> in the definition of TaskOp.
 static void printInReductionPrivateRegion(
     OpAsmPrinter &p, Operation *op, Region &region, ValueRange inReductionVars,
     TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
@@ -986,6 +1015,8 @@ static void printInReductionPrivateRegion(
   printBlockArgRegion(p, op, region, args);
 }
 
+// See custom<InReductionPrivateReductionRegion> in the definition of
+// TaskloopOp.
 static void printInReductionPrivateReductionRegion(
     OpAsmPrinter &p, Operation *op, Region &region, ValueRange inReductionVars,
     TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
@@ -1003,6 +1034,7 @@ static void printInReductionPrivateReductionRegion(
   printBlockArgRegion(p, op, region, args);
 }
 
+// See custom<PrivateRegion> in the definition of SingleOp.
 static void printPrivateRegion(OpAsmPrinter &p, Operation *op, Region &region,
                                ValueRange privateVars, TypeRange privateTypes,
                                ArrayAttr privateSyms) {
@@ -1012,6 +1044,7 @@ static void printPrivateRegion(OpAsmPrinter &p, Operation *op, Region &region,
   printBlockArgRegion(p, op, region, args);
 }
 
+// See custom<PrivateReductionRegion> in the definition of LoopOp.
 static void printPrivateReductionRegion(
     OpAsmPrinter &p, Operation *op, Region &region, ValueRange privateVars,
     TypeRange privateTypes, ArrayAttr privateSyms,
@@ -1026,6 +1059,7 @@ static void printPrivateReductionRegion(
   printBlockArgRegion(p, op, region, args);
 }
 
+// See custom<TaskReductionRegion> in the definition of TaskgroupOp.
 static void printTaskReductionRegion(OpAsmPrinter &p, Operation *op,
                                      Region &region,
                                      ValueRange taskReductionVars,
@@ -1038,6 +1072,8 @@ static void printTaskReductionRegion(OpAsmPrinter &p, Operation *op,
   printBlockArgRegion(p, op, region, args);
 }
 
+// See custom<UseDeviceAddrUseDevicePtrRegion> in the definition of
+// TargetDataOp.
 static void printUseDeviceAddrUseDevicePtrRegion(OpAsmPrinter &p, Operation *op,
                                                  Region &region,
                                                  ValueRange useDeviceAddrVars,

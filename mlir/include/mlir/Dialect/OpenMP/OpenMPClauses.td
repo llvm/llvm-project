@@ -463,6 +463,10 @@ class OpenMP_HasDeviceAddrClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$has_device_addr_vars
   );
@@ -471,11 +475,6 @@ class OpenMP_HasDeviceAddrClauseSkip<
     unsigned numHasDeviceAddrBlockArgs() {
       return getHasDeviceAddrVars().size();
     }
-  }];
-
-  let optAssemblyFormat = [{
-    `has_device_addr` `(` $has_device_addr_vars `:` type($has_device_addr_vars)
-                      `)`
   }];
 
   let description = [{
