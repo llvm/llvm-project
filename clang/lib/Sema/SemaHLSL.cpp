@@ -2421,7 +2421,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(
-            TheCall, /*ArgTyRestr*/
+            TheCall, /*ArgTyRestr=*/
             TheCall->getArg(0)->getType()->hasFloatingRepresentation()
                 ? Sema::EltwiseBuiltinArgTyRestriction::FloatTy
                 : Sema::EltwiseBuiltinArgTyRestriction::None))
@@ -2558,7 +2558,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(
-            TheCall, /*ArgTyRestr*/
+            TheCall, /*ArgTyRestr=*/
             TheCall->getArg(0)->getType()->hasFloatingRepresentation()
                 ? Sema::EltwiseBuiltinArgTyRestriction::FloatTy
                 : Sema::EltwiseBuiltinArgTyRestriction::None))
