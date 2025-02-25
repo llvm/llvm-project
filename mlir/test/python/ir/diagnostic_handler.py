@@ -2,7 +2,9 @@
 
 import gc
 from mlir.ir import *
-from mlir._mlir_libs._mlirPythonTestNanobind import test_diagnostics_with_errors_and_notes
+from mlir._mlir_libs._mlirPythonTestNanobind import (
+  test_diagnostics_with_errors_and_notes,
+)
 
 
 def run(f):
@@ -224,6 +226,7 @@ def testDiagnosticReturnFalseDoesNotHandle():
     # CHECK: CALLBACK1: foobar
     loc.emit_error("foobar")
 
+
 # CHECK-LABEL: TEST: testBuiltInDiagnosticsHandler
 @run
 def testBuiltInDiagnosticsHandler():
@@ -235,4 +238,3 @@ def testBuiltInDiagnosticsHandler():
         # CHECK: created error
         # CHECK: MLIRPythonCAPI
         print(e)
-
