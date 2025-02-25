@@ -24,7 +24,7 @@ def uimm5nonzero : RISCVOp<XLenVT>,
 def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return (Imm > 3) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GT3">;
-  let DecoderMethod = "decodeUImmOperand<5>";
+  let DecoderMethod = "decodeUImmOperandGE<5, 4>";
   let OperandType = "OPERAND_UIMM5_GT3";
 }
 
