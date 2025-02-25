@@ -225,15 +225,15 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @shuffle3_i16(<8 x i16> %src) {
 ; CHECK-LABEL: shuffle3_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vmovx.f16 s2, s5
-; CHECK-NEXT:    vmovx.f16 s0, s4
-; CHECK-NEXT:    vins.f16 s5, s4
-; CHECK-NEXT:    vins.f16 s2, s0
-; CHECK-NEXT:    vmov.f32 s3, s5
-; CHECK-NEXT:    vmovx.f16 s1, s7
-; CHECK-NEXT:    vmov.f32 s0, s6
-; CHECK-NEXT:    vins.f16 s1, s7
+; CHECK-NEXT:    vmovx.f16 s5, s3
+; CHECK-NEXT:    vmovx.f16 s6, s1
+; CHECK-NEXT:    vmovx.f16 s4, s0
+; CHECK-NEXT:    vins.f16 s1, s0
+; CHECK-NEXT:    vins.f16 s6, s4
+; CHECK-NEXT:    vins.f16 s5, s3
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s7, s1
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 7, i32 6, i32 3, i32 1, i32 2, i32 0>
@@ -357,22 +357,22 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle3step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vmovx.f16 s13, s3
 ; CHECK-NEXT:    vins.f16 s17, s2
-; CHECK-NEXT:    vmov.f32 s18, s7
 ; CHECK-NEXT:    vmovx.f16 s2, s8
-; CHECK-NEXT:    vmov.f32 s19, s10
+; CHECK-NEXT:    vmov.f32 s18, s7
+; CHECK-NEXT:    vmovx.f16 s14, s6
 ; CHECK-NEXT:    vins.f16 s18, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s11
+; CHECK-NEXT:    vmov.f32 s19, s10
+; CHECK-NEXT:    vmovx.f16 s15, s9
 ; CHECK-NEXT:    vins.f16 s19, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s1
 ; CHECK-NEXT:    vins.f16 s0, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s4
 ; CHECK-NEXT:    vins.f16 s3, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s7
-; CHECK-NEXT:    vmovx.f16 s4, s10
-; CHECK-NEXT:    vmovx.f16 s14, s6
-; CHECK-NEXT:    vmovx.f16 s15, s9
 ; CHECK-NEXT:    vins.f16 s6, s2
-; CHECK-NEXT:    vins.f16 s9, s4
+; CHECK-NEXT:    vmovx.f16 s2, s10
+; CHECK-NEXT:    vins.f16 s9, s2
 ; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    vins.f16 s14, s8
 ; CHECK-NEXT:    vins.f16 s15, s11
@@ -416,8 +416,8 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle4step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vmov.f32 s20, s1
 ; CHECK-NEXT:    vmovx.f16 s1, s10
 ; CHECK-NEXT:    vmov.f32 s22, s9
-; CHECK-NEXT:    vmov.f32 s23, s13
 ; CHECK-NEXT:    vmov.f32 s21, s5
+; CHECK-NEXT:    vmov.f32 s23, s13
 ; CHECK-NEXT:    vadd.i16 q4, q5, q4
 ; CHECK-NEXT:    vmovx.f16 s22, s8
 ; CHECK-NEXT:    vins.f16 s22, s1
@@ -434,9 +434,9 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle4step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vins.f16 s4, s6
 ; CHECK-NEXT:    vins.f16 s21, s1
 ; CHECK-NEXT:    vins.f16 s0, s2
-; CHECK-NEXT:    vmov.f32 s3, s12
 ; CHECK-NEXT:    vmov.f32 s1, s4
 ; CHECK-NEXT:    vmov.f32 s2, s8
+; CHECK-NEXT:    vmov.f32 s3, s12
 ; CHECK-NEXT:    vadd.i16 q0, q0, q5
 ; CHECK-NEXT:    vadd.i16 q0, q0, q4
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
@@ -1147,15 +1147,15 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @shuffle3_f16(<8 x half> %src) {
 ; CHECK-LABEL: shuffle3_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vmovx.f16 s2, s5
-; CHECK-NEXT:    vmovx.f16 s0, s4
-; CHECK-NEXT:    vins.f16 s5, s4
-; CHECK-NEXT:    vins.f16 s2, s0
-; CHECK-NEXT:    vmov.f32 s3, s5
-; CHECK-NEXT:    vmovx.f16 s1, s7
-; CHECK-NEXT:    vmov.f32 s0, s6
-; CHECK-NEXT:    vins.f16 s1, s7
+; CHECK-NEXT:    vmovx.f16 s5, s3
+; CHECK-NEXT:    vmovx.f16 s6, s1
+; CHECK-NEXT:    vmovx.f16 s4, s0
+; CHECK-NEXT:    vins.f16 s1, s0
+; CHECK-NEXT:    vins.f16 s6, s4
+; CHECK-NEXT:    vins.f16 s5, s3
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s7, s1
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x half> %src, <8 x half> undef, <8 x i32> <i32 4, i32 5, i32 7, i32 6, i32 3, i32 1, i32 2, i32 0>
@@ -1348,12 +1348,12 @@ define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP-NEXT:    vins.f16 s0, s2
 ; CHECKFP-NEXT:    vmov.f32 s24, s1
 ; CHECKFP-NEXT:    vmov.f32 s26, s9
-; CHECKFP-NEXT:    vmov.f32 s27, s13
 ; CHECKFP-NEXT:    vmov.f32 s25, s5
+; CHECKFP-NEXT:    vmov.f32 s27, s13
 ; CHECKFP-NEXT:    vmov.f32 s2, s8
 ; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
-; CHECKFP-NEXT:    vmov.f32 s3, s12
 ; CHECKFP-NEXT:    vmov.f32 s1, s4
+; CHECKFP-NEXT:    vmov.f32 s3, s12
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q5
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q4
 ; CHECKFP-NEXT:    vpop {d8, d9, d10, d11, d12, d13}

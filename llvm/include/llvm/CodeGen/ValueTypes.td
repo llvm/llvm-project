@@ -338,9 +338,9 @@ def MetadataVT : ValueType<0, 505> { // Metadata
   let LLVMName = "Metadata";
 }
 
-// Pseudo valuetype mapped to the current pointer size to any address space.
+// Pseudo valuetype to represent "pointer to any address space"
 // Should only be used in TableGen.
-def iPTRAny    : VTAny<506>;
+def pAny       : VTAny<506>;
 
 // Pseudo valuetype to represent "vector of any size"
 // Should only be used in TableGen.

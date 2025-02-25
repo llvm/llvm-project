@@ -12,8 +12,6 @@
 
 #include "LanaiSelectionDAGInfo.h"
 
-#include "LanaiTargetMachine.h"
-
 #define DEBUG_TYPE "lanai-selectiondag-info"
 
 namespace llvm {

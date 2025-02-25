@@ -12,21 +12,21 @@ define signext i32 @wobble() nounwind {
 ; CHECK-LABEL: wobble:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    lui a0, %hi(global)
+; CHECK-NEXT:    lui a1, %hi(global.1)
 ; CHECK-NEXT:    lbu a0, %lo(global)(a0)
-; CHECK-NEXT:    lui a1, %hi(global.2)
-; CHECK-NEXT:    lbu a1, %lo(global.2)(a1)
+; CHECK-NEXT:    lui a2, %hi(global.2)
+; CHECK-NEXT:    lui a3, 52429
+; CHECK-NEXT:    lbu a2, %lo(global.2)(a2)
 ; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    lui a2, %hi(global.1)
-; CHECK-NEXT:    sw a0, %lo(global.1)(a2)
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    slli a1, a0, 48
-; CHECK-NEXT:    lui a2, 52429
-; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    mulhu a1, a1, a2
-; CHECK-NEXT:    srli a1, a1, 18
-; CHECK-NEXT:    lui a2, %hi(global.3)
+; CHECK-NEXT:    sw a0, %lo(global.1)(a1)
+; CHECK-NEXT:    lui a1, %hi(global.3)
+; CHECK-NEXT:    slli a3, a3, 4
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    slli a2, a0, 48
+; CHECK-NEXT:    mulhu a2, a2, a3
+; CHECK-NEXT:    srli a2, a2, 18
 ; CHECK-NEXT:    li a3, 5
-; CHECK-NEXT:    sw a1, %lo(global.3)(a2)
+; CHECK-NEXT:    sw a2, %lo(global.3)(a1)
 ; CHECK-NEXT:    bgeu a0, a3, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb12
 ; CHECK-NEXT:    li a0, 0

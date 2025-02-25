@@ -57,7 +57,7 @@ define i8 @knownbits_allones(i8 %x, i8 %y) {
 
 define <2 x i8> @add_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @add_vec(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
 ;
   %ret = add nuw <2 x i8> %x, <i8 -1, i8 -1>
   ret <2 x i8> %ret

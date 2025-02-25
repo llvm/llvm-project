@@ -862,13 +862,13 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi a0, sp, 64
-; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a1, a2, 3
-; CHECK-NEXT:    add a3, a0, a1
 ; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    slli a2, a2, 1
+; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    vs8r.v v16, (a3)
 ; CHECK-NEXT:    bltu a2, a1, .LBB74_2
@@ -879,9 +879,13 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i64> %v, i32 -1
   ret i64 %r
@@ -922,16 +926,20 @@ define i64 @extractelt_nxv16i64_idx(<vscale x 16 x i64> %v, i32 zeroext %idx) {
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    addi a2, sp, 64
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    vs8r.v v8, (a2)
-; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i64> %v, i32 %idx
   ret i64 %r

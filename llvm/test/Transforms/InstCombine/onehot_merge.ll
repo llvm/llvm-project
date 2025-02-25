@@ -31,8 +31,8 @@ define i1 @and_consts_logical(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @and_consts_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @and_consts_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[K:%.*]], <i32 12, i32 12>
-; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 12, i32 12>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[K:%.*]], splat (i32 12)
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP1]], splat (i32 12)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %t1 = and <2 x i32> <i32 4, i32 4>, %k
@@ -84,8 +84,8 @@ define i1 @foo1_and_logical(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @foo1_and_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_and_vector(
-; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
@@ -148,8 +148,8 @@ define i1 @foo1_and_commuted_logical(i32 %k, i32 %c1, i32 %c2) {
 define <2 x i1> @foo1_and_commuted_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_and_commuted_vector(
 ; CHECK-NEXT:    [[K2:%.*]] = mul <2 x i32> [[K:%.*]], [[K]]
-; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K2]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
@@ -196,8 +196,8 @@ define i1 @or_consts_logical(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @or_consts_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @or_consts_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[K:%.*]], <i32 12, i32 12>
-; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 12, i32 12>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[K:%.*]], splat (i32 12)
+; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP1]], splat (i32 12)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %t1 = and <2 x i32> <i32 4, i32 4>, %k
@@ -249,8 +249,8 @@ define i1 @foo1_or_logical(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @foo1_or_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_or_vector(
-; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
@@ -313,8 +313,8 @@ define i1 @foo1_or_commuted_logical(i32 %k, i32 %c1, i32 %c2) {
 define <2 x i1> @foo1_or_commuted_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_or_commuted_vector(
 ; CHECK-NEXT:    [[K2:%.*]] = mul <2 x i32> [[K:%.*]], [[K]]
-; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K2]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
@@ -372,8 +372,8 @@ define i1 @foo1_and_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @foo1_and_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_and_signbit_lshr_vector(
-; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> splat (i32 -2147483648), [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
@@ -430,8 +430,8 @@ define i1 @foo1_or_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @foo1_or_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_or_signbit_lshr_vector(
-; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> splat (i32 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> splat (i32 -2147483648), [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
@@ -1142,4 +1142,20 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_not_pwr2_logical(i32 %
   %t4 = icmp sgt i32 %t3, -1
   %or = select i1 %t2, i1 true, i1 %t4
   ret i1 %or
+}
+
+define i1 @two_types_of_bittest(i8 %x, i8 %c) {
+; CHECK-LABEL: @two_types_of_bittest(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[T0]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t0 = shl i8 1, %c
+  %icmp1 = icmp slt i8 %x, 0
+  %and = and i8 %x, %t0
+  %icmp2 = icmp ne i8 %and, 0
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
 }

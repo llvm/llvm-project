@@ -26,14 +26,63 @@
 namespace clang {
 class AttributeCommonInfo;
 class IdentifierInfo;
+class InitializedEntity;
+class InitializationKind;
 class ParsedAttr;
 class Scope;
+class VarDecl;
+
+using llvm::dxil::ResourceClass;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
     QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
+
+enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
+
+// DeclBindingInfo struct stores information about required/assigned resource
+// binding onon a declaration for specific resource class.
+struct DeclBindingInfo {
+  const VarDecl *Decl;
+  ResourceClass ResClass;
+  const HLSLResourceBindingAttr *Attr;
+  BindingType BindType;
+
+  DeclBindingInfo(const VarDecl *Decl, ResourceClass ResClass,
+                  BindingType BindType = BindingType::NotAssigned,
+                  const HLSLResourceBindingAttr *Attr = nullptr)
+      : Decl(Decl), ResClass(ResClass), Attr(Attr), BindType(BindType) {}
+
+  void setBindingAttribute(HLSLResourceBindingAttr *A, BindingType BT) {
+    assert(Attr == nullptr && BindType == BindingType::NotAssigned &&
+           "binding attribute already assigned");
+    Attr = A;
+    BindType = BT;
+  }
+};
+
+// ResourceBindings class stores information about all resource bindings
+// in a shader. It is used for binding diagnostics and implicit binding
+// assigments.
+class ResourceBindings {
+public:
+  DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD,
+                                      ResourceClass ResClass);
+  DeclBindingInfo *getDeclBindingInfo(const VarDecl *VD,
+                                      ResourceClass ResClass);
+  bool hasBindingInfoForDecl(const VarDecl *VD) const;
+
+private:
+  // List of all resource bindings required by the shader.
+  // A global declaration can have multiple bindings for different
+  // resource classes. They are all stored sequentially in this list.
+  // The DeclToBindingListIndex hashtable maps a declaration to the
+  // index of the first binding info in the list.
+  llvm::SmallVector<DeclBindingInfo> BindingsList;
+  llvm::DenseMap<const VarDecl *, unsigned> DeclToBindingListIndex;
+};
 
 class SemaHLSL : public SemaBase {
 public:
@@ -55,6 +104,7 @@ public:
   mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
+  void ActOnVariableDeclarator(VarDecl *VD);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
@@ -71,6 +121,8 @@ public:
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
@@ -84,13 +136,23 @@ public:
 
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
-  bool IsIntangibleType(QualType T1);
+  bool IsTypedResourceElementCompatible(QualType T1);
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 
+  // Diagnose whether the input ID is uint/unit2/uint3 type.
+  bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
+
+  bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
+  bool ContainsBitField(QualType BaseTy);
+  bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
+  bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
+
+  bool TransformInitList(const InitializedEntity &Entity,
+                         const InitializationKind &Kind, InitListExpr *Init);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
@@ -102,6 +164,15 @@ private:
   llvm::DenseMap<const HLSLAttributedResourceType *,
                  HLSLAttributedResourceLocInfo>
       LocsForHLSLAttributedResources;
+
+  // List of all resource bindings
+  ResourceBindings Bindings;
+
+private:
+  void collectResourceBindingsOnVarDecl(VarDecl *D);
+  void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
+                                               const RecordType *RT);
+  void processExplicitBindingsOnDecl(VarDecl *D);
 };
 
 } // namespace clang

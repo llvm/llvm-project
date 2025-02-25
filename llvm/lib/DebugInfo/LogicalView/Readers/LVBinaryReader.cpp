@@ -65,20 +65,24 @@ LVSectionIndex LVSymbolTable::update(LVScope *Function) {
     Name = Function->getName();
   std::string SymbolName(Name);
 
-  if (SymbolName.empty() || (SymbolNames.find(SymbolName) == SymbolNames.end()))
+  if (SymbolName.empty())
+    return SectionIndex;
+
+  auto It = SymbolNames.find(SymbolName);
+  if (It == SymbolNames.end())
     return SectionIndex;
 
   // Update a recorded entry with its logical scope, only if the scope has
   // ranges. That is the case when in DWARF there are 2 DIEs connected via
   // the DW_AT_specification.
   if (Function->getHasRanges()) {
-    SymbolNames[SymbolName].Scope = Function;
-    SectionIndex = SymbolNames[SymbolName].SectionIndex;
+    It->second.Scope = Function;
+    SectionIndex = It->second.SectionIndex;
   } else {
     SectionIndex = UndefinedSectionIndex;
   }
 
-  if (SymbolNames[SymbolName].IsComdat)
+  if (It->second.IsComdat)
     Function->setIsComdat();
 
   LLVM_DEBUG({ print(dbgs()); });
@@ -87,20 +91,20 @@ LVSectionIndex LVSymbolTable::update(LVScope *Function) {
 
 const LVSymbolTableEntry &LVSymbolTable::getEntry(StringRef Name) {
   static LVSymbolTableEntry Empty = LVSymbolTableEntry();
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second : Empty;
 }
 LVAddress LVSymbolTable::getAddress(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.Address : 0;
 }
 LVSectionIndex LVSymbolTable::getIndex(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.SectionIndex
                                    : getReader().getDotTextSectionIndex();
 }
 bool LVSymbolTable::getIsComdat(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.IsComdat : false;
 }
 

@@ -18,7 +18,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Argument.h"
@@ -288,7 +287,7 @@ bool Argument::hasNoAliasAttr() const {
 
 bool Argument::hasNoCaptureAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return hasAttribute(Attribute::NoCapture);
+  return capturesNothing(getAttributes().getCaptureInfo());
 }
 
 bool Argument::hasNoFreeAttr() const {
@@ -357,6 +356,10 @@ bool Argument::hasAttribute(StringRef Kind) const {
 
 Attribute Argument::getAttribute(Attribute::AttrKind Kind) const {
   return getParent()->getParamAttribute(getArgNo(), Kind);
+}
+
+AttributeSet Argument::getAttributes() const {
+  return getParent()->getAttributes().getParamAttrs(getArgNo());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1159,22 +1162,6 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
                        ->getValue()
                        .getZExtValue());
   return R;
-}
-
-void Function::setSectionPrefix(StringRef Prefix) {
-  MDBuilder MDB(getContext());
-  setMetadata(LLVMContext::MD_section_prefix,
-              MDB.createFunctionSectionPrefix(Prefix));
-}
-
-std::optional<StringRef> Function::getSectionPrefix() const {
-  if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
-    assert(cast<MDString>(MD->getOperand(0))->getString() ==
-               "function_section_prefix" &&
-           "Metadata not match");
-    return cast<MDString>(MD->getOperand(1))->getString();
-  }
-  return std::nullopt;
 }
 
 bool Function::nullPointerIsDefined() const {

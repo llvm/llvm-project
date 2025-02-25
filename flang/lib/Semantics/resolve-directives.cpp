@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <list>
@@ -350,6 +351,17 @@ public:
     return true;
   }
 
+  bool Pre(const parser::OmpDirectiveSpecification &x) {
+    PushContext(x.source, std::get<llvm::omp::Directive>(x.t));
+    return true;
+  }
+  void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
+  bool Pre(const parser::OmpMetadirectiveDirective &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
+    return true;
+  }
+  void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
+
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
 
@@ -382,6 +394,14 @@ public:
     return true;
   }
   void Post(const parser::OpenMPDeclareSimdConstruct &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPDepobjConstruct &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
+    auto &object{std::get<parser::OmpObject>(x.t)};
+    ResolveOmpObject(object, Symbol::Flag::OmpDependObject);
+    return true;
+  }
+  void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     using Flags = WithOmpDeclarative::RequiresFlags;
@@ -423,11 +443,20 @@ public:
   bool Pre(const parser::OpenMPDeclareTargetConstruct &);
   void Post(const parser::OpenMPDeclareTargetConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
+  void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &);
+  void Post(const parser::OpenMPDeclareReductionConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
   bool Pre(const parser::OpenMPDeclarativeAllocate &);
   void Post(const parser::OpenMPDeclarativeAllocate &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPDispatchConstruct &);
+  void Post(const parser::OpenMPDispatchConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPExecutableAllocate &);
   void Post(const parser::OpenMPExecutableAllocate &);
@@ -435,7 +464,29 @@ public:
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source));
+      }
+    }
+  }
+
   // 2.15.3 Data-Sharing Attribute Clauses
+  bool Pre(const parser::OmpClause::Inclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpInclusiveScan);
+    return false;
+  }
+  bool Pre(const parser::OmpClause::Exclusive &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpExclusiveScan);
+    return false;
+  }
   void Post(const parser::OmpDefaultClause &);
   bool Pre(const parser::OmpClause::Shared &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpShared);
@@ -468,54 +519,58 @@ public:
     return false;
   }
   bool Pre(const parser::OmpLinearClause &x) {
-    common::visit(common::visitors{
-                      [&](const parser::OmpLinearClause::WithoutModifier
-                              &linearWithoutModifier) {
-                        ResolveOmpNameList(linearWithoutModifier.names,
-                            Symbol::Flag::OmpLinear);
-                      },
-                      [&](const parser::OmpLinearClause::WithModifier
-                              &linearWithModifier) {
-                        ResolveOmpNameList(
-                            linearWithModifier.names, Symbol::Flag::OmpLinear);
-                      },
-                  },
-        x.u);
+    auto &objects{std::get<parser::OmpObjectList>(x.t)};
+    ResolveOmpObjectList(objects, Symbol::Flag::OmpLinear);
     return false;
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const parser::OmpReductionOperator &opr{
-        std::get<parser::OmpReductionOperator>(x.v.t)};
-    auto createDummyProcSymbol = [&](const parser::Name *name) {
-      // If name resolution failed, create a dummy symbol
-      const auto namePair{
-          currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
-      auto &newSymbol{*namePair.first->second};
-      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
-        newSymbol.attrs().set(Attr::INTRINSIC);
-      }
-      name->symbol = &newSymbol;
-    };
-    if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
-      if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
-        if (!name->symbol) {
-          if (!ResolveName(name)) {
-            createDummyProcSymbol(name);
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+
+    if (auto &modifiers{OmpGetModifiers(x.v)}) {
+      auto createDummyProcSymbol = [&](const parser::Name *name) {
+        // If name resolution failed, create a dummy symbol
+        const auto namePair{currScope().try_emplace(
+            name->source, Attrs{}, ProcEntityDetails{})};
+        auto &newSymbol{*namePair.first->second};
+        if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+          newSymbol.attrs().set(Attr::INTRINSIC);
+        }
+        name->symbol = &newSymbol;
+      };
+
+      for (auto &mod : *modifiers) {
+        if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
+          continue;
+        }
+        auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
+        if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+          if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+            if (!name->symbol) {
+              if (!ResolveName(name)) {
+                createDummyProcSymbol(name);
+              }
+            }
+          }
+          if (auto *procRef{
+                  parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+            if (!procRef->v.thing.component.symbol) {
+              if (!ResolveName(&procRef->v.thing.component)) {
+                createDummyProcSymbol(&procRef->v.thing.component);
+              }
+            }
           }
         }
       }
-      if (const auto *procRef{
-              parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-        if (!procRef->v.thing.component.symbol) {
-          if (!ResolveName(&procRef->v.thing.component)) {
-            createDummyProcSymbol(&procRef->v.thing.component);
-          }
+      using ReductionModifier = parser::OmpReductionModifier;
+      if (auto *maybeModifier{
+              OmpGetUniqueModifier<ReductionModifier>(modifiers)}) {
+        if (maybeModifier->v == ReductionModifier::Value::Inscan) {
+          ResolveOmpObjectList(objList, Symbol::Flag::OmpInScanReduction);
         }
       }
     }
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
-    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
     return false;
   }
 
@@ -531,16 +586,17 @@ public:
     return false;
   }
 
-  bool Pre(const parser::OmpDependClause &x) {
-    if (const auto *dependSink{
-            std::get_if<parser::OmpDependClause::Sink>(&x.u)}) {
-      const auto &dependSinkVec{dependSink->v};
-      for (const auto &dependSinkElement : dependSinkVec) {
-        const auto &name{std::get<parser::Name>(dependSinkElement.t)};
-        ResolveName(&name);
+  void Post(const parser::OmpIteration &x) {
+    if (const auto &name{std::get<parser::Name>(x.t)}; !name.symbol) {
+      auto *symbol{currScope().FindSymbol(name.source)};
+      if (!symbol) {
+        // OmpIteration must use an existing object. If there isn't one,
+        // create a fake one and flag an error later.
+        symbol = &currScope().MakeSymbol(
+            name.source, Attrs{}, EntityDetails(/*isDummy=*/true));
       }
+      Resolve(name, symbol);
     }
-    return false;
   }
 
   bool Pre(const parser::OmpClause::UseDevicePtr &x) {
@@ -591,25 +647,25 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
-    if (const auto &mapType{
-            std::get<std::optional<parser::OmpMapClause::Type>>(x.t)}) {
-      switch (*mapType) {
-      case parser::OmpMapClause::Type::To:
+    auto &mods{OmpGetModifiers(x)};
+    if (auto *mapType{OmpGetUniqueModifier<parser::OmpMapType>(mods)}) {
+      switch (mapType->v) {
+      case parser::OmpMapType::Value::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case parser::OmpMapClause::Type::From:
+      case parser::OmpMapType::Value::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case parser::OmpMapClause::Type::Tofrom:
+      case parser::OmpMapType::Value::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case parser::OmpMapClause::Type::Alloc:
+      case parser::OmpMapType::Value::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case parser::OmpMapClause::Type::Release:
+      case parser::OmpMapType::Value::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case parser::OmpMapClause::Type::Delete:
+      case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }
@@ -666,8 +722,9 @@ private:
       Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr,
       Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
-  Symbol::Flags ompFlagsRequireMark{
-      Symbol::Flag::OmpThreadprivate, Symbol::Flag::OmpDeclareTarget};
+  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
+      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
+      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -1521,8 +1578,10 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_masked:
   case llvm::omp::Directive::OMPD_parallel_masked:
   case llvm::omp::Directive::OMPD_master:
+  case llvm::omp::Directive::OMPD_parallel_master:
   case llvm::omp::Directive::OMPD_ordered:
   case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_target_data:
@@ -1539,7 +1598,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
     // TODO others
     break;
   }
-  if (beginDir.v == llvm::omp::Directive::OMPD_master)
+  if (beginDir.v == llvm::omp::Directive::OMPD_master ||
+      beginDir.v == llvm::omp::Directive::OMPD_parallel_master)
     IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
@@ -1552,8 +1612,11 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
   switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_masked:
+  case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_parallel_masked:
+  case llvm::omp::Directive::OMPD_parallel_master:
   case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_task:
@@ -1594,6 +1657,7 @@ bool OmpAttributeVisitor::Pre(
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_scan:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
   case llvm::omp::Directive::OMPD_target_update:
@@ -1622,10 +1686,14 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_loop:
   case llvm::omp::Directive::OMPD_masked_taskloop_simd:
   case llvm::omp::Directive::OMPD_masked_taskloop:
+  case llvm::omp::Directive::OMPD_master_taskloop_simd:
+  case llvm::omp::Directive::OMPD_master_taskloop:
   case llvm::omp::Directive::OMPD_parallel_do:
   case llvm::omp::Directive::OMPD_parallel_do_simd:
   case llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd:
   case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
+  case llvm::omp::Directive::OMPD_parallel_master_taskloop_simd:
+  case llvm::omp::Directive::OMPD_parallel_master_taskloop:
   case llvm::omp::Directive::OMPD_simd:
   case llvm::omp::Directive::OMPD_target_loop:
   case llvm::omp::Directive::OMPD_target_parallel_do:
@@ -1643,6 +1711,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
   case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
   case llvm::omp::Directive::OMPD_teams_distribute_simd:
+  case llvm::omp::Directive::OMPD_teams_loop:
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll:
     PushContext(beginDir.source, beginDir.v);
@@ -1650,7 +1719,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   default:
     break;
   }
-  if (beginDir.v == llvm::omp::Directive::OMPD_target_loop)
+  if (beginDir.v == llvm::omp::OMPD_master_taskloop ||
+      beginDir.v == llvm::omp::OMPD_master_taskloop_simd ||
+      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop ||
+      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
+      beginDir.v == llvm::omp::Directive::OMPD_target_loop)
     IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
@@ -1721,7 +1794,6 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
 // Use of DO CONCURRENT inside OpenMP construct is unspecified behavior
 // till OpenMP-5.0 standard.
 // In above both cases we skip the privatization of iteration variables.
-// [OpenMP 5.1] DO CONCURRENT indices are private
 bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   if (!dirContext_.empty() && GetContext().withinConstruct) {
     llvm::SmallVector<const parser::Name *> ivs;
@@ -1729,20 +1801,6 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
       const parser::Name *iv{GetLoopIndex(x)};
       if (iv && iv->symbol)
         ivs.push_back(iv);
-    } else if (x.IsDoConcurrent()) {
-      const Fortran::parser::LoopControl *loopControl = &*x.GetLoopControl();
-      const Fortran::parser::LoopControl::Concurrent &concurrent =
-          std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
-      const Fortran::parser::ConcurrentHeader &concurrentHeader =
-          std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
-      const std::list<Fortran::parser::ConcurrentControl> &controls =
-          std::get<std::list<Fortran::parser::ConcurrentControl>>(
-              concurrentHeader.t);
-      for (const auto &control : controls) {
-        const parser::Name *iv{&std::get<0>(control.t)};
-        if (iv && iv->symbol)
-          ivs.push_back(iv);
-      }
     }
     ordCollapseLevel--;
     for (auto iv : ivs) {
@@ -1754,9 +1812,6 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
       if (ordCollapseLevel) {
         if (const auto *details{iv->symbol->detailsIf<HostAssocDetails>()}) {
           const Symbol *tpSymbol = &details->symbol();
-          // TODO: DoConcurrent won't capture the following check because a new
-          // symbol is declared in ResolveIndexName(), which will not have the
-          // OmpThreadprivate flag.
           if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
             context_.Say(iv->source,
                 "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
@@ -1828,22 +1883,29 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   }
 
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
-    // go through all the nested do-loops and resolve index variables
-    const parser::Name *iv{GetLoopIndex(*loop)};
-    if (iv) {
-      if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
-        symbol->set(Symbol::Flag::OmpPreDetermined);
-        iv->symbol = symbol; // adjust the symbol within region
-        AddToContextObjectWithDSA(*symbol, ivDSA);
-      }
+  if (outer.has_value()) {
+    for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+      // go through all the nested do-loops and resolve index variables
+      const parser::Name *iv{GetLoopIndex(*loop)};
+      if (iv) {
+        if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+          symbol->set(Symbol::Flag::OmpPreDetermined);
+          iv->symbol = symbol; // adjust the symbol within region
+          AddToContextObjectWithDSA(*symbol, ivDSA);
+        }
 
-      const auto &block{std::get<parser::Block>(loop->t)};
-      const auto it{block.begin()};
-      loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+        const auto &block{std::get<parser::Block>(loop->t)};
+        const auto it{block.begin()};
+        loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+      }
     }
+    CheckAssocLoopLevel(level, GetAssociatedClause());
+  } else {
+    context_.Say(GetContext().directiveSource,
+        "A DO loop must follow the %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::omp::getOpenMPDirectiveName(GetContext().directive).str()));
   }
-  CheckAssocLoopLevel(level, GetAssociatedClause());
 }
 void OmpAttributeVisitor::CheckAssocLoopLevel(
     std::int64_t level, const parser::OmpClause *clause) {
@@ -1898,7 +1960,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
     for (const auto &clause : clauseList->v) {
       if (const auto *toClause{std::get_if<parser::OmpClause::To>(&clause.u)}) {
-        ResolveOmpObjectList(toClause->v, Symbol::Flag::OmpDeclareTarget);
+        auto &objList{std::get<parser::OmpObjectList>(toClause->v.t)};
+        ResolveOmpObjectList(objList, Symbol::Flag::OmpDeclareTarget);
       } else if (const auto *linkClause{
                      std::get_if<parser::OmpClause::Link>(&clause.u)}) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
@@ -1908,6 +1971,17 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
       }
     }
   }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_mapper);
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(
+    const parser::OpenMPDeclareReductionConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_reduction);
   return true;
 }
 
@@ -1923,6 +1997,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
   const auto &list{std::get<parser::OmpObjectList>(x.t)};
   ResolveOmpObjectList(list, Symbol::Flag::OmpDeclarativeAllocateDirective);
   return false;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_dispatch);
+  return true;
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
@@ -1948,20 +2027,25 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
 }
 
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
-  if (!dirContext_.empty()) {
-    switch (x.v) {
-    case parser::OmpDefaultClause::Type::Private:
-      SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
-      break;
-    case parser::OmpDefaultClause::Type::Firstprivate:
-      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
-      break;
-    case parser::OmpDefaultClause::Type::Shared:
-      SetContextDefaultDSA(Symbol::Flag::OmpShared);
-      break;
-    case parser::OmpDefaultClause::Type::None:
-      SetContextDefaultDSA(Symbol::Flag::OmpNone);
-      break;
+  // The DEFAULT clause may also be used on METADIRECTIVE. In that case
+  // there is nothing to do.
+  using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  if (auto *dsa{std::get_if<DataSharingAttribute>(&x.u)}) {
+    if (!dirContext_.empty()) {
+      switch (*dsa) {
+      case DataSharingAttribute::Private:
+        SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
+        break;
+      case DataSharingAttribute::Firstprivate:
+        SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
+        break;
+      case DataSharingAttribute::Shared:
+        SetContextDefaultDSA(Symbol::Flag::OmpShared);
+        break;
+      case DataSharingAttribute::None:
+        SetContextDefaultDSA(Symbol::Flag::OmpNone);
+        break;
+      }
     }
   }
 }
@@ -2024,17 +2108,16 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
           std::get<parser::OmpObjectList>(alloc->v.t),
           std::get<parser::Statement<parser::AllocateStmt>>(x.t).statement);
 
-      const auto &allocMod{
-          std::get<std::optional<parser::OmpAllocateClause::AllocateModifier>>(
-              alloc->v.t)};
+      auto &modifiers{OmpGetModifiers(alloc->v)};
+      bool hasAllocator{
+          OmpGetUniqueModifier<parser::OmpAllocatorSimpleModifier>(modifiers) ||
+          OmpGetUniqueModifier<parser::OmpAllocatorComplexModifier>(modifiers)};
+
       // TODO: As with allocate directive, exclude the case when a requires
       //       directive with the dynamic_allocators clause is present in
       //       the same compilation unit (OMP5.0 2.11.3).
       if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) &&
-          (!allocMod.has_value() ||
-              std::holds_alternative<
-                  parser::OmpAllocateClause::AllocateModifier::Align>(
-                  allocMod->u))) {
+          !hasAllocator) {
         context_.Say(x.source,
             "ALLOCATORS directives that appear in a TARGET region "
             "must specify an allocator"_err_en_US);
@@ -2046,9 +2129,15 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 
 static bool IsPrivatizable(const Symbol *sym) {
   auto *misc{sym->detailsIf<MiscDetails>()};
-  return !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
+  return IsVariableName(*sym) && !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
+      ( // OpenMP 5.2, 5.1.1: Assumed-size arrays are shared
+          !semantics::IsAssumedSizeArray(*sym) ||
+          // If CrayPointer is among the DSA list then the
+          // CrayPointee is Privatizable
+          sym->test(Symbol::Flag::CrayPointee)) &&
       !sym->owner().IsDerivedType() &&
       sym->owner().kind() != Scope::Kind::ImpliedDos &&
+      sym->owner().kind() != Scope::Kind::Forall &&
       !sym->detailsIf<semantics::AssocEntityDetails>() &&
       !sym->detailsIf<semantics::NamelistDetails>() &&
       (!misc ||
@@ -2212,16 +2301,24 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          context_.Say(name.source,
-              "The DEFAULT(NONE) clause requires that '%s' must be listed in "
-              "a data-sharing attribute clause"_err_en_US,
-              symbol->name());
+          if (symbol->test(Symbol::Flag::CrayPointee)) {
+            std::string crayPtrName{
+                semantics::GetCrayPointer(*symbol).name().ToString()};
+            if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))
+              context_.Say(name.source,
+                  "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+                  crayPtrName);
+          } else {
+            context_.Say(name.source,
+                "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+                symbol->name());
+          }
         }
       }
     }
 
     if (Symbol * found{currScope().FindSymbol(name.source)}) {
-      if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
+      if (found->GetUltimate().test(semantics::Symbol::Flag::OmpThreadprivate))
         return;
     }
 
@@ -2317,7 +2414,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
               if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
                 auto checkExclusivelists =
                     [&](const Symbol *symbol1, Symbol::Flag firstOmpFlag,
-                        Symbol *symbol2, Symbol::Flag secondOmpFlag) {
+                        const Symbol *symbol2, Symbol::Flag secondOmpFlag) {
                       if ((symbol1->test(firstOmpFlag) &&
                               symbol2->test(secondOmpFlag)) ||
                           (symbol1->test(secondOmpFlag) &&
@@ -2327,9 +2424,8 @@ void OmpAttributeVisitor::ResolveOmpObject(
                             "appear on both %s and %s "
                             "clauses on a %s construct"_err_en_US,
                             symbol2->name(),
-                            const_cast<Symbol *>(symbol1)->OmpFlagToClauseName(
-                                firstOmpFlag),
-                            symbol2->OmpFlagToClauseName(secondOmpFlag),
+                            Symbol::OmpFlagToClauseName(firstOmpFlag),
+                            Symbol::OmpFlagToClauseName(secondOmpFlag),
                             parser::ToUpperCaseLetters(
                                 llvm::omp::getOpenMPDirectiveName(
                                     GetContext().directive)
@@ -2383,6 +2479,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
                     context_.Say(name->source,
                         "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
+                        name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpInclusiveScan ||
+                    ompFlag == Symbol::Flag::OmpExclusiveScan) {
+                  if (!symbol->test(Symbol::Flag::OmpInScanReduction)) {
+                    context_.Say(name->source,
+                        "List item %s must appear in REDUCTION clause "
+                        "with the INSCAN modifier of the parent "
+                        "directive"_err_en_US,
                         name->ToString());
                   }
                 }
@@ -2878,18 +2984,39 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
 
 void OmpAttributeVisitor::IssueNonConformanceWarning(
     llvm::omp::Directive D, parser::CharBlock source) {
-  std::string warnStr = "";
-  std::string dirName = llvm::omp::getOpenMPDirectiveName(D).str();
+  std::string warnStr;
+  llvm::raw_string_ostream warnStrOS(warnStr);
+  warnStrOS << "OpenMP directive "
+            << parser::ToUpperCaseLetters(
+                   llvm::omp::getOpenMPDirectiveName(D).str())
+            << " has been deprecated";
+
+  auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {
+    warnStrOS << ", please use " << alt << " instead.";
+  };
   switch (D) {
   case llvm::omp::OMPD_master:
-    warnStr = "OpenMP directive '" + dirName +
-        "' has been deprecated, please use 'masked' instead.";
+    setAlternativeStr("MASKED");
+    break;
+  case llvm::omp::OMPD_master_taskloop:
+    setAlternativeStr("MASKED TASKLOOP");
+    break;
+  case llvm::omp::OMPD_master_taskloop_simd:
+    setAlternativeStr("MASKED TASKLOOP SIMD");
+    break;
+  case llvm::omp::OMPD_parallel_master:
+    setAlternativeStr("PARALLEL MASKED");
+    break;
+  case llvm::omp::OMPD_parallel_master_taskloop:
+    setAlternativeStr("PARALLEL MASKED TASKLOOP");
+    break;
+  case llvm::omp::OMPD_parallel_master_taskloop_simd:
+    setAlternativeStr("PARALLEL_MASKED TASKLOOP SIMD");
     break;
   case llvm::omp::OMPD_target_loop:
-  default:
-    warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
+  default:;
   }
-  context_.Warn(
-      common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US, warnStr);
+  context_.Warn(common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US,
+      warnStrOS.str());
 }
 } // namespace Fortran::semantics

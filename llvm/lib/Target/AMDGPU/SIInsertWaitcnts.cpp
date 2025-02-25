@@ -34,7 +34,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
 using namespace llvm;
@@ -53,6 +52,11 @@ static cl::opt<bool>
                       cl::desc("Force all waitcnt instrs to be emitted as "
                                "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
                       cl::init(false), cl::Hidden);
+
+static cl::opt<bool> ForceEmitZeroLoadFlag(
+    "amdgpu-waitcnt-load-forcezero",
+    cl::desc("Force all waitcnt load counters to wait until 0"),
+    cl::init(false), cl::Hidden);
 
 namespace {
 // Class of object that encapsulates latest instruction counter score
@@ -1135,7 +1139,7 @@ FunctionPass *llvm::createSIInsertWaitcntsPass() {
   return new SIInsertWaitcnts();
 }
 
-static bool updateOperandIfDifferent(MachineInstr &MI, uint16_t OpName,
+static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
                                      unsigned NewEnc) {
   int OpIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName);
   assert(OpIdx >= 0);
@@ -1850,6 +1854,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     if (ScoreBrackets.hasPendingEvent(BVH_CNT))
       Wait.BvhCnt = 0;
   }
+
+  if (ForceEmitZeroLoadFlag && Wait.LoadCnt != ~0u)
+    Wait.LoadCnt = 0;
 
   return generateWaitcnt(Wait, MI.getIterator(), *MI.getParent(), ScoreBrackets,
                          OldWaitcntInstr);
@@ -2606,15 +2613,24 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
   // instructions.
-  for (MachineInstr *MI : ReleaseVGPRInsts) {
-    if (ST->requiresNopBeforeDeallocVGPRs()) {
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
-          .addImm(0);
+  // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
+  // waveslot limited kernel runs slower with the deallocation.
+  if (!ReleaseVGPRInsts.empty() &&
+      (MF.getFrameInfo().hasCalls() ||
+       ST->getOccupancyWithNumVGPRs(
+           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+           AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+    for (MachineInstr *MI : ReleaseVGPRInsts) {
+      if (ST->requiresNopBeforeDeallocVGPRs()) {
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_NOP))
+            .addImm(0);
+      }
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::S_SENDMSG))
+          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+      Modified = true;
     }
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::S_SENDMSG))
-        .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
-    Modified = true;
   }
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();

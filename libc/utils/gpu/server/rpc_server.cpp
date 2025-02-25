@@ -14,15 +14,14 @@
 // Make sure these are included first so they don't conflict with the system.
 #include <limits.h>
 
-#include "llvmlibc_rpc_server.h"
+#include "shared/rpc.h"
+#include "shared/rpc_opcodes.h"
 
-#include "src/__support/RPC/rpc.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/parser.h"
 #include "src/stdio/printf_core/writer.h"
 
-#include "src/stdio/gpu/file.h"
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
@@ -36,12 +35,6 @@
 using namespace LIBC_NAMESPACE;
 using namespace LIBC_NAMESPACE::printf_core;
 
-static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
-              "Buffer size mismatch");
-
-static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
-              "Incorrect maximum port count");
-
 namespace {
 struct TempStorage {
   char *alloc(size_t size) {
@@ -53,33 +46,53 @@ struct TempStorage {
 };
 } // namespace
 
-template <bool packed, uint32_t lane_size>
+enum Stream {
+  File = 0,
+  Stdin = 1,
+  Stdout = 2,
+  Stderr = 3,
+};
+
+// Get the associated stream out of an encoded number.
+LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
+  ::FILE *stream = reinterpret_cast<FILE *>(f & ~0x3ull);
+  Stream type = static_cast<Stream>(f & 0x3ull);
+  if (type == Stdin)
+    return stdin;
+  if (type == Stdout)
+    return stdout;
+  if (type == Stderr)
+    return stderr;
+  return stream;
+}
+
+template <bool packed, uint32_t num_lanes>
 static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
-  FILE *files[lane_size] = {nullptr};
+  FILE *files[num_lanes] = {nullptr};
   // Get the appropriate output stream to use.
-  if (port.get_opcode() == RPC_PRINTF_TO_STREAM ||
-      port.get_opcode() == RPC_PRINTF_TO_STREAM_PACKED)
+  if (port.get_opcode() == LIBC_PRINTF_TO_STREAM ||
+      port.get_opcode() == LIBC_PRINTF_TO_STREAM_PACKED)
     port.recv([&](rpc::Buffer *buffer, uint32_t id) {
       files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
     });
-  else if (port.get_opcode() == RPC_PRINTF_TO_STDOUT ||
-           port.get_opcode() == RPC_PRINTF_TO_STDOUT_PACKED)
-    std::fill(files, files + lane_size, stdout);
+  else if (port.get_opcode() == LIBC_PRINTF_TO_STDOUT ||
+           port.get_opcode() == LIBC_PRINTF_TO_STDOUT_PACKED)
+    std::fill(files, files + num_lanes, stdout);
   else
-    std::fill(files, files + lane_size, stderr);
+    std::fill(files, files + num_lanes, stderr);
 
-  uint64_t format_sizes[lane_size] = {0};
-  void *format[lane_size] = {nullptr};
+  uint64_t format_sizes[num_lanes] = {0};
+  void *format[num_lanes] = {nullptr};
 
-  uint64_t args_sizes[lane_size] = {0};
-  void *args[lane_size] = {nullptr};
+  uint64_t args_sizes[num_lanes] = {0};
+  void *args[num_lanes] = {nullptr};
 
   // Recieve the format string and arguments from the client.
   port.recv_n(format, format_sizes,
               [&](uint64_t size) { return temp_storage.alloc(size); });
 
   // Parse the format string to get the expected size of the buffer.
-  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+  for (uint32_t lane = 0; lane < num_lanes; ++lane) {
     if (!format[lane])
       continue;
 
@@ -104,9 +117,9 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
 
   // Identify any arguments that are actually pointers to strings on the client.
   // Additionally we want to determine how much buffer space we need to print.
-  std::vector<void *> strs_to_copy[lane_size];
-  int buffer_size[lane_size] = {0};
-  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+  std::vector<void *> strs_to_copy[num_lanes];
+  int buffer_size[num_lanes] = {0};
+  for (uint32_t lane = 0; lane < num_lanes; ++lane) {
     if (!format[lane])
       continue;
 
@@ -138,7 +151,7 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
   }
 
   // Recieve any strings from the client and push them into a buffer.
-  std::vector<void *> copied_strs[lane_size];
+  std::vector<void *> copied_strs[num_lanes];
   while (std::any_of(std::begin(strs_to_copy), std::end(strs_to_copy),
                      [](const auto &v) { return !v.empty() && v.back(); })) {
     port.send([&](rpc::Buffer *buffer, uint32_t id) {
@@ -147,11 +160,11 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
       if (!strs_to_copy[id].empty())
         strs_to_copy[id].pop_back();
     });
-    uint64_t str_sizes[lane_size] = {0};
-    void *strs[lane_size] = {nullptr};
+    uint64_t str_sizes[num_lanes] = {0};
+    void *strs[num_lanes] = {nullptr};
     port.recv_n(strs, str_sizes,
                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    for (uint32_t lane = 0; lane < lane_size; ++lane) {
+    for (uint32_t lane = 0; lane < num_lanes; ++lane) {
       if (!strs[lane])
         continue;
 
@@ -161,8 +174,8 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
   }
 
   // Perform the final formatting and printing using the LLVM C library printf.
-  int results[lane_size] = {0};
-  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+  int results[num_lanes] = {0};
+  for (uint32_t lane = 0; lane < num_lanes; ++lane) {
     if (!format[lane])
       continue;
 
@@ -212,374 +225,237 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
   });
 }
 
-template <uint32_t lane_size>
-rpc_status_t handle_server_impl(
-    rpc::Server &server,
-    const std::unordered_map<uint16_t, rpc_opcode_callback_ty> &callbacks,
-    const std::unordered_map<uint16_t, void *> &callback_data,
-    uint32_t &index) {
-  auto port = server.try_open(lane_size, index);
-  if (!port)
-    return RPC_STATUS_SUCCESS;
-
+template <uint32_t num_lanes>
+rpc::Status handle_port_impl(rpc::Server::Port &port) {
   TempStorage temp_storage;
 
-  switch (port->get_opcode()) {
-  case RPC_WRITE_TO_STREAM:
-  case RPC_WRITE_TO_STDERR:
-  case RPC_WRITE_TO_STDOUT:
-  case RPC_WRITE_TO_STDOUT_NEWLINE: {
-    uint64_t sizes[lane_size] = {0};
-    void *strs[lane_size] = {nullptr};
-    FILE *files[lane_size] = {nullptr};
-    if (port->get_opcode() == RPC_WRITE_TO_STREAM) {
-      port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+  switch (port.get_opcode()) {
+  case LIBC_WRITE_TO_STREAM:
+  case LIBC_WRITE_TO_STDERR:
+  case LIBC_WRITE_TO_STDOUT:
+  case LIBC_WRITE_TO_STDOUT_NEWLINE: {
+    uint64_t sizes[num_lanes] = {0};
+    void *strs[num_lanes] = {nullptr};
+    FILE *files[num_lanes] = {nullptr};
+    if (port.get_opcode() == LIBC_WRITE_TO_STREAM) {
+      port.recv([&](rpc::Buffer *buffer, uint32_t id) {
         files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
       });
-    } else if (port->get_opcode() == RPC_WRITE_TO_STDERR) {
-      std::fill(files, files + lane_size, stderr);
+    } else if (port.get_opcode() == LIBC_WRITE_TO_STDERR) {
+      std::fill(files, files + num_lanes, stderr);
     } else {
-      std::fill(files, files + lane_size, stdout);
+      std::fill(files, files + num_lanes, stdout);
     }
 
-    port->recv_n(strs, sizes,
-                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+    port.recv_n(strs, sizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
       flockfile(files[id]);
       buffer->data[0] = fwrite_unlocked(strs[id], 1, sizes[id], files[id]);
-      if (port->get_opcode() == RPC_WRITE_TO_STDOUT_NEWLINE &&
+      if (port.get_opcode() == LIBC_WRITE_TO_STDOUT_NEWLINE &&
           buffer->data[0] == sizes[id])
         buffer->data[0] += fwrite_unlocked("\n", 1, 1, files[id]);
       funlockfile(files[id]);
     });
     break;
   }
-  case RPC_READ_FROM_STREAM: {
-    uint64_t sizes[lane_size] = {0};
-    void *data[lane_size] = {nullptr};
-    port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_READ_FROM_STREAM: {
+    uint64_t sizes[num_lanes] = {0};
+    void *data[num_lanes] = {nullptr};
+    port.recv([&](rpc::Buffer *buffer, uint32_t id) {
       data[id] = temp_storage.alloc(buffer->data[0]);
       sizes[id] =
-          fread(data[id], 1, buffer->data[0], file::to_stream(buffer->data[1]));
+          fread(data[id], 1, buffer->data[0], to_stream(buffer->data[1]));
     });
-    port->send_n(data, sizes);
-    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+    port.send_n(data, sizes);
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
       std::memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
     });
     break;
   }
-  case RPC_READ_FGETS: {
-    uint64_t sizes[lane_size] = {0};
-    void *data[lane_size] = {nullptr};
-    port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_READ_FGETS: {
+    uint64_t sizes[num_lanes] = {0};
+    void *data[num_lanes] = {nullptr};
+    port.recv([&](rpc::Buffer *buffer, uint32_t id) {
       data[id] = temp_storage.alloc(buffer->data[0]);
-      const char *str =
-          fgets(reinterpret_cast<char *>(data[id]), buffer->data[0],
-                file::to_stream(buffer->data[1]));
+      const char *str = fgets(reinterpret_cast<char *>(data[id]),
+                              buffer->data[0], to_stream(buffer->data[1]));
       sizes[id] = !str ? 0 : std::strlen(str) + 1;
     });
-    port->send_n(data, sizes);
+    port.send_n(data, sizes);
     break;
   }
-  case RPC_OPEN_FILE: {
-    uint64_t sizes[lane_size] = {0};
-    void *paths[lane_size] = {nullptr};
-    port->recv_n(paths, sizes,
-                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    port->recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_OPEN_FILE: {
+    uint64_t sizes[num_lanes] = {0};
+    void *paths[num_lanes] = {nullptr};
+    port.recv_n(paths, sizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    port.recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
       FILE *file = fopen(reinterpret_cast<char *>(paths[id]),
                          reinterpret_cast<char *>(buffer->data));
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
     });
     break;
   }
-  case RPC_CLOSE_FILE: {
-    port->recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_CLOSE_FILE: {
+    port.recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
       FILE *file = reinterpret_cast<FILE *>(buffer->data[0]);
       buffer->data[0] = fclose(file);
     });
     break;
   }
-  case RPC_EXIT: {
+  case LIBC_EXIT: {
     // Send a response to the client to signal that we are ready to exit.
-    port->recv_and_send([](rpc::Buffer *) {});
-    port->recv([](rpc::Buffer *buffer) {
+    port.recv_and_send([](rpc::Buffer *, uint32_t) {});
+    port.recv([](rpc::Buffer *buffer, uint32_t) {
       int status = 0;
       std::memcpy(&status, buffer->data, sizeof(int));
       exit(status);
     });
     break;
   }
-  case RPC_ABORT: {
+  case LIBC_ABORT: {
     // Send a response to the client to signal that we are ready to abort.
-    port->recv_and_send([](rpc::Buffer *) {});
-    port->recv([](rpc::Buffer *) {});
+    port.recv_and_send([](rpc::Buffer *, uint32_t) {});
+    port.recv([](rpc::Buffer *, uint32_t) {});
     abort();
     break;
   }
-  case RPC_HOST_CALL: {
-    uint64_t sizes[lane_size] = {0};
-    unsigned long long results[lane_size] = {0};
-    void *args[lane_size] = {nullptr};
-    port->recv_n(args, sizes,
-                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_HOST_CALL: {
+    uint64_t sizes[num_lanes] = {0};
+    unsigned long long results[num_lanes] = {0};
+    void *args[num_lanes] = {nullptr};
+    port.recv_n(args, sizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    port.recv([&](rpc::Buffer *buffer, uint32_t id) {
       using func_ptr_t = unsigned long long (*)(void *);
       auto func = reinterpret_cast<func_ptr_t>(buffer->data[0]);
       results[id] = func(args[id]);
     });
-    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
       buffer->data[0] = static_cast<uint64_t>(results[id]);
     });
     break;
   }
-  case RPC_FEOF: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
-      buffer->data[0] = feof(file::to_stream(buffer->data[0]));
+  case LIBC_FEOF: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = feof(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_FERROR: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
-      buffer->data[0] = ferror(file::to_stream(buffer->data[0]));
+  case LIBC_FERROR: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = ferror(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_CLEARERR: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
-      clearerr(file::to_stream(buffer->data[0]));
+  case LIBC_CLEARERR: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      clearerr(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_FSEEK: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
-      buffer->data[0] = fseek(file::to_stream(buffer->data[0]),
-                              static_cast<long>(buffer->data[1]),
-                              static_cast<int>(buffer->data[2]));
+  case LIBC_FSEEK: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] =
+          fseek(to_stream(buffer->data[0]), static_cast<long>(buffer->data[1]),
+                static_cast<int>(buffer->data[2]));
     });
     break;
   }
-  case RPC_FTELL: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
-      buffer->data[0] = ftell(file::to_stream(buffer->data[0]));
+  case LIBC_FTELL: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = ftell(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_FFLUSH: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
-      buffer->data[0] = fflush(file::to_stream(buffer->data[0]));
+  case LIBC_FFLUSH: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = fflush(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_UNGETC: {
-    port->recv_and_send([](rpc::Buffer *buffer) {
-      buffer->data[0] = ungetc(static_cast<int>(buffer->data[0]),
-                               file::to_stream(buffer->data[1]));
+  case LIBC_UNGETC: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] =
+          ungetc(static_cast<int>(buffer->data[0]), to_stream(buffer->data[1]));
     });
     break;
   }
-  case RPC_PRINTF_TO_STREAM_PACKED:
-  case RPC_PRINTF_TO_STDOUT_PACKED:
-  case RPC_PRINTF_TO_STDERR_PACKED: {
-    handle_printf<true, lane_size>(*port, temp_storage);
+  case LIBC_PRINTF_TO_STREAM_PACKED:
+  case LIBC_PRINTF_TO_STDOUT_PACKED:
+  case LIBC_PRINTF_TO_STDERR_PACKED: {
+    handle_printf<true, num_lanes>(port, temp_storage);
     break;
   }
-  case RPC_PRINTF_TO_STREAM:
-  case RPC_PRINTF_TO_STDOUT:
-  case RPC_PRINTF_TO_STDERR: {
-    handle_printf<false, lane_size>(*port, temp_storage);
+  case LIBC_PRINTF_TO_STREAM:
+  case LIBC_PRINTF_TO_STDOUT:
+  case LIBC_PRINTF_TO_STDERR: {
+    handle_printf<false, num_lanes>(port, temp_storage);
     break;
   }
-  case RPC_REMOVE: {
-    uint64_t sizes[lane_size] = {0};
-    void *args[lane_size] = {nullptr};
-    port->recv_n(args, sizes,
-                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_REMOVE: {
+    uint64_t sizes[num_lanes] = {0};
+    void *args[num_lanes] = {nullptr};
+    port.recv_n(args, sizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
       buffer->data[0] = static_cast<uint64_t>(
           remove(reinterpret_cast<const char *>(args[id])));
     });
     break;
   }
-  case RPC_RENAME: {
-    uint64_t oldsizes[lane_size] = {0};
-    uint64_t newsizes[lane_size] = {0};
-    void *oldpath[lane_size] = {nullptr};
-    void *newpath[lane_size] = {nullptr};
-    port->recv_n(oldpath, oldsizes,
-                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    port->recv_n(newpath, newsizes,
-                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_RENAME: {
+    uint64_t oldsizes[num_lanes] = {0};
+    uint64_t newsizes[num_lanes] = {0};
+    void *oldpath[num_lanes] = {nullptr};
+    void *newpath[num_lanes] = {nullptr};
+    port.recv_n(oldpath, oldsizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    port.recv_n(newpath, newsizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
       buffer->data[0] = static_cast<uint64_t>(
           rename(reinterpret_cast<const char *>(oldpath[id]),
                  reinterpret_cast<const char *>(newpath[id])));
     });
     break;
   }
-  case RPC_SYSTEM: {
-    uint64_t sizes[lane_size] = {0};
-    void *args[lane_size] = {nullptr};
-    port->recv_n(args, sizes,
-                 [&](uint64_t size) { return temp_storage.alloc(size); });
-    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+  case LIBC_SYSTEM: {
+    uint64_t sizes[num_lanes] = {0};
+    void *args[num_lanes] = {nullptr};
+    port.recv_n(args, sizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
       buffer->data[0] = static_cast<uint64_t>(
           system(reinterpret_cast<const char *>(args[id])));
     });
     break;
   }
-  case RPC_NOOP: {
-    port->recv([](rpc::Buffer *) {});
+  case LIBC_NOOP: {
+    port.recv([](rpc::Buffer *, uint32_t) {});
     break;
   }
-  default: {
-    auto handler =
-        callbacks.find(static_cast<rpc_opcode_t>(port->get_opcode()));
-
-    // We error out on an unhandled opcode.
-    if (handler == callbacks.end())
-      return RPC_STATUS_UNHANDLED_OPCODE;
-
-    // Invoke the registered callback with a reference to the port.
-    void *data =
-        callback_data.at(static_cast<rpc_opcode_t>(port->get_opcode()));
-    rpc_port_t port_ref{reinterpret_cast<uint64_t>(&*port), lane_size};
-    (handler->second)(port_ref, data);
-  }
+  default:
+    return rpc::RPC_UNHANDLED_OPCODE;
   }
 
-  // Increment the index so we start the scan after this port.
-  index = port->get_index() + 1;
-  port->close();
-
-  return RPC_STATUS_CONTINUE;
+  return rpc::RPC_SUCCESS;
 }
 
-struct Device {
-  Device(uint32_t lane_size, uint32_t num_ports, void *buffer)
-      : lane_size(lane_size), buffer(buffer), server(num_ports, buffer),
-        client(num_ports, buffer) {}
-
-  rpc_status_t handle_server(uint32_t &index) {
-    switch (lane_size) {
-    case 1:
-      return handle_server_impl<1>(server, callbacks, callback_data, index);
-    case 32:
-      return handle_server_impl<32>(server, callbacks, callback_data, index);
-    case 64:
-      return handle_server_impl<64>(server, callbacks, callback_data, index);
-    default:
-      return RPC_STATUS_INVALID_LANE_SIZE;
-    }
-  }
-
-  uint32_t lane_size;
-  void *buffer;
-  rpc::Server server;
-  rpc::Client client;
-  std::unordered_map<uint16_t, rpc_opcode_callback_ty> callbacks;
-  std::unordered_map<uint16_t, void *> callback_data;
-};
-
-rpc_status_t rpc_server_init(rpc_device_t *rpc_device, uint64_t num_ports,
-                             uint32_t lane_size, rpc_alloc_ty alloc,
-                             void *data) {
-  if (!rpc_device)
-    return RPC_STATUS_ERROR;
-  if (lane_size != 1 && lane_size != 32 && lane_size != 64)
-    return RPC_STATUS_INVALID_LANE_SIZE;
-
-  uint64_t size = rpc::Server::allocation_size(lane_size, num_ports);
-  void *buffer = alloc(size, data);
-
-  if (!buffer)
-    return RPC_STATUS_ERROR;
-
-  Device *device = new Device(lane_size, num_ports, buffer);
-  if (!device)
-    return RPC_STATUS_ERROR;
-
-  rpc_device->handle = reinterpret_cast<uintptr_t>(device);
-  return RPC_STATUS_SUCCESS;
-}
-
-rpc_status_t rpc_server_shutdown(rpc_device_t rpc_device, rpc_free_ty dealloc,
-                                 void *data) {
-  if (!rpc_device.handle)
-    return RPC_STATUS_ERROR;
-
-  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
-  dealloc(device->buffer, data);
-  delete device;
-
-  return RPC_STATUS_SUCCESS;
-}
-
-rpc_status_t rpc_handle_server(rpc_device_t rpc_device) {
-  if (!rpc_device.handle)
-    return RPC_STATUS_ERROR;
-
-  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
-  uint32_t index = 0;
-  for (;;) {
-    rpc_status_t status = device->handle_server(index);
-    if (status != RPC_STATUS_CONTINUE)
-      return status;
+namespace rpc {
+// The implementation of this function currently lives in the utility directory
+// at 'utils/gpu/server/rpc_server.cpp'.
+rpc::Status handle_libc_opcodes(rpc::Server::Port &port, uint32_t num_lanes) {
+  switch (num_lanes) {
+  case 1:
+    return handle_port_impl<1>(port);
+  case 32:
+    return handle_port_impl<32>(port);
+  case 64:
+    return handle_port_impl<64>(port);
+  default:
+    return rpc::RPC_ERROR;
   }
 }
-
-rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint16_t opcode,
-                                   rpc_opcode_callback_ty callback,
-                                   void *data) {
-  if (!rpc_device.handle)
-    return RPC_STATUS_ERROR;
-
-  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
-
-  device->callbacks[opcode] = callback;
-  device->callback_data[opcode] = data;
-  return RPC_STATUS_SUCCESS;
-}
-
-const void *rpc_get_client_buffer(rpc_device_t rpc_device) {
-  if (!rpc_device.handle)
-    return nullptr;
-  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
-  return &device->client;
-}
-
-uint64_t rpc_get_client_size() { return sizeof(rpc::Client); }
-
-void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
-  auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  port->send([=](rpc::Buffer *buffer) {
-    callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
-  });
-}
-
-void rpc_send_n(rpc_port_t ref, const void *const *src, uint64_t *size) {
-  auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  port->send_n(src, size);
-}
-
-void rpc_recv(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
-  auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  port->recv([=](rpc::Buffer *buffer) {
-    callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
-  });
-}
-
-void rpc_recv_n(rpc_port_t ref, void **dst, uint64_t *size, rpc_alloc_ty alloc,
-                void *data) {
-  auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  auto alloc_fn = [=](uint64_t size) { return alloc(size, data); };
-  port->recv_n(dst, size, alloc_fn);
-}
-
-void rpc_recv_and_send(rpc_port_t ref, rpc_port_callback_ty callback,
-                       void *data) {
-  auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
-  port->recv_and_send([=](rpc::Buffer *buffer) {
-    callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
-  });
-}
+} // namespace rpc

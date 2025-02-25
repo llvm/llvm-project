@@ -98,7 +98,7 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
@@ -116,7 +116,8 @@ add_libc_test(
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
-if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)

@@ -46,7 +46,6 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectFrameAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset,
                         bool IsRV32Zdinx = false);
   bool SelectAddrRegImmRV32Zdinx(SDValue Addr, SDValue &Base, SDValue &Offset) {
@@ -118,6 +117,8 @@ public:
   template <unsigned ShAmt> bool selectSHXADD_UWOp(SDValue N, SDValue &Val) {
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
+
+  bool selectInvLogicImm(SDValue N, SDValue &Val);
 
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
@@ -277,6 +278,7 @@ struct VLX_VSXPseudo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
+#include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
 } // namespace llvm

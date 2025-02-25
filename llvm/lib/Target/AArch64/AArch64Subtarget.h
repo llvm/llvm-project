@@ -38,7 +38,7 @@ class Triple;
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
-    Others,
+    Generic,
 #define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 #undef ARM_PROCESSOR_FAMILY
@@ -46,7 +46,7 @@ public:
 
 protected:
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
-  ARMProcFamilyEnum ARMProcFamily = Others;
+  ARMProcFamilyEnum ARMProcFamily = Generic;
 
   // Enable 64-bit vectorization in SLP.
   unsigned MinVectorRegisterBitWidth = 64;
@@ -56,6 +56,7 @@ protected:
   bool ATTRIBUTE = DEFAULT;
 #include "AArch64GenSubtargetInfo.inc"
 
+  unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
@@ -84,10 +85,13 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
-  unsigned VScaleForTuning = 2;
+  unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
+
+  bool EnableSubregLiveness;
 
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -126,6 +130,8 @@ public:
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
 
+  virtual unsigned getHwModeSet() const override;
+
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
@@ -152,6 +158,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+  bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -171,6 +178,13 @@ public:
 
   /// Returns true if the function has a streaming-compatible body.
   bool isStreamingCompatible() const { return IsStreamingCompatible; }
+
+  /// Returns the size of memory region that if accessed by both the CPU and
+  /// the SME unit could result in a hazard. 0 = disabled.
+  unsigned getStreamingHazardSize() const {
+    return StreamingHazardSize.value_or(
+        !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
+  }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
@@ -229,6 +243,9 @@ public:
            hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
+  unsigned getEpilogueVectorizationMinVF() const {
+    return EpilogueVectorizationMinVF;
+  }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
@@ -409,6 +426,10 @@ public:
     return DefaultSVETFOpts;
   }
 
+  /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
+  /// add + cnt instructions.
+  bool useScalarIncVL() const;
+
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
@@ -434,29 +455,6 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
-
-  const PseudoSourceValue *getAddressCheckPSV() const {
-    return AddressCheckPSV.get();
-  }
-
-private:
-  /// Pseudo value representing memory load performed to check an address.
-  ///
-  /// This load operation is solely used for its side-effects: if the address
-  /// is not mapped (or not readable), it triggers CPU exception, otherwise
-  /// execution proceeds and the value is not used.
-  class AddressCheckPseudoSourceValue : public PseudoSourceValue {
-  public:
-    AddressCheckPseudoSourceValue(const TargetMachine &TM)
-        : PseudoSourceValue(TargetCustom, TM) {}
-
-    bool isConstant(const MachineFrameInfo *) const override { return false; }
-    bool isAliased(const MachineFrameInfo *) const override { return true; }
-    bool mayAlias(const MachineFrameInfo *) const override { return true; }
-    void printCustom(raw_ostream &OS) const override { OS << "AddressCheck"; }
-  };
-
-  std::unique_ptr<AddressCheckPseudoSourceValue> AddressCheckPSV;
 };
 } // End llvm namespace
 

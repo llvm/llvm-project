@@ -45,6 +45,7 @@ public:
 private:
   friend class SBBlock;
   friend class SBProcess;
+  friend class SBFunction;
 
   lldb_private::AddressRangeListImpl &ref() const;
 

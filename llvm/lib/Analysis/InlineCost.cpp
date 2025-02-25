@@ -249,6 +249,9 @@ protected:
   /// Getter for BlockFrequencyInfo
   function_ref<BlockFrequencyInfo &(Function &)> GetBFI;
 
+  /// Getter for TargetLibraryInfo
+  function_ref<const TargetLibraryInfo &(Function &)> GetTLI;
+
   /// Profile summary information.
   ProfileSummaryInfo *PSI;
 
@@ -419,6 +422,14 @@ protected:
     return It->second;
   }
 
+  /// Use a value in its given form directly if possible, otherwise try looking
+  /// for it in SimplifiedValues.
+  template <typename T> T *getDirectOrSimplifiedValue(Value *V) const {
+    if (auto *Direct = dyn_cast<T>(V))
+      return Direct;
+    return dyn_cast_if_present<T>(SimplifiedValues.lookup(V));
+  }
+
   // Custom simplification helper routines.
   bool isAllocaDerivedArg(Value *V);
   void disableSROAForArg(AllocaInst *SROAArg);
@@ -433,6 +444,7 @@ protected:
   bool simplifyIntrinsicCallIsConstant(CallBase &CB);
   bool simplifyIntrinsicCallObjectSize(CallBase &CB);
   ConstantInt *stripAndComputeInBoundsConstantOffsets(Value *&V);
+  bool isLoweredToCall(Function *F, CallBase &Call);
 
   /// Return true if the given argument to the function being considered for
   /// inlining has the given attribute set either at the call site or the
@@ -492,13 +504,15 @@ protected:
   bool visitUnreachableInst(UnreachableInst &I);
 
 public:
-  CallAnalyzer(Function &Callee, CallBase &Call, const TargetTransformInfo &TTI,
-               function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-               function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
-               ProfileSummaryInfo *PSI = nullptr,
-               OptimizationRemarkEmitter *ORE = nullptr)
+  CallAnalyzer(
+      Function &Callee, CallBase &Call, const TargetTransformInfo &TTI,
+      function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+      function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
+      function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
+      ProfileSummaryInfo *PSI = nullptr,
+      OptimizationRemarkEmitter *ORE = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
-        PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
+        GetTLI(GetTLI), PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
         CandidateCall(Call) {}
 
   InlineResult analyze();
@@ -688,7 +702,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       /// FIXME: if InlineCostCallAnalyzer is derived from, this may need
       /// to instantiate the derived class.
       InlineCostCallAnalyzer CA(*F, Call, IndirectCallParams, TTI,
-                                GetAssumptionCache, GetBFI, PSI, ORE, false);
+                                GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
+                                false);
       if (CA.analyze().isSuccess()) {
         // We were able to inline the indirect call! Subtract the cost from the
         // threshold to get the bonus we want to apply, but don't go below zero.
@@ -780,8 +795,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // the given instruction was assessed.
     if (!PrintInstructionComments)
       return;
-    InstructionCostDetailMap[I].CostBefore = Cost;
-    InstructionCostDetailMap[I].ThresholdBefore = Threshold;
+    auto &CostDetail = InstructionCostDetailMap[I];
+    CostDetail.CostBefore = Cost;
+    CostDetail.ThresholdBefore = Threshold;
   }
 
   void onInstructionAnalysisFinish(const Instruction *I) override {
@@ -789,8 +805,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // the instruction has been assessed.
     if (!PrintInstructionComments)
       return;
-    InstructionCostDetailMap[I].CostAfter = Cost;
-    InstructionCostDetailMap[I].ThresholdAfter = Threshold;
+    auto &CostDetail = InstructionCostDetailMap[I];
+    CostDetail.CostAfter = Cost;
+    CostDetail.ThresholdAfter = Threshold;
   }
 
   bool isCostBenefitAnalysisEnabled() {
@@ -1106,10 +1123,12 @@ public:
       const TargetTransformInfo &TTI,
       function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
       function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
+      function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       OptimizationRemarkEmitter *ORE = nullptr, bool BoostIndirect = true,
       bool IgnoreThreshold = false)
-      : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, PSI, ORE),
+      : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
+                     ORE),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
                               Params.ComputeFullInlineCost || ORE ||
                               isCostBenefitAnalysisEnabled()),
@@ -1228,8 +1247,8 @@ private:
           InlineConstants::IndirectCallThreshold;
 
       InlineCostCallAnalyzer CA(*F, Call, IndirectCallParams, TTI,
-                                GetAssumptionCache, GetBFI, PSI, ORE, false,
-                                true);
+                                GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
+                                false, true);
       if (CA.analyze().isSuccess()) {
         increment(InlineCostFeatureIndex::nested_inline_cost_estimate,
                   CA.getCost());
@@ -1355,9 +1374,11 @@ public:
       const TargetTransformInfo &TTI,
       function_ref<AssumptionCache &(Function &)> &GetAssumptionCache,
       function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+      function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
       ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE, Function &Callee,
       CallBase &Call)
-      : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, PSI) {}
+      : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI,
+                     PSI) {}
 
   const InlineCostFeatures &features() const { return Cost; }
 };
@@ -1424,10 +1445,8 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
 
   for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
        GTI != GTE; ++GTI) {
-    ConstantInt *OpC = dyn_cast<ConstantInt>(GTI.getOperand());
-    if (!OpC)
-      if (Constant *SimpleOp = SimplifiedValues.lookup(GTI.getOperand()))
-        OpC = dyn_cast<ConstantInt>(SimpleOp);
+    ConstantInt *OpC =
+        getDirectOrSimplifiedValue<ConstantInt>(GTI.getOperand());
     if (!OpC)
       return false;
     if (OpC->isZero())
@@ -1541,9 +1560,7 @@ bool CallAnalyzer::visitPHI(PHINode &I) {
     if (&I == V)
       continue;
 
-    Constant *C = dyn_cast<Constant>(V);
-    if (!C)
-      C = SimplifiedValues.lookup(V);
+    Constant *C = getDirectOrSimplifiedValue<Constant>(V);
 
     std::pair<Value *, APInt> BaseAndOffset = {nullptr, ZeroOffset};
     if (!C && CheckSROA)
@@ -1628,7 +1645,7 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   // Lambda to check whether a GEP's indices are all constant.
   auto IsGEPOffsetConstant = [&](GetElementPtrInst &GEP) {
     for (const Use &Op : GEP.indices())
-      if (!isa<Constant>(Op) && !SimplifiedValues.lookup(Op))
+      if (!getDirectOrSimplifiedValue<Constant>(Op))
         return false;
     return true;
   };
@@ -1655,9 +1672,7 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
 bool CallAnalyzer::simplifyInstruction(Instruction &I) {
   SmallVector<Constant *> COps;
   for (Value *Op : I.operands()) {
-    Constant *COp = dyn_cast<Constant>(Op);
-    if (!COp)
-      COp = SimplifiedValues.lookup(Op);
+    Constant *COp = getDirectOrSimplifiedValue<Constant>(Op);
     if (!COp)
       return false;
     COps.push_back(COp);
@@ -1680,10 +1695,7 @@ bool CallAnalyzer::simplifyInstruction(Instruction &I) {
 /// llvm.is.constant would evaluate.
 bool CallAnalyzer::simplifyIntrinsicCallIsConstant(CallBase &CB) {
   Value *Arg = CB.getArgOperand(0);
-  auto *C = dyn_cast<Constant>(Arg);
-
-  if (!C)
-    C = dyn_cast_or_null<Constant>(SimplifiedValues.lookup(Arg));
+  auto *C = getDirectOrSimplifiedValue<Constant>(Arg);
 
   Type *RT = CB.getFunctionType()->getReturnType();
   SimplifiedValues[&CB] = ConstantInt::get(RT, C ? 1 : 0);
@@ -2115,12 +2127,8 @@ bool CallAnalyzer::visitSub(BinaryOperator &I) {
 
 bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  Constant *CLHS = dyn_cast<Constant>(LHS);
-  if (!CLHS)
-    CLHS = SimplifiedValues.lookup(LHS);
-  Constant *CRHS = dyn_cast<Constant>(RHS);
-  if (!CRHS)
-    CRHS = SimplifiedValues.lookup(RHS);
+  Constant *CLHS = getDirectOrSimplifiedValue<Constant>(LHS);
+  Constant *CRHS = getDirectOrSimplifiedValue<Constant>(RHS);
 
   Value *SimpleV = nullptr;
   if (auto FI = dyn_cast<FPMathOperator>(&I))
@@ -2154,9 +2162,7 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
 
 bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
   Value *Op = I.getOperand(0);
-  Constant *COp = dyn_cast<Constant>(Op);
-  if (!COp)
-    COp = SimplifiedValues.lookup(Op);
+  Constant *COp = getDirectOrSimplifiedValue<Constant>(Op);
 
   Value *SimpleV = simplifyFNegInst(
       COp ? COp : Op, cast<FPMathOperator>(I).getFastMathFlags(), DL);
@@ -2244,9 +2250,7 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
   SmallVector<Constant *, 4> ConstantArgs;
   ConstantArgs.reserve(Call.arg_size());
   for (Value *I : Call.args()) {
-    Constant *C = dyn_cast<Constant>(I);
-    if (!C)
-      C = dyn_cast_or_null<Constant>(SimplifiedValues.lookup(I));
+    Constant *C = getDirectOrSimplifiedValue<Constant>(I);
     if (!C)
       return false; // This argument doesn't map to a constant.
 
@@ -2258,6 +2262,39 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
   }
 
   return false;
+}
+
+bool CallAnalyzer::isLoweredToCall(Function *F, CallBase &Call) {
+  const TargetLibraryInfo *TLI = GetTLI ? &GetTLI(*F) : nullptr;
+  LibFunc LF;
+  if (!TLI || !TLI->getLibFunc(*F, LF) || !TLI->has(LF))
+    return TTI.isLoweredToCall(F);
+
+  switch (LF) {
+  case LibFunc_memcpy_chk:
+  case LibFunc_memmove_chk:
+  case LibFunc_mempcpy_chk:
+  case LibFunc_memset_chk: {
+    // Calls to  __memcpy_chk whose length is known to fit within the object
+    // size will eventually be replaced by inline stores. Therefore, these
+    // should not incur a call penalty. This is only really relevant on
+    // platforms whose headers redirect memcpy to __memcpy_chk (e.g. Darwin), as
+    // other platforms use memcpy intrinsics, which are already exempt from the
+    // call penalty.
+    auto *LenOp = getDirectOrSimplifiedValue<ConstantInt>(Call.getOperand(2));
+    auto *ObjSizeOp =
+        getDirectOrSimplifiedValue<ConstantInt>(Call.getOperand(3));
+    if (LenOp && ObjSizeOp &&
+        LenOp->getLimitedValue() <= ObjSizeOp->getLimitedValue()) {
+      return false;
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return TTI.isLoweredToCall(F);
 }
 
 bool CallAnalyzer::visitCallBase(CallBase &Call) {
@@ -2341,7 +2378,7 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
       return false;
   }
 
-  if (TTI.isLoweredToCall(F)) {
+  if (isLoweredToCall(F, Call)) {
     onLoweredCall(F, Call, IsIndirectCall);
   }
 
@@ -2362,10 +2399,9 @@ bool CallAnalyzer::visitBranchInst(BranchInst &BI) {
   // shouldn't exist at all, but handling them makes the behavior of the
   // inliner more regular and predictable. Interestingly, conditional branches
   // which will fold away are also free.
-  return BI.isUnconditional() || isa<ConstantInt>(BI.getCondition()) ||
-         BI.getMetadata(LLVMContext::MD_make_implicit) ||
-         isa_and_nonnull<ConstantInt>(
-             SimplifiedValues.lookup(BI.getCondition()));
+  return BI.isUnconditional() ||
+         getDirectOrSimplifiedValue<ConstantInt>(BI.getCondition()) ||
+         BI.getMetadata(LLVMContext::MD_make_implicit);
 }
 
 bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
@@ -2373,12 +2409,8 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
 
-  Constant *TrueC = dyn_cast<Constant>(TrueVal);
-  if (!TrueC)
-    TrueC = SimplifiedValues.lookup(TrueVal);
-  Constant *FalseC = dyn_cast<Constant>(FalseVal);
-  if (!FalseC)
-    FalseC = SimplifiedValues.lookup(FalseVal);
+  Constant *TrueC = getDirectOrSimplifiedValue<Constant>(TrueVal);
+  Constant *FalseC = getDirectOrSimplifiedValue<Constant>(FalseVal);
   Constant *CondC =
       dyn_cast_or_null<Constant>(SimplifiedValues.lookup(SI.getCondition()));
 
@@ -2448,11 +2480,8 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
 bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   // We model unconditional switches as free, see the comments on handling
   // branches.
-  if (isa<ConstantInt>(SI.getCondition()))
+  if (getDirectOrSimplifiedValue<ConstantInt>(SI.getCondition()))
     return true;
-  if (Value *V = SimplifiedValues.lookup(SI.getCondition()))
-    if (isa<ConstantInt>(V))
-      return true;
 
   // Assume the most general case where the switch is lowered into
   // either a jump table, bit test, or a balanced binary tree consisting of
@@ -2671,8 +2700,10 @@ void CallAnalyzer::findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB) {
   auto IsEdgeDead = [&](BasicBlock *Pred, BasicBlock *Succ) {
     // A CFG edge is dead if the predecessor is dead or the predecessor has a
     // known successor which is not the one under exam.
-    return (DeadBlocks.count(Pred) ||
-            (KnownSuccessors[Pred] && KnownSuccessors[Pred] != Succ));
+    if (DeadBlocks.count(Pred))
+      return true;
+    BasicBlock *KnownSucc = KnownSuccessors[Pred];
+    return KnownSucc && KnownSucc != Succ;
   };
 
   auto IsNewlyDead = [&](BasicBlock *BB) {
@@ -2945,6 +2976,7 @@ std::optional<int> llvm::getInliningCostEstimate(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
   const InlineParams Params = {/* DefaultThreshold*/ 0,
                                /*HintThreshold*/ {},
@@ -2958,7 +2990,7 @@ std::optional<int> llvm::getInliningCostEstimate(
                                /*EnableDeferral*/ true};
 
   InlineCostCallAnalyzer CA(*Call.getCalledFunction(), Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, PSI, ORE, true,
+                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE, true,
                             /*IgnoreThreshold*/ true);
   auto R = CA.analyze();
   if (!R.isSuccess())
@@ -2970,9 +3002,10 @@ std::optional<InlineCostFeatures> llvm::getInliningCostFeatures(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
-  InlineCostFeaturesAnalyzer CFA(CalleeTTI, GetAssumptionCache, GetBFI, PSI,
-                                 ORE, *Call.getCalledFunction(), Call);
+  InlineCostFeaturesAnalyzer CFA(CalleeTTI, GetAssumptionCache, GetBFI, GetTLI,
+                                 PSI, ORE, *Call.getCalledFunction(), Call);
   auto R = CFA.analyze();
   if (!R.isSuccess())
     return std::nullopt;
@@ -3072,7 +3105,7 @@ InlineCost llvm::getInlineCost(
                           << ")\n");
 
   InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, PSI, ORE);
+                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
@@ -3257,16 +3290,17 @@ InlineCostAnnotationPrinterPass::run(Function &F,
   const InlineParams Params = llvm::getInlineParams();
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        Function *CalledFunction = CI->getCalledFunction();
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        Function *CalledFunction = CB->getCalledFunction();
         if (!CalledFunction || CalledFunction->isDeclaration())
           continue;
         OptimizationRemarkEmitter ORE(CalledFunction);
-        InlineCostCallAnalyzer ICCA(*CalledFunction, *CI, Params, TTI,
-                                    GetAssumptionCache, nullptr, &PSI, &ORE);
+        InlineCostCallAnalyzer ICCA(*CalledFunction, *CB, Params, TTI,
+                                    GetAssumptionCache, nullptr, nullptr, &PSI,
+                                    &ORE);
         ICCA.analyze();
         OS << "      Analyzing call of " << CalledFunction->getName()
-           << "... (caller:" << CI->getCaller()->getName() << ")\n";
+           << "... (caller:" << CB->getCaller()->getName() << ")\n";
         ICCA.print(OS);
         OS << "\n";
       }

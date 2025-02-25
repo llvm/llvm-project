@@ -34,6 +34,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
@@ -44,7 +45,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MachineLocation.h"
-#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -918,7 +918,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       // Skip instructions which aren't calls. Both calls and tail-calling jump
       // instructions (e.g TAILJMPd64) are classified correctly here.
-      if (!MI.isCandidateForCallSiteEntry())
+      if (!MI.isCandidateForAdditionalCallInfo())
         continue;
 
       // Skip instructions marked as frame setup, as they are not interesting to
@@ -1776,18 +1776,14 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     // span each individual section in the range from StartLabel to EndLabel.
     if (Asm->MF->hasBBSections() && StartLabel == Asm->getFunctionBegin() &&
         !Instr->getParent()->sameSection(&Asm->MF->front())) {
-      const MCSymbol *BeginSectionLabel = StartLabel;
-
-      for (const MachineBasicBlock &MBB : *Asm->MF) {
-        if (MBB.isBeginSection() && &MBB != &Asm->MF->front())
-          BeginSectionLabel = MBB.getSymbol();
-
-        if (MBB.sameSection(Instr->getParent())) {
-          DebugLoc.emplace_back(BeginSectionLabel, EndLabel, Values);
+      for (const auto &[MBBSectionId, MBBSectionRange] :
+           Asm->MBBSectionRanges) {
+        if (Instr->getParent()->getSectionID() == MBBSectionId) {
+          DebugLoc.emplace_back(MBBSectionRange.BeginLabel, EndLabel, Values);
           break;
         }
-        if (MBB.isEndSection())
-          DebugLoc.emplace_back(BeginSectionLabel, MBB.getEndSymbol(), Values);
+        DebugLoc.emplace_back(MBBSectionRange.BeginLabel,
+                              MBBSectionRange.EndLabel, Values);
       }
     } else {
       DebugLoc.emplace_back(StartLabel, EndLabel, Values);
@@ -1828,22 +1824,27 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     RangeMBB = &Asm->MF->front();
   else
     RangeMBB = Entries.begin()->getInstr()->getParent();
+  auto RangeIt = Asm->MBBSectionRanges.find(RangeMBB->getSectionID());
+  assert(RangeIt != Asm->MBBSectionRanges.end() &&
+         "Range MBB not found in MBBSectionRanges!");
   auto *CurEntry = DebugLoc.begin();
   auto *NextEntry = std::next(CurEntry);
+  auto NextRangeIt = std::next(RangeIt);
   while (NextEntry != DebugLoc.end()) {
-    // Get the last machine basic block of this section.
-    while (!RangeMBB->isEndSection())
-      RangeMBB = RangeMBB->getNextNode();
-    if (!RangeMBB->getNextNode())
+    if (NextRangeIt == Asm->MBBSectionRanges.end())
       return false;
     // CurEntry should end the current section and NextEntry should start
     // the next section and the Values must match for these two ranges to be
-    // merged.
-    if (CurEntry->getEndSym() != RangeMBB->getEndSymbol() ||
-        NextEntry->getBeginSym() != RangeMBB->getNextNode()->getSymbol() ||
+    // merged.  Do not match the section label end if it is the entry block
+    // section.  This is because the end label for the Debug Loc and the
+    // Function end label could be different.
+    if ((RangeIt->second.EndLabel != Asm->getFunctionEnd() &&
+         CurEntry->getEndSym() != RangeIt->second.EndLabel) ||
+        NextEntry->getBeginSym() != NextRangeIt->second.BeginLabel ||
         CurEntry->getValues() != NextEntry->getValues())
       return false;
-    RangeMBB = RangeMBB->getNextNode();
+    RangeIt = NextRangeIt;
+    NextRangeIt = std::next(RangeIt);
     CurEntry = NextEntry;
     NextEntry = std::next(CurEntry);
   }
@@ -2018,7 +2019,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   // When describing calls, we need a label for the call instruction.
   if (!NoDebug && SP->areAllCallsDescribed() &&
-      MI->isCandidateForCallSiteEntry(MachineInstr::AnyInBundle) &&
+      MI->isCandidateForAdditionalCallInfo(MachineInstr::AnyInBundle) &&
       (!MI->hasDelaySlot() || delaySlotSupported(*MI))) {
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     bool IsTail = TII->isTailCall(*MI);
@@ -2061,10 +2062,21 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+  if (!DL && MI == PrologEndLoc) {
+    // In rare situations, we might want to place the end of the prologue
+    // somewhere that doesn't have a source location already. It should be in
+    // the entry block.
+    assert(MI->getParent() == &*MI->getMF()->begin());
+    recordSourceLine(SP->getScopeLine(), 0, SP,
+                     DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT);
+    return;
+  }
+
   bool PrevInstInSameSection =
       (!PrevInstBB ||
        PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
-  if (DL == PrevInstLoc && PrevInstInSameSection) {
+  bool ForceIsStmt = ForceIsStmtInstrs.contains(MI);
+  if (DL == PrevInstLoc && PrevInstInSameSection && !ForceIsStmt) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
@@ -2121,7 +2133,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // If the line changed, we call that a new statement; unless we went to
   // line 0 and came back, in which case it is not a new statement.
   unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && DL.getLine() != OldLine)
+  if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
     Flags |= DWARF2_FLAG_IS_STMT;
 
   const MDNode *Scope = DL.getScope();
@@ -2136,32 +2148,123 @@ static std::pair<const MachineInstr *, bool>
 findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
-  const MachineInstr *LineZeroLoc = nullptr;
+  const auto &TII = *MF->getSubtarget().getInstrInfo();
+  const MachineInstr *NonTrivialInst = nullptr;
   const Function &F = MF->getFunction();
 
   // Some instructions may be inserted into prologue after this function. Must
   // keep prologue for these cases.
   bool IsEmptyPrologue =
       !(F.hasPrologueData() || F.getMetadata(LLVMContext::MD_func_sanitize));
-  for (const auto &MBB : *MF) {
-    for (const auto &MI : MBB) {
-      if (!MI.isMetaInstruction()) {
-        if (!MI.getFlag(MachineInstr::FrameSetup) && MI.getDebugLoc()) {
-          // Scan forward to try to find a non-zero line number. The
-          // prologue_end marks the first breakpoint in the function after the
-          // frame setup, and a compiler-generated line 0 location is not a
-          // meaningful breakpoint. If none is found, return the first
-          // location after the frame setup.
-          if (MI.getDebugLoc().getLine())
-            return std::make_pair(&MI, IsEmptyPrologue);
 
-          LineZeroLoc = &MI;
-        }
-        IsEmptyPrologue = false;
-      }
+  // Helper lambda to examine each instruction and potentially return it
+  // as the prologue_end point.
+  auto ExamineInst = [&](const MachineInstr &MI)
+      -> std::optional<std::pair<const MachineInstr *, bool>> {
+    // Is this instruction trivial data shuffling or frame-setup?
+    bool isCopy = (TII.isCopyInstr(MI) ? true : false);
+    bool isTrivRemat = TII.isTriviallyReMaterializable(MI);
+    bool isFrameSetup = MI.getFlag(MachineInstr::FrameSetup);
+
+    if (!isFrameSetup && MI.getDebugLoc()) {
+      // Scan forward to try to find a non-zero line number. The
+      // prologue_end marks the first breakpoint in the function after the
+      // frame setup, and a compiler-generated line 0 location is not a
+      // meaningful breakpoint. If none is found, return the first
+      // location after the frame setup.
+      if (MI.getDebugLoc().getLine())
+        return std::make_pair(&MI, IsEmptyPrologue);
     }
+
+    // Keep track of the first "non-trivial" instruction seen, i.e. anything
+    // that doesn't involve shuffling data around or is a frame-setup.
+    if (!isCopy && !isTrivRemat && !isFrameSetup && !NonTrivialInst)
+      NonTrivialInst = &MI;
+
+    IsEmptyPrologue = false;
+    return std::nullopt;
+  };
+
+  // Examine all the instructions at the start of the function. This doesn't
+  // necessarily mean just the entry block: unoptimised code can fall-through
+  // into an initial loop, and it makes sense to put the initial breakpoint on
+  // the first instruction of such a loop. However, if we pass branches, we're
+  // better off synthesising an early prologue_end.
+  auto CurBlock = MF->begin();
+  auto CurInst = CurBlock->begin();
+
+  // Find the initial instruction, we're guaranteed one by the caller, but not
+  // which block it's in.
+  while (CurBlock->empty())
+    CurInst = (++CurBlock)->begin();
+  assert(CurInst != CurBlock->end());
+
+  // Helper function for stepping through the initial sequence of
+  // unconditionally executed instructions.
+  auto getNextInst = [&CurBlock, &CurInst, MF]() -> bool {
+    // We've reached the end of the block. Did we just look at a terminator?
+    if (CurInst->isTerminator()) {
+      // Some kind of "real" control flow is occurring. At the very least
+      // we would have to start exploring the CFG, a good signal that the
+      // prologue is over.
+      return false;
+    }
+
+    // If we've already fallen through into a loop, don't fall through
+    // further, use a backup-location.
+    if (CurBlock->pred_size() > 1)
+      return false;
+
+    // Fall-through from entry to the next block. This is common at -O0 when
+    // there's no initialisation in the function. Bail if we're also at the
+    // end of the function, or the remaining blocks have no instructions.
+    // Skip empty blocks, in rare cases the entry can be empty, and
+    // other optimisations may add empty blocks that the control flow falls
+    // through.
+    do {
+      ++CurBlock;
+      if (CurBlock == MF->end())
+        return false;
+    } while (CurBlock->empty());
+    CurInst = CurBlock->begin();
+    return true;
+  };
+
+  while (true) {
+    // Check whether this non-meta instruction a good position for prologue_end.
+    if (!CurInst->isMetaInstruction()) {
+      auto FoundInst = ExamineInst(*CurInst);
+      if (FoundInst)
+        return *FoundInst;
+    }
+
+    // Try to continue searching, but use a backup-location if substantive
+    // computation is happening.
+    auto NextInst = std::next(CurInst);
+    if (NextInst != CurInst->getParent()->end()) {
+      // Continue examining the current block.
+      CurInst = NextInst;
+      continue;
+    }
+
+    if (!getNextInst())
+      break;
   }
-  return std::make_pair(LineZeroLoc, IsEmptyPrologue);
+
+  // We couldn't find any source-location, suggesting all meaningful information
+  // got optimised away. Set the prologue_end to be the first non-trivial
+  // instruction, which will get the scope line number. This is better than
+  // nothing.
+  // Only do this in the entry block, as we'll be giving it the scope line for
+  // the function. Return IsEmptyPrologue==true if we've picked the first
+  // instruction.
+  if (NonTrivialInst && NonTrivialInst->getParent() == &*MF->begin()) {
+    IsEmptyPrologue = NonTrivialInst == &*MF->begin()->begin();
+    return std::make_pair(NonTrivialInst, IsEmptyPrologue);
+  }
+
+  // If the entry path is empty, just don't have a prologue_end at all.
+  return std::make_pair(nullptr, IsEmptyPrologue);
 }
 
 /// Register a source line with debug info. Returns the  unique label that was
@@ -2188,17 +2291,30 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
 
 const MachineInstr *
 DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
+  // Don't deal with functions that have no instructions.
+  if (llvm::all_of(MF, [](const MachineBasicBlock &MBB) { return MBB.empty(); }))
+    return nullptr;
+
   std::pair<const MachineInstr *, bool> PrologEnd = findPrologueEndLoc(&MF);
   const MachineInstr *PrologEndLoc = PrologEnd.first;
   bool IsEmptyPrologue = PrologEnd.second;
 
   // If the prolog is empty, no need to generate scope line for the proc.
-  if (IsEmptyPrologue)
-    // In degenerate cases, we can have functions with no source locations
-    // at all. These want a scope line, to avoid a totally empty function.
-    // Thus, only skip scope line if there's location to place prologue_end.
-    if (PrologEndLoc)
-      return PrologEndLoc;
+  if (IsEmptyPrologue) {
+    // If there's nowhere to put a prologue_end flag, emit a scope line in case
+    // there are simply no source locations anywhere in the function.
+    if (PrologEndLoc) {
+      // Avoid trying to assign prologue_end to a line-zero location.
+      // Instructions with no DebugLoc at all are fine, they'll be given the
+      // scope line nuumber.
+      const DebugLoc &DL = PrologEndLoc->getDebugLoc();
+      if (!DL || DL->getLine() != 0)
+        return PrologEndLoc;
+
+      // Later, don't place the prologue_end flag on this line-zero location.
+      PrologEndLoc = nullptr;
+    }
+  }
 
   // Ensure the compile unit is created if the function is called before
   // beginFunction().
@@ -2209,6 +2325,143 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
                      CUID, getDwarfVersion(), getUnits());
   return PrologEndLoc;
+}
+
+/// For the function \p MF, finds the set of instructions which may represent a
+/// change in line number from one or more of the preceding MBBs. Stores the
+/// resulting set of instructions, which should have is_stmt set, in
+/// ForceIsStmtInstrs.
+void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
+  ForceIsStmtInstrs.clear();
+
+  // For this function, we try to find MBBs where the last source line in every
+  // block predecessor matches the first line seen in the block itself; for
+  // every such MBB, we set is_stmt=false on the first line in the block, and
+  // for every other block we set is_stmt=true on the first line.
+  // For example, if we have the block %bb.3, which has 2 predecesors %bb.1 and
+  // %bb.2:
+  //   bb.1:
+  //     $r3 = MOV64ri 12, debug-location !DILocation(line: 4)
+  //     JMP %bb.3, debug-location !DILocation(line: 5)
+  //   bb.2:
+  //     $r3 = MOV64ri 24, debug-location !DILocation(line: 5)
+  //     JMP %bb.3
+  //   bb.3:
+  //     $r2 = MOV64ri 1
+  //     $r1 = ADD $r2, $r3, debug-location !DILocation(line: 5)
+  // When we examine %bb.3, we first check to see if it contains any
+  // instructions with debug locations, and select the first such instruction;
+  // in this case, the ADD, with line=5. We then examine both of its
+  // predecessors to see what the last debug-location in them is. For each
+  // predecessor, if they do not contain any debug-locations, or if the last
+  // debug-location before jumping to %bb.3 does not have line=5, then the ADD
+  // in %bb.3 must use IsStmt. In this case, all predecessors have a
+  // debug-location with line=5 as the last debug-location before jumping to
+  // %bb.3, so we do not set is_stmt for the ADD instruction - we know that
+  // whichever MBB we have arrived from, the line has not changed.
+
+  const auto *TII = MF->getSubtarget().getInstrInfo();
+
+  // We only need to the predecessors of MBBs that could have is_stmt set by
+  // this logic.
+  SmallDenseSet<MachineBasicBlock *, 4> PredMBBsToExamine;
+  SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
+  // We use const_cast even though we won't actually modify MF, because some
+  // methods we need take a non-const MBB.
+  for (auto &MBB : *const_cast<MachineFunction *>(MF)) {
+    if (MBB.empty() || MBB.pred_empty())
+      continue;
+    for (auto &MI : MBB) {
+      if (MI.getDebugLoc() && MI.getDebugLoc()->getLine()) {
+        for (auto *Pred : MBB.predecessors())
+          PredMBBsToExamine.insert(Pred);
+        PotentialIsStmtMBBInstrs.insert({&MBB, &MI});
+        break;
+      }
+    }
+  }
+
+  // For each predecessor MBB, we examine the last line seen before each branch
+  // or logical fallthrough. We use analyzeBranch to handle cases where
+  // different branches have different outgoing lines (i.e. if there are
+  // multiple branches that each have their own source location); otherwise we
+  // just use the last line in the block.
+  for (auto *MBB : PredMBBsToExamine) {
+    auto CheckMBBEdge = [&](MachineBasicBlock *Succ, unsigned OutgoingLine) {
+      auto MBBInstrIt = PotentialIsStmtMBBInstrs.find(Succ);
+      if (MBBInstrIt == PotentialIsStmtMBBInstrs.end())
+        return;
+      MachineInstr *MI = MBBInstrIt->second;
+      if (MI->getDebugLoc()->getLine() == OutgoingLine)
+        return;
+      PotentialIsStmtMBBInstrs.erase(MBBInstrIt);
+      ForceIsStmtInstrs.insert(MI);
+    };
+    // If this block is empty, we conservatively assume that its fallthrough
+    // successor needs is_stmt; we could check MBB's predecessors to see if it
+    // has a consistent entry line, but this seems unlikely to be worthwhile.
+    if (MBB->empty()) {
+      for (auto *Succ : MBB->successors())
+        CheckMBBEdge(Succ, 0);
+      continue;
+    }
+    // If MBB has no successors that are in the "potential" set, due to one or
+    // more of them having confirmed is_stmt, we can skip this check early.
+    if (none_of(MBB->successors(), [&](auto *SuccMBB) {
+          return PotentialIsStmtMBBInstrs.contains(SuccMBB);
+        }))
+      continue;
+    // If we can't determine what DLs this branch's successors use, just treat
+    // all the successors as coming from the last DebugLoc.
+    SmallVector<MachineBasicBlock *, 2> SuccessorBBs;
+    auto MIIt = MBB->rbegin();
+    {
+      MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+      SmallVector<MachineOperand, 4> Cond;
+      bool AnalyzeFailed = TII->analyzeBranch(*MBB, TBB, FBB, Cond);
+      // For a conditional branch followed by unconditional branch where the
+      // unconditional branch has a DebugLoc, that loc is the outgoing loc to
+      // the the false destination only; otherwise, both destinations share an
+      // outgoing loc.
+      if (!AnalyzeFailed && !Cond.empty() && FBB != nullptr &&
+          MBB->back().getDebugLoc() && MBB->back().getDebugLoc()->getLine()) {
+        unsigned FBBLine = MBB->back().getDebugLoc()->getLine();
+        assert(MIIt->isBranch() && "Bad result from analyzeBranch?");
+        CheckMBBEdge(FBB, FBBLine);
+        ++MIIt;
+        SuccessorBBs.push_back(TBB);
+      } else {
+        // For all other cases, all successors share the last outgoing DebugLoc.
+        SuccessorBBs.assign(MBB->succ_begin(), MBB->succ_end());
+      }
+    }
+
+    // If we don't find an outgoing loc, this block will start with a line 0.
+    // It is possible that we have a block that has no DebugLoc, but acts as a
+    // simple passthrough between two blocks that end and start with the same
+    // line, e.g.:
+    //   bb.1:
+    //     JMP %bb.2, debug-location !10
+    //   bb.2:
+    //     JMP %bb.3
+    //   bb.3:
+    //     $r1 = ADD $r2, $r3, debug-location !10
+    // If these blocks were merged into a single block, we would not attach
+    // is_stmt to the ADD, but with this logic that only checks the immediate
+    // predecessor, we will; we make this tradeoff because doing a full dataflow
+    // analysis would be expensive, and these situations are probably not common
+    // enough for this to be worthwhile.
+    unsigned LastLine = 0;
+    while (MIIt != MBB->rend()) {
+      if (auto DL = MIIt->getDebugLoc(); DL && DL->getLine()) {
+        LastLine = DL->getLine();
+        break;
+      }
+      ++MIIt;
+    }
+    for (auto *Succ : SuccessorBBs)
+      CheckMBBEdge(Succ, LastLine);
+  }
 }
 
 // Gather pre-function debug information.  Assumes being called immediately
@@ -2222,6 +2475,9 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
     return;
 
   DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+  FunctionLineTableLabel = CU.emitFuncLineTableOffsets()
+                               ? Asm->OutStreamer->emitLineTableLabel()
+                               : nullptr;
 
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(
       getDwarfCompileUnitIDForLineTable(CU));
@@ -2229,6 +2485,8 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Record beginning of function.
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
+
+  findForceIsStmtInstrs(MF);
 }
 
 unsigned
@@ -2333,11 +2591,14 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   }
 
   ProcessedSPNodes.insert(SP);
-  DIE &ScopeDIE = TheCU.constructSubprogramScopeDIE(SP, FnScope);
+  DIE &ScopeDIE =
+      TheCU.constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructSubprogramScopeDIE(SP, FnScope);
+      SkelCU->constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
+
+  FunctionLineTableLabel = nullptr;
 
   // Construct call site entries.
   constructCallSiteEntryDIEs(*SP, TheCU, ScopeDIE, *MF);
@@ -3528,6 +3789,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // they depend on addresses, throwing them out and rebuilding them.
       setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
       CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
+      CU.updateAcceleratorTables(CTy->getScope(), CTy, RefDie);
       return;
     }
 

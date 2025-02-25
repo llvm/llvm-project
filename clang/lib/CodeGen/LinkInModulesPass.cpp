@@ -14,10 +14,6 @@
 #include "LinkInModulesPass.h"
 #include "BackendConsumer.h"
 
-#include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-
 using namespace llvm;
 
 LinkInModulesPass::LinkInModulesPass(clang::BackendConsumer *BC) : BC(BC) {}

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -mattr=+exception-handling -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
 
 --- |
   target triple = "wasm32-unknown-unknown"
@@ -40,15 +40,16 @@ body: |
     ; CHECK: RETHROW 1
     EH_LABEL <mcsymbol .Ltmp2>
     %0:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
-    RETHROW 0, implicit-def dead $arguments
+    RETHROW %bb.1, implicit-def dead $arguments
 
   bb.2 (landing-pad):
+    successors: %bb.3
     ; CHECK: bb.2 (landing-pad):
     ; CHECK: CATCH_LEGACY
     ; CHECK: RETHROW 0
     EH_LABEL <mcsymbol .Ltmp3>
     %1:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
-    RETHROW 0, implicit-def dead $arguments
+    RETHROW %bb.2, implicit-def dead $arguments
 
   bb.3:
     ; CHECK: bb.3:
@@ -105,12 +106,14 @@ body: |
     RETURN %0:i32, implicit-def dead $arguments
 
   bb.3 (landing-pad):
+    successors:
     EH_LABEL <mcsymbol .Ltmp4>
     %0:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
-    RETHROW 0, implicit-def dead $arguments
+    RETHROW %bb.3, implicit-def dead $arguments
 
   bb.4 (landing-pad):
+    successors:
     EH_LABEL <mcsymbol .Ltmp5>
     %1:i32 = CATCH_LEGACY &__cpp_exception, implicit-def dead $arguments
-    RETHROW 0, implicit-def dead $arguments
+    RETHROW %bb.4, implicit-def dead $arguments
 ...

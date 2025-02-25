@@ -33,6 +33,7 @@ to learn about the defaults for your platform and target.
 * **"general" options**
     - ``LIBC_ADD_NULL_CHECKS``: Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior.
 * **"math" options**
+    - ``LIBC_CONF_FREXP_INF_NAN_EXPONENT``: The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configue an explicit exp value for Inf/NaN inputs.
     - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
 * **"printf" options**
     - ``LIBC_CONF_PRINTF_DISABLE_FIXED_POINT``: Disable printing fixed point values in printf and friends.
@@ -42,6 +43,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_PRINTF_DISABLE_WRITE_INT``: Disable handling of %n in printf format string.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_NO_SPECIALIZE_LD``: Use the same mode for double and long double in printf.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT``: Use dyadic float for faster and smaller but less accurate printf doubles.
+    - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320``: Use an alternative printf float implementation based on 320-bit floats
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE``: Use large table for better printf long double performance.
 * **"pthread" options**
     - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention (default to 100).

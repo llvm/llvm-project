@@ -33,6 +33,7 @@ class Value;
 class APInt;
 class LLVMContext;
 template <typename T> class Expected;
+class Error;
 
 /// Class to represent integer types. Note that this class is also used to
 /// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
@@ -224,7 +225,11 @@ class StructType : public Type {
     SCDB_IsLiteral = 4,
     SCDB_IsSized = 8,
     SCDB_ContainsScalableVector = 16,
-    SCDB_NotContainsScalableVector = 32
+    SCDB_NotContainsScalableVector = 32,
+    SCDB_ContainsNonGlobalTargetExtType = 64,
+    SCDB_NotContainsNonGlobalTargetExtType = 128,
+    SCDB_ContainsNonLocalTargetExtType = 64,
+    SCDB_NotContainsNonLocalTargetExtType = 128,
   };
 
   /// For a named struct that actually has a name, this is a pointer to the
@@ -290,8 +295,20 @@ public:
   bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
   /// Returns true if this struct contains a scalable vector.
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::isScalableTy;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a global.
   bool
-  containsScalableVectorType(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
+  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonGlobalTargetExtType;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a local.
+  bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  using Type::containsNonLocalTargetExtType;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
@@ -317,15 +334,17 @@ public:
   /// suffix if there is a collision. Do not call this on an literal type.
   void setName(StringRef Name);
 
-  /// Specify a body for an opaque identified type.
+  /// Specify a body for an opaque identified type, which must not make the type
+  /// recursive.
   void setBody(ArrayRef<Type*> Elements, bool isPacked = false);
 
-  template <typename... Tys>
-  std::enable_if_t<are_base_of<Type, Tys...>::value, void>
-  setBody(Type *elt1, Tys *... elts) {
-    assert(elt1 && "Cannot create a struct type with no elements with this");
-    setBody(ArrayRef<Type *>({elt1, elts...}));
-  }
+  /// Specify a body for an opaque identified type or return an error if it
+  /// would make the type recursive.
+  Error setBodyOrError(ArrayRef<Type *> Elements, bool isPacked = false);
+
+  /// Return an error if the body for an opaque identified type would make it
+  /// recursive.
+  Error checkBody(ArrayRef<Type *> Elements);
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
@@ -515,6 +534,15 @@ public:
            "Cannot halve vector with odd number of elements.");
     return VectorType::get(VTy->getElementType(),
                            EltCnt.divideCoefficientBy(2));
+  }
+
+  static VectorType *getOneNthElementsVectorType(VectorType *VTy,
+                                                 unsigned Denominator) {
+    auto EltCnt = VTy->getElementCount();
+    assert(EltCnt.isKnownMultipleOf(Denominator) &&
+           "Cannot take one-nth of a vector");
+    return VectorType::get(VTy->getScalarType(),
+                           EltCnt.divideCoefficientBy(Denominator));
   }
 
   /// This static method returns a VectorType with twice as many elements as the
@@ -787,6 +815,9 @@ public:
     HasZeroInit = 1U << 0,
     /// This type may be used as the value type of a global variable.
     CanBeGlobal = 1U << 1,
+    /// This type may be allocated on the stack, either as the allocated type
+    /// of an alloca instruction or as a byval function parameter.
+    CanBeLocal = 1U << 2,
   };
 
   /// Returns true if the target extension type contains the given property.

@@ -625,26 +625,26 @@ namespace llvm {
 
     MPSADBW,
 
-    VCVTNE2PH2BF8,
-    VCVTNE2PH2BF8S,
-    VCVTNE2PH2HF8,
-    VCVTNE2PH2HF8S,
+    VCVT2PH2BF8,
+    VCVT2PH2BF8S,
+    VCVT2PH2HF8,
+    VCVT2PH2HF8S,
     VCVTBIASPH2BF8,
     VCVTBIASPH2BF8S,
     VCVTBIASPH2HF8,
     VCVTBIASPH2HF8S,
-    VCVTNEPH2BF8,
-    VCVTNEPH2BF8S,
-    VCVTNEPH2HF8,
-    VCVTNEPH2HF8S,
+    VCVTPH2BF8,
+    VCVTPH2BF8S,
+    VCVTPH2HF8,
+    VCVTPH2HF8S,
     VMCVTBIASPH2BF8,
     VMCVTBIASPH2BF8S,
     VMCVTBIASPH2HF8,
     VMCVTBIASPH2HF8S,
-    VMCVTNEPH2BF8,
-    VMCVTNEPH2BF8S,
-    VMCVTNEPH2HF8,
-    VMCVTNEPH2HF8S,
+    VMCVTPH2BF8,
+    VMCVTPH2BF8S,
+    VMCVTPH2HF8,
+    VMCVTPH2HF8S,
     VCVTHF82PH,
 
     // Compress and expand.
@@ -809,7 +809,8 @@ namespace llvm {
     CTEST,
 
     /// X86 strict FP compare instructions.
-    STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCMP = FIRST_STRICTFP_OPCODE,
     STRICT_FCMPS,
 
     // Vector packed double/float comparison.
@@ -853,12 +854,11 @@ namespace llvm {
     /// Floating point max and min.
     STRICT_FMAX,
     STRICT_FMIN,
-
-    // WARNING: Only add nodes here if they are strict FP nodes. Non-memory and
-    // non-strict FP nodes should be above FIRST_TARGET_STRICTFP_OPCODE.
+    LAST_STRICTFP_OPCODE = STRICT_FMIN,
 
     // Compare and swap.
-    LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    LCMPXCHG_DAG = FIRST_MEMORY_OPCODE,
     LCMPXCHG8_DAG,
     LCMPXCHG16_DAG,
     LCMPXCHG16_SAVE_RBX_DAG,
@@ -907,6 +907,10 @@ namespace llvm {
 
     // Load x87 FPU environment from memory.
     FLDENVm,
+
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -979,10 +983,7 @@ namespace llvm {
     // Conditional load/store instructions
     CLOAD,
     CSTORE,
-
-    // WARNING: Do not add anything in the end unless you want the node to
-    // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
-    // opcodes will be thought as target memory ops!
+    LAST_MEMORY_OPCODE = CSTORE,
   };
   } // end namespace X86ISD
 
@@ -1079,8 +1080,7 @@ namespace llvm {
     /// function arguments in the caller parameter area. For X86, aggregates
     /// that contains are placed at 16-byte boundaries while the rest are at
     /// 4-byte boundaries.
-    uint64_t getByValTypeAlignment(Type *Ty,
-                                   const DataLayout &DL) const override;
+    Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
@@ -1568,7 +1568,7 @@ namespace llvm {
     /// returns the address of that location. Otherwise, returns nullptr.
     Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;
@@ -1603,6 +1603,10 @@ namespace llvm {
     unsigned getVectorTypeBreakdownForCallingConv(
         LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
         unsigned &NumIntermediates, MVT &RegisterVT) const override;
+
+    bool functionArgumentNeedsConsecutiveRegisters(
+        Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+        const DataLayout &DL) const override;
 
     bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -1803,7 +1807,8 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context,
+                        const Type *RetTy) const override;
 
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
@@ -1847,9 +1852,6 @@ namespace llvm {
 
     MachineBasicBlock *EmitLoweredProbedAlloca(MachineInstr &MI,
                                                MachineBasicBlock *BB) const;
-
-    MachineBasicBlock *EmitLoweredTLSAddr(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
 
     MachineBasicBlock *EmitLoweredTLSCall(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;

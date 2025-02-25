@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFLegalizerInfo.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "bpf-legalinfo"
 

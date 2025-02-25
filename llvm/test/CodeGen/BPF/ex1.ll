@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -mcpu=v1 | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v1 | FileCheck %s
 
 %struct.bpf_context = type { i64, i64, i64, i64, i64, i64, i64 }
 %struct.sk_buff = type { i64, i64, i64, i64, i64, i64, i64 }

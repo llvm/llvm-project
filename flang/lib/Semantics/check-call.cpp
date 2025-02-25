@@ -67,10 +67,6 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
           "Null pointer argument requires an explicit interface"_err_en_US);
     } else if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
       const Symbol &symbol{named->GetLastSymbol()};
-      if (symbol.Corank() > 0) {
-        messages.Say(
-            "Coarray argument requires an explicit interface"_err_en_US);
-      }
       if (evaluate::IsAssumedRank(symbol)) {
         messages.Say(
             "Assumed rank argument requires an explicit interface"_err_en_US);
@@ -116,9 +112,9 @@ static bool CanAssociateWithStorageSequence(
              characteristics::TypeAndShape::Attr::AssumedRank) &&
       !dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape) &&
-      !dummy.type.attrs().test(characteristics::TypeAndShape::Attr::Coarray) &&
       !dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
-      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer);
+      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer) &&
+      dummy.type.corank() == 0;
 }
 
 // When a CHARACTER actual argument is known to be short,
@@ -135,6 +131,20 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
       dummy.type.type().kind() == actualType.type().kind() &&
       !dummy.attrs.test(
           characteristics::DummyDataObject::Attr::DeducedFromActual)) {
+    bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
+    if (actualIsAssumedRank &&
+        !dummy.type.attrs().test(
+            characteristics::TypeAndShape::Attr::AssumedRank)) {
+      if (!context.languageFeatures().IsEnabled(
+              common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
+        messages.Say(
+            "Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank"_err_en_US);
+      } else {
+        context.Warn(common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
+            messages.at(),
+            "Assumed-rank character array should not be associated with a dummy argument that is not assumed-rank"_port_en_US);
+      }
+    }
     if (dummy.type.LEN() && actualType.LEN()) {
       evaluate::FoldingContext &foldingContext{context.foldingContext()};
       auto dummyLength{
@@ -148,12 +158,14 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
           if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
                   foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
             auto dummyChars{*dummySize * *dummyLength};
-            if (actualType.Rank() == 0) {
+            if (actualType.Rank() == 0 && !actualIsAssumedRank) {
               evaluate::DesignatorFolder folder{
                   context.foldingContext(), /*getLastComponent=*/true};
               if (auto actualOffset{folder.FoldDesignator(actual)}) {
                 std::int64_t actualChars{*actualLength};
-                if (static_cast<std::size_t>(actualOffset->offset()) >=
+                if (IsAllocatableOrPointer(actualOffset->symbol())) {
+                  // don't use actualOffset->symbol().size()!
+                } else if (static_cast<std::size_t>(actualOffset->offset()) >=
                         actualOffset->symbol().size() ||
                     !evaluate::IsContiguous(
                         actualOffset->symbol(), foldingContext)) {
@@ -602,14 +614,27 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             characteristics::DummyDataObject::Attr::DeducedFromActual)) {
       if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
               foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
-        if (actualRank == 0 && !actualIsAssumedRank) {
+        if (actualIsAssumedRank) {
+          if (!context.languageFeatures().IsEnabled(
+                  common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
+            messages.Say(
+                "Assumed-rank array may not be associated with a dummy argument that is not assumed-rank"_err_en_US);
+          } else {
+            context.Warn(
+                common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
+                messages.at(),
+                "Assumed-rank array should not be associated with a dummy argument that is not assumed-rank"_port_en_US);
+          }
+        } else if (actualRank == 0) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
             evaluate::DesignatorFolder folder{
                 context.foldingContext(), /*getLastComponent=*/true};
             if (auto actualOffset{folder.FoldDesignator(actual)}) {
               std::optional<std::int64_t> actualElements;
-              if (static_cast<std::size_t>(actualOffset->offset()) >=
+              if (IsAllocatableOrPointer(actualOffset->symbol())) {
+                // don't use actualOffset->symbol().size()!
+              } else if (static_cast<std::size_t>(actualOffset->offset()) >=
                       actualOffset->symbol().size() ||
                   !evaluate::IsContiguous(
                       actualOffset->symbol(), foldingContext)) {
@@ -643,7 +668,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               }
             }
           }
-        } else { // actualRank > 0 || actualIsAssumedRank
+        } else {
           if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
                   foldingContext, evaluate::GetSize(actualType.shape())))};
               actualSize && *actualSize < *dummySize) {
@@ -665,7 +690,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
   if (actualLastObject && actualLastObject->IsCoarray() &&
-      IsAllocatable(*actualLastSymbol) && dummy.intent == common::Intent::Out &&
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
+      dummy.intent == common::Intent::Out &&
       !(intrinsic &&
           evaluate::AcceptsIntentOutAllocatableCoarray(
               intrinsic->name))) { // C846
@@ -678,12 +704,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
     std::optional<parser::MessageFixedText> undefinableMessage;
-    if (dummy.intent == common::Intent::Out) {
-      undefinableMessage =
-          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
-    } else if (dummy.intent == common::Intent::InOut) {
+    DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
+    if (dummy.intent == common::Intent::InOut) {
+      flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
       undefinableMessage =
           "Actual argument associated with INTENT(IN OUT) %s is not definable"_err_en_US;
+    } else if (dummy.intent == common::Intent::Out) {
+      undefinableMessage =
+          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
     } else if (context.ShouldWarn(common::LanguageFeature::
                        UndefinableAsynchronousOrVolatileActual)) {
       if (dummy.attrs.test(
@@ -697,7 +725,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     if (undefinableMessage) {
-      DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
       if (isElemental) { // 15.5.2.4(21)
         flags.set(DefinabilityFlag::VectorSubscriptIsOk);
       }
@@ -976,8 +1003,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }
+    std::optional<std::string> warning;
     if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
-            dummy.ignoreTKR,
+            dummy.ignoreTKR, &warning,
             /*allowUnifiedMatchingRule=*/true, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
@@ -987,6 +1015,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "%s has %s but its associated actual argument has %s"_err_en_US,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
+    }
+    if (warning && context.ShouldWarn(common::UsageWarning::CUDAUsage)) {
+      messages.Say(common::UsageWarning::CUDAUsage, "%s"_warn_en_US,
+          std::move(*warning));
     }
   }
 
@@ -1584,6 +1616,36 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
 }
 
+// EVENT_QUERY (F'2023 16.9.82)
+static void CheckEvent_Query(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  if (arguments.size() > 0 && arguments[0] &&
+      ExtractCoarrayRef(*arguments[0]).has_value()) {
+    foldingContext.messages().Say(arguments[0]->sourceLocation(),
+        "EVENT= argument to EVENT_QUERY must not be coindexed"_err_en_US);
+  }
+  if (arguments.size() > 1 && arguments[1]) {
+    if (auto dyType{arguments[1]->GetType()}) {
+      int defaultInt{
+          foldingContext.defaults().GetDefaultKind(TypeCategory::Integer)};
+      if (dyType->category() == TypeCategory::Integer &&
+          dyType->kind() < defaultInt) {
+        foldingContext.messages().Say(arguments[1]->sourceLocation(),
+            "COUNT= argument to EVENT_QUERY must be an integer with kind >= %d"_err_en_US,
+            defaultInt);
+      }
+    }
+  }
+  if (arguments.size() > 2 && arguments[2]) {
+    if (auto dyType{arguments[2]->GetType()}) {
+      if (dyType->category() == TypeCategory::Integer && dyType->kind() < 2) {
+        foldingContext.messages().Say(arguments[2]->sourceLocation(),
+            "STAT= argument to EVENT_QUERY must be an integer with kind >= 2 when present"_err_en_US);
+      }
+    }
+  }
+}
+
 // IMAGE_INDEX (F'2023 16.9.107)
 static void CheckImage_Index(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -1592,8 +1654,8 @@ static void CheckImage_Index(evaluate::ActualArguments &arguments,
             evaluate::GetShape(arguments[1]->UnwrapExpr())}) {
       if (const auto *coarrayArgSymbol{UnwrapWholeSymbolOrComponentDataRef(
               arguments[0]->UnwrapExpr())}) {
-        const auto coarrayArgCorank = coarrayArgSymbol->Corank();
-        if (const auto subArrSize = evaluate::ToInt64(*subArrShape->front())) {
+        auto coarrayArgCorank{coarrayArgSymbol->Corank()};
+        if (auto subArrSize{evaluate::ToInt64(*subArrShape->front())}) {
           if (subArrSize != coarrayArgCorank) {
             messages.Say(arguments[1]->sourceLocation(),
                 "The size of 'SUB=' (%jd) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (%d)"_err_en_US,
@@ -1920,6 +1982,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     const Scope *scope, const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "event_query") {
+    CheckEvent_Query(arguments, context.foldingContext());
   } else if (intrinsic.name == "image_index") {
     CheckImage_Index(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "max" || intrinsic.name == "min") {

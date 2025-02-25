@@ -755,7 +755,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (ClearFlags)
         replaceDbgUsesWithUndef(ExpressionChangedStart);
 
-      ExpressionChangedStart->moveBefore(I);
+      ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
     } while (true);
@@ -808,7 +808,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
     // assured that the neg instructions we just inserted dominate the
     // instruction we are about to insert after them.
     //
-    I->moveBefore(BI);
+    I->moveBefore(BI->getIterator());
     I->setName(I->getName()+".neg");
 
     // Add the intermediate negates to the redo list as processing them later
@@ -874,6 +874,8 @@ static Value *NegateValue(Value *V, Instruction *BI,
   // negation.
   Instruction *NewNeg =
       CreateNeg(V, V->getName() + ".neg", BI->getIterator(), BI);
+  // NewNeg is generated to potentially replace BI, so use its DebugLoc.
+  NewNeg->setDebugLoc(BI->getDebugLoc());
   ToRedo.insert(NewNeg);
   return NewNeg;
 }
@@ -2172,13 +2174,14 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   if (isa<FPMathOperator>(I) && !hasFPAssociativeFlags(I))
     return;
 
-  // Do not reassociate boolean (i1) expressions.  We want to preserve the
+  // Do not reassociate boolean (i1/vXi1) expressions.  We want to preserve the
   // original order of evaluation for short-circuited comparisons that
   // SimplifyCFG has folded to AND/OR expressions.  If the expression
   // is not further optimized, it is likely to be transformed back to a
   // short-circuited form for code gen, and the source order may have been
-  // optimized for the most likely conditions.
-  if (I->getType()->isIntegerTy(1))
+  // optimized for the most likely conditions. For vector boolean expressions,
+  // we should be optimizing for ILP and not serializing the logical operations.
+  if (I->getType()->isIntOrIntVectorTy(1))
     return;
 
   // If this is a bitwise or instruction of operands

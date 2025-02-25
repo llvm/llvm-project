@@ -435,16 +435,16 @@ allocate(t1(2)::p)
 **FIR**
 ```
 // For allocatable
-%5 = fir.call @_FortranAAllocatableInitDerived(%desc, %type) : (!fir.box<none>, ) -> ()
+fir.call @_FortranAAllocatableInitDerived(%desc, %type) : (!fir.box<none>, ) -> ()
 // The AllocatableSetDerivedLength functions is called for each length type parameters.
-%6 = fir.call @_FortranAAllocatableSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
-%7 = fir.call @_FortranAAllocatableAllocate(%3) : (!fir.box<none>) -> ()
+fir.call @_FortranAAllocatableSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
+fir.call @_FortranAAllocatableAllocate(%3) : (!fir.box<none>) -> ()
 
 // For pointer
-%5 = fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, ) -> ()
+fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, ) -> ()
 // The PointerSetDerivedLength functions is called for each length type parameters.
-%6 = fir.call @_FortranAPointerSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
-%7 = fir.call @_FortranAPointerAllocate(%3) : (!fir.box<none>) -> ()
+fir.call @_FortranAPointerSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
+fir.call @_FortranAPointerAllocate(%3) : (!fir.box<none>) -> ()
 ```
 
 `DEALLOCATE`
@@ -478,7 +478,7 @@ NULLIFY(p)
 
 **FIR**
 ```
-%0 = fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, !fir.tdesc) -> ()
+fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, !fir.tdesc) -> ()
 ```
 
 #### Formatted I/O
@@ -518,7 +518,7 @@ func.func @_QMpdtPprint_pdt() {
   %c8_i32 = arith.constant 8 : i32
   %3 = fir.convert %1 : (!fir.box<!fir.type<_QMpdtTt{l:i32,i:!fir.array<?xi32>}>>) -> !fir.box<none>
   %4 = fir.convert %2 : (!fir.ref<!fir.char<1,22>>) -> !fir.ref<i8>
-  %5 = fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
   %c-1_i32 = arith.constant -1 : i32
   %6 = fir.address_of(@_QQcl.2E2F6669725F7064745F6578616D706C652E66393000) : !fir.ref<!fir.char<1,22>>
   %7 = fir.convert %6 : (!fir.ref<!fir.char<1,22>>) -> !fir.ref<i8>
@@ -882,7 +882,7 @@ func.func @_QMpdt_initPlocal() {
   %c8_i32 = arith.constant 8 : i32
   %3 = fir.convert %1 : (!fir.box<!fir.type<_QMpdt_initTt{l:i32,i:!fir.array<?xi32>}>>) -> !fir.box<none>
   %4 = fir.convert %2 : (!fir.ref<!fir.char<1,22>>) -> !fir.ref<i8>
-  %5 = fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
   return
 }
 ```

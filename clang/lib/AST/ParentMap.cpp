@@ -34,17 +34,19 @@ static void BuildParentMap(MapTy& M, Stmt* S,
   switch (S->getStmtClass()) {
   case Stmt::PseudoObjectExprClass: {
     PseudoObjectExpr *POE = cast<PseudoObjectExpr>(S);
+    Expr *SF = POE->getSyntacticForm();
 
-    if (OVMode == OV_Opaque && M[POE->getSyntacticForm()])
-      break;
-
-    // If we are rebuilding the map, clear out any existing state.
-    if (M[POE->getSyntacticForm()])
+    auto [Iter, Inserted] = M.try_emplace(SF, S);
+    if (!Inserted) {
+      // Nothing more to do in opaque mode if we are updating an existing map.
+      if (OVMode == OV_Opaque)
+        break;
+      // Update the entry in transparent mode, and clear existing state.
+      Iter->second = S;
       for (Stmt *SubStmt : S->children())
-        M[SubStmt] = nullptr;
-
-    M[POE->getSyntacticForm()] = S;
-    BuildParentMap(M, POE->getSyntacticForm(), OV_Transparent);
+        M.erase(SubStmt);
+    }
+    BuildParentMap(M, SF, OV_Transparent);
 
     for (PseudoObjectExpr::semantics_iterator I = POE->semantics_begin(),
                                               E = POE->semantics_end();
@@ -79,10 +81,15 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     // The right thing to do is to give the OpaqueValueExpr its syntactic
     // parent, then not reassign that when traversing the semantic expressions.
     OpaqueValueExpr *OVE = cast<OpaqueValueExpr>(S);
-    if (OVMode == OV_Transparent || !M[OVE->getSourceExpr()]) {
-      M[OVE->getSourceExpr()] = S;
-      BuildParentMap(M, OVE->getSourceExpr(), OV_Transparent);
+    Expr *SrcExpr = OVE->getSourceExpr();
+    auto [Iter, Inserted] = M.try_emplace(SrcExpr, S);
+    // Force update in transparent mode.
+    if (!Inserted && OVMode == OV_Transparent) {
+      Iter->second = S;
+      Inserted = true;
     }
+    if (Inserted)
+      BuildParentMap(M, SrcExpr, OV_Transparent);
     break;
   }
   case Stmt::CapturedStmtClass:
@@ -95,6 +102,22 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     if (Stmt *SubStmt = cast<CapturedStmt>(S)->getCapturedStmt()) {
       M[SubStmt] = S;
       BuildParentMap(M, SubStmt, OVMode);
+    }
+    break;
+  case Stmt::CXXDefaultArgExprClass:
+    if (auto *Arg = dyn_cast<CXXDefaultArgExpr>(S)) {
+      if (Arg->hasRewrittenInit()) {
+        M[Arg->getExpr()] = S;
+        BuildParentMap(M, Arg->getExpr(), OVMode);
+      }
+    }
+    break;
+  case Stmt::CXXDefaultInitExprClass:
+    if (auto *Init = dyn_cast<CXXDefaultInitExpr>(S)) {
+      if (Init->hasRewrittenInit()) {
+        M[Init->getExpr()] = S;
+        BuildParentMap(M, Init->getExpr(), OVMode);
+      }
     }
     break;
   default:

@@ -1,4 +1,4 @@
-// RUN: mlir-opt <%s -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 // Asking the dimension of a 0-D shape doesn't make sense.
 func.func @dim_0_ranked(%arg : tensor<f32>, %arg1 : index) {
@@ -90,7 +90,7 @@ func.func @tensor.from_elements_wrong_result_type() {
 // -----
 
 func.func @tensor.from_elements_wrong_elements_count() {
-  // expected-error@+2 {{1 operands present, but expected 2}}
+  // expected-error@+2 {{number of operands and types do not match: got 1 operands and 2 types}}
   %c0 = arith.constant 0 : index
   %0 = tensor.from_elements %c0 : tensor<2xindex>
   return
@@ -200,7 +200,6 @@ func.func @tensor.reshape_num_elements_mismatch(
 func.func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
   // expected-error @+1 {{expected rank to be smaller or equal to the other rank.}}
   %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<?x?xf32>
-
   return
 }
 
@@ -209,7 +208,25 @@ func.func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
 func.func @extract_slice_wrong_result_rank(%t: tensor<?xf32>, %idx : index) {
   // expected-error @+1 {{expected element type to be 'f32'}}
   %0 = tensor.extract_slice %t[0][4][1] : tensor<?xf32> to tensor<4xi8>
+  return
+}
 
+
+// -----
+
+func.func @extract_slice_size_and_output_dim_mismatch_static_size(%t: tensor<16xf32>) {
+  // expected-error @+1 {{expected type to be 'tensor<4xf32>' or a rank-reduced version. (size mismatch)}}
+  %0 = tensor.extract_slice %t[0][4][1]
+    : tensor<16xf32> to tensor<6xf32>
+  return
+}
+
+// -----
+
+func.func @extract_slice_size_and_output_dim_mismatch_dynamic_size(%t: tensor<?xf32>, %idx : index) {
+  // expected-error @+2 {{expected type to be 'tensor<?xf32>' or a rank-reduced version. (size mismatch)}}
+  %c4 = arith.constant 4 : index
+  %0 = tensor.extract_slice %t[0][%c4][1] : tensor<?xf32> to tensor<4xi8>
   return
 }
 
@@ -219,7 +236,6 @@ func.func @extract_slice_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index)
   // expected-error @+1 {{expected type to be 'tensor<?x4x4xf32>' or a rank-reduced version. (size mismatch)}}
   %0 = tensor.extract_slice %t[0, 0, 0][%idx, 4, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<4x4x4xf32>
-
   return
 }
 
@@ -229,7 +245,14 @@ func.func @extract_slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index
   // expected-error @+1 {{expected type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (size mismatch)}}
   %0 = tensor.extract_slice %t[0, 2, 0][4, 4, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<?x4x4xf32>
+  return
+}
 
+// -----
+
+func.func @illegal_num_offsets(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{expected 3 offset values}}
+  %0 = tensor.extract_slice %arg0[0, 0] [%arg1, %arg2] [1, 1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
   return
 }
 
@@ -344,14 +367,6 @@ func.func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>)
 func.func @rank(%0: f32) {
   // expected-error@+1 {{'tensor.rank' op operand #0 must be tensor of any type values}}
   "tensor.rank"(%0): (f32)->index
-  return
-}
-
-// -----
-
-func.func @illegal_num_offsets(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index) {
-  // expected-error@+1 {{expected 3 offset values}}
-  %0 = tensor.extract_slice %arg0[0, 0] [%arg1, %arg2] [1, 1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
   return
 }
 
@@ -620,129 +635,16 @@ func.func @empty_wrong_number_of_operands(%sz : index) {
 
 // -----
 
-func.func @pack_invalid_no_padding_no_full_tiles(%input: tensor<256x128xf32>, %output: tensor<8x8x16x33xf32>) -> tensor<8x8x16x33xf32> {
-  // expected-error@+1 {{invalid tile factor or output size provided. Only full tiles are supported when padding_value is not set}}
-  %0 = tensor.pack %input inner_dims_pos = [1, 0] inner_tiles = [16, 33] into %output : tensor<256x128xf32>  -> tensor<8x8x16x33xf32>
-  return %0 : tensor<8x8x16x33xf32>
+func.func @bitcast_index_0(%arg0 : tensor<?xi64>) -> tensor<?xindex> {
+  // expected-error @+1 {{'tensor.bitcast' op result #0 must be tensor of signless integer or unsigned integer or signed integer or floating-point values, but got 'tensor<?xindex>'}}
+  %0 = tensor.bitcast %arg0 : tensor<?xi64> to tensor<?xindex>
+  return %0 : tensor<?xindex>
 }
 
 // -----
 
-func.func @pack_invalid_no_padding_no_full_tiles_dyn_tiles(%input: tensor<256x128xf32>, %output: tensor<10x8x?x?xf32>, %tile_size_0: index, %tile_size_1: index) -> tensor<10x8x?x?xf32> {
-  // expected-error@+1 {{invalid tile factor or output size provided. Only full tiles are supported when padding_value is not set}}
-  %0 = tensor.pack %input inner_dims_pos = [1, 0] inner_tiles = [%tile_size_0, %tile_size_1] into %output : tensor<256x128xf32>  -> tensor<10x8x?x?xf32>
-  return %0 : tensor<10x8x?x?xf32>
-} 
-
-// -----
-
-func.func @pack_invalid_no_padding_no_full_tiles_dyn_tiles_outperm(%input: tensor<256x128xf32>, %output: tensor<8x10x?x?xf32>, %tile_size_0: index, %tile_size_1: index) -> tensor<8x10x?x?xf32> {
-  // expected-error@+1 {{invalid tile factor or output size provided. Only full tiles are supported when padding_value is not set}}
-  %0 = tensor.pack %input outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [%tile_size_0, %tile_size_1] into %output : tensor<256x128xf32>  -> tensor<8x10x?x?xf32>
-  return %0 : tensor<8x10x?x?xf32>
-} 
-
-// -----
-
-func.func @pad_and_pack_invalid_type(%input: tensor<13x15xf32>, %output: tensor<2x8x8x2xf32>, %pad: i32) -> tensor<2x8x8x2xf32> {
-  // expected-error@+1 {{expected padding_value has 'f32' but got: 'i32'}}
-  %0 = tensor.pack %input padding_value(%pad: i32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %output : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
-  return %0 : tensor<2x8x8x2xf32>
-}
-
-// -----
-
-func.func @pack_invalid_inner_dims_pos_vector(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
-  // expected-error@+1 {{invalid inner_dims_pos vector}}
-  %0 = tensor.pack %input inner_dims_pos = [2, 0] inner_tiles = [2, 2] into %output : tensor<256x128xf32> -> tensor<8x8x32x16xf32>
-  return %0 : tensor<8x8x32x16xf32>
-}
-
-// -----
-
-func.func @pack_invalid_duplicate_element_in_inner_dims(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
-  // expected-error@+1 {{invalid inner_dims_pos vector}}
-  %0 = tensor.pack %input inner_dims_pos = [1, 1] inner_tiles = [2, 2] into %output : tensor<256x128xf32> -> tensor<8x8x32x16xf32>
-  return %0 : tensor<8x8x32x16xf32>
-}
-
-// -----
-
-func.func @pack_invalid_duplicate_element_in_outer_perm(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
-  // expected-error@+1 {{invalid outer_dims_perm vector}}
-  %0 = tensor.pack %input outer_dims_perm = [1, 1] inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %output : tensor<256x128xf32> -> tensor<8x8x32x16xf32>
-  return %0 : tensor<8x8x32x16xf32>
-}
-
-// -----
-
-func.func @pack_invalid_output_rank(%input: tensor<256x128xf32>, %output: tensor<64x32x16xf32>) -> tensor<64x32x16xf32> {
-  // expected-error@+1 {{packed rank must equal unpacked rank + tiling factors}}
-  %0 = tensor.pack %input inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %output : tensor<256x128xf32> -> tensor<64x32x16xf32>
-  return %0 : tensor<64x32x16xf32>
-}
-
-// -----
-
-func.func @unpack_invalid_out_of_bound_outer_perm(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
-  // expected-error@+1 {{invalid outer_dims_perm vector}}
-  %0 = tensor.unpack %output outer_dims_perm = [2, 1] inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %input : tensor<8x8x32x16xf32> -> tensor<256x128xf32>
-  return %0 : tensor<256x128xf32>
-}
-
-// -----
-
-func.func @pack_invalid_outer_dims_perm(%source: tensor<128x256xf32>, %dest: tensor<16x4x32x16xf32>) -> tensor<16x4x32x16xf32> {
-  // expected-error@+1 {{outer_dims_perm must be a permutation or empty}}
-  %0 = tensor.pack %source outer_dims_perm = [0] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<16x4x32x16xf32>
-  return %0 : tensor<16x4x32x16xf32>
-}
-
-// -----
-
-func.func @unpack_invalid_outer_dims_perm(%source: tensor<128x256xf32>, %dest: tensor<16x4x32x16xf32>) -> tensor<128x256xf32> {
-  // expected-error@+1 {{outer_dims_perm must be a permutation or empty}}
-  %0 = tensor.unpack %dest outer_dims_perm = [1] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %source : tensor<16x4x32x16xf32> -> tensor<128x256xf32>
-  return %0 : tensor<128x256xf32>
-}
-
-// -----
-
-func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
-  // expected-error@+1 {{the shape of output is not large enough to hold the packed data. Expected at least 'tensor<8x8x16x32xf32>', got 'tensor<8x8x32x16xf32>'}}
-  %0 = tensor.pack %input inner_dims_pos = [1, 0] inner_tiles = [16, 32] into %output : tensor<256x128xf32> -> tensor<8x8x32x16xf32>
-  return %0 : tensor<8x8x32x16xf32>
-}
-
-// -----
-
-func.func @unpack_invalid(%output: tensor<256x128xf32>, %input: tensor<8x8x32x16xf32>) -> tensor<256x128xf32> {
-  // expected-error@+1 {{the shape of output is not large enough to hold the packed data. Expected at least 'tensor<8x32x4x32xf32>', got 'tensor<8x8x32x16xf32>'}}
-  %0 = tensor.unpack %input inner_dims_pos = [1, 0] inner_tiles = [4, 32] into %output : tensor<8x8x32x16xf32> -> tensor<256x128xf32>
-  return %0 : tensor<256x128xf32>
-}
-
-// -----
-
-func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
-  // expected-error@+1 {{invalid zero tile factor}}
-  %0 = tensor.pack %input inner_dims_pos = [1, 0] inner_tiles = [0, 2] into %output : tensor<256x128xf32> -> tensor<8x8x32x16xf32>
-  return %0 : tensor<8x8x32x16xf32>
-}
-
-// -----
-func.func @pack_mismatch_inner_tile_size_and_output_shape(
-  %input : tensor<?x?xf32>, %output : tensor<?x?x8x8xf32>) -> tensor<?x?x8x8xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
-  %0 = tensor.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?xf32> -> tensor<?x?x8x8xf32>
-  return %0 : tensor<?x?x8x8xf32>
-}
-
-// -----
-
-func.func @unpack_mismatch_inner_tile_size_and_output_shape(
-  %input : tensor<?x?x8x8xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
-  %0 = tensor.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x8x8xf32> -> tensor<?x?xf32>
-  return %0 : tensor<?x?xf32>
+func.func @bitcast_index_1(%arg0 : tensor<?xindex>) -> tensor<?xi64> {
+  // expected-error @+1 {{'tensor.bitcast' op operand #0 must be tensor of signless integer or unsigned integer or signed integer or floating-point values, but got 'tensor<?xindex>'}}
+  %0 = tensor.bitcast %arg0 : tensor<?xindex> to tensor<?xi64>
+  return %0 : tensor<?xi64>
 }

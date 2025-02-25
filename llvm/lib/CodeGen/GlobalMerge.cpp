@@ -79,6 +79,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -118,6 +119,11 @@ GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
 static cl::opt<bool> GlobalMergeGroupByUse(
     "global-merge-group-by-use", cl::Hidden,
     cl::desc("Improve global merge pass to look at uses"), cl::init(true));
+
+static cl::opt<bool> GlobalMergeAllConst(
+    "global-merge-all-const", cl::Hidden,
+    cl::desc("Merge all const globals without looking at uses"),
+    cl::init(false));
 
 static cl::opt<bool> GlobalMergeIgnoreSingleUse(
     "global-merge-ignore-single-use", cl::Hidden,
@@ -197,12 +203,13 @@ public:
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
-                       bool MergeConstantGlobals)
+                       bool MergeConstantGlobals, bool MergeConstAggressive)
       : FunctionPass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
+    Opt.MergeConstAggressive = MergeConstAggressive;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -263,9 +270,8 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
       });
 
   // If we want to just blindly group all globals together, do so.
-  if (!GlobalMergeGroupByUse) {
-    BitVector AllGlobals(Globals.size());
-    AllGlobals.set();
+  if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
+    BitVector AllGlobals(Globals.size(), true);
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
   }
 
@@ -371,7 +377,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
 
         size_t UGSIdx = GlobalUsesByFunction[ParentFn];
 
-        // If this is the first global the basic block uses, map it to the set
+        // If this is the first global the function uses, map it to the set
         // consisting of this global only.
         if (!UGSIdx) {
           // If that set doesn't exist yet, create it.
@@ -386,7 +392,8 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
           continue;
         }
 
-        // If we already encountered this BB, just increment the counter.
+        // If we already encountered a use of this global in this function, just
+        // increment the counter.
         if (UsedGlobalSets[UGSIdx].Globals.test(GI)) {
           ++UsedGlobalSets[UGSIdx].UsageCount;
           continue;
@@ -415,8 +422,22 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
     }
   }
 
+  // We can choose to merge all globals together, but ignore globals never used
+  // with another global.  This catches the obviously non-profitable cases of
+  // having a single global, but is aggressive enough for any other case.
+  if (GlobalMergeIgnoreSingleUse) {
+    BitVector AllGlobals(Globals.size());
+    for (const UsedGlobalSet &UGS : UsedGlobalSets) {
+      if (UGS.UsageCount == 0)
+        continue;
+      if (UGS.Globals.count() > 1)
+        AllGlobals |= UGS.Globals;
+    }
+    return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
+  }
+
   // Now we found a bunch of sets of globals used together.  We accumulated
-  // the number of times we encountered the sets (i.e., the number of blocks
+  // the number of times we encountered the sets (i.e., the number of functions
   // that use that exact set of globals).
   //
   // Multiply that by the size of the set to give us a crude profitability
@@ -426,20 +447,6 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
                       return UGS1.Globals.count() * UGS1.UsageCount <
                              UGS2.Globals.count() * UGS2.UsageCount;
                     });
-
-  // We can choose to merge all globals together, but ignore globals never used
-  // with another global.  This catches the obviously non-profitable cases of
-  // having a single global, but is aggressive enough for any other case.
-  if (GlobalMergeIgnoreSingleUse) {
-    BitVector AllGlobals(Globals.size());
-    for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
-      if (UGS.UsageCount == 0)
-        continue;
-      if (UGS.Globals.count() > 1)
-        AllGlobals |= UGS.Globals;
-    }
-    return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
-  }
 
   // Starting from the sets with the best (=biggest) profitability, find a
   // good combination.
@@ -625,11 +632,14 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
-      Instruction *Pad = BB.getFirstNonPHI();
-      if (!Pad->isEHPad())
+      BasicBlock::iterator Pad = BB.getFirstNonPHIIt();
+      auto *II = dyn_cast<IntrinsicInst>(Pad);
+      if (!Pad->isEHPad() &&
+          !(II && II->getIntrinsicID() == Intrinsic::eh_typeid_for))
         continue;
 
-      // Keep globals used by landingpads and catchpads.
+      // Keep globals used by landingpads, catchpads,
+      // or intrinsics that require a plain global.
       for (const Use &U : Pad->operands()) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))
@@ -718,7 +728,8 @@ bool GlobalMergeImpl::run(Module &M) {
 
     Type *Ty = GV.getValueType();
     TypeSize AllocSize = DL.getTypeAllocSize(Ty);
-    if (AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize) {
+    bool CanMerge = AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize;
+    if (CanMerge) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);
@@ -727,11 +738,8 @@ bool GlobalMergeImpl::run(Module &M) {
       else
         Globals[{AddressSpace, Section}].push_back(&GV);
     }
-    LLVM_DEBUG(dbgs() << "GV "
-                      << ((DL.getTypeAllocSize(Ty) < Opt.MaxOffset)
-                              ? "to merge: "
-                              : "not to merge: ")
-                      << GV << "\n");
+    LLVM_DEBUG(dbgs() << "GV " << (CanMerge ? "" : "not ") << "to merge: " << GV
+                      << "\n");
   }
 
   for (auto &P : Globals)
@@ -753,10 +761,14 @@ bool GlobalMergeImpl::run(Module &M) {
 Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool OnlyOptimizeForSize,
                                   bool MergeExternalByDefault,
-                                  bool MergeConstantByDefault) {
+                                  bool MergeConstantByDefault,
+                                  bool MergeConstAggressiveByDefault) {
   bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
     MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
   bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
+  bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
+                                  ? GlobalMergeAllConst
+                                  : MergeConstAggressiveByDefault;
   return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
-                         MergeConstant);
+                         MergeConstant, MergeConstAggressive);
 }

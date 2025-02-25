@@ -22,11 +22,11 @@
 #include "integer.h"
 #include "logical.h"
 #include "real.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
 #include "flang/Common/template.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <cinttypes>
 #include <optional>
 #include <string>
@@ -69,6 +69,7 @@ static constexpr bool IsValidKindOfIntrinsicType(
     TypeCategory category, std::int64_t kind) {
   switch (category) {
   case TypeCategory::Integer:
+  case TypeCategory::Unsigned:
     return kind == 1 || kind == 2 || kind == 4 || kind == 8 || kind == 16;
   case TypeCategory::Real:
   case TypeCategory::Complex:
@@ -288,6 +289,13 @@ public:
 };
 
 template <int KIND>
+class Type<TypeCategory::Unsigned, KIND>
+    : public TypeBase<TypeCategory::Unsigned, KIND> {
+public:
+  using Scalar = value::Integer<8 * KIND>;
+};
+
+template <int KIND>
 class Type<TypeCategory::Real, KIND>
     : public TypeBase<TypeCategory::Real, KIND> {
 public:
@@ -367,11 +375,13 @@ using RealTypes = CategoryTypes<TypeCategory::Real>;
 using ComplexTypes = CategoryTypes<TypeCategory::Complex>;
 using CharacterTypes = CategoryTypes<TypeCategory::Character>;
 using LogicalTypes = CategoryTypes<TypeCategory::Logical>;
+using UnsignedTypes = CategoryTypes<TypeCategory::Unsigned>;
 
 using FloatingTypes = common::CombineTuples<RealTypes, ComplexTypes>;
-using NumericTypes = common::CombineTuples<IntegerTypes, FloatingTypes>;
-using RelationalTypes =
-    common::CombineTuples<IntegerTypes, RealTypes, CharacterTypes>;
+using NumericTypes =
+    common::CombineTuples<IntegerTypes, FloatingTypes, UnsignedTypes>;
+using RelationalTypes = common::CombineTuples<IntegerTypes, RealTypes,
+    CharacterTypes, UnsignedTypes>;
 using AllIntrinsicTypes =
     common::CombineTuples<NumericTypes, CharacterTypes, LogicalTypes>;
 using LengthlessIntrinsicTypes =
@@ -397,11 +407,13 @@ template <TypeCategory CATEGORY> struct SomeKind {
   }
 };
 
-using NumericCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
-    SomeKind<TypeCategory::Real>, SomeKind<TypeCategory::Complex>>;
-using AllIntrinsicCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
-    SomeKind<TypeCategory::Real>, SomeKind<TypeCategory::Complex>,
-    SomeKind<TypeCategory::Character>, SomeKind<TypeCategory::Logical>>;
+using NumericCategoryTypes =
+    std::tuple<SomeKind<TypeCategory::Integer>, SomeKind<TypeCategory::Real>,
+        SomeKind<TypeCategory::Complex>, SomeKind<TypeCategory::Unsigned>>;
+using AllIntrinsicCategoryTypes =
+    std::tuple<SomeKind<TypeCategory::Integer>, SomeKind<TypeCategory::Real>,
+        SomeKind<TypeCategory::Complex>, SomeKind<TypeCategory::Character>,
+        SomeKind<TypeCategory::Logical>, SomeKind<TypeCategory::Unsigned>>;
 
 // Represents a completely generic type (or, for Expr<SomeType>, a typeless
 // value like a BOZ literal or NULL() pointer).
@@ -448,9 +460,10 @@ using SomeReal = SomeKind<TypeCategory::Real>;
 using SomeComplex = SomeKind<TypeCategory::Complex>;
 using SomeCharacter = SomeKind<TypeCategory::Character>;
 using SomeLogical = SomeKind<TypeCategory::Logical>;
+using SomeUnsigned = SomeKind<TypeCategory::Unsigned>;
 using SomeDerived = SomeKind<TypeCategory::Derived>;
 using SomeCategory = std::tuple<SomeInteger, SomeReal, SomeComplex,
-    SomeCharacter, SomeLogical, SomeDerived>;
+    SomeCharacter, SomeLogical, SomeUnsigned, SomeDerived>;
 
 using AllTypes =
     common::CombineTuples<AllIntrinsicTypes, std::tuple<SomeDerived>>;
@@ -497,6 +510,8 @@ bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringTypeParameters(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+bool AreSameDerivedTypeIgnoringSequence(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \
@@ -507,6 +522,7 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
 #define EXPAND_FOR_EACH_CHARACTER_KIND(M, P, S) M(P, S, 1) M(P, S, 2) M(P, S, 4)
 #define EXPAND_FOR_EACH_LOGICAL_KIND(M, P, S) \
   M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8)
+#define EXPAND_FOR_EACH_UNSIGNED_KIND EXPAND_FOR_EACH_INTEGER_KIND
 
 #define FOR_EACH_INTEGER_KIND_HELP(PREFIX, SUFFIX, K) \
   PREFIX<Type<TypeCategory::Integer, K>> SUFFIX;
@@ -518,6 +534,8 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   PREFIX<Type<TypeCategory::Character, K>> SUFFIX;
 #define FOR_EACH_LOGICAL_KIND_HELP(PREFIX, SUFFIX, K) \
   PREFIX<Type<TypeCategory::Logical, K>> SUFFIX;
+#define FOR_EACH_UNSIGNED_KIND_HELP(PREFIX, SUFFIX, K) \
+  PREFIX<Type<TypeCategory::Unsigned, K>> SUFFIX;
 
 #define FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
   EXPAND_FOR_EACH_INTEGER_KIND(FOR_EACH_INTEGER_KIND_HELP, PREFIX, SUFFIX)
@@ -529,12 +547,15 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   EXPAND_FOR_EACH_CHARACTER_KIND(FOR_EACH_CHARACTER_KIND_HELP, PREFIX, SUFFIX)
 #define FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX) \
   EXPAND_FOR_EACH_LOGICAL_KIND(FOR_EACH_LOGICAL_KIND_HELP, PREFIX, SUFFIX)
+#define FOR_EACH_UNSIGNED_KIND(PREFIX, SUFFIX) \
+  EXPAND_FOR_EACH_UNSIGNED_KIND(FOR_EACH_UNSIGNED_KIND_HELP, PREFIX, SUFFIX)
 
 #define FOR_EACH_LENGTHLESS_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
   FOR_EACH_REAL_KIND(PREFIX, SUFFIX) \
   FOR_EACH_COMPLEX_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX)
+  FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX) \
+  FOR_EACH_UNSIGNED_KIND(PREFIX, SUFFIX)
 #define FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_LENGTHLESS_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_CHARACTER_KIND(PREFIX, SUFFIX)
@@ -548,6 +569,7 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   PREFIX<SomeComplex> SUFFIX; \
   PREFIX<SomeCharacter> SUFFIX; \
   PREFIX<SomeLogical> SUFFIX; \
+  PREFIX<SomeUnsigned> SUFFIX; \
   PREFIX<SomeDerived> SUFFIX; \
   PREFIX<SomeType> SUFFIX;
 #define FOR_EACH_TYPE_AND_KIND(PREFIX, SUFFIX) \

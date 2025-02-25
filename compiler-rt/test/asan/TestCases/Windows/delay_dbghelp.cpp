@@ -9,7 +9,7 @@
 // static build, there won't be any clang_rt DLLs.
 // RUN: not grep cl""ang_rt %t || \
 // RUN:   grep cl""ang_rt %t | xargs which | \
-// RUN:   xargs llvm-readobj --coff-imports | not grep dbghelp.dll %t
+// RUN:   xargs llvm-readobj --coff-imports | not grep dbghelp.dll
 
 extern "C" int puts(const char *);
 

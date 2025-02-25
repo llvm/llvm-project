@@ -540,6 +540,36 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# EmitC dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "EmitCPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=emitc",
+            ],
+            "mlir/dialects/_emitc_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/EmitC.td",
+    deps = [
+        "//mlir:EmitCTdFiles",
+    ],
+)
+
+filegroup(
+    name = "EmitCPyFiles",
+    srcs = [
+        "mlir/dialects/emitc.py",
+        ":EmitCPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Index dialect.
 ##---------------------------------------------------------------------------##
 

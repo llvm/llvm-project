@@ -18,7 +18,6 @@
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -146,14 +145,16 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
   uint64_t CurrentEndTDataAddr = 0;
   for (uint16_t I = 0, E = InitSections.size(); I < E; ++I) {
     // Assign indices for sections.
-    if (InitSections[I].SectionName.size() &&
-        !SectionIndexMap[InitSections[I].SectionName]) {
-      // The section index starts from 1.
-      SectionIndexMap[InitSections[I].SectionName] = I + 1;
-      if ((I + 1) > MaxSectionIndex) {
-        ErrHandler("exceeded the maximum permitted section index of " +
-                   Twine(MaxSectionIndex));
-        return false;
+    if (InitSections[I].SectionName.size()) {
+      int16_t &SectionIndex = SectionIndexMap[InitSections[I].SectionName];
+      if (!SectionIndex) {
+        // The section index starts from 1.
+        SectionIndex = I + 1;
+        if ((I + 1) > MaxSectionIndex) {
+          ErrHandler("exceeded the maximum permitted section index of " +
+                     Twine(MaxSectionIndex));
+          return false;
+        }
       }
     }
 
@@ -780,19 +781,19 @@ bool XCOFFWriter::writeSymbols() {
       W.write<uint32_t>(YamlSym.Value);
     }
     if (YamlSym.SectionName) {
-      if (!SectionIndexMap.count(*YamlSym.SectionName)) {
+      auto It = SectionIndexMap.find(*YamlSym.SectionName);
+      if (It == SectionIndexMap.end()) {
         ErrHandler("the SectionName " + *YamlSym.SectionName +
                    " specified in the symbol does not exist");
         return false;
       }
-      if (YamlSym.SectionIndex &&
-          SectionIndexMap[*YamlSym.SectionName] != *YamlSym.SectionIndex) {
+      if (YamlSym.SectionIndex && It->second != *YamlSym.SectionIndex) {
         ErrHandler("the SectionName " + *YamlSym.SectionName +
                    " and the SectionIndex (" + Twine(*YamlSym.SectionIndex) +
                    ") refer to different sections");
         return false;
       }
-      W.write<int16_t>(SectionIndexMap[*YamlSym.SectionName]);
+      W.write<int16_t>(It->second);
     } else {
       W.write<int16_t>(YamlSym.SectionIndex.value_or(0));
     }

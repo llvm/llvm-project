@@ -8,8 +8,8 @@
         movw r0, :lower16:_x+4
         movt r0, :upper16:_x+4
 
-        movw r0, :lower16:_x+0x10000
-        movt r0, :upper16:_x+0x10000
+        movw r0, :lower16:_x+0x1000
+        movt r0, :upper16:_x+0x1000
 
         .arm
         movw r0, :lower16:_x
@@ -18,8 +18,8 @@
         movw r0, :lower16:_x+4
         movt r0, :upper16:_x+4
 
-        movw r0, :lower16:_x+0x10000
-        movt r0, :upper16:_x+0x10000
+        movw r0, :lower16:_x+0x1000
+        movt r0, :upper16:_x+0x1000
 
 @ Enter the bizarre world of MachO relocations. First, they're in reverse order
 @ to the actual instructions
@@ -30,10 +30,10 @@
 @ Third column identifies ARM/Thumb & HI/LO.
 
 @ CHECK: 0x2C 0 1 1 ARM_RELOC_HALF 0 _x
-@ CHECK: 0x0 0 1 0 ARM_RELOC_PAIR 0 -
+@ CHECK: 0x1000 0 1 0 ARM_RELOC_PAIR 0 -
 
 @ CHECK: 0x28 0 0 1 ARM_RELOC_HALF 0 _x
-@ CHECK: 0x1 0 0 0 ARM_RELOC_PAIR 0 -
+@ CHECK: 0x0 0 0 0 ARM_RELOC_PAIR 0 -
 
 @ CHECK: 0x24 0 1 1 ARM_RELOC_HALF 0 _x
 @ CHECK: 0x4 0 1 0 ARM_RELOC_PAIR 0 -
@@ -48,10 +48,10 @@
 @ CHECK: 0x0 0 0 0 ARM_RELOC_PAIR 0 -
 
 @ CHECK: 0x14 0 3 1 ARM_RELOC_HALF 0 _x
-@ CHECK: 0x0 0 3 0 ARM_RELOC_PAIR 0 -
+@ CHECK: 0x1000 0 3 0 ARM_RELOC_PAIR 0 -
 
 @ CHECK: 0x10 0 2 1 ARM_RELOC_HALF 0 _x
-@ CHECK: 0x1 0 2 0 ARM_RELOC_PAIR 0 -
+@ CHECK: 0x0 0 2 0 ARM_RELOC_PAIR 0 -
 
 @ CHECK: 0xC 0 3 1 ARM_RELOC_HALF 0 _x
 @ CHECK: 0x4 0 3 0 ARM_RELOC_PAIR 0 -

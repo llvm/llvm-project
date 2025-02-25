@@ -164,7 +164,24 @@ void UnmapOrDie(void *addr, uptr size, bool raw_report) {
 static void *ReturnNullptrOnOOMOrDie(uptr size, const char *mem_type,
                                      const char *mmap_type) {
   error_t last_error = GetLastError();
-  if (last_error == ERROR_NOT_ENOUGH_MEMORY)
+
+  // Assumption: VirtualAlloc is the last system call that was invoked before
+  //   this method.
+  // VirtualAlloc emits one of 3 error codes when running out of memory
+  // 1. ERROR_NOT_ENOUGH_MEMORY:
+  //  There's not enough memory to execute the command
+  // 2. ERROR_INVALID_PARAMETER:
+  //  VirtualAlloc will return this if the request would allocate memory at an
+  //  address exceeding or being very close to the maximum application address
+  //  (the `lpMaximumApplicationAddress` field within the `SystemInfo` struct).
+  //  This does not seem to be officially documented, but is corroborated here:
+  //  https://stackoverflow.com/questions/45833674/why-does-virtualalloc-fail-for-lpaddress-greater-than-0x6ffffffffff
+  // 3. ERROR_COMMITMENT_LIMIT:
+  //  VirtualAlloc will return this if e.g. the pagefile is too small to commit
+  //  the requested amount of memory.
+  if (last_error == ERROR_NOT_ENOUGH_MEMORY ||
+      last_error == ERROR_INVALID_PARAMETER ||
+      last_error == ERROR_COMMITMENT_LIMIT)
     return nullptr;
   ReportMmapFailureAndDie(size, mem_type, mmap_type, last_error);
 }
@@ -968,6 +985,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return true;
 }
 
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
+}
+
 bool SignalContext::IsStackOverflow() const {
   return (DWORD)GetType() == EXCEPTION_STACK_OVERFLOW;
 }
@@ -1070,39 +1092,11 @@ void SignalContext::DumpAllRegisters(void *context) {
   Printf("\n");
 #  elif defined(_M_ARM64)
   Report("Register values:\n");
-  Printf("x0  = %llx  ", ctx->X0);
-  Printf("x1  = %llx  ", ctx->X1);
-  Printf("x2  = %llx  ", ctx->X2);
-  Printf("x3  = %llx  ", ctx->X3);
-  Printf("x4  = %llx  ", ctx->X4);
-  Printf("x5  = %llx  ", ctx->X5);
-  Printf("x6  = %llx  ", ctx->X6);
-  Printf("x7  = %llx  ", ctx->X7);
-  Printf("x8  = %llx  ", ctx->X8);
-  Printf("x9  = %llx  ", ctx->X9);
-  Printf("x10 = %llx  ", ctx->X10);
-  Printf("x11 = %llx  ", ctx->X11);
-  Printf("x12 = %llx  ", ctx->X12);
-  Printf("x13 = %llx  ", ctx->X13);
-  Printf("x14 = %llx  ", ctx->X14);
-  Printf("x15 = %llx  ", ctx->X15);
-  Printf("x16 = %llx  ", ctx->X16);
-  Printf("x17 = %llx  ", ctx->X17);
-  Printf("x18 = %llx  ", ctx->X18);
-  Printf("x19 = %llx  ", ctx->X19);
-  Printf("x20 = %llx  ", ctx->X20);
-  Printf("x21 = %llx  ", ctx->X21);
-  Printf("x22 = %llx  ", ctx->X22);
-  Printf("x23 = %llx  ", ctx->X23);
-  Printf("x24 = %llx  ", ctx->X24);
-  Printf("x25 = %llx  ", ctx->X25);
-  Printf("x26 = %llx  ", ctx->X26);
-  Printf("x27 = %llx  ", ctx->X27);
-  Printf("x28 = %llx  ", ctx->X28);
-  Printf("x29 = %llx  ", ctx->X29);
-  Printf("x30 = %llx  ", ctx->X30);
-  Printf("x31 = %llx  ", ctx->X31);
-  Printf("\n");
+  for (int i = 0; i <= 30; i++) {
+    Printf("x%d%s = %llx", i < 10 ? " " : "", ctx->X[i]);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
 #  else
   // TODO
   (void)ctx;

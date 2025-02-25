@@ -20,15 +20,15 @@ define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-NEXT:    ; def s[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
-; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x8
-; CHECK-NEXT:    v_writelane_b32 v22, s2, 0
-; CHECK-NEXT:    v_writelane_b32 v22, s3, 1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[4:7]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_writelane_b32 v22, s2, 0
+; CHECK-NEXT:    v_writelane_b32 v22, s3, 1
 ; CHECK-NEXT:    v_writelane_b32 v22, s4, 2
 ; CHECK-NEXT:    v_writelane_b32 v22, s5, 3
 ; CHECK-NEXT:    v_writelane_b32 v22, s6, 4
+; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; CHECK-NEXT:    v_writelane_b32 v22, s7, 5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[4:11]

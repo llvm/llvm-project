@@ -25,7 +25,7 @@ subroutine test()
 ! CHECK:           %[[VAL_29:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_30:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_31:.*]] = arith.constant 0 : i32
-! CHECK:           %[[VAL_32:.*]] = fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[VAL_27]], %[[VAL_28]], %[[VAL_29]], %[[VAL_30]], %[[VAL_31]]
+! CHECK:           fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[VAL_27]], %[[VAL_28]], %[[VAL_29]], %[[VAL_30]], %[[VAL_31]]
 ! CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_22]] : (!fir.box<!fir.char<1,5>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_36:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_33]], %[[VAL_34]], %[[VAL_18]],

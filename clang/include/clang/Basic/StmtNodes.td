@@ -24,6 +24,7 @@ def SwitchCase : StmtNode<Stmt, 1>;
 def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
+def SYCLKernelCallStmt : StmtNode<Stmt>;
 
 // Statements that might produce a value (for example, as the last non-null
 // statement in a GNU statement-expression).
@@ -229,6 +230,7 @@ def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
 def OMPSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPStripeDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPReverseDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPInterchangeDirective : StmtNode<OMPLoopTransformationDirective>;
@@ -307,6 +309,17 @@ def OpenACCAssociatedStmtConstruct
     : StmtNode<OpenACCConstructStmt, /*abstract=*/1>;
 def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 def OpenACCLoopConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCCombinedConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCDataConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCEnterDataConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCExitDataConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCHostDataConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCWaitConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCInitConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCShutdownConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCSetConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCUpdateConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCAtomicConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 
 // OpenACC Additional Expressions.
 def OpenACCAsteriskSizeExpr : StmtNode<Expr>;

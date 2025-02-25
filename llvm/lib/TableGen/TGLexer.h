@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TABLEGEN_TGLEXER_H
 #define LLVM_LIB_TABLEGEN_TGLEXER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/DataTypes.h"
@@ -21,7 +22,6 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 template <typename T> class ArrayRef;
@@ -80,7 +80,6 @@ enum TokKind {
   Code,
   Dag,
   ElseKW,
-  FalseKW,
   Field,
   In,
   Include,
@@ -88,7 +87,6 @@ enum TokKind {
   List,
   String,
   Then,
-  TrueKW,
 
   // Object start tokens.
   OBJECT_START_FIRST,
@@ -137,6 +135,7 @@ enum TokKind {
   XTail,
   XSize,
   XEmpty,
+  XInitialized,
   XIf,
   XCond,
   XEq,
@@ -235,7 +234,7 @@ public:
   std::pair<int64_t, unsigned> getCurBinaryIntVal() const {
     assert(CurCode == tgtok::BinaryIntVal &&
            "This token isn't a binary integer");
-    return std::make_pair(CurIntVal, (CurPtr - TokStart)-2);
+    return {CurIntVal, (CurPtr - TokStart) - 2};
   }
 
   SMLoc getLoc() const;
@@ -324,8 +323,7 @@ private:
   // preprocessing control stacks for the current file and all its
   // parent files.  The back() element is the preprocessing control
   // stack for the current file.
-  std::vector<std::unique_ptr<std::vector<PreprocessorControlDesc>>>
-      PrepIncludeStack;
+  SmallVector<SmallVector<PreprocessorControlDesc>> PrepIncludeStack;
 
   // Validate that the current preprocessing control stack is empty,
   // since we are about to exit a file, and pop the include stack.
@@ -349,14 +347,13 @@ private:
   tgtok::TokKind prepIsDirective() const;
 
   // Given a preprocessing token kind, adjusts CurPtr to the end
-  // of the preprocessing directive word.  Returns true, unless
-  // an unsupported token kind is passed in.
+  // of the preprocessing directive word.
   //
   // We use look-ahead prepIsDirective() and prepEatPreprocessorDirective()
   // to avoid adjusting CurPtr before we are sure that '#' is followed
   // by a preprocessing directive.  If it is not, then we fall back to
   // tgtok::paste interpretation of '#'.
-  bool prepEatPreprocessorDirective(tgtok::TokKind Kind);
+  void prepEatPreprocessorDirective(tgtok::TokKind Kind);
 
   // The main "exit" point from the token parsing to preprocessor.
   //

@@ -434,6 +434,112 @@ __datasizeof
 ``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
 type ignoring tail padding.
 
+_BitInt, _ExtInt
+----------------
+
+Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
+and in C++. This type was previously implemented in Clang with the same
+semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
+favor of the standard type.
+
+Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
+so this type should not yet be used in interfaces that require ABI stability.
+
+C keywords supported in all language modes
+------------------------------------------
+
+Clang supports ``_Alignas``, ``_Alignof``, ``_Atomic``, ``_Complex``,
+``_Generic``, ``_Imaginary``, ``_Noreturn``, ``_Static_assert``,
+``_Thread_local``, and ``_Float16`` in all language modes with the C semantics.
+
+__alignof, __alignof__
+----------------------
+
+``__alignof`` and ``__alignof__`` return, in contrast to ``_Alignof`` and
+``alignof``, the preferred alignment of a type. This may be larger than the
+required alignment for improved performance.
+
+__extension__
+-------------
+
+``__extension__`` suppresses extension diagnostics in the statement it is
+prepended to.
+
+__auto_type
+-----------
+
+``__auto_type`` behaves the same as ``auto`` in C++11 but is available in all
+language modes.
+
+__imag, __imag__
+----------------
+
+``__imag`` and ``__imag__`` can be used to get the imaginary part of a complex
+value.
+
+__real, __real__
+----------------
+
+``__real`` and ``__real__`` can be used to get the real part of a complex value.
+
+__asm, __asm__
+--------------
+
+``__asm`` and ``__asm__`` are alternate spellings for ``asm``, but available in
+all language modes.
+
+__complex, __complex__
+----------------------
+
+``__complex`` and ``__complex__`` are alternate spellings for ``_Complex``.
+
+__const, __const__, __volatile, __volatile__, __restrict, __restrict__
+----------------------------------------------------------------------
+
+These are alternate spellings for their non-underscore counterparts, but are
+available in all langauge modes.
+
+__decltype
+----------
+
+``__decltype`` is an alternate spelling for ``decltype``, but is also available
+in C++ modes before C++11.
+
+__inline, __inline__
+--------------------
+
+``__inline`` and ``__inline__`` are alternate spellings for ``inline``, but are
+available in all language modes.
+
+__nullptr
+---------
+
+``__nullptr`` is an alternate spelling for ``nullptr``. It is available in all C and C++ language modes.
+
+__signed, __signed__
+--------------------
+
+``__signed`` and ``__signed__`` are alternate spellings for ``signed``.
+``__unsigned`` and ``__unsigned__`` are **not** supported.
+
+__typeof, __typeof__, __typeof_unqual, __typeof_unqual__
+--------------------------------------------------------
+
+``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
+available in all langauge modes. These spellings result in the operand,
+retaining all qualifiers.
+
+``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
+C23 ``typeof_unqual`` type specifier, but are available in all language modes.
+These spellings result in the type of the operand, stripping all qualifiers.
+
+__char16_t, __char32_t
+----------------------
+
+``__char16_t`` and ``__char32_t`` are alternate spellings for ``char16_t`` and
+``char32_t`` respectively, but are also available in C++ modes before C++11.
+They are only supported in C++. ``__char8_t`` is not available.
+
 ..
   FIXME: This should list all the keyword extensions
 
@@ -647,6 +753,13 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
+The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
+``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
+``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+
+No implicit promotion of integer types takes place. The mixing of integer types
+of different sizes and signs is forbidden in binary and ternary builtins.
+
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
 ============================================== ====================================================================== =========================================
@@ -732,6 +845,11 @@ at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
 
+The integer reduction intrinsics, including ``__builtin_reduce_max``,
+``__builtin_reduce_min``, ``__builtin_reduce_add``, ``__builtin_reduce_mul``,
+``__builtin_reduce_and``, ``__builtin_reduce_or``, and ``__builtin_reduce_xor``,
+can be called in a ``constexpr`` context.
+
 Example:
 
 .. code-block:: c++
@@ -745,12 +863,10 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 ======================================= ====================================================================== ==================================
          Name                            Operation                                                              Supported element types
 ======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is         integer and floating point types
-                                         a NaN, return the other argument. If both arguments are NaNs,
-                                         fmax() return a NaN.
- ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument           integer and floating point types
-                                         is a NaN, return the other argument. If both arguments are
-                                         NaNs, fmax() return a NaN.
+ ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
+                                         will always be a number unless all elements of the vector are NaN.
  ET __builtin_reduce_add(VT a)           \+                                                                     integer types
  ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
  ET __builtin_reduce_and(VT a)           &                                                                      integer types
@@ -1524,6 +1640,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+Packs in Structured Bindings                 __cpp_structured_bindings        C++26         C++03
 Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
 Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
@@ -1687,10 +1804,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
-* ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true if a type is referenceable, and false otherwise. A referenceable
-  type is a type that's either an object type, a reference type, or an unqualified
-  function type.
 * ``__is_rvalue_reference`` (C++, Embarcadero)
 * ``__is_same`` (C++, Embarcadero)
 * ``__is_same_as`` (GCC): Synonym for ``__is_same``.
@@ -1984,7 +2097,7 @@ Enumerations with a fixed underlying type
 -----------------------------------------
 
 Clang provides support for C++11 enumerations with a fixed underlying type
-within Objective-C.  For example, one can write an enumeration type as:
+within Objective-C and C `prior to C23 <https://open-std.org/JTC1/SC22/WG14/www/docs/n3030.htm>`_.  For example, one can write an enumeration type as:
 
 .. code-block:: c++
 
@@ -1995,6 +2108,14 @@ value, is ``unsigned char``.
 
 Use ``__has_feature(objc_fixed_enum)`` to determine whether support for fixed
 underlying types is available in Objective-C.
+
+Use ``__has_extension(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C prior to C23. This will also report ``true`` in C23
+and later modes as the functionality is available even if it's not an extension in
+those modes.
+
+Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C23 and later.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -2122,8 +2243,8 @@ method; it specifies that the method expects its ``self`` parameter to have a
   - (void) bar __attribute__((ns_consumes_self));
   - (void) baz:(id) __attribute__((ns_consumed)) x;
 
-Further examples of these attributes are available in the static analyzer's `list of annotations for analysis
-<https://clang-analyzer.llvm.org/annotations.html#cocoa_mem>`_.
+Further examples of these attributes are available in the static analyzer's
+`list of annotations for analysis <analyzer/user-docs/Annotations.html#cocoa-mem>`__.
 
 Query for these features with ``__has_attribute(ns_consumed)``,
 ``__has_attribute(ns_returns_retained)``, etc.
@@ -2509,7 +2630,7 @@ with the current table size.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   size_t getSize() {
     return __builtin_wasm_table_size(table);
@@ -2531,10 +2652,10 @@ or -1. It will return -1 if not enough space could be allocated.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   // grow returns the new table size or -1 on error.
-  int grow(__funcref fn, int delta) {
+  int grow(funcref_t fn, int delta) {
     int prevSize = __builtin_wasm_table_grow(table, fn, delta);
     if (prevSize == -1)
       return -1;
@@ -2745,6 +2866,47 @@ passing the addresses of fields in the same struct, elements of the same array,
 etc.).
 
 Query for this feature with ``__has_builtin(__builtin_assume_separate_storage)``.
+
+``__builtin_assume_dereferenceable``
+-------------------------------------
+
+``__builtin_assume_dereferenceable`` is used to provide the optimizer with the
+knowledge that the pointer argument P is dereferenceable up to at least the
+specified number of bytes.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_assume_dereferenceable(const void *, size_t)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  int foo(int *x, int y) {
+      __builtin_assume_dereferenceable(x, sizeof(int));
+      int z = 0;
+      if (y == 1) {
+        // The optimizer may execute the load of x unconditionally due to
+        // __builtin_assume_dereferenceable guaranteeing sizeof(int) bytes can
+        // be loaded speculatively without trapping.
+        z = *x;
+      }
+      return z;
+  }
+
+**Description**:
+
+The arguments to this function provide a start pointer ``P`` and a size ``S``.
+``S`` must be at least 1 and a constant. The optimizer may assume that ``S``
+bytes are dereferenceable starting at ``P``. Note that this does not necessarily
+imply that ``P`` is non-null as ``nullptr`` can be dereferenced in some cases.
+The assumption also does not imply that ``P`` is not dereferenceable past ``S``
+bytes.
+
+
+Query for this feature with ``__has_builtin(__builtin_assume_dereferenceable)``.
 
 
 ``__builtin_offsetof``
@@ -3626,7 +3788,7 @@ program location should be executed. It is expected to be used to implement
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
 intrinsic.
 
-The ``__builtin_allow_runtime_check()`` can be used within constrol structures
+The ``__builtin_allow_runtime_check()`` can be used within control structures
 like ``if`` to guard expensive runtime checks. The return value is determined
 by the following compiler options and may differ per call site:
 
@@ -3773,6 +3935,74 @@ only one argument is provided, then the behavior is undefined.
 type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
 ``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
 as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
+
+``__builtin_counted_by_ref``
+----------------------------
+
+``__builtin_counted_by_ref`` returns a pointer to the count field from the
+``counted_by`` attribute.
+
+The argument must be a flexible array member. If the argument isn't a flexible
+array member or doesn't have the ``counted_by`` attribute, the builtin returns
+``(void *)0``.
+
+**Syntax**:
+
+.. code-block:: c
+
+  T *__builtin_counted_by_ref(void *array)
+
+**Examples**:
+
+.. code-block:: c
+
+  #define alloc(P, FAM, COUNT) ({                                 \
+     size_t __ignored_assignment;                                 \
+     typeof(P) __p = NULL;                                        \
+     __p = malloc(MAX(sizeof(*__p),                               \
+                      sizeof(*__p) + sizeof(*__p->FAM) * COUNT)); \
+                                                                  \
+     *_Generic(                                                   \
+       __builtin_counted_by_ref(__p->FAM),                        \
+         void *: &__ignored_assignment,                           \
+         default: __builtin_counted_by_ref(__p->FAM)) = COUNT;    \
+                                                                  \
+     __p;                                                         \
+  })
+
+**Description**:
+
+The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
+common error associated with the ``counted_by`` attribute. When using the
+``counted_by`` attribute, the ``count`` field **must** be set before the
+flexible array member can be accessed. Otherwise, the sanitizers may view such
+accesses as false positives. For instance, it's not uncommon for programmers to
+initialize the flexible array before setting the ``count`` field:
+
+.. code-block:: c
+
+  struct s {
+    int dummy;
+    short count;
+    long array[] __attribute__((counted_by(count)));
+  };
+
+  struct s *ptr = malloc(sizeof(struct s) + sizeof(long) * COUNT);
+
+  for (int i = 0; i < COUNT; ++i)
+    ptr->array[i] = i;
+
+  ptr->count = COUNT;
+
+Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
+allocation of a struct with a flexible array member with the ``counted_by``
+attribute is prone to failure in large code bases. This builtin mitigates this
+for allocators (like in Linux) that are implemented in a way where the counter
+assignment can happen automatically.
+
+**Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
+to a variable, have its address taken, or passed into or returned from a
+function, because doing so violates bounds safety conventions.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -3979,9 +4209,9 @@ standard:
 - ``4``  - to nearest, ties away from zero
 The effect of passing some other value to ``__builtin_flt_rounds`` is
 implementation-defined. ``__builtin_set_flt_rounds`` is currently only supported
-to work on x86, x86_64, Arm and AArch64 targets. These builtins read and modify
-the floating-point environment, which is not always allowed and may have unexpected
-behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
+to work on x86, x86_64, powerpc, powerpc64, Arm and AArch64 targets. These builtins
+read and modify the floating-point environment, which is not always allowed and may
+have unexpected behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
 
 String builtins
 ---------------
@@ -4444,8 +4674,12 @@ default member initializer, the invocation point is the location of the
 constructor or aggregate initialization used to create the object. Otherwise
 the invocation point is the same as the location of the builtin.
 
-When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
+When the invocation point of ``__builtin_FUNCTION`` is not a function scope, the
 empty string is returned.
+
+The builtin ``__builtin_COLUMN`` returns the offset from the start of the line,
+beginning from column 1. `This may differ from other implementations.
+<https://eel.is/c++draft/support.srcloc#tab:support.srcloc.current-row-3-column-2-sentence-2>`_
 
 The builtin ``__builtin_source_location`` returns a pointer to constant static
 data of type ``std::source_location::__impl``. This type must have already been
@@ -4705,8 +4939,8 @@ Extensions for Static Analysis
 Clang supports additional attributes that are useful for documenting program
 invariants and rules for static analysis tools, such as the `Clang Static
 Analyzer <https://clang-analyzer.llvm.org/>`_. These attributes are documented
-in the analyzer's `list of source-level annotations
-<https://clang-analyzer.llvm.org/annotations.html>`_.
+in the analyzer's `list of annotations for analysis
+<analyzer/user-docs/Annotations.html>`__.
 
 
 Extensions for Dynamic Analysis
@@ -5461,7 +5695,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 
 * The pragma clang section is enabled automatically, without need of any flags.
 
-* This feature is only defined to work sensibly for ELF and Mach-O targets.
+* This feature is only defined to work sensibly for ELF, Mach-O and COFF targets.
 
 * If section name is specified through _attribute_((section("myname"))), then
   the attribute name gains precedence.
@@ -5469,7 +5703,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 * Global variables that are initialized to zero will be placed in the named
   bss section, if one is present.
 
-* The ``#pragma clang section`` directive does not does try to infer section-kind
+* The ``#pragma clang section`` directive does not try to infer section-kind
   from the name. For example, naming a section "``.bss.mySec``" does NOT mean
   it will be a bss section name.
 
@@ -5698,17 +5932,6 @@ Examples are:
    # 60 "" 2 // return to "main.c"
    # 1 "/usr/ancient/header.h" 1 4 // Enter an implicit extern "C" header
 
-Extended Integer Types
-======================
-
-Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
-and in C++. This type was previously implemented in Clang with the same
-semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
-favor of the standard type.
-
-Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
-so this type should not yet be used in interfaces that require ABI stability.
-
 Intrinsics Support within Constant Expressions
 ==============================================
 
@@ -5883,3 +6106,54 @@ specify the starting offset to begin embedding from. The resources is treated
 as being empty if the specified offset is larger than the number of bytes in
 the resource. The offset will be applied *before* any ``limit`` parameters are
 applied.
+
+Union and aggregate initialization in C
+=======================================
+
+In C23 (N2900), when an object is initialized from initializer ``= {}``, all
+elements of arrays, all members of structs, and the first members of unions are
+empty-initialized recursively. In addition, all padding bits are initialized to
+zero.
+
+Clang guarantees the following behaviors:
+
+* ``1:`` Clang supports initializer ``= {}`` mentioned above in all C
+  standards.
+
+* ``2:`` When unions are initialized from initializer ``= {}``, bytes outside
+  of the first members of unions are also initialized to zero.
+
+* ``3:`` When unions, structures and arrays are initialized from initializer
+  ``= { initializer-list }``, all members not explicitly initialized in
+  the initializer list are empty-initialized recursively. In addition, all
+  padding bits are initialized to zero.
+
+Currently, the above extension only applies to C source code, not C++.
+
+
+Empty Objects in C
+==================
+The declaration of a structure or union type which has no named members is
+undefined behavior (C23 and earlier) or implementation-defined behavior (C2y).
+Clang allows the declaration of a structure or union type with no named members
+in all C language modes. `sizeof` for such a type returns `0`, which is
+different behavior than in C++ (where the size of such an object is typically
+`1`).
+
+
+Qualified function types in C
+=============================
+Declaring a function with a qualified type in C is undefined behavior (C23 and
+earlier) or implementation-defined behavior (C2y). Clang allows a function type
+to be specified with the ``const`` and ``volatile`` qualifiers, but ignores the
+qualifications.
+
+.. code-block:: c
+
+   typedef int f(void);
+   const volatile f func; // Qualifier on function type has no effect.
+
+
+Note, Clang does not allow an ``_Atomic`` function type because
+of explicit constraints against atomically qualified (arrays and) function
+types.

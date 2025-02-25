@@ -182,7 +182,7 @@ def P400WriteCMOV : SchedWriteRes<[SiFiveP400Branch, SiFiveP400IEXQ1]> {
 }
 def : InstRW<[P400WriteCMOV], (instrs PseudoCCMOVGPRNoX0)>;
 
-let Latency = 3 in {
+let Latency = 2 in {
 // Integer multiplication
 def : WriteRes<WriteIMul, [SiFiveP400MulDiv]>;
 def : WriteRes<WriteIMul32, [SiFiveP400MulDiv]>;
@@ -467,6 +467,9 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICALUV",   [SiFiveP400VEXQ0], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUX",   [SiFiveP400VEXQ0], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUI",   [SiFiveP400VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMV",  [SiFiveP400VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMX",  [SiFiveP400VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMI",  [SiFiveP400VEXQ0], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICmpV",    [SiFiveP400VEXQ0], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICmpX",    [SiFiveP400VEXQ0], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICmpI",    [SiFiveP400VEXQ0], mx, IsWorstCase>;
@@ -880,7 +883,16 @@ foreach mx = SchedMxList in {
   let Latency = 3, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVSHA2CHV", [SiFiveP400VEXQ0], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSHA2CLV", [SiFiveP400VEXQ0], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSHA2MSV", [SiFiveP400VEXQ0], mx, IsWorstCase>;
+    defvar ZvknhSEWs = !listremove(SchedSEWSet<mx>.val, [8, 16]);
+    // Largest SEW is the last element, assuming SchedSEWSet is sorted in ascending
+    // order.
+    defvar LargestZvknhSEW = !foldl(!head(ZvknhSEWs), ZvknhSEWs, last, curr, curr);
+    foreach sew = ZvknhSEWs in {
+      // The worst case for Zvknh[ab] is designated to the largest SEW and LMUL.
+      defvar IsWorstCaseVSHA2MSV = !and(IsWorstCase, !eq(sew, LargestZvknhSEW));
+      defm "" : LMULSEWWriteResMXSEW<"WriteVSHA2MSV", [SiFiveP400VEXQ0], mx, sew,
+                                     IsWorstCaseVSHA2MSV>;
+    }
   }
   // Zvkned
   let Latency = 2, ReleaseAtCycles = [LMulLat] in {
@@ -1210,7 +1222,7 @@ defm "" : LMULReadAdvance<"ReadVGMULV", 0>;
 // Zvknha or Zvknhb
 defm "" : LMULReadAdvance<"ReadVSHA2CHV", 0>;
 defm "" : LMULReadAdvance<"ReadVSHA2CLV", 0>;
-defm "" : LMULReadAdvance<"ReadVSHA2MSV", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVSHA2MSV", 0>;
 // Zvkned
 defm "" : LMULReadAdvance<"ReadVAESMVV", 0>;
 defm "" : LMULReadAdvance<"ReadVAESKF1V", 0>;

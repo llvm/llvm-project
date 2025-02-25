@@ -59,11 +59,12 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         assert(ctx.arg.relocatable && (rel->flags & SHF_LINK_ORDER));
         return s->name;
       }
+      StringSaver &ss = ctx.saver;
       if (s->type == SHT_CREL)
-        return saver().save(".crel" + out->name);
+        return ss.save(".crel" + out->name);
       if (s->type == SHT_RELA)
-        return saver().save(".rela" + out->name);
-      return saver().save(".rel" + out->name);
+        return ss.save(".rela" + out->name);
+      return ss.save(".rel" + out->name);
     }
   }
 
@@ -132,6 +133,10 @@ uint64_t ExprValue::getSectionOffset() const {
   return getValue() - getSecAddr();
 }
 
+// std::unique_ptr<OutputSection> may be incomplete type.
+LinkerScript::LinkerScript(Ctx &ctx) : ctx(ctx) {}
+LinkerScript::~LinkerScript() {}
+
 OutputDesc *LinkerScript::createOutputSection(StringRef name,
                                               StringRef location) {
   OutputDesc *&secRef = nameToOutputSection[CachedHashStringRef(name)];
@@ -140,7 +145,9 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
     // There was a forward reference.
     sec = secRef;
   } else {
-    sec = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
+    descPool.emplace_back(
+        std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0));
+    sec = descPool.back().get();
     if (!secRef)
       secRef = sec;
   }
@@ -149,10 +156,14 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
 }
 
 OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
-  OutputDesc *&cmdRef = nameToOutputSection[CachedHashStringRef(name)];
-  if (!cmdRef)
-    cmdRef = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
-  return cmdRef;
+  auto &secRef = nameToOutputSection[CachedHashStringRef(name)];
+  if (!secRef) {
+    secRef = descPool
+                 .emplace_back(
+                     std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0))
+                 .get();
+  }
+  return secRef;
 }
 
 // Expands the memory region by the specified size.
@@ -200,7 +211,7 @@ static bool shouldDefineSym(Ctx &ctx, SymbolAssignment *cmd) {
   if (cmd->name == ".")
     return false;
 
-  return !cmd->provide || LinkerScript::shouldAddProvideSym(ctx, cmd->name);
+  return !cmd->provide || ctx.script->shouldAddProvideSym(cmd->name);
 }
 
 // Called by processSymbolAssignments() to assign definitions to
@@ -227,8 +238,8 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(createInternalFile(ctx, cmd->location), cmd->name, STB_GLOBAL,
-                 visibility, value.type, symValue, 0, sec);
+  Defined newSym(ctx, createInternalFile(ctx, cmd->location), cmd->name,
+                 STB_GLOBAL, visibility, value.type, symValue, 0, sec);
 
   Symbol *sym = ctx.symtab->insert(cmd->name);
   sym->mergeProperties(newSym);
@@ -244,7 +255,7 @@ void LinkerScript::declareSymbol(SymbolAssignment *cmd) {
     return;
 
   uint8_t visibility = cmd->hidden ? STV_HIDDEN : STV_DEFAULT;
-  Defined newSym(ctx.internalFile, cmd->name, STB_GLOBAL, visibility,
+  Defined newSym(ctx, ctx.internalFile, cmd->name, STB_GLOBAL, visibility,
                  STT_NOTYPE, 0, 0, nullptr);
 
   // If the symbol is already defined, its order is 0 (with absence indicating
@@ -309,7 +320,8 @@ void LinkerScript::processInsertCommands() {
   SmallVector<OutputDesc *, 0> moves;
   for (const InsertCommand &cmd : insertCommands) {
     if (ctx.arg.enableNonContiguousRegions)
-      error("INSERT cannot be used with --enable-non-contiguous-regions");
+      ErrAlways(ctx)
+          << "INSERT cannot be used with --enable-non-contiguous-regions";
 
     for (StringRef name : cmd.names) {
       // If base is empty, it may have been discarded by
@@ -330,8 +342,8 @@ void LinkerScript::processInsertCommands() {
           return to != nullptr && to->osec.name == cmd.where;
         });
     if (insertPos == sectionCommands.end()) {
-      error("unable to insert " + cmd.names[0] +
-            (cmd.isAfter ? " after " : " before ") + cmd.where);
+      ErrAlways(ctx) << "unable to insert " << cmd.names[0]
+                     << (cmd.isAfter ? " after " : " before ") << cmd.where;
     } else {
       if (cmd.isAfter)
         ++insertPos;
@@ -390,33 +402,38 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-static inline StringRef getFilename(const InputFile *file) {
-  return file ? file->getNameForScript() : StringRef();
-}
-
-bool InputSectionDescription::matchesFile(const InputFile *file) const {
+bool InputSectionDescription::matchesFile(const InputFile &file) const {
   if (filePat.isTrivialMatchAll())
     return true;
 
-  if (!matchesFileCache || matchesFileCache->first != file)
-    matchesFileCache.emplace(file, filePat.match(getFilename(file)));
+  if (!matchesFileCache || matchesFileCache->first != &file) {
+    if (matchType == MatchType::WholeArchive) {
+      matchesFileCache.emplace(&file, filePat.match(file.archiveName));
+    } else {
+      if (matchType == MatchType::ArchivesExcluded && !file.archiveName.empty())
+        matchesFileCache.emplace(&file, false);
+      else
+        matchesFileCache.emplace(&file, filePat.match(file.getNameForScript()));
+    }
+  }
 
   return matchesFileCache->second;
 }
 
-bool SectionPattern::excludesFile(const InputFile *file) const {
+bool SectionPattern::excludesFile(const InputFile &file) const {
   if (excludedFilePat.empty())
     return false;
 
-  if (!excludesFileCache || excludesFileCache->first != file)
-    excludesFileCache.emplace(file, excludedFilePat.match(getFilename(file)));
+  if (!excludesFileCache || excludesFileCache->first != &file)
+    excludesFileCache.emplace(&file,
+                              excludedFilePat.match(file.getNameForScript()));
 
   return excludesFileCache->second;
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
   for (InputSectionDescription *id : keptSections)
-    if (id->matchesFile(s->file))
+    if (id->matchesFile(*s->file))
       for (SectionPattern &p : id->sectionPatterns)
         if (p.sectionPat.match(s->name) &&
             (s->flags & id->withFlags) == id->withFlags &&
@@ -545,7 +562,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         if (!pat.sectionPat.match(sec->name))
           continue;
 
-        if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
+        if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
             sec->parent == &outCmd || !flagsMatch(sec))
           continue;
 
@@ -598,12 +615,12 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
     SectionClassDesc *scd =
         sectionClasses.lookup(CachedHashStringRef(cmd->classRef));
     if (!scd) {
-      errorOrWarn("undefined section class '" + cmd->classRef + "'");
+      Err(ctx) << "undefined section class '" << cmd->classRef << "'";
       return ret;
     }
     if (!scd->sc.assigned) {
-      errorOrWarn("section class '" + cmd->classRef + "' referenced by '" +
-                  outCmd.name + "' before class definition");
+      Err(ctx) << "section class '" << cmd->classRef << "' referenced by '"
+               << outCmd.name << "' before class definition";
       return ret;
     }
 
@@ -613,8 +630,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
-          errorOrWarn("section '" + sec->name +
-                      "' cannot spill from/to /DISCARD/");
+          Err(ctx) << "section '" << sec->name
+                   << "' cannot spill from/to /DISCARD/";
           continue;
         }
         if (isSpill)
@@ -652,7 +669,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 
 void LinkerScript::discard(InputSectionBase &s) {
   if (&s == ctx.in.shStrTab.get())
-    error("discarding " + s.name + " section is not allowed");
+    ErrAlways(ctx) << "discarding " << s.name << " section is not allowed";
 
   s.markDead();
   s.parent = nullptr;
@@ -737,21 +754,21 @@ void LinkerScript::processSectionCommands() {
   // Process OVERWRITE_SECTIONS first so that it can overwrite the main script
   // or orphans.
   if (ctx.arg.enableNonContiguousRegions && !overwriteSections.empty())
-    error("OVERWRITE_SECTIONS cannot be used with "
-          "--enable-non-contiguous-regions");
+    ErrAlways(ctx) << "OVERWRITE_SECTIONS cannot be used with "
+                      "--enable-non-contiguous-regions";
   DenseMap<CachedHashStringRef, OutputDesc *> map;
   size_t i = 0;
   for (OutputDesc *osd : overwriteSections) {
     OutputSection *osec = &osd->osec;
     if (process(osec) &&
         !map.try_emplace(CachedHashStringRef(osec->name), osd).second)
-      warn("OVERWRITE_SECTIONS specifies duplicate " + osec->name);
+      Warn(ctx) << "OVERWRITE_SECTIONS specifies duplicate " << osec->name;
   }
   for (SectionCommand *&base : sectionCommands) {
     if (auto *osd = dyn_cast<OutputDesc>(base)) {
       OutputSection *osec = &osd->osec;
       if (OutputDesc *overwrite = map.lookup(CachedHashStringRef(osec->name))) {
-        log(overwrite->osec.location + " overwrites " + osec->name);
+        Log(ctx) << overwrite->osec.location << " overwrites " << osec->name;
         overwrite->osec.sectionIndex = i++;
         base = overwrite;
       } else if (process(osec)) {
@@ -795,9 +812,9 @@ void LinkerScript::processSectionCommands() {
         for (InputSectionBase *isec : isd->sectionBases)
           if (isa<PotentialSpillSection>(isec) ||
               potentialSpillLists.contains(isec))
-            errorOrWarn("section '" + isec->name +
-                        "' cannot spill from/to INSERT section '" + os->name +
-                        "'");
+            Err(ctx) << "section '" << isec->name
+                     << "' cannot spill from/to INSERT section '" << os->name
+                     << "'";
       }
     }
   }
@@ -815,8 +832,8 @@ void LinkerScript::processSectionCommands() {
     for (InputSectionDescription *isd : sc->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
         if (sec->parent && isa<SectionClass>(sec->parent)) {
-          errorOrWarn("section class '" + sec->parent->name +
-                      "' is unreferenced");
+          Err(ctx) << "section class '" << sec->parent->name
+                   << "' is unreferenced";
           goto nextClass;
         }
       }
@@ -830,7 +847,7 @@ void LinkerScript::processSymbolAssignments() {
   // sh_shndx should not be SHN_UNDEF or SHN_ABS. Create a dummy aether section
   // that fills the void outside a section. It has an index of one, which is
   // indistinguishable from any other regular section index.
-  aether = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
+  aether = std::make_unique<OutputSection>(ctx, "", 0, SHF_ALLOC);
   aether->sectionIndex = 1;
 
   // `st` captures the local AddressState and makes it accessible deliberately.
@@ -838,7 +855,7 @@ void LinkerScript::processSymbolAssignments() {
   // current state through to a lambda function created by the script parser.
   AddressState st(*this);
   state = &st;
-  st.outSec = aether;
+  st.outSec = aether.get();
 
   for (SectionCommand *cmd : sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
@@ -1052,9 +1069,9 @@ void LinkerScript::diagnoseOrphanHandling() const {
 
     StringRef name = getOutputSectionName(sec);
     if (ctx.arg.orphanHandling == OrphanHandlingPolicy::Error)
-      error(toString(sec) + " is being placed in '" + name + "'");
+      ErrAlways(ctx) << sec << " is being placed in '" << name << "'";
     else
-      warn(toString(sec) + " is being placed in '" + name + "'");
+      Warn(ctx) << sec << " is being placed in '" << name << "'";
   }
 }
 
@@ -1064,7 +1081,8 @@ void LinkerScript::diagnoseMissingSGSectionAddress() const {
 
   OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
   if (sec && !sec->addrExpr && !ctx.arg.sectionStartMap.count(".gnu.sgstubs"))
-    error("no address assigned to the veneers output section " + sec->name);
+    ErrAlways(ctx) << "no address assigned to the veneers output section "
+                   << sec->name;
 }
 
 // This function searches for a memory region to place the given output
@@ -1082,8 +1100,9 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
           return ByteCommand::classof(comm);
         });
     if (!sec->memoryRegionName.empty() && hasInputOrByteCommand)
-      warn("ignoring memory region assignment for non-allocatable section '" +
-           sec->name + "'");
+      Warn(ctx)
+          << "ignoring memory region assignment for non-allocatable section '"
+          << sec->name << "'";
     return {nullptr, nullptr};
   }
 
@@ -1092,7 +1111,8 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   if (!sec->memoryRegionName.empty()) {
     if (MemoryRegion *m = memoryRegions.lookup(sec->memoryRegionName))
       return {m, m};
-    error("memory region '" + sec->memoryRegionName + "' not declared");
+    ErrAlways(ctx) << "memory region '" << sec->memoryRegionName
+                   << "' not declared";
     return {nullptr, nullptr};
   }
 
@@ -1114,7 +1134,8 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   }
 
   // Otherwise, no suitable region was found.
-  error("no memory region specified for section '" + sec->name + "'");
+  ErrAlways(ctx) << "no memory region specified for section '" << sec->name
+                 << "'";
   return {nullptr, nullptr};
 }
 
@@ -1396,7 +1417,8 @@ void LinkerScript::adjustSectionsAfterSorting() {
         if (MemoryRegion *m = memoryRegions.lookup(sec->lmaRegionName))
           sec->lmaRegion = m;
         else
-          error("memory region '" + sec->lmaRegionName + "' not declared");
+          ErrAlways(ctx) << "memory region '" << sec->lmaRegionName
+                         << "' not declared";
       }
       std::tie(sec->memRegion, hint) = findMemoryRegion(sec, hint);
     }
@@ -1429,17 +1451,17 @@ void LinkerScript::adjustSectionsAfterSorting() {
 // We check if the headers fit below the first allocated section. If there isn't
 // enough space for these sections, we'll remove them from the PT_LOAD segment,
 // and we'll also remove the PT_PHDR segment.
-void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
+void LinkerScript::allocateHeaders(
+    SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *sec : ctx.outputSections)
     if (sec->flags & SHF_ALLOC)
       min = std::min<uint64_t>(min, sec->addr);
 
-  auto it = llvm::find_if(
-      phdrs, [](const PhdrEntry *e) { return e->p_type == PT_LOAD; });
+  auto it = llvm::find_if(phdrs, [](auto &e) { return e->p_type == PT_LOAD; });
   if (it == phdrs.end())
     return;
-  PhdrEntry *firstPTLoad = *it;
+  PhdrEntry *firstPTLoad = it->get();
 
   bool hasExplicitHeaders =
       llvm::any_of(phdrsCommands, [](const PhdrsCommand &cmd) {
@@ -1462,14 +1484,13 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
 
   // Error if we were explicitly asked to allocate headers.
   if (hasExplicitHeaders)
-    error("could not allocate headers");
+    ErrAlways(ctx) << "could not allocate headers";
 
   ctx.out.elfHeader->ptLoad = nullptr;
   ctx.out.programHeaders->ptLoad = nullptr;
   firstPTLoad->firstSec = findFirstSection(ctx, firstPTLoad);
 
-  llvm::erase_if(phdrs,
-                 [](const PhdrEntry *e) { return e->p_type == PT_PHDR; });
+  llvm::erase_if(phdrs, [](auto &e) { return e->p_type == PT_PHDR; });
 }
 
 LinkerScript::AddressState::AddressState(const LinkerScript &script) {
@@ -1502,7 +1523,7 @@ LinkerScript::assignAddresses() {
   AddressState st(*this);
   state = &st;
   errorOnMissingSection = true;
-  st.outSec = aether;
+  st.outSec = aether.get();
   recordedErrors.clear();
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
@@ -1632,24 +1653,25 @@ void LinkerScript::erasePotentialSpillSections() {
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
-  SmallVector<PhdrEntry *, 0> ret;
+SmallVector<std::unique_ptr<PhdrEntry>, 0> LinkerScript::createPhdrs() {
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &cmd : phdrsCommands) {
-    PhdrEntry *phdr = make<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
+    auto phdr =
+        std::make_unique<PhdrEntry>(ctx, cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
-      phdr->add(ctx.out.elfHeader);
+      phdr->add(ctx.out.elfHeader.get());
     if (cmd.hasPhdrs)
-      phdr->add(ctx.out.programHeaders);
+      phdr->add(ctx.out.programHeaders.get());
 
     if (cmd.lmaExpr) {
       phdr->p_paddr = cmd.lmaExpr().getValue();
       phdr->hasLMA = true;
     }
-    ret.push_back(phdr);
+    ret.push_back(std::move(phdr));
   }
 
   // Add output sections to program headers.
@@ -1682,7 +1704,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
   if (name == ".") {
     if (state)
       return {state->outSec, false, dot - state->outSec->addr, loc};
-    error(loc + ": unable to get location counter value");
+    ErrAlways(ctx) << loc << ": unable to get location counter value";
     return 0;
   }
 
@@ -1700,7 +1722,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
         return {nullptr, false, 0, loc};
   }
 
-  error(loc + ": symbol not found: " + name);
+  ErrAlways(ctx) << loc << ": symbol not found: " << name;
   return 0;
 }
 
@@ -1722,8 +1744,8 @@ SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
     if (std::optional<size_t> idx = getPhdrIndex(phdrsCommands, s))
       ret.push_back(*idx);
     else if (s != "NONE")
-      error(cmd->location + ": program header '" + s +
-            "' is not listed in PHDRS");
+      ErrAlways(ctx) << cmd->location << ": program header '" << s
+                     << "' is not listed in PHDRS";
   }
   return ret;
 }
@@ -1760,25 +1782,25 @@ void LinkerScript::recordError(const Twine &msg) {
   msg.toVector(str);
 }
 
-static void checkMemoryRegion(const MemoryRegion *region,
+static void checkMemoryRegion(Ctx &ctx, const MemoryRegion *region,
                               const OutputSection *osec, uint64_t addr) {
   uint64_t osecEnd = addr + osec->size;
   uint64_t regionEnd = region->getOrigin() + region->getLength();
   if (osecEnd > regionEnd) {
-    error("section '" + osec->name + "' will not fit in region '" +
-          region->name + "': overflowed by " + Twine(osecEnd - regionEnd) +
-          " bytes");
+    ErrAlways(ctx) << "section '" << osec->name << "' will not fit in region '"
+                   << region->name << "': overflowed by "
+                   << (osecEnd - regionEnd) << " bytes";
   }
 }
 
 void LinkerScript::checkFinalScriptConditions() const {
   for (StringRef err : recordedErrors)
-    errorOrWarn(err);
+    Err(ctx) << err;
   for (const OutputSection *sec : ctx.outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
-      checkMemoryRegion(memoryRegion, sec, sec->addr);
+      checkMemoryRegion(ctx, memoryRegion, sec, sec->addr);
     if (const MemoryRegion *lmaRegion = sec->lmaRegion)
-      checkMemoryRegion(lmaRegion, sec, sec->getLMA());
+      checkMemoryRegion(ctx, lmaRegion, sec, sec->getLMA());
   }
 }
 
@@ -1798,7 +1820,7 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
   DenseSet<StringRef> added;
   SmallVector<const SmallVector<StringRef, 0> *, 0> symRefsVec;
   for (const auto &[name, symRefs] : provideMap)
-    if (shouldAddProvideSym(ctx, name) && added.insert(name).second)
+    if (shouldAddProvideSym(name) && added.insert(name).second)
       symRefsVec.push_back(&symRefs);
   while (symRefsVec.size()) {
     for (StringRef name : *symRefsVec.pop_back_val()) {
@@ -1806,7 +1828,7 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
       // Prevent the symbol from being discarded by --gc-sections.
       referencedSymbols.push_back(name);
       auto it = provideMap.find(name);
-      if (it != provideMap.end() && shouldAddProvideSym(ctx, name) &&
+      if (it != provideMap.end() && shouldAddProvideSym(name) &&
           added.insert(name).second) {
         symRefsVec.push_back(&it->second);
       }
@@ -1814,14 +1836,17 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
   }
 }
 
-bool LinkerScript::shouldAddProvideSym(Ctx &ctx, StringRef symName) {
+bool LinkerScript::shouldAddProvideSym(StringRef symName) {
   // This function is called before and after garbage collection. To prevent
   // undefined references from the RHS, the result of this function for a
-  // symbol must be the same for each call. We use isUsedInRegularObj to not
-  // change the return value of a demoted symbol. The exportDynamic condition,
-  // while not so accurate, allows PROVIDE to define a symbol referenced by a
-  // DSO.
+  // symbol must be the same for each call. We use unusedProvideSyms to not
+  // change the return value of a demoted symbol.
   Symbol *sym = ctx.symtab->find(symName);
-  return sym && !sym->isDefined() && !sym->isCommon() &&
-         (sym->isUsedInRegularObj || sym->exportDynamic);
+  if (!sym)
+    return false;
+  if (sym->isDefined() || sym->isCommon()) {
+    unusedProvideSyms.insert(sym);
+    return false;
+  }
+  return !unusedProvideSyms.count(sym);
 }

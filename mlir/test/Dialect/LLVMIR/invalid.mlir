@@ -91,14 +91,14 @@ func.func @alloca_non_integer_alignment() {
 // -----
 
 func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (), i64
 }
 
 // -----
 
 func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (!llvm.ptr), i64
 }
 
@@ -235,6 +235,7 @@ func.func @call_missing_ptr_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func private @standard_func_callee()
 
 func.func @call_missing_ptr_type(%arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected direct call to have 1 trailing type}}
   llvm.call @standard_func_callee(%arg) : !llvm.ptr, (i8) -> (i8)
   llvm.return
@@ -251,6 +252,7 @@ func.func @call_non_pointer_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 // -----
 
 func.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected trailing function type}}
   llvm.call %callee(%arg) : !llvm.ptr, !llvm.func<i8 (i8)>
   llvm.return
@@ -1189,6 +1191,14 @@ func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 
 // -----
 
+func.func @mapa(%a: !llvm.ptr, %b : i32) {
+  // expected-error @below {{`res` and `a` should have the same type}}
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<3>
+  return
+}
+
+// -----
+
 func.func @gep_struct_variable(%arg0: !llvm.ptr, %arg1: i32, %arg2: i32) {
   // expected-error @below {{op expected index 1 indexing a struct to be constant}}
   llvm.getelementptr %arg0[%arg1, %arg1] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<(i32)>
@@ -1695,3 +1705,53 @@ llvm.func @wrong_number_of_bundle_tags() {
   } : (i32, i32) -> ()
   llvm.return
 }
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{expects type to be a valid element type for an LLVM global alias}}
+llvm.mlir.alias external @y : !llvm.label {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{linkage not supported in aliases, available options}}
+llvm.mlir.alias appending @y2 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1 {{initializer region must always return a pointer}}
+llvm.mlir.alias external @y3 : i32 {
+  %c = llvm.mlir.constant(42 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y4 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  // expected-error@+1 {{ops with side effects are not allowed in alias initializers}}
+  %2 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y5 : i32 {
+  // expected-error@+1 {{pointer address space must match address space}}
+  %0 = llvm.mlir.addressof @x : !llvm.ptr<4>
+  llvm.return %0 : !llvm.ptr<4>
+}
+

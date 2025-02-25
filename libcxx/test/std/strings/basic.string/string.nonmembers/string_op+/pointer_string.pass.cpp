@@ -16,68 +16,49 @@
 //   basic_string<charT,traits,Allocator>&&
 //   operator+(const charT* lhs, basic_string<charT,traits,Allocator>&& rhs); // constexpr since C++20
 
+#include <cassert>
 #include <string>
 #include <utility>
-#include <cassert>
 
 #include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test0(const typename S::value_type* lhs, const S& rhs, const S& x) {
-  assert(lhs + rhs == x);
-}
-
-#if TEST_STD_VER >= 11
-template <class S>
-TEST_CONSTEXPR_CXX20 void test1(const typename S::value_type* lhs, S&& rhs, const S& x) {
-  assert(lhs + std::move(rhs) == x);
-}
-#endif
-
-template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
-  test0("", S(""), S(""));
-  test0("", S("12345"), S("12345"));
-  test0("", S("1234567890"), S("1234567890"));
-  test0("", S("12345678901234567890"), S("12345678901234567890"));
-  test0("abcde", S(""), S("abcde"));
-  test0("abcde", S("12345"), S("abcde12345"));
-  test0("abcde", S("1234567890"), S("abcde1234567890"));
-  test0("abcde", S("12345678901234567890"), S("abcde12345678901234567890"));
-  test0("abcdefghij", S(""), S("abcdefghij"));
-  test0("abcdefghij", S("12345"), S("abcdefghij12345"));
-  test0("abcdefghij", S("1234567890"), S("abcdefghij1234567890"));
-  test0("abcdefghij", S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-  test0("abcdefghijklmnopqrst", S(""), S("abcdefghijklmnopqrst"));
-  test0("abcdefghijklmnopqrst", S("12345"), S("abcdefghijklmnopqrst12345"));
-  test0("abcdefghijklmnopqrst", S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-  test0("abcdefghijklmnopqrst", S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+  const char* test_data[2][4] = {
+      {"", "abcde", "abcdefghij", "abcdefghijklmnopqrst"}, {"", "12345", "1234567890", "12345678901234567890"}};
 
+  const char* results[4][4] = {
+      {"", "12345", "1234567890", "12345678901234567890"},
+      {"abcde", "abcde12345", "abcde1234567890", "abcde12345678901234567890"},
+      {"abcdefghij", "abcdefghij12345", "abcdefghij1234567890", "abcdefghij12345678901234567890"},
+      {"abcdefghijklmnopqrst",
+       "abcdefghijklmnopqrst12345",
+       "abcdefghijklmnopqrst1234567890",
+       "abcdefghijklmnopqrst12345678901234567890"}};
+
+  for (size_t i = 0; i != 4; ++i) {
+    for (size_t k = 0; k != 4; ++k) {
+      { // operator+(const value_type*, const string&);
+        const char* lhs = test_data[0][i];
+        const S rhs(test_data[1][k]);
+        assert(lhs + rhs == results[i][k]);
+      }
 #if TEST_STD_VER >= 11
-  test1("", S(""), S(""));
-  test1("", S("12345"), S("12345"));
-  test1("", S("1234567890"), S("1234567890"));
-  test1("", S("12345678901234567890"), S("12345678901234567890"));
-  test1("abcde", S(""), S("abcde"));
-  test1("abcde", S("12345"), S("abcde12345"));
-  test1("abcde", S("1234567890"), S("abcde1234567890"));
-  test1("abcde", S("12345678901234567890"), S("abcde12345678901234567890"));
-  test1("abcdefghij", S(""), S("abcdefghij"));
-  test1("abcdefghij", S("12345"), S("abcdefghij12345"));
-  test1("abcdefghij", S("1234567890"), S("abcdefghij1234567890"));
-  test1("abcdefghij", S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-  test1("abcdefghijklmnopqrst", S(""), S("abcdefghijklmnopqrst"));
-  test1("abcdefghijklmnopqrst", S("12345"), S("abcdefghijklmnopqrst12345"));
-  test1("abcdefghijklmnopqrst", S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-  test1("abcdefghijklmnopqrst", S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+      { // operator+(const value_type*, string&&);
+        const char* lhs = test_data[0][i];
+        S rhs(test_data[1][k]);
+        assert(lhs + std::move(rhs) == results[i][k]);
+      }
 #endif
+    }
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
-  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
   return true;
@@ -85,7 +66,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER > 17
+#if TEST_STD_VER >= 20
   static_assert(test());
 #endif
 

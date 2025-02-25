@@ -54,19 +54,15 @@ public:
   static constexpr unsigned FirstStackSlot = 1u << 30;
   static constexpr unsigned VirtualRegFlag = 1u << 31;
 
-  /// This is the portion of the positive number space that is not a physical
-  /// register. StackSlot values do not exist in the MC layer, see
-  /// Register::isStackSlot() for the more information on them.
-  ///
-  static constexpr bool isStackSlot(unsigned Reg) {
-    return FirstStackSlot <= Reg && Reg < VirtualRegFlag;
-  }
-
   /// Return true if the specified register number is in
   /// the physical register namespace.
   static constexpr bool isPhysicalRegister(unsigned Reg) {
     return FirstPhysicalReg <= Reg && Reg < FirstStackSlot;
   }
+
+  /// Return true if the specified register number is in the physical register
+  /// namespace.
+  constexpr bool isPhysical() const { return isPhysicalRegister(Reg); }
 
   constexpr operator unsigned() const { return Reg; }
 

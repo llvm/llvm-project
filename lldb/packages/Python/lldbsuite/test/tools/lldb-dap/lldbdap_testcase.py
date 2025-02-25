@@ -238,9 +238,10 @@ class DAPTestCaseBase(TestBase):
     def stepIn(
         self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
     ):
-        self.dap_server.request_stepIn(
+        response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
+        self.assertTrue(response["success"])
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
@@ -367,7 +368,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,
@@ -451,7 +452,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,

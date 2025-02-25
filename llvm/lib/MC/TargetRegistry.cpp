@@ -31,8 +31,7 @@ MCStreamer *Target::createMCObjectStreamer(
   case Triple::UnknownObjectFormat:
     llvm_unreachable("Unknown object format");
   case Triple::COFF:
-    assert((T.isOSWindows() || T.isUEFI()) &&
-           "only Windows and UEFI COFF are supported");
+    assert(T.isOSWindowsOrUEFI() && "only Windows and UEFI COFF are supported");
     S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
                            std::move(Emitter));
     break;
@@ -126,7 +125,7 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
                      [&](const Target &T) { return ArchName == T.getName(); });
 
     if (I == targets().end()) {
-      Error = ("invalid target '" + ArchName + "'.\n").str();
+      Error = ("invalid target '" + ArchName + "'.").str();
       return nullptr;
     }
 

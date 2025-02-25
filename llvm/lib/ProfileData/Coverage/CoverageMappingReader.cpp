@@ -14,7 +14,6 @@
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -494,6 +492,20 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
   return Tag == Counter::Zero;
 }
 
+/// Determine if we should skip the first byte of the section content
+static bool shouldSkipSectionFirstByte(SectionRef &Section) {
+  const ObjectFile *Obj = Section.getObject();
+  // If this is a linked PE/COFF file, then we have to skip over the null byte
+  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
+  // If the name section is .lprfcovnames, it doesn't have the null byte at the
+  // beginning.
+  if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      if (*NameOrErr != getInstrProfSectionName(IPSK_covname, Triple::COFF))
+        return true;
+  return false;
+}
+
 Error InstrProfSymtab::create(SectionRef &Section) {
   Expected<StringRef> DataOrErr = Section.getContents();
   if (!DataOrErr)
@@ -501,15 +513,8 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   Data = *DataOrErr;
   Address = Section.getAddress();
 
-  // If this is a linked PE/COFF file, then we have to skip over the null byte
-  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
-  // If the name section is .lprfcovnames, it doesn't have the null byte at the
-  // beginning.
-  const ObjectFile *Obj = Section.getObject();
-  if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
-    if (Expected<StringRef> NameOrErr = Section.getName())
-      if (*NameOrErr != getInstrProfSectionName(IPSK_covname, Triple::COFF))
-        Data = Data.drop_front(1);
+  if (shouldSkipSectionFirstByte(Section))
+    Data = Data.substr(1);
 
   return Error::success();
 }
@@ -1123,7 +1128,10 @@ lookupAllocatableSection(ObjectFile &OF, InstrProfSectKind IPSK) {
   auto ContentsOrErr = Section.getContents();
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
-  return std::make_pair(*ContentsOrErr, Section.getAddress());
+  auto Content = *ContentsOrErr;
+  if (shouldSkipSectionFirstByte(Section))
+    Content = Content.drop_front(1);
+  return std::make_pair(Content, Section.getAddress());
 }
 
 static Expected<std::unique_ptr<BinaryCoverageReader>>

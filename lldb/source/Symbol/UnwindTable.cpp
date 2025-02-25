@@ -86,6 +86,7 @@ void UnwindTable::Initialize() {
 void UnwindTable::ModuleWasUpdated() {
   std::lock_guard<std::mutex> guard(m_mutex);
   m_scanned_all_unwind_sources = false;
+  m_unwinds.clear();
 }
 
 UnwindTable::~UnwindTable() = default;
@@ -99,6 +100,12 @@ UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
       m_object_file_unwind_up->GetAddressRange(addr, range))
     return range;
 
+  // Check the symbol context
+  if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
+                         false, range) &&
+      range.GetBaseAddress().IsValid())
+    return range;
+
   // Does the eh_frame unwind info has a function bounds for this addr?
   if (m_eh_frame_up && m_eh_frame_up->GetAddressRange(addr, range))
     return range;
@@ -107,18 +114,12 @@ UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
   if (m_debug_frame_up && m_debug_frame_up->GetAddressRange(addr, range))
     return range;
 
-  // Check the symbol context
-  if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
-                         false, range) &&
-      range.GetBaseAddress().IsValid())
-    return range;
-
   return std::nullopt;
 }
 
 FuncUnwindersSP
 UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
-                                               SymbolContext &sc) {
+                                               const SymbolContext &sc) {
   Initialize();
 
   std::lock_guard<std::mutex> guard(m_mutex);

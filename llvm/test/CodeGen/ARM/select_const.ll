@@ -645,12 +645,13 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB2-NEXT:    push {r7, lr}
 ; THUMB2-NEXT:    ands r12, r0, #1
 ; THUMB2-NEXT:    mov.w lr, #1
-; THUMB2-NEXT:    itt ne
-; THUMB2-NEXT:    movne.w lr, #65536
+; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne.w r12, #1
+; THUMB2-NEXT:    it ne
+; THUMB2-NEXT:    movne.w lr, #65536
 ; THUMB2-NEXT:    subs.w r0, lr, #1
-; THUMB2-NEXT:    sbc r1, r12, #0
 ; THUMB2-NEXT:    eor r3, r3, #1
+; THUMB2-NEXT:    sbc r1, r12, #0
 ; THUMB2-NEXT:    eor r2, r2, #65537
 ; THUMB2-NEXT:    orrs r2, r3
 ; THUMB2-NEXT:    itt ne
@@ -688,11 +689,12 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    ldr r6, .LCPI24_0
 ; THUMB-NEXT:    eors r2, r6
 ; THUMB-NEXT:    orrs r2, r3
+; THUMB-NEXT:    cmp r2, #0
 ; THUMB-NEXT:    beq .LBB24_5
 ; THUMB-NEXT:  @ %bb.4:
-; THUMB-NEXT:    movs r1, r4
+; THUMB-NEXT:    mov r12, r4
+; THUMB-NEXT:    mov r1, r12
 ; THUMB-NEXT:  .LBB24_5:
-; THUMB-NEXT:    cmp r2, #0
 ; THUMB-NEXT:    beq .LBB24_7
 ; THUMB-NEXT:  @ %bb.6:
 ; THUMB-NEXT:    movs r0, r5

@@ -30,6 +30,9 @@ struct GlobalMergeOptions {
   bool MergeExternal = true;
   /// Whether we should merge constant global variables.
   bool MergeConstantGlobals = false;
+  /// Whether we should merge constant global variables aggressively without
+  /// looking at use.
+  bool MergeConstAggressive = false;
   /// Whether we should try to optimize for size only.
   /// Currently, this applies a dead simple heuristic: only consider globals
   /// used in minsize functions for merging.

@@ -20,6 +20,7 @@
 ; CHECK-DAG: %[[PtrV2Long:.*]] = OpTypePointer Function %[[V2Long]]
 ; CHECK-DAG: %[[StructV2Long:.*]] = OpTypeStruct %[[V2Long]] %[[V2Long]]
 ; CHECK-DAG: %[[ZeroV2Long:.*]] = OpConstantNull %[[V2Long]]
+; CHECK-DAG: %[[StructLong:.*]] = OpTypeStruct %[[Long]] %[[Long]]
 
 ; CHECK: OpFunction
 ; CHECK: %[[A:.*]] = OpFunctionParameter %[[Char]]
@@ -84,6 +85,20 @@ define dso_local spir_func void @umulo_v2i64(<2 x i64> %a, <2 x i64> %b, ptr %p)
   ret void
 }
 
+; This is to check that we re-use the same OpTypeStruct for two identical references to { i64, i1 }.
+; CHECK: OpFunction
+; CHECK: OpIAddCarry %[[StructLong]]
+; CHECK: OpIAddCarry %[[StructLong]]
+; CHECK: OpReturn
+define void @foo(i64 %a, i64 %b) {
+  %r1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %r2 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %d1 = extractvalue  { i64, i1 } %r1, 0
+  %d2 = extractvalue  { i64, i1 } %r2, 0
+  ret void
+}
+
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8, i8)
 declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
+declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64)
 declare {<2 x i64>, <2 x i1>} @llvm.uadd.with.overflow.v2i64(<2 x i64>, <2 x i64>)

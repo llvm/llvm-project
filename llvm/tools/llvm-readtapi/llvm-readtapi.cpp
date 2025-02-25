@@ -45,12 +45,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "TapiOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "TapiOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -60,7 +61,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class TAPIOptTable : public opt::GenericOptTable {
 public:
-  TAPIOptTable() : opt::GenericOptTable(InfoTable) {
+  TAPIOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -255,15 +257,20 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     if (EC)
       reportError(IT->path() + ": " + EC.message());
 
-    // Skip header directories (include/Headers/PrivateHeaders) and module
-    // files.
+    // Skip header directories (include/Headers/PrivateHeaders).
     StringRef Path = IT->path();
-    if (Path.ends_with("/include") || Path.ends_with("/Headers") ||
-        Path.ends_with("/PrivateHeaders") || Path.ends_with("/Modules") ||
-        Path.ends_with(".map") || Path.ends_with(".modulemap")) {
-      IT.no_push();
-      continue;
+    if (sys::fs::is_directory(Path)) {
+      const StringRef Stem = sys::path::stem(Path);
+      if ((Stem == "include") || (Stem == "Headers") ||
+          (Stem == "PrivateHeaders") || (Stem == "Modules")) {
+        IT.no_push();
+        continue;
+      }
     }
+
+    // Skip module files too.
+    if (Path.ends_with(".map") || Path.ends_with(".modulemap"))
+      continue;
 
     // Check if the entry is a symlink. We don't follow symlinks but we record
     // their content.
@@ -325,8 +332,8 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
         continue;
       }
 
-      auto itr = SymLinks.insert({LinkTarget.c_str(), std::vector<SymLink>()});
-      itr.first->second.emplace_back(LinkSrc.str(), std::string(SymPath.str()));
+      SymLinks[LinkTarget.c_str()].emplace_back(LinkSrc.str(),
+                                                std::string(SymPath.str()));
 
       continue;
     }
@@ -382,7 +389,7 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     // libraries to stubify.
     StringRef LibToCheck = Found->second;
     for (int i = 0; i < 20; ++i) {
-      auto LinkIt = SymLinks.find(LibToCheck.str());
+      auto LinkIt = SymLinks.find(LibToCheck);
       if (LinkIt != SymLinks.end()) {
         for (auto &SymInfo : LinkIt->second) {
           SmallString<PATH_MAX> LinkSrc(SymInfo.SrcPath);

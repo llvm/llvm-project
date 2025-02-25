@@ -171,7 +171,7 @@ __int64 test_mul128(__int64 Multiplier,
                     __int64 *HighProduct) {
   return _mul128(Multiplier, Multiplicand, HighProduct);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test_mul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{[a-z_ ]*}}%HighProduct)
+// CHECK-X64-LABEL: define dso_local i64 @test_mul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{.*}} initializes((0, 8)) %HighProduct)
 // CHECK-X64: = sext i64 %Multiplier to i128
 // CHECK-X64: = sext i64 %Multiplicand to i128
 // CHECK-X64: = mul nsw i128 %
@@ -183,7 +183,7 @@ unsigned __int64 test_umul128(unsigned __int64 Multiplier,
                               unsigned __int64 *HighProduct) {
   return _umul128(Multiplier, Multiplicand, HighProduct);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test_umul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{[a-z_ ]*}}%HighProduct)
+// CHECK-X64-LABEL: define dso_local i64 @test_umul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{.*}} initializes((0, 8)) %HighProduct)
 // CHECK-X64: = zext i64 %Multiplier to i128
 // CHECK-X64: = zext i64 %Multiplicand to i128
 // CHECK-X64: = mul nuw i128 %

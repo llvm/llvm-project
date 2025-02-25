@@ -19,13 +19,11 @@
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -35,7 +33,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -645,8 +643,8 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
   };
 
   // For now we only care about float and double type fma.
-  unsigned VSSRCLimit = TRI->getRegPressureSetLimit(
-      *MBB->getParent(), PPC::RegisterPressureSets::VSSRC);
+  unsigned VSSRCLimit =
+      RegClassInfo->getRegPressureSetLimit(PPC::RegisterPressureSets::VSSRC);
 
   // Only reduce register pressure when pressure is high.
   return GetMBBPressure(MBB)[PPC::RegisterPressureSets::VSSRC] >
@@ -1969,7 +1967,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 void PPCInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -2013,12 +2012,10 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   NewMIs.back()->addMemOperand(MF, MMO);
 }
 
-void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void PPCInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -3107,9 +3104,16 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
   case TargetOpcode::LOAD_STACK_GUARD: {
-    assert(Subtarget.isTargetLinux() &&
-           "Only Linux target is expected to contain LOAD_STACK_GUARD");
-    const int64_t Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
+    auto M = MBB.getParent()->getFunction().getParent();
+    assert(
+        (Subtarget.isTargetLinux() || M->getStackProtectorGuard() == "tls") &&
+        "Only Linux target or tls mode are expected to contain "
+        "LOAD_STACK_GUARD");
+    int64_t Offset;
+    if (M->getStackProtectorGuard() == "tls")
+      Offset = M->getStackProtectorGuardOffset();
+    else
+      Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
     const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
     MI.setDesc(get(Subtarget.isPPC64() ? PPC::LD : PPC::LWZ));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
@@ -5242,6 +5246,214 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
 // We limit the max depth to track incoming values of PHIs or binary ops
 // (e.g. AND) to avoid excessive cost.
 const unsigned MAX_BINOP_DEPTH = 1;
+
+// This function will promote the instruction which defines the register `Reg`
+// in the parameter from a 32-bit to a 64-bit instruction if needed. The logic
+// used to check whether an instruction needs to be promoted or not is similar
+// to the logic used to check whether or not a defined register is sign or zero
+// extended within the function PPCInstrInfo::isSignOrZeroExtended.
+// Additionally, the `promoteInstr32To64ForElimEXTSW` function is recursive.
+// BinOpDepth does not count all of the recursions. The parameter BinOpDepth is
+// incremented  only when `promoteInstr32To64ForElimEXTSW` calls itself more
+// than once. This is done to prevent exponential recursion.
+void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
+                                                  MachineRegisterInfo *MRI,
+                                                  unsigned BinOpDepth,
+                                                  LiveVariables *LV) const {
+  if (!Reg.isVirtual())
+    return;
+
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return;
+
+  unsigned Opcode = MI->getOpcode();
+
+  switch (Opcode) {
+  case PPC::OR:
+  case PPC::ISEL:
+  case PPC::OR8:
+  case PPC::PHI: {
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      break;
+    unsigned OperandEnd = 3, OperandStride = 1;
+    if (Opcode == PPC::PHI) {
+      OperandEnd = MI->getNumOperands();
+      OperandStride = 2;
+    }
+
+    for (unsigned I = 1; I < OperandEnd; I += OperandStride) {
+      assert(MI->getOperand(I).isReg() && "Operand must be register");
+      promoteInstr32To64ForElimEXTSW(MI->getOperand(I).getReg(), MRI,
+                                     BinOpDepth + 1, LV);
+    }
+
+    break;
+  }
+  case PPC::COPY: {
+    // Refers to the logic of the `case PPC::COPY` statement in the function
+    // PPCInstrInfo::isSignOrZeroExtended().
+
+    Register SrcReg = MI->getOperand(1).getReg();
+    // In both ELFv1 and v2 ABI, method parameters and the return value
+    // are sign- or zero-extended.
+    const MachineFunction *MF = MI->getMF();
+    if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
+      // If this is a copy from another register, we recursively promote the
+      // source.
+      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+      return;
+    }
+
+    // From here on everything is SVR4ABI. COPY will be eliminated in the other
+    // pass, we do not need promote the COPY pseudo opcode.
+
+    if (SrcReg != PPC::X3)
+      // If this is a copy from another register, we recursively promote the
+      // source.
+      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+    return;
+  }
+  case PPC::ORI:
+  case PPC::XORI:
+  case PPC::ORIS:
+  case PPC::XORIS:
+  case PPC::ORI8:
+  case PPC::XORI8:
+  case PPC::ORIS8:
+  case PPC::XORIS8:
+    promoteInstr32To64ForElimEXTSW(MI->getOperand(1).getReg(), MRI, BinOpDepth,
+                                   LV);
+    break;
+  case PPC::AND:
+  case PPC::AND8:
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      break;
+
+    promoteInstr32To64ForElimEXTSW(MI->getOperand(1).getReg(), MRI,
+                                   BinOpDepth + 1, LV);
+    promoteInstr32To64ForElimEXTSW(MI->getOperand(2).getReg(), MRI,
+                                   BinOpDepth + 1, LV);
+    break;
+  }
+
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
+    return;
+
+  const PPCInstrInfo *TII =
+      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
+
+  // Map the 32bit to 64bit opcodes for instructions that are not signed or zero
+  // extended themselves, but may have operands who's destination registers of
+  // signed or zero extended instructions.
+  std::unordered_map<unsigned, unsigned> OpcodeMap = {
+      {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
+      {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
+      {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},
+      {PPC::AND, PPC::AND8}};
+
+  int NewOpcode = -1;
+  auto It = OpcodeMap.find(Opcode);
+  if (It != OpcodeMap.end()) {
+    // Set the new opcode to the mapped 64-bit version.
+    NewOpcode = It->second;
+  } else {
+    if (!TII->isSExt32To64(Opcode))
+      return;
+
+    // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
+    // map the 32-bit instruction with the `SExt32To64` flag to the 64-bit
+    // instruction with the same opcode.
+    NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
+  }
+
+  assert(NewOpcode != -1 &&
+         "Must have a 64-bit opcode to map the 32-bit opcode!");
+
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  const MCInstrDesc &MCID = TII->get(NewOpcode);
+  const TargetRegisterClass *NewRC =
+      TRI->getRegClass(MCID.operands()[0].RegClass);
+
+  Register SrcReg = MI->getOperand(0).getReg();
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+
+  // If the register class of the defined register in the 32-bit instruction
+  // is the same as the register class of the defined register in the promoted
+  // 64-bit instruction, we do not need to promote the instruction.
+  if (NewRC == SrcRC)
+    return;
+
+  DebugLoc DL = MI->getDebugLoc();
+  auto MBB = MI->getParent();
+
+  // Since the pseudo-opcode of the instruction is promoted from 32-bit to
+  // 64-bit, if the source reg class of the original instruction belongs to
+  // PPC::GRCRegClass or PPC::GPRC_and_GPRC_NOR0RegClass, we need to promote
+  // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
+  // respectively.
+  DenseMap<unsigned, Register> PromoteRegs;
+  for (unsigned i = 1; i < MI->getNumOperands(); i++) {
+    MachineOperand &Operand = MI->getOperand(i);
+    if (!Operand.isReg())
+      continue;
+
+    Register OperandReg = Operand.getReg();
+    if (!OperandReg.isVirtual())
+      continue;
+
+    const TargetRegisterClass *NewUsedRegRC =
+        TRI->getRegClass(MCID.operands()[i].RegClass);
+    const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);
+    if (NewUsedRegRC != OrgRC && (OrgRC == &PPC::GPRCRegClass ||
+                                  OrgRC == &PPC::GPRC_and_GPRC_NOR0RegClass)) {
+      // Promote the used 32-bit register to 64-bit register.
+      Register TmpReg = MRI->createVirtualRegister(NewUsedRegRC);
+      Register DstTmpReg = MRI->createVirtualRegister(NewUsedRegRC);
+      BuildMI(*MBB, MI, DL, TII->get(PPC::IMPLICIT_DEF), TmpReg);
+      BuildMI(*MBB, MI, DL, TII->get(PPC::INSERT_SUBREG), DstTmpReg)
+          .addReg(TmpReg)
+          .addReg(OperandReg)
+          .addImm(PPC::sub_32);
+      PromoteRegs[i] = DstTmpReg;
+    }
+  }
+
+  Register NewDefinedReg = MRI->createVirtualRegister(NewRC);
+
+  BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewDefinedReg);
+  MachineBasicBlock::instr_iterator Iter(MI);
+  --Iter;
+  MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
+  for (unsigned i = 1; i < MI->getNumOperands(); i++) {
+    if (PromoteRegs.find(i) != PromoteRegs.end())
+      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
+    else
+      Iter->addOperand(MI->getOperand(i));
+  }
+
+  for (unsigned i = 1; i < Iter->getNumOperands(); i++) {
+    MachineOperand &Operand = Iter->getOperand(i);
+    if (!Operand.isReg())
+      continue;
+    Register OperandReg = Operand.getReg();
+    if (!OperandReg.isVirtual())
+      continue;
+    LV->recomputeForSingleDefVirtReg(OperandReg);
+  }
+
+  MI->eraseFromParent();
+
+  // A defined register may be used by other instructions that are 32-bit.
+  // After the defined register is promoted to 64-bit for the promoted
+  // instruction, we need to demote the 64-bit defined register back to a
+  // 32-bit register
+  BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
+      .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
+  LV->recomputeForSingleDefVirtReg(NewDefinedReg);
+}
+
 // The isSignOrZeroExtended function is recursive. The parameter BinOpDepth
 // does not count all of the recursions. The parameter BinOpDepth is incremented
 // only when isSignOrZeroExtended calls itself more than once. This is done to
@@ -5481,7 +5693,11 @@ public:
     // so we don't need to generate any thing here.
   }
 
-  void disposed() override {
+  void disposed(LiveIntervals *LIS) override {
+    if (LIS) {
+      LIS->RemoveMachineInstrFromMaps(*Loop);
+      LIS->RemoveMachineInstrFromMaps(*LoopCount);
+    }
     Loop->eraseFromParent();
     // Ensure the loop setup instruction is deleted too.
     LoopCount->eraseFromParent();

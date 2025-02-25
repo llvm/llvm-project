@@ -203,7 +203,7 @@ YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
     else
       PrevGUIDIdx = GUIDIdx;
     YamlInlineTree.emplace_back(yaml::bolt::InlineTreeNode{
-        Node.ParentId - PrevParent, Node.InlineSite, GUIDIdx});
+        Node.ParentId - PrevParent, Node.InlineSite, GUIDIdx, 0, 0});
     PrevParent = Node.ParentId;
   }
   return {YamlInlineTree, InlineTreeNodeId};

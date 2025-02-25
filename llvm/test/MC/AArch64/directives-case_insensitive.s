@@ -32,10 +32,12 @@ fred .REQ x5
 
 .CFI_STARTPROC
 .CFI_NEGATE_RA_STATE
+.CFI_NEGATE_RA_STATE_WITH_PC
 .CFI_B_KEY_FRAME
 .CFI_ENDPROC
 // CHECK: .cfi_startproc
 // CHECK: .cfi_negate_ra_state
+// CHECK: .cfi_negate_ra_state_with_pc
 // CHECK: .cfi_b_key_frame
 // CHECK: .cfi_endproc
 

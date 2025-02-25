@@ -31,6 +31,7 @@ add_flang_library(FortranSemantics
   definable.cpp
   expression.cpp
   mod-file.cpp
+  openmp-modifiers.cpp
   pointer-assignment.cpp
   program-tree.cpp
   resolve-labels.cpp
@@ -52,7 +53,7 @@ add_flang_library(FortranSemantics
   omp_gen
 
   LINK_LIBS
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
 

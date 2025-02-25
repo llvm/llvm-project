@@ -239,12 +239,13 @@ void DebuggerThread::DebugLoop() {
     BOOL wait_result = WaitForDebugEvent(&dbe, INFINITE);
     if (wait_result) {
       DWORD continue_status = DBG_CONTINUE;
+      bool shutting_down = m_is_shutting_down;
       switch (dbe.dwDebugEventCode) {
       default:
         llvm_unreachable("Unhandle debug event code!");
       case EXCEPTION_DEBUG_EVENT: {
-        ExceptionResult status =
-            HandleExceptionEvent(dbe.u.Exception, dbe.dwThreadId);
+        ExceptionResult status = HandleExceptionEvent(
+            dbe.u.Exception, dbe.dwThreadId, shutting_down);
 
         if (status == ExceptionResult::MaskException)
           continue_status = DBG_CONTINUE;
@@ -292,6 +293,45 @@ void DebuggerThread::DebugLoop() {
 
       ::ContinueDebugEvent(dbe.dwProcessId, dbe.dwThreadId, continue_status);
 
+      // We have to DebugActiveProcessStop after ContinueDebugEvent, otherwise
+      // the target process will crash
+      if (shutting_down) {
+        // A breakpoint that occurs while `m_pid_to_detach` is non-zero is a
+        // magic exception that we use simply to wake up the DebuggerThread so
+        // that we can close out the debug loop.
+        if (m_pid_to_detach != 0 &&
+            (dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                 EXCEPTION_BREAKPOINT ||
+             dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                 STATUS_WX86_BREAKPOINT)) {
+          LLDB_LOG(log,
+                   "Breakpoint exception is cue to detach from process {0:x}",
+                   m_pid_to_detach.load());
+
+          // detaching with leaving breakpoint exception event on the queue may
+          // cause target process to crash so process events as possible since
+          // target threads are running at this time, there is possibility to
+          // have some breakpoint exception between last WaitForDebugEvent and
+          // DebugActiveProcessStop but ignore for now.
+          while (WaitForDebugEvent(&dbe, 0)) {
+            continue_status = DBG_CONTINUE;
+            if (dbe.dwDebugEventCode == EXCEPTION_DEBUG_EVENT &&
+                !(dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                      EXCEPTION_BREAKPOINT ||
+                  dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                      STATUS_WX86_BREAKPOINT ||
+                  dbe.u.Exception.ExceptionRecord.ExceptionCode ==
+                      EXCEPTION_SINGLE_STEP))
+              continue_status = DBG_EXCEPTION_NOT_HANDLED;
+            ::ContinueDebugEvent(dbe.dwProcessId, dbe.dwThreadId,
+                                 continue_status);
+          }
+
+          ::DebugActiveProcessStop(m_pid_to_detach);
+          m_detached = true;
+        }
+      }
+
       if (m_detached) {
         should_debug = false;
       }
@@ -310,25 +350,18 @@ void DebuggerThread::DebugLoop() {
 
 ExceptionResult
 DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
-                                     DWORD thread_id) {
+                                     DWORD thread_id, bool shutting_down) {
   Log *log = GetLog(WindowsLog::Event | WindowsLog::Exception);
-  if (m_is_shutting_down) {
-    // A breakpoint that occurs while `m_pid_to_detach` is non-zero is a magic
-    // exception that
-    // we use simply to wake up the DebuggerThread so that we can close out the
-    // debug loop.
-    if (m_pid_to_detach != 0 &&
+  if (shutting_down) {
+    bool is_breakpoint =
         (info.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT ||
-         info.ExceptionRecord.ExceptionCode == STATUS_WX86_BREAKPOINT)) {
-      LLDB_LOG(log, "Breakpoint exception is cue to detach from process {0:x}",
-               m_pid_to_detach.load());
-      ::DebugActiveProcessStop(m_pid_to_detach);
-      m_detached = true;
-    }
+         info.ExceptionRecord.ExceptionCode == STATUS_WX86_BREAKPOINT);
 
     // Don't perform any blocking operations while we're shutting down.  That
     // will cause TerminateProcess -> WaitForSingleObject to time out.
-    return ExceptionResult::SendToApplication;
+    // We should not send breakpoint exceptions to the application.
+    return is_breakpoint ? ExceptionResult::MaskException
+                         : ExceptionResult::SendToApplication;
   }
 
   bool first_chance = (info.dwFirstChance != 0);

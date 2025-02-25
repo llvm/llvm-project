@@ -70,6 +70,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasStrictFP = false;
   PointerWidth = PointerAlign = 32;
   BoolWidth = BoolAlign = 8;
+  ShortWidth = ShortAlign = 16;
   IntWidth = IntAlign = 32;
   LongWidth = LongAlign = 32;
   LongLongWidth = LongLongAlign = 64;
@@ -140,6 +141,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   UseLeadingZeroLengthBitfield = true;
   UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
+  LargestOverSizedBitfieldContainer = 64;
   MaxAlignedAttribute = 0;
   HalfFormat = &llvm::APFloat::IEEEhalf();
   FloatFormat = &llvm::APFloat::IEEEsingle();
@@ -153,7 +155,6 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
-  IsRenderScriptTarget = false;
   HasAArch64SVETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
@@ -425,6 +426,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   // HLSL explicitly defines the sizes and formats of some data types, and we
   // need to conform to those regardless of what architecture you are targeting.
   if (Opts.HLSL) {
+    BoolWidth = BoolAlign = 32;
     LongWidth = LongAlign = 64;
     if (!Opts.NativeHalfType) {
       HalfFormat = &llvm::APFloat::IEEEsingle();
@@ -437,6 +439,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     // what these normally are for the target.
     // We also define long long and long double here, although the
     // OpenCL standard only mentions these as "reserved".
+    ShortWidth = ShortAlign = 16;
     IntWidth = IntAlign = 32;
     LongWidth = LongAlign = 64;
     LongLongWidth = LongLongAlign = 128;

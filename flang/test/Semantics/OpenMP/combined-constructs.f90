@@ -33,7 +33,7 @@ program main
   enddo
   !$omp end target parallel
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
+  !ERROR: 'variable-category' modifier is required
   !$omp target parallel defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -80,7 +80,7 @@ program main
   enddo
   !$omp end target parallel do
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
+  !ERROR: 'variable-category' modifier is required
   !$omp target parallel do defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -140,7 +140,7 @@ program main
   enddo
   !$omp end target teams
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
+  !ERROR: 'variable-category' modifier is required
   !$omp target teams defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -240,7 +240,7 @@ program main
   enddo
   !$omp end target teams distribute
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
+  !ERROR: 'variable-category' modifier is required
   !$omp target teams distribute defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -333,7 +333,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
+  !ERROR: 'variable-category' modifier is required
   !$omp target teams distribute parallel do defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -433,7 +433,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
+  !ERROR: 'variable-category' modifier is required
   !$omp target teams distribute parallel do simd defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14

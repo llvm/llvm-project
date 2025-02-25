@@ -28,9 +28,9 @@
 /// polymorphism as outlined in the "Value Semantics and Concept-based
 /// Polymorphism" talk (or its abbreviated sibling "Inheritance Is The Base
 /// Class of Evil") by Sean Parent:
-/// * http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations
+/// * https://sean-parent.stlab.cc/papers-and-presentations
 /// * http://www.youtube.com/watch?v=_BpMYeUFXv8
-/// * http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil
+/// * https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil
 ///
 //===----------------------------------------------------------------------===//
 
@@ -398,6 +398,11 @@ public:
     AnalysisResultLists.clear();
   }
 
+  /// Returns true if the specified analysis pass is registered.
+  template <typename PassT> bool isPassRegistered() const {
+    return AnalysisPasses.count(PassT::ID());
+  }
+
   /// Get the result of an analysis pass for a given IR unit.
   ///
   /// Runs the analysis if a cached result is not available.
@@ -458,10 +463,9 @@ public:
   /// and this function returns true.
   ///
   /// (Note: Although the return value of this function indicates whether or not
-  /// an analysis was previously registered, there intentionally isn't a way to
-  /// query this directly.  Instead, you should just register all the analyses
-  /// you might want and let this class run them lazily.  This idiom lets us
-  /// minimize the number of times we have to look up analyses in our
+  /// an analysis was previously registered, you should just register all the
+  /// analyses you might want and let this class run them lazily.  This idiom
+  /// lets us minimize the number of times we have to look up analyses in our
   /// hashtable.)
   template <typename PassBuilderT>
   bool registerPass(PassBuilderT &&PassBuilder) {

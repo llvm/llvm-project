@@ -14,7 +14,9 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
+#include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -27,7 +29,29 @@ class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
 
+extern cl::opt<bool> VerifyEachVPlan;
+
 struct VPlanTransforms {
+  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
+  /// arguments to the transform. Returns the boolean returned by the transform.
+  template <typename... ArgsTy>
+  static bool runPass(bool (*Transform)(VPlan &, ArgsTy...), VPlan &Plan,
+                      typename std::remove_reference<ArgsTy>::type &...Args) {
+    bool Res = Transform(Plan, Args...);
+    if (VerifyEachVPlan)
+      verifyVPlanIsValid(Plan);
+    return Res;
+  }
+  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
+  /// arguments to the transform.
+  template <typename... ArgsTy>
+  static void runPass(void (*Fn)(VPlan &, ArgsTy...), VPlan &Plan,
+                      typename std::remove_reference<ArgsTy>::type &...Args) {
+    Fn(Plan, Args...);
+    if (VerifyEachVPlan)
+      verifyVPlanIsValid(Plan);
+  }
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
   static void
@@ -36,11 +60,11 @@ struct VPlanTransforms {
                                 GetIntOrFpInductionDescriptor,
                             ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
-  /// Sink users of fixed-order recurrences after the recipe defining their
-  /// previous value. Then introduce FirstOrderRecurrenceSplice VPInstructions
-  /// to combine the value from the recurrence phis and previous values. The
-  /// current implementation assumes all users can be sunk after the previous
-  /// value, which is enforced by earlier legality checks.
+  /// Try to have all users of fixed-order recurrences appear after the recipe
+  /// defining their previous value, by either sinking users or hoisting recipes
+  /// defining their previous value (and its operands). Then introduce
+  /// FirstOrderRecurrenceSplice VPInstructions to combine the value from the
+  /// recurrence phis and previous values.
   /// \returns true if all users of fixed-order recurrences could be re-arranged
   /// as needed or false if it is not possible. In the latter case, \p Plan is
   /// not valid.
@@ -100,7 +124,8 @@ struct VPlanTransforms {
   /// TODO: Replace BlockNeedsPredication callback with retrieving info from
   ///       VPlan directly.
   static void dropPoisonGeneratingRecipes(
-      VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication);
+      VPlan &Plan,
+      const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
   /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
   /// replaces all uses except the canonical IV increment of
@@ -108,7 +133,9 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   /// \returns true if the transformation succeeds, or false if it doesn't.
-  static bool tryAddExplicitVectorLength(VPlan &Plan);
+  static bool
+  tryAddExplicitVectorLength(VPlan &Plan,
+                             const std::optional<unsigned> &MaxEVLSafeElements);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
@@ -117,10 +144,35 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
+      VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
+
+  /// Update \p Plan to account for the uncountable early exit block in \p
+  /// UncountableExitingBlock by
+  ///  * updating the condition exiting the vector loop to include the early
+  ///    exit conditions
+  ///  * splitting the original middle block to branch to the early exit block
+  ///    if taken.
+  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+                                         Loop *OrigLoop,
+                                         BasicBlock *UncountableExitingBlock,
+                                         VPRecipeBuilder &RecipeBuilder);
+
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void convertToConcreteRecipes(VPlan &Plan);
+
+  /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
+  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
+  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
+
+  /// If there's a single exit block, optimize its phi recipes that use exiting
+  /// IV values by feeding them precomputed end values instead, possibly taken
+  /// one step backwards.
+  static void
+  optimizeInductionExitUsers(VPlan &Plan,
+                             DenseMap<VPValue *, VPValue *> &EndValues);
 };
 
 } // namespace llvm

@@ -79,7 +79,7 @@ declare void @escape(ptr)
 define i1 @compare_and_call_after() {
 ; CHECK-LABEL: @compare_and_call_after(
 ; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(24) ptr @malloc(i64 24)
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull !0
+; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M]], [[LGP]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[ESCAPE_CALL:%.*]], label [[JUST_RETURN:%.*]]
 ; CHECK:       escape_call:
@@ -151,7 +151,7 @@ define ptr @compare_ret_escape(ptr %c) {
 ; CHECK:       retst:
 ; CHECK-NEXT:    ret ptr [[M]]
 ; CHECK:       chk:
-; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull !0
+; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull [[META0]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M]], [[LGP]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[RETST]], label [[CHK2:%.*]]
 ; CHECK:       chk2:
@@ -311,7 +311,7 @@ declare void @unknown(ptr)
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
 ; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    call void @unknown(ptr nocapture [[M]])
+; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M]], inttoptr (i64 2048 to ptr)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -325,7 +325,7 @@ define i1 @consistent_nocapture_inttoptr() {
 define i1 @consistent_nocapture_offset() {
 ; CHECK-LABEL: @consistent_nocapture_offset(
 ; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    call void @unknown(ptr nocapture [[M]])
+; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %m = call ptr @malloc(i64 4)
@@ -339,7 +339,7 @@ define i1 @consistent_nocapture_offset() {
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
 ; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    call void @unknown(ptr nocapture [[M]])
+; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %m = call ptr @malloc(i64 4)
@@ -382,8 +382,8 @@ define i1 @two_nonnull_mallocs_hidden() {
 ; CHECK-LABEL: @two_nonnull_mallocs_hidden(
 ; CHECK-NEXT:    [[M:%.*]] = call nonnull dereferenceable(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[N:%.*]] = call nonnull dereferenceable(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[N]], i64 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds nuw i8, ptr [[N]], i64 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

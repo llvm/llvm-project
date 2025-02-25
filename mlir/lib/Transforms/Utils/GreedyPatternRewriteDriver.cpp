@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements mlir::applyPatternsAndFoldGreedily.
+// This file implements mlir::applyPatternsGreedily.
 //
 //===----------------------------------------------------------------------===//
 
@@ -488,7 +488,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // infinite folding loop, as every constant op would be folded to an
     // Attribute and then immediately be rematerialized as a constant op, which
     // is then put on the worklist.
-    if (!op->hasTrait<OpTrait::ConstantLike>()) {
+    if (config.fold && !op->hasTrait<OpTrait::ConstantLike>()) {
       SmallVector<OpFoldResult> foldResults;
       if (succeeded(op->fold(foldResults))) {
         LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
@@ -523,7 +523,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           }
           // Materialize Attributes as SSA values.
           Operation *constOp = op->getDialect()->materializeConstant(
-              rewriter, ofr.get<Attribute>(), resultType, op->getLoc());
+              rewriter, cast<Attribute>(ofr), resultType, op->getLoc());
 
           if (!constOp) {
             // If materialization fails, cleanup any operations generated for
@@ -615,14 +615,14 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         matcher.matchAndRewrite(op, rewriter, canApply, onFailure, onSuccess);
 
     if (succeeded(matchResult)) {
-      LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
+      LLVM_DEBUG(logResultWithLine("success", "at least one pattern matched"));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       expensiveChecks.notifyRewriteSuccess();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       changed = true;
       ++numRewrites;
     } else {
-      LLVM_DEBUG(logResultWithLine("failure", "pattern failed to match"));
+      LLVM_DEBUG(logResultWithLine("failure", "all patterns failed to match"));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       expensiveChecks.notifyRewriteFailure();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -852,13 +852,13 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.
       region.walk([&](Operation *op) {
-        if (!insertKnownConstant(op))
+        if (!config.cseConstants || !insertKnownConstant(op))
           addToWorklist(op);
       });
     } else {
       // Add all nested operations to the worklist in preorder.
       region.walk<WalkOrder::PreOrder>([&](Operation *op) {
-        if (!insertKnownConstant(op)) {
+        if (!config.cseConstants || !insertKnownConstant(op)) {
           addToWorklist(op);
           return WalkResult::advance();
         }
@@ -894,9 +894,9 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 }
 
 LogicalResult
-mlir::applyPatternsAndFoldGreedily(Region &region,
-                                   const FrozenRewritePatternSet &patterns,
-                                   GreedyRewriteConfig config, bool *changed) {
+mlir::applyPatternsGreedily(Region &region,
+                            const FrozenRewritePatternSet &patterns,
+                            GreedyRewriteConfig config, bool *changed) {
   // The top-level operation must be known to be isolated from above to
   // prevent performing canonicalizations on operations defined at or above
   // the region containing 'op'.
@@ -1012,7 +1012,7 @@ static Region *findCommonAncestor(ArrayRef<Operation *> ops) {
   return region;
 }
 
-LogicalResult mlir::applyOpPatternsAndFold(
+LogicalResult mlir::applyOpPatternsGreedily(
     ArrayRef<Operation *> ops, const FrozenRewritePatternSet &patterns,
     GreedyRewriteConfig config, bool *changed, bool *allErased) {
   if (ops.empty()) {

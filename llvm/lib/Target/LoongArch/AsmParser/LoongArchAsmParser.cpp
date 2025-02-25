@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
@@ -163,11 +164,9 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   void emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
   // Helper to emit pseudo instruction "la.tls.desc $rd, sym".
-  void emitLoadAddressTLSDescAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
-  void emitLoadAddressTLSDescPcrel(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+  void emitLoadAddressTLSDesc(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
   // Helper to emit pseudo instruction "la.tls.desc $rd, $rj, sym".
-  void emitLoadAddressTLSDescPcrelLarge(MCInst &Inst, SMLoc IDLoc,
-                                        MCStreamer &Out);
+  void emitLoadAddressTLSDescLarge(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
   // Helper to emit pseudo instruction "li.w/d $rd, $imm".
   void emitLoadImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
@@ -670,13 +669,33 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
 
 bool LoongArchAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
-  return Error(getLoc(), "invalid register number");
+  if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
+    return Error(getLoc(), "invalid register name");
+
+  if (!LoongArchMCRegisterClasses[LoongArch::GPRRegClassID].contains(Reg) &&
+      !LoongArchMCRegisterClasses[LoongArch::FPR32RegClassID].contains(Reg))
+    return Error(getLoc(), "invalid register name");
+
+  return false;
 }
 
 ParseStatus LoongArchAsmParser::tryParseRegister(MCRegister &Reg,
                                                  SMLoc &StartLoc,
                                                  SMLoc &EndLoc) {
-  llvm_unreachable("Unimplemented function.");
+  const AsmToken &Tok = getParser().getTok();
+  StartLoc = Tok.getLoc();
+  EndLoc = Tok.getEndLoc();
+
+  parseOptionalToken(AsmToken::Dollar);
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+
+  StringRef Name = Tok.getIdentifier();
+  if (matchRegisterNameHelper(Reg, Name))
+    return ParseStatus::NoMatch;
+
+  getParser().Lex(); // Eat identifier token.
+  return ParseStatus::Success;
 }
 
 bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
@@ -990,7 +1009,8 @@ void LoongArchAsmParser::emitLoadAddressPcrel(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(ADDI, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1023,20 +1043,49 @@ void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
 void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
                                             MCStreamer &Out) {
   // la.got $rd, sym
-  // expands to:
-  //   pcalau12i $rd, %got_pc_hi20(sym)
-  //   ld.w/d    $rd, $rd, %got_pc_lo12(sym)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   InstSeq Insts;
   unsigned LD = is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
 
+  if (getSTI().hasFeature(LoongArch::LaGlobalWithAbs)) {
+    // with feature: +la-glabal-with-abs
+    // for 32bit:
+    //   lu12i.w $rd, %got_hi20(sym)
+    //   ori     $rd, $rd, %got_lo12(sym)
+    //   ld.w    $rd, $rd, 0
+    //
+    // for 64bit:
+    //   lu12i.w $rd, %got_hi20(sym)
+    //   ori     $rd, $rd, %got_lo12(sym)
+    //   lu32i.d $rd, %got64_lo20(sym)
+    //   lu52i.d $rd, $rd, %got64_hi12(sym)
+    //   ld.d    $rd, $rd, 0
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_GOT_HI20));
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_GOT_LO12));
+
+    if (is64Bit()) {
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_HI12));
+    }
+    Insts.push_back(LoongArchAsmParser::Inst(LD));
+    emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+    return;
+  }
+  // expands to:
+  //   pcalau12i $rd, %got_pc_hi20(sym)
+  //   ld.w/d    $rd, $rd, %got_pc_lo12(sym)
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20));
   Insts.push_back(
       LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressGotLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1087,20 +1136,50 @@ void LoongArchAsmParser::emitLoadAddressTLSLE(MCInst &Inst, SMLoc IDLoc,
 void LoongArchAsmParser::emitLoadAddressTLSIE(MCInst &Inst, SMLoc IDLoc,
                                               MCStreamer &Out) {
   // la.tls.ie $rd, sym
-  // expands to:
-  //   pcalau12i $rd, %ie_pc_hi20(sym)
-  //   ld.w/d    $rd, $rd, %ie_pc_lo12(sym)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   InstSeq Insts;
   unsigned LD = is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
 
+  if (getSTI().hasFeature(LoongArch::LaGlobalWithAbs)) {
+    // with feature: +la-glabal-with-abs
+    // for 32bit:
+    //   lu12i.w $rd, %ie_hi20(sym)
+    //   ori     $rd, $rd, %ie_lo12(sym)
+    //   ld.w    $rd, $rd, 0
+    //
+    // for 64bit:
+    //   lu12i.w $rd, %ie_hi20(sym)
+    //   ori     $rd, $rd, %ie_lo12(sym)
+    //   lu32i.d $rd, %ie64_lo20(sym)
+    //   lu52i.d $rd, $rd, %ie64_hi12(sym)
+    //   ld.d    $rd, $rd, 0
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_IE_HI20));
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_TLS_IE_LO12));
+
+    if (is64Bit()) {
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_TLS_IE64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_TLS_IE64_HI12));
+    }
+    Insts.push_back(LoongArchAsmParser::Inst(LD));
+    emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+    return;
+  }
+
+  // expands to:
+  //   pcalau12i $rd, %ie_pc_hi20(sym)
+  //   ld.w/d    $rd, $rd, %ie_pc_lo12(sym)
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20));
   Insts.push_back(LoongArchAsmParser::Inst(
       LD, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSIELarge(MCInst &Inst, SMLoc IDLoc,
@@ -1133,20 +1212,47 @@ void LoongArchAsmParser::emitLoadAddressTLSIELarge(MCInst &Inst, SMLoc IDLoc,
 void LoongArchAsmParser::emitLoadAddressTLSLD(MCInst &Inst, SMLoc IDLoc,
                                               MCStreamer &Out) {
   // la.tls.ld $rd, sym
-  // expands to:
-  //   pcalau12i $rd, %ld_pc_hi20(sym)
-  //   addi.w/d  $rd, $rd, %got_pc_lo12(sym)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   InstSeq Insts;
   unsigned ADDI = is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
 
+  if (getSTI().hasFeature(LoongArch::LaGlobalWithAbs)) {
+    // with feature: +la-glabal-with-abs
+    // for 32bit:
+    //   lu12i.w $rd, %ld_hi20(sym)
+    //   ori     $rd, $rd, %got_lo12(sym)
+    //
+    // for 64bit:
+    //   lu12i.w $rd, %ld_hi20(sym)
+    //   ori     $rd, $rd, %got_lo12(sym)
+    //   lu32i.d $rd, %got64_lo20(sym)
+    //   lu52i.d $rd, $rd, %got64_hi12(sym)
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_LD_HI20));
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_GOT_LO12));
+
+    if (is64Bit()) {
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_HI12));
+    }
+    emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+    return;
+  }
+
+  // expands to:
+  //   pcalau12i $rd, %ld_pc_hi20(sym)
+  //   addi.w/d  $rd, $rd, %got_pc_lo12(sym)
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20));
   Insts.push_back(LoongArchAsmParser::Inst(
       ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSLDLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1179,20 +1285,47 @@ void LoongArchAsmParser::emitLoadAddressTLSLDLarge(MCInst &Inst, SMLoc IDLoc,
 void LoongArchAsmParser::emitLoadAddressTLSGD(MCInst &Inst, SMLoc IDLoc,
                                               MCStreamer &Out) {
   // la.tls.gd $rd, sym
-  // expands to:
-  //   pcalau12i $rd, %gd_pc_hi20(sym)
-  //   addi.w/d  $rd, $rd, %got_pc_lo12(sym)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   InstSeq Insts;
   unsigned ADDI = is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
 
+  if (getSTI().hasFeature(LoongArch::LaGlobalWithAbs)) {
+    // with feature: +la-glabal-with-abs
+    // for 32bit:
+    //   lu12i.w $rd, %gd_hi20(sym)
+    //   ori     $rd, $rd, %got_lo12(sym)
+    //
+    // for 64bit:
+    //   lu12i.w $rd, %gd_hi20(sym)
+    //   ori     $rd, $rd, %got_lo12(sym)
+    //   lu32i.d $rd, %got64_lo20(sym)
+    //   lu52i.d $rd, $rd, %got64_hi12(sym)
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20));
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_GOT_LO12));
+
+    if (is64Bit()) {
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_HI12));
+    }
+    emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+    return;
+  }
+
+  // expands to:
+  //   pcalau12i $rd, %gd_pc_hi20(sym)
+  //   addi.w/d  $rd, $rd, %got_pc_lo12(sym)
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20));
   Insts.push_back(LoongArchAsmParser::Inst(
       ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1222,63 +1355,56 @@ void LoongArchAsmParser::emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc,
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
 }
 
-void LoongArchAsmParser::emitLoadAddressTLSDescAbs(MCInst &Inst, SMLoc IDLoc,
-                                                   MCStreamer &Out) {
-  // `la.tls.desc $rd, sym` with `la-global-with-abs` feature
-  // for la32 expands to:
-  //   lu12i.w $rd, %desc_hi20(sym)
-  //   ori     $rd, $rd, %desc_lo12(sym)
-  //   ld.w    $ra, $rd, %desc_ld(sym)
-  //   jirl    $ra, $ra, %desc_call(sym)
-  //
-  // for la64 expands to:
-  //   lu12i.w $rd, %desc_hi20(sym)
-  //   ori     $rd, $rd, %desc_lo12(sym)
-  //   lu32i.d $rd, %desc64_lo20(sym)
-  //   lu52i.d $rd, $rd, %desc64_hi12(sym)
-  //   ld.d    $ra, $rd, %desc_ld(sym)
-  //   jirl    $ra, $ra, %desc_call(sym)
-  MCRegister DestReg = Inst.getOperand(0).getReg();
-  const MCExpr *Symbol = Inst.getOpcode() == LoongArch::PseudoLA_TLS_DESC_ABS
-                             ? Inst.getOperand(1).getExpr()
-                             : Inst.getOperand(2).getExpr();
-  unsigned LD = is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
-  InstSeq Insts;
-
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LO12));
-
-  if (is64Bit()) {
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_LO20));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_HI12));
-  }
-
-  Insts.push_back(
-      LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
-
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
-}
-
-void LoongArchAsmParser::emitLoadAddressTLSDescPcrel(MCInst &Inst, SMLoc IDLoc,
-                                                     MCStreamer &Out) {
+void LoongArchAsmParser::emitLoadAddressTLSDesc(MCInst &Inst, SMLoc IDLoc,
+                                                MCStreamer &Out) {
   // la.tls.desc $rd, sym
-  // expands to:
-  //   pcalau12i $rd, %desc_pc_hi20(sym)
-  //   addi.w/d  $rd, $rd, %desc_pc_lo12(sym)
-  //   ld.w/d    $ra, $rd, %desc_ld(sym)
-  //   jirl      $ra, $ra, %desc_call(sym)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   unsigned ADDI = is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
   unsigned LD = is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
   InstSeq Insts;
 
+  if (getSTI().hasFeature(LoongArch::LaGlobalWithAbs)) {
+    // with feature: +la-glabal-with-abs
+    // for la32 expands to:
+    //   lu12i.w $rd, %desc_hi20(sym)
+    //   ori     $rd, $rd, %desc_lo12(sym)
+    //   ld.w    $ra, $rd, %desc_ld(sym)
+    //   jirl    $ra, $ra, %desc_call(sym)
+    //
+    // for la64 expands to:
+    //   lu12i.w $rd, %desc_hi20(sym)
+    //   ori     $rd, $rd, %desc_lo12(sym)
+    //   lu32i.d $rd, %desc64_lo20(sym)
+    //   lu52i.d $rd, $rd, %desc64_hi12(sym)
+    //   ld.d    $ra, $rd, %desc_ld(sym)
+    //   jirl    $ra, $ra, %desc_call(sym)
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20));
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LO12));
+
+    if (is64Bit()) {
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(
+          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_HI12));
+    }
+
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LD, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD));
+    Insts.push_back(LoongArchAsmParser::Inst(
+        LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
+
+    emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+    return;
+  }
+
+  // expands to:
+  //   pcalau12i $rd, %desc_pc_hi20(sym)
+  //   addi.w/d  $rd, $rd, %desc_pc_lo12(sym)
+  //   ld.w/d    $ra, $rd, %desc_ld(sym)
+  //   jirl      $ra, $ra, %desc_call(sym)
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20));
   Insts.push_back(LoongArchAsmParser::Inst(
@@ -1288,12 +1414,12 @@ void LoongArchAsmParser::emitLoadAddressTLSDescPcrel(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
-void LoongArchAsmParser::emitLoadAddressTLSDescPcrelLarge(MCInst &Inst,
-                                                          SMLoc IDLoc,
-                                                          MCStreamer &Out) {
+void LoongArchAsmParser::emitLoadAddressTLSDescLarge(MCInst &Inst, SMLoc IDLoc,
+                                                     MCStreamer &Out) {
   // la.tls.desc $rd, $rj, sym
   // expands to:
   //   pcalau12i $rd, %desc_pc_hi20(sym)
@@ -1380,8 +1506,9 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
       IsTailCall ? Inst.getOperand(0).getReg() : MCRegister(LoongArch::R1);
   const MCExpr *Sym =
       IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
-  const LoongArchMCExpr *LE = LoongArchMCExpr::create(
-      Sym, llvm::LoongArchMCExpr::VK_LoongArch_CALL36, getContext());
+  const LoongArchMCExpr *LE =
+      LoongArchMCExpr::create(Sym, llvm::LoongArchMCExpr::VK_LoongArch_CALL36,
+                              getContext(), /*RelaxHint=*/true);
 
   Out.emitInstruction(
       MCInstBuilder(LoongArch::PCADDU18I).addReg(ScratchReg).addExpr(LE),
@@ -1438,15 +1565,11 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case LoongArch::PseudoLA_TLS_GD_LARGE:
     emitLoadAddressTLSGDLarge(Inst, IDLoc, Out);
     return false;
-  case LoongArch::PseudoLA_TLS_DESC_ABS:
-  case LoongArch::PseudoLA_TLS_DESC_ABS_LARGE:
-    emitLoadAddressTLSDescAbs(Inst, IDLoc, Out);
+  case LoongArch::PseudoLA_TLS_DESC:
+    emitLoadAddressTLSDesc(Inst, IDLoc, Out);
     return false;
-  case LoongArch::PseudoLA_TLS_DESC_PC:
-    emitLoadAddressTLSDescPcrel(Inst, IDLoc, Out);
-    return false;
-  case LoongArch::PseudoLA_TLS_DESC_PC_LARGE:
-    emitLoadAddressTLSDescPcrelLarge(Inst, IDLoc, Out);
+  case LoongArch::PseudoLA_TLS_DESC_LARGE:
+    emitLoadAddressTLSDescLarge(Inst, IDLoc, Out);
     return false;
   case LoongArch::PseudoLI_W:
   case LoongArch::PseudoLI_D:
@@ -1465,20 +1588,20 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
 unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &MCID = MII.get(Opc);
   switch (Opc) {
   default:
-    if (Opc >= LoongArch::AMADD_D && Opc <= LoongArch::AMXOR_W) {
+    if (LoongArchII::isSubjectToAMORdConstraint(MCID.TSFlags)) {
+      const bool IsAMCAS = LoongArchII::isAMCAS(MCID.TSFlags);
       MCRegister Rd = Inst.getOperand(0).getReg();
-      MCRegister Rk = Inst.getOperand(1).getReg();
-      MCRegister Rj = Inst.getOperand(2).getReg();
+      MCRegister Rk = Inst.getOperand(IsAMCAS ? 2 : 1).getReg();
+      MCRegister Rj = Inst.getOperand(IsAMCAS ? 3 : 2).getReg();
       if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
         return Match_RequiresAMORdDifferRkRj;
     }
     break;
-  case LoongArch::PseudoLA_TLS_DESC_ABS:
-  case LoongArch::PseudoLA_TLS_DESC_ABS_LARGE:
-  case LoongArch::PseudoLA_TLS_DESC_PC:
-  case LoongArch::PseudoLA_TLS_DESC_PC_LARGE: {
+  case LoongArch::PseudoLA_TLS_DESC:
+  case LoongArch::PseudoLA_TLS_DESC_LARGE: {
     MCRegister Rd = Inst.getOperand(0).getReg();
     if (Rd != LoongArch::R4)
       return Match_RequiresLAORdR4;

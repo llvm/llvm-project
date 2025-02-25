@@ -178,6 +178,16 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
   ];
 }
 
+def LinalgRelayoutOpInterface : OpInterface<"RelayoutOpInterface"> {
+  let description = [{
+    A Linalg relayout-op is either linalg.pack or linalg.unpack.
+
+    While we could extend this interface with methods from Linalg_RelayoutOp,
+    this is currently not needed and left as a TODO.
+  }];
+  let cppNamespace = "::mlir::linalg";
+}
+
 def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {
   let description = [{
     A fill operation is defined in general terms:
@@ -252,7 +262,7 @@ def LinalgStructuredInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return getNumParallelLoops() ==  getNumParallelLoops();
+        return getNumParallelLoops() ==  getNumLoops();
       }]
     >,
     InterfaceMethod<
@@ -708,6 +718,19 @@ def LinalgStructuredInterface
         return;
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if the user has supplied explicit indexing maps that are
+        different from default indexing maps for this op. Returns `false` otherwise.
+        Note, if the user define maps that are identical to the default maps,
+        this method returns `false`.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasUserDefinedMaps",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return false; }]
+    >,
     //===------------------------------------------------------------------===//
     // Linalg generalization hooks.
     //===------------------------------------------------------------------===//
@@ -731,7 +754,7 @@ def LinalgStructuredInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto maps =  $_op.getIndexingMapsArray();
-        return concatAffineMaps(maps);
+        return concatAffineMaps(maps, $_op.getContext());
       }]
     >,
     InterfaceMethod<
@@ -849,11 +872,6 @@ def LinalgStructuredInterface
     /// operands. This is done by applying `getShapesToLoopsMap` to
     /// `createFlatListOfOperandDims`.
     SmallVector<Range, 4> createLoopRanges(OpBuilder &b, Location loc);
-
-    /// Compute the static loop sizes necessary to vectorize the computation.
-    /// This is done by applying `getShapesToLoopsMap` to
-    /// `createFlatListOfOperandStaticDims`.
-    SmallVector<int64_t, 4> computeStaticLoopSizes();
 
     /// Returns the value that expresses the shape of the output in terms of
     /// shape of the input operands where possible

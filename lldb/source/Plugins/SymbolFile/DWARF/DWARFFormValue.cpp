@@ -306,6 +306,11 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       *offset_ptr += 8;
       return true;
 
+    // 16 byte values
+    case DW_FORM_data16:
+      *offset_ptr += 16;
+      return true;
+
     // signed or unsigned LEB 128 values
     case DW_FORM_addrx:
     case DW_FORM_loclistx:
@@ -569,6 +574,31 @@ uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
   }
 }
 
+std::optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
+  if ((!IsDataForm(m_form)) || m_form == lldb_private::dwarf::DW_FORM_sdata)
+    return std::nullopt;
+  return m_value.uval;
+}
+
+std::optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
+  if ((!IsDataForm(m_form)) ||
+      (m_form == lldb_private::dwarf::DW_FORM_udata &&
+       uint64_t(std::numeric_limits<int64_t>::max()) < m_value.uval))
+    return std::nullopt;
+  switch (m_form) {
+  case lldb_private::dwarf::DW_FORM_data4:
+    return int32_t(m_value.uval);
+  case lldb_private::dwarf::DW_FORM_data2:
+    return int16_t(m_value.uval);
+  case lldb_private::dwarf::DW_FORM_data1:
+    return int8_t(m_value.uval);
+  case lldb_private::dwarf::DW_FORM_sdata:
+  case lldb_private::dwarf::DW_FORM_data8:
+  default:
+    return m_value.sval;
+  }
+}
+
 const uint8_t *DWARFFormValue::BlockData() const { return m_value.data; }
 
 bool DWARFFormValue::IsBlockForm(const dw_form_t form) {
@@ -578,6 +608,7 @@ bool DWARFFormValue::IsBlockForm(const dw_form_t form) {
   case DW_FORM_block1:
   case DW_FORM_block2:
   case DW_FORM_block4:
+  case DW_FORM_data16:
     return true;
   default:
     return false;
@@ -611,6 +642,7 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
     case DW_FORM_data2:
     case DW_FORM_data4:
     case DW_FORM_data8:
+    case DW_FORM_data16:
     case DW_FORM_string:
     case DW_FORM_block:
     case DW_FORM_block1:

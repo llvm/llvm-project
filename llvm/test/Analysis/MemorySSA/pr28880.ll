@@ -8,9 +8,9 @@
 @global.1 = external hidden unnamed_addr global double, align 8
 
 ; Function Attrs: nounwind ssp uwtable
-define hidden fastcc void @hoge() unnamed_addr #0 {
+define hidden fastcc void @hoge(i1 %arg) unnamed_addr #0 {
 bb:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:                                              ; preds = %bb
 ; These accesses should not conflict.
@@ -28,7 +28,7 @@ bb2:                                              ; preds = %bb
   br label %bb3
 
 bb3:                                              ; preds = %bb2
-  br i1 undef, label %bb4, label %bb6
+  br i1 %arg, label %bb4, label %bb6
 
 bb4:                                              ; preds = %bb3
 ; These accesses should conflict.

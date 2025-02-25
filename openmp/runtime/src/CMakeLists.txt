@@ -26,16 +26,22 @@ if(${LIBOMP_OMPT_SUPPORT})
 endif()
 
 # Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
+set(LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS "")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
+  # Required as Python doesn't inherit CMake's environment setup and uses the host system as the target system by default
+  set(LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS ${LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS} --target-system-override=${CMAKE_SYSTEM_NAME})
+endif()
+
 add_custom_command(
   OUTPUT  kmp_i18n_id.inc
   COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.py
-          --enum=kmp_i18n_id.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
+          --enum=kmp_i18n_id.inc ${LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS} ${LIBOMP_SRC_DIR}/i18n/en_US.txt
   DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.py
 )
 add_custom_command(
   OUTPUT  kmp_i18n_default.inc
   COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.py
-          --default=kmp_i18n_default.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
+          --default=kmp_i18n_default.inc ${LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS} ${LIBOMP_SRC_DIR}/i18n/en_US.txt
   DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.py
 )
 
@@ -253,6 +259,17 @@ if(NOT WIN32)
       libiomp5${LIBOMP_LIBRARY_SUFFIX}
     WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
   )
+  if(LIBOMP_ENABLE_SHARED)
+    if(APPLE)
+      set(VERSIONED_LIBGOMP_NAME libgomp.1${LIBOMP_LIBRARY_SUFFIX})
+    else()
+      set(VERSIONED_LIBGOMP_NAME libgomp${LIBOMP_LIBRARY_SUFFIX}.1)
+    endif()
+    add_custom_command(TARGET omp POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBOMP_LIB_FILE} ${VERSIONED_LIBGOMP_NAME}
+      WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
+    )
+  endif()
 endif()
 
 # Definitions for testing, for reuse when testing libomptarget-nvptx.
@@ -439,13 +456,18 @@ else()
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
+    extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
     set(LIBOMP_ALIASES "libgomp;libiomp5")
     foreach(alias IN LISTS LIBOMP_ALIASES)
-      extend_path(outdir "${CMAKE_INSTALL_PREFIX}" "${OPENMP_INSTALL_LIBDIR}")
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
         \"\$ENV{DESTDIR}${outdir}\")")
     endforeach()
+    if(LIBOMP_ENABLE_SHARED)
+      install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
+        \"${VERSIONED_LIBGOMP_NAME}\" WORKING_DIRECTORY
+        \"\$ENV{DESTDIR}${outdir}\")")
+    endif()
   endif()
 endif()
 install(

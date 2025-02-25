@@ -14,10 +14,10 @@ namespace std {
     size_t n;
     initializer_list(const T*, size_t);
   };
-}
+} // namespace std
 
-#if __cplusplus >= 201103L
 namespace cwg1305 { // cwg1305: 3.0
+#if __cplusplus >= 201103L
 struct Incomplete; // #cwg1305-Incomplete
 struct Complete {};
 
@@ -25,8 +25,8 @@ int incomplete = alignof(Incomplete(&)[]);
 // since-cxx11-error@-1 {{invalid application of 'alignof' to an incomplete type 'Incomplete'}}
 //   since-cxx11-note@#cwg1305-Incomplete {{forward declaration of 'cwg1305::Incomplete'}}
 int complete = alignof(Complete(&)[]);
-}
 #endif
+} // namespace cwg1305
 
 namespace cwg1307 { // cwg1307: 14
 #if __cplusplus >= 201103L
@@ -150,7 +150,7 @@ namespace cwg1310 { // cwg1310: 5
   }
   template void wt_test<W<int> >(); // #cwg1310-W-int
   template void wt_test_good<W<int> >();
-}
+} // namespace cwg1310
 
 namespace cwg1315 { // cwg1315: partial
   template <int I, int J> struct A {};
@@ -182,7 +182,7 @@ namespace cwg1315 { // cwg1315: partial
   template <typename T, int I> struct C;
   template <typename T> struct C<T, T::value>;
   // expected-error@-1 {{type of specialized non-type template argument depends on a template parameter of the partial specialization}}
-}
+} // namespace cwg1315
 
 namespace cwg1330 { // cwg1330: 4 c++11
   // exception-specifications are parsed in a context where the class is complete.
@@ -204,7 +204,7 @@ namespace cwg1330 { // cwg1330: 4 c++11
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*af2)() throw() = &A::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (cwg1330::A::*)() throw()' with an rvalue of type 'void (cwg1330::A::*)() throw(T)': different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an rvalue of type 'void (cwg1330::A::*)() throw(T)': different exception specifications}}
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(A().g()), "");
@@ -302,7 +302,7 @@ namespace cwg1330 { // cwg1330: 4 c++11
 
   struct E : C<int> {}; // #cwg1330-C-int
   E e; // #cwg1330-e
-}
+} // namespace cwg1330
 
 // cwg1334: sup 1719
 
@@ -333,7 +333,7 @@ struct S {
   int z : 1 || new int { 0 };
 };
 #endif
-}
+} // namespace cwg1341
 
 namespace cwg1346 { // cwg1346: 3.5
   auto a(1);
@@ -376,7 +376,7 @@ namespace cwg1346 { // cwg1346: 3.5
     // since-cxx11-error@-2 {{cannot deduce type for lambda capture 'e' from parenthesized initializer list}}
   }
 #endif
-}
+} // namespace cwg1346
 
 namespace cwg1347 { // cwg1347: 3.1
   auto x = 5, *y = &x;
@@ -390,7 +390,7 @@ namespace cwg1347 { // cwg1347: 3.1
   auto (*fp)(int) -> int, i = 0;
   // since-cxx11-error@-1 {{declaration with trailing return type must be the only declaration in its group}}
 #endif
-}
+} // namespace cwg1347
 
 namespace cwg1350 { // cwg1350: 3.5
 #if __cplusplus >= 201103L
@@ -520,7 +520,7 @@ namespace cwg1358 { // cwg1358: 3.1
     //   cxx11-20-note@#cwg1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   };
 #endif
-}
+} // namespace cwg1358
 
 namespace cwg1359 { // cwg1359: 3.5
 #if __cplusplus >= 201103L
@@ -549,7 +549,7 @@ namespace cwg1359 { // cwg1359: 3.5
   //   cxx11-17-note@#cwg1359-Y {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
   //   cxx11-17-note@#cwg1359-Y {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
 #endif
-}
+} // namespace cwg1359
 
 namespace cwg1388 { // cwg1388: 4
   template<typename A, typename ...T> void f(T..., A); // #cwg1388-f
@@ -622,7 +622,7 @@ namespace cwg1388 { // cwg1388: 4
     // expected-error@-1 {{no matching function for call to 'f_pair_4'}}
     //   expected-note@#cwg1388-f-4 {{candidate template ignored: deduced packs of different lengths for parameter 'T' (<int, long> vs. <int, long, const char *>)}}
   }
-}
+} // namespace cwg1388
 
 namespace cwg1391 { // cwg1391: partial
   struct A {}; struct B : A {};
@@ -713,14 +713,14 @@ namespace cwg1391 { // cwg1391: partial
     int test_c1 = c(0); // ok
     int test_c2 = c<int>(0); // FIXME: apparently ambiguous
   }
-}
+} // namespace cwg1391
 
 namespace cwg1394 { // cwg1394: 15
 #if __cplusplus >= 201103L
 struct Incomplete;
 Incomplete f(Incomplete) = delete; // well-formed
 #endif
-}
+} // namespace cwg1394
 
 namespace cwg1395 { // cwg1395: 16
 #if __cplusplus >= 201103L
@@ -731,7 +731,7 @@ namespace cwg1395 { // cwg1395: 16
     f(&i);
   }
 #endif
-}
+} // namespace cwg1395
 
 namespace cwg1397 { // cwg1397: 3.2
 #if __cplusplus >= 201103L
@@ -757,4 +757,4 @@ namespace cwg1399 { // cwg1399: dup 1388
     // expected-error@-1 {{no matching function for call to 'f'}}
     //   expected-note@#cwg1399-f {{candidate template ignored: deduced packs of different lengths for parameter 'T' (<> vs. <int, int>)}}
   }
-}
+} // namespace cwg1399

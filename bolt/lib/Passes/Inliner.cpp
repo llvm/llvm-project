@@ -310,13 +310,13 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
       if (MIB.isPseudo(Inst))
         continue;
 
-      MIB.stripAnnotations(Inst, /*KeepTC=*/BC.isX86());
+      MIB.stripAnnotations(Inst, /*KeepTC=*/BC.isX86() || BC.isAArch64());
 
       // Fix branch target. Strictly speaking, we don't have to do this as
       // targets of direct branches will be fixed later and don't matter
       // in the CFG state. However, disassembly may look misleading, and
       // hence we do the fixing.
-      if (MIB.isBranch(Inst)) {
+      if (MIB.isBranch(Inst) && !MIB.isTailCall(Inst)) {
         assert(!MIB.isIndirectBranch(Inst) &&
                "unexpected indirect branch in callee");
         const BinaryBasicBlock *TargetBB =

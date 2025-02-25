@@ -15,6 +15,8 @@
 #include <__assert>
 #include <__bit/countl.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__math/rounding_functions.h>
@@ -25,16 +27,16 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
+#include <__new/launder.h>
 #include <__type_traits/can_extract_key.h>
-#include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -42,9 +44,7 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cstring>
 #include <limits>
-#include <new> // __launder
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -111,8 +111,8 @@ struct __hash_node_base {
 template <class _Tp, class _VoidPtr>
 struct __hash_node : public __hash_node_base< __rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > > {
   typedef _Tp __node_value_type;
-  using _Base          = __hash_node_base<__rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > >;
-  using __next_pointer = typename _Base::__next_pointer;
+  using _Base _LIBCPP_NODEBUG          = __hash_node_base<__rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > >;
+  using __next_pointer _LIBCPP_NODEBUG = typename _Base::__next_pointer;
 
   size_t __hash_;
 
@@ -650,9 +650,9 @@ struct __enforce_unordered_container_requirements {
 
 template <class _Key, class _Hash, class _Equal>
 #ifndef _LIBCPP_CXX03_LANG
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
+_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Equal const&, _Key const&, _Key const&>,
                          "the specified comparator type does not provide a viable const call operator")
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
+_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Hash const&, _Key const&>,
                          "the specified hash functor does not provide a viable const call operator")
 #endif
     typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
@@ -770,9 +770,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __hash_table& operator=(const __hash_table& __u);
   _LIBCPP_HIDE_FROM_ABI __hash_table& operator=(__hash_table&& __u)
-      _NOEXCEPT_(__node_traits::propagate_on_container_move_assignment::value&&
-                     is_nothrow_move_assignable<__node_allocator>::value&& is_nothrow_move_assignable<hasher>::value&&
-                         is_nothrow_move_assignable<key_equal>::value);
+      _NOEXCEPT_(is_nothrow_move_assignable<hasher>::value&& is_nothrow_move_assignable<key_equal>::value &&
+                 ((__node_traits::propagate_on_container_move_assignment::value &&
+                   is_nothrow_move_assignable<__node_allocator>::value) ||
+                  allocator_traits<__node_allocator>::is_always_equal::value));
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_unique(_InputIterator __first, _InputIterator __last);
   template <class _InputIterator>
@@ -1238,10 +1239,11 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-inline __hash_table<_Tp, _Hash, _Equal, _Alloc>&
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(__hash_table&& __u) _NOEXCEPT_(
-    __node_traits::propagate_on_container_move_assignment::value&& is_nothrow_move_assignable<__node_allocator>::value&&
-        is_nothrow_move_assignable<hasher>::value&& is_nothrow_move_assignable<key_equal>::value) {
+inline __hash_table<_Tp, _Hash, _Equal, _Alloc>& __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(__hash_table&& __u)
+    _NOEXCEPT_(is_nothrow_move_assignable<hasher>::value&& is_nothrow_move_assignable<key_equal>::value &&
+               ((__node_traits::propagate_on_container_move_assignment::value &&
+                 is_nothrow_move_assignable<__node_allocator>::value) ||
+                allocator_traits<__node_allocator>::is_always_equal::value)) {
   __move_assign(__u, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }

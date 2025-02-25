@@ -375,7 +375,8 @@ ErrorOr<StringRef> MCPseudoProbeDecoder::readString(uint32_t Size) {
 }
 
 bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
-                                                 std::size_t Size) {
+                                                 std::size_t Size,
+                                                 bool IsMMapped) {
   // The pseudo_probe_desc section has a format like:
   // .section .pseudo_probe_desc,"",@progbits
   // .quad -5182264717993193164   // GUID
@@ -422,7 +423,8 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
     StringRef Name = cantFail(errorOrToExpected(readString(NameSize)));
 
     // Initialize PseudoProbeFuncDesc and populate it into GUID2FuncDescMap
-    GUID2FuncDescMap.emplace_back(GUID, Hash, Name.copy(FuncNameAllocator));
+    GUID2FuncDescMap.emplace_back(
+        GUID, Hash, IsMMapped ? Name : Name.copy(FuncNameAllocator));
   }
   assert(Data == End && "Have unprocessed data in pseudo_probe_desc section");
   assert(GUID2FuncDescMap.size() == FuncDescCount &&

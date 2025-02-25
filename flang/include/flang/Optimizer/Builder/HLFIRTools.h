@@ -33,6 +33,7 @@ class AssociateOp;
 class ElementalOp;
 class ElementalOpInterface;
 class ElementalAddrOp;
+class EvaluateInMemoryOp;
 class YieldElementOp;
 
 /// Is this a Fortran variable for which the defining op carrying the Fortran
@@ -124,7 +125,7 @@ public:
   bool isSimplyContiguous() const {
     // If this can be described without a fir.box in FIR, this must
     // be contiguous.
-    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()))
+    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()) || isScalar())
       return true;
     // Otherwise, if this entity has a visible declaration in FIR,
     // or is the dereference of an allocatable or contiguous pointer
@@ -149,10 +150,7 @@ public:
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
-  bool isOptional() const {
-    auto varIface = getIfVariableInterface();
-    return varIface ? varIface.isOptional() : false;
-  }
+  bool mayBeOptional() const;
 
   bool isParameter() const {
     auto varIface = getIfVariableInterface();
@@ -209,7 +207,8 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         Entity entity, bool contiguousHint = false);
+                         Entity entity, bool contiguousHint = false,
+                         bool keepScalarOptionalBoxed = false);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
@@ -357,21 +356,58 @@ hlfir::ElementalOp genElementalOp(
 
 /// Structure to describe a loop nest.
 struct LoopNest {
-  fir::DoLoopOp outerLoop;
-  fir::DoLoopOp innerLoop;
+  mlir::Operation *outerOp = nullptr;
+  mlir::Block *body = nullptr;
   llvm::SmallVector<mlir::Value> oneBasedIndices;
 };
 
 /// Generate a fir.do_loop nest looping from 1 to extents[i].
 /// \p isUnordered specifies whether the loops in the loop nest
 /// are unordered.
+///
+/// NOTE: genLoopNestWithReductions() should be used in favor
+/// of this method, though, it cannot generate OpenMP workshare
+/// loop constructs currently.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                     mlir::ValueRange extents, bool isUnordered = false);
+                     mlir::ValueRange extents, bool isUnordered = false,
+                     bool emitWorkshareLoop = false);
 inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::Value shape, bool isUnordered = false) {
+                            mlir::Value shape, bool isUnordered = false,
+                            bool emitWorkshareLoop = false) {
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
-                     isUnordered);
+                     isUnordered, emitWorkshareLoop);
 }
+
+/// The type of a callback that generates the body of a reduction
+/// loop nest. It takes a location and a builder, as usual.
+/// In addition, the first set of values are the values of the loops'
+/// induction variables. The second set of values are the values
+/// of the reductions on entry to the innermost loop.
+/// The callback must return the updated values of the reductions.
+using ReductionLoopBodyGenerator = std::function<llvm::SmallVector<mlir::Value>(
+    mlir::Location, fir::FirOpBuilder &, mlir::ValueRange, mlir::ValueRange)>;
+
+/// Generate a loop nest loopong from 1 to \p extents[i] and reducing
+/// a set of values.
+/// \p isUnordered specifies whether the loops in the loop nest
+/// are unordered.
+/// \p reductionInits are the initial values of the reductions
+/// on entry to the outermost loop.
+/// \p genBody callback is repsonsible for generating the code
+/// that updates the reduction values in the innermost loop.
+///
+/// NOTE: the implementation of this function may decide
+/// to perform the reductions on SSA or in memory.
+/// In the latter case, this function is responsible for
+/// allocating/loading/storing the reduction variables,
+/// and making sure they have proper data sharing attributes
+/// in case any parallel constructs are present around the point
+/// of the loop nest insertion, or if the function decides
+/// to use any worksharing loop constructs for the loop nest.
+llvm::SmallVector<mlir::Value> genLoopNestWithReductions(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
+    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
+    bool isUnordered = false);
 
 /// Inline the body of an hlfir.elemental at the current insertion point
 /// given a list of one based indices. This generates the computation
@@ -395,6 +431,24 @@ mlir::Value inlineElementalOp(
     hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
     const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
+
+/// Create a new temporary with the shape and parameters of the provided
+/// hlfir.eval_in_mem operation and clone the body of the hlfir.eval_in_mem
+/// operating on this new temporary.  returns the temporary and whether the
+/// temporary is heap or stack allocated.
+std::pair<hlfir::Entity, bool>
+computeEvaluateOpInNewTemp(mlir::Location, fir::FirOpBuilder &,
+                           hlfir::EvaluateInMemoryOp evalInMem,
+                           mlir::Value shape, mlir::ValueRange typeParams);
+
+// Clone the body of the hlfir.eval_in_mem operating on this the provided
+// storage.  The provided storage must be a contiguous "raw" memory reference
+// (not a fir.box) big enough to hold the value computed by hlfir.eval_in_mem.
+// No runtime check is inserted by this utility to enforce that. It is also
+// usually invalid to provide some storage that is already addressed directly
+// or indirectly inside the hlfir.eval_in_mem body.
+void computeEvaluateOpIn(mlir::Location, fir::FirOpBuilder &,
+                         hlfir::EvaluateInMemoryOp, mlir::Value storage);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -451,6 +505,17 @@ std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
 genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity source, mlir::Type toType,
                       bool preserveLowerBounds);
+
+/// A shortcut for loadTrivialScalar(getElementAt()),
+/// which designates and loads an element of an array.
+Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
+                     Entity entity, mlir::ValueRange oneBasedIndices);
+
+/// Return a vector of extents for the given entity.
+/// The function creates new operations, but tries to clean-up
+/// after itself.
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
+genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 
 } // namespace hlfir
 

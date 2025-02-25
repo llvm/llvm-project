@@ -251,11 +251,11 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
     addr_t address = record->Address + base;
     SectionSP section_sp = list->FindSectionContainingFileAddress(address);
     if (section_sp) {
-      AddressRange func_range(
-          section_sp, address - section_sp->GetFileAddress(), record->Size);
+      Address func_addr(section_sp, address - section_sp->GetFileAddress());
       // Use the CU's id because every CU has only one function inside.
-      func_sp = std::make_shared<Function>(&comp_unit, id, 0, func_name,
-                                           nullptr, func_range);
+      func_sp = std::make_shared<Function>(
+          &comp_unit, id, 0, func_name, nullptr, func_addr,
+          AddressRanges{AddressRange(func_addr, record->Size)});
       comp_unit.AddFunction(func_sp);
     }
   }
@@ -299,12 +299,10 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
   // "INLINE 0 ...", the current level is 0 and its parent block is the
   // function block at index 0.
   std::vector<Block *> blocks;
-  Block &block = func.GetBlock(false);
-  block.AddRange(Block::Range(0, func.GetAddressRange().GetByteSize()));
-  blocks.push_back(&block);
+  blocks.push_back(&func.GetBlock(false));
 
   size_t blocks_added = 0;
-  addr_t func_base = func.GetAddressRange().GetBaseAddress().GetOffset();
+  addr_t func_base = func.GetAddress().GetOffset();
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit->GetID()).data;
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
       End(*m_objfile_sp);
@@ -315,7 +313,8 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
       if (record->InlineNestLevel == 0 ||
           record->InlineNestLevel <= last_added_nest_level + 1) {
         last_added_nest_level = record->InlineNestLevel;
-        BlockSP block_sp = std::make_shared<Block>(It.GetBookmark().offset);
+        BlockSP block_sp = blocks[record->InlineNestLevel]->CreateChild(
+            It.GetBookmark().offset);
         FileSpec callsite_file;
         if (record->CallSiteFileNum < m_files->size())
           callsite_file = (*m_files)[record->CallSiteFileNum];
@@ -333,7 +332,6 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
         }
         block_sp->FinalizeRanges();
 
-        blocks[record->InlineNestLevel]->AddChild(block_sp);
         if (record->InlineNestLevel + 1 >= blocks.size()) {
           blocks.resize(blocks.size() + 1);
         }
@@ -398,7 +396,7 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
         Block &block = func_sp->GetBlock(true);
         sc.block = block.FindInnermostBlockByOffset(
             so_addr.GetFileAddress() -
-            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+            sc.function->GetAddress().GetFileAddress());
         if (sc.block)
           result |= eSymbolContextBlock;
       }
@@ -839,18 +837,16 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
          "How did we create compile units without a base address?");
 
   SupportFileMap map;
-  std::vector<std::unique_ptr<LineSequence>> sequences;
-  std::unique_ptr<LineSequence> line_seq_up =
-      LineTable::CreateLineSequenceContainer();
+  std::vector<LineTable::Sequence> sequences;
+  LineTable::Sequence sequence;
   std::optional<addr_t> next_addr;
   auto finish_sequence = [&]() {
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), *next_addr, /*line=*/0, /*column=*/0,
+        sequence, *next_addr, /*line=*/0, /*column=*/0,
         /*file_idx=*/0, /*is_start_of_statement=*/false,
         /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
         /*is_epilogue_begin=*/false, /*is_terminal_entry=*/true);
-    sequences.push_back(std::move(line_seq_up));
-    line_seq_up = LineTable::CreateLineSequenceContainer();
+    sequences.push_back(std::move(sequence));
   };
 
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
@@ -872,7 +868,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
       finish_sequence();
     }
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), record->Address, record->LineNum, /*column=*/0,
+        sequence, record->Address, record->LineNum, /*column=*/0,
         map[record->FileNum], /*is_start_of_statement=*/true,
         /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
         /*is_epilogue_begin=*/false, /*is_terminal_entry=*/false);

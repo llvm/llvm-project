@@ -61,3 +61,29 @@
 ! CHECK-TWO-CONFIGS-NEXT: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
 ! CHECK-TWO-CONFIGS: -ffp-contract=fast
 ! CHECK-TWO-CONFIGS: -O3
+
+!--- The linker input flags should be moved to the end of input list and appear only when linking.
+! RUN: %flang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg %s -lmylib -Wl,foo.a -### 2>&1 | FileCheck %s -check-prefix CHECK-LINKING
+! RUN: %flang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -fopenmp=libomp %s -lmylib -Wl,foo.a -### 2>&1 | FileCheck %s -check-prefix CHECK-LINKING-LIBOMP-GOES-AFTER
+! RUN: %flang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NOLINKING
+! RUN: %flang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -fopenmp=libomp -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NOLINKING-OPENMP
+! RUN: %flang --target=x86_64-pc-windows-msvc    --config %S/Inputs/config-l.cfg %s -lmylib -Wl,foo.lib -### 2>&1 | FileCheck %s -check-prefix CHECK-LINKING-MSVC
+! RUN: %flang --target=x86_64-pc-windows-msvc    --config %S/Inputs/config-l.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NOLINKING-MSVC
+! CHECK-LINKING: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
+! CHECK-LINKING: "-ffast-math"
+! CHECK-LINKING: "--as-needed" "{{.*}}-{{.*}}.o" "-lmylib" "foo.a" "-lm" "-Bstatic" "-lhappy" "-Bdynamic"
+! CHECK-LINKING-LIBOMP-GOES-AFTER: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
+! CHECK-LINKING-LIBOMP-GOES-AFTER: "-ffast-math" {{.*}}"-fopenmp"
+! CHECK-LINKING-LIBOMP-GOES-AFTER: "--as-needed" "{{.*}}-{{.*}}.o" "-lmylib" "foo.a" "-lm" "-Bstatic" "-lhappy" "-Bdynamic" {{.*}}"-lomp"
+! CHECK-NOLINKING: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
+! CHECK-NOLINKING: "-ffast-math"
+! CHECK-NOLINKING-NO: "-lm" "-Bstatic" "-lhappy" "-Bdynamic"
+! CHECK-NOLINKING-OPENMP: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
+! CHECK-NOLINKING-OPENMP: "-ffast-math" {{.*}}"-fopenmp"
+! CHECK-NOLINKING-OPENMP-NO: "-lm" "-Bstatic" "-lhappy" "-Bdynamic" {{.}}"-lomp"
+! CHECK-LINKING-MSVC: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
+! CHECK-LINKING-MSVC: "-ffast-math"
+! CHECK-LINKING-MSVC: "--as-needed" "{{.*}}-{{.*}}.o" "mylib.lib" "foo.lib" "m.lib" "-Bstatic" "happy.lib" "-Bdynamic"
+! CHECK-NOLINKING-MSVC: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
+! CHECK-NOLINKING-MSVC: "-ffast-math"
+! CHECK-NOLINKING-MSVC-NO: "m.lib" "-Bstatic" "happy.lib" "-Bdynamic"

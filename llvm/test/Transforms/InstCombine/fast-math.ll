@@ -587,7 +587,7 @@ define float @fdiv2(float %x) {
 
 define <2 x float> @fdiv2_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv2_vec(
-; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast <2 x float> [[X:%.*]], <float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[DIV1]]
 ;
   %mul = fmul <2 x float> %x, <float 6.0, float 9.0>

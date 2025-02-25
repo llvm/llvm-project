@@ -1,13 +1,10 @@
 ; Check Default behaviour still emits ctors
-; RUN: opt < %s -passes=asan -S | \
-; RUN:   FileCheck -check-prefix=CHECK-DEFAULT %s
+; RUN: opt < %s -passes=asan -S | FileCheck -check-prefix=CHECK-DEFAULT %s
 ; CHECK-DEFAULT: llvm.global_ctor{{.+}}asan.module_ctor
 ; CHECK-DEFAULT: define internal void @asan.module_ctor
 
 ; Check with ctor emission disabled
-; RUN: opt < %s -passes=asan \
-; RUN:   -asan-constructor-kind=none -S | \
-; RUN:   FileCheck %s
+; RUN: opt < %s -passes=asan -asan-constructor-kind=none -S | FileCheck %s
 ; CHECK-NOT: llvm.global_ctor{{.+}}asan.module_ctor
 ; CHECK-NOT: define internal void @asan.module_ctor
 

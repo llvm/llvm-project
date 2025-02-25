@@ -87,6 +87,15 @@ define void @foo(i8 %v0) {
   EXPECT_FALSE(One.contains(I1));
   EXPECT_FALSE(One.contains(I2));
   EXPECT_FALSE(One.contains(Ret));
+  // Check touches().
+  {
+    sandboxir::Interval<sandboxir::Instruction> Intvl(I2, I2);
+    EXPECT_TRUE(Intvl.touches(I1));
+    EXPECT_TRUE(Intvl.contains(I2));
+    EXPECT_FALSE(Intvl.touches(I2));
+    EXPECT_TRUE(Intvl.touches(Ret));
+    EXPECT_FALSE(Intvl.touches(I0));
+  }
   // Check iterator.
   auto BBIt = BB->begin();
   for (auto &I : Intvl)
@@ -329,5 +338,114 @@ define void @foo(i8 %v0) {
     sandboxir::Interval<sandboxir::Instruction> I0I0(I0, I0);
     auto SingleUnion = I2Ret.getUnionInterval(I0I0);
     EXPECT_THAT(getPtrVec(SingleUnion), testing::ElementsAre(I0, I1, I2, Ret));
+  }
+}
+
+TEST_F(IntervalTest, NotifyMoveInstr) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0) {
+  %I0 = add i8 %v0, %v0
+  %I1 = add i8 %v0, %v0
+  %I2 = add i8 %v0, %v0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  auto *Ret = &*It++;
+  {
+    // Assert that we don't try to move external instr to the interval.
+    sandboxir::Interval<sandboxir::Instruction> I2Ret(I2, Ret);
+#ifndef NDEBUG
+    EXPECT_DEATH(I2Ret.notifyMoveInstr(I0, Ret->getIterator()), ".*interval.*");
+#endif // NDEBUG
+  }
+  {
+    // Assert that we don't move before self.
+    sandboxir::Interval<sandboxir::Instruction> I2Ret(I2, Ret);
+#ifndef NDEBUG
+    EXPECT_DEATH(I2Ret.notifyMoveInstr(Ret, Ret->getIterator()), ".*self.*");
+#endif // NDEBUG
+  }
+  {
+    // Single-element interval.
+    sandboxir::Interval<sandboxir::Instruction> I2I2(I2, I2);
+    I2I2.notifyMoveInstr(I2, Ret->getIterator());
+    EXPECT_EQ(I2I2.top(), I2);
+    EXPECT_EQ(I2I2.bottom(), I2);
+  }
+  {
+    // Two-element interval swap.
+    sandboxir::Interval<sandboxir::Instruction> I1I2(I1, I2);
+    I1I2.notifyMoveInstr(I2, I1->getIterator());
+    I2->moveBefore(I1);
+    EXPECT_EQ(I1I2.top(), I2);
+    EXPECT_EQ(I1I2.bottom(), I1);
+
+    I2->moveAfter(I1);
+  }
+  {
+    // Move to same position.
+    sandboxir::Interval<sandboxir::Instruction> I0Ret(I0, Ret);
+    I0Ret.notifyMoveInstr(I0, I1->getIterator());
+    I0->moveBefore(I1);
+    EXPECT_EQ(I0Ret.top(), I0);
+    EXPECT_EQ(I0Ret.bottom(), Ret);
+  }
+  {
+    // Move internal to internal.
+    sandboxir::Interval<sandboxir::Instruction> I0Ret(I0, Ret);
+    I0Ret.notifyMoveInstr(I2, I1->getIterator());
+    I2->moveBefore(I1);
+    EXPECT_EQ(I0Ret.top(), I0);
+    EXPECT_EQ(I0Ret.bottom(), Ret);
+
+    I2->moveAfter(I1);
+  }
+  {
+    // Move internal before top.
+    sandboxir::Interval<sandboxir::Instruction> I0Ret(I0, Ret);
+    I0Ret.notifyMoveInstr(I2, I0->getIterator());
+    I2->moveBefore(I0);
+    EXPECT_EQ(I0Ret.top(), I2);
+    EXPECT_EQ(I0Ret.bottom(), Ret);
+
+    I2->moveAfter(I1);
+  }
+  {
+    // Move internal to bottom.
+    sandboxir::Interval<sandboxir::Instruction> I0Ret(I0, Ret);
+    I0Ret.notifyMoveInstr(I2, BB->end());
+    I2->moveAfter(Ret);
+    EXPECT_EQ(I0Ret.top(), I0);
+    EXPECT_EQ(I0Ret.bottom(), I2);
+
+    I2->moveAfter(I1);
+  }
+  {
+    // Move bottom before internal.
+    sandboxir::Interval<sandboxir::Instruction> I0Ret(I0, Ret);
+    I0Ret.notifyMoveInstr(Ret, I2->getIterator());
+    Ret->moveBefore(I2);
+    EXPECT_EQ(I0Ret.top(), I0);
+    EXPECT_EQ(I0Ret.bottom(), I2);
+
+    Ret->moveAfter(I2);
+  }
+  {
+    // Move bottom before top.
+    sandboxir::Interval<sandboxir::Instruction> I0Ret(I0, Ret);
+    I0Ret.notifyMoveInstr(Ret, I0->getIterator());
+    Ret->moveBefore(I0);
+    EXPECT_EQ(I0Ret.top(), Ret);
+    EXPECT_EQ(I0Ret.bottom(), I2);
+
+    Ret->moveAfter(I2);
   }
 }

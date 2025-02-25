@@ -1256,6 +1256,18 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
 
+  if (RoundedSize != 0) {
+    if (TRI.hasBasePointer(MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(TRI.getBaseRegister())
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else if (hasFP(MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(FramePtrReg)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+  }
+
   Register FramePtrRegScratchCopy;
   Register SGPRForFPSaveRestoreCopy =
       FuncInfo->getScratchSGPRCopyDstReg(FramePtrReg);
@@ -1280,14 +1292,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                          FramePtrRegScratchCopy);
   }
 
-  if (RoundedSize != 0 && hasFP(MF)) {
-    auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)
-        .addReg(StackPtrReg)
-        .addImm(-static_cast<int64_t>(RoundedSize * getScratchScaleFactor(ST)))
-        .setMIFlag(MachineInstr::FrameDestroy);
-    Add->getOperand(3).setIsDead(); // Mark SCC as dead.
-  }
-
   if (FPSaved) {
     // Insert the copy to restore FP.
     Register SrcReg = SGPRForFPSaveRestoreCopy ? SGPRForFPSaveRestoreCopy
@@ -1299,7 +1303,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       MIB.setMIFlag(MachineInstr::FrameDestroy);
   } else {
     // Insert the CSR spill restores with SP as the base register.
-    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
+    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits,
+                         FuncInfo->isChainFunction() ? Register() : StackPtrReg,
                          FramePtrRegScratchCopy);
   }
 }
@@ -1437,7 +1442,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // second VGPR emergency frame index.
     if (HaveSGPRToVMemSpill &&
         allocateScavengingFrameIndexesNearIncomingSP(MF)) {
-      RS->addScavengingFrameIndex(MFI.CreateStackObject(4, Align(4), false));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
 }
@@ -1805,7 +1810,7 @@ static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
 // The FP for kernels is always known 0, so we never really need to setup an
 // explicit register for it. However, DisableFramePointerElim will force us to
 // use a register for it.
-bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
+bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // For entry & chain functions we can use an immediate offset in most cases,

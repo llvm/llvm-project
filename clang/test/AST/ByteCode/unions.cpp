@@ -401,4 +401,88 @@ namespace UnionInBase {
                                         // both-note {{subobject 'y' is not initialized}}
   static_assert(return_uninit().a.x == 2);
 }
+
+namespace One {
+  struct A { long x; };
+
+  union U;
+  constexpr A foo(U *up);
+  union U {
+    A a = foo(this); // both-note {{in call to 'foo(&u)'}}
+    int y;
+  };
+
+  constexpr A foo(U *up) {
+    return {up->y}; // both-note {{read of member 'y' of union}}
+  }
+
+  constinit U u = {}; // both-error {{constant init}} \
+                      // both-note {{constinit}}
+}
+
+namespace CopyAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.a;
+  }
+  static_assert(f()== 12);
+
+
+  constexpr int f2() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.b; // both-note {{read of member 'b' of union with active member 'a'}}
+  }
+  static_assert(f2() == 12); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+}
+
+namespace MoveAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A b{13};
+
+    b = A{12} ;
+    return b.a;
+  }
+  static_assert(f()== 12);
+}
+
+namespace IFD {
+  template <class T>
+  struct Optional {
+    struct {
+      union {
+        char null_state;
+        T val;
+      };
+    };
+    constexpr Optional() : null_state(){}
+  };
+
+  constexpr bool test()
+  {
+    Optional<int> opt{};
+    Optional<int> opt2{};
+    opt = opt2;
+    return true;
+  }
+  static_assert(test());
+}
 #endif

@@ -139,16 +139,14 @@ define i32 @PR34471(i32 %x) {
 ; NO_FWD-NEXT:    switch i32 [[X:%.*]], label [[ELSE3:%.*]] [
 ; NO_FWD-NEXT:      i32 17, label [[RETURN:%.*]]
 ; NO_FWD-NEXT:      i32 19, label [[IF19:%.*]]
-; NO_FWD-NEXT:      i32 42, label [[IF42:%.*]]
+; NO_FWD-NEXT:      i32 42, label [[IF19]]
 ; NO_FWD-NEXT:    ]
 ; NO_FWD:       if19:
-; NO_FWD-NEXT:    br label [[RETURN]]
-; NO_FWD:       if42:
 ; NO_FWD-NEXT:    br label [[RETURN]]
 ; NO_FWD:       else3:
 ; NO_FWD-NEXT:    br label [[RETURN]]
 ; NO_FWD:       return:
-; NO_FWD-NEXT:    [[R:%.*]] = phi i32 [ [[X]], [[IF19]] ], [ [[X]], [[IF42]] ], [ 0, [[ELSE3]] ], [ 17, [[ENTRY:%.*]] ]
+; NO_FWD-NEXT:    [[R:%.*]] = phi i32 [ [[X]], [[IF19]] ], [ 0, [[ELSE3]] ], [ 17, [[ENTRY:%.*]] ]
 ; NO_FWD-NEXT:    ret i32 [[R]]
 ;
 ; FWD-LABEL: @PR34471(

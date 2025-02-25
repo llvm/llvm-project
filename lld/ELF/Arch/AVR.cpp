@@ -93,8 +93,8 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   case R_AVR_13_PCREL:
     return R_PC;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -110,7 +110,7 @@ bool AVR::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_AVR_HI8_LDI_GS:
     // A thunk is needed if the symbol's virtual address is out of range
     // [0, 0x1ffff].
-    return s.getVA() >= 0x20000;
+    return s.getVA(ctx) >= 0x20000;
   default:
     return false;
   }
@@ -282,8 +282,8 @@ uint32_t AVR::calcEFlags() const {
   for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     uint32_t objFlags = getEFlags(f);
     if ((objFlags & EF_AVR_ARCH_MASK) != (flags & EF_AVR_ARCH_MASK))
-      error(toString(f) +
-            ": cannot link object files with incompatible target ISA");
+      ErrAlways(ctx)
+          << f << ": cannot link object files with incompatible target ISA";
     if (!(objFlags & EF_AVR_LINKRELAX_PREPARED))
       hasLinkRelaxFlag = false;
   }

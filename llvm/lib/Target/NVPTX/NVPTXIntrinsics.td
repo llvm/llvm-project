@@ -69,17 +69,17 @@ def INT_BARRIER0 : NVPTXInst<(outs), (ins),
       [(int_nvvm_barrier0)]>;
 def INT_BARRIERN : NVPTXInst<(outs), (ins Int32Regs:$src1),
                   "bar.sync \t$src1;",
-      [(int_nvvm_barrier_n Int32Regs:$src1)]>;
+      [(int_nvvm_barrier_n i32:$src1)]>;
 def INT_BARRIER : NVPTXInst<(outs), (ins Int32Regs:$src1, Int32Regs:$src2),
                   "bar.sync \t$src1, $src2;",
-      [(int_nvvm_barrier Int32Regs:$src1, Int32Regs:$src2)]>;
+      [(int_nvvm_barrier i32:$src1, i32:$src2)]>;
 def INT_BARRIER0_POPC : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
   !strconcat("{{ \n\t",
              ".reg .pred \t%p1; \n\t",
              "setp.ne.u32 \t%p1, $pred, 0; \n\t",
              "bar.red.popc.u32 \t$dst, 0, %p1; \n\t",
              "}}"),
-      [(set Int32Regs:$dst, (int_nvvm_barrier0_popc Int32Regs:$pred))]>;
+      [(set i32:$dst, (int_nvvm_barrier0_popc i32:$pred))]>;
 def INT_BARRIER0_AND : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
   !strconcat("{{ \n\t",
              ".reg .pred \t%p1; \n\t",
@@ -88,7 +88,7 @@ def INT_BARRIER0_AND : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
              "bar.red.and.pred \t%p2, 0, %p1; \n\t",
              "selp.u32 \t$dst, 1, 0, %p2; \n\t",
              "}}"),
-      [(set Int32Regs:$dst, (int_nvvm_barrier0_and Int32Regs:$pred))]>;
+      [(set i32:$dst, (int_nvvm_barrier0_and i32:$pred))]>;
 def INT_BARRIER0_OR : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
   !strconcat("{{ \n\t",
              ".reg .pred \t%p1; \n\t",
@@ -97,7 +97,7 @@ def INT_BARRIER0_OR : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
              "bar.red.or.pred \t%p2, 0, %p1; \n\t",
              "selp.u32 \t$dst, 1, 0, %p2; \n\t",
              "}}"),
-      [(set Int32Regs:$dst, (int_nvvm_barrier0_or Int32Regs:$pred))]>;
+      [(set i32:$dst, (int_nvvm_barrier0_or i32:$pred))]>;
 
 def INT_BAR_SYNC : NVPTXInst<(outs), (ins i32imm:$i), "bar.sync \t$i;",
                              [(int_nvvm_bar_sync imm:$i)]>;
@@ -106,27 +106,27 @@ def INT_BAR_WARP_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync \t$i
                              [(int_nvvm_bar_warp_sync imm:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BAR_WARP_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "bar.warp.sync \t$i;",
-                             [(int_nvvm_bar_warp_sync Int32Regs:$i)]>,
+                             [(int_nvvm_bar_warp_sync i32:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 
 def INT_BARRIER_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "barrier.sync \t$i;",
                                    [(int_nvvm_barrier_sync imm:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "barrier.sync \t$i;",
-                                   [(int_nvvm_barrier_sync Int32Regs:$i)]>,
+                                   [(int_nvvm_barrier_sync i32:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 
 def INT_BARRIER_SYNC_CNT_RR : NVPTXInst<(outs), (ins Int32Regs:$id, Int32Regs:$cnt),
                  "barrier.sync \t$id, $cnt;",
-                 [(int_nvvm_barrier_sync_cnt Int32Regs:$id, Int32Regs:$cnt)]>,
+                 [(int_nvvm_barrier_sync_cnt i32:$id, i32:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_CNT_RI : NVPTXInst<(outs), (ins Int32Regs:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
-                 [(int_nvvm_barrier_sync_cnt Int32Regs:$id, imm:$cnt)]>,
+                 [(int_nvvm_barrier_sync_cnt i32:$id, imm:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_CNT_IR : NVPTXInst<(outs), (ins i32imm:$id, Int32Regs:$cnt),
                  "barrier.sync \t$id, $cnt;",
-                 [(int_nvvm_barrier_sync_cnt imm:$id, Int32Regs:$cnt)]>,
+                 [(int_nvvm_barrier_sync_cnt imm:$id, i32:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
@@ -217,7 +217,7 @@ foreach sync = [false, true] in {
 multiclass VOTE<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
   def : NVPTXInst<(outs regclass:$dest), (ins Int1Regs:$pred),
               "vote." # mode # " \t$dest, $pred;",
-              [(set regclass:$dest, (IntOp Int1Regs:$pred))]>,
+              [(set regclass:$dest, (IntOp i1:$pred))]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 }
 
@@ -230,11 +230,11 @@ defm VOTE_BALLOT : VOTE<Int32Regs, "ballot.b32", int_nvvm_vote_ballot>;
 multiclass VOTE_SYNC<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
   def i : NVPTXInst<(outs regclass:$dest), (ins i32imm:$mask, Int1Regs:$pred),
               "vote.sync." # mode # " \t$dest, $pred, $mask;",
-              [(set regclass:$dest, (IntOp imm:$mask, Int1Regs:$pred))]>,
+              [(set regclass:$dest, (IntOp imm:$mask, i1:$pred))]>,
           Requires<[hasPTX<60>, hasSM<30>]>;
   def r : NVPTXInst<(outs regclass:$dest), (ins Int32Regs:$mask, Int1Regs:$pred),
               "vote.sync." # mode #" \t$dest, $pred, $mask;",
-              [(set regclass:$dest, (IntOp Int32Regs:$mask, Int1Regs:$pred))]>,
+              [(set regclass:$dest, (IntOp i32:$mask, i1:$pred))]>,
           Requires<[hasPTX<60>, hasSM<30>]>;
 }
 
@@ -246,37 +246,37 @@ defm VOTE_SYNC_BALLOT : VOTE_SYNC<Int32Regs, "ballot.b32", int_nvvm_vote_ballot_
 // elect.sync
 def INT_ELECT_SYNC_I : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred), (ins i32imm:$mask),
             "elect.sync \t$dest|$pred, $mask;",
-            [(set Int32Regs:$dest, Int1Regs:$pred, (int_nvvm_elect_sync imm:$mask))]>,
+            [(set i32:$dest, i1:$pred, (int_nvvm_elect_sync imm:$mask))]>,
             Requires<[hasPTX<80>, hasSM<90>]>;
 def INT_ELECT_SYNC_R : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred), (ins Int32Regs:$mask),
             "elect.sync \t$dest|$pred, $mask;",
-            [(set Int32Regs:$dest, Int1Regs:$pred, (int_nvvm_elect_sync Int32Regs:$mask))]>,
+            [(set i32:$dest, i1:$pred, (int_nvvm_elect_sync i32:$mask))]>,
             Requires<[hasPTX<80>, hasSM<90>]>;
 
 multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntOp,
                           Operand ImmOp> {
   def ii : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, ImmOp:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set Int32Regs:$dest, (IntOp imm:$mask, imm:$value))]>,
+              [(set i32:$dest, (IntOp imm:$mask, imm:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
   def ir : NVPTXInst<(outs Int32Regs:$dest), (ins Int32Regs:$mask, ImmOp:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set Int32Regs:$dest, (IntOp Int32Regs:$mask, imm:$value))]>,
+              [(set i32:$dest, (IntOp i32:$mask, imm:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
   def ri : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, regclass:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set Int32Regs:$dest, (IntOp imm:$mask, regclass:$value))]>,
+              [(set i32:$dest, (IntOp imm:$mask, regclass:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
   def rr : NVPTXInst<(outs Int32Regs:$dest), (ins Int32Regs:$mask, regclass:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
-              [(set Int32Regs:$dest, (IntOp Int32Regs:$mask, regclass:$value))]>,
+              [(set i32:$dest, (IntOp i32:$mask, regclass:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
 }
 
 // activemask.b32
 def ACTIVEMASK : NVPTXInst<(outs Int32Regs:$dest), (ins),
                     "activemask.b32 \t$dest;",
-                    [(set Int32Regs:$dest, (int_nvvm_activemask))]>,
+                    [(set i32:$dest, (int_nvvm_activemask))]>,
                  Requires<[hasPTX<62>, hasSM<30>]>;
 
 defm MATCH_ANY_SYNC_32 : MATCH_ANY_SYNC<Int32Regs, "b32", int_nvvm_match_any_sync_i32,
@@ -289,22 +289,22 @@ multiclass MATCH_ALLP_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic Int
   def ii : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins i32imm:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp imm:$mask, imm:$value))]>,
+              [(set i32:$dest, i1:$pred, (IntOp imm:$mask, imm:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
   def ir : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, imm:$value))]>,
+              [(set i32:$dest, i1:$pred, (IntOp i32:$mask, imm:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
   def ri : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins i32imm:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp imm:$mask, regclass:$value))]>,
+              [(set i32:$dest, i1:$pred, (IntOp imm:$mask, regclass:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
   def rr : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
-              [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, regclass:$value))]>,
+              [(set i32:$dest, i1:$pred, (IntOp i32:$mask, regclass:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
 }
 defm MATCH_ALLP_SYNC_32 : MATCH_ALLP_SYNC<Int32Regs, "b32", int_nvvm_match_all_sync_i32p,
@@ -315,7 +315,7 @@ defm MATCH_ALLP_SYNC_64 : MATCH_ALLP_SYNC<Int64Regs, "b64", int_nvvm_match_all_s
 multiclass REDUX_SYNC<string BinOp, string PTXType, Intrinsic Intrin> {
   def : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$src, Int32Regs:$mask),
           "redux.sync." # BinOp # "." # PTXType # " $dst, $src, $mask;",
-          [(set Int32Regs:$dst, (Intrin Int32Regs:$src, Int32Regs:$mask))]>,
+          [(set i32:$dst, (Intrin i32:$src, Int32Regs:$mask))]>,
         Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -327,6 +327,25 @@ defm REDUX_SYNC_MAX : REDUX_SYNC<"max", "s32", int_nvvm_redux_sync_max>;
 defm REDUX_SYNC_AND : REDUX_SYNC<"and", "b32", int_nvvm_redux_sync_and>;
 defm REDUX_SYNC_XOR : REDUX_SYNC<"xor", "b32", int_nvvm_redux_sync_xor>;
 defm REDUX_SYNC_OR : REDUX_SYNC<"or", "b32", int_nvvm_redux_sync_or>;
+
+multiclass REDUX_SYNC_F<string BinOp, string abs, string NaN> {
+  defvar intr_name = "int_nvvm_redux_sync_f" # BinOp # !subst(".", "_", abs) # !subst(".", "_", NaN);
+
+  def : NVPTXInst<(outs Float32Regs:$dst),
+                  (ins Float32Regs:$src, Int32Regs:$mask),
+                  "redux.sync." # BinOp # abs # NaN # ".f32 $dst, $src, $mask;",
+                  [(set f32:$dst, (!cast<Intrinsic>(intr_name) f32:$src, Int32Regs:$mask))]>,
+                  Requires<[hasPTX<86>, hasSM100a]>; 
+}
+
+defm REDUX_SYNC_FMIN : REDUX_SYNC_F<"min", "", "">;
+defm REDUX_SYNC_FMIN_ABS : REDUX_SYNC_F<"min", ".abs", "">;
+defm REDUX_SYNC_FMIN_NAN: REDUX_SYNC_F<"min", "", ".NaN">;
+defm REDUX_SYNC_FMIN_ABS_NAN: REDUX_SYNC_F<"min", ".abs", ".NaN">;
+defm REDUX_SYNC_FMAX : REDUX_SYNC_F<"max", "", "">;
+defm REDUX_SYNC_FMAX_ABS : REDUX_SYNC_F<"max", ".abs", "">;
+defm REDUX_SYNC_FMAX_NAN: REDUX_SYNC_F<"max", "", ".NaN">;
+defm REDUX_SYNC_FMAX_ABS_NAN: REDUX_SYNC_F<"max", ".abs", ".NaN">;
 
 } // isConvergent = true
 
@@ -371,7 +390,7 @@ def INT_FENCE_PROXY_TENSORMAP_GENERIC_RELEASE_SYS:
 class FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE<string Scope, Intrinsic Intr> :
         NVPTXInst<(outs), (ins Int64Regs:$addr),
                   "fence.proxy.tensormap::generic.acquire." # Scope # " [$addr], 128;",
-                  [(Intr Int64Regs:$addr, (i32 128))]>,
+                  [(Intr i64:$addr, (i32 128))]>,
         Requires<[hasPTX<83>, hasSM<90>]>;
 
 def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_CTA :
@@ -394,11 +413,11 @@ def INT_FENCE_PROXY_TENSORMAP_GENERIC_ACQUIRE_SYS :
 multiclass CP_ASYNC_MBARRIER_ARRIVE<string NoInc, string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr),
             !strconcat("cp.async.mbarrier.arrive", NoInc, AddrSpace, ".b64 [$addr];"),
-            [(Intrin Int32Regs:$addr)]>,
+            [(Intrin i32:$addr)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr),
             !strconcat("cp.async.mbarrier.arrive", NoInc, AddrSpace, ".b64 [$addr];"),
-            [(Intrin Int64Regs:$addr)]>,
+            [(Intrin i64:$addr)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -414,28 +433,28 @@ defm CP_ASYNC_MBARRIER_ARRIVE_NOINC_SHARED :
 multiclass CP_ASYNC_SHARED_GLOBAL_I<string cc, string cpsize, Intrinsic Intrin, Intrinsic IntrinS> {
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src),
             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ";"),
-            [(Intrin Int32Regs:$dst, Int32Regs:$src)]>,
+            [(Intrin i32:$dst, i32:$src)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src),
             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ";"),
-            [(Intrin Int64Regs:$dst, Int64Regs:$src)]>,
+            [(Intrin i64:$dst, i64:$src)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   // Variant with src_size parameter
   def _32s : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src, Int32Regs:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
-             [(IntrinS Int32Regs:$dst, Int32Regs:$src, Int32Regs:$src_size)]>,
+             [(IntrinS i32:$dst, i32:$src, i32:$src_size)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _32si: NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src, i32imm:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
-             [(IntrinS Int32Regs:$dst, Int32Regs:$src, imm:$src_size)]>,
+             [(IntrinS i32:$dst, i32:$src, imm:$src_size)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64s : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src, Int32Regs:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
-             [(IntrinS Int64Regs:$dst, Int64Regs:$src, Int32Regs:$src_size)]>,
+             [(IntrinS i64:$dst, i64:$src, i32:$src_size)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64si: NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src, i32imm:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
-             [(IntrinS Int64Regs:$dst, Int64Regs:$src, imm:$src_size)]>,
+             [(IntrinS i64:$dst, i64:$src, imm:$src_size)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -461,7 +480,7 @@ def CP_ASYNC_COMMIT_GROUP :
 
 def CP_ASYNC_WAIT_GROUP :
   NVPTXInst<(outs), (ins i32imm:$n), "cp.async.wait_group $n;",
-  [(int_nvvm_cp_async_wait_group (i32 timm:$n))]>,
+  [(int_nvvm_cp_async_wait_group timm:$n)]>,
   Requires<[hasPTX<70>, hasSM<80>]>;
 
 def CP_ASYNC_WAIT_ALL :
@@ -477,13 +496,298 @@ def CP_ASYNC_BULK_COMMIT_GROUP :
 
 def CP_ASYNC_BULK_WAIT_GROUP :
   NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group $n;",
-  [(int_nvvm_cp_async_bulk_wait_group (i32 timm:$n))]>,
+  [(int_nvvm_cp_async_bulk_wait_group timm:$n)]>,
   Requires<[hasPTX<80>, hasSM<90>]>;
 
 def CP_ASYNC_BULK_WAIT_GROUP_READ :
   NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group.read $n;",
-  [(int_nvvm_cp_async_bulk_wait_group_read (i32 timm:$n))]>,
+  [(int_nvvm_cp_async_bulk_wait_group_read timm:$n)]>,
   Requires<[hasPTX<80>, hasSM<90>]>;
+
+//------------------------------
+// TMA Async Bulk Copy Functions
+//------------------------------
+
+class CpAsyncBulkStr<bit mc, bit ch> {
+  // Shared to Global memory
+  string S2G = "cp.async.bulk.global.shared::cta.bulk_group"
+               # !if(ch, ".L2::cache_hint", "");
+
+  // Global to Shared cluster memory
+  string G2S = "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes"
+               # !if(mc, ".multicast::cluster", "")
+               # !if(ch, ".L2::cache_hint", "");
+
+  // Shared CTA to Cluster memory
+  string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
+}
+
+multiclass CP_ASYNC_BULK_S2G<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins Int64Regs:$dst, rc:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.S2G, " [$dst], [$src], $size;"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  (ins Int64Regs:$dst, rc:$src, Int32Regs:$size, Int64Regs:$ch),
+                  !strconcat(CpAsyncBulkStr<0, 1>.S2G, " [$dst], [$src], $size, $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_S2G : CP_ASYNC_BULK_S2G<Int64Regs>;
+defm CP_ASYNC_BULK_S2G_SHARED32 : CP_ASYNC_BULK_S2G<Int32Regs>;
+
+multiclass CP_ASYNC_BULK_G2S<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.G2S, " [$dst], [$src], $size, [$mbar];"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC: NVPTXInst<(outs),
+                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc),
+                  !strconcat(CpAsyncBulkStr<1, 0>.G2S, " [$dst], [$src], $size, [$mbar], $mc;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                  !strconcat(CpAsyncBulkStr<0, 1>.G2S, " [$dst], [$src], $size, [$mbar], $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC_CH: NVPTXInst<(outs),
+                     (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc, Int64Regs:$ch),
+                     !strconcat(CpAsyncBulkStr<1, 1>.G2S, " [$dst], [$src], $size, [$mbar], $mc, $ch;"), []>,
+                     Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_G2S : CP_ASYNC_BULK_G2S<Int64Regs>;
+defm CP_ASYNC_BULK_G2S_SHARED32 : CP_ASYNC_BULK_G2S<Int32Regs>;
+
+multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.C2C, " [$dst], [$src], $size, [$mbar];"),
+            [(int_nvvm_cp_async_bulk_shared_cta_to_cluster rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size)]>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
+defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
+
+//------------------------------
+// Bulk Copy Prefetch Functions
+//------------------------------
+def CP_ASYNC_BULK_PREFETCH : NVPTXInst<(outs),
+                             (ins Int64Regs:$src, Int32Regs:$size),
+                             "cp.async.bulk.prefetch.L2.global [$src], $size;", []>,
+                             Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_PREFETCH_CH : NVPTXInst<(outs),
+                                (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                                "cp.async.bulk.prefetch.L2.global.L2::cache_hint [$src], $size, $ch;", []>,
+                                Requires<[hasPTX<80>, hasSM<90>]>;
+//-------------------------------------
+// TMA Async Bulk Tensor Copy Functions
+//-------------------------------------
+
+// From Global to Shared memory (G2S)
+class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
+  string prefix = "cp.async.bulk.tensor";
+  string dir = "shared::cluster.global";
+  string completion = "mbarrier::complete_tx::bytes";
+  string inst_name = prefix
+                     # "." # dim # "d"
+                     # "." # dir
+                     # "." # mode
+                     # "." # completion
+                     # !if(mc, ".multicast::cluster", "")
+                     # !if(ch, ".L2::cache_hint", "");
+  string intr_name = "CP_ASYNC_BULK_TENSOR_G2S_"
+                     # dim # "D"
+                     # !if(is_shared32, "_SHARED32", "")
+                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str_default = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
+  defvar rc = !if(is_shared32, Int32Regs, Int64Regs);
+
+  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
+  defvar im2col_dag = !if(!eq(mode, "im2col"),
+    !dag(ins, !listsplat(Int16Regs, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
+    (ins));
+  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
+  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
+
+  defvar asm_str = !if(!eq(mode, "im2col"),
+    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
+
+  def NAME: NVPTXInst<(outs),
+            !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag),
+            !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC: NVPTXInst<(outs),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc)),
+                  !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+                  !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC_CH: NVPTXInst<(outs),
+                     !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc, Int64Regs:$ch)),
+                     !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
+                     Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach shared32 = [true, false] in {
+    foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+      defm G2S_STRINGS<dim, mode, 0, 0, shared32>.intr_name :
+        CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, shared32, mode>;
+    }
+  }
+}
+
+// From Shared to Global memory (S2G)
+class S2G_STRINGS<int dim, string mode, bit ch,
+                  bit is_shared32 = 0, bit is_reduce = 0> {
+  string dir = "global.shared::cta";
+  string completion = "bulk_group";
+  string inst_name = !if(is_reduce, "cp.reduce", "cp")
+                     # ".async.bulk.tensor"
+                     # "." # dim # "d"
+                     # "." # dir
+                     # "." # mode
+                     # "." # completion
+                     # !if(ch, ".L2::cache_hint", "");
+  string intr_name = "CP_ASYNC_BULK_TENSOR_"
+                     # !if(is_reduce, "RED_", "S2G_")
+                     # dim # "D"
+                     # !if(is_shared32, "_SHARED32", "")
+                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, bit shared32, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
+  defvar rc = !if(shared32, Int32Regs, Int64Regs);
+
+  def NAME: NVPTXInst<(outs),
+            !con((ins rc:$src, Int64Regs:$tmap), dims_dag),
+            !strconcat(S2G_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins Int64Regs:$ch)),
+                  !strconcat(S2G_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+def TMAReductionFlags : Operand<i32> {
+  let PrintMethod = "printTmaReductionMode";
+}
+
+// TMA Copy from Shared to Global memory with Reduction
+multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
+  defvar rc = !if(shared32, Int32Regs, Int64Regs);
+
+  defvar prefix = "cp.reduce.async.bulk.tensor" # "." # dim # "d" # ".global.shared::cta";
+  defvar suffix = "." # mode # ".bulk_group";
+
+  def NAME: NVPTXInst<(outs),
+            !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins TMAReductionFlags:$red_op)),
+            !strconcat(prefix, "${red_op}", suffix, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins Int64Regs:$ch, TMAReductionFlags:$red_op)),
+                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach shared32 = [true, false] in {
+    foreach mode = !if(!ge(dim, 3), ["tile", "im2col_no_offs"], ["tile"]) in {
+      defm S2G_STRINGS<dim, mode, 0, shared32>.intr_name :
+        CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, shared32, mode>;
+      defm S2G_STRINGS<dim, mode, 0, shared32, 1>.intr_name :
+        CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, shared32, mode>;
+    }
+  }
+}
+
+// TMA Prefetch from Global memory to L2 cache
+class PREFETCH_STRINGS<int dim, string mode, bit ch> {
+  string prefix = "cp.async.bulk.prefetch.tensor";
+  string dir = "L2.global";
+  string inst_name = prefix
+                     # "." # dim # "d"
+                     # "." # dir
+                     # "." # mode
+                     # !if(ch, ".L2::cache_hint", "");
+  string intr_name = "CP_ASYNC_BULK_TENSOR_PREFETCH_"
+                     # dim # "D"
+                     # !if(!eq(mode, "tile"), "_TILE", "_IM2COL");
+}
+
+multiclass CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
+  defvar dims_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "d" # i));
+  defvar dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  defvar asm_str_default = " [$tmap, {{" # dims_str # "}}]";
+
+  defvar num_im2col = !if(!ge(dim, 3), !add(dim, -2), 0);
+  defvar im2col_dag = !if(!eq(mode, "im2col"),
+    !dag(ins, !listsplat(Int16Regs, num_im2col), !foreach(i, !range(num_im2col), "im2col" # i)),
+    (ins));
+  defvar im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
+  defvar im2col_asm_str = ", {{" # im2col_str # "}}";
+
+  defvar asm_str = !if(!eq(mode, "im2col"),
+    !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
+
+  def NAME: NVPTXInst<(outs),
+            !con((ins Int64Regs:$tmap), dims_dag, im2col_dag),
+            !strconcat(PREFETCH_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+                  !strconcat(PREFETCH_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    defm PREFETCH_STRINGS<dim, mode, 0>.intr_name :
+      CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>;
+  }
+}
+
+//Prefetch and Prefetchu 
+
+class PREFETCH_INTRS<string InstName> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+          InstName # " [$addr];",
+          [(!cast<Intrinsic>(!strconcat("int_nvvm_",
+          !subst(".", "_", InstName))) i64:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+   
+
+def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1">;
+def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2">;
+def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1">;
+def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1">;
+def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2">;
+def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
+
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_normal" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_normal") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_last" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_last") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
 //-----------------------------------
 // MBarrier Functions
@@ -492,11 +796,11 @@ def CP_ASYNC_BULK_WAIT_GROUP_READ :
 multiclass MBARRIER_INIT<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.init", AddrSpace, ".b64 [$addr], $count;"),
-    [(Intrin Int32Regs:$addr, Int32Regs:$count)]>,
+    [(Intrin i32:$addr, i32:$count)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.init", AddrSpace, ".b64 [$addr], $count;"),
-    [(Intrin Int64Regs:$addr, Int32Regs:$count)]>,
+    [(Intrin i64:$addr, i32:$count)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -507,11 +811,11 @@ defm MBARRIER_INIT_SHARED : MBARRIER_INIT<".shared",
 multiclass MBARRIER_INVAL<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr),
            !strconcat("mbarrier.inval", AddrSpace, ".b64 [$addr];"),
-    [(Intrin Int32Regs:$addr)]>,
+    [(Intrin i32:$addr)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr),
            !strconcat("mbarrier.inval", AddrSpace, ".b64 [$addr];"),
-    [(Intrin Int64Regs:$addr)]>,
+    [(Intrin i64:$addr)]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -522,11 +826,11 @@ defm MBARRIER_INVAL_SHARED : MBARRIER_INVAL<".shared",
 multiclass MBARRIER_ARRIVE<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs Int64Regs:$state), (ins Int32Regs:$addr),
            !strconcat("mbarrier.arrive", AddrSpace, ".b64 $state, [$addr];"),
-    [(set Int64Regs:$state, (Intrin Int32Regs:$addr))]>,
+    [(set i64:$state, (Intrin i32:$addr))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state), (ins Int64Regs:$addr),
            !strconcat("mbarrier.arrive", AddrSpace, ".b64 $state, [$addr];"),
-    [(set Int64Regs:$state, (Intrin Int64Regs:$addr))]>,
+    [(set i64:$state, (Intrin i64:$addr))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -539,13 +843,13 @@ multiclass MBARRIER_ARRIVE_NOCOMPLETE<string AddrSpace, Intrinsic Intrin> {
            (ins Int32Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.arrive.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
-    [(set Int64Regs:$state, (Intrin Int32Regs:$addr, Int32Regs:$count))]>,
+    [(set i64:$state, (Intrin i32:$addr, i32:$count))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state),
            (ins Int64Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.arrive.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
-    [(set Int64Regs:$state, (Intrin Int64Regs:$addr, Int32Regs:$count))]>,
+    [(set i64:$state, (Intrin i64:$addr, i32:$count))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -558,12 +862,12 @@ multiclass MBARRIER_ARRIVE_DROP<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs Int64Regs:$state), (ins Int32Regs:$addr),
            !strconcat("mbarrier.arrive_drop", AddrSpace,
                       ".b64 $state, [$addr];"),
-           [(set Int64Regs:$state, (Intrin Int32Regs:$addr))]>,
+           [(set i64:$state, (Intrin i32:$addr))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state), (ins Int64Regs:$addr),
            !strconcat("mbarrier.arrive_drop", AddrSpace,
                       ".b64 $state, [$addr];"),
-           [(set Int64Regs:$state, (Intrin Int64Regs:$addr))]>,
+           [(set i64:$state, (Intrin i64:$addr))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -577,13 +881,13 @@ multiclass MBARRIER_ARRIVE_DROP_NOCOMPLETE<string AddrSpace, Intrinsic Intrin> {
            (ins Int32Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.arrive_drop.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
-           [(set Int64Regs:$state, (Intrin Int32Regs:$addr, Int32Regs:$count))]>,
+           [(set i64:$state, (Intrin i32:$addr, i32:$count))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state),
            (ins Int64Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.arrive_drop.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
-           [(set Int64Regs:$state, (Intrin Int64Regs:$addr, Int32Regs:$count))]>,
+           [(set i64:$state, (Intrin i64:$addr, i32:$count))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -596,11 +900,11 @@ defm MBARRIER_ARRIVE_DROP_NOCOMPLETE_SHARED :
 multiclass MBARRIER_TEST_WAIT<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs Int1Regs:$res), (ins Int32Regs:$addr, Int64Regs:$state),
            !strconcat("mbarrier.test_wait", AddrSpace, ".b64 $res, [$addr], $state;"),
-           [(set Int1Regs:$res, (Intrin Int32Regs:$addr, Int64Regs:$state))]>,
+           [(set i1:$res, (Intrin i32:$addr, i64:$state))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int1Regs:$res), (ins Int64Regs:$addr, Int64Regs:$state),
            !strconcat("mbarrier.test_wait", AddrSpace, ".b64 $res, [$addr], $state;"),
-           [(set Int1Regs:$res, (Intrin Int64Regs:$addr, Int64Regs:$state))]>,
+           [(set i1:$res, (Intrin i64:$addr, i64:$state))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
@@ -612,7 +916,7 @@ defm MBARRIER_TEST_WAIT_SHARED :
 class MBARRIER_PENDING_COUNT<Intrinsic Intrin> :
            NVPTXInst<(outs Int32Regs:$res), (ins Int64Regs:$state),
            "mbarrier.pending_count.b64 $res, $state;",
-           [(set Int32Regs:$res, (Intrin Int64Regs:$state))]>,
+           [(set i32:$res, (Intrin i64:$state))]>,
     Requires<[hasPTX<70>, hasSM<80>]>;
 
 def MBARRIER_PENDING_COUNT :
@@ -629,30 +933,30 @@ def MBARRIER_PENDING_COUNT :
 // Same story for fmax, fmin.
 
 def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f immFloat0, Float32Regs:$a)),
-          (CVT_f32_f32 Float32Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_f immFloat0, f32:$a)),
+          (CVT_f32_f32 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f Float32Regs:$a, immFloat0)),
-          (CVT_f32_f32 Float32Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_f f32:$a, immFloat0)),
+          (CVT_f32_f32 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f immFloat0, Float32Regs:$a), immFloat1),
-          (CVT_f32_f32 Float32Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_f immFloat0, f32:$a), immFloat1),
+          (CVT_f32_f32 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f Float32Regs:$a, immFloat0), immFloat1),
-          (CVT_f32_f32 Float32Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_f f32:$a, immFloat0), immFloat1),
+          (CVT_f32_f32 $a, CvtSAT)>;
 
 def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d immDouble0, Float64Regs:$a)),
-          (CVT_f64_f64 Float64Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_d immDouble0, f64:$a)),
+          (CVT_f64_f64 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d Float64Regs:$a, immDouble0)),
-          (CVT_f64_f64 Float64Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_d f64:$a, immDouble0)),
+          (CVT_f64_f64 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d immDouble0, Float64Regs:$a), immDouble1),
-          (CVT_f64_f64 Float64Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_d immDouble0, f64:$a), immDouble1),
+          (CVT_f64_f64 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d Float64Regs:$a, immDouble0), immDouble1),
-          (CVT_f64_f64 Float64Regs:$a, CvtSAT)>;
+            (int_nvvm_fmax_d f64:$a, immDouble0), immDouble1),
+          (CVT_f64_f64 $a, CvtSAT)>;
 
 
 // We need a full string for OpcStr here because we need to deal with case like
@@ -696,7 +1000,7 @@ def INT_NVVM_NANOSLEEP_I : NVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32 \t$
                              [(int_nvvm_nanosleep imm:$i)]>,
         Requires<[hasPTX<63>, hasSM<70>]>;
 def INT_NVVM_NANOSLEEP_R : NVPTXInst<(outs), (ins Int32Regs:$i), "nanosleep.u32 \t$i;",
-                             [(int_nvvm_nanosleep Int32Regs:$i)]>,
+                             [(int_nvvm_nanosleep i32:$i)]>,
         Requires<[hasPTX<63>, hasSM<70>]>;
 //
 // Min Max
@@ -930,6 +1234,18 @@ def INT_NVVM_DIV_RM_D : F_MATH_2<"div.rm.f64 \t$dst, $src0, $src1;",
 def INT_NVVM_DIV_RP_D : F_MATH_2<"div.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_div_rp_d>;
 
+def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
+          (FDIV32rr $a, $b)>;
+
+def : Pat<(int_nvvm_div_full f32:$a, fpimm:$b),
+          (FDIV32ri $a, f32imm:$b)>;
+
+def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
+          (FDIV32rr_ftz $a, $b)>;
+
+def : Pat<(int_nvvm_div_full_ftz f32:$a, fpimm:$b),
+          (FDIV32ri_ftz $a, f32imm:$b)>;
+
 //
 // Sad
 //
@@ -951,19 +1267,19 @@ def INT_NVVM_SAD_ULL : F_MATH_3<"sad.u64 \t$dst, $src0, $src1, $src2;",
 // Floor  Ceil
 //
 
-def : Pat<(int_nvvm_floor_ftz_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRMI_FTZ)>;
-def : Pat<(int_nvvm_floor_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_floor_d Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRMI)>;
+def : Pat<(int_nvvm_floor_ftz_f f32:$a),
+          (CVT_f32_f32 $a, CvtRMI_FTZ)>;
+def : Pat<(int_nvvm_floor_f f32:$a),
+          (CVT_f32_f32 $a, CvtRMI)>;
+def : Pat<(int_nvvm_floor_d f64:$a),
+          (CVT_f64_f64 $a, CvtRMI)>;
 
-def : Pat<(int_nvvm_ceil_ftz_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRPI_FTZ)>;
-def : Pat<(int_nvvm_ceil_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRPI)>;
-def : Pat<(int_nvvm_ceil_d Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_ceil_ftz_f f32:$a),
+          (CVT_f32_f32 $a, CvtRPI_FTZ)>;
+def : Pat<(int_nvvm_ceil_f f32:$a),
+          (CVT_f32_f32 $a, CvtRPI)>;
+def : Pat<(int_nvvm_ceil_d f64:$a),
+          (CVT_f64_f64 $a, CvtRPI)>;
 
 //
 // Abs
@@ -986,12 +1302,12 @@ def fcopysign_nvptx : SDNode<"NVPTXISD::FCOPYSIGN", SDTFPBinOp>;
 def COPYSIGN_F :
     NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src0, Float32Regs:$src1),
               "copysign.f32 \t$dst, $src0, $src1;",
-              [(set Float32Regs:$dst, (fcopysign_nvptx Float32Regs:$src1, Float32Regs:$src0))]>;
+              [(set f32:$dst, (fcopysign_nvptx f32:$src1, f32:$src0))]>;
 
 def COPYSIGN_D :
     NVPTXInst<(outs Float64Regs:$dst), (ins Float64Regs:$src0, Float64Regs:$src1),
               "copysign.f64 \t$dst, $src0, $src1;",
-              [(set Float64Regs:$dst, (fcopysign_nvptx Float64Regs:$src1, Float64Regs:$src0))]>;
+              [(set f64:$dst, (fcopysign_nvptx f64:$src1, f64:$src0))]>;
 
 //
 // Abs, Neg bf16, bf16x2
@@ -1010,34 +1326,34 @@ def INT_NVVM_NEG_BF16X2 : F_MATH_1<"neg.bf16x2 \t$dst, $src0;", Int32Regs,
 // Round
 //
 
-def : Pat<(int_nvvm_round_ftz_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>;
-def : Pat<(int_nvvm_round_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_round_d Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
+def : Pat<(int_nvvm_round_ftz_f f32:$a),
+          (CVT_f32_f32 $a, CvtRNI_FTZ)>;
+def : Pat<(int_nvvm_round_f f32:$a),
+          (CVT_f32_f32 $a, CvtRNI)>;
+def : Pat<(int_nvvm_round_d f64:$a),
+          (CVT_f64_f64 $a, CvtRNI)>;
 
 //
 // Trunc
 //
 
-def : Pat<(int_nvvm_trunc_ftz_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRZI_FTZ)>;
-def : Pat<(int_nvvm_trunc_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_trunc_d Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRZI)>;
+def : Pat<(int_nvvm_trunc_ftz_f f32:$a),
+          (CVT_f32_f32 $a, CvtRZI_FTZ)>;
+def : Pat<(int_nvvm_trunc_f f32:$a),
+          (CVT_f32_f32 $a, CvtRZI)>;
+def : Pat<(int_nvvm_trunc_d f64:$a),
+          (CVT_f64_f64 $a, CvtRZI)>;
 
 //
 // Saturate
 //
 
-def : Pat<(int_nvvm_saturate_ftz_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtSAT_FTZ)>;
-def : Pat<(int_nvvm_saturate_f Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtSAT)>;
-def : Pat<(int_nvvm_saturate_d Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtSAT)>;
+def : Pat<(int_nvvm_saturate_ftz_f f32:$a),
+          (CVT_f32_f32 $a, CvtSAT_FTZ)>;
+def : Pat<(int_nvvm_saturate_f f32:$a),
+          (CVT_f32_f32 $a, CvtSAT)>;
+def : Pat<(int_nvvm_saturate_d f64:$a),
+          (CVT_f64_f64 $a, CvtSAT)>;
 
 //
 // Exp2  Log2
@@ -1049,10 +1365,20 @@ def INT_NVVM_EX2_APPROX_F : F_MATH_1<"ex2.approx.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_ex2_approx_f>;
 def INT_NVVM_EX2_APPROX_D : F_MATH_1<"ex2.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_ex2_approx_d>;
+
 def INT_NVVM_EX2_APPROX_F16 : F_MATH_1<"ex2.approx.f16 \t$dst, $src0;",
   Int16Regs, Int16Regs, int_nvvm_ex2_approx_f16, [hasPTX<70>, hasSM<75>]>;
 def INT_NVVM_EX2_APPROX_F16X2 : F_MATH_1<"ex2.approx.f16x2 \t$dst, $src0;",
   Int32Regs, Int32Regs, int_nvvm_ex2_approx_f16x2, [hasPTX<70>, hasSM<75>]>;
+
+def : Pat<(fexp2 f32:$a),
+          (INT_NVVM_EX2_APPROX_FTZ_F $a)>, Requires<[doF32FTZ]>;
+def : Pat<(fexp2 f32:$a),
+          (INT_NVVM_EX2_APPROX_F $a)>, Requires<[doNoF32FTZ]>;
+def : Pat<(fexp2 f16:$a),
+          (INT_NVVM_EX2_APPROX_F16 $a)>, Requires<[useFP16Math]>;
+def : Pat<(fexp2 v2f16:$a),
+          (INT_NVVM_EX2_APPROX_F16X2 $a)>, Requires<[useFP16Math]>;
 
 def INT_NVVM_LG2_APPROX_FTZ_F : F_MATH_1<"lg2.approx.ftz.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_lg2_approx_ftz_f>;
@@ -1060,6 +1386,11 @@ def INT_NVVM_LG2_APPROX_F : F_MATH_1<"lg2.approx.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_lg2_approx_f>;
 def INT_NVVM_LG2_APPROX_D : F_MATH_1<"lg2.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_lg2_approx_d>;
+
+def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_FTZ_F $a)>,
+          Requires<[doF32FTZ]>;
+def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_F $a)>,
+          Requires<[doNoF32FTZ]>;
 
 //
 // Sin  Cos
@@ -1223,14 +1554,14 @@ def INT_NVVM_SQRT_RP_D : F_MATH_1<"sqrt.rp.f64 \t$dst, $src0;", Float64Regs,
   Float64Regs, int_nvvm_sqrt_rp_d>;
 
 // nvvm_sqrt intrinsic
-def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
-          (INT_NVVM_SQRT_RN_FTZ_F Float32Regs:$a)>, Requires<[doF32FTZ, do_SQRTF32_RN]>;
-def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
-          (INT_NVVM_SQRT_RN_F Float32Regs:$a)>, Requires<[do_SQRTF32_RN]>;
-def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
-          (INT_NVVM_SQRT_APPROX_FTZ_F Float32Regs:$a)>, Requires<[doF32FTZ]>;
-def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
-          (INT_NVVM_SQRT_APPROX_F Float32Regs:$a)>;
+def : Pat<(int_nvvm_sqrt_f f32:$a),
+          (INT_NVVM_SQRT_RN_FTZ_F $a)>, Requires<[doF32FTZ, do_SQRTF32_RN]>;
+def : Pat<(int_nvvm_sqrt_f f32:$a),
+          (INT_NVVM_SQRT_RN_F $a)>, Requires<[do_SQRTF32_RN]>;
+def : Pat<(int_nvvm_sqrt_f f32:$a),
+          (INT_NVVM_SQRT_APPROX_FTZ_F $a)>, Requires<[doF32FTZ]>;
+def : Pat<(int_nvvm_sqrt_f f32:$a),
+          (INT_NVVM_SQRT_APPROX_F $a)>;
 
 //
 // Rsqrt
@@ -1249,25 +1580,25 @@ def INT_NVVM_RSQRT_APPROX_D : F_MATH_1<"rsqrt.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_rsqrt_approx_d>;
 
 // 1.0f / sqrt_approx -> rsqrt_approx
-def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_approx_f Float32Regs:$a)),
-         (INT_NVVM_RSQRT_APPROX_F Float32Regs:$a)>,
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_approx_f f32:$a)),
+         (INT_NVVM_RSQRT_APPROX_F $a)>,
          Requires<[doRsqrtOpt]>;
-def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_approx_ftz_f Float32Regs:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F Float32Regs:$a)>,
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
+         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
          Requires<[doRsqrtOpt]>;
 // same for int_nvvm_sqrt_f when non-precision sqrt is requested
-def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_f Float32Regs:$a)),
-         (INT_NVVM_RSQRT_APPROX_F Float32Regs:$a)>,
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_f f32:$a)),
+         (INT_NVVM_RSQRT_APPROX_F $a)>,
          Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doNoF32FTZ]>;
-def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_f Float32Regs:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F Float32Regs:$a)>,
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_f f32:$a)),
+         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
          Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doF32FTZ]>;
 
-def: Pat<(fdiv FloatConst1, (fsqrt Float32Regs:$a)),
-         (INT_NVVM_RSQRT_APPROX_F Float32Regs:$a)>,
+def: Pat<(fdiv FloatConst1, (fsqrt f32:$a)),
+         (INT_NVVM_RSQRT_APPROX_F $a)>,
          Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doNoF32FTZ]>;
-def: Pat<(fdiv FloatConst1, (fsqrt Float32Regs:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F Float32Regs:$a)>,
+def: Pat<(fdiv FloatConst1, (fsqrt f32:$a)),
+         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
          Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doF32FTZ]>;
 //
 // Add
@@ -1300,145 +1631,159 @@ def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_add_rp_d>;
 
 //
+// BFIND
+//
+
+foreach t = [I32RT, I64RT] in {
+  foreach sign = ["s", "u"] in {
+    defvar flo_intrin = !cast<Intrinsic>("int_nvvm_flo_" # sign);
+    def BFIND_ # sign # t.Size
+      : NVPTXInst<(outs Int32Regs:$dst), (ins t.RC:$src),
+                  "bfind." # sign # t.Size # " \t$dst, $src;",
+                  [(set i32:$dst, (flo_intrin t.Ty:$src, 0))]>;
+
+    def BFIND_SHIFTAMT_ # sign # t.Size
+      : NVPTXInst<(outs Int32Regs:$dst), (ins t.RC:$src),
+                  "bfind.shiftamt." # sign # t.Size # " \t$dst, $src;",
+                  [(set i32:$dst, (flo_intrin t.Ty:$src, -1))]>;
+  }
+}
+
+//
 // Convert
 //
 
-def : Pat<(int_nvvm_d2f_rn_ftz Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRN_FTZ)>;
-def : Pat<(int_nvvm_d2f_rn Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_d2f_rz_ftz Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRZ_FTZ)>;
-def : Pat<(int_nvvm_d2f_rz Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_d2f_rm_ftz Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRM_FTZ)>;
-def : Pat<(int_nvvm_d2f_rm Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_d2f_rp_ftz Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRP_FTZ)>;
-def : Pat<(int_nvvm_d2f_rp Float64Regs:$a),
-          (CVT_f32_f64 Float64Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_d2f_rn_ftz f64:$a),
+          (CVT_f32_f64 $a, CvtRN_FTZ)>;
+def : Pat<(int_nvvm_d2f_rn f64:$a),
+          (CVT_f32_f64 $a, CvtRN)>;
+def : Pat<(int_nvvm_d2f_rz_ftz f64:$a),
+          (CVT_f32_f64 $a, CvtRZ_FTZ)>;
+def : Pat<(int_nvvm_d2f_rz f64:$a),
+          (CVT_f32_f64 $a, CvtRZ)>;
+def : Pat<(int_nvvm_d2f_rm_ftz f64:$a),
+          (CVT_f32_f64 $a, CvtRM_FTZ)>;
+def : Pat<(int_nvvm_d2f_rm f64:$a),
+          (CVT_f32_f64 $a, CvtRM)>;
+def : Pat<(int_nvvm_d2f_rp_ftz f64:$a),
+          (CVT_f32_f64 $a, CvtRP_FTZ)>;
+def : Pat<(int_nvvm_d2f_rp f64:$a),
+          (CVT_f32_f64 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_d2i_rn Float64Regs:$a),
-          (CVT_s32_f64 Float64Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_d2i_rz Float64Regs:$a),
-          (CVT_s32_f64 Float64Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_d2i_rm Float64Regs:$a),
-          (CVT_s32_f64 Float64Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_d2i_rp Float64Regs:$a),
-          (CVT_s32_f64 Float64Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_d2i_rn f64:$a),
+          (CVT_s32_f64 $a, CvtRNI)>;
+def : Pat<(int_nvvm_d2i_rz f64:$a),
+          (CVT_s32_f64 $a, CvtRZI)>;
+def : Pat<(int_nvvm_d2i_rm f64:$a),
+          (CVT_s32_f64 $a, CvtRMI)>;
+def : Pat<(int_nvvm_d2i_rp f64:$a),
+          (CVT_s32_f64 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_d2ui_rn Float64Regs:$a),
-          (CVT_u32_f64 Float64Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_d2ui_rz Float64Regs:$a),
-          (CVT_u32_f64 Float64Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_d2ui_rm Float64Regs:$a),
-          (CVT_u32_f64 Float64Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_d2ui_rp Float64Regs:$a),
-          (CVT_u32_f64 Float64Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_d2ui_rn f64:$a),
+          (CVT_u32_f64 $a, CvtRNI)>;
+def : Pat<(int_nvvm_d2ui_rz f64:$a),
+          (CVT_u32_f64 $a, CvtRZI)>;
+def : Pat<(int_nvvm_d2ui_rm f64:$a),
+          (CVT_u32_f64 $a, CvtRMI)>;
+def : Pat<(int_nvvm_d2ui_rp f64:$a),
+          (CVT_u32_f64 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_i2d_rn Int32Regs:$a),
-          (CVT_f64_s32 Int32Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_i2d_rz Int32Regs:$a),
-          (CVT_f64_s32 Int32Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_i2d_rm Int32Regs:$a),
-          (CVT_f64_s32 Int32Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_i2d_rp Int32Regs:$a),
-          (CVT_f64_s32 Int32Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_i2d_rn i32:$a),
+          (CVT_f64_s32 $a, CvtRN)>;
+def : Pat<(int_nvvm_i2d_rz i32:$a),
+          (CVT_f64_s32 $a, CvtRZ)>;
+def : Pat<(int_nvvm_i2d_rm i32:$a),
+          (CVT_f64_s32 $a, CvtRM)>;
+def : Pat<(int_nvvm_i2d_rp i32:$a),
+          (CVT_f64_s32 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ui2d_rn Int32Regs:$a),
-          (CVT_f64_u32 Int32Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_ui2d_rz Int32Regs:$a),
-          (CVT_f64_u32 Int32Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_ui2d_rm Int32Regs:$a),
-          (CVT_f64_u32 Int32Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_ui2d_rp Int32Regs:$a),
-          (CVT_f64_u32 Int32Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_ui2d_rn i32:$a),
+          (CVT_f64_u32 $a, CvtRN)>;
+def : Pat<(int_nvvm_ui2d_rz i32:$a),
+          (CVT_f64_u32 $a, CvtRZ)>;
+def : Pat<(int_nvvm_ui2d_rm i32:$a),
+          (CVT_f64_u32 $a, CvtRM)>;
+def : Pat<(int_nvvm_ui2d_rp i32:$a),
+          (CVT_f64_u32 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_f2i_rn_ftz Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRNI_FTZ)>;
-def : Pat<(int_nvvm_f2i_rn Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_f2i_rz_ftz Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRZI_FTZ)>;
-def : Pat<(int_nvvm_f2i_rz Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_f2i_rm_ftz Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRMI_FTZ)>;
-def : Pat<(int_nvvm_f2i_rm Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_f2i_rp_ftz Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRPI_FTZ)>;
-def : Pat<(int_nvvm_f2i_rp Float32Regs:$a),
-          (CVT_s32_f32 Float32Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_f2i_rn_ftz f32:$a),
+          (CVT_s32_f32 $a, CvtRNI_FTZ)>;
+def : Pat<(int_nvvm_f2i_rn f32:$a),
+          (CVT_s32_f32 $a, CvtRNI)>;
+def : Pat<(int_nvvm_f2i_rz_ftz f32:$a),
+          (CVT_s32_f32 $a, CvtRZI_FTZ)>;
+def : Pat<(int_nvvm_f2i_rz f32:$a),
+          (CVT_s32_f32 $a, CvtRZI)>;
+def : Pat<(int_nvvm_f2i_rm_ftz f32:$a),
+          (CVT_s32_f32 $a, CvtRMI_FTZ)>;
+def : Pat<(int_nvvm_f2i_rm f32:$a),
+          (CVT_s32_f32 $a, CvtRMI)>;
+def : Pat<(int_nvvm_f2i_rp_ftz f32:$a),
+          (CVT_s32_f32 $a, CvtRPI_FTZ)>;
+def : Pat<(int_nvvm_f2i_rp f32:$a),
+          (CVT_s32_f32 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_f2ui_rn_ftz Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRNI_FTZ)>;
-def : Pat<(int_nvvm_f2ui_rn Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_f2ui_rz_ftz Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRZI_FTZ)>;
-def : Pat<(int_nvvm_f2ui_rz Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_f2ui_rm_ftz Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRMI_FTZ)>;
-def : Pat<(int_nvvm_f2ui_rm Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_f2ui_rp_ftz Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRPI_FTZ)>;
-def : Pat<(int_nvvm_f2ui_rp Float32Regs:$a),
-          (CVT_u32_f32 Float32Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_f2ui_rn_ftz f32:$a),
+          (CVT_u32_f32 $a, CvtRNI_FTZ)>;
+def : Pat<(int_nvvm_f2ui_rn f32:$a),
+          (CVT_u32_f32 $a, CvtRNI)>;
+def : Pat<(int_nvvm_f2ui_rz_ftz f32:$a),
+          (CVT_u32_f32 $a, CvtRZI_FTZ)>;
+def : Pat<(int_nvvm_f2ui_rz f32:$a),
+          (CVT_u32_f32 $a, CvtRZI)>;
+def : Pat<(int_nvvm_f2ui_rm_ftz f32:$a),
+          (CVT_u32_f32 $a, CvtRMI_FTZ)>;
+def : Pat<(int_nvvm_f2ui_rm f32:$a),
+          (CVT_u32_f32 $a, CvtRMI)>;
+def : Pat<(int_nvvm_f2ui_rp_ftz f32:$a),
+          (CVT_u32_f32 $a, CvtRPI_FTZ)>;
+def : Pat<(int_nvvm_f2ui_rp f32:$a),
+          (CVT_u32_f32 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_i2f_rn Int32Regs:$a),
-          (CVT_f32_s32 Int32Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_i2f_rz Int32Regs:$a),
-          (CVT_f32_s32 Int32Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_i2f_rm Int32Regs:$a),
-          (CVT_f32_s32 Int32Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_i2f_rp Int32Regs:$a),
-          (CVT_f32_s32 Int32Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_i2f_rn i32:$a),
+          (CVT_f32_s32 $a, CvtRN)>;
+def : Pat<(int_nvvm_i2f_rz i32:$a),
+          (CVT_f32_s32 $a, CvtRZ)>;
+def : Pat<(int_nvvm_i2f_rm i32:$a),
+          (CVT_f32_s32 $a, CvtRM)>;
+def : Pat<(int_nvvm_i2f_rp i32:$a),
+          (CVT_f32_s32 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ui2f_rn Int32Regs:$a),
-          (CVT_f32_u32 Int32Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_ui2f_rz Int32Regs:$a),
-          (CVT_f32_u32 Int32Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_ui2f_rm Int32Regs:$a),
-          (CVT_f32_u32 Int32Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_ui2f_rp Int32Regs:$a),
-          (CVT_f32_u32 Int32Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_ui2f_rn i32:$a),
+          (CVT_f32_u32 $a, CvtRN)>;
+def : Pat<(int_nvvm_ui2f_rz i32:$a),
+          (CVT_f32_u32 $a, CvtRZ)>;
+def : Pat<(int_nvvm_ui2f_rm i32:$a),
+          (CVT_f32_u32 $a, CvtRM)>;
+def : Pat<(int_nvvm_ui2f_rp i32:$a),
+          (CVT_f32_u32 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ff2bf16x2_rn Float32Regs:$a, Float32Regs:$b),
-          (CVT_bf16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
-def : Pat<(int_nvvm_ff2bf16x2_rn_relu Float32Regs:$a, Float32Regs:$b),
-          (CVT_bf16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff2bf16x2_rz Float32Regs:$a, Float32Regs:$b),
-          (CVT_bf16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRZ)>;
-def : Pat<(int_nvvm_ff2bf16x2_rz_relu Float32Regs:$a, Float32Regs:$b),
-          (CVT_bf16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRZ_RELU)>;
+def : Pat<(int_nvvm_ff2bf16x2_rn f32:$a, f32:$b),
+          (CVT_bf16x2_f32 $a, $b, CvtRN)>;
+def : Pat<(int_nvvm_ff2bf16x2_rn_relu f32:$a, f32:$b),
+          (CVT_bf16x2_f32 $a, $b, CvtRN_RELU)>;
+def : Pat<(int_nvvm_ff2bf16x2_rz f32:$a, f32:$b),
+          (CVT_bf16x2_f32 $a, $b, CvtRZ)>;
+def : Pat<(int_nvvm_ff2bf16x2_rz_relu f32:$a, f32:$b),
+          (CVT_bf16x2_f32 $a, $b, CvtRZ_RELU)>;
 
-def : Pat<(int_nvvm_ff2f16x2_rn Float32Regs:$a, Float32Regs:$b),
-          (CVT_f16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
-def : Pat<(int_nvvm_ff2f16x2_rn_relu Float32Regs:$a, Float32Regs:$b),
-          (CVT_f16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff2f16x2_rz Float32Regs:$a, Float32Regs:$b),
-          (CVT_f16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRZ)>;
-def : Pat<(int_nvvm_ff2f16x2_rz_relu Float32Regs:$a, Float32Regs:$b),
-          (CVT_f16x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRZ_RELU)>;
+def : Pat<(int_nvvm_ff2f16x2_rn f32:$a, f32:$b),
+          (CVT_f16x2_f32 $a, $b, CvtRN)>;
+def : Pat<(int_nvvm_ff2f16x2_rn_relu f32:$a, f32:$b),
+          (CVT_f16x2_f32 $a, $b, CvtRN_RELU)>;
+def : Pat<(int_nvvm_ff2f16x2_rz f32:$a, f32:$b),
+          (CVT_f16x2_f32 $a, $b, CvtRZ)>;
+def : Pat<(int_nvvm_ff2f16x2_rz_relu f32:$a, f32:$b),
+          (CVT_f16x2_f32 $a, $b, CvtRZ_RELU)>;
 
-def : Pat<(int_nvvm_f2bf16_rn Float32Regs:$a),
-          (CVT_bf16_f32 Float32Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_f2bf16_rn_relu Float32Regs:$a),
-          (CVT_bf16_f32 Float32Regs:$a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f2bf16_rz Float32Regs:$a),
-          (CVT_bf16_f32 Float32Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_f2bf16_rz_relu Float32Regs:$a),
-          (CVT_bf16_f32 Float32Regs:$a, CvtRZ_RELU)>;
-
-def CVT_tf32_f32 :
-   NVPTXInst<(outs Int32Regs:$dest), (ins Float32Regs:$a),
-                   "cvt.rna.tf32.f32 \t$dest, $a;",
-       [(set Int32Regs:$dest, (int_nvvm_f2tf32_rna Float32Regs:$a))]>;
+def : Pat<(int_nvvm_f2bf16_rn f32:$a),
+          (CVT_bf16_f32 $a, CvtRN)>;
+def : Pat<(int_nvvm_f2bf16_rn_relu f32:$a),
+          (CVT_bf16_f32 $a, CvtRN_RELU)>;
+def : Pat<(int_nvvm_f2bf16_rz f32:$a),
+          (CVT_bf16_f32 $a, CvtRZ)>;
+def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a),
+          (CVT_bf16_f32 $a, CvtRZ_RELU)>;
 
 def INT_NVVM_LOHI_I2D : F_MATH_2<"mov.b64 \t$dst, {{$src0, $src1}};",
   Float64Regs, Int32Regs, Int32Regs, int_nvvm_lohi_i2d>;
@@ -1456,126 +1801,126 @@ def INT_NVVM_D2I_HI : F_MATH_1<
              "}}"),
   Int32Regs, Float64Regs, int_nvvm_d2i_hi>;
 
-def : Pat<(int_nvvm_f2ll_rn_ftz Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRNI_FTZ)>;
-def : Pat<(int_nvvm_f2ll_rn Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_f2ll_rz_ftz Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRZI_FTZ)>;
-def : Pat<(int_nvvm_f2ll_rz Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_f2ll_rm_ftz Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRMI_FTZ)>;
-def : Pat<(int_nvvm_f2ll_rm Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_f2ll_rp_ftz Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRPI_FTZ)>;
-def : Pat<(int_nvvm_f2ll_rp Float32Regs:$a),
-          (CVT_s64_f32 Float32Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_f2ll_rn_ftz f32:$a),
+          (CVT_s64_f32 $a, CvtRNI_FTZ)>;
+def : Pat<(int_nvvm_f2ll_rn f32:$a),
+          (CVT_s64_f32 $a, CvtRNI)>;
+def : Pat<(int_nvvm_f2ll_rz_ftz f32:$a),
+          (CVT_s64_f32 $a, CvtRZI_FTZ)>;
+def : Pat<(int_nvvm_f2ll_rz f32:$a),
+          (CVT_s64_f32 $a, CvtRZI)>;
+def : Pat<(int_nvvm_f2ll_rm_ftz f32:$a),
+          (CVT_s64_f32 $a, CvtRMI_FTZ)>;
+def : Pat<(int_nvvm_f2ll_rm f32:$a),
+          (CVT_s64_f32 $a, CvtRMI)>;
+def : Pat<(int_nvvm_f2ll_rp_ftz f32:$a),
+          (CVT_s64_f32 $a, CvtRPI_FTZ)>;
+def : Pat<(int_nvvm_f2ll_rp f32:$a),
+          (CVT_s64_f32 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_f2ull_rn_ftz Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRNI_FTZ)>;
-def : Pat<(int_nvvm_f2ull_rn Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_f2ull_rz_ftz Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRZI_FTZ)>;
-def : Pat<(int_nvvm_f2ull_rz Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_f2ull_rm_ftz Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRMI_FTZ)>;
-def : Pat<(int_nvvm_f2ull_rm Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_f2ull_rp_ftz Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRPI_FTZ)>;
-def : Pat<(int_nvvm_f2ull_rp Float32Regs:$a),
-          (CVT_u64_f32 Float32Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_f2ull_rn_ftz f32:$a),
+          (CVT_u64_f32 $a, CvtRNI_FTZ)>;
+def : Pat<(int_nvvm_f2ull_rn f32:$a),
+          (CVT_u64_f32 $a, CvtRNI)>;
+def : Pat<(int_nvvm_f2ull_rz_ftz f32:$a),
+          (CVT_u64_f32 $a, CvtRZI_FTZ)>;
+def : Pat<(int_nvvm_f2ull_rz f32:$a),
+          (CVT_u64_f32 $a, CvtRZI)>;
+def : Pat<(int_nvvm_f2ull_rm_ftz f32:$a),
+          (CVT_u64_f32 $a, CvtRMI_FTZ)>;
+def : Pat<(int_nvvm_f2ull_rm f32:$a),
+          (CVT_u64_f32 $a, CvtRMI)>;
+def : Pat<(int_nvvm_f2ull_rp_ftz f32:$a),
+          (CVT_u64_f32 $a, CvtRPI_FTZ)>;
+def : Pat<(int_nvvm_f2ull_rp f32:$a),
+          (CVT_u64_f32 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_d2ll_rn Float64Regs:$a),
-          (CVT_s64_f64 Float64Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_d2ll_rz Float64Regs:$a),
-          (CVT_s64_f64 Float64Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_d2ll_rm Float64Regs:$a),
-          (CVT_s64_f64 Float64Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_d2ll_rp Float64Regs:$a),
-          (CVT_s64_f64 Float64Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_d2ll_rn f64:$a),
+          (CVT_s64_f64 $a, CvtRNI)>;
+def : Pat<(int_nvvm_d2ll_rz f64:$a),
+          (CVT_s64_f64 $a, CvtRZI)>;
+def : Pat<(int_nvvm_d2ll_rm f64:$a),
+          (CVT_s64_f64 $a, CvtRMI)>;
+def : Pat<(int_nvvm_d2ll_rp f64:$a),
+          (CVT_s64_f64 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_d2ull_rn Float64Regs:$a),
-          (CVT_u64_f64 Float64Regs:$a, CvtRNI)>;
-def : Pat<(int_nvvm_d2ull_rz Float64Regs:$a),
-          (CVT_u64_f64 Float64Regs:$a, CvtRZI)>;
-def : Pat<(int_nvvm_d2ull_rm Float64Regs:$a),
-          (CVT_u64_f64 Float64Regs:$a, CvtRMI)>;
-def : Pat<(int_nvvm_d2ull_rp Float64Regs:$a),
-          (CVT_u64_f64 Float64Regs:$a, CvtRPI)>;
+def : Pat<(int_nvvm_d2ull_rn f64:$a),
+          (CVT_u64_f64 $a, CvtRNI)>;
+def : Pat<(int_nvvm_d2ull_rz f64:$a),
+          (CVT_u64_f64 $a, CvtRZI)>;
+def : Pat<(int_nvvm_d2ull_rm f64:$a),
+          (CVT_u64_f64 $a, CvtRMI)>;
+def : Pat<(int_nvvm_d2ull_rp f64:$a),
+          (CVT_u64_f64 $a, CvtRPI)>;
 
-def : Pat<(int_nvvm_ll2f_rn Int64Regs:$a),
-          (CVT_f32_s64 Int64Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_ll2f_rz Int64Regs:$a),
-          (CVT_f32_s64 Int64Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_ll2f_rm Int64Regs:$a),
-          (CVT_f32_s64 Int64Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_ll2f_rp Int64Regs:$a),
-          (CVT_f32_s64 Int64Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_ll2f_rn i64:$a),
+          (CVT_f32_s64 $a, CvtRN)>;
+def : Pat<(int_nvvm_ll2f_rz i64:$a),
+          (CVT_f32_s64 $a, CvtRZ)>;
+def : Pat<(int_nvvm_ll2f_rm i64:$a),
+          (CVT_f32_s64 $a, CvtRM)>;
+def : Pat<(int_nvvm_ll2f_rp i64:$a),
+          (CVT_f32_s64 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ull2f_rn Int64Regs:$a),
-          (CVT_f32_u64 Int64Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_ull2f_rz Int64Regs:$a),
-          (CVT_f32_u64 Int64Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_ull2f_rm Int64Regs:$a),
-          (CVT_f32_u64 Int64Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_ull2f_rp Int64Regs:$a),
-          (CVT_f32_u64 Int64Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_ull2f_rn i64:$a),
+          (CVT_f32_u64 $a, CvtRN)>;
+def : Pat<(int_nvvm_ull2f_rz i64:$a),
+          (CVT_f32_u64 $a, CvtRZ)>;
+def : Pat<(int_nvvm_ull2f_rm i64:$a),
+          (CVT_f32_u64 $a, CvtRM)>;
+def : Pat<(int_nvvm_ull2f_rp i64:$a),
+          (CVT_f32_u64 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ll2d_rn Int64Regs:$a),
-          (CVT_f64_s64 Int64Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_ll2d_rz Int64Regs:$a),
-          (CVT_f64_s64 Int64Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_ll2d_rm Int64Regs:$a),
-          (CVT_f64_s64 Int64Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_ll2d_rp Int64Regs:$a),
-          (CVT_f64_s64 Int64Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_ll2d_rn i64:$a),
+          (CVT_f64_s64 $a, CvtRN)>;
+def : Pat<(int_nvvm_ll2d_rz i64:$a),
+          (CVT_f64_s64 $a, CvtRZ)>;
+def : Pat<(int_nvvm_ll2d_rm i64:$a),
+          (CVT_f64_s64 $a, CvtRM)>;
+def : Pat<(int_nvvm_ll2d_rp i64:$a),
+          (CVT_f64_s64 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ull2d_rn Int64Regs:$a),
-          (CVT_f64_u64 Int64Regs:$a, CvtRN)>;
-def : Pat<(int_nvvm_ull2d_rz Int64Regs:$a),
-          (CVT_f64_u64 Int64Regs:$a, CvtRZ)>;
-def : Pat<(int_nvvm_ull2d_rm Int64Regs:$a),
-          (CVT_f64_u64 Int64Regs:$a, CvtRM)>;
-def : Pat<(int_nvvm_ull2d_rp Int64Regs:$a),
-          (CVT_f64_u64 Int64Regs:$a, CvtRP)>;
+def : Pat<(int_nvvm_ull2d_rn i64:$a),
+          (CVT_f64_u64 $a, CvtRN)>;
+def : Pat<(int_nvvm_ull2d_rz i64:$a),
+          (CVT_f64_u64 $a, CvtRZ)>;
+def : Pat<(int_nvvm_ull2d_rm i64:$a),
+          (CVT_f64_u64 $a, CvtRM)>;
+def : Pat<(int_nvvm_ull2d_rp i64:$a),
+          (CVT_f64_u64 $a, CvtRP)>;
 
 
-def : Pat<(int_nvvm_f2h_rn_ftz Float32Regs:$a),
-          (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ)>;
-def : Pat<(int_nvvm_f2h_rn Float32Regs:$a),
-          (CVT_f16_f32 Float32Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_f2h_rn_ftz f32:$a),
+          (CVT_f16_f32 $a, CvtRN_FTZ)>;
+def : Pat<(int_nvvm_f2h_rn f32:$a),
+          (CVT_f16_f32 $a, CvtRN)>;
 
-def : Pat<(int_nvvm_ff_to_e4m3x2_rn Float32Regs:$a, Float32Regs:$b),
-          (CVT_e4m3x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
-def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu Float32Regs:$a, Float32Regs:$b),
-          (CVT_e4m3x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff_to_e5m2x2_rn Float32Regs:$a, Float32Regs:$b),
-          (CVT_e5m2x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN)>;
-def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu Float32Regs:$a, Float32Regs:$b),
-          (CVT_e5m2x2_f32 Float32Regs:$a, Float32Regs:$b, CvtRN_RELU)>;
+def : Pat<(int_nvvm_ff_to_e4m3x2_rn f32:$a, f32:$b),
+          (CVT_e4m3x2_f32 $a, $b, CvtRN)>;
+def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu f32:$a, f32:$b),
+          (CVT_e4m3x2_f32 $a, $b, CvtRN_RELU)>;
+def : Pat<(int_nvvm_ff_to_e5m2x2_rn f32:$a, f32:$b),
+          (CVT_e5m2x2_f32 $a, $b, CvtRN)>;
+def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu f32:$a, f32:$b),
+          (CVT_e5m2x2_f32 $a, $b, CvtRN_RELU)>;
 
 def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn Int32Regs:$a),
-          (CVT_e4m3x2_f16x2 Int32Regs:$a, CvtRN)>;
+          (CVT_e4m3x2_f16x2 $a, CvtRN)>;
 def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu Int32Regs:$a),
-          (CVT_e4m3x2_f16x2 Int32Regs:$a, CvtRN_RELU)>;
+          (CVT_e4m3x2_f16x2 $a, CvtRN_RELU)>;
 def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn Int32Regs:$a),
-          (CVT_e5m2x2_f16x2 Int32Regs:$a, CvtRN)>;
+          (CVT_e5m2x2_f16x2 $a, CvtRN)>;
 def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu Int32Regs:$a),
-          (CVT_e5m2x2_f16x2 Int32Regs:$a, CvtRN_RELU)>;
+          (CVT_e5m2x2_f16x2 $a, CvtRN_RELU)>;
 
 def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn Int16Regs:$a),
-          (CVT_f16x2_e4m3x2 Int16Regs:$a, CvtRN)>;
+          (CVT_f16x2_e4m3x2 $a, CvtRN)>;
 def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu Int16Regs:$a),
-          (CVT_f16x2_e4m3x2 Int16Regs:$a, CvtRN_RELU)>;
+          (CVT_f16x2_e4m3x2 $a, CvtRN_RELU)>;
 def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn Int16Regs:$a),
-          (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN)>;
+          (CVT_f16x2_e5m2x2 $a, CvtRN)>;
 def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
-          (CVT_f16x2_e5m2x2 Int16Regs:$a, CvtRN_RELU)>;
+          (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
 
 //
 // FNS
@@ -1584,23 +1929,23 @@ def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu Int16Regs:$a),
 class INT_FNS_MBO<dag ins, dag Operands>
   : NVPTXInst<(outs Int32Regs:$dst), ins,
                "fns.b32 \t$dst, $mask, $base, $offset;",
-               [(set Int32Regs:$dst, Operands )]>,
+               [(set i32:$dst, Operands)]>,
     Requires<[hasPTX<60>, hasSM<30>]>;
 
 def INT_FNS_rrr : INT_FNS_MBO<(ins Int32Regs:$mask, Int32Regs:$base, Int32Regs:$offset),
-                     (int_nvvm_fns Int32Regs:$mask, Int32Regs:$base, Int32Regs:$offset)>;
+                     (int_nvvm_fns i32:$mask, i32:$base, i32:$offset)>;
 def INT_FNS_rri : INT_FNS_MBO<(ins Int32Regs:$mask, Int32Regs:$base,    i32imm:$offset),
-                     (int_nvvm_fns Int32Regs:$mask, Int32Regs:$base,       imm:$offset)>;
+                     (int_nvvm_fns i32:$mask, i32:$base,       imm:$offset)>;
 def INT_FNS_rir : INT_FNS_MBO<(ins Int32Regs:$mask,    i32imm:$base, Int32Regs:$offset),
-                     (int_nvvm_fns Int32Regs:$mask,       imm:$base, Int32Regs:$offset)>;
+                     (int_nvvm_fns i32:$mask,       imm:$base, i32:$offset)>;
 def INT_FNS_rii : INT_FNS_MBO<(ins Int32Regs:$mask,    i32imm:$base,    i32imm:$offset),
-                     (int_nvvm_fns Int32Regs:$mask,       imm:$base,       imm:$offset)>;
+                     (int_nvvm_fns i32:$mask,       imm:$base,       imm:$offset)>;
 def INT_FNS_irr : INT_FNS_MBO<(ins    i32imm:$mask, Int32Regs:$base, Int32Regs:$offset),
-                     (int_nvvm_fns       imm:$mask, Int32Regs:$base, Int32Regs:$offset)>;
+                     (int_nvvm_fns       imm:$mask, i32:$base, i32:$offset)>;
 def INT_FNS_iri : INT_FNS_MBO<(ins    i32imm:$mask, Int32Regs:$base,    i32imm:$offset),
-                     (int_nvvm_fns       imm:$mask, Int32Regs:$base,       imm:$offset)>;
+                     (int_nvvm_fns       imm:$mask, i32:$base,       imm:$offset)>;
 def INT_FNS_iir : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base, Int32Regs:$offset),
-                     (int_nvvm_fns       imm:$mask,       imm:$base, Int32Regs:$offset)>;
+                     (int_nvvm_fns       imm:$mask,       imm:$base, i32:$offset)>;
 def INT_FNS_iii : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base,    i32imm:$offset),
                      (int_nvvm_fns       imm:$mask,       imm:$base,       imm:$offset)>;
 
@@ -2138,7 +2483,7 @@ class ATOM23_impl<string AsmStr, ValueType regT, NVPTXRegClass regclass, list<Pr
                   dag ins, dag Operands>
       : NVPTXInst<(outs regclass:$result), ins,
                   AsmStr,
-                  [(set (regT regclass:$result), Operands)]>,
+                  [(set regT:$result, Operands)]>,
         Requires<Preds>;
 
 // Define instruction variants for all addressing modes.
@@ -2149,26 +2494,26 @@ multiclass ATOM2P_impl<string AsmStr,  Intrinsic Intr,
   let AddedComplexity = 1 in {
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int16Regs:$src, regclass:$b),
-                      (Intr (i16 Int16Regs:$src), (regT regclass:$b))>;
+                      (Intr i16:$src, regT:$b)>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int32Regs:$src, regclass:$b),
-                      (Intr (i32 Int32Regs:$src), (regT regclass:$b))>;
+                      (Intr i32:$src, regT:$b)>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int64Regs:$src, regclass:$b),
-                      (Intr (i64 Int64Regs:$src), (regT regclass:$b))>;
+                      (Intr i64:$src, regT:$b)>;
   }
   // tablegen can't infer argument types from Intrinsic (though it can
   // from Instruction) so we have to enforce specific type on
   // immediates via explicit cast to ImmTy.
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                     (ins Int16Regs:$src, ImmType:$b),
-                    (Intr (i16 Int16Regs:$src), (ImmTy Imm:$b))>;
+                    (Intr i16:$src, (ImmTy Imm:$b))>;
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                     (ins Int32Regs:$src, ImmType:$b),
-                    (Intr (i32 Int32Regs:$src), (ImmTy Imm:$b))>;
+                    (Intr i32:$src, (ImmTy Imm:$b))>;
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                     (ins Int64Regs:$src, ImmType:$b),
-                    (Intr (i64 Int64Regs:$src), (ImmTy Imm:$b))>;
+                    (Intr i64:$src, (ImmTy Imm:$b))>;
 }
 
 multiclass ATOM3P_impl<string AsmStr,  Intrinsic Intr,
@@ -2179,31 +2524,31 @@ multiclass ATOM3P_impl<string AsmStr,  Intrinsic Intr,
   let AddedComplexity = 2 in {
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int32Regs:$src, regclass:$b, regclass:$c),
-                      (Intr (i32 Int32Regs:$src), (regT regclass:$b), (regT regclass:$c))>;
+                      (Intr i32:$src, regT:$b, regT:$c)>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int64Regs:$src, regclass:$b, regclass:$c),
-                      (Intr (i64 Int64Regs:$src), (regT regclass:$b), (regT regclass:$c))>;
+                      (Intr i64:$src, regT:$b, regT:$c)>;
   }
   let AddedComplexity = 1 in {
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int32Regs:$src, ImmType:$b, regclass:$c),
-                      (Intr (i32 Int32Regs:$src), (ImmTy Imm:$b), (regT regclass:$c))>;
+                      (Intr i32:$src, (ImmTy Imm:$b), regT:$c)>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int64Regs:$src, ImmType:$b, regclass:$c),
-                      (Intr (i64 Int64Regs:$src), (ImmTy Imm:$b), (regT regclass:$c))>;
+                      (Intr i64:$src, (ImmTy Imm:$b), regT:$c)>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int32Regs:$src, regclass:$b, ImmType:$c),
-                      (Intr (i32 Int32Regs:$src), (regT regclass:$b), (ImmTy Imm:$c))>;
+                      (Intr i32:$src, regT:$b, (ImmTy Imm:$c))>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int64Regs:$src, regclass:$b, ImmType:$c),
-                      (Intr (i64 Int64Regs:$src), (regT regclass:$b), (ImmTy Imm:$c))>;
+                      (Intr i64:$src, regT:$b, (ImmTy Imm:$c))>;
   }
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                     (ins Int32Regs:$src, ImmType:$b, ImmType:$c),
-                    (Intr (i32 Int32Regs:$src), (ImmTy Imm:$b), (ImmTy Imm:$c))>;
+                    (Intr i32:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                     (ins Int64Regs:$src, ImmType:$b, ImmType:$c),
-                    (Intr (i64 Int64Regs:$src), (ImmTy Imm:$b), (ImmTy Imm:$c))>;
+                    (Intr i64:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
 }
 
 // Constructs intrinsic name and instruction asm strings.
@@ -2348,12 +2693,6 @@ defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
 // Scalar
 
 multiclass LDU_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr),
-                      []>, Requires<[hasLDU]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr),
-                        []>, Requires<[hasLDU]>;
  def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
                !strconcat("ldu.global.", TyStr),
                       []>, Requires<[hasLDU]>;
@@ -2376,12 +2715,6 @@ defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
 
 // Elementized vector ldu
 multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
                      !strconcat("ldu.global.", TyStr), []>;
@@ -2394,12 +2727,6 @@ multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
 }
 
 multiclass VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                             regclass:$dst4), (ins MEMri:$src),
                !strconcat("ldu.global.", TyStr), []>;
@@ -2451,12 +2778,6 @@ defm INT_PTX_LDU_G_v4f32_ELE
 // during the lifetime of the kernel.
 
 multiclass LDG_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                      []>, Requires<[hasLDG]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                        []>, Requires<[hasLDG]>;
  def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
                !strconcat("ld.global.nc.", TyStr),
                       []>, Requires<[hasLDG]>;
@@ -2485,12 +2806,6 @@ defm INT_PTX_LDG_GLOBAL_f64
 
 // Elementized vector ldg
 multiclass VLDG_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
                      !strconcat("ld.global.nc.", TyStr), []>;
@@ -2570,48 +2885,48 @@ defm cvta_to_const  : G_TO_NG<"const">;
 // nvvm.ptr.param.to.gen
 defm cvta_param : NG_TO_G<"param">;
 
-def : Pat<(int_nvvm_ptr_param_to_gen Int32Regs:$src),
-          (cvta_param Int32Regs:$src)>;
+def : Pat<(int_nvvm_ptr_param_to_gen i32:$src),
+          (cvta_param $src)>;
 
-def : Pat<(int_nvvm_ptr_param_to_gen Int64Regs:$src),
-          (cvta_param_64 Int64Regs:$src)>;
+def : Pat<(int_nvvm_ptr_param_to_gen i64:$src),
+          (cvta_param_64 $src)>;
 
 // nvvm.ptr.gen.to.param
-def : Pat<(int_nvvm_ptr_gen_to_param Int32Regs:$src),
-          (IMOV32rr Int32Regs:$src)>;
+def : Pat<(int_nvvm_ptr_gen_to_param i32:$src),
+          (i32 Int32Regs:$src)>;
 
-def : Pat<(int_nvvm_ptr_gen_to_param Int64Regs:$src),
-          (IMOV64rr Int64Regs:$src)>;
+def : Pat<(int_nvvm_ptr_gen_to_param i64:$src),
+          (i64 Int64Regs:$src)>;
 
 // nvvm.move intrinsicc
 def nvvm_move_i16 : NVPTXInst<(outs Int16Regs:$r), (ins Int16Regs:$s),
                              "mov.b16 \t$r, $s;",
-                             [(set Int16Regs:$r,
-                               (int_nvvm_move_i16 Int16Regs:$s))]>;
+                             [(set i16:$r,
+                               (int_nvvm_move_i16 i16:$s))]>;
 def nvvm_move_i32 : NVPTXInst<(outs Int32Regs:$r), (ins Int32Regs:$s),
                              "mov.b32 \t$r, $s;",
-                             [(set Int32Regs:$r,
-                               (int_nvvm_move_i32 Int32Regs:$s))]>;
+                             [(set i32:$r,
+                               (int_nvvm_move_i32 i32:$s))]>;
 def nvvm_move_i64 : NVPTXInst<(outs Int64Regs:$r), (ins Int64Regs:$s),
                              "mov.b64 \t$r, $s;",
-                             [(set Int64Regs:$r,
-                               (int_nvvm_move_i64 Int64Regs:$s))]>;
+                             [(set i64:$r,
+                               (int_nvvm_move_i64 i64:$s))]>;
 def nvvm_move_float : NVPTXInst<(outs Float32Regs:$r), (ins Float32Regs:$s),
                              "mov.f32 \t$r, $s;",
-                             [(set Float32Regs:$r,
-                               (int_nvvm_move_float Float32Regs:$s))]>;
+                             [(set f32:$r,
+                               (int_nvvm_move_float f32:$s))]>;
 def nvvm_move_double : NVPTXInst<(outs Float64Regs:$r), (ins Float64Regs:$s),
                              "mov.f64 \t$r, $s;",
-                             [(set Float64Regs:$r,
-                               (int_nvvm_move_double Float64Regs:$s))]>;
+                             [(set f64:$r,
+                               (int_nvvm_move_double f64:$s))]>;
 def nvvm_move_ptr32 : NVPTXInst<(outs Int32Regs:$r), (ins Int32Regs:$s),
                              "mov.u32 \t$r, $s;",
-                             [(set Int32Regs:$r,
-                               (int_nvvm_move_ptr Int32Regs:$s))]>;
+                             [(set i32:$r,
+                               (int_nvvm_move_ptr i32:$s))]>;
 def nvvm_move_ptr64 : NVPTXInst<(outs Int64Regs:$r), (ins Int64Regs:$s),
                              "mov.u64 \t$r, $s;",
-                             [(set Int64Regs:$r,
-                               (int_nvvm_move_ptr Int64Regs:$s))]>;
+                             [(set i64:$r,
+                               (int_nvvm_move_ptr i64:$s))]>;
 
 // @TODO: Are these actually needed, or will we always just see symbols
 // copied to registers first?
@@ -2635,16 +2950,16 @@ def texsurf_handles
 
 def INT_NVVM_COMPILER_WARN_32 : NVPTXInst<(outs), (ins Int32Regs:$a),
                 "// llvm.nvvm.compiler.warn()",
-                [(int_nvvm_compiler_warn Int32Regs:$a)]>;
+                [(int_nvvm_compiler_warn i32:$a)]>;
 def INT_NVVM_COMPILER_WARN_64 : NVPTXInst<(outs), (ins Int64Regs:$a),
                 "// llvm.nvvm.compiler.warn()",
-                [(int_nvvm_compiler_warn Int64Regs:$a)]>;
+                [(int_nvvm_compiler_warn i64:$a)]>;
 def INT_NVVM_COMPILER_ERROR_32 : NVPTXInst<(outs), (ins Int32Regs:$a),
                 "// llvm.nvvm.compiler.error()",
-                [(int_nvvm_compiler_error Int32Regs:$a)]>;
+                [(int_nvvm_compiler_error i32:$a)]>;
 def INT_NVVM_COMPILER_ERROR_64 : NVPTXInst<(outs), (ins Int64Regs:$a),
                 "// llvm.nvvm.compiler.error()",
-                [(int_nvvm_compiler_error Int64Regs:$a)]>;
+                [(int_nvvm_compiler_error i64:$a)]>;
 
 
 // isspacep
@@ -2652,11 +2967,11 @@ def INT_NVVM_COMPILER_ERROR_64 : NVPTXInst<(outs), (ins Int64Regs:$a),
 multiclass ISSPACEP<string suffix, Intrinsic Intr, list<Predicate> Preds = []> {
   def _32: NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
               "isspacep." # suffix # "\t$d, $a;",
-              [(set Int1Regs:$d, (Intr Int32Regs:$a))]>,
+              [(set i1:$d, (Intr i32:$a))]>,
     Requires<Preds>;
   def _64: NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
               "isspacep." # suffix # "\t$d, $a;",
-              [(set Int1Regs:$d, (Intr Int64Regs:$a))]>,
+              [(set i1:$d, (Intr i64:$a))]>,
     Requires<Preds>;
 }
 
@@ -2707,9 +3022,9 @@ def : Pat<(int_nvvm_read_ptx_sreg_envreg30), (MOV_SPECIAL ENVREG30)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg31), (MOV_SPECIAL ENVREG31)>;
 
 
-def : Pat<(int_nvvm_swap_lo_hi_b64 Int64Regs:$src),
-          (V2I32toI64 (I64toI32H Int64Regs:$src),
-                      (I64toI32L Int64Regs:$src))> ;
+def : Pat<(int_nvvm_swap_lo_hi_b64 i64:$src),
+          (V2I32toI64 (I64toI32H $src),
+                      (I64toI32L $src))> ;
 
 //-----------------------------------
 // Texture Intrinsics
@@ -2723,16 +3038,19 @@ let IsTex = true, IsTexModeUnified = false in {
 // Texture fetch instructions using handles
 
 class TEX_1D_base<string inst, NVPTXRegClass outtype,
-                  NVPTXRegClass intype, dag texsamp>
+                  NVPTXRegClass intype, dag texsamp, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, $s, \\{$x\\}];",
-                 []>;
+                 pattern>;
 
-multiclass TEX_1D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
-  def _RR : TEX_1D_base<inst, outtype, intype,
-                        (ins Int64Regs:$t, Int64Regs:$s)>;
+multiclass TEX_1D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
+                  Intrinsic intr> {
+  def _RR : TEX_1D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x))]>;
   def _RI : TEX_1D_base<inst, outtype, intype,
                         (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_1D_base<inst, outtype, intype,
@@ -2741,25 +3059,34 @@ multiclass TEX_1D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
                         (ins i64imm:$t, i64imm:$s)>;
 }
 
-defm TEX_1D_F32_S32 : TEX_1D<"tex.1d.v4.f32.s32", Float32Regs, Int32Regs>;
-defm TEX_1D_F32_F32 : TEX_1D<"tex.1d.v4.f32.f32", Float32Regs, Float32Regs>;
-defm TEX_1D_S32_S32 : TEX_1D<"tex.1d.v4.s32.s32", Int32Regs, Int32Regs>;
-defm TEX_1D_S32_F32 : TEX_1D<"tex.1d.v4.s32.f32", Int32Regs, Float32Regs>;
-defm TEX_1D_U32_S32 : TEX_1D<"tex.1d.v4.u32.s32", Int32Regs, Int32Regs>;
-defm TEX_1D_U32_F32 : TEX_1D<"tex.1d.v4.u32.f32", Int32Regs, Float32Regs>;
+defm TEX_1D_F32_S32 : TEX_1D<"tex.1d.v4.f32.s32", Float32Regs, Int32Regs,
+                             int_nvvm_tex_1d_v4f32_s32>;
+defm TEX_1D_F32_F32 : TEX_1D<"tex.1d.v4.f32.f32", Float32Regs, Float32Regs,
+                             int_nvvm_tex_1d_v4f32_f32>;
+defm TEX_1D_S32_S32 : TEX_1D<"tex.1d.v4.s32.s32", Int32Regs, Int32Regs,
+                             int_nvvm_tex_1d_v4s32_s32>;
+defm TEX_1D_S32_F32 : TEX_1D<"tex.1d.v4.s32.f32", Int32Regs, Float32Regs,
+                             int_nvvm_tex_1d_v4s32_f32>;
+defm TEX_1D_U32_S32 : TEX_1D<"tex.1d.v4.u32.s32", Int32Regs, Int32Regs,
+                             int_nvvm_tex_1d_v4u32_s32>;
+defm TEX_1D_U32_F32 : TEX_1D<"tex.1d.v4.u32.f32", Int32Regs, Float32Regs,
+                             int_nvvm_tex_1d_v4u32_f32>;
 
 class TEX_1D_LEVEL_base<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype, dag texsamp>
+                        NVPTXRegClass intype, dag texsamp,
+                        list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, $s, \\{$x\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_1D_LEVEL<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype> {
-  def _RR : TEX_1D_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                        NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_1D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$lod))]>;
   def _RI : TEX_1D_LEVEL_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_1D_LEVEL_base<inst, outtype, intype,
@@ -2769,25 +3096,31 @@ multiclass TEX_1D_LEVEL<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_1D_F32_F32_LEVEL :
-  TEX_1D_LEVEL<"tex.level.1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  TEX_1D_LEVEL<"tex.level.1d.v4.f32.f32", Float32Regs, Float32Regs,
+               int_nvvm_tex_1d_level_v4f32_f32>;
 defm TEX_1D_S32_F32_LEVEL :
-  TEX_1D_LEVEL<"tex.level.1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  TEX_1D_LEVEL<"tex.level.1d.v4.s32.f32", Int32Regs, Float32Regs,
+               int_nvvm_tex_1d_level_v4s32_f32>;
 defm TEX_1D_U32_F32_LEVEL :
-  TEX_1D_LEVEL<"tex.level.1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  TEX_1D_LEVEL<"tex.level.1d.v4.u32.f32", Int32Regs, Float32Regs,
+               int_nvvm_tex_1d_level_v4u32_f32>;
 
 class TEX_1D_GRAD_base<string inst, NVPTXRegClass outtype,
-                       NVPTXRegClass intype, dag texsamp>
+                       NVPTXRegClass intype, dag texsamp,
+                       list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$gradx, intype:$grady)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, $s, \\{$x\\}],"
                         " \\{$gradx\\}, \\{$grady\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_1D_GRAD<string inst, NVPTXRegClass outtype,
-                       NVPTXRegClass intype> {
-  def _RR : TEX_1D_GRAD_base<inst, outtype, intype,
-                             (ins Int64Regs:$t, Int64Regs:$s)>;
+                       NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_1D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$gradx, intype:$grady))]>;
   def _RI : TEX_1D_GRAD_base<inst, outtype, intype,
                              (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_1D_GRAD_base<inst, outtype, intype,
@@ -2797,24 +3130,30 @@ multiclass TEX_1D_GRAD<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_1D_F32_F32_GRAD
-  : TEX_1D_GRAD<"tex.grad.1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_1D_GRAD<"tex.grad.1d.v4.f32.f32", Float32Regs, Float32Regs,
+                int_nvvm_tex_1d_grad_v4f32_f32>;
 defm TEX_1D_S32_F32_GRAD
-  : TEX_1D_GRAD<"tex.grad.1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_GRAD<"tex.grad.1d.v4.s32.f32", Int32Regs, Float32Regs,
+                int_nvvm_tex_1d_grad_v4s32_f32>;
 defm TEX_1D_U32_F32_GRAD
-  : TEX_1D_GRAD<"tex.grad.1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_GRAD<"tex.grad.1d.v4.u32.f32", Int32Regs, Float32Regs,
+                int_nvvm_tex_1d_grad_v4u32_f32>;
 
 class TEX_1D_ARRAY_base<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype, dag texsamp>
+                        NVPTXRegClass intype, dag texsamp,
+                        list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, $s, \\{$l, $x\\}];",
-                 []>;
+                 pattern>;
 
 multiclass TEX_1D_ARRAY<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype> {
-  def _RR : TEX_1D_ARRAY_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                        NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_1D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x))]>;
   def _RI : TEX_1D_ARRAY_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_1D_ARRAY_base<inst, outtype, intype,
@@ -2824,31 +3163,40 @@ multiclass TEX_1D_ARRAY<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_1D_ARRAY_F32_F32
-  : TEX_1D_ARRAY<"tex.a1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_1D_ARRAY<"tex.a1d.v4.f32.f32", Float32Regs, Float32Regs,
+                 int_nvvm_tex_1d_array_v4f32_f32>;
 defm TEX_1D_ARRAY_F32_S32
-  : TEX_1D_ARRAY<"tex.a1d.v4.f32.s32", Float32Regs, Int32Regs>;
+  : TEX_1D_ARRAY<"tex.a1d.v4.f32.s32", Float32Regs, Int32Regs,
+                 int_nvvm_tex_1d_array_v4f32_s32>;
 defm TEX_1D_ARRAY_S32_S32
-  : TEX_1D_ARRAY<"tex.a1d.v4.s32.s32", Int32Regs, Int32Regs>;
+  : TEX_1D_ARRAY<"tex.a1d.v4.s32.s32", Int32Regs, Int32Regs,
+                 int_nvvm_tex_1d_array_v4s32_s32>;
 defm TEX_1D_ARRAY_S32_F32
-  : TEX_1D_ARRAY<"tex.a1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_ARRAY<"tex.a1d.v4.s32.f32", Int32Regs, Float32Regs,
+                 int_nvvm_tex_1d_array_v4s32_f32>;
 defm TEX_1D_ARRAY_U32_S32
-  : TEX_1D_ARRAY<"tex.a1d.v4.u32.s32", Int32Regs, Int32Regs>;
+  : TEX_1D_ARRAY<"tex.a1d.v4.u32.s32", Int32Regs, Int32Regs,
+                 int_nvvm_tex_1d_array_v4u32_s32>;
 defm TEX_1D_ARRAY_U32_F32
-  : TEX_1D_ARRAY<"tex.a1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_ARRAY<"tex.a1d.v4.u32.f32", Int32Regs, Float32Regs,
+                 int_nvvm_tex_1d_array_v4u32_f32>;
 
 class TEX_1D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
-                              NVPTXRegClass intype, dag texsamp>
+                              NVPTXRegClass intype, dag texsamp,
+                              list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$l, $x\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_1D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
-                              NVPTXRegClass intype> {
-  def _RR : TEX_1D_ARRAY_LEVEL_base<inst, outtype, intype,
-                                    (ins Int64Regs:$t, Int64Regs:$s)>;
+                              NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_1D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$lod))]>;
   def _RI : TEX_1D_ARRAY_LEVEL_base<inst, outtype, intype,
                                     (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_1D_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -2858,26 +3206,33 @@ multiclass TEX_1D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_1D_ARRAY_F32_F32_LEVEL
-  : TEX_1D_ARRAY_LEVEL<"tex.level.a1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_1D_ARRAY_LEVEL<"tex.level.a1d.v4.f32.f32", Float32Regs, Float32Regs,
+                       int_nvvm_tex_1d_array_level_v4f32_f32>;
 defm TEX_1D_ARRAY_S32_F32_LEVEL
-  : TEX_1D_ARRAY_LEVEL<"tex.level.a1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_ARRAY_LEVEL<"tex.level.a1d.v4.s32.f32", Int32Regs, Float32Regs,
+                       int_nvvm_tex_1d_array_level_v4s32_f32>;
 defm TEX_1D_ARRAY_U32_F32_LEVEL
-  : TEX_1D_ARRAY_LEVEL<"tex.level.a1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_ARRAY_LEVEL<"tex.level.a1d.v4.u32.f32", Int32Regs, Float32Regs,
+                       int_nvvm_tex_1d_array_level_v4u32_f32>;
 
 class TEX_1D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
-                             NVPTXRegClass intype, dag texsamp>
+                             NVPTXRegClass intype, dag texsamp,
+                             list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x,
                                     intype:$gradx, intype:$grady)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, $s, \\{$l, $x\\}],"
                         " \\{$gradx\\}, \\{$grady\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_1D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
-                             NVPTXRegClass intype> {
-  def _RR : TEX_1D_ARRAY_GRAD_base<inst, outtype, intype,
-                                   (ins Int64Regs:$t, Int64Regs:$s)>;
+                             NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_1D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x,
+                  intype:$gradx, intype:$grady))]>;
   def _RI : TEX_1D_ARRAY_GRAD_base<inst, outtype, intype,
                                    (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_1D_ARRAY_GRAD_base<inst, outtype, intype,
@@ -2887,48 +3242,63 @@ multiclass TEX_1D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_1D_ARRAY_F32_F32_GRAD
-  : TEX_1D_ARRAY_GRAD<"tex.grad.a1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_1D_ARRAY_GRAD<"tex.grad.a1d.v4.f32.f32", Float32Regs, Float32Regs,
+                      int_nvvm_tex_1d_array_grad_v4f32_f32>;
 defm TEX_1D_ARRAY_S32_F32_GRAD
-  : TEX_1D_ARRAY_GRAD<"tex.grad.a1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_ARRAY_GRAD<"tex.grad.a1d.v4.s32.f32", Int32Regs, Float32Regs,
+                      int_nvvm_tex_1d_array_grad_v4s32_f32>;
 defm TEX_1D_ARRAY_U32_F32_GRAD
-  : TEX_1D_ARRAY_GRAD<"tex.grad.a1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_1D_ARRAY_GRAD<"tex.grad.a1d.v4.u32.f32", Int32Regs, Float32Regs,
+                      int_nvvm_tex_1d_array_grad_v4u32_f32>;
 
 class TEX_2D_base<string inst, NVPTXRegClass outtype,
-                  NVPTXRegClass intype, dag texsamp>
+                  NVPTXRegClass intype, dag texsamp, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, $s, \\{$x, $y\\}];",
-                 []>;
+                 pattern>;
 
-multiclass TEX_2D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
-  def _RR : TEX_2D_base<inst, outtype, intype,
-                        (ins Int64Regs:$t, Int64Regs:$s)>;
+multiclass TEX_2D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
+                  Intrinsic intr> {
+  def _RR : TEX_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y))]>;
   def _RI : TEX_2D_base<inst, outtype, intype, (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_2D_base<inst, outtype, intype, (ins i64imm:$t, Int64Regs:$s)>;
   def _II : TEX_2D_base<inst, outtype, intype, (ins i64imm:$t, i64imm:$s)>;
 }
 
-defm TEX_2D_F32_F32 : TEX_2D<"tex.2d.v4.f32.f32", Float32Regs, Float32Regs>;
-defm TEX_2D_F32_S32 : TEX_2D<"tex.2d.v4.f32.s32", Float32Regs, Int32Regs>;
-defm TEX_2D_S32_S32 : TEX_2D<"tex.2d.v4.s32.s32", Int32Regs, Int32Regs>;
-defm TEX_2D_S32_F32 : TEX_2D<"tex.2d.v4.s32.f32", Int32Regs, Float32Regs>;
-defm TEX_2D_U32_S32 : TEX_2D<"tex.2d.v4.u32.s32", Int32Regs, Int32Regs>;
-defm TEX_2D_U32_F32 : TEX_2D<"tex.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+defm TEX_2D_F32_F32 : TEX_2D<"tex.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                             int_nvvm_tex_2d_v4f32_f32>;
+defm TEX_2D_F32_S32 : TEX_2D<"tex.2d.v4.f32.s32", Float32Regs, Int32Regs,
+                             int_nvvm_tex_2d_v4f32_s32>;
+defm TEX_2D_S32_S32 : TEX_2D<"tex.2d.v4.s32.s32", Int32Regs, Int32Regs,
+                             int_nvvm_tex_2d_v4s32_s32>;
+defm TEX_2D_S32_F32 : TEX_2D<"tex.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                             int_nvvm_tex_2d_v4s32_f32>;
+defm TEX_2D_U32_S32 : TEX_2D<"tex.2d.v4.u32.s32", Int32Regs, Int32Regs,
+                             int_nvvm_tex_2d_v4u32_s32>;
+defm TEX_2D_U32_F32 : TEX_2D<"tex.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                             int_nvvm_tex_2d_v4u32_f32>;
 
 class TEX_2D_LEVEL_base<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype, dag texsamp>
+                        NVPTXRegClass intype, dag texsamp,
+                        list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$x, $y\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_2D_LEVEL<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype> {
-  def _RR : TEX_2D_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                        NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_2D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$lod))]>;
   def _RI : TEX_2D_LEVEL_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_2D_LEVEL_base<inst, outtype, intype,
@@ -2938,14 +3308,18 @@ multiclass TEX_2D_LEVEL<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_2D_F32_F32_LEVEL :
-  TEX_2D_LEVEL<"tex.level.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  TEX_2D_LEVEL<"tex.level.2d.v4.f32.f32", Float32Regs, Float32Regs,
+               int_nvvm_tex_2d_level_v4f32_f32>;
 defm TEX_2D_S32_F32_LEVEL :
-  TEX_2D_LEVEL<"tex.level.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  TEX_2D_LEVEL<"tex.level.2d.v4.s32.f32", Int32Regs, Float32Regs,
+               int_nvvm_tex_2d_level_v4s32_f32>;
 defm TEX_2D_U32_F32_LEVEL :
-  TEX_2D_LEVEL<"tex.level.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  TEX_2D_LEVEL<"tex.level.2d.v4.u32.f32", Int32Regs, Float32Regs,
+               int_nvvm_tex_2d_level_v4u32_f32>;
 
 class TEX_2D_GRAD_base<string inst, NVPTXRegClass outtype,
-                       NVPTXRegClass intype, dag texsamp>
+                       NVPTXRegClass intype, dag texsamp,
+                       list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y,
@@ -2953,12 +3327,16 @@ class TEX_2D_GRAD_base<string inst, NVPTXRegClass outtype,
                                     intype:$grady0, intype:$grady1)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, $s, \\{$x, $y\\}],"
                         " \\{$gradx0, $gradx1\\}, \\{$grady0, $grady1\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_2D_GRAD<string inst, NVPTXRegClass outtype,
-                       NVPTXRegClass intype> {
-  def _RR : TEX_2D_GRAD_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                       NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_2D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y,
+                  intype:$gradx0, intype:$gradx1,
+                  intype:$grady0, intype:$grady1))]>;
   def _RI : TEX_2D_GRAD_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_2D_GRAD_base<inst, outtype, intype,
@@ -2968,25 +3346,31 @@ multiclass TEX_2D_GRAD<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_2D_F32_F32_GRAD :
-  TEX_2D_GRAD<"tex.grad.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  TEX_2D_GRAD<"tex.grad.2d.v4.f32.f32", Float32Regs, Float32Regs,
+              int_nvvm_tex_2d_grad_v4f32_f32>;
 defm TEX_2D_S32_F32_GRAD :
-  TEX_2D_GRAD<"tex.grad.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  TEX_2D_GRAD<"tex.grad.2d.v4.s32.f32", Int32Regs, Float32Regs,
+              int_nvvm_tex_2d_grad_v4s32_f32>;
 defm TEX_2D_U32_F32_GRAD :
-  TEX_2D_GRAD<"tex.grad.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  TEX_2D_GRAD<"tex.grad.2d.v4.u32.f32", Int32Regs, Float32Regs,
+              int_nvvm_tex_2d_grad_v4u32_f32>;
 
 class TEX_2D_ARRAY_base<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype, dag texsamp>
+                        NVPTXRegClass intype, dag texsamp,
+                        list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x, intype:$y)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$l, $x, $y, $y\\}];",
-                 []>;
+                 pattern>;
 
 multiclass TEX_2D_ARRAY<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype> {
-  def _RR : TEX_2D_ARRAY_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                        NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_2D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y))]>;
   def _RI : TEX_2D_ARRAY_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_2D_ARRAY_base<inst, outtype, intype,
@@ -2996,32 +3380,41 @@ multiclass TEX_2D_ARRAY<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_2D_ARRAY_F32_F32
-  : TEX_2D_ARRAY<"tex.a2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_2D_ARRAY<"tex.a2d.v4.f32.f32", Float32Regs, Float32Regs,
+                 int_nvvm_tex_2d_array_v4f32_f32>;
 defm TEX_2D_ARRAY_F32_S32
-  : TEX_2D_ARRAY<"tex.a2d.v4.f32.s32", Float32Regs, Int32Regs>;
+  : TEX_2D_ARRAY<"tex.a2d.v4.f32.s32", Float32Regs, Int32Regs,
+                 int_nvvm_tex_2d_array_v4f32_s32>;
 defm TEX_2D_ARRAY_S32_S32
-  : TEX_2D_ARRAY<"tex.a2d.v4.s32.s32", Int32Regs, Int32Regs>;
+  : TEX_2D_ARRAY<"tex.a2d.v4.s32.s32", Int32Regs, Int32Regs,
+                 int_nvvm_tex_2d_array_v4s32_s32>;
 defm TEX_2D_ARRAY_S32_F32
-  : TEX_2D_ARRAY<"tex.a2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_2D_ARRAY<"tex.a2d.v4.s32.f32", Int32Regs, Float32Regs,
+                 int_nvvm_tex_2d_array_v4s32_f32>;
 defm TEX_2D_ARRAY_U32_S32
-  : TEX_2D_ARRAY<"tex.a2d.v4.u32.s32", Int32Regs, Int32Regs>;
+  : TEX_2D_ARRAY<"tex.a2d.v4.u32.s32", Int32Regs, Int32Regs,
+                 int_nvvm_tex_2d_array_v4u32_s32>;
 defm TEX_2D_ARRAY_U32_F32
-  : TEX_2D_ARRAY<"tex.a2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_2D_ARRAY<"tex.a2d.v4.u32.f32", Int32Regs, Float32Regs,
+                 int_nvvm_tex_2d_array_v4u32_f32>;
 
 class TEX_2D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
-                              NVPTXRegClass intype, dag texsamp>
+                              NVPTXRegClass intype, dag texsamp,
+                              list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x, intype:$y,
                                     intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$l, $x, $y, $y\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_2D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
-                              NVPTXRegClass intype> {
-  def _RR : TEX_2D_ARRAY_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                              NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_2D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y, intype:$lod))]>;
   def _RI : TEX_2D_ARRAY_LEVEL_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_2D_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -3031,14 +3424,18 @@ multiclass TEX_2D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_2D_ARRAY_F32_F32_LEVEL
-  : TEX_2D_ARRAY_LEVEL<"tex.level.a2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_2D_ARRAY_LEVEL<"tex.level.a2d.v4.f32.f32", Float32Regs, Float32Regs,
+                       int_nvvm_tex_2d_array_level_v4f32_f32>;
 defm TEX_2D_ARRAY_S32_F32_LEVEL
-  : TEX_2D_ARRAY_LEVEL<"tex.level.a2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_2D_ARRAY_LEVEL<"tex.level.a2d.v4.s32.f32", Int32Regs, Float32Regs,
+                       int_nvvm_tex_2d_array_level_v4s32_f32>;
 defm TEX_2D_ARRAY_U32_F32_LEVEL
-  : TEX_2D_ARRAY_LEVEL<"tex.level.a2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_2D_ARRAY_LEVEL<"tex.level.a2d.v4.u32.f32", Int32Regs, Float32Regs,
+                       int_nvvm_tex_2d_array_level_v4u32_f32>;
 
 class TEX_2D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
-                             NVPTXRegClass intype, dag texsamp>
+                             NVPTXRegClass intype, dag texsamp,
+                             list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x, intype:$y,
@@ -3047,12 +3444,16 @@ class TEX_2D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$l, $x, $y, $y\\}],"
                         " \\{$gradx0, $gradx1\\}, \\{$grady0, $grady1\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_2D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
-                             NVPTXRegClass intype> {
-  def _RR : TEX_2D_ARRAY_GRAD_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                             NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_2D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y,
+                  intype:$gradx0, intype:$gradx1,
+                  intype:$grady0, intype:$grady1))]>;
   def _RI : TEX_2D_ARRAY_GRAD_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_2D_ARRAY_GRAD_base<inst, outtype, intype,
@@ -3062,24 +3463,30 @@ multiclass TEX_2D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_2D_ARRAY_F32_F32_GRAD
-  : TEX_2D_ARRAY_GRAD<"tex.grad.a2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_2D_ARRAY_GRAD<"tex.grad.a2d.v4.f32.f32", Float32Regs, Float32Regs,
+                      int_nvvm_tex_2d_array_grad_v4f32_f32>;
 defm TEX_2D_ARRAY_S32_F32_GRAD
-  : TEX_2D_ARRAY_GRAD<"tex.grad.a2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_2D_ARRAY_GRAD<"tex.grad.a2d.v4.s32.f32", Int32Regs, Float32Regs,
+                      int_nvvm_tex_2d_array_grad_v4s32_f32>;
 defm TEX_2D_ARRAY_U32_F32_GRAD
-  : TEX_2D_ARRAY_GRAD<"tex.grad.a2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_2D_ARRAY_GRAD<"tex.grad.a2d.v4.u32.f32", Int32Regs, Float32Regs,
+                      int_nvvm_tex_2d_array_grad_v4u32_f32>;
 
 class TEX_3D_base<string inst, NVPTXRegClass outtype,
-                  NVPTXRegClass intype, dag texsamp>
+                  NVPTXRegClass intype, dag texsamp, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y, intype:$z)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$x, $y, $z, $z\\}];",
-                 []>;
+                 pattern>;
 
-multiclass TEX_3D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
-  def _RR : TEX_3D_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+multiclass TEX_3D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
+                  Intrinsic intr> {
+  def _RR : TEX_3D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z))]>;
   def _RI : TEX_3D_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_3D_base<inst, outtype, intype,
@@ -3088,27 +3495,37 @@ multiclass TEX_3D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
                               (ins i64imm:$t, i64imm:$s)>;
 }
 
-defm TEX_3D_F32_F32 : TEX_3D<"tex.3d.v4.f32.f32", Float32Regs, Float32Regs>;
-defm TEX_3D_F32_S32 : TEX_3D<"tex.3d.v4.f32.s32", Float32Regs, Int32Regs>;
-defm TEX_3D_S32_S32 : TEX_3D<"tex.3d.v4.s32.s32", Int32Regs, Int32Regs>;
-defm TEX_3D_S32_F32 : TEX_3D<"tex.3d.v4.s32.f32", Int32Regs, Float32Regs>;
-defm TEX_3D_U32_S32 : TEX_3D<"tex.3d.v4.u32.s32", Int32Regs, Int32Regs>;
-defm TEX_3D_U32_F32 : TEX_3D<"tex.3d.v4.u32.f32", Int32Regs, Float32Regs>;
+defm TEX_3D_F32_F32 : TEX_3D<"tex.3d.v4.f32.f32", Float32Regs, Float32Regs,
+                             int_nvvm_tex_3d_v4f32_f32>;
+defm TEX_3D_F32_S32 : TEX_3D<"tex.3d.v4.f32.s32", Float32Regs, Int32Regs,
+                             int_nvvm_tex_3d_v4f32_s32>;
+defm TEX_3D_S32_S32 : TEX_3D<"tex.3d.v4.s32.s32", Int32Regs, Int32Regs,
+                             int_nvvm_tex_3d_v4s32_s32>;
+defm TEX_3D_S32_F32 : TEX_3D<"tex.3d.v4.s32.f32", Int32Regs, Float32Regs,
+                             int_nvvm_tex_3d_v4s32_f32>;
+defm TEX_3D_U32_S32 : TEX_3D<"tex.3d.v4.u32.s32", Int32Regs, Int32Regs,
+                             int_nvvm_tex_3d_v4u32_s32>;
+defm TEX_3D_U32_F32 : TEX_3D<"tex.3d.v4.u32.f32", Int32Regs, Float32Regs,
+                             int_nvvm_tex_3d_v4u32_f32>;
 
 class TEX_3D_LEVEL_base<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype, dag texsamp>
+                        NVPTXRegClass intype, dag texsamp,
+                        list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y, intype:$z,
                                     intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$x, $y, $z, $z\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_3D_LEVEL<string inst, NVPTXRegClass outtype,
-                        NVPTXRegClass intype> {
-  def _RR : TEX_3D_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s)>;
+                        NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_3D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z,
+                  intype:$lod))]>;
   def _RI : TEX_3D_LEVEL_base<inst, outtype, intype,
                               (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_3D_LEVEL_base<inst, outtype, intype,
@@ -3118,14 +3535,18 @@ multiclass TEX_3D_LEVEL<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_3D_F32_F32_LEVEL
-  : TEX_3D_LEVEL<"tex.level.3d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_3D_LEVEL<"tex.level.3d.v4.f32.f32", Float32Regs, Float32Regs,
+                 int_nvvm_tex_3d_level_v4f32_f32>;
 defm TEX_3D_S32_F32_LEVEL
-  : TEX_3D_LEVEL<"tex.level.3d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_3D_LEVEL<"tex.level.3d.v4.s32.f32", Int32Regs, Float32Regs,
+                 int_nvvm_tex_3d_level_v4s32_f32>;
 defm TEX_3D_U32_F32_LEVEL
-  : TEX_3D_LEVEL<"tex.level.3d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_3D_LEVEL<"tex.level.3d.v4.u32.f32", Int32Regs, Float32Regs,
+                 int_nvvm_tex_3d_level_v4u32_f32>;
 
 class TEX_3D_GRAD_base<string inst, NVPTXRegClass outtype,
-                       NVPTXRegClass intype, dag texsamp>
+                       NVPTXRegClass intype, dag texsamp,
+                       list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y, intype:$z,
@@ -3136,12 +3557,16 @@ class TEX_3D_GRAD_base<string inst, NVPTXRegClass outtype,
                         " [$t, $s, \\{$x, $y, $z, $z\\}],"
                         " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
                         " \\{$grady0, $grady1, $grady2, $grady2\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_3D_GRAD<string inst, NVPTXRegClass outtype,
-                       NVPTXRegClass intype> {
-  def _RR : TEX_3D_GRAD_base<inst, outtype, intype,
-                             (ins Int64Regs:$t, Int64Regs:$s)>;
+                       NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_3D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z,
+                  intype:$gradx0, intype:$gradx1, intype:$gradx2,
+                  intype:$grady0, intype:$grady1, intype:$grady2))]>;
   def _RI : TEX_3D_GRAD_base<inst, outtype, intype,
                              (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_3D_GRAD_base<inst, outtype, intype,
@@ -3151,24 +3576,30 @@ multiclass TEX_3D_GRAD<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_3D_F32_F32_GRAD
-  : TEX_3D_GRAD<"tex.grad.3d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_3D_GRAD<"tex.grad.3d.v4.f32.f32", Float32Regs, Float32Regs,
+                int_nvvm_tex_3d_grad_v4f32_f32>;
 defm TEX_3D_S32_F32_GRAD
-  : TEX_3D_GRAD<"tex.grad.3d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_3D_GRAD<"tex.grad.3d.v4.s32.f32", Int32Regs, Float32Regs,
+                int_nvvm_tex_3d_grad_v4s32_f32>;
 defm TEX_3D_U32_F32_GRAD
-  : TEX_3D_GRAD<"tex.grad.3d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_3D_GRAD<"tex.grad.3d.v4.u32.f32", Int32Regs, Float32Regs,
+                int_nvvm_tex_3d_grad_v4u32_f32>;
 
 class TEX_CUBE_base<string inst, NVPTXRegClass outtype,
-                    NVPTXRegClass intype, dag texsamp>
+                    NVPTXRegClass intype, dag texsamp, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y, intype:$z)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$x, $y, $z, $z\\}];",
-                 []>;
+                 pattern>;
 
-multiclass TEX_CUBE<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
-  def _RR : TEX_CUBE_base<inst, outtype, intype,
-                          (ins Int64Regs:$t, Int64Regs:$s)>;
+multiclass TEX_CUBE<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
+                    Intrinsic intr> {
+  def _RR : TEX_CUBE_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z))]>;
   def _RI : TEX_CUBE_base<inst, outtype, intype,
                           (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_CUBE_base<inst, outtype, intype,
@@ -3178,26 +3609,33 @@ multiclass TEX_CUBE<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
 }
 
 defm TEX_CUBE_F32_F32
-  : TEX_CUBE<"tex.cube.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_CUBE<"tex.cube.v4.f32.f32", Float32Regs, Float32Regs,
+             int_nvvm_tex_cube_v4f32_f32>;
 defm TEX_CUBE_S32_F32
-  : TEX_CUBE<"tex.cube.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_CUBE<"tex.cube.v4.s32.f32", Int32Regs, Float32Regs,
+             int_nvvm_tex_cube_v4s32_f32>;
 defm TEX_CUBE_U32_F32
-  : TEX_CUBE<"tex.cube.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_CUBE<"tex.cube.v4.u32.f32", Int32Regs, Float32Regs,
+             int_nvvm_tex_cube_v4u32_f32>;
 
 class TEX_CUBE_LEVEL_base<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype, dag texsamp>
+                          NVPTXRegClass intype, dag texsamp,
+                          list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins intype:$x, intype:$y, intype:$z,
                                     intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$x, $y, $z, $z\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_CUBE_LEVEL<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype> {
-  def _RR : TEX_CUBE_LEVEL_base<inst, outtype, intype,
-                                (ins Int64Regs:$t, Int64Regs:$s)>;
+                          NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_CUBE_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z,
+                  intype:$lod))]>;
   def _RI : TEX_CUBE_LEVEL_base<inst, outtype, intype,
                                 (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_CUBE_LEVEL_base<inst, outtype, intype,
@@ -3207,26 +3645,32 @@ multiclass TEX_CUBE_LEVEL<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_CUBE_F32_F32_LEVEL
-  : TEX_CUBE_LEVEL<"tex.level.cube.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_CUBE_LEVEL<"tex.level.cube.v4.f32.f32", Float32Regs, Float32Regs,
+                   int_nvvm_tex_cube_level_v4f32_f32>;
 defm TEX_CUBE_S32_F32_LEVEL
-  : TEX_CUBE_LEVEL<"tex.level.cube.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_CUBE_LEVEL<"tex.level.cube.v4.s32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_cube_level_v4s32_f32>;
 defm TEX_CUBE_U32_F32_LEVEL
-  : TEX_CUBE_LEVEL<"tex.level.cube.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_CUBE_LEVEL<"tex.level.cube.v4.u32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_cube_level_v4u32_f32>;
 
 class TEX_CUBE_ARRAY_base<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype, dag texsamp>
+                          NVPTXRegClass intype, dag texsamp,
+                          list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x, intype:$y,
                                     intype:$z)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$l, $x, $y, $z\\}];",
-                 []>;
+                 pattern>;
 
 multiclass TEX_CUBE_ARRAY<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype> {
-  def _RR : TEX_CUBE_ARRAY_base<inst, outtype, intype,
-                                (ins Int64Regs:$t, Int64Regs:$s)>;
+                          NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_CUBE_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y, intype:$z))]>;
   def _RI : TEX_CUBE_ARRAY_base<inst, outtype, intype,
                                 (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_CUBE_ARRAY_base<inst, outtype, intype,
@@ -3236,26 +3680,33 @@ multiclass TEX_CUBE_ARRAY<string inst, NVPTXRegClass outtype,
 }
 
 defm TEX_CUBE_ARRAY_F32_F32
-  : TEX_CUBE_ARRAY<"tex.acube.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_CUBE_ARRAY<"tex.acube.v4.f32.f32", Float32Regs, Float32Regs,
+                   int_nvvm_tex_cube_array_v4f32_f32>;
 defm TEX_CUBE_ARRAY_S32_F32
-  : TEX_CUBE_ARRAY<"tex.acube.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_CUBE_ARRAY<"tex.acube.v4.s32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_cube_array_v4s32_f32>;
 defm TEX_CUBE_ARRAY_U32_F32
-  : TEX_CUBE_ARRAY<"tex.acube.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_CUBE_ARRAY<"tex.acube.v4.u32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_cube_array_v4u32_f32>;
 
 class TEX_CUBE_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype, dag texsamp>
+                                NVPTXRegClass intype, dag texsamp,
+                                list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(texsamp, (ins Int32Regs:$l, intype:$x, intype:$y,
                                     intype:$z, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, $s, \\{$l, $x, $y, $z\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_CUBE_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype> {
-  def _RR : TEX_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
-                                      (ins Int64Regs:$t, Int64Regs:$s)>;
+                                NVPTXRegClass intype, Intrinsic intr> {
+  def _RR : TEX_CUBE_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y, intype:$z,
+                  intype:$lod))]>;
   def _RI : TEX_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
                                       (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TEX_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -3266,25 +3717,31 @@ multiclass TEX_CUBE_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
 
 defm TEX_CUBE_ARRAY_F32_F32_LEVEL
   : TEX_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.f32.f32",
-                         Float32Regs, Float32Regs>;
+                         Float32Regs, Float32Regs,
+                         int_nvvm_tex_cube_array_level_v4f32_f32>;
 defm TEX_CUBE_ARRAY_S32_F32_LEVEL
   : TEX_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.s32.f32",
-                         Int32Regs, Float32Regs>;
+                         Int32Regs, Float32Regs,
+                         int_nvvm_tex_cube_array_level_v4s32_f32>;
 defm TEX_CUBE_ARRAY_U32_F32_LEVEL
   : TEX_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.u32.f32",
-                         Int32Regs, Float32Regs>;
+                         Int32Regs, Float32Regs,
+                         int_nvvm_tex_cube_array_level_v4u32_f32>;
 
 class TLD4_2D_base<string inst, NVPTXRegClass outtype,
-                   NVPTXRegClass intype, dag texsamp>
+                   NVPTXRegClass intype, dag texsamp, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$v0, outtype:$v1,
                       outtype:$v2, outtype:$v3),
                  !con(texsamp, (ins intype:$x, intype:$y)),
                  inst # " \t\\{$v0, $v1, $v2, $v3\\}, [$t, $s, \\{$x, $y\\}];",
-                 []>;
+                 pattern>;
 
-multiclass TLD4_2D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
-  def _RR : TLD4_2D_base<inst, outtype, intype,
-                         (ins Int64Regs:$t, Int64Regs:$s)>;
+multiclass TLD4_2D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
+                   Intrinsic intr> {
+  def _RR : TLD4_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
+      [(set outtype:$v0, outtype:$v1, outtype:$v2, outtype:$v3,
+            (intr i64:$t, i64:$s, intype:$x, intype:$y))]>;
   def _RI : TLD4_2D_base<inst, outtype, intype,
                          (ins Int64Regs:$t, i64imm:$s)>;
   def _IR : TLD4_2D_base<inst, outtype, intype,
@@ -3294,31 +3751,43 @@ multiclass TLD4_2D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype> {
 }
 
 defm TLD4_R_2D_F32_F32
-  : TLD4_2D<"tld4.r.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.r.2d.v4.f32.f32", Float32Regs, Float32Regs,
+            int_nvvm_tld4_r_2d_v4f32_f32>;
 defm TLD4_G_2D_F32_F32
-  : TLD4_2D<"tld4.g.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.g.2d.v4.f32.f32", Float32Regs, Float32Regs,
+            int_nvvm_tld4_g_2d_v4f32_f32>;
 defm TLD4_B_2D_F32_F32
-  : TLD4_2D<"tld4.b.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.b.2d.v4.f32.f32", Float32Regs, Float32Regs,
+            int_nvvm_tld4_b_2d_v4f32_f32>;
 defm TLD4_A_2D_F32_F32
-  : TLD4_2D<"tld4.a.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.a.2d.v4.f32.f32", Float32Regs, Float32Regs,
+            int_nvvm_tld4_a_2d_v4f32_f32>;
 
 defm TLD4_R_2D_S32_F32
-  : TLD4_2D<"tld4.r.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.r.2d.v4.s32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_r_2d_v4s32_f32>;
 defm TLD4_G_2D_S32_F32
-  : TLD4_2D<"tld4.g.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.g.2d.v4.s32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_g_2d_v4s32_f32>;
 defm TLD4_B_2D_S32_F32
-  : TLD4_2D<"tld4.b.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.b.2d.v4.s32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_b_2d_v4s32_f32>;
 defm TLD4_A_2D_S32_F32
-  : TLD4_2D<"tld4.a.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.a.2d.v4.s32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_a_2d_v4s32_f32>;
 
 defm TLD4_R_2D_U32_F32
-  : TLD4_2D<"tld4.r.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.r.2d.v4.u32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_r_2d_v4u32_f32>;
 defm TLD4_G_2D_U32_F32
-  : TLD4_2D<"tld4.g.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.g.2d.v4.u32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_g_2d_v4u32_f32>;
 defm TLD4_B_2D_U32_F32
-  : TLD4_2D<"tld4.b.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.b.2d.v4.u32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_b_2d_v4u32_f32>;
 defm TLD4_A_2D_U32_F32
-  : TLD4_2D<"tld4.a.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_2D<"tld4.a.2d.v4.u32.f32", Int32Regs, Float32Regs,
+            int_nvvm_tld4_a_2d_v4u32_f32>;
 
 }
 
@@ -3328,206 +3797,268 @@ let IsTex = true, IsTexModeUnified = true in {
 // Texture fetch instructions using handles
 
 class TEX_UNIFIED_1D_base<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype, dag tex>
+                          NVPTXRegClass intype, dag tex, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x\\}];",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_1D<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_1D_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                          NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_1D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x))]>;
   def _I : TEX_UNIFIED_1D_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_1D_F32_S32
-  : TEX_UNIFIED_1D<"tex.1d.v4.f32.s32", Float32Regs, Int32Regs>;
+  : TEX_UNIFIED_1D<"tex.1d.v4.f32.s32", Float32Regs, Int32Regs,
+                   int_nvvm_tex_unified_1d_v4f32_s32>;
 defm TEX_UNIFIED_1D_F32_F32
-  : TEX_UNIFIED_1D<"tex.1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D<"tex.1d.v4.f32.f32", Float32Regs, Float32Regs,
+                   int_nvvm_tex_unified_1d_v4f32_f32>;
 defm TEX_UNIFIED_1D_S32_S32
-  : TEX_UNIFIED_1D<"tex.1d.v4.s32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_1D<"tex.1d.v4.s32.s32", Int32Regs, Int32Regs,
+                   int_nvvm_tex_unified_1d_v4s32_s32>;
 defm TEX_UNIFIED_1D_S32_F32
-  : TEX_UNIFIED_1D<"tex.1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D<"tex.1d.v4.s32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_unified_1d_v4s32_f32>;
 defm TEX_UNIFIED_1D_U32_S32
-  : TEX_UNIFIED_1D<"tex.1d.v4.u32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_1D<"tex.1d.v4.u32.s32", Int32Regs, Int32Regs,
+                   int_nvvm_tex_unified_1d_v4u32_s32>;
 defm TEX_UNIFIED_1D_U32_F32
-  : TEX_UNIFIED_1D<"tex.1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D<"tex.1d.v4.u32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_unified_1d_v4u32_f32>;
 
 class TEX_UNIFIED_1D_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype, dag tex>
+                                NVPTXRegClass intype, dag tex,
+                                list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_1D_LEVEL<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_1D_LEVEL_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                                NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_1D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$lod))]>;
   def _I : TEX_UNIFIED_1D_LEVEL_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_1D_F32_F32_LEVEL
-  : TEX_UNIFIED_1D_LEVEL<"tex.level.1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_LEVEL<"tex.level.1d.v4.f32.f32", Float32Regs, Float32Regs,
+                         int_nvvm_tex_unified_1d_level_v4f32_f32>;
 defm TEX_UNIFIED_1D_S32_F32_LEVEL
-  : TEX_UNIFIED_1D_LEVEL<"tex.level.1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_LEVEL<"tex.level.1d.v4.s32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_1d_level_v4s32_f32>;
 defm TEX_UNIFIED_1D_U32_F32_LEVEL
-  : TEX_UNIFIED_1D_LEVEL<"tex.level.1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_LEVEL<"tex.level.1d.v4.u32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_1d_level_v4u32_f32>;
 
 class TEX_UNIFIED_1D_GRAD_base<string inst, NVPTXRegClass outtype,
-                               NVPTXRegClass intype, dag tex>
+                               NVPTXRegClass intype, dag tex,
+                               list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$gradx, intype:$grady)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, \\{$x\\}], \\{$gradx\\}, \\{$grady\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_1D_GRAD<string inst, NVPTXRegClass outtype,
-                               NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_1D_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                               NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_1D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$gradx, intype:$grady))]>;
   def _I : TEX_UNIFIED_1D_GRAD_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_1D_F32_F32_GRAD
-  : TEX_UNIFIED_1D_GRAD<"tex.grad.1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_GRAD<"tex.grad.1d.v4.f32.f32", Float32Regs, Float32Regs,
+                        int_nvvm_tex_unified_1d_grad_v4f32_f32>;
 defm TEX_UNIFIED_1D_S32_F32_GRAD
-  : TEX_UNIFIED_1D_GRAD<"tex.grad.1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_GRAD<"tex.grad.1d.v4.s32.f32", Int32Regs, Float32Regs,
+                        int_nvvm_tex_unified_1d_grad_v4s32_f32>;
 defm TEX_UNIFIED_1D_U32_F32_GRAD
-  : TEX_UNIFIED_1D_GRAD<"tex.grad.1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_GRAD<"tex.grad.1d.v4.u32.f32", Int32Regs, Float32Regs,
+                        int_nvvm_tex_unified_1d_grad_v4u32_f32>;
 
 class TEX_UNIFIED_1D_ARRAY_base<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype, dag tex>
+                                NVPTXRegClass intype, dag tex,
+                                list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x\\}];",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_1D_ARRAY<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_1D_ARRAY_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                                NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_1D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x))]>;
   def _I : TEX_UNIFIED_1D_ARRAY_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_1D_ARRAY_F32_S32
-  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.f32.s32", Float32Regs, Int32Regs>;
+  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.f32.s32", Float32Regs, Int32Regs,
+                         int_nvvm_tex_unified_1d_array_v4f32_s32>;
 defm TEX_UNIFIED_1D_ARRAY_F32_F32
-  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.f32.f32", Float32Regs, Float32Regs,
+                         int_nvvm_tex_unified_1d_array_v4f32_f32>;
 defm TEX_UNIFIED_1D_ARRAY_S32_S32
-  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.s32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.s32.s32", Int32Regs, Int32Regs,
+                         int_nvvm_tex_unified_1d_array_v4s32_s32>;
 defm TEX_UNIFIED_1D_ARRAY_S32_F32
-  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.s32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_1d_array_v4s32_f32>;
 defm TEX_UNIFIED_1D_ARRAY_U32_S32
-  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.u32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.u32.s32", Int32Regs, Int32Regs,
+                         int_nvvm_tex_unified_1d_array_v4u32_s32>;
 defm TEX_UNIFIED_1D_ARRAY_U32_F32
-  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_1D_ARRAY<"tex.a1d.v4.u32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_1d_array_v4u32_f32>;
 
 class TEX_UNIFIED_1D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                      NVPTXRegClass intype, dag tex>
+                                      NVPTXRegClass intype, dag tex,
+                                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_1D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
-                                      NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_1D_ARRAY_LEVEL_base<inst, outtype, intype,
-                                           (ins Int64Regs:$t)>;
+                                      NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_1D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$lod))]>;
   def _I : TEX_UNIFIED_1D_ARRAY_LEVEL_base<inst, outtype, intype,
                                            (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_1D_ARRAY_F32_F32_LEVEL
   : TEX_UNIFIED_1D_ARRAY_LEVEL<"tex.level.a1d.v4.f32.f32",
-                               Float32Regs, Float32Regs>;
+                               Float32Regs, Float32Regs,
+                               int_nvvm_tex_unified_1d_array_level_v4f32_f32>;
 defm TEX_UNIFIED_1D_ARRAY_S32_F32_LEVEL
   : TEX_UNIFIED_1D_ARRAY_LEVEL<"tex.level.a1d.v4.s32.f32",
-                               Int32Regs, Float32Regs>;
+                               Int32Regs, Float32Regs,
+                               int_nvvm_tex_unified_1d_array_level_v4s32_f32>;
 defm TEX_UNIFIED_1D_ARRAY_U32_F32_LEVEL
   : TEX_UNIFIED_1D_ARRAY_LEVEL<"tex.level.a1d.v4.u32.f32",
-                               Int32Regs, Float32Regs>;
+                               Int32Regs, Float32Regs,
+                               int_nvvm_tex_unified_1d_array_level_v4u32_f32>;
 
 class TEX_UNIFIED_1D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
-                                     NVPTXRegClass intype, dag tex>
+                                     NVPTXRegClass intype, dag tex,
+                                     list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x,
                                 intype:$gradx, intype:$grady)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         "  [$t, \\{$l, $x\\}], \\{$gradx\\}, \\{$grady\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_1D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
-                                     NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_1D_ARRAY_GRAD_base<inst, outtype, intype,
-                                          (ins Int64Regs:$t)>;
+                                     NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_1D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$gradx, intype:$grady))]>;
   def _I : TEX_UNIFIED_1D_ARRAY_GRAD_base<inst, outtype, intype,
                                           (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_1D_ARRAY_F32_F32_GRAD
   : TEX_UNIFIED_1D_ARRAY_GRAD<"tex.grad.a1d.v4.f32.f32",
-                              Float32Regs, Float32Regs>;
+                              Float32Regs, Float32Regs,
+                              int_nvvm_tex_unified_1d_array_grad_v4f32_f32>;
 defm TEX_UNIFIED_1D_ARRAY_S32_F32_GRAD
   : TEX_UNIFIED_1D_ARRAY_GRAD<"tex.grad.a1d.v4.s32.f32",
-                              Int32Regs, Float32Regs>;
+                              Int32Regs, Float32Regs,
+                              int_nvvm_tex_unified_1d_array_grad_v4s32_f32>;
 defm TEX_UNIFIED_1D_ARRAY_U32_F32_GRAD
   : TEX_UNIFIED_1D_ARRAY_GRAD<"tex.grad.a1d.v4.u32.f32",
-                              Int32Regs, Float32Regs>;
+                              Int32Regs, Float32Regs,
+                              int_nvvm_tex_unified_1d_array_grad_v4u32_f32>;
 
 class TEX_UNIFIED_2D_base<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype, dag tex>
+                          NVPTXRegClass intype, dag tex, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y\\}];",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_2D<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_2D_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                          NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y))]>;
   def _I : TEX_UNIFIED_2D_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_2D_F32_S32
-  : TEX_UNIFIED_2D<"tex.2d.v4.f32.s32", Float32Regs, Int32Regs>;
+  : TEX_UNIFIED_2D<"tex.2d.v4.f32.s32", Float32Regs, Int32Regs,
+                   int_nvvm_tex_unified_2d_v4f32_s32>;
 defm TEX_UNIFIED_2D_F32_F32
-  : TEX_UNIFIED_2D<"tex.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D<"tex.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                   int_nvvm_tex_unified_2d_v4f32_f32>;
 defm TEX_UNIFIED_2D_S32_S32
-  : TEX_UNIFIED_2D<"tex.2d.v4.s32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_2D<"tex.2d.v4.s32.s32", Int32Regs, Int32Regs,
+                   int_nvvm_tex_unified_2d_v4s32_s32>;
 defm TEX_UNIFIED_2D_S32_F32
-  : TEX_UNIFIED_2D<"tex.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D<"tex.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_unified_2d_v4s32_f32>;
 defm TEX_UNIFIED_2D_U32_S32
-  : TEX_UNIFIED_2D<"tex.2d.v4.u32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_2D<"tex.2d.v4.u32.s32", Int32Regs, Int32Regs,
+                   int_nvvm_tex_unified_2d_v4u32_s32>;
 defm TEX_UNIFIED_2D_U32_F32
-  : TEX_UNIFIED_2D<"tex.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D<"tex.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_unified_2d_v4u32_f32>;
 
 class TEX_UNIFIED_2D_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype, dag tex>
+                                NVPTXRegClass intype, dag tex,
+                                list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y\\}], $lod;",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_2D_LEVEL<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_2D_LEVEL_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                                NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_2D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y, intype:$lod))]>;
   def _I : TEX_UNIFIED_2D_LEVEL_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_2D_F32_F32_LEVEL
-  : TEX_UNIFIED_2D_LEVEL<"tex.level.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_LEVEL<"tex.level.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                         int_nvvm_tex_unified_2d_level_v4f32_f32>;
 defm TEX_UNIFIED_2D_S32_F32_LEVEL
-  : TEX_UNIFIED_2D_LEVEL<"tex.level.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_LEVEL<"tex.level.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_2d_level_v4s32_f32>;
 defm TEX_UNIFIED_2D_U32_F32_LEVEL
-  : TEX_UNIFIED_2D_LEVEL<"tex.level.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_LEVEL<"tex.level.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_2d_level_v4u32_f32>;
 
 class TEX_UNIFIED_2D_GRAD_base<string inst, NVPTXRegClass outtype,
-                               NVPTXRegClass intype, dag tex>
+                               NVPTXRegClass intype, dag tex,
+                               list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y,
@@ -3535,75 +4066,100 @@ class TEX_UNIFIED_2D_GRAD_base<string inst, NVPTXRegClass outtype,
                                 intype:$grady0, intype:$grady1)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y\\}],"
                         " \\{$gradx0, $gradx1\\}, \\{$grady0, $grady1\\};",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_2D_GRAD<string inst, NVPTXRegClass outtype,
-                               NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_2D_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                               NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_2D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y,
+                  intype:$gradx0, intype:$gradx1,
+                  intype:$grady0, intype:$grady1))]>;
   def _I : TEX_UNIFIED_2D_GRAD_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_2D_F32_F32_GRAD
-  : TEX_UNIFIED_2D_GRAD<"tex.grad.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_GRAD<"tex.grad.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                        int_nvvm_tex_unified_2d_grad_v4f32_f32>;
 defm TEX_UNIFIED_2D_S32_F32_GRAD
-  : TEX_UNIFIED_2D_GRAD<"tex.grad.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_GRAD<"tex.grad.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                        int_nvvm_tex_unified_2d_grad_v4s32_f32>;
 defm TEX_UNIFIED_2D_U32_F32_GRAD
-  : TEX_UNIFIED_2D_GRAD<"tex.grad.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_GRAD<"tex.grad.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                        int_nvvm_tex_unified_2d_grad_v4u32_f32>;
 
 class TEX_UNIFIED_2D_ARRAY_base<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype, dag tex>
+                                NVPTXRegClass intype, dag tex,
+                                list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x, $y, $y\\}];",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_2D_ARRAY<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_2D_ARRAY_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                                NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_2D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$y))]>;
   def _I : TEX_UNIFIED_2D_ARRAY_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_2D_ARRAY_F32_S32
-  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.f32.s32", Float32Regs, Int32Regs>;
+  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.f32.s32", Float32Regs, Int32Regs,
+                         int_nvvm_tex_unified_2d_array_v4f32_s32>;
 defm TEX_UNIFIED_2D_ARRAY_F32_F32
-  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.f32.f32", Float32Regs, Float32Regs,
+                         int_nvvm_tex_unified_2d_array_v4f32_f32>;
 defm TEX_UNIFIED_2D_ARRAY_S32_S32
-  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.s32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.s32.s32", Int32Regs, Int32Regs,
+                         int_nvvm_tex_unified_2d_array_v4s32_s32>;
 defm TEX_UNIFIED_2D_ARRAY_S32_F32
-  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.s32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_2d_array_v4s32_f32>;
 defm TEX_UNIFIED_2D_ARRAY_U32_S32
-  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.u32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.u32.s32", Int32Regs, Int32Regs,
+                         int_nvvm_tex_unified_2d_array_v4u32_s32>;
 defm TEX_UNIFIED_2D_ARRAY_U32_F32
-  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_2D_ARRAY<"tex.a2d.v4.u32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_2d_array_v4u32_f32>;
 
 class TEX_UNIFIED_2D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                      NVPTXRegClass intype, dag tex>
+                                      NVPTXRegClass intype, dag tex,
+                                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y,
                                 intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         "  [$t, \\{$l, $x, $y, $y\\}], $lod;",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_2D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
-                                      NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_2D_ARRAY_LEVEL_base<inst, outtype, intype,
-                                           (ins Int64Regs:$t)>;
+                                      NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_2D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$lod))]>;
   def _I : TEX_UNIFIED_2D_ARRAY_LEVEL_base<inst, outtype, intype,
                                            (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_2D_ARRAY_F32_F32_LEVEL
   : TEX_UNIFIED_2D_ARRAY_LEVEL<"tex.level.a2d.v4.f32.f32",
-                               Float32Regs, Float32Regs>;
+                               Float32Regs, Float32Regs,
+                               int_nvvm_tex_unified_2d_array_level_v4f32_f32>;
 defm TEX_UNIFIED_2D_ARRAY_S32_F32_LEVEL
   : TEX_UNIFIED_2D_ARRAY_LEVEL<"tex.level.a2d.v4.s32.f32",
-                               Int32Regs, Float32Regs>;
+                               Int32Regs, Float32Regs,
+                               int_nvvm_tex_unified_2d_array_level_v4s32_f32>;
 defm TEX_UNIFIED_2D_ARRAY_U32_F32_LEVEL
   : TEX_UNIFIED_2D_ARRAY_LEVEL<"tex.level.a2d.v4.u32.f32",
-                               Int32Regs, Float32Regs>;
+                               Int32Regs, Float32Regs,
+                               int_nvvm_tex_unified_2d_array_level_v4u32_f32>;
 
 class TEX_UNIFIED_2D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
-                                     NVPTXRegClass intype, dag tex>
+                                     NVPTXRegClass intype, dag tex,
+                                     list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y,
@@ -3611,74 +4167,98 @@ class TEX_UNIFIED_2D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
                                 intype:$grady0, intype:$grady1)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x, $y, $y\\}],"
                         " \\{$gradx0, $gradx1\\}, \\{$grady0, $grady1\\};",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_2D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
-                                     NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_2D_ARRAY_GRAD_base<inst, outtype, intype,
-                                          (ins Int64Regs:$t)>;
+                                     NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_2D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$y,
+                  intype:$gradx0, intype:$gradx1,
+                  intype:$grady0, intype:$grady1))]>;
   def _I : TEX_UNIFIED_2D_ARRAY_GRAD_base<inst, outtype, intype,
                                           (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_2D_ARRAY_F32_F32_GRAD
   : TEX_UNIFIED_2D_ARRAY_GRAD<"tex.grad.a2d.v4.f32.f32",
-                              Float32Regs, Float32Regs>;
+                              Float32Regs, Float32Regs,
+                              int_nvvm_tex_unified_2d_array_grad_v4f32_f32>;
 defm TEX_UNIFIED_2D_ARRAY_S32_F32_GRAD
   : TEX_UNIFIED_2D_ARRAY_GRAD<"tex.grad.a2d.v4.s32.f32",
-                              Int32Regs, Float32Regs>;
+                              Int32Regs, Float32Regs,
+                              int_nvvm_tex_unified_2d_array_grad_v4s32_f32>;
 defm TEX_UNIFIED_2D_ARRAY_U32_F32_GRAD
   : TEX_UNIFIED_2D_ARRAY_GRAD<"tex.grad.a2d.v4.u32.f32",
-                              Int32Regs, Float32Regs>;
+                              Int32Regs, Float32Regs,
+                              int_nvvm_tex_unified_2d_array_grad_v4u32_f32>;
 
 class TEX_UNIFIED_3D_base<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype, dag tex>
+                          NVPTXRegClass intype, dag tex, list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y, intype:$z)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y, $z, $z\\}];",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_3D<string inst, NVPTXRegClass outtype,
-                          NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_3D_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                          NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_3D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y, intype:$z))]>;
   def _I : TEX_UNIFIED_3D_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_3D_F32_S32
-  : TEX_UNIFIED_3D<"tex.3d.v4.f32.s32", Float32Regs, Int32Regs>;
+  : TEX_UNIFIED_3D<"tex.3d.v4.f32.s32", Float32Regs, Int32Regs,
+                   int_nvvm_tex_unified_3d_v4f32_s32>;
 defm TEX_UNIFIED_3D_F32_F32
-  : TEX_UNIFIED_3D<"tex.3d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D<"tex.3d.v4.f32.f32", Float32Regs, Float32Regs,
+                   int_nvvm_tex_unified_3d_v4f32_f32>;
 defm TEX_UNIFIED_3D_S32_S32
-  : TEX_UNIFIED_3D<"tex.3d.v4.s32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_3D<"tex.3d.v4.s32.s32", Int32Regs, Int32Regs,
+                   int_nvvm_tex_unified_3d_v4s32_s32>;
 defm TEX_UNIFIED_3D_S32_F32
-  : TEX_UNIFIED_3D<"tex.3d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D<"tex.3d.v4.s32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_unified_3d_v4s32_f32>;
 defm TEX_UNIFIED_3D_U32_S32
-  : TEX_UNIFIED_3D<"tex.3d.v4.u32.s32", Int32Regs, Int32Regs>;
+  : TEX_UNIFIED_3D<"tex.3d.v4.u32.s32", Int32Regs, Int32Regs,
+                   int_nvvm_tex_unified_3d_v4u32_s32>;
 defm TEX_UNIFIED_3D_U32_F32
-  : TEX_UNIFIED_3D<"tex.3d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D<"tex.3d.v4.u32.f32", Int32Regs, Float32Regs,
+                   int_nvvm_tex_unified_3d_v4u32_f32>;
 
 class TEX_UNIFIED_3D_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype, dag tex>
+                                NVPTXRegClass intype, dag tex,
+                                list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y, intype:$z, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, \\{$x, $y, $z, $z\\}], $lod;",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_3D_LEVEL<string inst, NVPTXRegClass outtype,
-                                NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_3D_LEVEL_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                                NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_3D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y, intype:$z, intype:$lod))]>;
   def _I : TEX_UNIFIED_3D_LEVEL_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_3D_F32_F32_LEVEL
-  : TEX_UNIFIED_3D_LEVEL<"tex.level.3d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D_LEVEL<"tex.level.3d.v4.f32.f32", Float32Regs, Float32Regs,
+                         int_nvvm_tex_unified_3d_level_v4f32_f32>;
 defm TEX_UNIFIED_3D_S32_F32_LEVEL
-  : TEX_UNIFIED_3D_LEVEL<"tex.level.3d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D_LEVEL<"tex.level.3d.v4.s32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_3d_level_v4s32_f32>;
 defm TEX_UNIFIED_3D_U32_F32_LEVEL
-  : TEX_UNIFIED_3D_LEVEL<"tex.level.3d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D_LEVEL<"tex.level.3d.v4.u32.f32", Int32Regs, Float32Regs,
+                         int_nvvm_tex_unified_3d_level_v4u32_f32>;
 
 class TEX_UNIFIED_3D_GRAD_base<string inst, NVPTXRegClass outtype,
-                               NVPTXRegClass intype, dag tex>
+                               NVPTXRegClass intype, dag tex,
+                               list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y, intype:$z,
@@ -3688,117 +4268,151 @@ class TEX_UNIFIED_3D_GRAD_base<string inst, NVPTXRegClass outtype,
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y, $z, $z\\}],"
                         " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
                         " \\{$grady0, $grady1, $grady2, $grady2\\};",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_3D_GRAD<string inst, NVPTXRegClass outtype,
-                               NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_3D_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                               NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_3D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y, intype:$z,
+                  intype:$gradx0, intype:$gradx1, intype:$gradx2,
+                  intype:$grady0, intype:$grady1, intype:$grady2))]>;
   def _I : TEX_UNIFIED_3D_GRAD_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_3D_F32_F32_GRAD
-  : TEX_UNIFIED_3D_GRAD<"tex.grad.3d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D_GRAD<"tex.grad.3d.v4.f32.f32", Float32Regs, Float32Regs,
+                        int_nvvm_tex_unified_3d_grad_v4f32_f32>;
 defm TEX_UNIFIED_3D_S32_F32_GRAD
-  : TEX_UNIFIED_3D_GRAD<"tex.grad.3d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D_GRAD<"tex.grad.3d.v4.s32.f32", Int32Regs, Float32Regs,
+                        int_nvvm_tex_unified_3d_grad_v4s32_f32>;
 defm TEX_UNIFIED_3D_U32_F32_GRAD
-  : TEX_UNIFIED_3D_GRAD<"tex.grad.3d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_3D_GRAD<"tex.grad.3d.v4.u32.f32", Int32Regs, Float32Regs,
+                        int_nvvm_tex_unified_3d_grad_v4u32_f32>;
 
 class TEX_UNIFIED_CUBE_base<string inst, NVPTXRegClass outtype,
-                            NVPTXRegClass intype, dag tex>
+                            NVPTXRegClass intype, dag tex,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y, intype:$z)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y, $z, $z\\}];",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_CUBE<string inst, NVPTXRegClass outtype,
-                            NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_CUBE_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                            NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_CUBE_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y, intype:$z))]>;
   def _I : TEX_UNIFIED_CUBE_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_CUBE_F32_F32
-  : TEX_UNIFIED_CUBE<"tex.cube.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE<"tex.cube.v4.f32.f32", Float32Regs, Float32Regs,
+                     int_nvvm_tex_unified_cube_v4f32_f32>;
 defm TEX_UNIFIED_CUBE_S32_F32
-  : TEX_UNIFIED_CUBE<"tex.cube.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE<"tex.cube.v4.s32.f32", Int32Regs, Float32Regs,
+                     int_nvvm_tex_unified_cube_v4s32_f32>;
 defm TEX_UNIFIED_CUBE_U32_F32
-  : TEX_UNIFIED_CUBE<"tex.cube.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE<"tex.cube.v4.u32.f32", Int32Regs, Float32Regs,
+                     int_nvvm_tex_unified_cube_v4u32_f32>;
 
 class TEX_UNIFIED_CUBE_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                  NVPTXRegClass intype, dag tex>
+                                  NVPTXRegClass intype, dag tex,
+                                  list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y, intype:$z, intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, \\{$x, $y, $z, $z\\}], $lod;",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_CUBE_LEVEL<string inst, NVPTXRegClass outtype,
-                                  NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_CUBE_LEVEL_base<inst, outtype, intype,
-                                       (ins Int64Regs:$t)>;
+                                  NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_CUBE_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y, intype:$z, intype:$lod))]>;
   def _I : TEX_UNIFIED_CUBE_LEVEL_base<inst, outtype, intype,
                                        (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_CUBE_F32_F32_LEVEL
   : TEX_UNIFIED_CUBE_LEVEL<"tex.level.cube.v4.f32.f32",
-                           Float32Regs, Float32Regs>;
+                           Float32Regs, Float32Regs,
+                           int_nvvm_tex_unified_cube_level_v4f32_f32>;
 defm TEX_UNIFIED_CUBE_S32_F32_LEVEL
   : TEX_UNIFIED_CUBE_LEVEL<"tex.level.cube.v4.s32.f32",
-                           Int32Regs, Float32Regs>;
+                           Int32Regs, Float32Regs,
+                           int_nvvm_tex_unified_cube_level_v4s32_f32>;
 defm TEX_UNIFIED_CUBE_U32_F32_LEVEL
   : TEX_UNIFIED_CUBE_LEVEL<"tex.level.cube.v4.u32.f32",
-                           Int32Regs, Float32Regs>;
+                           Int32Regs, Float32Regs,
+                           int_nvvm_tex_unified_cube_level_v4u32_f32>;
 
 class TEX_UNIFIED_CUBE_ARRAY_base<string inst, NVPTXRegClass outtype,
-                                  NVPTXRegClass intype, dag tex>
+                                  NVPTXRegClass intype, dag tex,
+                                  list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y, intype:$z)),
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x, $y, $z\\}];",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_CUBE_ARRAY<string inst, NVPTXRegClass outtype,
-                                  NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_CUBE_ARRAY_base<inst, outtype, intype,
-                                       (ins Int64Regs:$t)>;
+                                  NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_CUBE_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$z))]>;
   def _I : TEX_UNIFIED_CUBE_ARRAY_base<inst, outtype, intype,
                                        (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_CUBE_ARRAY_F32_F32
-  : TEX_UNIFIED_CUBE_ARRAY<"tex.acube.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE_ARRAY<"tex.acube.v4.f32.f32", Float32Regs, Float32Regs,
+                           int_nvvm_tex_unified_cube_array_v4f32_f32>;
 defm TEX_UNIFIED_CUBE_ARRAY_S32_F32
-  : TEX_UNIFIED_CUBE_ARRAY<"tex.acube.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE_ARRAY<"tex.acube.v4.s32.f32", Int32Regs, Float32Regs,
+                           int_nvvm_tex_unified_cube_array_v4s32_f32>;
 defm TEX_UNIFIED_CUBE_ARRAY_U32_F32
-  : TEX_UNIFIED_CUBE_ARRAY<"tex.acube.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE_ARRAY<"tex.acube.v4.u32.f32", Int32Regs, Float32Regs,
+                           int_nvvm_tex_unified_cube_array_v4u32_f32>;
 
 class TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
-                                        NVPTXRegClass intype, dag tex>
+                                        NVPTXRegClass intype, dag tex,
+                                        list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y, intype:$z,
                                 intype:$lod)),
                  inst # " \t\\{$r, $g, $b, $a\\},"
                         " [$t, \\{$l, $x, $y, $z\\}], $lod;",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_CUBE_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
-                                        NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
-                                             (ins Int64Regs:$t)>;
+                                        NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$z, intype:$lod))]>;
   def _I : TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
                                              (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_CUBE_ARRAY_F32_F32_LEVEL
   : TEX_UNIFIED_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.f32.f32",
-                                 Float32Regs, Float32Regs>;
+                                 Float32Regs, Float32Regs,
+                                 int_nvvm_tex_unified_cube_array_level_v4f32_f32>;
 defm TEX_UNIFIED_CUBE_ARRAY_S32_F32_LEVEL
   : TEX_UNIFIED_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.s32.f32",
-                                 Int32Regs, Float32Regs>;
+                                 Int32Regs, Float32Regs,
+                                 int_nvvm_tex_unified_cube_array_level_v4s32_f32>;
 defm TEX_UNIFIED_CUBE_ARRAY_U32_F32_LEVEL
   : TEX_UNIFIED_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.u32.f32",
-                                 Int32Regs, Float32Regs>;
+                                 Int32Regs, Float32Regs,
+                                 int_nvvm_tex_unified_cube_array_level_v4u32_f32>;
 
 class TEX_UNIFIED_CUBE_GRAD_base<string inst, NVPTXRegClass outtype,
-                                 NVPTXRegClass intype, dag tex>
+                                 NVPTXRegClass intype, dag tex,
+                                 list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins intype:$x, intype:$y, intype:$z,
@@ -3808,23 +4422,32 @@ class TEX_UNIFIED_CUBE_GRAD_base<string inst, NVPTXRegClass outtype,
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y, $z, $z\\}],"
                         " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
                         " \\{$grady0, $grady1, $grady2, $grady2\\};",
-                 []>;
+                 pattern>;
 
 multiclass TEX_UNIFIED_CUBE_GRAD<string inst, NVPTXRegClass outtype,
-                                 NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_CUBE_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                                 NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_CUBE_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, intype:$x, intype:$y, intype:$z,
+                  intype:$gradx0, intype:$gradx1, intype:$gradx2,
+                  intype:$grady0, intype:$grady1, intype:$grady2))]>;
   def _I : TEX_UNIFIED_CUBE_GRAD_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_CUBE_F32_F32_GRAD
-  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.f32.f32", Float32Regs, Float32Regs,
+                          int_nvvm_tex_unified_cube_grad_v4f32_f32>;
 defm TEX_UNIFIED_CUBE_S32_F32_GRAD
-  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.s32.f32", Int32Regs, Float32Regs,
+                          int_nvvm_tex_unified_cube_grad_v4s32_f32>;
 defm TEX_UNIFIED_CUBE_U32_F32_GRAD
-  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.u32.f32", Int32Regs, Float32Regs,
+                          int_nvvm_tex_unified_cube_grad_v4u32_f32>;
 
 class TEX_UNIFIED_CUBE_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
-                                       NVPTXRegClass intype, dag tex>
+                                       NVPTXRegClass intype, dag tex,
+                                       list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g,
                       outtype:$b, outtype:$a),
                  !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y, intype:$z,
@@ -3834,64 +4457,88 @@ class TEX_UNIFIED_CUBE_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
                  inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x, $y, $z\\}],"
                         " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
                         " \\{$grady0, $grady1, $grady2, $grady2\\};",
-                 []>;
+                 pattern>;
 multiclass TEX_UNIFIED_CUBE_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
-                                       NVPTXRegClass intype> {
-  def _R : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<inst, outtype, intype,
-                                            (ins Int64Regs:$t)>;
+                                       NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+            (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$z,
+                  intype:$gradx0, intype:$gradx1,
+                  intype:$gradx2, intype:$grady0,
+                  intype:$grady1, intype:$grady2))]>;
   def _I : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<inst, outtype, intype,
                                             (ins i64imm:$t)>;
 }
 
 defm TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD
   : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.f32.f32",
-                                Float32Regs, Float32Regs>;
+                                Float32Regs, Float32Regs,
+                                int_nvvm_tex_unified_cube_array_grad_v4f32_f32>;
 defm TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD
   : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.s32.f32",
-                                Int32Regs, Float32Regs>;
+                                Int32Regs, Float32Regs,
+                                int_nvvm_tex_unified_cube_array_grad_v4s32_f32>;
 defm TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD
   : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.u32.f32",
-                                Int32Regs, Float32Regs>;
+                                Int32Regs, Float32Regs,
+                                int_nvvm_tex_unified_cube_array_grad_v4u32_f32>;
 
 class TLD4_UNIFIED_2D_base<string inst, NVPTXRegClass outtype,
-                           NVPTXRegClass intype, dag tex>
+                           NVPTXRegClass intype, dag tex,
+                           list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$v0, outtype:$v1,
                       outtype:$v2, outtype:$v3),
                  !con(tex, (ins intype:$x, intype:$y)),
                  inst # " \t\\{$v0, $v1, $v2, $v3\\}, [$t, \\{$x, $y\\}];",
-                 []>;
+                 pattern>;
 multiclass TLD4_UNIFIED_2D<string inst, NVPTXRegClass outtype,
-                           NVPTXRegClass intype> {
-  def _R : TLD4_UNIFIED_2D_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+                           NVPTXRegClass intype, Intrinsic intr> {
+  def _R : TLD4_UNIFIED_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
+      [(set outtype:$v0, outtype:$v1, outtype:$v2, outtype:$v3,
+            (intr i64:$t, intype:$x, intype:$y))]>;
   def _I : TLD4_UNIFIED_2D_base<inst, outtype, intype, (ins i64imm:$t)>;
 }
 
 defm TLD4_UNIFIED_R_2D_F32_F32
-  : TLD4_UNIFIED_2D<"tld4.r.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.r.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_r_2d_v4f32_f32>;
 defm TLD4_UNIFIED_G_2D_F32_F32
-  : TLD4_UNIFIED_2D<"tld4.g.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.g.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_g_2d_v4f32_f32>;
 defm TLD4_UNIFIED_B_2D_F32_F32
-  : TLD4_UNIFIED_2D<"tld4.b.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.b.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_b_2d_v4f32_f32>;
 defm TLD4_UNIFIED_A_2D_F32_F32
-  : TLD4_UNIFIED_2D<"tld4.a.2d.v4.f32.f32", Float32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.a.2d.v4.f32.f32", Float32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_a_2d_v4f32_f32>;
 
 defm TLD4_UNIFIED_R_2D_S32_F32
-  : TLD4_UNIFIED_2D<"tld4.r.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.r.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_r_2d_v4s32_f32>;
 defm TLD4_UNIFIED_G_2D_S32_F32
-  : TLD4_UNIFIED_2D<"tld4.g.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.g.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_g_2d_v4s32_f32>;
 defm TLD4_UNIFIED_B_2D_S32_F32
-  : TLD4_UNIFIED_2D<"tld4.b.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.b.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_b_2d_v4s32_f32>;
 defm TLD4_UNIFIED_A_2D_S32_F32
-  : TLD4_UNIFIED_2D<"tld4.a.2d.v4.s32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.a.2d.v4.s32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_a_2d_v4s32_f32>;
 
 defm TLD4_UNIFIED_R_2D_U32_F32
-  : TLD4_UNIFIED_2D<"tld4.r.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.r.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_r_2d_v4u32_f32>;
 defm TLD4_UNIFIED_G_2D_U32_F32
-  : TLD4_UNIFIED_2D<"tld4.g.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.g.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_g_2d_v4u32_f32>;
 defm TLD4_UNIFIED_B_2D_U32_F32
-  : TLD4_UNIFIED_2D<"tld4.b.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.b.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_b_2d_v4u32_f32>;
 defm TLD4_UNIFIED_A_2D_U32_F32
-  : TLD4_UNIFIED_2D<"tld4.a.2d.v4.u32.f32", Int32Regs, Float32Regs>;
+  : TLD4_UNIFIED_2D<"tld4.a.2d.v4.u32.f32", Int32Regs, Float32Regs,
+                    int_nvvm_tld4_unified_a_2d_v4u32_f32>;
 
 }
 
@@ -3901,13 +4548,17 @@ defm TLD4_UNIFIED_A_2D_U32_F32
 
 let IsSuld = true in {
 
-class SULD_1D_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_base<string inst, NVPTXRegClass outtype, dag surf,
+                   list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$x)),
                 inst # " \\{$r\\}, [$s, \\{$x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_base<inst, outtype, (ins Int64Regs:$s),
+                        [(set outtype:$r, (intr i64:$s, i32:$x))]>;
   def _I : SULD_1D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -3926,13 +4577,18 @@ defm SULD_1D_I16_ZERO : SULD_1D<"suld.b.1d.b16.zero", Int16Regs>;
 defm SULD_1D_I32_ZERO : SULD_1D<"suld.b.1d.b32.zero", Int32Regs>;
 defm SULD_1D_I64_ZERO : SULD_1D<"suld.b.1d.b64.zero", Int64Regs>;
 
-class SULD_1D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
+                         list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x)),
                 inst # " \\{$r\\}, [$s, \\{$l, $x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_ARRAY<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_ARRAY_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_ARRAY_base<inst, outtype, (ins Int64Regs:$s),
+                              [(set outtype:$r,
+                                    (intr i64:$s, i32:$l, i32:$x))]>;
   def _I : SULD_1D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -3963,13 +4619,17 @@ defm SULD_1D_ARRAY_I32_ZERO
 defm SULD_1D_ARRAY_I64_ZERO
   : SULD_1D_ARRAY<"suld.b.a1d.b64.zero", Int64Regs>;
 
-class SULD_2D_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_base<string inst, NVPTXRegClass outtype, dag surf,
+                   list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r\\}, [$s, \\{$x, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_base<inst, outtype, (ins Int64Regs:$s),
+                        [(set outtype:$r, (intr i64:$s, i32:$x, i32:$y))]>;
   def _I : SULD_2D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -3988,13 +4648,18 @@ defm SULD_2D_I16_ZERO : SULD_2D<"suld.b.2d.b16.zero", Int16Regs>;
 defm SULD_2D_I32_ZERO : SULD_2D<"suld.b.2d.b32.zero", Int32Regs>;
 defm SULD_2D_I64_ZERO : SULD_2D<"suld.b.2d.b64.zero", Int64Regs>;
 
-class SULD_2D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
+                         list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r\\}, [$s, \\{$l, $x, $y, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_ARRAY<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_ARRAY_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_ARRAY_base<inst, outtype, (ins Int64Regs:$s),
+                              [(set outtype:$r,
+                                    (intr i64:$s, i32:$l, i32:$x, i32:$y))]>;
   def _I : SULD_2D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4013,13 +4678,18 @@ defm SULD_2D_ARRAY_I16_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b16.zero", Int16Regs>;
 defm SULD_2D_ARRAY_I32_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b32.zero", Int32Regs>;
 defm SULD_2D_ARRAY_I64_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b64.zero", Int64Regs>;
 
-class SULD_3D_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_3D_base<string inst, NVPTXRegClass outtype, dag surf,
+                   list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z)),
                 inst # " \\{$r\\}, [$s, \\{$x, $y, $z, $z\\}];",
-                []>;
+                pattern>;
 multiclass SULD_3D<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_3D_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_3D_base<inst, outtype, (ins Int64Regs:$s),
+                        [(set outtype:$r,
+                              (intr i64:$s, i32:$x, i32:$y, i32:$z))]>;
   def _I : SULD_3D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4041,13 +4711,18 @@ defm SULD_3D_I64_ZERO : SULD_3D<"suld.b.3d.b64.zero", Int64Regs>;
 
 let IsSuld = 2 in {
 
-class SULD_1D_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$x)),
                 inst # " \\{$r, $g\\}, [$s, \\{$x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_V2_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g,
+                                 (intr i64:$s, i32:$x))]>;
   def _I : SULD_1D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4066,13 +4741,18 @@ defm SULD_1D_V2I16_ZERO : SULD_1D_V2<"suld.b.1d.v2.b16.zero", Int16Regs>;
 defm SULD_1D_V2I32_ZERO : SULD_1D_V2<"suld.b.1d.v2.b32.zero", Int32Regs>;
 defm SULD_1D_V2I64_ZERO : SULD_1D_V2<"suld.b.1d.v2.b64.zero", Int64Regs>;
 
-class SULD_1D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x)),
                 inst # " \\{$r, $g\\}, [$s, \\{$l, $x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g,
+                                       (intr i64:$s, i32:$l, i32:$x))]>;
   def _I : SULD_1D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4103,13 +4783,18 @@ defm SULD_1D_ARRAY_V2I32_ZERO
 defm SULD_1D_ARRAY_V2I64_ZERO
   : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.zero", Int64Regs>;
 
-class SULD_2D_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g\\}, [$s, \\{$x, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_V2_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g,
+                                 (intr i64:$s, i32:$x, i32:$y))]>;
   def _I : SULD_2D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4140,13 +4825,18 @@ defm SULD_2D_V2I32_ZERO
 defm SULD_2D_V2I64_ZERO
   : SULD_2D_V2<"suld.b.2d.v2.b64.zero", Int64Regs>;
 
-class SULD_2D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g\\}, [$s, \\{$l, $x, $y, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g,
+                                       (intr i64:$s, i32:$l, i32:$x, i32:$y))]>;
   def _I : SULD_2D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4177,13 +4867,18 @@ defm SULD_2D_ARRAY_V2I32_ZERO
 defm SULD_2D_ARRAY_V2I64_ZERO
   : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.zero", Int64Regs>;
 
-class SULD_3D_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_3D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z)),
                 inst # " \\{$r, $g\\}, [$s, \\{$x, $y, $z, $z\\}];",
-                []>;
+                pattern>;
 multiclass SULD_3D_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_3D_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_3D_V2_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g,
+                                 (intr i64:$s, i32:$x, i32:$y, i32:$z))]>;
   def _I : SULD_3D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4206,13 +4901,18 @@ defm SULD_3D_V2I64_ZERO : SULD_3D_V2<"suld.b.3d.v2.b64.zero", Int64Regs>;
 
 let IsSuld = 3 in {
 
-class SULD_1D_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$x)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_V4_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+                                 (intr i64:$s, i32:$x))]>;
   def _I : SULD_1D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4228,13 +4928,19 @@ defm SULD_1D_V4I8_ZERO : SULD_1D_V4<"suld.b.1d.v4.b8.zero", Int16Regs>;
 defm SULD_1D_V4I16_ZERO : SULD_1D_V4<"suld.b.1d.v4.b16.zero", Int16Regs>;
 defm SULD_1D_V4I32_ZERO : SULD_1D_V4<"suld.b.1d.v4.b32.zero", Int32Regs>;
 
-class SULD_1D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$l, $x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g, outtype:$b,
+                                       outtype:$a,
+                                       (intr i64:$s, i32:$l, i32:$x))]>;
   def _I : SULD_1D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4259,13 +4965,18 @@ defm SULD_1D_ARRAY_V4I16_ZERO
 defm SULD_1D_ARRAY_V4I32_ZERO
   : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.zero", Int32Regs>;
 
-class SULD_2D_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$x, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_V4_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+                                 (intr i64:$s, i32:$x, i32:$y))]>;
   def _I : SULD_2D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4281,13 +4992,19 @@ defm SULD_2D_V4I8_ZERO : SULD_2D_V4<"suld.b.2d.v4.b8.zero", Int16Regs>;
 defm SULD_2D_V4I16_ZERO : SULD_2D_V4<"suld.b.2d.v4.b16.zero", Int16Regs>;
 defm SULD_2D_V4I32_ZERO : SULD_2D_V4<"suld.b.2d.v4.b32.zero", Int32Regs>;
 
-class SULD_2D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$l, $x, $y, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g, outtype:$b,
+                                       outtype:$a,
+                                       (intr i64:$s, i32:$l, i32:$x, i32:$y))]>;
   def _I : SULD_2D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4312,13 +5029,18 @@ defm SULD_2D_ARRAY_V4I16_ZERO
 defm SULD_2D_ARRAY_V4I32_ZERO
   : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.zero", Int32Regs>;
 
-class SULD_3D_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_3D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$x, $y, $z, $z\\}];",
-                []>;
+                pattern>;
 multiclass SULD_3D_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_3D_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_3D_V4_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+                                 (intr i64:$s, i32:$x, i32:$y, i32:$z))]>;
   def _I : SULD_3D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4407,22 +5129,22 @@ def TXQ_NUM_MIPMAP_LEVELS_I
               []>;
 }
 
-def : Pat<(int_nvvm_txq_channel_order Int64Regs:$a),
-          (TXQ_CHANNEL_ORDER_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_txq_channel_data_type Int64Regs:$a),
-          (TXQ_CHANNEL_DATA_TYPE_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_txq_width Int64Regs:$a),
-          (TXQ_WIDTH_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_txq_height Int64Regs:$a),
-          (TXQ_HEIGHT_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_txq_depth Int64Regs:$a),
-          (TXQ_DEPTH_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_txq_array_size Int64Regs:$a),
-          (TXQ_ARRAY_SIZE_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_txq_num_samples Int64Regs:$a),
-          (TXQ_NUM_SAMPLES_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_txq_num_mipmap_levels Int64Regs:$a),
-          (TXQ_NUM_MIPMAP_LEVELS_R Int64Regs:$a)>;
+def : Pat<(int_nvvm_txq_channel_order i64:$a),
+          (TXQ_CHANNEL_ORDER_R $a)>;
+def : Pat<(int_nvvm_txq_channel_data_type i64:$a),
+          (TXQ_CHANNEL_DATA_TYPE_R $a)>;
+def : Pat<(int_nvvm_txq_width i64:$a),
+          (TXQ_WIDTH_R $a)>;
+def : Pat<(int_nvvm_txq_height i64:$a),
+          (TXQ_HEIGHT_R $a)>;
+def : Pat<(int_nvvm_txq_depth i64:$a),
+          (TXQ_DEPTH_R $a)>;
+def : Pat<(int_nvvm_txq_array_size i64:$a),
+          (TXQ_ARRAY_SIZE_R $a)>;
+def : Pat<(int_nvvm_txq_num_samples i64:$a),
+          (TXQ_NUM_SAMPLES_R $a)>;
+def : Pat<(int_nvvm_txq_num_mipmap_levels i64:$a),
+          (TXQ_NUM_MIPMAP_LEVELS_R $a)>;
 
 
 //-----------------------------------
@@ -4480,18 +5202,18 @@ def SUQ_ARRAY_SIZE_I
               []>;
 }
 
-def : Pat<(int_nvvm_suq_channel_order Int64Regs:$a),
-          (SUQ_CHANNEL_ORDER_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_suq_channel_data_type Int64Regs:$a),
-          (SUQ_CHANNEL_DATA_TYPE_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_suq_width Int64Regs:$a),
-          (SUQ_WIDTH_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_suq_height Int64Regs:$a),
-          (SUQ_HEIGHT_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_suq_depth Int64Regs:$a),
-          (SUQ_DEPTH_R Int64Regs:$a)>;
-def : Pat<(int_nvvm_suq_array_size Int64Regs:$a),
-          (SUQ_ARRAY_SIZE_R Int64Regs:$a)>;
+def : Pat<(int_nvvm_suq_channel_order i64:$a),
+          (SUQ_CHANNEL_ORDER_R $a)>;
+def : Pat<(int_nvvm_suq_channel_data_type i64:$a),
+          (SUQ_CHANNEL_DATA_TYPE_R $a)>;
+def : Pat<(int_nvvm_suq_width i64:$a),
+          (SUQ_WIDTH_R $a)>;
+def : Pat<(int_nvvm_suq_height i64:$a),
+          (SUQ_HEIGHT_R $a)>;
+def : Pat<(int_nvvm_suq_depth i64:$a),
+          (SUQ_DEPTH_R $a)>;
+def : Pat<(int_nvvm_suq_array_size i64:$a),
+          (SUQ_ARRAY_SIZE_R $a)>;
 
 
 //===- Handle Query -------------------------------------------------------===//
@@ -4500,15 +5222,15 @@ def : Pat<(int_nvvm_suq_array_size Int64Regs:$a),
 def ISTYPEP_SAMPLER
   : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
               "istypep.samplerref \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_istypep_sampler Int64Regs:$a))]>;
+              [(set i1:$d, (int_nvvm_istypep_sampler i64:$a))]>;
 def ISTYPEP_SURFACE
   : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
               "istypep.surfref \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_istypep_surface Int64Regs:$a))]>;
+              [(set i1:$d, (int_nvvm_istypep_surface i64:$a))]>;
 def ISTYPEP_TEXTURE
   : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
               "istypep.texref \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_istypep_texture Int64Regs:$a))]>;
+              [(set i1:$d, (int_nvvm_istypep_texture i64:$a))]>;
 
 //===- Surface Stores -----------------------------------------------------===//
 
@@ -6299,13 +7021,13 @@ def : Pat<(int_nvvm_sust_p_3d_v4i32_trap
 class PTX_READ_SREG_R64<string regname, Intrinsic intop, list<Predicate> Preds=[]>
   : NVPTXInst<(outs Int64Regs:$d), (ins),
               !strconcat("mov.u64 \t$d, %", regname, ";"),
-              [(set Int64Regs:$d, (intop))]>,
+              [(set i64:$d, (intop))]>,
     Requires<Preds>;
 
 class PTX_READ_SREG_R32<string regname, Intrinsic intop, list<Predicate> Preds=[]>
   : NVPTXInst<(outs Int32Regs:$d), (ins),
               !strconcat("mov.u32 \t$d, %", regname, ";"),
-              [(set Int32Regs:$d, (intop))]>,
+              [(set i32:$d, (intop))]>,
     Requires<Preds>;
 
 multiclass PTX_READ_SREG_R32V4<string regname, list<Predicate> Preds=[]> {
@@ -6387,7 +7109,7 @@ def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
 // handle the constant.
 def INT_PTX_SREG_WARPSIZE :
     NVPTXInst<(outs Int32Regs:$dst), (ins), "mov.u32 \t$dst, WARP_SZ;",
-              [(set Int32Regs:$dst, (int_nvvm_read_ptx_sreg_warpsize))]>;
+              [(set i32:$dst, (int_nvvm_read_ptx_sreg_warpsize))]>;
 
 // Helper class that represents a 'fragment' of an NVPTX *MMA instruction.
 // In addition to target-independent fields provided by WMMA_REGS, it adds
@@ -6799,19 +7521,19 @@ foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs) in
 multiclass MAPA<string suffix, Intrinsic Intr> {
   def _32: NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a, Int32Regs:$b),
               "mapa" # suffix # ".u32\t$d, $a, $b;",
-              [(set Int32Regs:$d, (Intr Int32Regs:$a, Int32Regs:$b))]>,
+              [(set i32:$d, (Intr i32:$a, i32:$b))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
   def _32i: NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a, i32imm:$b),
               "mapa" # suffix # ".u32\t$d, $a, $b;",
-              [(set Int32Regs:$d, (Intr Int32Regs:$a, imm:$b))]>,
+              [(set i32:$d, (Intr i32:$a, imm:$b))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
   def _64: NVPTXInst<(outs Int64Regs:$d), (ins Int64Regs:$a, Int32Regs:$b),
               "mapa" # suffix # ".u64\t$d, $a, $b;",
-              [(set Int64Regs:$d, (Intr Int64Regs:$a, Int32Regs:$b))]>,
+              [(set i64:$d, (Intr i64:$a, i32:$b))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
   def _64i: NVPTXInst<(outs Int64Regs:$d), (ins Int64Regs:$a, i32imm:$b),
               "mapa" # suffix # ".u64\t$d, $a, $b;",
-              [(set Int64Regs:$d, (Intr Int64Regs:$a, imm:$b))]>,
+              [(set i64:$d, (Intr i64:$a, imm:$b))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
 }
 
@@ -6822,11 +7544,11 @@ defm mapa_shared_cluster  : MAPA<".shared::cluster", int_nvvm_mapa_shared_cluste
 multiclass GETCTARANK<string suffix, Intrinsic Intr> {
   def _32: NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
               "getctarank" # suffix # ".u32\t$d, $a;",
-              [(set Int32Regs:$d, (Intr Int32Regs:$a))]>,
+              [(set i32:$d, (Intr i32:$a))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
   def _64: NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
               "getctarank" # suffix # ".u64\t$d, $a;",
-              [(set Int32Regs:$d, (Intr Int64Regs:$a))]>,
+              [(set i32:$d, (Intr i64:$a))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
 }
 
@@ -6835,7 +7557,7 @@ defm getctarank_shared_cluster  : GETCTARANK<".shared::cluster", int_nvvm_getcta
 
 def is_explicit_cluster: NVPTXInst<(outs Int1Regs:$d), (ins),
               "mov.pred\t$d, %is_explicit_cluster;",
-              [(set Int1Regs:$d, (int_nvvm_is_explicit_cluster))]>,
+              [(set i1:$d, (int_nvvm_is_explicit_cluster))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
 
 // setmaxnreg inc/dec intrinsics
@@ -6844,7 +7566,7 @@ multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
   def : NVPTXInst<(outs), (ins i32imm:$reg_count),
           "setmaxnreg." # Action # ".sync.aligned.u32 $reg_count;",
           [(Intr timm:$reg_count)]>,
-    Requires<[hasSM90a, hasPTX<80>]>;
+    Requires<[hasAcceleratedFeatures, hasSM<90>, hasPTX<80>]>;
 }
 
 defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
@@ -6852,4 +7574,160 @@ defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_align
 
 } // isConvergent
 
+//
+// WGMMA fence instructions
+//
+let isConvergent = true in {
+def INT_NVVM_WGMMA_FENCE_SYNC_ALIGNED : NVPTXInst<(outs), (ins), "wgmma.fence.sync.aligned;",
+                             [(int_nvvm_wgmma_fence_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+
+def INT_NVVM_WGMMA_COMMIT_GROUP_SYNC_ALIGNED : NVPTXInst<(outs), (ins), "wgmma.commit_group.sync.aligned;",
+                             [(int_nvvm_wgmma_commit_group_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+
+def INT_NVVM_WGMMA_WAIT_GROUP_SYNC_ALIGNED : NVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned \t$n;",
+                             [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>, Requires<[hasSM90a, hasPTX<80>]>;
+} // isConvergent = true
+
+def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.launch_dependents;",
+                [(int_nvvm_griddepcontrol_launch_dependents)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
+
+def GRIDDEPCONTROL_WAIT :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.wait;",
+                [(int_nvvm_griddepcontrol_wait)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
+
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;
+
+// Tcgen05 intrinsics
+let isConvergent = true in {
+
+multiclass TCGEN05_ALLOC_INTR<NVPTXRegClass rc, string AS, string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins rc:$dst, Int32Regs:$ncols),
+             !strconcat("tcgen05.alloc.cta_group::", num, ".sync.aligned", AS, ".b32 [$dst], $ncols;"),
+             [(Intr rc:$dst, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+
+defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, "", "1", int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, "", "2", int_nvvm_tcgen05_alloc_cg2>;
+
+defm TCGEN05_ALLOC_S64_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S64_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+defm TCGEN05_ALLOC_S32_CG1 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S32_CG2 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr, Int32Regs:$ncols),
+             !strconcat("tcgen05.dealloc.cta_group::", num, ".sync.aligned.b32 $tmem_addr, $ncols;"),
+             [(Intr Int32Regs:$tmem_addr, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
+defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+
+multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs), (ins),
+             !strconcat("tcgen05.relinquish_alloc_permit.cta_group::", num, ".sync.aligned;"),
+             [(Intr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
+defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
+
+def tcgen05_wait_ld: NVPTXInst<(outs), (ins), "tcgen05.wait::ld.sync.aligned;",
+  [(int_nvvm_tcgen05_wait_ld)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+def tcgen05_wait_st: NVPTXInst<(outs), (ins), "tcgen05.wait::st.sync.aligned;",
+  [(int_nvvm_tcgen05_wait_st)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+multiclass TCGEN05_COMMIT_INTR<NVPTXRegClass rc, string AS, string num> {
+  defvar prefix = "tcgen05.commit.cta_group::" # num;
+  defvar suffix = ".mbarrier::arrive::one.shared::cluster";
+
+  defvar intr_suffix = !if(!eq(AS, "shared"), "_shared", "") # "_cg" # num;
+  defvar Intr = !cast<Intrinsic>("int_nvvm_tcgen05_commit" # intr_suffix);
+  defvar IntrMC = !cast<Intrinsic>("int_nvvm_tcgen05_commit_mc" # intr_suffix);
+
+  def NAME : NVPTXInst<(outs), (ins rc:$mbar),
+             !strconcat(prefix, suffix, ".b64 [$mbar];"),
+             [(Intr rc:$mbar)]>,
+             Requires<[hasTcgen05Instructions]>;
+  def NAME # _MC : NVPTXInst<(outs), (ins rc:$mbar, Int16Regs:$mc),
+                   !strconcat(prefix, suffix, ".multicast::cluster.b64 [$mbar], $mc;"),
+                   [(IntrMC rc:$mbar, Int16Regs:$mc)]>,
+                   Requires<[hasTcgen05Instructions]>;
+}
+
+defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<Int64Regs, "", "1">;
+defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "", "2">;
+defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "1">;
+defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "2">;
+defm TCGEN05_COMMIT_S32_CG1 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "1">;
+defm TCGEN05_COMMIT_S32_CG2 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "2">;
+
+multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr),
+             !strconcat("tcgen05.shift.cta_group::", num, ".down [$tmem_addr];"),
+             [(Intr Int32Regs:$tmem_addr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
+defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
+
+multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
+  defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
+  defvar fmt_asm = StrJoin<".", [dst_fmt, src_fmt]>.ret;
+  defvar fmt_intr = StrJoin<"_", [src_fmt]>.ret;
+
+  defvar shape_mc_asm = StrJoin<".", [shape, mc]>.ret;
+  defvar shape_mc_intr = !subst("::", "_", !subst(".", "_", shape_mc_asm));
+
+  defvar intr_prefix = StrJoin<"_", ["int_nvvm_tcgen05_cp", shape_mc_intr, fmt_intr]>.ret;
+  defvar IntrCG1 = !cast<Intrinsic>(intr_prefix # "_cg1");
+  defvar IntrCG2 = !cast<Intrinsic>(intr_prefix # "_cg2");
+
+  def NAME # _cg1 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::1." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG1 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+  def NAME # _cg2 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::2." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG2 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+}
+
+foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
+  defm TCGEN05_CP_128x256b # src_fmt : TCGEN05_CP_INTR<"128x256b", src_fmt>;
+  defm TCGEN05_CP_4x256b # src_fmt   : TCGEN05_CP_INTR<"4x256b", src_fmt>;
+  defm TCGEN05_CP_128x128b # src_fmt : TCGEN05_CP_INTR<"128x128b", src_fmt>;
+  defm TCGEN05_CP_64x128_1 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::02_13">;
+  defm TCGEN05_CP_64x128_2 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::01_23">;
+  defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
+}
+} // isConvergent
+
+let hasSideEffects = 1 in {
+
+def tcgen05_fence_before_thread_sync: NVPTXInst<(outs), (ins),
+  "tcgen05.fence::before_thread_sync;",
+  [(int_nvvm_tcgen05_fence_before_thread_sync)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+def tcgen05_fence_after_thread_sync: NVPTXInst<(outs), (ins),
+  "tcgen05.fence::after_thread_sync;",
+  [(int_nvvm_tcgen05_fence_after_thread_sync)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+} // hasSideEffects

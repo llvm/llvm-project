@@ -54,16 +54,18 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   Size = scudo::roundUp(Size, MinAlignment);
-  if (Allocator->useMemoryTaggingTestOnly())
+  if (Allocator->useMemoryTaggingTestOnly()) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
           reinterpret_cast<char *>(P)[-1] = 'A';
         },
         "");
+  }
   if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
           ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment) {
+          : Alignment == MinAlignment &&
+                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
@@ -531,6 +533,27 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
           reinterpret_cast<char *>(P)[Size - 1] = 'A';
         },
         "");
+  }
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromPrimary) {
+  auto *Allocator = this->Allocator.get();
+
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    const scudo::uptr Size = 1U << SizeLog;
+    if (!isPrimaryAllocation<TestAllocator<TypeParam>>(Size, 0))
+      break;
+
+    // Verify that a double free results in a chunk state error.
+    EXPECT_DEATH(
+        {
+          // Allocate from primary
+          void *P = Allocator->allocate(Size, Origin);
+          ASSERT_TRUE(P != nullptr);
+          Allocator->deallocate(P, Origin);
+          Allocator->deallocate(P, Origin);
+        },
+        "invalid chunk state");
   }
 }
 

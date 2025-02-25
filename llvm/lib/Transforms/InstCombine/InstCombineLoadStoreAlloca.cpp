@@ -112,11 +112,6 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
             (Call->onlyReadsMemory(DataOpNo) && NoCapture))
           continue;
-
-        // If this is being passed as a byval argument, the caller is making a
-        // copy, so it is only a read of the alloca.
-        if (IsArgOperand && Call->isByValArgument(DataOpNo))
-          continue;
       }
 
       // Lifetime intrinsics can be handled by the caller.
@@ -467,8 +462,8 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
 
       // Get the first instruction in the entry block.
       BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
-      Instruction *FirstInst = EntryBlock.getFirstNonPHIOrDbg();
-      if (FirstInst != &AI) {
+      BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
+      if (&*FirstInst != &AI) {
         // If the entry block doesn't start with a zero-size alloca then move
         // this one to the start of the entry block.  There is no problem with
         // dominance as the array size was forced to a constant earlier already.
@@ -709,29 +704,22 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     const DataLayout &DL = IC.getDataLayout();
     auto *SL = DL.getStructLayout(ST);
 
-    // Don't unpack for structure with scalable vector.
-    if (SL->getSizeInBits().isScalable())
-      return nullptr;
-
     if (SL->hasPadding())
       return nullptr;
 
     const auto Align = LI.getAlign();
     auto *Addr = LI.getPointerOperand();
-    auto *IdxType = Type::getInt32Ty(T->getContext());
-    auto *Zero = ConstantInt::get(IdxType, 0);
+    auto *IdxType = DL.getIndexType(Addr->getType());
 
     Value *V = PoisonValue::get(T);
     for (unsigned i = 0; i < NumElements; i++) {
-      Value *Indices[2] = {
-        Zero,
-        ConstantInt::get(IdxType, i),
-      };
-      auto *Ptr = IC.Builder.CreateInBoundsGEP(ST, Addr, ArrayRef(Indices),
-                                               Name + ".elt");
+      auto *Ptr = IC.Builder.CreateInBoundsPtrAdd(
+          Addr, IC.Builder.CreateTypeSize(IdxType, SL->getElementOffset(i)),
+          Name + ".elt");
       auto *L = IC.Builder.CreateAlignedLoad(
           ST->getElementType(i), Ptr,
-          commonAlignment(Align, SL->getElementOffset(i)), Name + ".unpack");
+          commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue()),
+          Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       L->setAAMetadata(LI.getAAMetadata());
       V = IC.Builder.CreateInsertValue(V, L, i);
@@ -1065,6 +1053,10 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Alignment);
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+        // It is safe to copy any metadata that does not trigger UB. Copy any
+        // poison-generating metadata.
+        V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
+        V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
 
@@ -1223,10 +1215,6 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     const DataLayout &DL = IC.getDataLayout();
     auto *SL = DL.getStructLayout(ST);
 
-    // Don't unpack for structure with scalable vector.
-    if (SL->getSizeInBits().isScalable())
-      return false;
-
     if (SL->hasPadding())
       return false;
 
@@ -1238,17 +1226,14 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     SmallString<16> AddrName = Addr->getName();
     AddrName += ".repack";
 
-    auto *IdxType = Type::getInt32Ty(ST->getContext());
-    auto *Zero = ConstantInt::get(IdxType, 0);
+    auto *IdxType = DL.getIndexType(Addr->getType());
     for (unsigned i = 0; i < Count; i++) {
-      Value *Indices[2] = {
-        Zero,
-        ConstantInt::get(IdxType, i),
-      };
-      auto *Ptr =
-          IC.Builder.CreateInBoundsGEP(ST, Addr, ArrayRef(Indices), AddrName);
+      auto *Ptr = IC.Builder.CreateInBoundsPtrAdd(
+          Addr, IC.Builder.CreateTypeSize(IdxType, SL->getElementOffset(i)),
+          AddrName);
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
-      auto EltAlign = commonAlignment(Align, SL->getElementOffset(i));
+      auto EltAlign =
+          commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue());
       llvm::Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       NS->setAAMetadata(SI.getAAMetadata());
     }
@@ -1451,6 +1436,20 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // value. Change to PoisonValue once #52930 is resolved.
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
+
+  // TODO: Add a helper to simplify the pointer operand for all memory
+  // instructions.
+  // store val, (select (cond, null, P)) -> store val, P
+  // store val, (select (cond, P, null)) -> store val, P
+  if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace())) {
+    if (SelectInst *Sel = dyn_cast<SelectInst>(Ptr)) {
+      if (isa<ConstantPointerNull>(Sel->getOperand(1)))
+        return replaceOperand(SI, 1, Sel->getOperand(2));
+
+      if (isa<ConstantPointerNull>(Sel->getOperand(2)))
+        return replaceOperand(SI, 1, Sel->getOperand(1));
+    }
+  }
 
   return nullptr;
 }

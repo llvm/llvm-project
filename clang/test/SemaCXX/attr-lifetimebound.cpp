@@ -1,8 +1,7 @@
 // RUN: %clang_cc1 -std=c++23 -verify %s
 
 namespace usage_invalid {
-  // FIXME: Should we diagnose a void return type?
-  void voidreturn(int &param [[clang::lifetimebound]]);
+  void void_return(int &param [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute cannot be applied to a parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
 
   int *not_class_member() [[clang::lifetimebound]]; // expected-error {{non-member function has no implicit object parameter}}
   struct A {
@@ -10,15 +9,34 @@ namespace usage_invalid {
     ~A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a destructor}}
     static int *static_class_member() [[clang::lifetimebound]]; // expected-error {{static member function has no implicit object parameter}}
     int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
-    int not_function [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
-    int [[clang::lifetimebound]] also_not_function; // expected-error {{cannot be applied to types}}
+    int attr_on_var [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
+    int [[clang::lifetimebound]] attr_on_int; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] attr_on_int_ptr; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] * attr_on_int_ptr_ptr; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int (* [[clang::lifetimebound]] attr_on_func_ptr)(); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    void void_return_member() [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
   };
   int *attr_with_param(int &param [[clang::lifetimebound(42)]]); // expected-error {{takes no arguments}}
+
+  void attr_on_ptr_arg(int * [[clang::lifetimebound]] ptr); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  static_assert((int [[clang::lifetimebound]]) 12); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int* attr_on_unnamed_arg(const int& [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  template <typename T>
+  int* attr_on_template_ptr_arg(T * [[clang::lifetimebound]] ptr); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+
+  int (*func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int (*(*func_ptr_ptr)(int) [[clang::lifetimebound]])(int); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  struct X {};
+  int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
 }
 
 namespace usage_ok {
   struct IntRef { int *target; };
 
+  const int &crefparam(const int &param); // Omitted in first decl
+  const int &crefparam(const int &param); // Omitted in second decl
+  const int &crefparam(const int &param [[clang::lifetimebound]]); // Add LB
+  const int &crefparam(const int &param) { return param; } // Omit in impl
   int &refparam(int &param [[clang::lifetimebound]]);
   int &classparam(IntRef param [[clang::lifetimebound]]);
 
@@ -31,6 +49,13 @@ namespace usage_ok {
     return *(int*)param;
   }
 
+  template <class T, class R = void> R dependent_void(const T& t [[clang::lifetimebound]]);
+  void dependent_void_instantiation() {
+    dependent_void<int>(1); // OK: Returns void.
+    int x = dependent_void<int, int>(1); // expected-warning {{temporary whose address is used as value of local variable 'x' will be destroyed at the end of the full-expression}}
+    dependent_void<int, int>(1); // OK: Returns an unused value.
+  }
+
   struct A {
     A();
     A(int);
@@ -41,6 +66,7 @@ namespace usage_ok {
   int *p = A().class_member(); // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   int *q = A(); // expected-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}}
   int *r = A(1); // expected-warning {{temporary whose address is used as value of local variable 'r' will be destroyed at the end of the full-expression}}
+  const int& s = crefparam(2); // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}}
 
   void test_assignment() {
     p = A().class_member(); // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
@@ -106,6 +132,37 @@ namespace std {
 
 using std::operator""s;
 using std::operator""sv;
+
+namespace default_args {
+  using IntArray = int[];
+  const int *defaultparam1(const int &def1 [[clang::lifetimebound]] = 0); // #def1
+  const int &defaultparam_array([[clang::lifetimebound]] const int *p = IntArray{1, 2, 3}); // #def2
+  struct A {
+    A(const char *, const int &def3 [[clang::lifetimebound]] = 0); // #def3
+  };
+  const int &defaultparam2(const int &def4 [[clang::lifetimebound]] = 0); // #def4
+  const int &defaultparam3(const int &def5 [[clang::lifetimebound]] = defaultparam2(), const int &def6 [[clang::lifetimebound]] = 0); // #def5 #def6
+  std::string_view defaultparam4(std::string_view s [[clang::lifetimebound]] = std::string()); // #def7
+
+  const int *test_default_args() {
+    const int *c = defaultparam1(); // expected-warning {{temporary whose address is used as value of local variable 'c' will be destroyed at the end of the full-expression}} expected-note@#def1 {{initializing parameter 'def1' with default argument}}
+    A a = A(""); // expected-warning {{temporary whose address is used as value of local variable 'a' will be destroyed at the end of the full-expression}} expected-note@#def3 {{initializing parameter 'def3' with default argument}}
+    const int &s = defaultparam2(); // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}} expected-note@#def4 {{initializing parameter 'def4' with default argument}}
+    const int &t = defaultparam3(); // expected-warning {{temporary bound to local reference 't' will be destroyed at the end of the full-expression}} expected-note@#def4 {{initializing parameter 'def4' with default argument}} expected-note@#def5 {{initializing parameter 'def5' with default argument}} expected-warning {{temporary bound to local reference 't' will be destroyed at the end of the full-expression}} expected-note@#def6 {{initializing parameter 'def6' with default argument}}
+    const int &u = defaultparam_array(); // expected-warning {{temporary bound to local reference 'u' will be destroyed at the end of the full-expression}} expected-note@#def2 {{initializing parameter 'p' with default argument}}
+    int local;
+    const int &v = defaultparam2(local); // no warning
+    const int &w = defaultparam2(1); // expected-warning {{temporary bound to local reference 'w' will be destroyed at the end of the full-expression}}
+    if (false) {
+      return &defaultparam2();  // expected-warning {{returning address of local temporary object}}
+    }
+    if (false) {
+      return &defaultparam2(0);  // expected-warning {{returning address of local temporary object}} expected-note@#def4 {{initializing parameter 'def4' with default argument}}
+    }
+    std::string_view sv = defaultparam4(); // expected-warning {{temporary whose address is used as value of local variable 'sv' will be destroyed at the end of the full-expression}} expected-note@#def7 {{initializing parameter 's' with default argument}}
+    return nullptr;
+  }
+} // namespace default_args
 
 namespace p0936r0_examples {
   std::string_view s = "foo"s; // expected-warning {{temporary}}
@@ -299,8 +356,8 @@ struct StatusOr {
 };
 
 void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
-  foo1 = Foo(); // expected-warning {{object backing the pointer foo1 will be destroyed at the end}}
-  // No warning on non-gsl annotated types.
-  foo2 = NonAnnotatedFoo();
+  foo1 = Foo(); // expected-warning {{object backing foo1 will be destroyed at the end}}
+  // This warning is triggered by the lifetimebound annotation, regardless of whether the class type is annotated with GSL.
+  foo2 = NonAnnotatedFoo(); // expected-warning {{object backing foo2 will be destroyed at the end}}
 }
 } // namespace GH106372

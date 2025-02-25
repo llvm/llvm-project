@@ -268,11 +268,19 @@ namespace NowThrowNew {
     delete[] p;
     return result;
   }
-  /// This needs support for CXXConstrucExprs with non-constant array sizes.
-  static_assert(erroneous_array_bound_nothrow2(3)); // expected-error {{not an integral constant expression}}
-  static_assert(erroneous_array_bound_nothrow2(0));// expected-error {{not an integral constant expression}}
-  static_assert(erroneous_array_bound_nothrow2(-1) == 0);// expected-error {{not an integral constant expression}}
-  static_assert(!erroneous_array_bound_nothrow2(1LL << 62));// expected-error {{not an integral constant expression}}
+  static_assert(erroneous_array_bound_nothrow2(3));
+  static_assert(erroneous_array_bound_nothrow2(0));
+  static_assert(erroneous_array_bound_nothrow2(-1) == 0);
+  static_assert(!erroneous_array_bound_nothrow2(1LL << 62));
+
+  constexpr bool erroneous_array_bound(long long n) {
+    delete[] new int[n]; // both-note {{array bound -1 is negative}} both-note {{array bound 4611686018427387904 is too large}}
+    return true;
+  }
+  static_assert(erroneous_array_bound(3));
+  static_assert(erroneous_array_bound(0));
+  static_assert(erroneous_array_bound(-1)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(erroneous_array_bound(1LL << 62)); // both-error {{constant expression}} both-note {{in call}}
 
   constexpr bool evaluate_nothrow_arg() {
     bool ok = false;
@@ -569,6 +577,16 @@ namespace CastedDelete {
     return a;
   }
   static_assert(vdtor_1() == 1);
+
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+      struct S {};
+      struct T : S {};
+      S *p = new T();
+      delete p; // both-note 2{{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+      return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -583,8 +601,7 @@ namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}} \
-                                                        // #alloc
+      return (T*)__builtin_operator_new(sizeof(T) * N); // #alloc
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
@@ -622,7 +639,7 @@ namespace OperatorNewDelete {
       p = new int[1]; // both-note {{heap allocation performed here}}
       break;
     case 2:
-      p = std::allocator<int>().allocate(1);
+      p = std::allocator<int>().allocate(1); // both-note 2{{heap allocation performed here}}
       break;
     }
     switch (dealloc_kind) {
@@ -796,6 +813,134 @@ static_assert(virt_delete(false)); // both-error {{not an integral constant expr
                                    // both-note {{in call to}}
 
 
+namespace ToplevelScopeInTemplateArg {
+  class string {
+  public:
+    char *mem;
+    constexpr string() {
+      this->mem = new char(1);
+    }
+    constexpr ~string() {
+      delete this->mem;
+    }
+    constexpr unsigned size() const { return 4; }
+  };
+
+
+  template <unsigned N>
+  void test() {};
+
+  void f() {
+      test<string().size()>();
+      static_assert(string().size() == 4);
+  }
+}
+
+template <typename T>
+struct SS {
+    constexpr SS(unsigned long long N)
+    : data(nullptr){
+        data = alloc.allocate(N);
+        for(std::size_t i = 0; i < N; i ++)
+            std::construct_at<T>(data + i, i);
+    }
+
+    constexpr SS()
+    : data(nullptr){
+        data = alloc.allocate(1);
+        std::construct_at<T>(data);
+    }
+
+    constexpr T operator[](std::size_t i) const {
+      return data[i];
+    }
+
+    constexpr ~SS() {
+        alloc.deallocate(data);
+    }
+    std::allocator<T> alloc;
+    T* data;
+};
+constexpr unsigned short ssmall = SS<unsigned short>(100)[42];
+constexpr auto Ss = SS<S>()[0];
+
+
+namespace IncompleteArray {
+  struct A {
+    int b = 10;
+  };
+  constexpr int test1() {
+    int n = 5;
+    int* a = new int[n];
+    int c = a[0]; // both-note {{read of uninitialized object}}
+    delete[] a;
+    return c;
+  }
+  static_assert(test1() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
+
+  constexpr int test2() {
+    int n = 0;
+    int* a = new int[n];
+    delete[] a;
+    return 10;
+  }
+  static_assert(test2() == 10);
+
+  /// In this case, the type of the initializer is A[2], while the full size of the
+  /// allocated array is of course 5. The remaining 3 elements need to be initialized
+  /// using A's constructor.
+  constexpr int test3() {
+    int n = 3;
+    A* a = new A[n]{5, 1};
+    int c = a[0].b + a[1].b + a[2].b;
+    delete[] a;
+    return c;
+  }
+  static_assert(test3() == (5 + 1 + 10));
+
+  constexpr int test4() {
+    auto n = 3;
+    int *a = new int[n]{12};
+    int c =  a[0] + a[1];
+    delete[] a;
+    return c;
+  }
+  static_assert(test4() == 12);
+
+
+  constexpr char *f(int n) {
+    return new char[n]();
+  }
+  static_assert((delete[] f(2), true));
+}
+
+namespace NonConstexprArrayCtor {
+  struct S {
+    S() {} // both-note 2{{declared here}}
+  };
+
+  constexpr bool test() { // both-error {{never produces a constant expression}}
+     auto s = new S[1]; // both-note 2{{non-constexpr constructor}}
+     return true;
+  }
+  static_assert(test()); // both-error {{not an integral constant expression}} \
+                         // both-note {{in call to}}
+}
+
+namespace ArrayBaseCast {
+  struct A {};
+  struct B : A {};
+  constexpr bool test() {
+    B *b = new B[2];
+
+    A* a = b;
+
+    delete[] b;
+    return true;
+  }
+  static_assert(test());
+}
 
 #else
 /// Make sure we reject this prior to C++20

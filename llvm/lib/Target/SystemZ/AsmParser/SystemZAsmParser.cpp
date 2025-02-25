@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
-#include "SystemZTargetStreamer.h"
+#include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -75,7 +75,8 @@ enum MemoryKind {
   BDXMem,
   BDLMem,
   BDRMem,
-  BDVMem
+  BDVMem,
+  LXAMem
 };
 
 class SystemZOperand : public MCParsedAsmOperand {
@@ -339,6 +340,13 @@ public:
     addExpr(Inst, Mem.Disp);
     Inst.addOperand(MCOperand::createReg(Mem.Index));
   }
+  void addLXAAddrOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 3 && "Invalid number of operands");
+    assert(isMem(LXAMem) && "Invalid operand type");
+    Inst.addOperand(MCOperand::createReg(Mem.Base));
+    addExpr(Inst, Mem.Disp);
+    Inst.addOperand(MCOperand::createReg(Mem.Index));
+  }
   void addImmTLSOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands");
     assert(Kind == KindImmTLS && "Invalid operand type");
@@ -376,6 +384,7 @@ public:
   bool isBDLAddr64Disp12Len8() const { return isMemDisp12Len8(GR64Reg); }
   bool isBDRAddr64Disp12() const { return isMemDisp12(BDRMem, GR64Reg); }
   bool isBDVAddr64Disp12() const { return isMemDisp12(BDVMem, GR64Reg); }
+  bool isLXAAddr64Disp20() const { return isMemDisp20(LXAMem, GR64Reg); }
   bool isU1Imm() const { return isImm(0, 1); }
   bool isU2Imm() const { return isImm(0, 3); }
   bool isU3Imm() const { return isImm(0, 7); }
@@ -442,7 +451,7 @@ private:
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
-  // Both the hlasm and att variants still rely on the basic gnu asm
+  // Both the hlasm and gnu variants still rely on the basic gnu asm
   // format with respect to inputs, clobbers, outputs etc.
   //
   // However, calling the overriden getAssemblerDialect() method in
@@ -475,8 +484,8 @@ private:
   // Are we parsing using the AD_HLASM dialect?
   inline bool isParsingHLASM() { return getMAIAssemblerDialect() == AD_HLASM; }
 
-  // Are we parsing using the AD_ATT dialect?
-  inline bool isParsingATT() { return getMAIAssemblerDialect() == AD_ATT; }
+  // Are we parsing using the AD_GNU dialect?
+  inline bool isParsingGNU() { return getMAIAssemblerDialect() == AD_GNU; }
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
@@ -581,6 +590,9 @@ public:
   }
   ParseStatus parseBDVAddr64(OperandVector &Operands) {
     return parseAddress(Operands, BDVMem, GR64Reg);
+  }
+  ParseStatus parseLXAAddr64(OperandVector &Operands) {
+    return parseAddress(Operands, LXAMem, GR64Reg);
   }
   ParseStatus parsePCRel12(OperandVector &Operands) {
     return parsePCRel(Operands, -(1LL << 12), (1LL << 12) - 1, false);
@@ -721,7 +733,7 @@ void SystemZOperand::print(raw_ostream &OS) const {
     OS << "Token:" << getToken();
     break;
   case KindReg:
-    OS << "Reg:" << SystemZInstPrinter::getRegisterName(getReg());
+    OS << "Reg:" << SystemZGNUInstPrinter::getRegisterName(getReg());
     break;
   case KindImm:
     OS << "Imm:";
@@ -743,10 +755,10 @@ void SystemZOperand::print(raw_ostream &OS) const {
       if (Op.MemKind == BDLMem)
         OS << *cast<MCConstantExpr>(Op.Length.Imm) << ",";
       else if (Op.MemKind == BDRMem)
-        OS << SystemZInstPrinter::getRegisterName(Op.Length.Reg) << ",";
+        OS << SystemZGNUInstPrinter::getRegisterName(Op.Length.Reg) << ",";
       if (Op.Index)
-        OS << SystemZInstPrinter::getRegisterName(Op.Index) << ",";
-      OS << SystemZInstPrinter::getRegisterName(Op.Base);
+        OS << SystemZGNUInstPrinter::getRegisterName(Op.Index) << ",";
+      OS << SystemZGNUInstPrinter::getRegisterName(Op.Base);
       OS << ")";
     }
     break;
@@ -848,7 +860,7 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
   }
 
   // Handle register names of the form %<prefix><number>
-  if (isParsingATT() && Parser.getTok().is(AsmToken::Percent)) {
+  if (isParsingGNU() && Parser.getTok().is(AsmToken::Percent)) {
     if (parseRegister(Reg, /*RequirePercent=*/true))
       return ParseStatus::Failure;
 
@@ -1029,7 +1041,7 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
   if (getLexer().is(AsmToken::LParen)) {
     Parser.Lex();
 
-    if (isParsingATT() && getLexer().is(AsmToken::Percent)) {
+    if (isParsingGNU() && getLexer().is(AsmToken::Percent)) {
       // Parse the first register.
       HaveReg1 = true;
       if (parseRegister(Reg1, /*RequirePercent=*/true))
@@ -1071,9 +1083,16 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
       if (getLexer().is(AsmToken::Integer)) {
         if (parseIntegerRegister(Reg2, RegGR))
           return true;
-      } else {
-        if (isParsingATT() && parseRegister(Reg2, /*RequirePercent=*/true))
-          return true;
+      } else if (isParsingGNU()) {
+        if (Parser.getTok().is(AsmToken::Percent)) {
+          if (parseRegister(Reg2, /*RequirePercent=*/true))
+            return true;
+        } else {
+          // GAS allows ",)" to indicate a missing base register.
+          Reg2.Num = 0;
+          Reg2.Group = RegGR;
+          Reg2.StartLoc = Reg2.EndLoc = Parser.getTok().getLoc();
+        }
       }
     }
 
@@ -1137,14 +1156,20 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
       return Error(StartLoc, "invalid use of indexed addressing");
     break;
   case BDXMem:
+  case LXAMem:
     // If we have Reg1, it must be an address register.
     if (HaveReg1) {
+      const unsigned *IndexRegs = Regs;
+      if (MemKind == LXAMem)
+        IndexRegs = SystemZMC::GR32Regs;
+
       if (parseAddressRegister(Reg1))
         return ParseStatus::Failure;
-      // If the are two registers, the first one is the index and the
-      // second is the base.
-      if (HaveReg2)
-        Index = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
+      // If there are two registers, the first one is the index and the
+      // second is the base.  If there is only a single register, it is
+      // used as base with GAS and as index with HLASM.
+      if (HaveReg2 || isParsingHLASM())
+        Index = Reg1.Num == 0 ? 0 : IndexRegs[Reg1.Num];
       else
         Base = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
     }
@@ -1186,6 +1211,10 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (!HaveReg1 || Reg1.Group != RegV)
       return Error(StartLoc, "vector index required in address");
     Index = SystemZMC::VR128Regs[Reg1.Num];
+    // In GAS mode, we must have Reg2, since a single register would be
+    // interpreted as base register, which cannot be a vector register.
+    if (isParsingGNU() && !HaveReg2)
+      return Error(Reg1.StartLoc, "invalid use of vector addressing");
     // If we have Reg2, it must be an address register.
     if (HaveReg2) {
       if (parseAddressRegister(Reg2))
@@ -1266,6 +1295,8 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ResTy = parseBDAddr64(Operands);
     else if (Kind == MCK_BDVAddr64Disp12)
       ResTy = parseBDVAddr64(Operands);
+    else if (Kind == MCK_LXAAddr64Disp20)
+      ResTy = parseLXAAddr64(Operands);
     else if (Kind == MCK_PCRel32)
       ResTy = parsePCRel32(Operands);
     else if (Kind == MCK_PCRel16)
@@ -1312,6 +1343,8 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ZOperand.addBDXAddrOperands(Inst, 3);
     else if (ZOperand.isMem(BDVMem))
       ZOperand.addBDVAddrOperands(Inst, 3);
+    else if (ZOperand.isMem(LXAMem))
+      ZOperand.addLXAAddrOperands(Inst, 3);
     else if (ZOperand.isImm())
       ZOperand.addImmOperands(Inst, 1);
     else
@@ -1490,7 +1523,7 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
   // a context-dependent parse routine, which gives the required register
   // class.  The code is here to mop up other cases, like those where
   // the instruction isn't recognized.
-  if (isParsingATT() && Parser.getTok().is(AsmToken::Percent)) {
+  if (isParsingGNU() && Parser.getTok().is(AsmToken::Percent)) {
     Register Reg;
     if (parseRegister(Reg, /*RequirePercent=*/true))
       return true;
@@ -1672,7 +1705,7 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
 }
 
 bool SystemZAsmParser::isLabel(AsmToken &Token) {
-  if (isParsingATT())
+  if (isParsingGNU())
     return true;
 
   // HLASM labels are ordinary symbols.

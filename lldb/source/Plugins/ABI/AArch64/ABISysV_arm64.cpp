@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -29,6 +28,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Utility/ARM64_DWARF_Registers.h"
 
@@ -60,6 +60,69 @@ ABISysV_arm64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) 
   return ABISP();
 }
 
+static Status PushToLinuxGuardedControlStack(addr_t return_addr,
+                                             RegisterContext *reg_ctx,
+                                             Thread &thread) {
+  Status err;
+
+  // If the Guarded Control Stack extension is present we may need to put the
+  // return address onto that stack.
+  const RegisterInfo *gcs_features_enabled_info =
+      reg_ctx->GetRegisterInfoByName("gcs_features_enabled");
+  if (!gcs_features_enabled_info)
+    return err;
+
+  uint64_t gcs_features_enabled = reg_ctx->ReadRegisterAsUnsigned(
+      gcs_features_enabled_info, LLDB_INVALID_ADDRESS);
+  if (gcs_features_enabled == LLDB_INVALID_ADDRESS)
+    return Status("Could not read GCS features enabled register.");
+
+  // Only attempt this if GCS is enabled. If it's not enabled then gcspr_el0
+  // may point to unmapped memory.
+  if ((gcs_features_enabled & 1) == 0)
+    return err;
+
+  const RegisterInfo *gcspr_el0_info =
+      reg_ctx->GetRegisterInfoByName("gcspr_el0");
+  if (!gcspr_el0_info)
+    return Status("Could not get register info for gcspr_el0.");
+
+  uint64_t gcspr_el0 =
+      reg_ctx->ReadRegisterAsUnsigned(gcspr_el0_info, LLDB_INVALID_ADDRESS);
+  if (gcspr_el0 == LLDB_INVALID_ADDRESS)
+    return Status("Could not read gcspr_el0.");
+
+  // A link register entry on the GCS is 8 bytes.
+  gcspr_el0 -= 8;
+  if (!reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0))
+    return Status(
+        "Attempted to decrement gcspr_el0, but could not write to it.");
+
+  Status error;
+  size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
+                                                  sizeof(return_addr), error);
+  if ((wrote != sizeof(return_addr) || error.Fail())) {
+    // When PrepareTrivialCall fails, the register context is not restored,
+    // unlike when an expression fails to execute. This is arguably a bug,
+    // see https://github.com/llvm/llvm-project/issues/124269.
+    // For now we are handling this here specifically. We can assume this
+    // write will work as the one to decrement the register did.
+    reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0 + 8);
+    return Status("Failed to write new Guarded Control Stack entry.");
+  }
+
+  Log *log = GetLog(LLDBLog::Expressions);
+  LLDB_LOGF(log,
+            "Pushed return address 0x%" PRIx64 " to Guarded Control Stack. "
+            "gcspr_el0 was 0%" PRIx64 ", is now 0x%" PRIx64 ".",
+            return_addr, gcspr_el0 - 8, gcspr_el0);
+
+  // gcspr_el0 will be restored to the original value by lldb-server after
+  // the call has finished, which serves as the "pop".
+
+  return err;
+}
+
 bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                        addr_t func_addr, addr_t return_addr,
                                        llvm::ArrayRef<addr_t> args) const {
@@ -86,6 +149,18 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   // x0 - x7 contain first 8 simple args
   if (args.size() > 8)
     return false;
+
+  // Do this first, as it's got the most chance of failing (though still very
+  // low).
+  if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
+    Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
+    // If we could not manage the GCS, the expression will certainly fail,
+    // and if we just carried on, that failure would be a lot more cryptic.
+    if (err.Fail()) {
+      LLDB_LOGF(log, "Failed to setup Guarded Call Stack: %s", err.AsCString());
+      return false;
+    }
+  }
 
   for (size_t i = 0; i < args.size(); ++i) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(

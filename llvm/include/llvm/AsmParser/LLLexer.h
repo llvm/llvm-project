@@ -95,6 +95,7 @@ namespace llvm {
 
     int getNextChar();
     void SkipLineComment();
+    bool SkipCComment();
     lltok::Kind ReadString(lltok::Kind kind);
     bool ReadVarName();
 

@@ -1,6 +1,6 @@
 @AUTO_GEN_COMMENT@
 
-config.bin_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
+config.bin_llvm_tools_dir = "@LLVM_RUNTIME_OUTPUT_INTDIR@"
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
 config.test_fortran_compiler="@OPENMP_TEST_Fortran_COMPILER@"
@@ -28,5 +28,6 @@ config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
 config.has_libomptarget_ompt = @LIBOMPTARGET_OMPT_SUPPORT@
 config.libomptarget_has_libc = @LIBOMPTARGET_GPU_LIBC_SUPPORT@
 config.libomptarget_test_pgo = @LIBOMPTARGET_TEST_GPU_PGO@
+config.offload_tblgen = "@OFFLOAD_TBLGEN_EXECUTABLE@"
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

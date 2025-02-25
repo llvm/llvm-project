@@ -251,7 +251,7 @@ static uint8_t byteFromBitsInit(const BitsInit *B) {
 
   uint8_t Value = 0;
   for (unsigned I = 0; I != N; ++I) {
-    BitInit *Bit = cast<BitInit>(B->getBit(I));
+    const BitInit *Bit = cast<BitInit>(B->getBit(I));
     Value |= Bit->getValue() << I;
   }
   return Value;
@@ -487,7 +487,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   uint8_t Enc = byteFromBitsInit(RegRec->getValueAsBitsInit("OpEncBits"));
   if (isExplicitAlign(RegInst)) {
     // The instruction require explicitly aligned memory.
-    BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
+    const BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
     Result.Alignment = Align(byteFromBitsInit(VectSize));
   } else if (!Enc && !isExplicitUnalign(RegInst) &&
              getMemOperandSize(MemOpRec) > 64) {
@@ -512,7 +512,7 @@ void X86FoldTablesEmitter::addBroadcastEntry(
   assert(Table.find(RegInst) == Table.end() && "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
 
-  DagInit *In = MemInst->TheDef->getValueAsDag("InOperandList");
+  const DagInit *In = MemInst->TheDef->getValueAsDag("InOperandList");
   for (unsigned I = 0, E = In->getNumArgs(); I != E; ++I) {
     Result.BroadcastKind =
         StringSwitch<X86FoldTableEntry::BcastType>(In->getArg(I)->getAsString())

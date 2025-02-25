@@ -1,3 +1,6 @@
+; This test case checks how phi-nodes with different operand types select
+; a result type. Majority of operands makes it i8* in this case.
+
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
@@ -15,14 +18,13 @@
 
 ; CHECK: %[[Branch1:.*]] = OpLabel
 ; CHECK: %[[Res1:.*]] = OpVariable %[[StructPtr]] Function
+; CHECK: %[[Res1Casted:.*]] = OpBitcast %[[CharPtr]] %[[Res1]]
 ; CHECK: OpBranchConditional %[[#]] %[[#]] %[[Branch2:.*]]
 ; CHECK: %[[Res2:.*]] = OpInBoundsPtrAccessChain %[[CharPtr]] %[[#]] %[[#]]
-; CHECK: %[[Res2Casted:.*]] = OpBitcast %[[StructPtr]] %[[Res2]]
 ; CHECK: OpBranchConditional %[[#]] %[[#]] %[[BranchSelect:.*]]
 ; CHECK: %[[SelectRes:.*]] = OpSelect %[[CharPtr]] %[[#]] %[[#]] %[[#]]
-; CHECK: %[[SelectResCasted:.*]] = OpBitcast %[[StructPtr]] %[[SelectRes]]
 ; CHECK: OpLabel
-; CHECK: OpPhi %[[StructPtr]] %[[Res1]] %[[Branch1]] %[[Res2Casted]] %[[Branch2]] %[[SelectResCasted]] %[[BranchSelect]]
+; CHECK: OpPhi %[[CharPtr]] %[[Res1Casted]] %[[Branch1]] %[[Res2]] %[[Branch2]] %[[SelectRes]] %[[BranchSelect]]
 
 %struct = type { %array }
 %array = type { [1 x i64] }

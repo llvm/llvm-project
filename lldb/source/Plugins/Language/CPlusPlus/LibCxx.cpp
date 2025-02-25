@@ -10,8 +10,6 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -23,6 +21,8 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -309,11 +309,6 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 size_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "__ptr_")
@@ -412,11 +407,6 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "pointer")
@@ -430,12 +420,6 @@ size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
 
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  if (valobj.IsPointerType()) {
-    uint64_t value = valobj.GetValueAsUnsigned(0);
-    if (!value)
-      return false;
-    stream.Printf("0x%016" PRIx64 " ", value);
-  }
   return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
                                        nullptr, nullptr, &valobj, false, false);
 }

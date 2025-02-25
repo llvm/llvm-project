@@ -13,7 +13,6 @@
 
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h" // For StaticAssertDecl
@@ -23,7 +22,6 @@
 #include <algorithm>
 #include <random>
 #include <set>
-#include <sstream>
 #include <string>
 
 using clang::ASTContext;
@@ -93,7 +91,7 @@ void randomizeStructureLayoutImpl(const ASTContext &Context,
     auto FieldIter = FieldsOut.begin();
     FieldDecl *FD = *FieldIter;
 
-    if (FD->isBitField() && !FD->isZeroLengthBitField(Context)) {
+    if (FD->isBitField() && !FD->isZeroLengthBitField()) {
       // Start a bitfield run if this is the first bitfield we have found.
       if (!CurrentBitfieldRun)
         CurrentBitfieldRun = std::make_unique<BitfieldRunBucket>();

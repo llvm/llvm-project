@@ -10,6 +10,18 @@
 #include <ompx.h>
 #include <type_traits>
 
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
+unsigned get_warp_size() { return __builtin_amdgcn_wavefrontsize(); }
+#pragma omp end declare variant
+
+#pragma omp begin declare variant match(device = {arch(nvptx64)})
+unsigned get_warp_size() { return __nvvm_read_ptx_sreg_warpsize(); }
+#pragma omp end declare variant
+
+#pragma omp begin declare variant match(device = {kind(cpu)})
+unsigned get_warp_size() { return 1; }
+#pragma omp end declare variant
+
 template <typename T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
 bool equal(T LHS, T RHS) {
   return LHS == RHS;
@@ -32,11 +44,7 @@ template <typename T> void test() {
   {
     int tid = ompx_thread_id_x();
     T val = ompx::shfl_down_sync(~0U, static_cast<T>(tid), 1);
-#ifdef __AMDGCN_WAVEFRONT_SIZE
-    int warp_size = __AMDGCN_WAVEFRONT_SIZE;
-#else
-    int warp_size = 32;
-#endif
+    int warp_size = get_warp_size();
     if ((tid & (warp_size - 1)) != warp_size - 1)
       res[tid] = equal(val, static_cast<T>(tid + 1));
     else

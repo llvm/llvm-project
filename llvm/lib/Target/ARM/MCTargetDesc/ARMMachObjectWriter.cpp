@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMFixupKinds.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringExtras.h"
@@ -16,10 +15,12 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -490,4 +491,24 @@ std::unique_ptr<MCObjectTargetWriter>
 llvm::createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType,
                                 uint32_t CPUSubtype) {
   return std::make_unique<ARMMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
+}
+
+namespace {
+class ARMTargetMachOStreamer : public ARMTargetStreamer {
+public:
+  ARMTargetMachOStreamer(MCStreamer &S) : ARMTargetStreamer(S) {}
+  MCObjectStreamer &getStreamer() {
+    return static_cast<MCObjectStreamer &>(Streamer);
+  }
+  void emitThumbFunc(MCSymbol *Symbol) override {
+    // Remember that the function is a thumb function. Fixup and relocation
+    // values will need adjusted.
+    getStreamer().getAssembler().setIsThumbFunc(Symbol);
+    cast<MCSymbolMachO>(Symbol)->setThumbFunc();
+  }
+};
+} // namespace
+
+MCTargetStreamer *llvm::createARMObjectTargetMachOStreamer(MCStreamer &S) {
+  return new ARMTargetMachOStreamer(S);
 }

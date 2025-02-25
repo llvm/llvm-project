@@ -392,6 +392,10 @@ Test Filenames`_ when determining the names for new test files.
        of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
        in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
 
+   * - ``FOO.bench.cpp``
+     - A benchmark test. These tests are linked against the GoogleBenchmark library and generally consist of micro-benchmarks of individual
+       components of the library.
+
 
 libc++-Specific Lit Features
 ----------------------------
@@ -431,6 +435,38 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
        extension.)
 
 
+C++ Standard version tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historically libc++ tests used to filter the tests for C++ Standard versions
+with lit directives like:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+
+With C++ Standards released every 3 years, this solution is not scalable.
+Instead use:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: std-at-least-c++26
+
+There is no corresponding ``std-at-most-c++23``. This could be useful when
+tests are only valid for a small set of standard versions. For example, a
+deprecation test is only valid when the feature is deprecated until it is
+removed from the Standard. These tests should be written like:
+
+.. code-block:: cpp
+
+   // REQUIRES: c++17 || c++20 || c++23
+
+.. note::
+
+   There are a lot of tests with the first style, these can remain as they are.
+   The new style is only intended to be used for new tests.
+
+
 Benchmarks
 ==========
 
@@ -438,43 +474,47 @@ Libc++ contains benchmark tests separately from the test of the test suite.
 The benchmarks are written using the `Google Benchmark`_ library, a copy of which
 is stored in the libc++ repository.
 
-For more information about using the Google Benchmark library see the
+For more information about using the Google Benchmark library, see the
 `official documentation <https://github.com/google/benchmark>`_.
 
+The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
+works in the same way as running a test. Both the benchmarks and the tests share
+the same configuration, so make sure to enable the relevant optimization level
+when running the benchmarks. For example,
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+
+Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
+we only want to make sure they don't rot. Do not rely on the results of benchmarks
+run through ``check-cxx`` for anything, instead run the benchmarks manually using
+the instructions for running individual tests.
+
+If you want to compare the results of different benchmark runs, we recommend using the
+``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
+and run the benchmark:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build1> [...]
+  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Then, do the same for the second configuration you want to test. Use a different build
+directory for that configuration:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build2> [...]
+  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Finally, use ``libcxx-compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
+
 .. _`Google Benchmark`: https://github.com/google/benchmark
-
-Building Benchmarks
--------------------
-
-The benchmark tests are not built by default. The benchmarks can be built using
-the ``cxx-benchmarks`` target.
-
-An example build would look like:
-
-.. code-block:: bash
-
-  $ ninja -C build cxx-benchmarks
-
-This will build all of the benchmarks under ``<libcxx>/test/benchmarks`` to be
-built against the just-built libc++. The compiled tests are output into
-``build/libcxx/test/benchmarks``.
-
-Running Benchmarks
-------------------
-
-The benchmarks must be run manually by the user. Currently there is no way
-to run them as part of the build.
-
-For example:
-
-.. code-block:: bash
-
-  $ cd build/libcxx/test/benchmarks
-  $ ./find.bench.out # Runs all the benchmarks
-  $ ./find.bench.out --benchmark_filter="bm_ranges_find<std::vector<char>>" # Only runs that specific benchmark
-
-For more information about running benchmarks see `Google Benchmark`_.
-
 
 .. _testing-hardening-assertions:
 
@@ -518,4 +558,3 @@ A toy example:
 
 Note that error messages are only tested (matched) if the ``debug``
 hardening mode is used.
-

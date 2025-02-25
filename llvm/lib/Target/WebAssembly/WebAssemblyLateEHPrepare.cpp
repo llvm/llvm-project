@@ -128,7 +128,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     Changed |= hoistCatches(MF);
     Changed |= addCatchAlls(MF);
     Changed |= replaceFuncletReturns(MF);
-    if (WebAssembly::WasmEnableExnref)
+    if (!WebAssembly::WasmUseLegacyEH)
       Changed |= addCatchRefsAndThrowRefs(MF);
   }
   Changed |= removeUnnecessaryUnreachables(MF);
@@ -217,9 +217,9 @@ bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
     if (InsertPos == MBB.end() ||
         !WebAssembly::isCatch(InsertPos->getOpcode())) {
       Changed = true;
-      unsigned CatchAllOpcode = WebAssembly::WasmEnableExnref
-                                    ? WebAssembly::CATCH_ALL
-                                    : WebAssembly::CATCH_ALL_LEGACY;
+      unsigned CatchAllOpcode = WebAssembly::WasmUseLegacyEH
+                                    ? WebAssembly::CATCH_ALL_LEGACY
+                                    : WebAssembly::CATCH_ALL;
       BuildMI(MBB, InsertPos,
               InsertPos == MBB.end() ? DebugLoc() : InsertPos->getDebugLoc(),
               TII.get(CatchAllOpcode));
@@ -251,15 +251,39 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
       Changed = true;
       break;
     }
-    case WebAssembly::CLEANUPRET: {
-      // Replace a cleanupret with a rethrow. For C++ support, currently
-      // rethrow's immediate argument is always 0 (= the latest exception).
+    case WebAssembly::RETHROW:
+      // These RETHROWs here were lowered from llvm.wasm.rethrow() intrinsics,
+      // generated in Clang for when an exception is not caught by the given
+      // type (e.g. catch (int)).
       //
-      // Even when -wasm-enable-exnref is true, we use a RETHROW here for the
-      // moment. This will be converted to a THROW_REF in
-      // addCatchRefsAndThrowRefs.
+      // RETHROW's BB argument is the EH pad where the exception to rethrow has
+      // been caught. (Until this point, RETHROW has just a '0' as a placeholder
+      // argument.) For these llvm.wasm.rethrow()s, we can safely assume the
+      // exception comes from the nearest dominating EH pad, because catch.start
+      // EH pad is structured like this:
+      //
+      // catch.start:
+      //   catchpad ...
+      //   %matches = compare ehselector with typeid
+      //   br i1 %matches, label %catch, label %rethrow
+      //
+      // rethrow:
+      //   ;; rethrows the exception caught in 'catch.start'
+      //   call @llvm.wasm.rethrow()
+      TI->removeOperand(0);
+      TI->addOperand(MachineOperand::CreateMBB(getMatchingEHPad(TI)));
+      Changed = true;
+      break;
+    case WebAssembly::CLEANUPRET: {
+      // CLEANUPRETs have the EH pad BB the exception to rethrow has been caught
+      // as an argument. Use it and change the instruction opcode to 'RETHROW'
+      // to make rethrowing instructions consistent.
+      //
+      // This is because we cannot safely assume that it is always the nearest
+      // dominating EH pad, in case there are code transformations such as
+      // inlining.
       BuildMI(MBB, TI, TI->getDebugLoc(), TII.get(WebAssembly::RETHROW))
-          .addImm(0);
+          .addMBB(TI->getOperand(0).getMBB());
       TI->eraseFromParent();
       Changed = true;
       break;
@@ -272,21 +296,17 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
 // Add CATCH_REF and CATCH_ALL_REF pseudo instructions to EH pads, and convert
 // RETHROWs to THROW_REFs.
 bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
-  bool Changed = false;
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();
   DenseMap<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> EHPadToRethrows;
 
   // Create a map of <EH pad, a vector of RETHROWs rethrowing its exception>
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
-      if (MI.getOpcode() == WebAssembly::RETHROW) {
-        Changed = true;
-        auto *EHPad = getMatchingEHPad(&MI);
-        EHPadToRethrows[EHPad].push_back(&MI);
-      }
-    }
-  }
+  for (auto &MBB : MF)
+    for (auto &MI : MBB)
+      if (MI.getOpcode() == WebAssembly::RETHROW)
+        EHPadToRethrows[MI.getOperand(0).getMBB()].push_back(&MI);
+  if (EHPadToRethrows.empty())
+    return false;
 
   // Convert CATCH into CATCH_REF and CATCH_ALL into CATCH_ALL_REF, when the
   // caught exception is rethrown. And convert RETHROWs to THROW_REFs.
@@ -325,7 +345,7 @@ bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
     }
   }
 
-  return Changed;
+  return true;
 }
 
 // Remove unnecessary unreachables after a throw/rethrow/throw_ref.

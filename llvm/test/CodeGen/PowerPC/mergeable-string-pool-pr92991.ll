@@ -7,8 +7,8 @@
 define void @test(ptr %p, ptr %p2) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addis 5, 2, .L__ModuleStringPool@toc@ha
-; CHECK-NEXT:    addi 5, 5, .L__ModuleStringPool@toc@l
+; CHECK-NEXT:    addis 5, 2, .L_MergedGlobals@toc@ha
+; CHECK-NEXT:    addi 5, 5, .L_MergedGlobals@toc@l
 ; CHECK-NEXT:    addi 6, 5, 12
 ; CHECK-NEXT:    std 6, 0(3)
 ; CHECK-NEXT:    addi 3, 5, 16

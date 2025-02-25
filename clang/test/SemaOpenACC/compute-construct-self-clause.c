@@ -82,5 +82,5 @@ void WarnMaybeNotUsed(int val1, int val2) {
 
   // expected-error@+1{{OpenACC 'self' clause is not valid on 'loop' directive}}
 #pragma acc loop self
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

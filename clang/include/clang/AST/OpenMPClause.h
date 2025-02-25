@@ -486,7 +486,8 @@ public:
 /// #pragma omp parallel private(a) allocate(omp_default_mem_alloc :a)
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'private'
-/// and clause 'allocate' for the variable 'a'.
+/// and clause 'allocate' for the variable 'a', which specifies an explicit
+/// memory allocator.
 class OMPAllocateClause final
     : public OMPVarListClause<OMPAllocateClause>,
       private llvm::TrailingObjects<OMPAllocateClause, Expr *> {
@@ -497,8 +498,50 @@ class OMPAllocateClause final
   /// Allocator specified in the clause, or 'nullptr' if the default one is
   /// used.
   Expr *Allocator = nullptr;
+  /// Alignment specified in the clause, or 'nullptr' if the default one is
+  /// used.
+  Expr *Alignment = nullptr;
   /// Position of the ':' delimiter in the clause;
   SourceLocation ColonLoc;
+  /// Modifier of 'allocate' clause.
+  OpenMPAllocateClauseModifier AllocatorModifier = OMPC_ALLOCATE_unknown;
+  /// Location of allocator modifier if any.
+  SourceLocation AllocatorModifierLoc;
+
+  // ----------------------------------------------------------------------------
+
+  /// Modifiers for 'allocate' clause.
+  enum { FIRST, SECOND, NUM_MODIFIERS };
+  OpenMPAllocateClauseModifier Modifiers[NUM_MODIFIERS];
+
+  /// Locations of modifiers.
+  SourceLocation ModifiersLoc[NUM_MODIFIERS];
+
+  /// Set the first allocate modifier.
+  ///
+  /// \param M Allocate modifier.
+  void setFirstAllocateModifier(OpenMPAllocateClauseModifier M) {
+    Modifiers[FIRST] = M;
+  }
+
+  /// Set the second allocate modifier.
+  ///
+  /// \param M Allocate modifier.
+  void setSecondAllocateModifier(OpenMPAllocateClauseModifier M) {
+    Modifiers[SECOND] = M;
+  }
+
+  /// Set location of the first allocate modifier.
+  void setFirstAllocateModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[FIRST] = Loc;
+  }
+
+  /// Set location of the second allocate modifier.
+  void setSecondAllocateModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[SECOND] = Loc;
+  }
+
+  // ----------------------------------------------------------------------------
 
   /// Build clause with number of variables \a N.
   ///
@@ -509,11 +552,20 @@ class OMPAllocateClause final
   /// \param EndLoc Ending location of the clause.
   /// \param N Number of the variables in the clause.
   OMPAllocateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
-                    Expr *Allocator, SourceLocation ColonLoc,
-                    SourceLocation EndLoc, unsigned N)
+                    Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
+                    OpenMPAllocateClauseModifier Modifier1,
+                    SourceLocation Modifier1Loc,
+                    OpenMPAllocateClauseModifier Modifier2,
+                    SourceLocation Modifier2Loc, SourceLocation EndLoc,
+                    unsigned N)
       : OMPVarListClause<OMPAllocateClause>(llvm::omp::OMPC_allocate, StartLoc,
                                             LParenLoc, EndLoc, N),
-        Allocator(Allocator), ColonLoc(ColonLoc) {}
+        Allocator(Allocator), Alignment(Alignment), ColonLoc(ColonLoc) {
+    Modifiers[FIRST] = Modifier1;
+    Modifiers[SECOND] = Modifier2;
+    ModifiersLoc[FIRST] = Modifier1Loc;
+    ModifiersLoc[SECOND] = Modifier2Loc;
+  }
 
   /// Build an empty clause.
   ///
@@ -521,12 +573,19 @@ class OMPAllocateClause final
   explicit OMPAllocateClause(unsigned N)
       : OMPVarListClause<OMPAllocateClause>(llvm::omp::OMPC_allocate,
                                             SourceLocation(), SourceLocation(),
-                                            SourceLocation(), N) {}
+                                            SourceLocation(), N) {
+    Modifiers[FIRST] = OMPC_ALLOCATE_unknown;
+    Modifiers[SECOND] = OMPC_ALLOCATE_unknown;
+  }
 
   /// Sets location of ':' symbol in clause.
   void setColonLoc(SourceLocation CL) { ColonLoc = CL; }
 
   void setAllocator(Expr *A) { Allocator = A; }
+  void setAllocatorModifier(OpenMPAllocateClauseModifier AM) {
+    AllocatorModifier = AM;
+  }
+  void setAlignment(Expr *A) { Alignment = A; }
 
 public:
   /// Creates clause with a list of variables \a VL.
@@ -536,18 +595,54 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param Allocator Allocator expression.
   /// \param ColonLoc Location of ':' delimiter.
+  /// \param AllocatorModifier Allocator modifier.
+  /// \param SourceLocation Allocator modifier location.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
-  static OMPAllocateClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                   SourceLocation LParenLoc, Expr *Allocator,
-                                   SourceLocation ColonLoc,
-                                   SourceLocation EndLoc, ArrayRef<Expr *> VL);
+  static OMPAllocateClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
+         OpenMPAllocateClauseModifier Modifier1, SourceLocation Modifier1Loc,
+         OpenMPAllocateClauseModifier Modifier2, SourceLocation Modifier2Loc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL);
 
   /// Returns the allocator expression or nullptr, if no allocator is specified.
   Expr *getAllocator() const { return Allocator; }
 
+  /// Returns the alignment expression or nullptr, if no alignment specified.
+  Expr *getAlignment() const { return Alignment; }
+
+  /// Return 'allocate' modifier.
+  OpenMPAllocateClauseModifier getAllocatorModifier() const {
+    return AllocatorModifier;
+  }
+
+  /// Get the first modifier of the clause.
+  OpenMPAllocateClauseModifier getFirstAllocateModifier() const {
+    return Modifiers[FIRST];
+  }
+
+  /// Get location of first modifier of the clause.
+  SourceLocation getFirstAllocateModifierLoc() const {
+    return ModifiersLoc[FIRST];
+  }
+
+  /// Get the second modifier of the clause.
+  OpenMPAllocateClauseModifier getSecondAllocateModifier() const {
+    return Modifiers[SECOND];
+  }
+
+  /// Get location of second modifier of the clause.
+  SourceLocation getSecondAllocateModifierLoc() const {
+    return ModifiersLoc[SECOND];
+  }
+
   /// Returns the location of the ':' delimiter.
   SourceLocation getColonLoc() const { return ColonLoc; }
+  /// Return the location of the modifier.
+  SourceLocation getAllocatorModifierLoc() const {
+    return AllocatorModifierLoc;
+  }
 
   /// Creates an empty clause with the place for \a N variables.
   ///
@@ -2328,6 +2423,28 @@ public:
   OMPNoOpenMPRoutinesClause() : OMPNoChildClause() {}
 };
 
+/// This represents the 'no_openmp_constructs' clause in the
+//// '#pragma omp assume' directive.
+///
+/// \code
+/// #pragma omp assume no_openmp_constructs
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp_constructs'
+/// clause.
+class OMPNoOpenMPConstructsClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp_constructs> {
+public:
+  /// Build 'no_openmp_constructs' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPConstructsClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPConstructsClause() : OMPNoChildClause() {}
+};
+
 /// This represents the 'no_parallelism' clause in the '#pragma omp assume'
 /// directive.
 ///
@@ -2645,8 +2762,8 @@ public:
   }
 };
 
-/// This represents 'seq_cst' clause in the '#pragma omp atomic'
-/// directive.
+/// This represents 'seq_cst' clause in the '#pragma omp atomic|flush'
+/// directives.
 ///
 /// \code
 /// #pragma omp atomic seq_cst
@@ -6108,14 +6225,14 @@ public:
     return const_component_lists_iterator(
         getUniqueDeclsRef(), getDeclNumListsRef(), getComponentListSizesRef(),
         getComponentsRef(), SupportsMapper,
-        SupportsMapper ? getUDMapperRefs() : std::nullopt);
+        SupportsMapper ? getUDMapperRefs() : ArrayRef<Expr *>());
   }
   const_component_lists_iterator component_lists_end() const {
     return const_component_lists_iterator(
         ArrayRef<ValueDecl *>(), ArrayRef<unsigned>(), ArrayRef<unsigned>(),
         MappableExprComponentListRef(getComponentsRef().end(),
                                      getComponentsRef().end()),
-        SupportsMapper, std::nullopt);
+        SupportsMapper, {});
   }
   const_component_lists_range component_lists() const {
     return {component_lists_begin(), component_lists_end()};
@@ -6128,7 +6245,7 @@ public:
     return const_component_lists_iterator(
         VD, getUniqueDeclsRef(), getDeclNumListsRef(),
         getComponentListSizesRef(), getComponentsRef(), SupportsMapper,
-        SupportsMapper ? getUDMapperRefs() : std::nullopt);
+        SupportsMapper ? getUDMapperRefs() : ArrayRef<Expr *>());
   }
   const_component_lists_iterator decl_component_lists_end() const {
     return component_lists_end();
@@ -9356,7 +9473,8 @@ struct TargetOMPContext final : public llvm::omp::OMPContext {
   TargetOMPContext(ASTContext &ASTCtx,
                    std::function<void(StringRef)> &&DiagUnknownTrait,
                    const FunctionDecl *CurrentFunctionDecl,
-                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits);
+                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits,
+                   int DeviceNum);
 
   virtual ~TargetOMPContext() = default;
 

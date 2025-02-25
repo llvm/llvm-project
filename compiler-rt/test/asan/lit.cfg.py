@@ -10,7 +10,7 @@ import lit.formats
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -183,6 +183,7 @@ if platform.system() == "Windows":
         config.substitutions.append(("%MD", "-MD"))
         config.substitutions.append(("%MT", "-MT"))
         config.substitutions.append(("%Gw", "-Gw"))
+        config.substitutions.append(("%Oy-", "-Oy-"))
 
         base_lib = os.path.join(
             config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix
@@ -220,6 +221,7 @@ if platform.system() == "Windows":
         config.substitutions.append(("%MD", ""))
         config.substitutions.append(("%MT", ""))
         config.substitutions.append(("%Gw", "-fdata-sections"))
+        config.substitutions.append(("%Oy-", "-fno-omit-frame-pointer"))
 
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(

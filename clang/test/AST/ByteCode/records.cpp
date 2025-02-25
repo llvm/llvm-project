@@ -1015,11 +1015,13 @@ namespace ParenInit {
   };
 
   /// Not constexpr!
-  O o1(0);
+  O o1(0); // both-warning {{temporary whose address is used as value of}}
+  // FIXME: the secondary warning message is bogus, would be nice to suppress it.
   constinit O o2(0); // both-error {{variable does not have a constant initializer}} \
                      // both-note {{required by 'constinit' specifier}} \
                      // both-note {{reference to temporary is not a constant expression}} \
-                     // both-note {{temporary created here}}
+                     // both-note {{temporary created here}} \
+                     // both-warning {{temporary whose address is used as value}}
 
 
   /// Initializing an array.
@@ -1654,10 +1656,81 @@ namespace ExprWithCleanups {
   static_assert(F == 1i, "");
 }
 
-namespace NullptrUpcast {
+namespace NullptrCast {
   struct A {};
   struct B : A { int n; };
+  constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
                          // both-note {{cannot access base class of null pointer}}
+  constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
+                             // both-note {{cannot access derived class of null pointer}}
+  constexpr bool test() {
+    auto a = (A*)(B*)nullptr;
+
+    return a == nullptr;
+  }
+  static_assert(test(), "");
+
+  constexpr bool test2() {
+    auto a = (B*)(A*)nullptr;
+
+    return a == nullptr;
+  }
+  static_assert(test2(), "");
 }
+
+namespace NonConst {
+  template <int I>
+  struct S {
+    static constexpr int Size = I;
+    constexpr int getSize() const { return I; }
+    explicit S(int a) {}
+  };
+
+  void func() {
+    int a,b ;
+    const S<10> s{a};
+    static_assert(s.getSize() == 10, "");
+  }
+}
+
+namespace ExplicitThisInTemporary {
+  struct B { B *p = this; };
+  constexpr bool g(B b) { return &b == b.p; }
+  static_assert(g({}), "");
+}
+
+namespace IgnoredMemberExpr {
+  class A {
+  public:
+    int a;
+  };
+  class B : public A {
+  public:
+    constexpr int foo() {
+      a; // both-warning {{expression result unused}}
+      return 0;
+    }
+  };
+  static_assert(B{}.foo() == 0, "");
+}
+
+#if __cplusplus >= 202002L
+namespace DeadUpcast {
+  struct A {};
+  struct B : A{};
+  constexpr bool foo() {
+
+    B *pb;
+    {
+      B b;
+      pb = &b;
+    }
+    A *pa = pb;
+
+    return true;
+  }
+  static_assert(foo(), "");
+}
+#endif

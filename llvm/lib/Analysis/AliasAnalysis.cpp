@@ -29,7 +29,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -47,7 +46,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -638,9 +636,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // Only look at the no-capture or byval pointer arguments.  If this
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
-    if (!(*CI)->getType()->isPointerTy() ||
-        (!Call->doesNotCapture(ArgNo) && ArgNo < Call->arg_size() &&
-         !Call->isByValArgument(ArgNo)))
+    if (!(*CI)->getType()->isPointerTy() || !Call->doesNotCapture(ArgNo))
       continue;
 
     AliasResult AR =
@@ -834,6 +830,14 @@ bool llvm::isIdentifiedFunctionLocal(const Value *V) {
   return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasOrByValArgument(V);
 }
 
+bool llvm::isBaseOfObject(const Value *V) {
+  // TODO: We can handle other cases here
+  // 1) For GC languages, arguments to functions are often required to be
+  //    base pointers.
+  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
+  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
+}
+
 bool llvm::isEscapeSource(const Value *V) {
   if (auto *CB = dyn_cast<CallBase>(V))
     return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
@@ -851,6 +855,12 @@ bool llvm::isEscapeSource(const Value *V) {
   // escaping, and objects located at well-known addresses via platform-specific
   // means cannot be considered non-escaping local objects.
   if (isa<IntToPtrInst>(V))
+    return true;
+
+  // Capture tracking considers insertions into aggregates and vectors as
+  // captures. As such, extractions from aggregates and vectors are escape
+  // sources.
+  if (isa<ExtractValueInst, ExtractElementInst>(V))
     return true;
 
   // Same for inttoptr constant expressions.

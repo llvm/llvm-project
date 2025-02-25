@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that the compiler does not generate an invalid packet with three
 ; instructions that each requires slot 2 or 3. The specification for

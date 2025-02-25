@@ -10,6 +10,7 @@
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
+#include "lldb/Target/ThreadCollection.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include "Utils.h"
@@ -98,6 +99,14 @@ SBSaveCoreOptions::AddMemoryRegionToSave(const SBMemoryRegionInfo &region) {
   // proof thing to do.
   m_opaque_up->AddMemoryRegionToSave(region.ref());
   return SBError();
+}
+
+lldb::SBThreadCollection SBSaveCoreOptions::GetThreadsToSave() const {
+  LLDB_INSTRUMENT_VA(this);
+  lldb::ThreadCollectionSP threadcollection_sp =
+      std::make_shared<lldb_private::ThreadCollection>(
+          m_opaque_up->GetThreadsToSave());
+  return SBThreadCollection(threadcollection_sp);
 }
 
 void SBSaveCoreOptions::Clear() {

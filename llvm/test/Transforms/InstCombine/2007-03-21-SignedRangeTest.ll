@@ -16,8 +16,8 @@ define i1 @test(i32 %tmp6) {
 
 define <2 x i1> @test_vec(<2 x i32> %tmp6) {
 ; CHECK-LABEL: @test_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP6:%.*]], <i32 71, i32 71>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -12, i32 -12>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP6:%.*]], splat (i32 71)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], splat (i32 -12)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %tmp7 = sdiv <2 x i32> %tmp6, <i32 12, i32 12>

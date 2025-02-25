@@ -390,17 +390,11 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++20"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++20"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++20"
 # endif
 
 # ifdef __cpp_lib_smart_ptr_owner_equality
@@ -521,17 +515,11 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++23"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++23"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++23"
 # endif
 
 # ifdef __cpp_lib_smart_ptr_owner_equality
@@ -652,17 +640,11 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++26"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++26"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

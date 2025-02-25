@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -ifcvt-limit=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -ifcvt-limit=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; Check if the branch probabilities are reflected in the instructions:
 ; The basic block placement pass should place the more probable successor

@@ -39,6 +39,8 @@ static LogicalResult createBackwardSliceFunction(Operation *op,
   SetVector<Operation *> slice;
   BackwardSliceOptions options;
   options.omitBlockArguments = omitBlockArguments;
+  // TODO: Make this default.
+  options.omitUsesFromAbove = false;
   getBackwardSlice(op, &slice, options);
   for (Operation *slicedOp : slice)
     builder.clone(*slicedOp, mapper);

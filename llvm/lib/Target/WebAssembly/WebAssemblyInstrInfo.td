@@ -30,6 +30,14 @@ def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
     AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
 
+def HasBulkMemoryOpt :
+    Predicate<"Subtarget->hasBulkMemoryOpt()">,
+    AssemblerPredicate<(all_of FeatureBulkMemoryOpt), "bulk-memory-opt">;
+
+def HasCallIndirectOverlong :
+    Predicate<"Subtarget->hasCallIndirectOverlong()">,
+    AssemblerPredicate<(all_of FeatureCallIndirectOverlong), "call-indirect-overlong">;
+
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
     AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
@@ -83,6 +91,10 @@ def HasSIMD128 :
 def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,
     AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
+
+def HasWideArithmetic :
+    Predicate<"Subtarget->hasWideArithmetic()">,
+    AssemblerPredicate<(all_of FeatureWideArithmetic), "wide-arithmetic">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

@@ -70,6 +70,7 @@
 #endif
 
 using namespace llvm;
+using namespace ThinLTOCodeGeneratorImpl;
 
 #define DEBUG_TYPE "thinlto"
 
@@ -83,8 +84,6 @@ extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
     RemarksHotnessThreshold;
 extern cl::opt<std::string> RemarksFormat;
 }
-
-namespace {
 
 // Default to using all available threads in the system, but using only one
 // thred per core, as indicated by the usage of
@@ -161,8 +160,7 @@ generateModuleMap(std::vector<std::unique_ptr<lto::InputFile>> &Modules) {
 
 static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index,
                           bool ClearDSOLocalOnDeclarations) {
-  if (renameModuleForThinLTO(TheModule, Index, ClearDSOLocalOnDeclarations))
-    report_fatal_error("renameModuleForThinLTO failed");
+  renameModuleForThinLTO(TheModule, Index, ClearDSOLocalOnDeclarations);
 }
 
 namespace {
@@ -325,8 +323,8 @@ computeGUIDPreservedSymbols(const lto::InputFile &File,
   return GUIDPreservedSymbols;
 }
 
-std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
-                                            TargetMachine &TM) {
+static std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
+                                                   TargetMachine &TM) {
   SmallVector<char, 128> OutputBuffer;
 
   // CodeGen
@@ -346,6 +344,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
       std::move(OutputBuffer), /*RequiresNullTerminator=*/false);
 }
 
+namespace {
 /// Manage caching for a single Module.
 class ModuleCacheEntry {
   SmallString<128> EntryPath;
@@ -423,6 +422,7 @@ public:
                                        toString(std::move(Err)).c_str()));
   }
 };
+} // end anonymous namespace
 
 static std::unique_ptr<MemoryBuffer>
 ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
@@ -539,8 +539,6 @@ static void initTMBuilder(TargetMachineBuilder &TMBuilder,
     TMBuilder.MCpu = lto::getThinLTODefaultCPU(TheTriple);
   TMBuilder.TheTriple = std::move(TheTriple);
 }
-
-} // end anonymous namespace
 
 void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {
   MemoryBufferRef Buffer(Data, Identifier);

@@ -101,7 +101,8 @@ using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
   if (Offset != 0) {
-    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
+    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset,
+                   /*isSigned=*/true);
     Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
   }
   return Ptr;
@@ -258,8 +259,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
             // all promoted loads.
             if (LI->hasMetadata(LLVMContext::MD_noundef))
               LI->copyMetadata(*Pair.second.MustExecInstr,
-                               {LLVMContext::MD_range, LLVMContext::MD_nonnull,
-                                LLVMContext::MD_align});
+                               Metadata::PoisonGeneratingIDs);
           }
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());
@@ -335,9 +335,9 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     }
 
     // There potentially are metadata uses for things like llvm.dbg.value.
-    // Replace them with undef, after handling the other regular uses.
-    auto RauwUndefMetadata = make_scope_exit(
-        [&]() { Arg.replaceAllUsesWith(UndefValue::get(Arg.getType())); });
+    // Replace them with poison, after handling the other regular uses.
+    auto RauwPoisonMetadata = make_scope_exit(
+        [&]() { Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType())); });
 
     if (Arg.use_empty())
       continue;

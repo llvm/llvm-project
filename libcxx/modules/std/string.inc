@@ -37,7 +37,7 @@ export namespace std {
 #if _LIBCPP_HAS_CHAR8_T
   using std::u8string;
 #endif
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wstring;
 #endif
 
@@ -51,7 +51,7 @@ export namespace std {
   using std::stoul;
   using std::stoull;
   using std::to_string;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::to_wstring;
 #endif
 
@@ -63,7 +63,7 @@ export namespace std {
 #if _LIBCPP_HAS_CHAR8_T
     using std::pmr::u8string;
 #endif
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
     using std::pmr::wstring;
 #endif
   } // namespace pmr

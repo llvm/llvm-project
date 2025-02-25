@@ -56,14 +56,14 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
     Method.ParentMI = 0;
     Method.LoadAddr = Sym->getAddress();
     Method.LoadSize = Sym->getSize();
-    Method.NameSI = GetStringIdx(Sym->getName());
+    Method.NameSI = GetStringIdx(*Sym->getName());
     Method.ClassFileSI = 0;
     Method.SourceFileSI = 0;
 
     if (!EmitDebugInfo)
       continue;
 
-    auto &Section = Sym->getBlock().getSection();
+    auto &Section = Sym->getSection();
     auto Addr = Sym->getAddress();
     auto SAddr =
         object::SectionedAddress{Addr.getValue(), Section.getOrdinal()};

@@ -163,7 +163,7 @@ inline namespace InlineNS {}
 // CHECK: DeclRefExpr=i:44:14 [type=int] [typekind=Int] [isPOD=1]
 // CHECK: StructDecl=Blob:46:8 (Definition) [type=Blob] [typekind=Record] [isPOD=1] [nbFields=2]
 // CHECK: FieldDecl=i:47:7 (Definition) [type=int] [typekind=Int] [isPOD=1]
-// CHECK: VarDecl=member_pointer:50:12 (Definition) [type=int Blob::*] [typekind=MemberPointer] [isPOD=1]
+// CHECK: VarDecl=member_pointer:50:12 (Definition) [type=int Blob::*] [typekind=MemberPointer] [canonicaltype=int Blob::*] [canonicaltypekind=MemberPointer] [isPOD=1]
 // CHECK: FunctionDecl=elaboratedNamespaceType:52:42 [type=NS::Type (const NS::Type)] [typekind=FunctionProto] [canonicaltype=NS::Type (NS::Type)] [canonicaltypekind=FunctionProto] [resulttype=NS::Type] [resulttypekind=Elaborated] [args= [const NS::Type] [Elaborated]] [isPOD=0]
 // CHECK: NamespaceRef=NS:52:11 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: TypeRef=struct NS::Type:52:23 [type=NS::Type] [typekind=Record] [isPOD=1]

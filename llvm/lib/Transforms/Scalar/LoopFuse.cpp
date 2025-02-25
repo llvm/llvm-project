@@ -60,7 +60,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
@@ -1100,7 +1099,7 @@ private:
 
     LLVM_DEBUG(dbgs() << "Checking if this mem inst can be hoisted.\n");
     for (Instruction *NotHoistedInst : NotHoisting) {
-      if (auto D = DI.depends(&I, NotHoistedInst, true)) {
+      if (auto D = DI.depends(&I, NotHoistedInst)) {
         // Dependency is not read-before-write, write-before-read or
         // write-before-write
         if (D->isFlow() || D->isAnti() || D->isOutput()) {
@@ -1112,7 +1111,7 @@ private:
     }
 
     for (Instruction *ReadInst : FC0.MemReads) {
-      if (auto D = DI.depends(ReadInst, &I, true)) {
+      if (auto D = DI.depends(ReadInst, &I)) {
         // Dependency is not read-before-write
         if (D->isAnti()) {
           LLVM_DEBUG(dbgs() << "Inst depends on a read instruction in FC0.\n");
@@ -1122,7 +1121,7 @@ private:
     }
 
     for (Instruction *WriteInst : FC0.MemWrites) {
-      if (auto D = DI.depends(WriteInst, &I, true)) {
+      if (auto D = DI.depends(WriteInst, &I)) {
         // Dependency is not write-before-read or write-before-write
         if (D->isFlow() || D->isOutput()) {
           LLVM_DEBUG(dbgs() << "Inst depends on a write instruction in FC0.\n");
@@ -1154,7 +1153,7 @@ private:
       return true;
 
     for (Instruction *ReadInst : FC1.MemReads) {
-      if (auto D = DI.depends(&I, ReadInst, true)) {
+      if (auto D = DI.depends(&I, ReadInst)) {
         // Dependency is not write-before-read
         if (D->isFlow()) {
           LLVM_DEBUG(dbgs() << "Inst depends on a read instruction in FC1.\n");
@@ -1164,7 +1163,7 @@ private:
     }
 
     for (Instruction *WriteInst : FC1.MemWrites) {
-      if (auto D = DI.depends(&I, WriteInst, true)) {
+      if (auto D = DI.depends(&I, WriteInst)) {
         // Dependency is not write-before-write or read-before-write
         if (D->isOutput() || D->isAnti()) {
           LLVM_DEBUG(dbgs() << "Inst depends on a write instruction in FC1.\n");
@@ -1336,7 +1335,7 @@ private:
     case FUSION_DEPENDENCE_ANALYSIS_SCEV:
       return accessDiffIsPositive(*FC0.L, *FC1.L, I0, I1, AnyDep);
     case FUSION_DEPENDENCE_ANALYSIS_DA: {
-      auto DepResult = DI.depends(&I0, &I1, true);
+      auto DepResult = DI.depends(&I0, &I1);
       if (!DepResult)
         return true;
 #ifndef NDEBUG
@@ -1663,7 +1662,7 @@ private:
       if (SE.isSCEVable(PHI->getType()))
         SE.forgetValue(PHI);
       if (PHI->hasNUsesOrMore(1))
-        PHI->moveBefore(&*FC0.Header->getFirstInsertionPt());
+        PHI->moveBefore(FC0.Header->getFirstInsertionPt());
       else
         PHI->eraseFromParent();
     }
@@ -1948,7 +1947,7 @@ private:
       if (SE.isSCEVable(PHI->getType()))
         SE.forgetValue(PHI);
       if (PHI->hasNUsesOrMore(1))
-        PHI->moveBefore(&*FC0.Header->getFirstInsertionPt());
+        PHI->moveBefore(FC0.Header->getFirstInsertionPt());
       else
         PHI->eraseFromParent();
     }

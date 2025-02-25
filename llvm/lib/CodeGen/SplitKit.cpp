@@ -14,7 +14,6 @@
 #include "SplitKit.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -569,7 +568,7 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
   SmallVector<unsigned, 8> SubIndexes;
 
   // Abort if we cannot possibly implement the COPY with the given indexes.
-  if (!TRI.getCoveringSubRegIndexes(MRI, RC, LaneMask, SubIndexes))
+  if (!TRI.getCoveringSubRegIndexes(RC, LaneMask, SubIndexes))
     report_fatal_error("Impossible to implement partial COPY");
 
   SlotIndex Def;

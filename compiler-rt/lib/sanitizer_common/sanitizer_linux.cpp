@@ -82,6 +82,12 @@
 #    include <sys/personality.h>
 #  endif
 
+#  if SANITIZER_ANDROID && __ANDROID_API__ < 35
+// The weak `strerrorname_np` (introduced in API level 35) definition,
+// allows for checking the API level at runtime.
+extern "C" SANITIZER_WEAK_ATTRIBUTE const char *strerrorname_np(int);
+#  endif
+
 #  if SANITIZER_LINUX && defined(__loongarch__)
 #    include <sys/sysmacros.h>
 #  endif
@@ -134,9 +140,10 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 // Are we using 32-bit or 64-bit Linux syscalls?
 // x32 (which defines __x86_64__) has SANITIZER_WORDSIZE == 32
 // but it still needs to use 64-bit syscalls.
-#  if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) || \
-                          SANITIZER_WORDSIZE == 64 ||                      \
-                          (defined(__mips__) && _MIPS_SIM == _ABIN32))
+#  if SANITIZER_LINUX &&                                \
+      (defined(__x86_64__) || defined(__powerpc64__) || \
+       SANITIZER_WORDSIZE == 64 ||                      \
+       (defined(__mips__) && defined(_ABIN32) && _MIPS_SIM == _ABIN32))
 #    define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
 #  else
 #    define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
@@ -164,33 +171,56 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
+#  if SANITIZER_LINUX
+// Deletes the specified signal from newset, if it is not present in oldset
+// Equivalently: newset[signum] = newset[signum] & oldset[signum]
+static void KeepUnblocked(__sanitizer_sigset_t &newset,
+                          __sanitizer_sigset_t &oldset, int signum) {
+  // FIXME: https://github.com/google/sanitizers/issues/1816
+  if (SANITIZER_ANDROID || !internal_sigismember(&oldset, signum))
+    internal_sigdelset(&newset, signum);
+}
+#  endif
+
 // Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
-  __sanitizer_sigset_t set;
-  internal_sigfillset(&set);
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+  __sanitizer_sigset_t newset;
+  internal_sigfillset(&newset);
+
+#  if SANITIZER_LINUX
+  __sanitizer_sigset_t currentset;
+
+#    if !SANITIZER_ANDROID
+  // FIXME: https://github.com/google/sanitizers/issues/1816
+  SetSigProcMask(NULL, &currentset);
+
   // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
   // on any thread, setuid call hangs.
   // See test/sanitizer_common/TestCases/Linux/setuid.c.
-  internal_sigdelset(&set, 33);
-#  endif
-#  if SANITIZER_LINUX
+  KeepUnblocked(newset, currentset, 33);
+#    endif  // !SANITIZER_ANDROID
+
   // Seccomp-BPF-sandboxed processes rely on SIGSYS to handle trapped syscalls.
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
-  internal_sigdelset(&set, 31);
+  KeepUnblocked(newset, currentset, 31);
 
+#    if !SANITIZER_ANDROID
   // Don't block synchronous signals
-  internal_sigdelset(&set, SIGSEGV);
-  internal_sigdelset(&set, SIGBUS);
-  internal_sigdelset(&set, SIGILL);
-  internal_sigdelset(&set, SIGTRAP);
-  internal_sigdelset(&set, SIGABRT);
-  internal_sigdelset(&set, SIGFPE);
-  internal_sigdelset(&set, SIGPIPE);
-#  endif
+  // but also don't unblock signals that the user had deliberately blocked.
+  // FIXME: https://github.com/google/sanitizers/issues/1816
+  KeepUnblocked(newset, currentset, SIGSEGV);
+  KeepUnblocked(newset, currentset, SIGBUS);
+  KeepUnblocked(newset, currentset, SIGILL);
+  KeepUnblocked(newset, currentset, SIGTRAP);
+  KeepUnblocked(newset, currentset, SIGABRT);
+  KeepUnblocked(newset, currentset, SIGFPE);
+  KeepUnblocked(newset, currentset, SIGPIPE);
+#    endif  //! SANITIZER_ANDROID
 
-  SetSigProcMask(&set, oldset);
+#  endif  // SANITIZER_LINUX
+
+  SetSigProcMask(&newset, oldset);
 }
 
 ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
@@ -256,6 +286,11 @@ int internal_madvise(uptr addr, uptr length, int advice) {
   return internal_syscall(SYSCALL(madvise), addr, length, advice);
 }
 
+#    if SANITIZER_FREEBSD
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return internal_syscall(SYSCALL(close_range), lowfd, highfd, flags);
+}
+#    endif
 uptr internal_close(fd_t fd) { return internal_syscall(SYSCALL(close), fd); }
 
 uptr internal_open(const char *filename, int flags) {
@@ -401,8 +436,9 @@ uptr internal_stat(const char *path, void *buf) {
                              AT_NO_AUTOMOUNT, STATX_BASIC_STATS, (uptr)&bufx);
   statx_to_stat(&bufx, (struct stat *)buf);
   return res;
-#      elif (SANITIZER_WORDSIZE == 64 || SANITIZER_X32 ||    \
-             (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+#      elif (                                                                 \
+          SANITIZER_WORDSIZE == 64 || SANITIZER_X32 ||                        \
+          (defined(__mips__) && defined(_ABIN32) && _MIPS_SIM == _ABIN32)) && \
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
@@ -439,8 +475,9 @@ uptr internal_lstat(const char *path, void *buf) {
                              STATX_BASIC_STATS, (uptr)&bufx);
   statx_to_stat(&bufx, (struct stat *)buf);
   return res;
-#      elif (defined(_LP64) || SANITIZER_X32 ||              \
-             (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+#      elif (                                                                 \
+          defined(_LP64) || SANITIZER_X32 ||                                  \
+          (defined(__mips__) && defined(_ABIN32) && _MIPS_SIM == _ABIN32)) && \
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
@@ -1209,6 +1246,16 @@ uptr GetPageSize() {
   CHECK_EQ(rv, 0);
   return (uptr)pz;
 #    elif SANITIZER_USE_GETAUXVAL
+#      if SANITIZER_ANDROID && __ANDROID_API__ < 35
+  // The 16 KB page size was introduced in Android 15 (API level 35), while
+  // earlier versions of Android always used a 4 KB page size.
+  // We are checking the weak definition of `strerrorname_np` (introduced in API
+  // level 35) because some earlier API levels crashed when
+  // `getauxval(AT_PAGESZ)` was called from the `.preinit_array`.
+  if (!strerrorname_np)
+    return 4096;
+#      endif
+
   return getauxval(AT_PAGESZ);
 #    else
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
@@ -1821,11 +1868,6 @@ int internal_uname(struct utsname *buf) {
 #  endif
 
 #  if SANITIZER_ANDROID
-#    if __ANDROID_API__ < 21
-extern "C" __attribute__((weak)) int dl_iterate_phdr(
-    int (*)(struct dl_phdr_info *, size_t, void *), void *);
-#    endif
-
 static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
                                    void *data) {
   // Any name starting with "lib" indicates a bug in L where library base names
@@ -1841,9 +1883,7 @@ static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
 static atomic_uint32_t android_api_level;
 
 static AndroidApiLevel AndroidDetectApiLevelStatic() {
-#    if __ANDROID_API__ <= 19
-  return ANDROID_KITKAT;
-#    elif __ANDROID_API__ <= 22
+#    if __ANDROID_API__ <= 22
   return ANDROID_LOLLIPOP_MR1;
 #    else
   return ANDROID_POST_LOLLIPOP;
@@ -1851,8 +1891,6 @@ static AndroidApiLevel AndroidDetectApiLevelStatic() {
 }
 
 static AndroidApiLevel AndroidDetectApiLevel() {
-  if (!&dl_iterate_phdr)
-    return ANDROID_KITKAT;  // K or lower
   bool base_name_seen = false;
   dl_iterate_phdr(dl_iterate_phdr_test_cb, &base_name_seen);
   if (base_name_seen)

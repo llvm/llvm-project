@@ -9,55 +9,38 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAP_H
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
-#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
-
-#include <atomic>
-#include <condition_variable>
-#include <cstdio>
-#include <future>
-#include <iosfwd>
-#include <map>
-#include <optional>
-#include <set>
-#include <thread>
-
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/JSON.h"
-#include "llvm/Support/Threading.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include "lldb/API/SBAttachInfo.h"
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBBreakpointLocation.h"
-#include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBCommunication.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBEvent.h"
-#include "lldb/API/SBFormat.h"
-#include "lldb/API/SBHostOS.h"
-#include "lldb/API/SBInstruction.h"
-#include "lldb/API/SBInstructionList.h"
-#include "lldb/API/SBLanguageRuntime.h"
-#include "lldb/API/SBLaunchInfo.h"
-#include "lldb/API/SBLineEntry.h"
-#include "lldb/API/SBListener.h"
-#include "lldb/API/SBProcess.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/API/SBStringList.h"
-#include "lldb/API/SBTarget.h"
-#include "lldb/API/SBThread.h"
-
+#include "DAPForward.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
+#include "OutputRedirector.h"
 #include "ProgressEvent.h"
-#include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
+#include "lldb/API/SBBroadcaster.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFile.h"
+#include "lldb/API/SBFormat.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/API/SBValueList.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Threading.h"
+#include <map>
+#include <mutex>
+#include <optional>
+#include <thread>
+#include <vector>
 
 #define VARREF_LOCALS (int64_t)1
 #define VARREF_GLOBALS (int64_t)2
@@ -67,7 +50,8 @@
 
 namespace lldb_dap {
 
-typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
+typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
+    SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
@@ -82,7 +66,7 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(const llvm::json::Object &command);
+typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
 typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
@@ -135,26 +119,40 @@ struct Variables {
 };
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
+  bool DoExecute(lldb::SBDebugger debugger, char **command,
+                 lldb::SBCommandReturnObject &result) override;
+};
+
+struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
+  DAP &dap;
+  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct DAP {
-  std::string debug_adaptor_path;
+  llvm::StringRef debug_adaptor_path;
+  std::ofstream *log;
   InputStream input;
   OutputStream output;
+  lldb::SBFile in;
+  OutputRedirector out;
+  OutputRedirector err;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   Variables variables;
   lldb::SBBroadcaster broadcaster;
   std::thread event_thread;
   std::thread progress_event_thread;
-  std::unique_ptr<std::ofstream> log;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -185,7 +183,7 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  std::map<std::string, RequestCallback> request_handlers;
+  std::map<std::string, RequestCallback, std::less<>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -206,12 +204,22 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP();
+  DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
+      StreamDescriptor input, StreamDescriptor output);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
+
+  /// Redirect stdout and stderr fo the IDE's console output.
+  ///
+  /// Errors in this operation will be printed to the log file and the IDE's
+  /// console output as well.
+  llvm::Error ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr);
+
+  /// Stop the redirected IO threads and associated pipes.
+  void StopIO();
 
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
@@ -360,8 +368,6 @@ private:
   // JSON bytes.
   void SendJSON(const std::string &json_str);
 };
-
-extern DAP g_dap;
 
 } // namespace lldb_dap
 

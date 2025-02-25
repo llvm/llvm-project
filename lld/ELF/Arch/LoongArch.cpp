@@ -53,6 +53,7 @@ enum Op {
   ADDI_W = 0x02800000,
   ADDI_D = 0x02c00000,
   ANDI = 0x03400000,
+  PCADDI = 0x18000000,
   PCADDU12I = 0x1c000000,
   LD_W = 0x28800000,
   LD_D = 0x28c00000,
@@ -131,6 +132,10 @@ static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
   return begin == 63 ? v >> end : (v & ((1ULL << (begin + 1)) - 1)) >> end;
 }
 
+static uint32_t getD5(uint64_t v) { return extractBits(v, 4, 0); }
+
+static uint32_t getJ5(uint64_t v) { return extractBits(v, 9, 5); }
+
 static uint32_t setD5k16(uint32_t insn, uint32_t imm) {
   uint32_t immLo = extractBits(imm, 15, 0);
   uint32_t immHi = extractBits(imm, 20, 16);
@@ -165,7 +170,7 @@ static void handleUleb128(Ctx &ctx, uint8_t *loc, uint64_t val) {
   const char *error = nullptr;
   uint64_t orig = decodeULEB128(loc, &count, nullptr, &error);
   if (count > maxcount || (count == maxcount && error))
-    errorOrWarn(getErrorLoc(ctx, loc) + "extra space for uleb128");
+    Err(ctx) << getErrorLoc(ctx, loc) << "extra space for uleb128";
   uint64_t mask = count < maxcount ? (1ULL << 7 * count) - 1 : -1ULL;
   encodeULEB128((orig + val) & mask, loc, count);
 }
@@ -250,9 +255,9 @@ uint32_t LoongArch::calcEFlags() const {
 
     if ((flags & EF_LOONGARCH_ABI_MODIFIER_MASK) !=
         (target & EF_LOONGARCH_ABI_MODIFIER_MASK))
-      error(toString(f) +
-            ": cannot link object files with different ABI from " +
-            toString(targetFile));
+      ErrAlways(ctx) << f
+                     << ": cannot link object files with different ABI from "
+                     << targetFile;
 
     // We cannot process psABI v1.x / object ABI v0 files (containing stack
     // relocations), unlike ld.bfd.
@@ -270,7 +275,7 @@ uint32_t LoongArch::calcEFlags() const {
     // and the few impacted users are advised to simply rebuild world or
     // reinstall a recent system.
     if ((flags & EF_LOONGARCH_OBJABI_MASK) != EF_LOONGARCH_OBJABI_V1)
-      error(toString(f) + ": unsupported object file ABI version");
+      ErrAlways(ctx) << f << ": unsupported object file ABI version";
   }
 
   return target;
@@ -279,8 +284,7 @@ uint32_t LoongArch::calcEFlags() const {
 int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   case R_LARCH_32:
   case R_LARCH_TLS_DTPMOD32:
@@ -316,9 +320,9 @@ void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void LoongArch::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
     if (ctx.arg.is64)
-      write64le(buf, s.getVA());
+      write64le(buf, s.getVA(ctx));
     else
-      write32le(buf, s.getVA());
+      write32le(buf, s.getVA(ctx));
   }
 }
 
@@ -429,7 +433,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_SUB_ULEB128:
     // The LoongArch add/sub relocs behave like the RISCV counterparts; reuse
     // the RelExpr to avoid code duplication.
-    return R_RISCV_ADD;
+    return RE_RISCV_ADD;
   case R_LARCH_32_PCREL:
   case R_LARCH_64_PCREL:
   case R_LARCH_PCREL20_S2:
@@ -445,17 +449,17 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_IE_PC_HI20:
   case R_LARCH_TLS_IE64_PC_LO20:
   case R_LARCH_TLS_IE64_PC_HI12:
-    return R_LOONGARCH_GOT_PAGE_PC;
+    return RE_LOONGARCH_GOT_PAGE_PC;
   case R_LARCH_GOT_PC_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
-    return R_LOONGARCH_GOT;
+    return RE_LOONGARCH_GOT;
   case R_LARCH_TLS_LD_PC_HI20:
   case R_LARCH_TLS_GD_PC_HI20:
-    return R_LOONGARCH_TLSGD_PAGE_PC;
+    return RE_LOONGARCH_TLSGD_PAGE_PC;
   case R_LARCH_PCALA_HI20:
-    // Why not R_LOONGARCH_PAGE_PC, majority of references don't go through PLT
-    // anyway so why waste time checking only to get everything relaxed back to
-    // it?
+    // Why not RE_LOONGARCH_PAGE_PC, majority of references don't go through
+    // PLT anyway so why waste time checking only to get everything relaxed back
+    // to it?
     //
     // This is again due to the R_LARCH_PCALA_LO12 on JIRL case, where we want
     // both the HI20 and LO12 to potentially refer to the PLT. But in reality
@@ -475,12 +479,12 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     //
     // So, unfortunately we have to again workaround this quirk the same way as
     // BFD: assuming every R_LARCH_PCALA_HI20 is potentially PLT-needing, only
-    // relaxing back to R_LOONGARCH_PAGE_PC if it's known not so at a later
+    // relaxing back to RE_LOONGARCH_PAGE_PC if it's known not so at a later
     // stage.
-    return R_LOONGARCH_PLT_PAGE_PC;
+    return RE_LOONGARCH_PLT_PAGE_PC;
   case R_LARCH_PCALA64_LO20:
   case R_LARCH_PCALA64_HI12:
-    return R_LOONGARCH_PAGE_PC;
+    return RE_LOONGARCH_PAGE_PC;
   case R_LARCH_GOT_HI20:
   case R_LARCH_GOT_LO12:
   case R_LARCH_GOT64_LO20:
@@ -502,7 +506,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_DESC_PC_HI20:
   case R_LARCH_TLS_DESC64_PC_LO20:
   case R_LARCH_TLS_DESC64_PC_HI12:
-    return R_LOONGARCH_TLSDESC_PAGE_PC;
+    return RE_LOONGARCH_TLSDESC_PAGE_PC;
   case R_LARCH_TLS_DESC_PC_LO12:
   case R_LARCH_TLS_DESC_LD:
   case R_LARCH_TLS_DESC_HI20:
@@ -528,8 +532,8 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   //
   // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -744,6 +748,88 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
+static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return i + 1 < relocs.size() && relocs[i + 1].type == R_LARCH_RELAX;
+}
+
+static bool isPairRelaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return relaxable(relocs, i) && relaxable(relocs, i + 2) &&
+         relocs[i].offset + 4 == relocs[i + 2].offset;
+}
+
+// Relax code sequence.
+// From:
+//   pcalau12i $a0, %pc_hi20(sym)
+//   addi.w/d $a0, $a0, %pc_lo12(sym)
+// To:
+//   pcaddi $a0, %pc_lo12(sym)
+//
+// From:
+//   pcalau12i $a0, %got_pc_hi20(sym_got)
+//   ld.w/d $a0, $a0, %got_pc_lo12(sym_got)
+// To:
+//   pcaddi $a0, %got_pc_hi20(sym_got)
+static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
+                            uint64_t loc, Relocation &rHi20, Relocation &rLo12,
+                            uint32_t &remove) {
+  // check if the relocations are relaxable sequences.
+  if (!((rHi20.type == R_LARCH_PCALA_HI20 &&
+         rLo12.type == R_LARCH_PCALA_LO12) ||
+        (rHi20.type == R_LARCH_GOT_PC_HI20 &&
+         rLo12.type == R_LARCH_GOT_PC_LO12)))
+    return;
+
+  // GOT references to absolute symbols can't be relaxed to use pcaddi in
+  // position-independent code, because these instructions produce a relative
+  // address.
+  // Meanwhile skip undefined, preemptible and STT_GNU_IFUNC symbols, because
+  // these symbols may be resolve in runtime.
+  if (rHi20.type == R_LARCH_GOT_PC_HI20 &&
+      (!rHi20.sym->isDefined() || rHi20.sym->isPreemptible ||
+       rHi20.sym->isGnuIFunc() ||
+       (ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section)))
+    return;
+
+  uint64_t dest = 0;
+  if (rHi20.expr == RE_LOONGARCH_PLT_PAGE_PC)
+    dest = rHi20.sym->getPltVA(ctx);
+  else if (rHi20.expr == RE_LOONGARCH_PAGE_PC ||
+           rHi20.expr == RE_LOONGARCH_GOT_PAGE_PC)
+    dest = rHi20.sym->getVA(ctx);
+  else {
+    Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc) << "unknown expr ("
+             << rHi20.expr << ") against symbol " << rHi20.sym
+             << "in relaxPCHi20Lo12";
+    return;
+  }
+  dest += rHi20.addend;
+
+  const int64_t displace = dest - loc;
+  // Check if the displace aligns 4 bytes or exceeds the range of pcaddi.
+  if ((displace & 0x3) != 0 || !isInt<22>(displace))
+    return;
+
+  // Note: If we can ensure that the .o files generated by LLVM only contain
+  // relaxable instruction sequences with R_LARCH_RELAX, then we do not need to
+  // decode instructions. The relaxable instruction sequences imply the
+  // following constraints:
+  // * For relocation pairs related to got_pc, the opcodes of instructions
+  // must be pcalau12i + ld.w/d. In other cases, the opcodes must be pcalau12i +
+  // addi.w/d.
+  // * The destination register of pcalau12i is guaranteed to be used only by
+  // the immediately following instruction.
+  const uint32_t currInsn = read32le(sec.content().data() + rHi20.offset);
+  const uint32_t nextInsn = read32le(sec.content().data() + rLo12.offset);
+  // Check if use the same register.
+  if (getD5(currInsn) != getJ5(nextInsn) || getJ5(nextInsn) != getD5(nextInsn))
+    return;
+
+  sec.relaxAux->relocTypes[i] = R_LARCH_RELAX;
+  sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
+  sec.relaxAux->writes.push_back(insn(PCADDI, getD5(nextInsn), 0, 0));
+  remove = 4;
+}
+
 static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
@@ -774,14 +860,20 @@ static bool relax(Ctx &ctx, InputSection &sec) {
         remove = allBytes - curBytes;
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
-                    "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(allBytes) + " bytes available for " +
-                    "requested alignment of " + Twine(align) + " bytes");
+        Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
+                 << "insufficient padding bytes for " << r.type << ": "
+                 << allBytes << " bytes available for "
+                 << "requested alignment of " << align << " bytes";
         remove = 0;
       }
       break;
     }
+    case R_LARCH_PCALA_HI20:
+    case R_LARCH_GOT_PC_HI20:
+      // The overflow check for i+2 will be carried out in isPairRelaxable.
+      if (isPairRelaxable(relocs, i))
+        relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
+      break;
     }
 
     // For all anchors whose offsets are <= r.offset, they are preceded by
@@ -808,7 +900,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    fatal("section size decrease is too large: " + Twine(delta));
+    Fatal(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }
@@ -839,7 +931,7 @@ bool LoongArch::relaxOnce(int pass) const {
 }
 
 void LoongArch::finalizeRelax(int passes) const {
-  log("relaxation passes: " + Twine(passes));
+  Log(ctx) << "relaxation passes: " << passes;
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -852,7 +944,8 @@ void LoongArch::finalizeRelax(int passes) const {
       MutableArrayRef<Relocation> rels = sec->relocs();
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
-      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      size_t writesIdx = 0;
+      uint8_t *p = ctx.bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;
@@ -868,11 +961,29 @@ void LoongArch::finalizeRelax(int passes) const {
           continue;
 
         // Copy from last location to the current relocated location.
-        const Relocation &r = rels[i];
+        Relocation &r = rels[i];
         uint64_t size = r.offset - offset;
         memcpy(p, old.data() + offset, size);
         p += size;
-        offset = r.offset + remove;
+
+        int64_t skip = 0;
+        if (RelType newType = aux.relocTypes[i]) {
+          switch (newType) {
+          case R_LARCH_RELAX:
+            break;
+          case R_LARCH_PCREL20_S2:
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            // RelExpr is needed for relocating.
+            r.expr = r.sym->hasFlag(NEEDS_PLT) ? R_PLT_PC : R_PC;
+            break;
+          default:
+            llvm_unreachable("unsupported type");
+          }
+        }
+
+        p += skip;
+        offset = r.offset + skip + remove;
       }
       memcpy(p, old.data() + offset, old.size() - offset);
 

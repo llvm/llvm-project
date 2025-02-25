@@ -22,10 +22,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  if __has_builtin(__builtin_is_implicit_lifetime)
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_implicit_lifetime : public bool_constant<__builtin_is_implicit_lifetime(_Tp)> {};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_implicit_lifetime
+    : public bool_constant<__builtin_is_implicit_lifetime(_Tp)> {};
 
 template <class _Tp>
-inline constexpr bool is_implicit_lifetime_v = __builtin_is_implicit_lifetime(_Tp);
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_implicit_lifetime_v = __builtin_is_implicit_lifetime(_Tp);
 
 #  endif
 #endif

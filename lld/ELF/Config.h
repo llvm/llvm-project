@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -26,10 +27,10 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TarWriter.h"
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -43,6 +44,7 @@ class SharedFile;
 class InputSectionBase;
 class EhInputSection;
 class Defined;
+class Undefined;
 class Symbol;
 class SymbolTable;
 class BitcodeCompiler;
@@ -172,13 +174,13 @@ private:
   bool inLib = false;
 
   std::unique_ptr<BitcodeCompiler> lto;
-  std::vector<InputFile *> files;
+  SmallVector<std::unique_ptr<InputFile>, 0> files, ltoObjectFiles;
 
 public:
   // See InputFile::groupId.
   uint32_t nextGroupId;
   bool isInGroup;
-  InputFile *armCmseImpLib = nullptr;
+  std::unique_ptr<InputFile> armCmseImpLib;
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
 
@@ -262,6 +264,12 @@ struct Config {
   bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
   CGProfileSortKind callGraphProfileSort;
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  bool bpVerboseSectionOrderer = false;
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
@@ -290,7 +298,6 @@ struct Config {
   bool gdbIndex;
   bool gnuHash = false;
   bool gnuUnique;
-  bool hasDynSymTab;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
@@ -304,7 +311,6 @@ struct Config {
   bool mipsN32Abi = false;
   bool mmapOutputFile;
   bool nmagic;
-  bool noDynamicLinker = false;
   bool noinhibitExec;
   bool nostdlib;
   bool oFormatBinary;
@@ -318,6 +324,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  std::optional<uint64_t> randomizeSectionPadding;
   bool rejectMismatch;
   bool relax;
   bool relaxGP;
@@ -360,6 +367,7 @@ struct Config {
   bool zInterpose;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
+  bool zNoBtCfi;
   bool zNodefaultlib;
   bool zNodelete;
   bool zNodlopen;
@@ -403,7 +411,7 @@ struct Config {
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
-  StringRef packageMetadata;
+  SmallVector<uint8_t, 0> packageMetadata;
 
   // The following config options do not directly correspond to any
   // particular command line options.
@@ -505,6 +513,16 @@ struct DuplicateSymbol {
   uint64_t value;
 };
 
+struct UndefinedDiag {
+  Undefined *sym;
+  struct Loc {
+    InputSectionBase *sec;
+    uint64_t offset;
+  };
+  SmallVector<Loc, 0> locs;
+  bool isWarning;
+};
+
 // Linker generated sections which can be used as inputs and are not specific to
 // a partition.
 struct InStruct {
@@ -512,6 +530,8 @@ struct InStruct {
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
+  std::unique_ptr<SyntheticSection> gnuProperty;
+  std::unique_ptr<SyntheticSection> gnuStack;
   std::unique_ptr<GotSection> got;
   std::unique_ptr<GotPltSection> gotPlt;
   std::unique_ptr<IgotPltSection> igotPlt;
@@ -537,11 +557,9 @@ struct InStruct {
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;
   std::unique_ptr<SymtabShndxSection> symTabShndx;
-
-  void reset();
 };
 
-struct Ctx {
+struct Ctx : CommonLinkerContext {
   Config arg;
   LinkerDriver driver;
   LinkerScript *script;
@@ -549,15 +567,15 @@ struct Ctx {
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
-  uint8_t *bufferStart;
-  Partition *mainPart;
-  PhdrEntry *tlsPhdr;
+  uint8_t *bufferStart = nullptr;
+  Partition *mainPart = nullptr;
+  PhdrEntry *tlsPhdr = nullptr;
   struct OutSections {
-    OutputSection *elfHeader;
-    OutputSection *programHeaders;
-    OutputSection *preinitArray;
-    OutputSection *initArray;
-    OutputSection *finiArray;
+    std::unique_ptr<OutputSection> elfHeader;
+    std::unique_ptr<OutputSection> programHeaders;
+    OutputSection *preinitArray = nullptr;
+    OutputSection *initArray = nullptr;
+    OutputSection *finiArray = nullptr;
   };
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
@@ -603,8 +621,9 @@ struct Ctx {
     // _TLS_MODULE_BASE_ on targets that support TLSDESC.
     Defined *tlsModuleBase;
   };
-  ElfSym sym;
+  ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
+  SmallVector<Symbol *, 0> synthesizedSymbols;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -618,6 +637,11 @@ struct Ctx {
   SmallVector<SymbolAux, 0> symAux;
   // Duplicate symbol candidates.
   SmallVector<DuplicateSymbol, 0> duplicates;
+  // Undefined diagnostics are collected in a vector and emitted once all of
+  // them are known, so that some postprocessing on the list of undefined
+  // symbols can happen before lld emits diagnostics.
+  std::mutex relocMutex;
+  SmallVector<UndefinedDiag, 0> undefErrs;
   // Symbols in a non-prevailing COMDAT group which should be changed to an
   // Undefined.
   SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
@@ -634,7 +658,9 @@ struct Ctx {
   // archive.
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
-  InputFile *internalFile;
+  InputFile *internalFile = nullptr;
+  // True if symbols can be exported (isExported) or preemptible.
+  bool hasDynsym = false;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
@@ -643,7 +669,9 @@ struct Ctx {
   std::atomic<bool> needsTlsLd{false};
   // True if all native vtable symbols have corresponding type info symbols
   // during LTO.
-  bool ltoAllVtablesHaveTypeInfos;
+  bool ltoAllVtablesHaveTypeInfos = false;
+  // Number of Vernaux entries (needed shared object names).
+  uint32_t vernauxNum = 0;
 
   // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
   // order. Each DEFINED(sym) evaluation checks whether the reference happens
@@ -657,14 +685,11 @@ struct Ctx {
   llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
   Ctx();
-  void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
-
-LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
@@ -672,12 +697,55 @@ static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
-void errorOrWarn(const Twine &msg);
+struct ELFSyncStream : SyncStream {
+  Ctx &ctx;
+  ELFSyncStream(Ctx &ctx, DiagLevel level)
+      : SyncStream(ctx.e, level), ctx(ctx) {}
+};
 
-static inline void internalLinkerError(StringRef loc, const Twine &msg) {
-  errorOrWarn(loc + "internal linker error: " + msg + "\n" +
-              llvm::getBugReportMsg());
+template <typename T>
+std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>,
+                 const ELFSyncStream &>
+operator<<(const ELFSyncStream &s, T &&v) {
+  s.os << std::forward<T>(v);
+  return s;
 }
+
+inline const ELFSyncStream &operator<<(const ELFSyncStream &s, const char *v) {
+  s.os << v;
+  return s;
+}
+
+inline const ELFSyncStream &operator<<(const ELFSyncStream &s, Error v) {
+  s.os << llvm::toString(std::move(v));
+  return s;
+}
+
+// Report a log if --verbose is specified.
+ELFSyncStream Log(Ctx &ctx);
+
+// Print a message to stdout.
+ELFSyncStream Msg(Ctx &ctx);
+
+// Report a warning. Upgraded to an error if --fatal-warnings is specified.
+ELFSyncStream Warn(Ctx &ctx);
+
+// Report an error that will suppress the output file generation. Downgraded to
+// a warning if --noinhibit-exec is specified.
+ELFSyncStream Err(Ctx &ctx);
+
+// Report an error regardless of --noinhibit-exec.
+ELFSyncStream ErrAlways(Ctx &ctx);
+
+// Report a fatal error that exits immediately. This should generally be avoided
+// in favor of Err.
+ELFSyncStream Fatal(Ctx &ctx);
+
+uint64_t errCount(Ctx &ctx);
+
+ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
+
+#define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
 
 } // namespace lld::elf
 

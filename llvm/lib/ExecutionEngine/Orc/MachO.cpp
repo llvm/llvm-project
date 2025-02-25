@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -226,6 +227,40 @@ getMachOSliceRangeForTriple(MemoryBufferRef UBBuf, const Triple &TT) {
     return UB.takeError();
 
   return getMachOSliceRangeForTriple(**UB, TT);
+}
+
+Error ForceLoadMachOArchiveMembers::operator()(MemoryBufferRef MemberBuf) {
+  if (!ObjCOnly)
+    return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+
+  // We need to check whether this archive member contains any Objective-C
+  // or Swift metadata.
+
+  auto Obj = object::ObjectFile::createObjectFile(MemberBuf);
+  if (!Obj) {
+    // We silently ignore invalid files.
+    consumeError(Obj.takeError());
+    return Error::success();
+  }
+
+  if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(&**Obj)) {
+    // Load the object if any recognized special section is present.
+    for (auto Sec : MachOObj->sections()) {
+      auto SegName =
+          MachOObj->getSectionFinalSegmentName(Sec.getRawDataRefImpl());
+      if (auto SecName = Sec.getName()) {
+        if (*SecName == "__objc_classlist" || *SecName == "__objc_protolist" ||
+            *SecName == "__objc_clsrolist" || *SecName == "__objc_catlist" ||
+            *SecName == "__objc_catlist2" || *SecName == "__objc_nlcatlist" ||
+            (SegName == "__TEXT" && (*SecName).starts_with("__swift") &&
+             *SecName != "__swift_modhash"))
+          return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+      } else
+        return SecName.takeError();
+    }
+  }
+
+  return Error::success();
 }
 
 } // End namespace orc.

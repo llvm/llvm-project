@@ -244,8 +244,8 @@ declare <32 x i1> @llvm.x86.avx512fp16.fpclass.ph.512(<32 x half>, i32)
 define i32 @test_int_x86_avx512_fpclass_ph_512(<32 x half> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_ph_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassph $2, %zmm0, %k1
-; CHECK-NEXT:    vfpclassph $4, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    vfpclassph $2, %zmm0, %k1 # k1 = isPositiveZero(zmm0)
+; CHECK-NEXT:    vfpclassph $4, %zmm0, %k0 {%k1} # k0 {%k1} = isNegativeZero(zmm0)
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -261,8 +261,8 @@ declare i8 @llvm.x86.avx512fp16.mask.fpclass.sh(<8 x half>, i32, i8)
 define i8 @test_int_x86_avx512_mask_fpclass_sh(<8 x half> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_sh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclasssh $4, %xmm0, %k1
-; CHECK-NEXT:    vfpclasssh $2, %xmm0, %k0 {%k1}
+; CHECK-NEXT:    vfpclasssh $4, %xmm0, %k1 # k1 = isNegativeZero(xmm0)
+; CHECK-NEXT:    vfpclasssh $2, %xmm0, %k0 {%k1} # k0 {%k1} = isPositiveZero(xmm0)
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -274,7 +274,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_sh(<8 x half> %x0) {
 define i8 @test_int_x86_avx512_mask_fpclass_sh_load(ptr %x0ptr) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_sh_load:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclasssh $4, (%rdi), %k0
+; CHECK-NEXT:    vfpclasssh $4, (%rdi), %k0 # k0 = isNegativeZero(mem)
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq

@@ -62,6 +62,16 @@ def CodeModelDocs : Documentation {
   let Content = [{
 The ``model`` attribute allows overriding the translation unit's
 code model (specified by ``-mcmodel``) for a specific global variable.
+
+On LoongArch, allowed values are "normal", "medium", "extreme".
+
+On x86-64, allowed values are ``"small"`` and ``"large"``. ``"small"`` is
+roughly equivalent to ``-mcmodel=small``, meaning the global is considered
+"small" placed closer to the ``.text`` section relative to "large" globals, and
+to prefer using 32-bit relocations to access the global. ``"large"`` is roughly
+equivalent to ``-mcmodel=large``, meaning the global is considered "large" and
+placed further from the ``.text`` section relative to "small" globals, and
+64-bit relocations must be used to access the global.
   }];
   let Heading = "model";
 }
@@ -121,11 +131,12 @@ def InitPriorityDocs : Documentation {
 In C++, the order in which global variables are initialized across translation
 units is unspecified, unlike the ordering within a single translation unit. The
 ``init_priority`` attribute allows you to specify a relative ordering for the
-initialization of objects declared at namespace scope in C++. The priority is
-given as an integer constant expression between 101 and 65535 (inclusive).
-Priorities outside of that range are reserved for use by the implementation. A
-lower value indicates a higher priority of initialization. Note that only the
-relative ordering of values is important. For example:
+initialization of objects declared at namespace scope in C++ within a single
+linked image on supported platforms. The priority is given as an integer constant
+expression between 101 and 65535 (inclusive). Priorities outside of that range are
+reserved for use by the implementation. A lower value indicates a higher priority
+of initialization. Note that only the relative ordering of values is important.
+For example:
 
 .. code-block:: c++
 
@@ -136,9 +147,15 @@ relative ordering of values is important. For example:
 ``Obj2`` will be initialized *before* ``Obj1`` despite the usual order of
 initialization being the opposite.
 
+Note that this attribute does not control the initialization order of objects
+across final linked image boundaries like shared objects and executables.
+
 On Windows, ``init_seg(compiler)`` is represented with a priority of 200 and
 ``init_seg(library)`` is represented with a priority of 400. ``init_seg(user)``
 uses the default 65535 priority.
+
+On MachO platforms, this attribute also does not control the order of initialization
+across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
 other language modes. Currently, this attribute is not implemented on z/OS.
@@ -452,6 +469,181 @@ function marked with the ``sycl_kernel`` attribute:
   generate the OpenCL kernel body, and the OpenCL kernel must return ``void``.
 
 The SYCL kernel in the previous code sample meets these expectations.
+  }];
+}
+
+def SYCLKernelEntryPointDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sycl_kernel_entry_point`` attribute facilitates the generation of an
+offload kernel entry point, sometimes called a SYCL kernel caller function,
+suitable for invoking a SYCL kernel on an offload device. The attribute is
+intended for use in the implementation of SYCL kernel invocation functions
+like the ``single_task`` and ``parallel_for`` member functions of the
+``sycl::handler`` class specified in section 4.9.4, "Command group ``handler``
+class", of the SYCL 2020 specification.
+
+The attribute requires a single type argument that specifies a class type that
+meets the requirements for a SYCL kernel name as described in section 5.2,
+"Naming of kernels", of the SYCL 2020 specification. A unique kernel name type
+is required for each function declared with the attribute. The attribute may
+not first appear on a declaration that follows a definition of the function.
+
+The attribute only appertains to functions and only those that meet the
+following requirements.
+
+* Has a non-deduced ``void`` return type.
+* Is not a non-static member function, constructor, or destructor.
+* Is not a C variadic function.
+* Is not a coroutine.
+* Is not defined as deleted or as defaulted.
+* Is not defined with a function try block.
+* Is not declared with the ``constexpr`` or ``consteval`` specifiers.
+* Is not declared with the ``[[noreturn]]`` attribute.
+
+Use in the implementation of a SYCL kernel invocation function might look as
+follows.
+
+.. code-block:: c++
+
+  namespace sycl {
+  class handler {
+    template<typename KernelNameType, typename KernelType>
+    [[ clang::sycl_kernel_entry_point(KernelNameType) ]]
+    static void kernel_entry_point(KernelType kernel) {
+      kernel();
+    }
+
+  public:
+    template<typename KernelNameType, typename KernelType>
+    void single_task(KernelType kernel) {
+      // Call kernel_entry_point() to trigger generation of an offload
+      // kernel entry point.
+      kernel_entry_point<KernelNameType>(kernel);
+      // Call functions appropriate for the desired offload backend
+      // (OpenCL, CUDA, HIP, Level Zero, etc...).
+    }
+  };
+  } // namespace sycl
+
+A SYCL kernel is a callable object of class type that is constructed on a host,
+often via a lambda expression, and then passed to a SYCL kernel invocation
+function to be executed on an offload device. A SYCL kernel invocation function
+is responsible for copying the provided SYCL kernel object to an offload
+device and initiating a call to it. The SYCL kernel object and its data members
+constitute the parameters of an offload kernel.
+
+A SYCL kernel type is required to satisfy the device copyability requirements
+specified in section 3.13.1, "Device copyable", of the SYCL 2020 specification.
+Additionally, any data members of the kernel object type are required to satisfy
+section 4.12.4, "Rules for parameter passing to kernels". For most types, these
+rules require that the type is trivially copyable.  However, the SYCL
+specification mandates that certain special SYCL types, such as
+``sycl::accessor`` and ``sycl::stream`` be device copyable even if they are not
+trivially copyable. These types require special handling because they cannot
+be copied to device memory as if by ``memcpy()``. Additionally, some offload
+backends, OpenCL for example, require objects of some of these types to be
+passed as individual arguments to the offload kernel.
+
+An offload kernel consists of an entry point function that declares the
+parameters of the offload kernel and the set of all functions and variables that
+are directly or indirectly used by the entry point function.
+
+A SYCL kernel invocation function invokes a SYCL kernel on a device by
+performing the following tasks (likely with the help of an offload backend
+like OpenCL):
+
+#. Identifying the offload kernel entry point to be used for the SYCL kernel.
+
+#. Deconstructing the SYCL kernel object, if necessary, to produce the set of
+   offload kernel arguments required by the offload kernel entry point.
+
+#. Copying the offload kernel arguments to device memory.
+
+#. Initiating execution of the offload kernel entry point.
+
+The offload kernel entry point for a SYCL kernel performs the following tasks:
+
+#. Reconstituting the SYCL kernel object, if necessary, using the offload
+   kernel parameters.
+
+#. Calling the ``operator()`` member function of the (reconstituted) SYCL kernel
+   object.
+
+The ``sycl_kernel_entry_point`` attribute automates generation of an offload
+kernel entry point that performs those latter tasks. The parameters and body of
+a function declared with the ``sycl_kernel_entry_point`` attribute specify a
+pattern from which the parameters and body of the entry point function are
+derived. Consider the following call to a SYCL kernel invocation function.
+
+.. code-block:: c++
+
+  struct S { int i; };
+  void f(sycl::handler &handler, sycl::stream &sout, S s) {
+    handler.single_task<struct KN>([=] {
+      sout << "The value of s.i is " << s.i << "\n";
+    });
+  }
+
+The SYCL kernel object is the result of the lambda expression. It has two
+data members corresponding to the captures of ``sout`` and ``s``. Since one
+of these data members corresponds to a special SYCL type that must be passed
+individually as an offload kernel parameter, it is necessary to decompose the
+SYCL kernel object into its constituent parts; the offload kernel will have
+two kernel parameters. Given a SYCL implementation that uses a
+``sycl_kernel_entry_point`` attributed function like the one shown above, an
+offload kernel entry point function will be generated that looks approximately
+as follows.
+
+.. code-block:: c++
+
+  void sycl-kernel-caller-for-KN(sycl::stream sout, S s) {
+    kernel-type kernel = { sout, s );
+    kernel();
+  }
+
+There are a few items worthy of note:
+
+#. The name of the generated function incorporates the SYCL kernel name,
+   ``KN``, that was passed as the ``KernelNameType`` template parameter to
+   ``kernel_entry_point()`` and provided as the argument to the
+   ``sycl_kernel_entry_point`` attribute. There is a one-to-one correspondence
+   between SYCL kernel names and offload kernel entry points.
+
+#. The SYCL kernel is a lambda closure type and therefore has no name;
+   ``kernel-type`` is substituted above and corresponds to the ``KernelType``
+   template parameter deduced in the call to ``kernel_entry_point()``.
+   Lambda types cannot be declared and initialized using the aggregate
+   initialization syntax used above, but the intended behavior should be clear.
+
+#. ``S`` is a device copyable type that does not directly or indirectly contain
+   a data member of a SYCL special type. It therefore does not need to be
+   decomposed into its constituent members to be passed as a kernel argument.
+
+#. The depiction of the ``sycl::stream`` parameter as a single self contained
+   kernel parameter is an oversimplification. SYCL special types may require
+   additional decomposition such that the generated function might have three
+   or more parameters depending on how the SYCL library implementation defines
+   these types.
+
+#. The call to ``kernel_entry_point()`` has no effect other than to trigger
+   emission of the entry point function. The statments that make up the body
+   of the function are not executed when the function is called; they are
+   only used in the generation of the entry point function.
+
+It is not necessary for a function declared with the ``sycl_kernel_entry_point``
+attribute to be called for the offload kernel entry point to be emitted. For
+inline functions and function templates, any ODR-use will suffice. For other
+functions, an ODR-use is not required; the offload kernel entry point will be
+emitted if the function is defined.
+
+Functions declared with the ``sycl_kernel_entry_point`` attribute are not
+limited to the simple example shown above. They may have additional template
+parameters, declare additional function parameters, and have complex control
+flow in the function body. Function parameter decomposition and reconstitution
+is performed for all function parameters. The function must abide by the
+language feature restrictions described in section 5.4, "Language restrictions
+for device functions" in the SYCL 2020 specification.
   }];
 }
 
@@ -981,6 +1173,15 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
   }];
 }
 
+def NoSpecializationsDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates which should not be explicitly specialized by users. This is primarily
+used to diagnose user specializations of standard library type traits.
+  }];
+}
+
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
   let Heading = "pass_object_size, pass_dynamic_object_size";
@@ -1206,6 +1407,82 @@ Query for this attribute with ``__has_attribute(overloadable)``.
   }];
 }
 
+def OwnershipDocs : Documentation {
+  let Heading = "ownership_holds, ownership_returns, ownership_takes (Clang "
+                "Static Analyzer)";
+  let Category = DocCatFunction;
+  let Label = "analyzer-ownership-attrs";
+  let Content = [{
+
+.. note::
+
+  In order for the Clang Static Analyzer to acknowledge these attributes, the
+  ``Optimistic`` config needs to be set to true for the checker
+  ``unix.DynamicMemoryModeling``:
+
+  ``-Xclang -analyzer-config -Xclang unix.DynamicMemoryModeling:Optimistic=true``
+
+These attributes are used by the Clang Static Analyzer's dynamic memory modeling
+facilities to mark custom allocating/deallocating functions.
+
+All 3 attributes' first parameter of type string is the type of the allocation:
+``malloc``, ``new``, etc. to allow for catching :ref:`mismatched deallocation
+<unix-MismatchedDeallocator>` bugs. The allocation type can be any string, e.g.
+a function annotated with
+returning a piece of memory of type ``lasagna`` but freed with a function
+annotated to release ``cheese`` typed memory will result in mismatched
+deallocation warning.
+
+The (currently) only allocation type having special meaning is ``malloc`` --
+the Clang Static Analyzer makes sure that allocating functions annotated with
+``malloc`` are treated like they used the standard ``malloc()``, and can be
+safely deallocated with the standard ``free()``.
+
+* Use ``ownership_returns`` to mark a function as an allocating function. Takes
+  1 parameter to denote the allocation type.
+* Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
+  parameters: the allocation type, and the index of the parameter that is being
+  deallocated (counting from 1).
+* Use ``ownership_holds`` to mark that a function takes over the ownership of a
+  piece of memory and will free it at some unspecified point in the future. Like
+  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  index of the parameter whose ownership will be taken over (counting from 1).
+
+The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
+leak reports (concerning the specified argument); the difference between them
+is that using taken memory is a use-after-free error, while using held memory
+is assumed to be legitimate.
+
+Example:
+
+.. code-block:: c
+
+  // Denotes that my_malloc will return with a dynamically allocated piece of
+  // memory using malloc().
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+
+  // Denotes that my_free will deallocate its parameter using free().
+  void __attribute((ownership_takes(malloc, 1))) my_free(void *);
+
+  // Denotes that my_hold will take over the ownership of its parameter that was
+  // allocated via malloc().
+  void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
+
+Further reading about dynamic memory modeling in the Clang Static Analyzer is
+found in these checker docs:
+:ref:`unix.Malloc <unix-Malloc>`, :ref:`unix.MallocSizeof <unix-MallocSizeof>`,
+:ref:`unix.MismatchedDeallocator <unix-MismatchedDeallocator>`,
+:ref:`cplusplus.NewDelete <cplusplus-NewDelete>`,
+:ref:`cplusplus.NewDeleteLeaks <cplusplus-NewDeleteLeaks>`,
+:ref:`optin.taint.TaintedAlloc <optin-taint-TaintedAlloc>`.
+Mind that many more checkers are affected by dynamic memory modeling changes to
+some extent.
+
+Further reading for other annotations:
+`Source Annotations in the Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/user-docs/Annotations.html>`_.
+  }];
+}
+
 def ObjCMethodFamilyDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1422,6 +1699,55 @@ def NoSplitStackDocs : Documentation {
 The ``no_split_stack`` attribute disables the emission of the split stack
 preamble for a particular function. It has no effect if ``-fsplit-stack``
 is not specified.
+  }];
+}
+
+def ExplicitInitDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+The ``clang::require_explicit_initialization`` attribute indicates that a
+field of an aggregate must be initialized explicitly by the user when an object
+of the aggregate type is constructed. The attribute supports both C and C++,
+but its usage is invalid on non-aggregates.
+
+Note that this attribute is *not* a memory safety feature, and is *not* intended
+to guard against use of uninitialized memory.
+
+Rather, it is intended for use in "parameter-objects", used to simulate,
+for example, the passing of named parameters.
+The attribute generates a warning when explicit initializers for such
+variables are not provided (this occurs regardless of whether any in-class field
+initializers exist):
+
+.. code-block:: c++
+
+  struct Buffer {
+    void *address [[clang::require_explicit_initialization]];
+    size_t length [[clang::require_explicit_initialization]] = 0;
+  };
+
+  struct ArrayIOParams {
+    size_t count [[clang::require_explicit_initialization]];
+    size_t element_size [[clang::require_explicit_initialization]];
+    int flags = 0;
+  };
+
+  size_t ReadArray(FILE *file, struct Buffer buffer,
+                   struct ArrayIOParams params);
+
+  int main() {
+    unsigned int buf[512];
+    ReadArray(stdin, {
+      buf
+      // warning: field 'length' is not explicitly initialized
+    }, {
+      .count = sizeof(buf) / sizeof(*buf),
+      // warning: field 'element_size' is not explicitly initialized
+      // (Note that a missing initializer for 'flags' is not diagnosed, because
+      // the field is not marked as requiring explicit initialization.)
+    });
+  }
+
   }];
 }
 
@@ -2669,7 +2995,7 @@ sign. For example:
 
   .. code-block:: c++
 
-    __attribute__((target_clones("sha2+memtag2", "fcma+sve2-pmull128")))
+    __attribute__((target_clones("sha2+memtag", "fcma+sve2-pmull128")))
     void foo() {}
 
 For every multiversioned function a ``default`` (fallback) implementation
@@ -3177,9 +3503,8 @@ def NoSanitizeAddressDocs : Documentation {
   // This function has multiple distinct spellings, and so it requires a custom
   // heading to be specified. The most common spelling is sufficient.
   let Heading = "no_sanitize_address, no_address_safety_analysis";
+  let Label = "langext-address_sanitizer";
   let Content = [{
-.. _langext-address_sanitizer:
-
 Use ``__attribute__((no_sanitize_address))`` on a function or a global
 variable declaration to specify that address safety instrumentation
 (e.g. AddressSanitizer) should not be applied.
@@ -3189,9 +3514,8 @@ variable declaration to specify that address safety instrumentation
 def NoSanitizeThreadDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_thread";
+  let Label = "langext-thread_sanitizer";
   let Content = [{
-.. _langext-thread_sanitizer:
-
 Use ``__attribute__((no_sanitize_thread))`` on a function declaration to
 specify that checks for data races on plain (non-atomic) memory accesses should
 not be inserted by ThreadSanitizer. The function is still instrumented by the
@@ -3202,9 +3526,8 @@ tool to avoid false positives and provide meaningful stack traces.
 def NoSanitizeMemoryDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_memory";
+  let Label = "langext-memory_sanitizer";
   let Content = [{
-.. _langext-memory_sanitizer:
-
 Use ``__attribute__((no_sanitize_memory))`` on a function declaration to
 specify that checks for uninitialized memory should not be inserted
 (e.g. by MemorySanitizer). The function may still be instrumented by the tool
@@ -3215,9 +3538,8 @@ to avoid false positives in other places.
 def CFICanonicalJumpTableDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "cfi_canonical_jump_table";
+  let Label = "langext-cfi_canonical_jump_table";
   let Content = [{
-.. _langext-cfi_canonical_jump_table:
-
 Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
 make the function's CFI jump table canonical. See :ref:`the CFI documentation
 <cfi-canonical-jump-tables>` for more details.
@@ -3684,8 +4006,7 @@ def LifetimeBoundDocs : Documentation {
 The ``lifetimebound`` attribute on a function parameter or implicit object
 parameter indicates that objects that are referred to by that parameter may
 also be referred to by the return value of the annotated function (or, for a
-parameter of a constructor, by the value of the constructed object). It is only
-supported in C++.
+parameter of a constructor, by the value of the constructed object).
 
 By default, a reference is considered to refer to its referenced object, a
 pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
@@ -3702,20 +4023,32 @@ user-declared functions. For example:
 
 .. code-block:: c++
 
+    #include <map>
+    #include <string>
+
+    using namespace std::literals;
+
     // Returns m[key] if key is present, or default_value if not.
     template<typename T, typename U>
     const U &get_or_default(const std::map<T, U> &m [[clang::lifetimebound]],
                             const T &key, /* note, not lifetimebound */
-                            const U &default_value [[clang::lifetimebound]]);
+                            const U &default_value [[clang::lifetimebound]]) {
+      if (auto iter = m.find(key); iter != m.end()) return iter->second;
+      else return default_value;
+    }
 
-    std::map<std::string, std::string> m;
-    // warning: temporary "bar"s that might be bound to local reference 'val'
-    // will be destroyed at the end of the full-expression
-    const std::string &val = get_or_default(m, "foo"s, "bar"s);
+    int main() {
+      std::map<std::string, std::string> m;
+      // warning: temporary bound to local reference 'val1' will be destroyed
+      // at the end of the full-expression
+      const std::string &val1 = get_or_default(m, "foo"s, "bar"s);
 
-    // No warning in this case.
-    std::string def_val = "bar"s;
-    const std::string &val = get_or_default(m, "foo"s, def_val);
+      // No warning in this case.
+      std::string def_val = "bar"s;
+      const std::string &val2 = get_or_default(m, "foo"s, def_val);
+
+      return 0;
+    }
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
@@ -3730,6 +4063,118 @@ function by writing the attribute after the function type:
 This attribute is inspired by the C++ committee paper `P0936R0
 <http://wg21.link/p0936r0>`_, but does not affect whether temporary objects
 have their lifetimes extended.
+  }];
+}
+
+def LifetimeCaptureByDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
+function parameter or implicit object parameter indicates that the capturing
+entity ``X`` may refer to the object referred by that parameter.
+
+Below is a list of types of the parameters and what they're considered to refer to:
+
+- A reference param (of non-view type) is considered to refer to its referenced object.
+- A pointer param (of non-view type) is considered to refer to its pointee.
+- View type param (type annotated with ``[[gsl::Pointer()]]``) is considered to refer
+  to its pointee (gsl owner). This holds true even if the view type appears as a reference
+  in the parameter. For example, both ``std::string_view`` and
+  ``const std::string_view &`` are considered to refer to a ``std::string``.
+- A ``std::initializer_list<T>`` is considered to refer to its underlying array.
+- Aggregates (arrays and simple ``struct``\s) are considered to refer to all
+  objects that their transitive subobjects refer to.
+
+Clang would diagnose when a temporary object is used as an argument to such an
+annotated parameter.
+In this case, the capturing entity ``X`` could capture a dangling reference to this
+temporary object.
+
+.. code-block:: c++
+
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
+    s.insert(a);
+  }
+  void use() {
+    std::set<std::string_view> s;
+    addToSet(std::string(), s); // Warning: object whose reference is captured by 's' will be destroyed at the end of the full-expression.
+    //       ^^^^^^^^^^^^^
+    std::string local;
+    addToSet(local, s); // Ok.
+  }
+
+The capturing entity ``X`` can be one of the following:
+
+- Another (named) function parameter.
+
+  .. code-block:: c++
+
+    void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
+      s.insert(a);
+    }
+
+- ``this`` (in case of member functions).
+
+  .. code-block:: c++
+
+    class S {
+      void addToSet(std::string_view a [[clang::lifetime_capture_by(this)]]) {
+        s.insert(a);
+      }
+      std::set<std::string_view> s;
+    };
+
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
+
+- `global`, `unknown`.
+
+  .. code-block:: c++
+
+    std::set<std::string_view> s;
+    void addToSet(std::string_view a [[clang::lifetime_capture_by(global)]]) {
+      s.insert(a);
+    }
+    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(unknown)]]);
+
+The attribute can be applied to the implicit ``this`` parameter of a member
+function by writing the attribute after the function type:
+
+.. code-block:: c++
+
+  struct S {
+    const char *data(std::set<S*>& s) [[clang::lifetime_capture_by(s)]] {
+      s.insert(this);
+    }
+  };
+
+The attribute supports specifying more than one capturing entities:
+
+.. code-block:: c++
+
+  void addToSets(std::string_view a [[clang::lifetime_capture_by(s1, s2)]],
+                 std::set<std::string_view>& s1,
+                 std::set<std::string_view>& s2) {
+    s1.insert(a);
+    s2.insert(a);
+  }
+
+Limitation: The capturing entity ``X`` is not used by the analysis and is
+used for documentation purposes only. This is because the analysis is
+statement-local and only detects use of a temporary as an argument to the
+annotated parameter.
+
+.. code-block:: c++
+
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s);
+  void use() {
+    std::set<std::string_view> s;
+    if (foo()) {
+      std::string str;
+      addToSet(str, s); // Not detected.
+    }
+  }
+
+.. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
   }];
 }
 
@@ -3763,7 +4208,8 @@ purposes of calls. For example:
 
 If a type is trivial for the purposes of calls, has a non-trivial destructor,
 and is passed as an argument by value, the convention is that the callee will
-destroy the object before returning.
+destroy the object before returning. The lifetime of the copy of the parameter
+in the caller ends without a destructor call when the call begins.
 
 If a type is trivial for the purpose of calls, it is assumed to be trivially
 relocatable for the purpose of ``__is_trivially_relocatable``.
@@ -4495,8 +4941,8 @@ def SwiftAttrDocs : Documentation {
   let Heading = "swift_attr";
   let Content = [{
 The ``swift_attr`` provides a Swift-specific annotation for the declaration
-to which the attribute appertains to. It can be used on any declaration
-in Clang. This kind of annotation is ignored by Clang as it doesn't have any
+or type to which the attribute appertains to. It can be used on any declaration
+or type in Clang. This kind of annotation is ignored by Clang as it doesn't have any
 semantic meaning in languages supported by Clang. The Swift compiler can
 interpret these annotations according to its own rules when importing C or
 Objective-C declarations.
@@ -4838,6 +5284,7 @@ optimization passes are aware of the following assumptions:
     "omp_no_openmp"
     "omp_no_openmp_routines"
     "omp_no_parallelism"
+    "omp_no_openmp_constructs"
 
 The OpenMP standard defines the meaning of OpenMP assumptions ("omp_XYZ" is
 spelled "XYZ" in the `OpenMP 5.1 Standard`_).
@@ -5796,12 +6243,19 @@ declared entity. The entity must not have weak linkage; for example, in C++,
 it cannot be applied to a declaration if a definition at that location would be
 considered inline.
 
-Not all targets support this attribute. ELF target support depends on both the
-linker and runtime linker, and is available in at least lld 4.0 and later,
-binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later.
-Mach-O targets support it, but with slightly different semantics: the resolver
-is run at first call, instead of at load time by the runtime linker. Targets
-other than ELF and Mach-O currently do not support this attribute.
+Not all targets support this attribute:
+
+- ELF target support depends on both the linker and runtime linker, and is
+  available in at least lld 4.0 and later, binutils 2.20.1 and later, glibc
+  v2.11.1 and later, and FreeBSD 9.1 and later.
+- Mach-O targets support it, but with slightly different semantics: the resolver
+  is run at first call, instead of at load time by the runtime linker.
+- Windows target supports it on AArch64, but with different semantics: the
+  ``ifunc`` is replaced with a global function pointer, and the call is replaced
+  with an indirect call. The function pointer is initialized by a constructor
+  that calls the resolver.
+- Baremetal target supports it on AVR.
+- Other targets currently do not support this attribute.
   }];
 }
 
@@ -5828,21 +6282,6 @@ This attribute can only be applied to types and namespaces.
 If both ``visibility`` and ``type_visibility`` are applied to a type or a namespace, the
 visibility specified with the ``type_visibility`` attribute overrides the visibility
 provided with the regular ``visibility`` attribute.
-  }];
-}
-
-def RenderScriptKernelAttributeDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-``__attribute__((kernel))`` is used to mark a ``kernel`` function in
-RenderScript.
-
-In RenderScript, ``kernel`` functions are used to express data-parallel
-computations. The RenderScript runtime efficiently parallelizes ``kernel``
-functions to run on computational resources such as multi-core CPUs and GPUs.
-See the RenderScript_ documentation for more information.
-
-.. _RenderScript: https://developer.android.com/guide/topics/renderscript/compute.html
   }];
 }
 
@@ -6623,6 +7062,16 @@ unbind runtime APIs.
   }];
 }
 
+def CUDAGridConstantAttrDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__grid_constant__`` attribute can be applied to a ``const``-qualified kernel
+function argument and allows compiler to take the address of that argument without
+making a copy. The argument applies to sm_70 or newer GPUs, during compilation
+with CUDA-11.7(PTX 7.7) or newer, and is ignored otherwise.
+  }];
+}
+
 def HIPManagedAttrDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -6876,8 +7325,8 @@ the field it is attached to, and it may also lead to emission of automatic fix-i
 hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-* Attribute attached to functions: The attribute does not suppress 
-  ``-Wunsafe-buffer-usage`` inside the function to which it is attached. 
+* Attribute attached to functions: The attribute does not suppress
+  ``-Wunsafe-buffer-usage`` inside the function to which it is attached.
   These warnings still need to be addressed.
 
   The attribute is warranted even if the only way a function can overflow
@@ -6940,10 +7389,10 @@ alternatives, though the attribute can be used even when the fix can't be automa
   and then use the attribute on the original ``baz()`` to help the users
   update their code to use the new function.
 
-* Attribute attached to fields: The attribute should only be attached to 
-  struct fields, if the fields can not be updated to a safe type with bounds 
-  check, such as std::span. In other words, the buffers prone to unsafe accesses 
-  should always be updated to use safe containers/views and attaching the attribute 
+* Attribute attached to fields: The attribute should only be attached to
+  struct fields, if the fields can not be updated to a safe type with bounds
+  check, such as std::span. In other words, the buffers prone to unsafe accesses
+  should always be updated to use safe containers/views and attaching the attribute
   must be last resort when such an update is infeasible.
 
   The attribute can be placed on individual fields or a set of them as shown below.
@@ -6961,7 +7410,7 @@ alternatives, though the attribute can be used even when the fix can't be automa
       size_t sz;
     };
 
-  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning 
+  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning
   that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
 
   }];
@@ -7254,6 +7703,32 @@ The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
   }];
 }
 
+def ArmAgnosticDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_agnostic`` keyword applies to prototyped function types and
+affects the function's calling convention for a given state S. This
+attribute allows the user to describe a function that preserves S, without
+requiring the function to share S with its callers and without making
+the assumption that S exists.
+
+If a function has the ``__arm_agnostic(S)`` attribute and calls a function
+without this attribute, then the function's object code will contain code
+to preserve state S. Otherwise, the function's object code will be the same
+as if it did not have the attribute.
+
+The attribute takes string arguments to describe state S. The supported
+states are:
+
+* ``"sme_za_state"`` for state enabled by PSTATE.ZA, such as ZA and ZT0.
+
+The attribute ``__arm_agnostic("sme_za_state")`` cannot be used in conjunction
+with ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` or
+``__arm_preserves(S)`` where state S describes state enabled by PSTATE.ZA,
+such as "za" or "zt0".
+  }];
+}
+
 def ArmSmeLocallyStreamingDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
@@ -7516,10 +7991,10 @@ def HLSLLoopHintDocs : Documentation {
   let Content = [{
 The ``[loop]`` directive allows loop optimization hints to be
 specified for the subsequent loop. The directive allows unrolling to
-be disabled and is not compatible with [unroll(x)]. 
+be disabled and is not compatible with [unroll(x)].
 
 Specifying the parameter, ``[loop]``, directs the
-unroller to not unroll the loop. 
+unroller to not unroll the loop.
 
 .. code-block:: hlsl
 
@@ -7633,6 +8108,27 @@ otherwise.
 The attribute ``no_randomize_layout``, when attached to a C structure,
 instructs the compiler that this structure should not have its field layout
 randomized.
+  }];
+}
+
+def HLSLSV_GroupThreadIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
+individual thread within a thread group is executing in. This attribute is
+only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
+  }];
+}
+
+def HLSLSV_GroupIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
+thread group a shader is executing in. This attribute is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
   }];
 }
 
@@ -7996,7 +8492,7 @@ that is a pointer to the type with the attribute.
   }
 
 The above example will result in a call to ``bar`` being passed the address of
-`y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
+``y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
 address of ``x`` when ``x`` goes out of scope. If two or more variables share
 the same scope, their ``cleanup`` callbacks are invoked in the reverse order
 the variables were declared in. It is not possible to check the return value
@@ -8459,6 +8955,18 @@ Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify func
 
 .. _`clspv`: https://github.com/google/clspv
 .. _`libclc`: https://libclc.llvm.org
+}];
+}
+
+def NoTrivialAutoVarInitDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__declspec(no_init_all)`` attribute disables the automatic initialization that the
+`-ftrivial-auto-var-init`_ flag would have applied to locals in a marked function, or instances of
+a marked type. Note that this attribute has no effect for locals that are automatically initialized
+without the `-ftrivial-auto-var-init`_ flag.
+
+.. _`-ftrivial-auto-var-init`: ClangCommandLineReference.html#cmdoption-clang-ftrivial-auto-var-init
 }];
 }
 

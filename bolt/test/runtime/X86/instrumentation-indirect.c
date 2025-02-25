@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 /*
 REQUIRES: system-linux,bolt-runtime,lit-max-individual-test-time
 
-RUN: %clang %cflags %s -o %t.exe -Wl,-q -pie -fpie
+RUN: %clang %cflags -D_GNU_SOURCE %s -o %t.exe -Wl,-q -pie -fpie
 
 RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata \
 RUN:   --instrumentation-wait-forks=1 --conservative-instrumentation \

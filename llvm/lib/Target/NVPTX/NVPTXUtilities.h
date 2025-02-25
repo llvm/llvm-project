@@ -14,7 +14,9 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -62,7 +64,11 @@ std::optional<unsigned> getClusterDimz(const Function &);
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
 std::optional<unsigned> getMaxNReg(const Function &);
-bool isKernelFunction(const Function &);
+
+inline bool isKernelFunction(const Function &F) {
+  return F.getCallingConv() == CallingConv::PTX_Kernel;
+}
+
 bool isParamGridConstant(const Value &);
 
 MaybeAlign getAlign(const Function &, unsigned);
@@ -84,6 +90,19 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 bool Isv2x16VT(EVT VT);
 
 namespace NVPTX {
+inline std::string getValidPTXIdentifier(StringRef Name) {
+  std::string ValidName;
+  ValidName.reserve(Name.size() + 4);
+  for (char C : Name)
+    // While PTX also allows '%' at the start of identifiers, LLVM will throw a
+    // fatal error for '%' in symbol names in MCSymbol::print. Exclude for now.
+    if (isAlnum(C) || C == '_' || C == '$')
+      ValidName.push_back(C);
+    else
+      ValidName.append({'_', '$', '_'});
+
+  return ValidName;
+}
 
 inline std::string OrderingToString(Ordering Order) {
   switch (Order) {

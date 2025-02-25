@@ -431,7 +431,10 @@ public:
   using Uint64Map = DenseMap<uint64_t, uint64_t>;
 
   // Decode pseudo_probe_desc section to build GUID to PseudoProbeFuncDesc map.
-  bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size);
+  // If pseudo_probe_desc section is mapped to memory and \p IsMMapped is true,
+  // uses StringRefs pointing to the section.
+  bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size,
+                             bool IsMMapped = false);
 
   // Decode pseudo_probe section to count the number of probes and inlined
   // function records for each function record.

@@ -27,17 +27,32 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
 fi
 
 sccache --zero-stats
-function show-stats {
+function at-exit {
+  retcode=$?
+
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
+
+  # If building fails there will be no results files.
+  shopt -s nullglob
+  if command -v buildkite-agent 2>&1 >/dev/null
+  then
+    python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
+      "windows-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
+  fi
 }
-trap show-stats EXIT
+trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
 
 echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+
+export CC=cl
+export CXX=cl
+export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
 # on fixing a build reliability issue on the build server, please
@@ -53,7 +68,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
-      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --timeout=1200 --time-tests" \
+      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests" \
       -D COMPILER_RT_BUILD_ORC=OFF \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
@@ -61,8 +76,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_PARALLEL_COMPILE_JOBS=16 \
-      -D LLVM_PARALLEL_LINK_JOBS=4
+      -D LLVM_PARALLEL_COMPILE_JOBS=${MAX_PARALLEL_COMPILE_JOBS} \
+      -D LLVM_PARALLEL_LINK_JOBS=${MAX_PARALLEL_LINK_JOBS}
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.

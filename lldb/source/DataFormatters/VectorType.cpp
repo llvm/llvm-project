@@ -8,12 +8,12 @@
 
 #include "lldb/DataFormatters/VectorType.h"
 
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -267,8 +267,6 @@ public:
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return lldb::ChildCacheState::eRefetch;
   }
-
-  bool MightHaveChildren() override { return true; }
 
   size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();

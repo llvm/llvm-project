@@ -28,7 +28,7 @@ define i8 @popcount128(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    ld1 { v0.d }[1], [x8]
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    addv b0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 ;
@@ -104,8 +104,8 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    ld1 { v1.d }[1], [x8]
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cnt v1.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    uaddlv h1, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    addv b1, v1.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    add w0, w9, w8
@@ -113,9 +113,9 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ;
 ; GISEL-LABEL: popcount256:
 ; GISEL:       // %bb.0: // %Entry
-; GISEL-NEXT:    ldp x8, x9, [x0, #16]
+; GISEL-NEXT:    ldp x8, x9, [x0]
 ; GISEL-NEXT:    mov v0.d[0], x8
-; GISEL-NEXT:    ldp x8, x10, [x0]
+; GISEL-NEXT:    ldp x8, x10, [x0, #16]
 ; GISEL-NEXT:    mov v1.d[0], x8
 ; GISEL-NEXT:    mov v0.d[1], x9
 ; GISEL-NEXT:    mov v1.d[1], x10
@@ -191,12 +191,10 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ;
 ; CHECK-LABEL: popcount1x128:
 ; CHECK:       // %bb.0: // %Entry
-; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.d[1], x1
-; CHECK-NEXT:    cnt v1.16b, v1.16b
-; CHECK-NEXT:    uaddlv h1, v1.16b
-; CHECK-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    mov v0.d[1], x1
+; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    addv b0, v0.16b
 ; CHECK-NEXT:    mov x1, v0.d[1]
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret

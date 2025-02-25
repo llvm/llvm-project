@@ -15,6 +15,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Transforms/Coroutines/SpillUtils.h"
 #include <deque>
 
@@ -69,20 +70,21 @@ struct RematGraph {
                std::deque<std::unique_ptr<RematNode>> &WorkList,
                User *FirstUse) {
     RematNode *N = NUPtr.get();
-    if (Remats.count(N->Node))
+    auto [It, Inserted] = Remats.try_emplace(N->Node);
+    if (!Inserted)
       return;
 
     // We haven't see this node yet - add to the list
-    Remats[N->Node] = std::move(NUPtr);
+    It->second = std::move(NUPtr);
     for (auto &Def : N->Node->operands()) {
       Instruction *D = dyn_cast<Instruction>(Def.get());
       if (!D || !MaterializableCallback(*D) ||
           !Checker.isDefinitionAcrossSuspend(*D, FirstUse))
         continue;
 
-      if (Remats.count(D)) {
+      if (auto It = Remats.find(D); It != Remats.end()) {
         // Already have this in the graph
-        N->Operands.push_back(Remats[D].get());
+        N->Operands.push_back(It->second.get());
         continue;
       }
 
@@ -104,19 +106,25 @@ struct RematGraph {
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  static std::string getBasicBlockLabel(const BasicBlock *BB) {
-    if (BB->hasName())
-      return BB->getName().str();
+  static void dumpBasicBlockLabel(const BasicBlock *BB,
+                                  ModuleSlotTracker &MST) {
+    if (BB->hasName()) {
+      dbgs() << BB->getName();
+      return;
+    }
 
-    std::string S;
-    raw_string_ostream OS(S);
-    BB->printAsOperand(OS, false);
-    return OS.str().substr(1);
+    dbgs() << MST.getLocalSlot(BB);
   }
 
   void dump() const {
+    BasicBlock *BB = EntryNode->Node->getParent();
+    Function *F = BB->getParent();
+
+    ModuleSlotTracker MST(F->getParent());
+    MST.incorporateFunction(*F);
+
     dbgs() << "Entry (";
-    dbgs() << getBasicBlockLabel(EntryNode->Node->getParent());
+    dumpBasicBlockLabel(BB, MST);
     dbgs() << ") : " << *EntryNode->Node << "\n";
     for (auto &E : Remats) {
       dbgs() << *(E.first) << "\n";
@@ -173,12 +181,12 @@ static void rewriteMaterializableInstructions(
     // insert the remats into the end of the predecessor (there should only be
     // one). This is so that suspend blocks always have the suspend instruction
     // as the first instruction.
-    auto InsertPoint = &*Use->getParent()->getFirstInsertionPt();
+    BasicBlock::iterator InsertPoint = Use->getParent()->getFirstInsertionPt();
     if (isa<AnyCoroSuspendInst>(Use)) {
       BasicBlock *SuspendPredecessorBlock =
           Use->getParent()->getSinglePredecessor();
       assert(SuspendPredecessorBlock && "malformed coro suspend instruction");
-      InsertPoint = SuspendPredecessorBlock->getTerminator();
+      InsertPoint = SuspendPredecessorBlock->getTerminator()->getIterator();
     }
 
     // Note: skip the first instruction as this is the actual use that we're
@@ -190,7 +198,7 @@ static void rewriteMaterializableInstructions(
       CurrentMaterialization = D->clone();
       CurrentMaterialization->setName(D->getName());
       CurrentMaterialization->insertBefore(InsertPoint);
-      InsertPoint = CurrentMaterialization;
+      InsertPoint = CurrentMaterialization->getIterator();
 
       // Replace all uses of Def in the instructions being added as part of this
       // rematerialization group
@@ -285,7 +293,8 @@ void coro::doRematerializations(
     for (Instruction *U : E.second) {
       // Don't process a user twice (this can happen if the instruction uses
       // more than one rematerializable def)
-      if (AllRemats.count(U))
+      auto [It, Inserted] = AllRemats.try_emplace(U);
+      if (!Inserted)
         continue;
 
       // Constructor creates the whole RematGraph for the given Use
@@ -298,7 +307,7 @@ void coro::doRematerializations(
                       ++I) { (*I)->Node->dump(); } dbgs()
                  << "\n";);
 
-      AllRemats[U] = std::move(RematUPtr);
+      It->second = std::move(RematUPtr);
     }
   }
 

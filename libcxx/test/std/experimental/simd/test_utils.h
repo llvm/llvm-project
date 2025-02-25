@@ -9,12 +9,13 @@
 #ifndef LIBCXX_TEST_STD_EXPERIMENTAL_SIMD_TEST_UTILS_H
 #define LIBCXX_TEST_STD_EXPERIMENTAL_SIMD_TEST_UTILS_H
 
-#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <experimental/simd>
 #include <type_traits>
 #include <utility>
-#include <experimental/simd>
+
 #include "type_algorithms.h"
 
 namespace ex = std::experimental::parallelism_v2;

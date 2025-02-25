@@ -89,7 +89,6 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -193,8 +192,7 @@ public:
   void getLDSMemoryInstructions(Function *Func,
                                 SetVector<Instruction *> &LDSInstructions);
   void replaceKernelLDSAccesses(Function *Func);
-  Value *getTranslatedGlobalMemoryGEPOfLDSPointer(Value *LoadMallocPtr,
-                                                  Value *LDSPtr);
+  Value *getTranslatedGlobalMemoryPtrOfLDS(Value *LoadMallocPtr, Value *LDSPtr);
   void translateLDSMemoryOperationsToGlobalMemory(
       Function *Func, Value *LoadMallocPtr,
       SetVector<Instruction *> &LDSInstructions);
@@ -358,7 +356,6 @@ void AMDGPUSwLowerLDS::buildSwLDSGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwLDS->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
@@ -377,7 +374,6 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwDynLDS->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::populateSwLDSAttributeAndMetadata(Function *Func) {
@@ -496,7 +492,6 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwLDSMetadata->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::populateLDSToReplacementIndicesMap(Function *Func) {
@@ -522,7 +517,6 @@ void AMDGPUSwLowerLDS::populateLDSToReplacementIndicesMap(Function *Func) {
   PopulateIndices(LDSParams.IndirectAccess.StaticLDSGlobals, Idx);
   PopulateIndices(LDSParams.DirectAccess.DynamicLDSGlobals, Idx);
   PopulateIndices(LDSParams.IndirectAccess.DynamicLDSGlobals, Idx);
-  return;
 }
 
 static void replacesUsesOfGlobalInFunction(Function *Func, GlobalVariable *GV,
@@ -660,20 +654,30 @@ void AMDGPUSwLowerLDS::getLDSMemoryInstructions(
       } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(&Inst)) {
         if (XCHG->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
           LDSInstructions.insert(&Inst);
+      } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(&Inst)) {
+        if (ASC->getSrcAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
+            ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS)
+          LDSInstructions.insert(&Inst);
       } else
         continue;
     }
   }
 }
 
-Value *
-AMDGPUSwLowerLDS::getTranslatedGlobalMemoryGEPOfLDSPointer(Value *LoadMallocPtr,
+Value *AMDGPUSwLowerLDS::getTranslatedGlobalMemoryPtrOfLDS(Value *LoadMallocPtr,
                                                            Value *LDSPtr) {
   assert(LDSPtr && "Invalid LDS pointer operand");
-  Value *PtrToInt = IRB.CreatePtrToInt(LDSPtr, IRB.getInt32Ty());
-  Value *GEP =
-      IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, {PtrToInt});
-  return GEP;
+  Type *LDSPtrType = LDSPtr->getType();
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+  Type *IntTy = DL.getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+  if (auto *VecPtrTy = dyn_cast<VectorType>(LDSPtrType)) {
+    // Handle vector of pointers
+    ElementCount NumElements = VecPtrTy->getElementCount();
+    IntTy = VectorType::get(IntTy, NumElements);
+  }
+  Value *GepIndex = IRB.CreatePtrToInt(LDSPtr, IntTy);
+  return IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, {GepIndex});
 }
 
 void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
@@ -686,7 +690,7 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
     if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
       Value *LIOperand = LI->getPointerOperand();
       Value *Replacement =
-          getTranslatedGlobalMemoryGEPOfLDSPointer(LoadMallocPtr, LIOperand);
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, LIOperand);
       LoadInst *NewLI = IRB.CreateAlignedLoad(LI->getType(), Replacement,
                                               LI->getAlign(), LI->isVolatile());
       NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
@@ -696,7 +700,7 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
     } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
       Value *SIOperand = SI->getPointerOperand();
       Value *Replacement =
-          getTranslatedGlobalMemoryGEPOfLDSPointer(LoadMallocPtr, SIOperand);
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, SIOperand);
       StoreInst *NewSI = IRB.CreateAlignedStore(
           SI->getValueOperand(), Replacement, SI->getAlign(), SI->isVolatile());
       NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
@@ -706,8 +710,8 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
     } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(Inst)) {
       Value *RMWPtrOperand = RMW->getPointerOperand();
       Value *RMWValOperand = RMW->getValOperand();
-      Value *Replacement = getTranslatedGlobalMemoryGEPOfLDSPointer(
-          LoadMallocPtr, RMWPtrOperand);
+      Value *Replacement =
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, RMWPtrOperand);
       AtomicRMWInst *NewRMW = IRB.CreateAtomicRMW(
           RMW->getOperation(), Replacement, RMWValOperand, RMW->getAlign(),
           RMW->getOrdering(), RMW->getSyncScopeID());
@@ -717,8 +721,8 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       RMW->eraseFromParent();
     } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(Inst)) {
       Value *XCHGPtrOperand = XCHG->getPointerOperand();
-      Value *Replacement = getTranslatedGlobalMemoryGEPOfLDSPointer(
-          LoadMallocPtr, XCHGPtrOperand);
+      Value *Replacement =
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, XCHGPtrOperand);
       AtomicCmpXchgInst *NewXCHG = IRB.CreateAtomicCmpXchg(
           Replacement, XCHG->getCompareOperand(), XCHG->getNewValOperand(),
           XCHG->getAlign(), XCHG->getSuccessOrdering(),
@@ -727,6 +731,16 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       AsanInfo.Instructions.insert(NewXCHG);
       XCHG->replaceAllUsesWith(NewXCHG);
       XCHG->eraseFromParent();
+    } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Inst)) {
+      Value *AIOperand = ASC->getPointerOperand();
+      Value *Replacement =
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, AIOperand);
+      Value *NewAI = IRB.CreateAddrSpaceCast(Replacement, ASC->getType());
+      // Note: No need to add the instruction to AsanInfo instructions to be
+      // instrumented list. FLAT_ADDRESS ptr would have been already
+      // instrumented by asan pass prior to this pass.
+      ASC->replaceAllUsesWith(NewAI);
+      ASC->eraseFromParent();
     } else
       report_fatal_error("Unimplemented LDS lowering instruction");
   }
@@ -921,9 +935,8 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
-  Value *ReturnAddr = IRB.CreateCall(
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::returnaddress),
-      IRB.getInt32(0));
+  Value *ReturnAddr =
+      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
   Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
   Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
   IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
@@ -954,12 +967,13 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
 
   SmallVector<Constant *> Elements;
   for (auto *GV : Variables) {
-    if (!LDSParams.LDSToReplacementIndicesMap.contains(GV)) {
+    auto It = LDSParams.LDSToReplacementIndicesMap.find(GV);
+    if (It == LDSParams.LDSToReplacementIndicesMap.end()) {
       Elements.push_back(
           PoisonValue::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS)));
       continue;
     }
-    auto &Indices = LDSParams.LDSToReplacementIndicesMap[GV];
+    auto &Indices = It->second;
     Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, Indices[0]),
                           ConstantInt::get(Int32Ty, Indices[1]),
                           ConstantInt::get(Int32Ty, Indices[2])};
@@ -1056,9 +1070,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
   SetVector<Instruction *> LDSInstructions;
   getLDSMemoryInstructions(Func, LDSInstructions);
 
-  Function *Decl = Intrinsic::getOrInsertDeclaration(
-      &M, Intrinsic::amdgcn_lds_kernel_id, {});
-  auto *KernelId = IRB.CreateCall(Decl, {});
+  auto *KernelId = IRB.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
   GlobalVariable *LDSBaseTable = NKLDSParams.LDSBaseTable;
   GlobalVariable *LDSOffsetTable = NKLDSParams.LDSOffsetTable;
   auto &OrdereLDSGlobals = NKLDSParams.OrdereLDSGlobals;
@@ -1121,7 +1133,6 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
                                   false, &Offset, &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
   AsanInfo.Offset = Offset;
-  return;
 }
 
 bool AMDGPUSwLowerLDS::run() {
@@ -1185,10 +1196,13 @@ bool AMDGPUSwLowerLDS::run() {
         LDSParams.IndirectAccess.DynamicLDSGlobals.empty()) {
       Changed = false;
     } else {
-      removeFnAttrFromReachable(CG, Func,
-                                {"amdgpu-no-workitem-id-x",
-                                 "amdgpu-no-workitem-id-y",
-                                 "amdgpu-no-workitem-id-z"});
+      removeFnAttrFromReachable(
+          CG, Func,
+          {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
+           "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
+      if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
+          !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
+        removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
       reorderStaticDynamicIndirectLDSSet(LDSParams);
       buildSwLDSGlobal(Func);
       buildSwDynLDSGlobal(Func);

@@ -63,7 +63,8 @@ class Triple;
 class TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
+                      StringRef FS, ArrayRef<StringRef> PN,
+                      ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
@@ -232,6 +233,16 @@ public:
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
                                    unsigned NumRegionInstrs) const {}
 
+  /// Override generic post-ra scheduling policy within a region.
+  ///
+  /// This is a convenient way for targets that don't provide any custom
+  /// scheduling heuristics (no custom MachineSchedStrategy) to make
+  /// changes to the generic  post-ra scheduling policy.
+  /// Note that some options like tracking register pressure won't take effect
+  /// in post-ra scheduling.
+  virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                         unsigned NumRegionInstrs) const {}
+
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.
   // If a pair of operands is associated with the schedule dependency, DefOpIdx
@@ -313,7 +324,7 @@ public:
   /// written in the tablegen descriptions, false if it should allocate
   /// the specified physical register later if is it callee-saved.
   virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           unsigned PhysReg) const {
+                                           MCRegister PhysReg) const {
     return false;
   }
 
@@ -339,6 +350,8 @@ public:
     // Conservatively assume such instructions exist by default.
     return true;
   }
+
+  virtual bool isRegisterReservedByUser(Register R) const { return false; }
 };
 } // end namespace llvm
 

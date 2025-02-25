@@ -32,7 +32,7 @@ define i1 @fpext_constant(float %a) {
 
 define <2 x i1> @fpext_constant_vec_splat(<2 x half> %a) {
 ; CHECK-LABEL: @fpext_constant_vec_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ole <2 x half> [[A:%.*]], <half 0xH5140, half 0xH5140>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ole <2 x half> [[A:%.*]], splat (half 0xH5140)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %ext = fpext <2 x half> %a to <2 x double>
@@ -780,7 +780,7 @@ define i1 @lossy_une(half %x) {
 define <2 x i1> @lossy_ogt(<2 x float> %x) {
 ; CHECK-LABEL: @lossy_ogt(
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = fcmp ogt <2 x double> [[E]], <double 1.000000e-01, double 1.000000e-01>
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt <2 x double> [[E]], splat (double 1.000000e-01)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %e = fpext <2 x float> %x to <2 x double>
@@ -826,7 +826,7 @@ define i1 @lossy_ole(half %x) {
 define <2 x i1> @lossy_ugt(<2 x float> %x) {
 ; CHECK-LABEL: @lossy_ugt(
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x float> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = fcmp ugt <2 x double> [[E]], <double 1.000000e-01, double 1.000000e-01>
+; CHECK-NEXT:    [[R:%.*]] = fcmp ugt <2 x double> [[E]], splat (double 1.000000e-01)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %e = fpext <2 x float> %x to <2 x double>
@@ -1222,7 +1222,7 @@ define i1 @bitcast_eq0(i32 %x) {
 
 define <2 x i1> @bitcast_ne0(<2 x i32> %x) {
 ; CHECK-LABEL: @bitcast_ne0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;

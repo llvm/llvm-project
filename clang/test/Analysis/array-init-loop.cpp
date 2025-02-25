@@ -330,3 +330,41 @@ void no_crash() {
 }
 
 } // namespace crash
+
+namespace array_subscript_initializer {
+struct S {
+  int x;
+};
+
+void no_crash() {
+  S arr[][2] = {{1, 2}};
+
+  const auto [a, b] = arr[0]; // no-crash
+
+  clang_analyzer_eval(a.x == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(b.x == 2); // expected-warning{{TRUE}}
+}
+} // namespace array_subscript_initializer
+
+namespace iterator_initializer {
+struct S {
+  int x;
+};
+
+void no_crash() {
+  S arr[][2] = {{1, 2}, {3, 4}};
+
+  int i = 0;
+  for (const auto [a, b] : arr) { // no-crash
+    if (i == 0) {
+      clang_analyzer_eval(a.x == 1); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b.x == 2); // expected-warning{{TRUE}}
+    } else {
+      clang_analyzer_eval(a.x == 3); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b.x == 4); // expected-warning{{TRUE}}
+    }
+
+    ++i;
+  }
+}
+} // namespace iterator_initializer

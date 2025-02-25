@@ -25,7 +25,7 @@ static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("amdgpu-arch") << '\n';
 }
 
-int printGPUsByHSA();
+int printGPUsByKFD();
 int printGPUsByHIP();
 
 int main(int argc, char *argv[]) {
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
   }
 
 #ifndef _WIN32
-  if (!printGPUsByHSA())
+  if (!printGPUsByKFD())
     return 0;
 #endif
 

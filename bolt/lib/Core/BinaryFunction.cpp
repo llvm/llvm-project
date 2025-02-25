@@ -385,16 +385,7 @@ bool BinaryFunction::isForwardCall(const MCSymbol *CalleeSymbol) const {
   if (CalleeBF) {
     if (CalleeBF->isInjected())
       return true;
-
-    if (hasValidIndex() && CalleeBF->hasValidIndex()) {
-      return getIndex() < CalleeBF->getIndex();
-    } else if (hasValidIndex() && !CalleeBF->hasValidIndex()) {
-      return true;
-    } else if (!hasValidIndex() && CalleeBF->hasValidIndex()) {
-      return false;
-    } else {
-      return getAddress() < CalleeBF->getAddress();
-    }
+    return compareBinaryFunctionByIndex(this, CalleeBF);
   } else {
     // Absolute symbol.
     ErrorOr<uint64_t> CalleeAddressOrError = BC.getSymbolValue(*CalleeSymbol);
@@ -500,10 +491,31 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
   // Offset of the instruction in function.
   uint64_t Offset = 0;
 
+  auto printConstantIslandInRange = [&](uint64_t Start, uint64_t End) {
+    assert(Start <= End && "Invalid range");
+    std::optional<uint64_t> IslandOffset = getIslandInRange(Start, End);
+
+    if (!IslandOffset)
+      return;
+
+    // Print label if it exists at this offset.
+    if (const BinaryData *BD =
+            BC.getBinaryDataAtAddress(getAddress() + *IslandOffset))
+      OS << BD->getName() << ":\n";
+
+    const size_t IslandSize = getSizeOfDataInCodeAt(*IslandOffset);
+    BC.printData(OS, BC.extractData(getAddress() + *IslandOffset, IslandSize),
+                 *IslandOffset);
+  };
+
   if (BasicBlocks.empty() && !Instructions.empty()) {
     // Print before CFG was built.
+    uint64_t PrevOffset = 0;
     for (const std::pair<const uint32_t, MCInst> &II : Instructions) {
       Offset = II.first;
+
+      // Print any constant islands inbeetween the instructions.
+      printConstantIslandInRange(PrevOffset, Offset);
 
       // Print label if exists at this offset.
       auto LI = Labels.find(Offset);
@@ -515,7 +527,12 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
       }
 
       BC.printInstruction(OS, II.second, Offset, this);
+
+      PrevOffset = Offset;
     }
+
+    // Print any data at the end of the function.
+    printConstantIslandInRange(PrevOffset, getMaxSize());
   }
 
   StringRef SplitPointMsg = "";
@@ -804,7 +821,6 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   auto Begin = Instructions.begin();
   if (BC.isAArch64()) {
-    PreserveNops = BC.HasRelocations;
     // Start at the last label as an approximation of the current basic block.
     // This is a heuristic, since the full set of labels have yet to be
     // determined
@@ -1055,7 +1071,20 @@ size_t BinaryFunction::getSizeOfDataInCodeAt(uint64_t Offset) const {
   auto Iter = Islands->CodeOffsets.upper_bound(Offset);
   if (Iter != Islands->CodeOffsets.end())
     return *Iter - Offset;
-  return getSize() - Offset;
+  return getMaxSize() - Offset;
+}
+
+std::optional<uint64_t>
+BinaryFunction::getIslandInRange(uint64_t StartOffset,
+                                 uint64_t EndOffset) const {
+  if (!Islands)
+    return std::nullopt;
+
+  auto Iter = llvm::lower_bound(Islands->DataOffsets, StartOffset);
+  if (Iter != Islands->DataOffsets.end() && *Iter < EndOffset)
+    return *Iter;
+
+  return std::nullopt;
 }
 
 bool BinaryFunction::isZeroPaddingAt(uint64_t Offset) const {
@@ -1513,6 +1542,20 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
   return Target;
 }
 
+void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
+  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
+    if (!Op.isExpr())
+      continue;
+    const MCExpr &Expr = *Op.getExpr();
+    if (Expr.getKind() != MCExpr::SymbolRef)
+      continue;
+    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
+    // Set HasAddressTaken for a function regardless of the ICF level.
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+      BF->setHasAddressTaken(true);
+  }
+}
+
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
@@ -1633,6 +1676,8 @@ bool BinaryFunction::scanExternalRefs() {
                              [](const MCOperand &Op) { return Op.isExpr(); })) {
       // Skip assembly if the instruction may not have any symbolic operands.
       continue;
+    } else {
+      analyzeInstructionForFuncReference(Instruction);
     }
 
     // Emit the instruction using temp emitter and generate relocations.
@@ -2293,6 +2338,10 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
                 << *this << '\n';
     }
+
+    if (BC.isAArch64())
+      PreserveNops = BC.HasRelocations;
+
     // In relocation mode we want to keep processing the function but avoid
     // optimizing it.
     setSimple(false);
@@ -2577,8 +2626,10 @@ private:
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
+    case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpRememberState:
@@ -2715,8 +2766,10 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
+    case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       return false;
     case MCCFIInstruction::OpRememberState:
@@ -2864,8 +2917,10 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
+    case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:
@@ -4204,10 +4259,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
 
   if (BC.HasRelocations || isInjected()) {
     if (hasConstantIsland()) {
-      const auto DataAddress =
-          Linker.lookupSymbol(getFunctionConstantIslandLabel()->getName());
-      assert(DataAddress && "Cannot find function CI symbol");
-      setOutputDataAddress(*DataAddress);
+      const auto IslandLabelSymInfo =
+          Linker.lookupSymbolInfo(getFunctionConstantIslandLabel()->getName());
+      assert(IslandLabelSymInfo && "Cannot find function CI symbol");
+      setOutputDataAddress(IslandLabelSymInfo->Address);
       for (auto It : Islands->Offsets) {
         const uint64_t OldOffset = It.first;
         BinaryData *BD = BC.getBinaryDataAtAddress(getAddress() + OldOffset);
@@ -4215,10 +4270,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
           continue;
 
         MCSymbol *Symbol = It.second;
-        const auto NewAddress = Linker.lookupSymbol(Symbol->getName());
-        assert(NewAddress && "Cannot find CI symbol");
+        const auto SymInfo = Linker.lookupSymbolInfo(Symbol->getName());
+        assert(SymInfo && "Cannot find CI symbol");
         auto &Section = *getCodeSection();
-        const auto NewOffset = *NewAddress - Section.getOutputAddress();
+        const auto NewOffset = SymInfo->Address - Section.getOutputAddress();
         BD->setOutputLocation(Section, NewOffset);
       }
     }
@@ -4243,10 +4298,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
         FF.setAddress(ColdStartSymbolInfo->Address);
         FF.setImageSize(ColdStartSymbolInfo->Size);
         if (hasConstantIsland()) {
-          const auto DataAddress = Linker.lookupSymbol(
+          const auto SymInfo = Linker.lookupSymbolInfo(
               getFunctionColdConstantIslandLabel()->getName());
-          assert(DataAddress && "Cannot find cold CI symbol");
-          setOutputColdDataAddress(*DataAddress);
+          assert(SymInfo && "Cannot find cold CI symbol");
+          setOutputColdDataAddress(SymInfo->Address);
         }
       }
     }

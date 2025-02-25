@@ -790,7 +790,7 @@ void multiply_compound_int_matrix_scalar_ull(ix9x3_t b, unsigned long long s) {
 // CHECK-NEXT:    store <6 x float> [[A:%.*]], ptr [[A_ADDR]], align 4
 // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], <float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00>
+// CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], splat (float 2.500000e+00)
 // CHECK-NEXT:    store <6 x float> [[RES]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -804,7 +804,7 @@ void multiply_float_matrix_constant(fx2x3_t a) {
 // CHECK-NEXT:    store <6 x float> [[A:%.*]], ptr [[A_ADDR]], align 4
 // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], <float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00>
+// CHECK-NEXT:    [[RES:%.*]] = fmul <6 x float> [[MAT]], splat (float 2.500000e+00)
 // CHECK-NEXT:    store <6 x float> [[RES]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    ret void
 void multiply_compound_float_matrix_constant(fx2x3_t a) {
@@ -817,7 +817,7 @@ void multiply_compound_float_matrix_constant(fx2x3_t a) {
 // CHECK-NEXT:    store <27 x i32> [[A:%.*]], ptr [[A_ADDR]], align 4
 // NOOPT-NEXT:    [[MAT:%.*]] = load <27 x i32>, ptr [[A_ADDR]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <27 x i32>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[RES:%.*]] = mul <27 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>, [[MAT]]
+// CHECK-NEXT:    [[RES:%.*]] = mul <27 x i32> splat (i32 5), [[MAT]]
 // CHECK-NEXT:    store <27 x i32> [[RES]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -831,7 +831,7 @@ void multiply_int_matrix_constant(ix9x3_t a) {
 // CHECK-NEXT:    store <27 x i32> [[A:%.*]], ptr [[A_ADDR]], align 4
 // NOOPT-NEXT:    [[MAT:%.*]] = load <27 x i32>, ptr [[A_ADDR]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <27 x i32>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[RES:%.*]] = mul <27 x i32> [[MAT]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+// CHECK-NEXT:    [[RES:%.*]] = mul <27 x i32> [[MAT]], splat (i32 5)
 // CHECK-NEXT:    store <27 x i32> [[RES]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -939,7 +939,7 @@ void divide_ull_matrix_scalar_ull(ullx4x2_t b, unsigned long long s) {
 // CHECK-NEXT:    store <6 x float> [[A:%.*]], ptr [[A_ADDR]], align 4
 // NOOPT-NEXT:    [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4{{$}}
 // OPT-NEXT:      [[MAT:%.*]] = load <6 x float>, ptr [[A_ADDR]], align 4, !tbaa !{{[0-9]+}}{{$}}
-// CHECK-NEXT:    [[RES:%.*]] = fdiv <6 x float> [[MAT]], <float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00, float 2.500000e+00>
+// CHECK-NEXT:    [[RES:%.*]] = fdiv <6 x float> [[MAT]], splat (float 2.500000e+00)
 // CHECK-NEXT:    store <6 x float> [[RES]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    ret void
 //

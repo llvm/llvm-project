@@ -398,7 +398,7 @@ define i8 @smax_of_nots(i8 %x, i8 %y) {
 define <3 x i8> @smin_of_nots(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @smin_of_nots(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
-; CHECK-NEXT:    [[M:%.*]] = xor <3 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[M:%.*]] = xor <3 x i8> [[TMP1]], splat (i8 -1)
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %notx = xor <3 x i8> %x, <i8 -1, i8 poison, i8 -1>
@@ -478,7 +478,7 @@ define i8 @smax_of_not_and_const(i8 %x) {
 define <3 x i8> @smin_of_not_and_const(<3 x i8> %x) {
 ; CHECK-LABEL: @smin_of_not_and_const(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 -43, i8 poison, i8 -44>)
-; CHECK-NEXT:    [[M:%.*]] = xor <3 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[M:%.*]] = xor <3 x i8> [[TMP1]], splat (i8 -1)
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %notx = xor <3 x i8> %x, <i8 -1, i8 -1, i8 poison>
@@ -774,8 +774,8 @@ define i8 @clamp_two_vals_smax_smin(i8 %x) {
 
 define <3 x i8> @clamp_two_vals_smin_smax(<3 x i8> %x) {
 ; CHECK-LABEL: @clamp_two_vals_smin_smax(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X:%.*]], <i8 41, i8 41, i8 41>
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i8> <i8 42, i8 42, i8 42>, <3 x i8> <i8 41, i8 41, i8 41>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X:%.*]], splat (i8 41)
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i8> splat (i8 42), <3 x i8> splat (i8 41)
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
   %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %x, <3 x i8> <i8 42, i8 42, i8 42>)
@@ -1933,8 +1933,8 @@ define i8 @smax_offset_uses(i8 %x) {
 
 define <3 x i8> @smin_offset(<3 x i8> %x) {
 ; CHECK-LABEL: @smin_offset(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 -127, i8 -127, i8 -127>)
-; CHECK-NEXT:    [[M:%.*]] = or disjoint <3 x i8> [[TMP1]], <i8 124, i8 124, i8 124>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> splat (i8 -127))
+; CHECK-NEXT:    [[M:%.*]] = or disjoint <3 x i8> [[TMP1]], splat (i8 124)
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %a = add nsw nuw <3 x i8> %x, <i8 124, i8 124, i8 124>
@@ -1996,8 +1996,8 @@ define i8 @smin_offset_uses(i8 %x) {
 
 define <3 x i8> @umax_offset(<3 x i8> %x) {
 ; CHECK-LABEL: @umax_offset(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 3, i8 3, i8 3>)
-; CHECK-NEXT:    [[M:%.*]] = add nuw <3 x i8> [[TMP1]], <i8 127, i8 127, i8 127>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> splat (i8 3))
+; CHECK-NEXT:    [[M:%.*]] = add nuw <3 x i8> [[TMP1]], splat (i8 127)
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %a = add nsw nuw <3 x i8> %x, <i8 127, i8 127, i8 127>
@@ -2509,8 +2509,8 @@ entry:
 define <3 x i8> @fold_umax_with_knownbits_info_poison_in_splat(<3 x i8> %a, <3 x i8> %b) {
 ; CHECK-LABEL: @fold_umax_with_knownbits_info_poison_in_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A1:%.*]] = or <3 x i8> [[A:%.*]], <i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[A2:%.*]] = shl <3 x i8> [[B:%.*]], <i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[A1:%.*]] = or <3 x i8> [[A:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[A2:%.*]] = shl <3 x i8> [[B:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <3 x i8> [[A1]], [[A2]]
 ; CHECK-NEXT:    ret <3 x i8> [[SUB]]
 ;
@@ -2538,7 +2538,7 @@ entry:
 define <3 x i8> @fold_umin_with_knownbits_info_poison_in_splat(<3 x i8> %a, <3 x i8> %b) {
 ; CHECK-LABEL: @fold_umin_with_knownbits_info_poison_in_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <3 x i8> <i8 3, i8 3, i8 3>
+; CHECK-NEXT:    ret <3 x i8> splat (i8 3)
 ;
 entry:
   %a1 = or <3 x i8> %a, <i8 3, i8 3, i8 3>

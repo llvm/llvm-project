@@ -1,0 +1,90 @@
+## Test the --private-headers option for the loader section of XCOFF object files.
+
+# RUN: yaml2obj --docnum=1 %s -o %t_xcoff32.o
+# RUN: yaml2obj --docnum=2  %s -o %t_xcoff64.o
+# RUN: llvm-objdump --private-headers %t_xcoff32.o |\
+# RUN:   FileCheck %s --check-prefixes=CHECK32 --match-full-lines
+# RUN: llvm-objdump --private-headers %t_xcoff64.o |\
+# RUN:   FileCheck %s --check-prefixes=CHECK64 --match-full-lines
+
+# RUN: yaml2obj --docnum=1 %s -o %t-truncate.o
+# RUN: %python -c "with open('%/t-truncate.o', 'r+b') as input: input.truncate(60)"
+# RUN: llvm-objdump --private-headers %t-truncate.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=WARN %s
+
+# WARN: The end of the file was unexpectedly encountered: loader section with offset 0x3c and size 0x20 goes past the end of the file
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .loader
+    Flags:           [ STYP_LOADER ]
+    SectionData:     "0000000100000003000000050000016D00000001000000A40000001800000211"
+##                    ^-------                                                           -Version=1
+##                            ^-------                                                   -NumberOfSymbolEntries=3
+##                                    ^-------                                           -NumberOfRelocationEntries=5
+##                                            ^-------                                   -LengthOfImportFileIDStringTable=365
+##                                                    ^-------                           -NumberOfImportFileIDs=1
+##                                                            ^-------                   -OffsetToImportFileIDs=0xA4
+##                                                                    ^-------           -LengthOfStringTable=24
+##                                                                            ^-------   -OffsetToStringTable=0x211
+
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1F7
+Sections:
+  - Name:            .loader
+    Flags:           [ STYP_LOADER ]
+    SectionData:     "0000000200000003000000050000016D000000010000002300000000000000D0000000000000023D00000000000000380000000000000080"
+##                    ^-------                                                           -Version=2
+##                            ^-------                                                   -NumberOfSymbolEntries=3
+##                                    ^-------                                           -NumberOfRelocationEntries=5
+##                                            ^-------                                   -LengthOfImportFileIDStringTable=365
+##                                                    ^-------                           -NumberOfImportFileIDs=1
+##                                                            ^-------                   --LengthOfStringTable=0x23
+##                                                                    ^---------------   -OffsetToImportFileIDs=0xD0
+##                                                                                    ^---------------                                        -OffsetToStringTable=0x23D
+##                                                                                                    ^--------------                         -OffsetToSymbolTable=0x38
+##                                                                                                                    ^---------------        -OffsetToRelocationEntries=0x80
+
+# CHECK32:      ---File Header:
+# CHECK32-NEXT: Magic:              0x1df
+# CHECK32-NEXT: NumberOfSections:   1
+# CHECK32-NEXT: Timestamp:          None (0)
+# CHECK32-NEXT: SymbolTableOffset:  0x0
+# CHECK32-NEXT: SymbolTableEntries: 0
+# CHECK32-NEXT: OptionalHeaderSize: 0x0
+# CHECK32-NEXT: Flags:              0x0
+
+# CHECK32:      ---Loader Section Header:
+# CHECK32-NEXT: Version:                           1
+# CHECK32-NEXT: NumberOfSymbolEntries:             3
+# CHECK32-NEXT: NumberOfRelocationEntries:         5
+# CHECK32-NEXT: LengthOfImportFileIDStringTable:   365
+# CHECK32-NEXT: NumberOfImportFileIDs:             1
+# CHECK32-NEXT: OffsetToImportFileIDs:             0xa4
+# CHECK32-NEXT: LengthOfStringTable:               24
+# CHECK32-NEXT: OffsetToStringTable:               0x211
+
+# CHECK64:      ---File Header:
+# CHECK64-NEXT: Magic:              0x1f7
+# CHECK64-NEXT: NumberOfSections:   1
+# CHECK64-NEXT: Timestamp:          None (0)
+# CHECK64-NEXT: SymbolTableOffset:  0x0
+# CHECK64-NEXT: SymbolTableEntries: 0
+# CHECK64-NEXT: OptionalHeaderSize: 0x0
+# CHECK64-NEXT: Flags:              0x0
+
+# CHECK64:      ---Loader Section Header:
+# CHECK64-NEXT: Version:                           2
+# CHECK64-NEXT: NumberOfSymbolEntries:             3
+# CHECK64-NEXT: NumberOfRelocationEntries:         5
+# CHECK64-NEXT: LengthOfImportFileIDStringTable:   365
+# CHECK64-NEXT: NumberOfImportFileIDs:             1
+# CHECK64-NEXT: OffsetToImportFileIDs:             0xd0
+# CHECK64-NEXT: LengthOfStringTable:               35
+# CHECK64-NEXT: OffsetToStringTable:               0x23d
+# CHECK64-NEXT: OffsetToSymbolTable                0x38
+# CHECK64-NEXT: OffsetToRelocationEntries          0x80

@@ -40,10 +40,10 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
@@ -282,6 +282,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::HLSLAttributedResource:
       return TEK_Scalar;
 
     // Complexes.
@@ -403,9 +404,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   bool HasCleanups = EHStack.stable_begin() != PrologueCleanupDepth;
-  bool HasOnlyLifetimeMarkers =
-      HasCleanups && EHStack.containsOnlyLifetimeMarkers(PrologueCleanupDepth);
-  bool EmitRetDbgLoc = !HasCleanups || HasOnlyLifetimeMarkers;
+  bool HasOnlyNoopCleanups =
+      HasCleanups && EHStack.containsOnlyNoopCleanups(PrologueCleanupDepth);
+  bool EmitRetDbgLoc = !HasCleanups || HasOnlyNoopCleanups;
 
   std::optional<ApplyDebugLocation> OAL;
   if (HasCleanups) {
@@ -486,7 +487,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (IndirectBranch) {
     llvm::PHINode *PN = cast<llvm::PHINode>(IndirectBranch->getAddress());
     if (PN->getNumIncomingValues() == 0) {
-      PN->replaceAllUsesWith(llvm::UndefValue::get(PN->getType()));
+      PN->replaceAllUsesWith(llvm::PoisonValue::get(PN->getType()));
       PN->eraseFromParent();
     }
   }
@@ -549,14 +550,6 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (getContext().getTargetInfo().getTriple().isX86())
     CurFn->addFnAttr("min-legal-vector-width",
                      llvm::utostr(LargestVectorWidth));
-
-  // Add vscale_range attribute if appropriate.
-  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
-      getContext().getTargetInfo().getVScaleRange(getLangOpts());
-  if (VScaleRange) {
-    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
-        getLLVMContext(), VScaleRange->first, VScaleRange->second));
-  }
 
   // If we generated an unreachable return block, delete it now.
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty()) {
@@ -635,7 +628,9 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
 
   CGM.GenKernelArgMetadata(Fn, FD, this);
 
-  if (!getLangOpts().OpenCL)
+  if (!(getLangOpts().OpenCL ||
+        (getLangOpts().CUDA &&
+         getContext().getTargetInfo().getTriple().isSPIRV())))
     return;
 
   if (const VecTypeHintAttr *A = FD->getAttr<VecTypeHintAttr>()) {
@@ -835,6 +830,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);
+    if (SanOpts.has(SanitizerKind::Type))
+      Fn->addFnAttr(llvm::Attribute::SanitizeType);
     if (SanOpts.has(SanitizerKind::NumericalStability))
       Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
@@ -851,7 +848,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         if (Fe.Effect.kind() == FunctionEffect::Kind::NonBlocking)
           Fn->addFnAttr(llvm::Attribute::SanitizeRealtime);
         else if (Fe.Effect.kind() == FunctionEffect::Kind::Blocking)
-          Fn->addFnAttr(llvm::Attribute::SanitizeRealtimeUnsafe);
+          Fn->addFnAttr(llvm::Attribute::SanitizeRealtimeBlocking);
       }
 
   // Apply fuzzing attribute to the function.
@@ -897,6 +894,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("ptrauth-auth-traps");
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
+  if (CodeGenOpts.PointerAuth.AArch64JumpTableHardening)
+    Fn->addFnAttr("aarch64-jump-table-hardening");
 
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;
@@ -1022,6 +1021,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   if (FD && (getLangOpts().OpenCL ||
+             (getLangOpts().CUDA &&
+              getContext().getTargetInfo().getTriple().isSPIRV()) ||
              ((getLangOpts().HIP || getLangOpts().OffloadViaLLVM) &&
               getLangOpts().CUDAIsDevice))) {
     // Add metadata for a kernel function.
@@ -1101,13 +1102,22 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (FD && FD->isMain())
     Fn->removeFnAttr("zero-call-used-regs");
 
+  // Add vscale_range attribute if appropriate.
+  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
+      getContext().getTargetInfo().getVScaleRange(
+          getLangOpts(), FD ? IsArmStreamingFunction(FD, true) : false);
+  if (VScaleRange) {
+    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
+        getLLVMContext(), VScaleRange->first, VScaleRange->second));
+  }
+
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 
   // Create a marker to make it easy to insert allocas into the entryblock
   // later.  Don't create this with the builder, because we don't want it
   // folded.
-  llvm::Value *Undef = llvm::UndefValue::get(Int32Ty);
-  AllocaInsertPt = new llvm::BitCastInst(Undef, Int32Ty, "allocapt", EntryBB);
+  llvm::Value *Poison = llvm::PoisonValue::get(Int32Ty);
+  AllocaInsertPt = new llvm::BitCastInst(Poison, Int32Ty, "allocapt", EntryBB);
 
   ReturnBlock = getJumpDestInCurrentScope("return");
 
@@ -1592,9 +1602,9 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (SanOpts.has(SanitizerKind::Return)) {
       SanitizerScope SanScope(this);
       llvm::Value *IsFalse = Builder.getFalse();
-      EmitCheck(std::make_pair(IsFalse, SanitizerKind::Return),
+      EmitCheck(std::make_pair(IsFalse, SanitizerKind::SO_Return),
                 SanitizerHandler::MissingReturn,
-                EmitCheckSourceLocation(FD->getLocation()), std::nullopt);
+                EmitCheckSourceLocation(FD->getLocation()), {});
     } else if (ShouldEmitUnreachable) {
       if (CGM.getCodeGenOpts().OptimizationLevel == 0)
         EmitTrapCall(llvm::Intrinsic::trap);
@@ -1607,6 +1617,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   // Emit the standard function epilogue.
   FinishFunction(BodyRange.getEnd());
+
+  PGO.verifyCounterMap();
 
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
@@ -1730,6 +1742,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
+  PGO.markStmtMaybeUsed(Cond);
   ResultInt = Int;
   return true;
 }
@@ -2075,7 +2088,30 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
-  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
+  llvm::Instruction *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock,
+                                                   Weights, Unpredictable);
+  switch (HLSLControlFlowAttr) {
+  case HLSLControlFlowHintAttr::Microsoft_branch:
+  case HLSLControlFlowHintAttr::Microsoft_flatten: {
+    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+
+    llvm::ConstantInt *BranchHintConstant =
+        HLSLControlFlowAttr ==
+                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
+            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
+            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
+
+    SmallVector<llvm::Metadata *, 2> Vals(
+        {MDHelper.createString("hlsl.controlflow.hint"),
+         MDHelper.createConstant(BranchHintConstant)});
+    BrInst->setMetadata("hlsl.controlflow.hint",
+                        llvm::MDNode::get(CGM.getLLVMContext(), Vals));
+    break;
+  }
+  // This is required to avoid warnings during compilation
+  case HLSLControlFlowHintAttr::SpellingNotCalculated:
+    break;
+  }
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
@@ -2473,8 +2509,9 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
             llvm::Constant *StaticArgs[] = {
                 EmitCheckSourceLocation(sizeExpr->getBeginLoc()),
                 EmitCheckTypeDescriptor(SEType)};
-            EmitCheck(std::make_pair(CheckCondition, SanitizerKind::VLABound),
-                      SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
+            EmitCheck(
+                std::make_pair(CheckCondition, SanitizerKind::SO_VLABound),
+                SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
           }
 
           // Always zexting here would be wrong if it weren't
@@ -2824,23 +2861,17 @@ void CodeGenFunction::EmitKCFIOperandBundle(
     Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(FP->desugar()));
 }
 
-llvm::Value *CodeGenFunction::FormAArch64ResolverCondition(
-    const MultiVersionResolverOption &RO) {
-  llvm::SmallVector<StringRef, 8> CondFeatures;
-  for (const StringRef &Feature : RO.Conditions.Features)
-    CondFeatures.push_back(Feature);
-  if (!CondFeatures.empty()) {
-    return EmitAArch64CpuSupports(CondFeatures);
-  }
-  return nullptr;
+llvm::Value *
+CodeGenFunction::FormAArch64ResolverCondition(const FMVResolverOption &RO) {
+  return RO.Features.empty() ? nullptr : EmitAArch64CpuSupports(RO.Features);
 }
 
-llvm::Value *CodeGenFunction::FormX86ResolverCondition(
-    const MultiVersionResolverOption &RO) {
+llvm::Value *
+CodeGenFunction::FormX86ResolverCondition(const FMVResolverOption &RO) {
   llvm::Value *Condition = nullptr;
 
-  if (!RO.Conditions.Architecture.empty()) {
-    StringRef Arch = RO.Conditions.Architecture;
+  if (RO.Architecture) {
+    StringRef Arch = *RO.Architecture;
     // If arch= specifies an x86-64 micro-architecture level, test the feature
     // with __builtin_cpu_supports, otherwise use __builtin_cpu_is.
     if (Arch.starts_with("x86-64"))
@@ -2849,8 +2880,8 @@ llvm::Value *CodeGenFunction::FormX86ResolverCondition(
       Condition = EmitX86CpuIs(Arch);
   }
 
-  if (!RO.Conditions.Features.empty()) {
-    llvm::Value *FeatureCond = EmitX86CpuSupports(RO.Conditions.Features);
+  if (!RO.Features.empty()) {
+    llvm::Value *FeatureCond = EmitX86CpuSupports(RO.Features);
     Condition =
         Condition ? Builder.CreateAnd(Condition, FeatureCond) : FeatureCond;
   }
@@ -2880,7 +2911,7 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
 }
 
 void CodeGenFunction::EmitMultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
 
   llvm::Triple::ArchType ArchType =
       getContext().getTargetInfo().getTriple().getArch();
@@ -2903,27 +2934,8 @@ void CodeGenFunction::EmitMultiVersionResolver(
   }
 }
 
-static int getPriorityFromAttrString(StringRef AttrStr) {
-  SmallVector<StringRef, 8> Attrs;
-
-  AttrStr.split(Attrs, ';');
-
-  // Default Priority is zero.
-  int Priority = 0;
-  for (auto Attr : Attrs) {
-    if (Attr.consume_front("priority=")) {
-      int Result;
-      if (!Attr.getAsInteger(0, Result)) {
-        Priority = Result;
-      }
-    }
-  }
-
-  return Priority;
-}
-
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
 
   if (getContext().getTargetInfo().getTriple().getOS() !=
       llvm::Triple::OSType::Linux) {
@@ -2939,35 +2951,16 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   bool HasDefault = false;
   unsigned DefaultIndex = 0;
 
-  SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> CurrOptions(
-      Options);
-
-  llvm::stable_sort(
-      CurrOptions, [](const CodeGenFunction::MultiVersionResolverOption &LHS,
-                      const CodeGenFunction::MultiVersionResolverOption &RHS) {
-        return getPriorityFromAttrString(LHS.Conditions.Features[0]) >
-               getPriorityFromAttrString(RHS.Conditions.Features[0]);
-      });
-
   // Check the each candidate function.
-  for (unsigned Index = 0; Index < CurrOptions.size(); Index++) {
+  for (unsigned Index = 0; Index < Options.size(); Index++) {
 
-    if (CurrOptions[Index].Conditions.Features[0].starts_with("default")) {
+    if (Options[Index].Features.empty()) {
       HasDefault = true;
       DefaultIndex = Index;
       continue;
     }
 
     Builder.SetInsertPoint(CurBlock);
-
-    std::vector<std::string> TargetAttrFeats =
-        getContext()
-            .getTargetInfo()
-            .parseTargetAttr(CurrOptions[Index].Conditions.Features[0])
-            .Features;
-
-    if (TargetAttrFeats.empty())
-      continue;
 
     // FeaturesCondition: The bitmask of the required extension has been
     // enabled by the runtime object.
@@ -2991,20 +2984,32 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     // Without checking the length first, we may access an incorrect memory
     // address when using different versions.
     llvm::SmallVector<StringRef, 8> CurrTargetAttrFeats;
+    llvm::SmallVector<std::string, 8> TargetAttrFeats;
 
-    for (auto &Feat : TargetAttrFeats) {
-      StringRef CurrFeat = Feat;
-      if (CurrFeat.starts_with('+'))
-        CurrTargetAttrFeats.push_back(CurrFeat.substr(1));
+    for (StringRef Feat : Options[Index].Features) {
+      std::vector<std::string> FeatStr =
+          getContext().getTargetInfo().parseTargetAttr(Feat).Features;
+
+      assert(FeatStr.size() == 1 && "Feature string not delimited");
+
+      std::string &CurrFeat = FeatStr.front();
+      if (CurrFeat[0] == '+')
+        TargetAttrFeats.push_back(CurrFeat.substr(1));
     }
+
+    if (TargetAttrFeats.empty())
+      continue;
+
+    for (std::string &Feat : TargetAttrFeats)
+      CurrTargetAttrFeats.push_back(Feat);
 
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *FeatsCondition = EmitRISCVCpuSupports(CurrTargetAttrFeats);
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     CGBuilderTy RetBuilder(*this, RetBlock);
-    CreateMultiVersionResolverReturn(
-        CGM, Resolver, RetBuilder, CurrOptions[Index].Function, SupportsIFunc);
+    CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder,
+                                     Options[Index].Function, SupportsIFunc);
     llvm::BasicBlock *ElseBlock = createBasicBlock("resolver_else", Resolver);
 
     Builder.SetInsertPoint(CurBlock);
@@ -3016,9 +3021,8 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
   // Finally, emit the default one.
   if (HasDefault) {
     Builder.SetInsertPoint(CurBlock);
-    CreateMultiVersionResolverReturn(CGM, Resolver, Builder,
-                                     CurrOptions[DefaultIndex].Function,
-                                     SupportsIFunc);
+    CreateMultiVersionResolverReturn(
+        CGM, Resolver, Builder, Options[DefaultIndex].Function, SupportsIFunc);
     return;
   }
 
@@ -3032,17 +3036,16 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 }
 
 void CodeGenFunction::EmitAArch64MultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
   assert(!Options.empty() && "No multiversion resolver options found");
-  assert(Options.back().Conditions.Features.size() == 0 &&
-         "Default case must be last");
+  assert(Options.back().Features.size() == 0 && "Default case must be last");
   bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
   assert(SupportsIFunc &&
          "Multiversion resolver requires target IFUNC support");
   bool AArch64CpuInitialized = false;
   llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
 
-  for (const MultiVersionResolverOption &RO : Options) {
+  for (const FMVResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *Condition = FormAArch64ResolverCondition(RO);
 
@@ -3078,7 +3081,7 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
 }
 
 void CodeGenFunction::EmitX86MultiVersionResolver(
-    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
 
   bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
 
@@ -3087,7 +3090,7 @@ void CodeGenFunction::EmitX86MultiVersionResolver(
   Builder.SetInsertPoint(CurBlock);
   EmitX86CpuInit();
 
-  for (const MultiVersionResolverOption &RO : Options) {
+  for (const FMVResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *Condition = FormX86ResolverCondition(RO);
 
@@ -3162,7 +3165,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     llvm::Value *DynamicData[] = {EmitCheckValue(Ptr),
                                   EmitCheckValue(Alignment),
                                   EmitCheckValue(OffsetValue)};
-    EmitCheck({std::make_pair(TheCheck, SanitizerKind::Alignment)},
+    EmitCheck({std::make_pair(TheCheck, SanitizerKind::SO_Alignment)},
               SanitizerHandler::AlignmentAssumption, StaticData, DynamicData);
   }
 

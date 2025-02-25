@@ -107,6 +107,7 @@ X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE,      "arrowlake")
 X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE_S,    "arrowlake-s")
 X86_CPU_SUBTYPE(INTEL_COREI7_PANTHERLAKE,    "pantherlake")
 X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER5,            "znver5")
+X86_CPU_SUBTYPE(INTEL_COREI7_DIAMONDRAPIDS,  "diamondrapids")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
@@ -261,7 +262,14 @@ X86_FEATURE_COMPAT(AVX10_1,         "avx10.1-256",           36)
 X86_FEATURE_COMPAT(AVX10_1_512,     "avx10.1-512",           37)
 X86_FEATURE_COMPAT(AVX10_2,         "avx10.2-256",            0)
 X86_FEATURE_COMPAT(AVX10_2_512,     "avx10.2-512",            0)
+//FIXME: make MOVRS _COMPAT defined when gcc landed relate patch.
+X86_FEATURE       (MOVRS,           "movrs")
 X86_FEATURE       (ZU,              "zu")
+X86_FEATURE       (AMX_FP8,         "amx-fp8")
+X86_FEATURE       (AMX_TRANSPOSE,   "amx-transpose")
+X86_FEATURE       (AMX_MOVRS,       "amx-movrs")
+X86_FEATURE       (AMX_AVX512,      "amx-avx512")
+X86_FEATURE       (AMX_TF32,        "amx-tf32")
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")
 X86_FEATURE       (RETPOLINE_INDIRECT_BRANCHES, "retpoline-indirect-branches")

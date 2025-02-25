@@ -631,7 +631,7 @@ NOINLINE void SigLongJmpFunc1(sigjmp_buf buf) {
 
 #if !defined(__ANDROID__) && !defined(__arm__) && !defined(__aarch64__) && \
     !defined(__mips__) && !defined(__mips64) && !defined(__s390__) &&      \
-    !defined(__riscv) && !defined(__loongarch__)
+    !defined(__riscv) && !defined(__loongarch__) && !defined(__sparc__)
 NOINLINE void BuiltinLongJmpFunc1(jmp_buf buf) {
   // create three red zones for these two stack objects.
   int a;
@@ -1166,13 +1166,9 @@ TEST(AddressSanitizer, DISABLED_StressStackReuseAndExceptionsTest) {
 
 #if !defined(_WIN32)
 TEST(AddressSanitizer, MlockTest) {
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
   EXPECT_EQ(0, mlockall(MCL_CURRENT));
-#endif
-  EXPECT_EQ(0, mlock((void*)0x12345, 0x5678));
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
+  EXPECT_EQ(0, mlock((void *)0x12345, 0x5678));
   EXPECT_EQ(0, munlockall());
-#endif
   EXPECT_EQ(0, munlock((void*)0x987, 0x654));
 }
 #endif

@@ -65,7 +65,6 @@
 #include "llvm/Transforms/Scalar/GVNExpression.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -535,14 +534,10 @@ public:
     uint32_t e = ExpressionNumbering[exp];
     if (!e) {
       hash_code H = exp->getHashValue([=](Value *V) { return lookupOrAdd(V); });
-      auto I = HashNumbering.find(H);
-      if (I != HashNumbering.end()) {
-        e = I->second;
-      } else {
-        e = nextValueNumber++;
-        HashNumbering[H] = e;
-        ExpressionNumbering[exp] = e;
-      }
+      auto [I, Inserted] = HashNumbering.try_emplace(H, nextValueNumber);
+      e = I->second;
+      if (Inserted)
+        ExpressionNumbering[exp] = nextValueNumber++;
     }
     ValueNumbering[V] = e;
     return e;
@@ -911,7 +906,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
   // and move it to the start of the successor block.
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O)
     I0->getOperandUse(O).set(NewOperands[O]);
-  I0->moveBefore(&*BBEnd->getFirstInsertionPt());
+  I0->moveBefore(BBEnd->getFirstInsertionPt());
 
   // Update metadata and IR flags.
   for (auto *I : Insts)

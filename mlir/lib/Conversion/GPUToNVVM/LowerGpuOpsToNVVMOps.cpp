@@ -11,18 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVM.h"
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -234,6 +232,103 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   }
 };
 
+/// Lowering of cf.assert into a conditional __assertfail.
+struct AssertOpToAssertfailLowering
+    : public ConvertOpToLLVMPattern<cf::AssertOp> {
+  using ConvertOpToLLVMPattern<cf::AssertOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(cf::AssertOp assertOp, cf::AssertOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    MLIRContext *ctx = rewriter.getContext();
+    Location loc = assertOp.getLoc();
+    Type i8Type = typeConverter->convertType(rewriter.getIntegerType(8));
+    Type i32Type = typeConverter->convertType(rewriter.getIntegerType(32));
+    Type i64Type = typeConverter->convertType(rewriter.getIntegerType(64));
+    Type ptrType = LLVM::LLVMPointerType::get(ctx);
+    Type voidType = LLVM::LLVMVoidType::get(ctx);
+
+    // Find or create __assertfail function declaration.
+    auto moduleOp = assertOp->getParentOfType<gpu::GPUModuleOp>();
+    auto assertfailType = LLVM::LLVMFunctionType::get(
+        voidType, {ptrType, ptrType, i32Type, ptrType, i64Type});
+    LLVM::LLVMFuncOp assertfailDecl = getOrDefineFunction(
+        moduleOp, loc, rewriter, "__assertfail", assertfailType);
+    assertfailDecl.setPassthroughAttr(
+        ArrayAttr::get(ctx, StringAttr::get(ctx, "noreturn")));
+
+    // Split blocks and insert conditional branch.
+    // ^before:
+    //   ...
+    //   cf.cond_br %condition, ^after, ^assert
+    // ^assert:
+    //   cf.assert
+    //   cf.br ^after
+    // ^after:
+    //   ...
+    Block *beforeBlock = assertOp->getBlock();
+    Block *assertBlock =
+        rewriter.splitBlock(beforeBlock, assertOp->getIterator());
+    Block *afterBlock =
+        rewriter.splitBlock(assertBlock, ++assertOp->getIterator());
+    rewriter.setInsertionPointToEnd(beforeBlock);
+    rewriter.create<cf::CondBranchOp>(loc, adaptor.getArg(), afterBlock,
+                                      assertBlock);
+    rewriter.setInsertionPointToEnd(assertBlock);
+    rewriter.create<cf::BranchOp>(loc, afterBlock);
+
+    // Continue cf.assert lowering.
+    rewriter.setInsertionPoint(assertOp);
+
+    // Populate file name, file number and function name from the location of
+    // the AssertOp.
+    StringRef fileName = "(unknown)";
+    StringRef funcName = "(unknown)";
+    int32_t fileLine = 0;
+    while (auto callSiteLoc = dyn_cast<CallSiteLoc>(loc))
+      loc = callSiteLoc.getCallee();
+    if (auto fileLineColLoc = dyn_cast<FileLineColRange>(loc)) {
+      fileName = fileLineColLoc.getFilename().strref();
+      fileLine = fileLineColLoc.getStartLine();
+    } else if (auto nameLoc = dyn_cast<NameLoc>(loc)) {
+      funcName = nameLoc.getName().strref();
+      if (auto fileLineColLoc =
+              dyn_cast<FileLineColRange>(nameLoc.getChildLoc())) {
+        fileName = fileLineColLoc.getFilename().strref();
+        fileLine = fileLineColLoc.getStartLine();
+      }
+    }
+
+    // Create constants.
+    auto getGlobal = [&](LLVM::GlobalOp global) {
+      // Get a pointer to the format string's first element.
+      Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
+          loc, LLVM::LLVMPointerType::get(ctx, global.getAddrSpace()),
+          global.getSymNameAttr());
+      Value start =
+          rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
+                                       globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+      return start;
+    };
+    Value assertMessage = getGlobal(getOrCreateStringConstant(
+        rewriter, loc, moduleOp, i8Type, "assert_message_", assertOp.getMsg()));
+    Value assertFile = getGlobal(getOrCreateStringConstant(
+        rewriter, loc, moduleOp, i8Type, "assert_file_", fileName));
+    Value assertFunc = getGlobal(getOrCreateStringConstant(
+        rewriter, loc, moduleOp, i8Type, "assert_func_", funcName));
+    Value assertLine =
+        rewriter.create<LLVM::ConstantOp>(loc, i32Type, fileLine);
+    Value c1 = rewriter.create<LLVM::ConstantOp>(loc, i64Type, 1);
+
+    // Insert function call to __assertfail.
+    SmallVector<Value> arguments{assertMessage, assertFile, assertLine,
+                                 assertFunc, c1};
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(assertOp, assertfailDecl,
+                                              arguments);
+    return success();
+  }
+};
+
 /// Import the GPU Ops to NVVM Patterns.
 #include "GPUToNVVM.cpp.inc"
 
@@ -242,9 +337,14 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
 ///
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
-struct LowerGpuOpsToNVVMOpsPass
+struct LowerGpuOpsToNVVMOpsPass final
     : public impl::ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
   using Base::Base;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    Base::getDependentDialects(registry);
+    registerConvertToLLVMDependentDialectLoading(registry);
+  }
 
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
@@ -269,46 +369,49 @@ struct LowerGpuOpsToNVVMOpsPass
     {
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
-      if (failed(applyPatternsAndFoldGreedily(m, std::move(patterns))))
+      if (failed(applyPatternsGreedily(m, std::move(patterns))))
         return signalPassFailure();
     }
 
     LLVMTypeConverter converter(m.getContext(), options);
-    // NVVM uses alloca in the default address space to represent private
-    // memory allocations, so drop private annotations. NVVM uses address
-    // space 3 for shared memory. NVVM uses the default address space to
-    // represent global memory.
-    populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) -> unsigned {
-          switch (space) {
-          case gpu::AddressSpace::Global:
-            return static_cast<unsigned>(
-                NVVM::NVVMMemorySpace::kGlobalMemorySpace);
-          case gpu::AddressSpace::Workgroup:
-            return static_cast<unsigned>(
-                NVVM::NVVMMemorySpace::kSharedMemorySpace);
-          case gpu::AddressSpace::Private:
-            return 0;
-          }
-          llvm_unreachable("unknown address space enum value");
-          return 0;
-        });
-    // Lowering for MMAMatrixType.
-    converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
-      return convertMMAToLLVMType(type);
-    });
+    configureGpuToNVVMTypeConverter(converter);
     RewritePatternSet llvmPatterns(m.getContext());
+    LLVMConversionTarget target(getContext());
 
-    arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
-    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
+
+    llvm::SmallDenseSet<StringRef> allowedDialectsSet(allowedDialects.begin(),
+                                                      allowedDialects.end());
+    for (Dialect *dialect : getContext().getLoadedDialects()) {
+      // Skip math patterns as nvvm needs custom math lowering.
+      if (isa<math::MathDialect>(dialect))
+        continue;
+
+      bool allowed = allowedDialectsSet.contains(dialect->getNamespace());
+      // Empty `allowedDialectsSet` means all dialects are allowed.
+      if (!allowedDialectsSet.empty() && !allowed)
+        continue;
+
+      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      if (!iface) {
+        // Error out if dialect was explicily specified but doesn't implement
+        // conversion interface.
+        if (allowed) {
+          m.emitError()
+              << "dialect does not implement ConvertToLLVMPatternInterface: "
+              << dialect->getNamespace();
+          return signalPassFailure();
+        }
+        continue;
+      }
+
+      iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                     llvmPatterns);
+    }
+
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
-    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
-    LLVMConversionTarget target(getContext());
     configureGpuToNVVMConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -319,6 +422,7 @@ struct LowerGpuOpsToNVVMOpsPass
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addIllegalOp<func::FuncOp>();
+  target.addIllegalOp<cf::AssertOp>();
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
@@ -332,6 +436,32 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
 }
 
+void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
+  // NVVM uses alloca in the default address space to represent private
+  // memory allocations, so drop private annotations. NVVM uses address
+  // space 3 for shared memory. NVVM uses the default address space to
+  // represent global memory.
+  populateGpuMemorySpaceAttributeConversions(
+      converter, [](gpu::AddressSpace space) -> unsigned {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+        case gpu::AddressSpace::Workgroup:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+        case gpu::AddressSpace::Private:
+          return 0;
+        }
+        llvm_unreachable("unknown address space enum value");
+        return 0;
+      });
+  // Lowering for MMAMatrixType.
+  converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
+    return convertMMAToLLVMType(type);
+  });
+}
+
 template <typename OpTy>
 static void populateOpPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
@@ -340,6 +470,22 @@ static void populateOpPatterns(const LLVMTypeConverter &converter,
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
   patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func,
                                            f32ApproxFunc, f16Func);
+}
+
+template <typename OpTy>
+static void populateIntOpPatterns(const LLVMTypeConverter &converter,
+                                  RewritePatternSet &patterns,
+                                  StringRef i32Func) {
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, "", "", "", "", i32Func);
+}
+
+template <typename OpTy>
+static void populateFloatIntOpPatterns(const LLVMTypeConverter &converter,
+                                       RewritePatternSet &patterns,
+                                       StringRef f32Func, StringRef f64Func) {
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func, "", "");
 }
 
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
@@ -352,7 +498,10 @@ void mlir::populateGpuToNVVMConversionPatterns(
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
   populateWithGenerated(patterns);
-  patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
+
+  // Set higher benefit, so patterns will run before generic LLVM lowering.
+  patterns.add<GPUPrintfOpToVPrintfLowering, AssertOpToAssertfailLowering>(
+      converter, /*benefit*/ 10);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
                                       NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>>(
@@ -404,6 +553,12 @@ void mlir::populateGpuToNVVMConversionPatterns(
 
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
                                     "__nv_fmod");
+  populateOpPatterns<arith::MaxNumFOp>(converter, patterns, "__nv_fmaxf",
+                                       "__nv_fmax");
+  populateOpPatterns<arith::MinNumFOp>(converter, patterns, "__nv_fminf",
+                                       "__nv_fmin");
+
+  populateIntOpPatterns<math::AbsIOp>(converter, patterns, "__nv_abs");
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
   populateOpPatterns<math::AcosOp>(converter, patterns, "__nv_acosf",
@@ -440,6 +595,13 @@ void mlir::populateGpuToNVVMConversionPatterns(
   populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
                                     "__nv_floor");
   populateOpPatterns<math::FmaOp>(converter, patterns, "__nv_fmaf", "__nv_fma");
+  // Note: libdevice does not provide `__nv_isfinitef` as of moment of writing.
+  populateOpPatterns<math::IsFiniteOp>(converter, patterns, "",
+                                       "__nv_isfinited");
+  populateOpPatterns<math::IsInfOp>(converter, patterns, "__nv_isinff",
+                                    "__nv_isinfd");
+  populateOpPatterns<math::IsNaNOp>(converter, patterns, "__nv_isnanf",
+                                    "__nv_isnand");
   populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log",
                                   "__nv_fast_logf");
   populateOpPatterns<math::Log10Op>(converter, patterns, "__nv_log10f",
@@ -450,6 +612,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                    "__nv_log2", "__nv_fast_log2f");
   populateOpPatterns<math::PowFOp>(converter, patterns, "__nv_powf", "__nv_pow",
                                    "__nv_fast_powf");
+  populateFloatIntOpPatterns<math::FPowIOp>(converter, patterns, "__nv_powif",
+                                            "__nv_powi");
   populateOpPatterns<math::RoundOp>(converter, patterns, "__nv_roundf",
                                     "__nv_round");
   populateOpPatterns<math::RoundEvenOp>(converter, patterns, "__nv_rintf",
@@ -466,4 +630,35 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                   "__nv_fast_tanf");
   populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
                                    "__nv_tanh");
+}
+
+//===----------------------------------------------------------------------===//
+// NVVMTargetAttr convert to LLVM attr interface
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct NVVMTargetConvertToLLVMAttrInterface
+    : public ConvertToLLVMAttrInterface::ExternalModel<
+          NVVMTargetConvertToLLVMAttrInterface, NVVM::NVVMTargetAttr> {
+  /// Configure GPU to NVVM.
+  void populateConvertToLLVMConversionPatterns(
+      Attribute attr, ConversionTarget &target,
+      LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) const;
+};
+} // namespace
+
+void NVVMTargetConvertToLLVMAttrInterface::
+    populateConvertToLLVMConversionPatterns(Attribute attr,
+                                            ConversionTarget &target,
+                                            LLVMTypeConverter &typeConverter,
+                                            RewritePatternSet &patterns) const {
+  configureGpuToNVVMConversionLegality(target);
+  configureGpuToNVVMTypeConverter(typeConverter);
+  populateGpuToNVVMConversionPatterns(typeConverter, patterns);
+}
+
+void mlir::NVVM::registerConvertGpuToNVVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, NVVMDialect *dialect) {
+    NVVMTargetAttr::attachInterface<NVVMTargetConvertToLLVMAttrInterface>(*ctx);
+  });
 }

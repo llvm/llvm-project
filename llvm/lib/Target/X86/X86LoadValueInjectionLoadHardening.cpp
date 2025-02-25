@@ -53,7 +53,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/InitializePasses.h"
@@ -340,10 +339,10 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
   DenseMap<MachineInstr *, GraphIter> NodeMap;
   int FenceCount = 0, GadgetCount = 0;
   auto MaybeAddNode = [&NodeMap, &Builder](MachineInstr *MI) {
-    auto Ref = NodeMap.find(MI);
-    if (Ref == NodeMap.end()) {
+    auto [Ref, Inserted] = NodeMap.try_emplace(MI);
+    if (Inserted) {
       auto I = Builder.addVertex(MI);
-      NodeMap[MI] = I;
+      Ref->second = I;
       return std::pair<GraphIter, bool>{I, true};
     }
     return std::pair<GraphIter, bool>{Ref->getSecond(), false};

@@ -1,4 +1,4 @@
-# RUN: llc -march=x86 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=i686 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses fixed stack memory operands
 # correctly.
 

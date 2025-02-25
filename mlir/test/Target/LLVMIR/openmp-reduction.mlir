@@ -34,7 +34,6 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %3, %prv : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -118,7 +117,6 @@ llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %6, %prv1 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -207,7 +205,6 @@ llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %4, %prv0 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -297,7 +294,6 @@ llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %5, %prv : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -393,7 +389,6 @@ llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
         llvm.store %6, %prv1 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -549,7 +544,6 @@ llvm.func @parallel_nested_workshare_reduction(%ub : i64) {
         llvm.store %add, %prv : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -592,3 +586,83 @@ llvm.func @parallel_nested_workshare_reduction(%ub : i64) {
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
 // CHECK: add i32
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+
+// CHECK-LABEL: @wsloop_simd_reduction
+llvm.func @wsloop_simd_reduction(%lb : i64, %ub : i64, %step : i64) {
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  omp.parallel {
+    omp.wsloop reduction(@add_f32 %0 -> %prv1 : !llvm.ptr) {
+      omp.simd reduction(@add_f32 %prv1 -> %prv2 : !llvm.ptr) {
+        omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+          %1 = llvm.mlir.constant(2.0 : f32) : f32
+          %2 = llvm.load %prv2 : !llvm.ptr -> f32
+          %3 = llvm.fadd %1, %2 : f32
+          llvm.store %3, %prv2 : f32, !llvm.ptr
+          omp.yield
+        }
+      } {omp.composite}
+    } {omp.composite}
+    omp.terminator
+  }
+  llvm.return
+}
+
+// Same checks as for wsloop reduction, because currently omp.simd is ignored in
+// a composite 'do/for simd' construct.
+// Call to the outlined function.
+// CHECK: call void {{.*}} @__kmpc_fork_call
+// CHECK-SAME: @[[OUTLINED:[A-Za-z_.][A-Za-z0-9_.]*]]
+
+// Outlined function.
+// CHECK: define internal void @[[OUTLINED]]
+
+// Private reduction variable and its initialization.
+// CHECK: %[[PRIVATE:.+]] = alloca float
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE]]
+
+// Call to the reduction function.
+// CHECK: call i32 @__kmpc_reduce
+// CHECK-SAME: @[[REDFUNC:[A-Za-z_.][A-Za-z0-9_.]*]]
+
+// Atomic reduction.
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
+// CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL]]
+
+// Non-atomic reduction:
+// CHECK: fadd float
+// CHECK: call void @__kmpc_end_reduce
+// CHECK: br label %[[FINALIZE:.+]]
+
+// CHECK: [[FINALIZE]]:
+// CHECK: call void @__kmpc_barrier
+
+// Update of the private variable using the reduction region
+// (the body block currently comes after all the other blocks).
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
+// CHECK: %[[UPDATED:.+]] = fadd float 2.000000e+00, %[[PARTIAL]]
+// CHECK: store float %[[UPDATED]], ptr %[[PRIVATE]]
+
+// Reduction function.
+// CHECK: define internal void @[[REDFUNC]]
+// CHECK: fadd float

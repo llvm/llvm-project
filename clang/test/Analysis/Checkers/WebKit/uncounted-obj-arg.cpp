@@ -77,6 +77,8 @@ T&& forward(T& arg);
 template<typename T>
 T&& move( T&& t );
 
+#define offsetof(t, d) __builtin_offsetof(t, d)
+
 } // namespace std
 
 bool isMainThread();
@@ -238,6 +240,8 @@ public:
   using BaseType::BaseType;
 };
 
+void __libcpp_verbose_abort(const char *__format, ...);
+
 class RefCounted {
 public:
   void ref() const;
@@ -258,6 +262,15 @@ public:
 
   void mutuallyRecursive8() { mutuallyRecursive9(); someFunction(); }
   void mutuallyRecursive9() { mutuallyRecursive8(); }
+
+  int recursiveCost() {
+    unsigned totalCost = 0;
+    for (unsigned i = 0; i < sizeof(children)/sizeof(*children); ++i) {
+      if (auto* child = children[i])
+        totalCost += child->recursiveCost();
+    }
+    return totalCost;
+  }
 
   int trivial1() { return 123; }
   float trivial2() { return 0.3; }
@@ -352,6 +365,18 @@ public:
   void trivial62() { WTFReportBacktrace(); }
   SomeType trivial63() { return SomeType(0); }
   SomeType trivial64() { return SomeType(); }
+  void trivial65() {
+    __libcpp_verbose_abort("%s", "aborting");
+  }
+  RefPtr<RefCounted> trivial66() { return children[0]; }
+  Ref<RefCounted> trivial67() { return *children[0]; }
+  struct point {
+    double x;
+    double y;
+  };
+  void trivial68() { point pt = { 1.0 }; }
+  unsigned trivial69() { return offsetof(RefCounted, children); }
+  DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -448,6 +473,7 @@ public:
   Number* number { nullptr };
   ComplexNumber complex;
   Enum enumValue { Enum::Value1 };
+  RefCounted* children[4];
 };
 
 unsigned RefCounted::s_v = 0;
@@ -534,6 +560,12 @@ public:
     getFieldTrivial().trivial62(); // no-warning
     getFieldTrivial().trivial63(); // no-warning
     getFieldTrivial().trivial64(); // no-warning
+    getFieldTrivial().trivial65(); // no-warning
+    getFieldTrivial().trivial66()->trivial6(); // no-warning
+    getFieldTrivial().trivial67()->trivial6(); // no-warning
+    getFieldTrivial().trivial68(); // no-warning
+    getFieldTrivial().trivial69(); // no-warning
+    getFieldTrivial().trivial70(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
@@ -557,6 +589,8 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().mutuallyRecursive9();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+
+    getFieldTrivial().recursiveCost(); // no-warning
 
     getFieldTrivial().someFunction();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}

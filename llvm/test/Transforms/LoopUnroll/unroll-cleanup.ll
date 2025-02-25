@@ -21,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-LABEL: define void @_Z3fn1v(
-; CHECK-SAME: ptr nocapture writeonly [[R:%.*]], ptr nocapture readonly [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) [[R:%.*]], ptr readonly captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TOBOOL20:%.*]] = icmp eq i32 [[TMP]], 0
@@ -57,15 +57,15 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[CMP_PROL:%.*]] = icmp eq i8 [[TMP3_PROL]], 0
 ; CHECK-NEXT:    br i1 [[CMP_PROL]], label %[[IF_THEN_PROL:.*]], label %[[FOR_INC_PROL:.*]]
 ; CHECK:       [[IF_THEN_PROL]]:
-; CHECK-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds i8, ptr [[R_022]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[R_022]], i64 2
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX_PROL]], align 2
 ; CHECK-NEXT:    store i16 0, ptr [[R_022]], align 2
-; CHECK-NEXT:    [[ARRAYIDX5_PROL:%.*]] = getelementptr inbounds i8, ptr [[R_022]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX5_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[R_022]], i64 4
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX5_PROL]], align 2
 ; CHECK-NEXT:    br label %[[FOR_INC_PROL]]
 ; CHECK:       [[FOR_INC_PROL]]:
-; CHECK-NEXT:    [[INCDEC_PTR_PROL:%.*]] = getelementptr inbounds i8, ptr [[A_021]], i64 1
-; CHECK-NEXT:    [[ADD_PTR_PROL:%.*]] = getelementptr inbounds i8, ptr [[R_022]], i64 6
+; CHECK-NEXT:    [[INCDEC_PTR_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[A_021]], i64 1
+; CHECK-NEXT:    [[ADD_PTR_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[R_022]], i64 6
 ; CHECK-NEXT:    br label %[[FOR_BODY3_PROL_LOOPEXIT]]
 ; CHECK:       [[FOR_BODY3_PROL_LOOPEXIT]]:
 ; CHECK-NEXT:    [[ADD_PTR_LCSSA_UNR]] = phi ptr [ poison, %[[FOR_BODY3_PREHEADER]] ], [ [[ADD_PTR_PROL]], %[[FOR_INC_PROL]] ]
@@ -82,29 +82,29 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[FOR_INC:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[R_117]], i64 2
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    store i16 0, ptr [[R_117]], align 2
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[R_117]], i64 4
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX5]], align 2
 ; CHECK-NEXT:    br label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_116]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A_116]], i64 1
 ; CHECK-NEXT:    [[DEC18_1]] = add nsw i32 [[DEC18_IN]], -2
 ; CHECK-NEXT:    [[TMP3_1:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i8 [[TMP3_1]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[IF_THEN_1:.*]], label %[[FOR_INC_1]]
 ; CHECK:       [[IF_THEN_1]]:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 8
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[R_117]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[R_117]], i64 8
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX_1]], align 2
 ; CHECK-NEXT:    store i16 0, ptr [[ADD_PTR]], align 2
-; CHECK-NEXT:    [[ARRAYIDX5_1:%.*]] = getelementptr inbounds i8, ptr [[R_117]], i64 10
+; CHECK-NEXT:    [[ARRAYIDX5_1:%.*]] = getelementptr inbounds nuw i8, ptr [[R_117]], i64 10
 ; CHECK-NEXT:    store i16 0, ptr [[ARRAYIDX5_1]], align 2
 ; CHECK-NEXT:    br label %[[FOR_INC_1]]
 ; CHECK:       [[FOR_INC_1]]:
-; CHECK-NEXT:    [[INCDEC_PTR_1]] = getelementptr inbounds i8, ptr [[A_116]], i64 2
-; CHECK-NEXT:    [[ADD_PTR_1]] = getelementptr inbounds i8, ptr [[R_117]], i64 12
+; CHECK-NEXT:    [[INCDEC_PTR_1]] = getelementptr inbounds nuw i8, ptr [[A_116]], i64 2
+; CHECK-NEXT:    [[ADD_PTR_1]] = getelementptr inbounds nuw i8, ptr [[R_117]], i64 12
 ; CHECK-NEXT:    [[TOBOOL2_1:%.*]] = icmp eq i32 [[DEC18_1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL2_1]], label %[[FOR_COND_LOOPEXIT_LOOPEXIT]], label %[[FOR_BODY3]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[FOR_END6]]:

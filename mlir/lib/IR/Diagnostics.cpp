@@ -519,6 +519,10 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
   }
 }
 
+void SourceMgrDiagnosticHandler::setCallStackLimit(unsigned limit) {
+  callStackLimit = limit;
+}
+
 /// Get a memory buffer for the given file, or nullptr if one is not found.
 const llvm::MemoryBuffer *
 SourceMgrDiagnosticHandler::getBufferForFile(StringRef filename) {

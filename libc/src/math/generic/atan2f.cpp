@@ -17,9 +17,19 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
+
+// We use float-float implementation to reduce size.
+#include "src/math/generic/atan2f_float.h"
+
+#else
+
 namespace LIBC_NAMESPACE_DECL {
 
 namespace {
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // Look up tables for accurate pass:
 
@@ -163,6 +173,8 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
   return static_cast<float>(cpp::bit_cast<double>(rr_bits));
 }
 
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
 } // anonymous namespace
 
 // There are several range reduction steps we can take for atan2(y, x) as
@@ -246,12 +258,18 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   uint32_t y_abs = y_bits.uintval();
   uint32_t max_abs = x_abs > y_abs ? x_abs : y_abs;
   uint32_t min_abs = x_abs <= y_abs ? x_abs : y_abs;
+  float num_f = FPBits(min_abs).get_val();
+  float den_f = FPBits(max_abs).get_val();
+  double num_d = static_cast<double>(num_f);
+  double den_d = static_cast<double>(den_f);
 
-  if (LIBC_UNLIKELY(max_abs >= 0x7f80'0000U || min_abs == 0U)) {
+  if (LIBC_UNLIKELY(max_abs >= 0x7f80'0000U || num_d == 0.0)) {
     if (x_bits.is_nan() || y_bits.is_nan())
       return FPBits::quiet_nan().get_val();
-    size_t x_except = x_abs == 0 ? 0 : (x_abs == 0x7f80'0000 ? 2 : 1);
-    size_t y_except = y_abs == 0 ? 0 : (y_abs == 0x7f80'0000 ? 2 : 1);
+    double x_d = static_cast<double>(x);
+    double y_d = static_cast<double>(y);
+    size_t x_except = (x_d == 0.0) ? 0 : (x_abs == 0x7f80'0000 ? 2 : 1);
+    size_t y_except = (y_d == 0.0) ? 0 : (y_abs == 0x7f80'0000 ? 2 : 1);
 
     // Exceptional cases:
     //   EXCEPT[y_except][x_except][x_is_neg]
@@ -275,18 +293,26 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   bool recip = x_abs < y_abs;
   double final_sign = IS_NEG[(x_sign != y_sign) != recip];
   fputil::DoubleDouble const_term = CONST_ADJ[x_sign][y_sign][recip];
-  double num_d = static_cast<double>(FPBits(min_abs).get_val());
-  double den_d = static_cast<double>(FPBits(max_abs).get_val());
   double q_d = num_d / den_d;
 
-  double k_d = fputil::nearest_integer(q_d * 0x1.0p4f);
+  double k_d = fputil::nearest_integer(q_d * 0x1.0p4);
   int idx = static_cast<int>(k_d);
+  double r;
+
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+  double p = atan_eval_no_table(num_d, den_d, k_d * 0x1.0p-4);
+  r = final_sign * (p + (const_term.hi + ATAN_K_OVER_16[idx]));
+#else
   q_d = fputil::multiply_add(k_d, -0x1.0p-4, q_d);
 
   double p = atan_eval(q_d, idx);
-  double r = final_sign *
-             fputil::multiply_add(q_d, p, const_term.hi + ATAN_COEFFS[idx][0]);
+  r = final_sign *
+      fputil::multiply_add(q_d, p, const_term.hi + ATAN_COEFFS[idx][0]);
+#endif // LIBC_MATH_HAS_SMALL_TABLES
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return static_cast<float>(r);
+#else
   constexpr uint32_t LOWER_ERR = 4;
   // Mask sticky bits in double precision before rounding to single precision.
   constexpr uint32_t MASK =
@@ -302,6 +328,9 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
 
   return atan2f_double_double(num_d, den_d, q_d, idx, k_d, final_sign,
                               const_term);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif

@@ -1,4 +1,4 @@
-//===--- ClangCommentHTMLNamedCharacterReferenceEmitter.cpp -----------------=//
+//===-- ClangCommentHTMLNamedCharacterReferenceEmitter.cpp ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,7 +51,7 @@ void clang::EmitClangCommentHTMLNamedCharacterReferences(
   std::vector<StringMatcher::StringPair> NameToUTF8;
   SmallString<32> CLiteral;
   for (const Record *Tag : Records.getAllDerivedDefinitions("NCR")) {
-    std::string Spelling = std::string(Tag->getValueAsString("Spelling"));
+    std::string Spelling = Tag->getValueAsString("Spelling").str();
     uint64_t CodePoint = Tag->getValueAsInt("CodePoint");
     CLiteral.clear();
     CLiteral.append("return ");

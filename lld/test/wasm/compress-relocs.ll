@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: llvm-mc -mattr=+reference-types -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t2.o
+; RUN: llvm-mc -mattr=+call-indirect-overlong -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t2.o
 ; RUN: wasm-ld --export-dynamic -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 ; RUN: wasm-ld --export-dynamic -O2 -o %t-opt.wasm %t2.o %t.o

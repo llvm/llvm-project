@@ -600,12 +600,13 @@ MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,
     return buildCopy(Dst, Src);
 
   unsigned Opcode;
-  if (SrcTy.isPointer() && DstTy.isScalar())
+  if (SrcTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_PTRTOINT;
-  else if (DstTy.isPointer() && SrcTy.isScalar())
+  else if (DstTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_INTTOPTR;
   else {
-    assert(!SrcTy.isPointer() && !DstTy.isPointer() && "n G_ADDRCAST yet");
+    assert(!SrcTy.isPointerOrPointerVector() &&
+           !DstTy.isPointerOrPointerVector() && "no G_ADDRCAST yet");
     Opcode = TargetOpcode::G_BITCAST;
   }
 
@@ -697,6 +698,15 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(LLT Res,
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildUnmerge(MachineRegisterInfo::VRegAttrs Attrs,
+                               const SrcOp &Op) {
+  LLT OpTy = Op.getLLTTy(*getMRI());
+  unsigned NumRegs = OpTy.getSizeInBits() / Attrs.Ty.getSizeInBits();
+  SmallVector<DstOp, 8> TmpVec(NumRegs, Attrs);
+  return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<Register> Res,
                                                    const SrcOp &Op) {
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<DstOp>,
@@ -772,13 +782,13 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   LLT DstTy = Res.getLLTTy(*getMRI());
   LLT Src1Ty = Src1.getLLTTy(*getMRI());
   LLT Src2Ty = Src2.getLLTTy(*getMRI());
-  assert((size_t)(Src1Ty.getNumElements() + Src2Ty.getNumElements()) >=
-         Mask.size());
-  assert(DstTy.getElementType() == Src1Ty.getElementType() &&
-         DstTy.getElementType() == Src2Ty.getElementType());
-  (void)DstTy;
-  (void)Src1Ty;
-  (void)Src2Ty;
+  const LLT DstElemTy = DstTy.isVector() ? DstTy.getElementType() : DstTy;
+  const LLT ElemTy1 = Src1Ty.isVector() ? Src1Ty.getElementType() : Src1Ty;
+  const LLT ElemTy2 = Src2Ty.isVector() ? Src2Ty.getElementType() : Src2Ty;
+  assert(DstElemTy == ElemTy1 && DstElemTy == ElemTy2);
+  (void)DstElemTy;
+  (void)ElemTy1;
+  (void)ElemTy2;
   ArrayRef<int> MaskAlloc = getMF().allocateShuffleMask(Mask);
   return buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {Res}, {Src1, Src2})
       .addShuffleMask(MaskAlloc);
@@ -807,6 +817,18 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   }
 
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildStepVector(const DstOp &Res,
+                                                      unsigned Step) {
+  unsigned Bitwidth = Res.getLLTTy(*getMRI()).getElementType().getSizeInBits();
+  ConstantInt *CI = ConstantInt::get(getMF().getFunction().getContext(),
+                                     APInt(Bitwidth, Step));
+  auto StepVector = buildInstr(TargetOpcode::G_STEP_VECTOR);
+  StepVector->setDebugLoc(DebugLoc());
+  Res.addDefToMIB(*getMRI(), StepVector);
+  StepVector.addCImm(CI);
+  return StepVector;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildVScale(const DstOp &Res,
@@ -898,8 +920,9 @@ MachineIRBuilder::buildFPTrunc(const DstOp &Res, const SrcOp &Op,
 MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
-                                                const SrcOp &Op1) {
-  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1});
+                                                const SrcOp &Op1,
+                                                std::optional<unsigned> Flags) {
+  return buildInstr(TargetOpcode::G_ICMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,

@@ -29,6 +29,9 @@ namespace linalg {
 ///   4. The source operands for vector.transfer_{read|write} do not originate
 ///   from Ops implementing ViewLikeOpInterface (to reduce the risk of
 ///   aliasing).
+///   5. If `verifyNonZeroTrip` is true, then the lower bound of the loop must
+///   be statically smaller than the upper bound of the loop, guaranteeing that
+///   the loop body will execute at least once.
 /// To improve hoisting opportunities, call the `moveLoopInvariantCode` helper
 /// function on the candidate loop above which to hoist. Hoisting the transfers
 /// results in scf::ForOp yielding the value that originally transited through
@@ -41,7 +44,12 @@ namespace linalg {
 ///
 /// WARNING: This hoisting does not model parallelism and is generally incorrect
 /// when used on distributed loops with memref semantics!
-void hoistRedundantVectorTransfers(Operation *root);
+/// NOTE: Setting `verifyNonZeroTrip = true` makes this more stable for
+/// distributed loops with memref semantics, but there could still be some
+/// issues when loops are executed a different number of times for different
+/// threads.
+void hoistRedundantVectorTransfers(Operation *root,
+                                   bool verifyNonZeroTrip = false);
 
 /// Hoist vector.extract/vector.broadcast pairs out of immediately enclosing
 /// scf::ForOp iteratively, if the following conditions are met:

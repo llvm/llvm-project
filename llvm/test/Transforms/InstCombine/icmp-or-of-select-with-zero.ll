@@ -293,3 +293,20 @@ define i1 @src_tv_ne_invert(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
   call void @use.i8(i8 %sel_other)
   ret i1 %r
 }
+
+; Make sure we don't crash on this case.
+
+define <4 x i1> @pr119063(<4 x i32> %x, i1 %cond) {
+; CHECK-LABEL: @pr119063(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[SEL]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[OR]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+entry:
+  %sel = select i1 %cond, <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
+  %or = or <4 x i32> %sel, %x
+  %cmp = icmp ne <4 x i32> %or, zeroinitializer
+  ret <4 x i1> %cmp
+}

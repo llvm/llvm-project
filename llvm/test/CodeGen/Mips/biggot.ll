@@ -1,10 +1,10 @@
-; RUN: llc -march=mipsel -mattr=+xgot \
+; RUN: llc -mtriple=mipsel -mattr=+xgot \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefix=O32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+xgot \
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -mattr=+xgot \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefix=N64
-; RUN: llc -march=mipsel -mattr=+xgot -fast-isel \
+; RUN: llc -mtriple=mipsel -mattr=+xgot -fast-isel \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefix=O32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+xgot -fast-isel \
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -mattr=+xgot -fast-isel \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefix=N64
 
 @v0 = external global i32

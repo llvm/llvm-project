@@ -19,19 +19,17 @@ using namespace clang::targets;
 namespace clang {
 namespace targets {
 
-void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
-                      const llvm::Triple &Triple, StringRef &PlatformName,
-                      VersionTuple &PlatformMinVersion) {
+void getAppleMachODefines(MacroBuilder &Builder, const LangOptions &Opts,
+                          const llvm::Triple &Triple) {
   Builder.defineMacro("__APPLE_CC__", "6000");
   Builder.defineMacro("__APPLE__");
-  Builder.defineMacro("__STDC_NO_THREADS__");
 
   // AddressSanitizer doesn't play well with source fortification, which is on
-  // by default on Darwin.
+  // by default on Apple platforms.
   if (Opts.Sanitize.has(SanitizerKind::Address))
     Builder.defineMacro("_FORTIFY_SOURCE", "0");
 
-  // Darwin defines __weak, __strong, and __unsafe_unretained even in C mode.
+  // Apple defines __weak, __strong, and __unsafe_unretained even in C mode.
   if (!Opts.ObjC) {
     // __weak is always defined, for use in blocks and with objc pointers.
     Builder.defineMacro("__weak", "__attribute__((objc_gc(weak)))");
@@ -46,6 +44,22 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
 
   if (Opts.POSIXThreads)
     Builder.defineMacro("_REENTRANT");
+
+  // __MACH__ originally meant "will run in a Mach kernel based OS", but it has
+  // come to also mean "uses Apple Mach-O linking/symbol visibility semantics".
+  // Notably libc++'s __configuration/platform.h and Swift's shims/Visibility.h
+  // take __MACH__ for the more general meaning.
+  if (Triple.isAppleMachO() || Triple.isOSDarwin())
+    Builder.defineMacro("__MACH__");
+}
+
+void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
+                      const llvm::Triple &Triple, StringRef &PlatformName,
+                      VersionTuple &PlatformMinVersion) {
+  getAppleMachODefines(Builder, Opts, Triple);
+
+  // Darwin's libc doesn't have threads.h
+  Builder.defineMacro("__STDC_NO_THREADS__");
 
   // Get the platform type and version number from the triple.
   VersionTuple OsVersion;
@@ -114,9 +128,6 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     assert(OsVersion.getMinor().value_or(0) < 100 &&
            OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
     Builder.defineMacro("__ENVIRONMENT_OS_VERSION_MIN_REQUIRED__", Str);
-
-    // Tell users about the kernel if there is one.
-    Builder.defineMacro("__MACH__");
   }
 
   PlatformMinVersion = OsVersion;
@@ -214,9 +225,11 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
       Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));
 
     if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
-      if (Opts.CPlusPlus23)
+      if (Opts.CPlusPlus26)
         // TODO update to the proper value.
-        Builder.defineMacro("_MSVC_LANG", "202004L");
+        Builder.defineMacro("_MSVC_LANG", "202400L");
+      else if (Opts.CPlusPlus23)
+        Builder.defineMacro("_MSVC_LANG", "202302L");
       else if (Opts.CPlusPlus20)
         Builder.defineMacro("_MSVC_LANG", "202002L");
       else if (Opts.CPlusPlus17)
@@ -246,8 +259,10 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
     Builder.defineMacro("_KERNEL_MODE");
 
   Builder.defineMacro("_INTEGRAL_MAX_BITS", "64");
-  Builder.defineMacro("__STDC_NO_THREADS__");
-
+  // Define __STDC_NO_THREADS__ based on MSVC version, threads.h availability,
+  // and language standard.
+  if (!(Opts.isCompatibleWithMSVC(LangOptions::MSVC2022_9) && Opts.C11))
+    Builder.defineMacro("__STDC_NO_THREADS__");
   // Starting with VS 2022 17.1, MSVC predefines the below macro to inform
   // users of the execution character set defined at compile time.
   // The value given is the Windows Code Page Identifier:

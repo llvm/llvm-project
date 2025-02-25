@@ -279,6 +279,21 @@ define <4 x float> @cvt_v2i32_v2f32(ptr) nounwind {
   ret <4 x float> %8
 }
 
+define noundef <2 x i64> @cvt_f64_v2i64(double %a0) {
+; X86-LABEL: cvt_f64_v2i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    retl
+;
+; X64-LABEL: cvt_f64_v2i64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-NEXT:    retq
+  %bc = bitcast double %a0 to <1 x i64>
+  %r = shufflevector <1 x i64> %bc, <1 x i64> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %r
+}
+
 declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>)
 declare <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double>)
 declare <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double>)

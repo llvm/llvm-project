@@ -226,13 +226,13 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
     const bool needsFixup = config->emitChainedFixups &&
                             target->hasAttr(r.type, RelocAttrBits::UNSIGNED);
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
-      const Symbol *fromSym = r.referent.get<Symbol *>();
+      const Symbol *fromSym = cast<Symbol *>(r.referent);
       const Reloc &minuend = relocs[++i];
       uint64_t minuendVA;
       if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
         minuendVA = toSym->getVA() + minuend.addend;
       else {
-        auto *referentIsec = minuend.referent.get<InputSection *>();
+        auto *referentIsec = cast<InputSection *>(minuend.referent);
         assert(!::shouldOmitFromOutput(referentIsec));
         minuendVA = referentIsec->getVA(minuend.addend);
       }

@@ -10,6 +10,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Casting.h"
@@ -84,7 +85,7 @@ void LatticeAnchor::print(raw_ostream &os) const {
     return value.print(os, OpPrintingFlags().skipRegions());
   }
 
-  return get<ProgramPoint *>()->print(os);
+  return llvm::cast<ProgramPoint *>(*this)->print(os);
 }
 
 Location LatticeAnchor::getLoc() const {
@@ -93,7 +94,7 @@ Location LatticeAnchor::getLoc() const {
   if (auto value = llvm::dyn_cast<Value>(*this))
     return value.getLoc();
 
-  ProgramPoint *pp = get<ProgramPoint *>();
+  ProgramPoint *pp = llvm::cast<ProgramPoint *>(*this);
   if (!pp->isBlockStart())
     return pp->getPrevOp()->getLoc();
   return pp->getBlock()->getParent()->getLoc();
@@ -104,6 +105,10 @@ Location LatticeAnchor::getLoc() const {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
+  // Enable enqueue to the worklist.
+  isRunning = true;
+  auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
+
   // Initialize the analyses.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
     DATAFLOW_DEBUG(llvm::dbgs()
@@ -134,6 +139,8 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
 
 void DataFlowSolver::propagateIfChanged(AnalysisState *state,
                                         ChangeResult changed) {
+  assert(isRunning &&
+         "DataFlowSolver is not running, should not use propagateIfChanged");
   if (changed == ChangeResult::Change) {
     DATAFLOW_DEBUG(llvm::dbgs() << "Propagating update to " << state->debugName
                                 << " of " << state->anchor << "\n"

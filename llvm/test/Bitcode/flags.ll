@@ -30,6 +30,8 @@ second:                                           ; preds = %first
   %tsv = trunc nsw <2 x i32> %aa to <2 x i16>
   %tusv = trunc nuw nsw <2 x i32> %aa to <2 x i16>
   %tv = trunc <2 x i32> %aa to <2 x i16>
+  %ii = icmp samesign ult i32 %a, %z
+  %iv = icmp samesign ult <2 x i32> %aa, %aa
   unreachable
 
 first:                                                    ; preds = %entry
@@ -53,5 +55,7 @@ first:                                                    ; preds = %entry
   %ttsv = trunc nsw <2 x i32> %aa to <2 x i16>
   %ttusv = trunc nuw nsw <2 x i32> %aa to <2 x i16>
   %ttv = trunc <2 x i32> %aa to <2 x i16>
+  %icm = icmp samesign ult i32 %a, %zz
+  %icv = icmp samesign ult <2 x i32> %aa, %aa
   br label %second
 }

@@ -92,7 +92,7 @@ struct constant_op_binder {
     (void)result;
     assert(succeeded(result) && "expected ConstantLike op to be foldable");
 
-    if (auto attr = llvm::dyn_cast<AttrT>(foldedOp.front().get<Attribute>())) {
+    if (auto attr = llvm::dyn_cast<AttrT>(cast<Attribute>(foldedOp.front()))) {
       if (bind_value)
         *bind_value = attr;
       return true;
@@ -415,6 +415,11 @@ inline detail::constant_float_predicate_matcher m_OneFloat() {
   return {[](const APFloat &value) {
     return APFloat(value.getSemantics(), 1) == value;
   }};
+}
+
+/// Matches a constant scalar / vector splat / tensor splat float ones.
+inline detail::constant_float_predicate_matcher m_NaNFloat() {
+  return {[](const APFloat &value) { return value.isNaN(); }};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat float positive

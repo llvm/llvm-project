@@ -44,7 +44,7 @@ void use() {
            // expected-note@* {{but in 'a' found a different body}}
 }
 
-// expected-error@a.cppm:* {{declaration 'foo' attached to named module 'a' can't be attached to other modules}}
+// expected-error@a.cppm:* {{declaration 'foo' attached to named module 'a' cannot be attached to other modules}}
 // expected-note@b.cppm:* {{}}
 
 //--- h.cppm
@@ -59,5 +59,5 @@ void use() {
            // expected-note@* {{but in 'a' found a different body}}
 }
 
-// expected-error@a.cppm:* {{declaration 'foo' attached to named module 'a' can't be attached to other modules}}
+// expected-error@a.cppm:* {{declaration 'foo' attached to named module 'a' cannot be attached to other modules}}
 // expected-note@b.cppm:* {{}}

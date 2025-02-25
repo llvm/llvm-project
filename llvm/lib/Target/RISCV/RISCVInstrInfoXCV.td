@@ -514,6 +514,7 @@ def CVrrAsmOperand : AsmOperandClass {
   let Name = "RegReg";
   let ParserMethod = "parseRegReg";
   let DiagnosticType = "InvalidRegReg";
+  let DiagnosticString = "operands must be register and register";
 }
 
 def CVrr : Operand<i32>,
@@ -698,7 +699,7 @@ let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
   def : CVStriPat<post_store, CV_SW_ri_inc>;
 
   def : CVStrriPat<post_truncsti8, CV_SB_rr_inc>;
-  def : CVStrriPat<post_truncsti16, CV_SH_ri_inc>;
+  def : CVStrriPat<post_truncsti16, CV_SH_rr_inc>;
   def : CVStrriPat<post_store, CV_SW_rr_inc>;
 
   def : CVStrrPat<truncstorei8, CV_SB_rr>;
@@ -818,7 +819,7 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
 
   let usesCustomInserter = 1 in
   def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
-                             (ins GPR:$lhs, simm5:$imm5, ixlenimm:$cc,
+                             (ins GPR:$lhs, simm5:$imm5, cond_code:$cc,
                               GPR:$truev, GPR:$falsev), []>;
 
 

@@ -21,7 +21,6 @@
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 
 using namespace llvm;
 
@@ -213,6 +212,9 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::ATAN_F32] = f32_func_f32;
     Table[RTLIB::ATAN_F64] = f64_func_f64;
     Table[RTLIB::ATAN_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ATAN2_F32] = f32_func_f32_f32;
+    Table[RTLIB::ATAN2_F64] = f64_func_f64_f64;
+    Table[RTLIB::ATAN2_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::SINH_F32] = f32_func_f32;
     Table[RTLIB::SINH_F64] = f64_func_f64;
     Table[RTLIB::SINH_F128] = i64_i64_func_i64_i64;
@@ -535,10 +537,6 @@ struct StaticLibcallNameMap {
         Map[NameLibcall.first] = NameLibcall.second;
       }
     }
-    // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
-    // consistent with the f64 and f128 names.
-    Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
-    Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
 
     Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }

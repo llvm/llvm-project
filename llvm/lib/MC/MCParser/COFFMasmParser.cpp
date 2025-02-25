@@ -35,23 +35,23 @@ class COFFMasmParser : public MCAsmParserExtension {
     getParser().addDirectiveHandler(Directive, Handler);
   }
 
-  bool ParseSectionSwitch(StringRef SectionName, unsigned Characteristics);
+  bool parseSectionSwitch(StringRef SectionName, unsigned Characteristics);
 
-  bool ParseSectionSwitch(StringRef SectionName, unsigned Characteristics,
+  bool parseSectionSwitch(StringRef SectionName, unsigned Characteristics,
                           StringRef COMDATSymName, COFF::COMDATType Type,
                           Align Alignment);
 
-  bool ParseDirectiveProc(StringRef, SMLoc);
-  bool ParseDirectiveEndProc(StringRef, SMLoc);
-  bool ParseDirectiveSegment(StringRef, SMLoc);
-  bool ParseDirectiveSegmentEnd(StringRef, SMLoc);
-  bool ParseDirectiveIncludelib(StringRef, SMLoc);
-  bool ParseDirectiveOption(StringRef, SMLoc);
+  bool parseDirectiveProc(StringRef, SMLoc);
+  bool parseDirectiveEndProc(StringRef, SMLoc);
+  bool parseDirectiveSegment(StringRef, SMLoc);
+  bool parseDirectiveSegmentEnd(StringRef, SMLoc);
+  bool parseDirectiveIncludelib(StringRef, SMLoc);
+  bool parseDirectiveOption(StringRef, SMLoc);
 
-  bool ParseDirectiveAlias(StringRef, SMLoc);
+  bool parseDirectiveAlias(StringRef, SMLoc);
 
-  bool ParseSEHDirectiveAllocStack(StringRef, SMLoc);
-  bool ParseSEHDirectiveEndProlog(StringRef, SMLoc);
+  bool parseSEHDirectiveAllocStack(StringRef, SMLoc);
+  bool parseSEHDirectiveEndProlog(StringRef, SMLoc);
 
   bool IgnoreDirective(StringRef, SMLoc) {
     while (!getLexer().is(AsmToken::EndOfStatement)) {
@@ -65,9 +65,9 @@ class COFFMasmParser : public MCAsmParserExtension {
     MCAsmParserExtension::Initialize(Parser);
 
     // x64 directives
-    addDirectiveHandler<&COFFMasmParser::ParseSEHDirectiveAllocStack>(
+    addDirectiveHandler<&COFFMasmParser::parseSEHDirectiveAllocStack>(
         ".allocstack");
-    addDirectiveHandler<&COFFMasmParser::ParseSEHDirectiveEndProlog>(
+    addDirectiveHandler<&COFFMasmParser::parseSEHDirectiveEndProlog>(
         ".endprolog");
 
     // Code label directives
@@ -115,20 +115,20 @@ class COFFMasmParser : public MCAsmParserExtension {
     // goto
 
     // Miscellaneous directives
-    addDirectiveHandler<&COFFMasmParser::ParseDirectiveAlias>("alias");
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveAlias>("alias");
     // assume
     // .fpo
-    addDirectiveHandler<&COFFMasmParser::ParseDirectiveIncludelib>(
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveIncludelib>(
         "includelib");
-    addDirectiveHandler<&COFFMasmParser::ParseDirectiveOption>("option");
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveOption>("option");
     // popcontext
     // pushcontext
     // .safeseh
 
     // Procedure directives
-    addDirectiveHandler<&COFFMasmParser::ParseDirectiveEndProc>("endp");
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveEndProc>("endp");
     // invoke (32-bit only)
-    addDirectiveHandler<&COFFMasmParser::ParseDirectiveProc>("proc");
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveProc>("proc");
     // proto
 
     // Processor directives; all ignored
@@ -153,17 +153,17 @@ class COFFMasmParser : public MCAsmParserExtension {
     // .alpha (32-bit only, order segments alphabetically)
     // .dosseg (32-bit only, order segments in DOS convention)
     // .seq (32-bit only, order segments sequentially)
-    addDirectiveHandler<&COFFMasmParser::ParseDirectiveSegmentEnd>("ends");
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveSegmentEnd>("ends");
     // group (32-bit only)
-    addDirectiveHandler<&COFFMasmParser::ParseDirectiveSegment>("segment");
+    addDirectiveHandler<&COFFMasmParser::parseDirectiveSegment>("segment");
 
     // Simplified segment directives
-    addDirectiveHandler<&COFFMasmParser::ParseSectionDirectiveCode>(".code");
+    addDirectiveHandler<&COFFMasmParser::parseSectionDirectiveCode>(".code");
     // .const
+    addDirectiveHandler<&COFFMasmParser::parseSectionDirectiveInitializedData>(
+        ".data");
     addDirectiveHandler<
-        &COFFMasmParser::ParseSectionDirectiveInitializedData>(".data");
-    addDirectiveHandler<
-        &COFFMasmParser::ParseSectionDirectiveUninitializedData>(".data?");
+        &COFFMasmParser::parseSectionDirectiveUninitializedData>(".data?");
     // .exit
     // .fardata
     // .fardata?
@@ -182,20 +182,20 @@ class COFFMasmParser : public MCAsmParserExtension {
     // typedef
   }
 
-  bool ParseSectionDirectiveCode(StringRef, SMLoc) {
-    return ParseSectionSwitch(".text", COFF::IMAGE_SCN_CNT_CODE |
+  bool parseSectionDirectiveCode(StringRef, SMLoc) {
+    return parseSectionSwitch(".text", COFF::IMAGE_SCN_CNT_CODE |
                                            COFF::IMAGE_SCN_MEM_EXECUTE |
                                            COFF::IMAGE_SCN_MEM_READ);
   }
 
-  bool ParseSectionDirectiveInitializedData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+  bool parseSectionDirectiveInitializedData(StringRef, SMLoc) {
+    return parseSectionSwitch(".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                            COFF::IMAGE_SCN_MEM_READ |
                                            COFF::IMAGE_SCN_MEM_WRITE);
   }
 
-  bool ParseSectionDirectiveUninitializedData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".bss", COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA |
+  bool parseSectionDirectiveUninitializedData(StringRef, SMLoc) {
+    return parseSectionSwitch(".bss", COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA |
                                           COFF::IMAGE_SCN_MEM_READ |
                                           COFF::IMAGE_SCN_MEM_WRITE);
   }
@@ -210,13 +210,13 @@ public:
 
 } // end anonymous namespace.
 
-bool COFFMasmParser::ParseSectionSwitch(StringRef SectionName,
+bool COFFMasmParser::parseSectionSwitch(StringRef SectionName,
                                         unsigned Characteristics) {
-  return ParseSectionSwitch(SectionName, Characteristics, "",
+  return parseSectionSwitch(SectionName, Characteristics, "",
                             (COFF::COMDATType)0, Align(16));
 }
 
-bool COFFMasmParser::ParseSectionSwitch(StringRef SectionName,
+bool COFFMasmParser::parseSectionSwitch(StringRef SectionName,
                                         unsigned Characteristics,
                                         StringRef COMDATSymName,
                                         COFF::COMDATType Type,
@@ -233,7 +233,7 @@ bool COFFMasmParser::ParseSectionSwitch(StringRef SectionName,
   return false;
 }
 
-bool COFFMasmParser::ParseDirectiveSegment(StringRef Directive, SMLoc Loc) {
+bool COFFMasmParser::parseDirectiveSegment(StringRef Directive, SMLoc Loc) {
   StringRef SegmentName;
   if (!getLexer().is(AsmToken::Identifier))
     return TokError("expected identifier in directive");
@@ -367,9 +367,9 @@ bool COFFMasmParser::ParseDirectiveSegment(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
-/// ParseDirectiveSegmentEnd
+/// parseDirectiveSegmentEnd
 ///  ::= identifier "ends"
-bool COFFMasmParser::ParseDirectiveSegmentEnd(StringRef Directive, SMLoc Loc) {
+bool COFFMasmParser::parseDirectiveSegmentEnd(StringRef Directive, SMLoc Loc) {
   StringRef SegmentName;
   if (!getLexer().is(AsmToken::Identifier))
     return TokError("expected identifier in directive");
@@ -380,9 +380,9 @@ bool COFFMasmParser::ParseDirectiveSegmentEnd(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
-/// ParseDirectiveIncludelib
+/// parseDirectiveIncludelib
 ///  ::= "includelib" identifier
-bool COFFMasmParser::ParseDirectiveIncludelib(StringRef Directive, SMLoc Loc) {
+bool COFFMasmParser::parseDirectiveIncludelib(StringRef Directive, SMLoc Loc) {
   StringRef Lib;
   if (getParser().parseIdentifier(Lib))
     return TokError("expected identifier in includelib directive");
@@ -398,9 +398,9 @@ bool COFFMasmParser::ParseDirectiveIncludelib(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
-/// ParseDirectiveOption
+/// parseDirectiveOption
 ///  ::= "option" option-list
-bool COFFMasmParser::ParseDirectiveOption(StringRef Directive, SMLoc Loc) {
+bool COFFMasmParser::parseDirectiveOption(StringRef Directive, SMLoc Loc) {
   auto parseOption = [&]() -> bool {
     StringRef Option;
     if (getParser().parseIdentifier(Option))
@@ -435,12 +435,15 @@ bool COFFMasmParser::ParseDirectiveOption(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
-/// ParseDirectiveProc
+/// parseDirectiveProc
 /// TODO(epastor): Implement parameters and other attributes.
 ///  ::= label "proc" [[distance]]
 ///          statements
 ///      label "endproc"
-bool COFFMasmParser::ParseDirectiveProc(StringRef Directive, SMLoc Loc) {
+bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
+  if (!getStreamer().getCurrentFragment())
+    return Error(getTok().getLoc(), "expected section directive");
+
   StringRef Label;
   if (getParser().parseIdentifier(Label))
     return Error(Loc, "expected identifier for procedure");
@@ -476,7 +479,7 @@ bool COFFMasmParser::ParseDirectiveProc(StringRef Directive, SMLoc Loc) {
   CurrentProceduresFramed.push_back(Framed);
   return false;
 }
-bool COFFMasmParser::ParseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
+bool COFFMasmParser::parseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
   StringRef Label;
   SMLoc LabelLoc = getTok().getLoc();
   if (getParser().parseIdentifier(Label))
@@ -496,7 +499,7 @@ bool COFFMasmParser::ParseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
-bool COFFMasmParser::ParseDirectiveAlias(StringRef Directive, SMLoc Loc) {
+bool COFFMasmParser::parseDirectiveAlias(StringRef Directive, SMLoc Loc) {
   std::string AliasName, ActualName;
   if (getTok().isNot(AsmToken::Less) ||
       getParser().parseAngleBracketString(AliasName))
@@ -515,7 +518,7 @@ bool COFFMasmParser::ParseDirectiveAlias(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
-bool COFFMasmParser::ParseSEHDirectiveAllocStack(StringRef Directive,
+bool COFFMasmParser::parseSEHDirectiveAllocStack(StringRef Directive,
                                                  SMLoc Loc) {
   int64_t Size;
   SMLoc SizeLoc = getTok().getLoc();
@@ -527,7 +530,7 @@ bool COFFMasmParser::ParseSEHDirectiveAllocStack(StringRef Directive,
   return false;
 }
 
-bool COFFMasmParser::ParseSEHDirectiveEndProlog(StringRef Directive,
+bool COFFMasmParser::parseSEHDirectiveEndProlog(StringRef Directive,
                                                 SMLoc Loc) {
   getStreamer().emitWinCFIEndProlog(Loc);
   return false;

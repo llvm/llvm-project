@@ -139,7 +139,7 @@ public:
     return visitor_(x.base());
   }
   Result operator()(const Triplet &x) const {
-    return Combine(x.lower(), x.upper(), x.stride());
+    return Combine(x.GetLower(), x.GetUpper(), x.GetStride());
   }
   Result operator()(const Subscript &x) const { return visitor_(x.u); }
   Result operator()(const ArrayRef &x) const {
@@ -151,7 +151,7 @@ public:
   }
   Result operator()(const DataRef &x) const { return visitor_(x.u); }
   Result operator()(const Substring &x) const {
-    return Combine(x.parent(), x.lower(), x.upper());
+    return Combine(x.parent(), x.GetLower(), x.GetUpper());
   }
   Result operator()(const ComplexPart &x) const {
     return visitor_(x.complex());

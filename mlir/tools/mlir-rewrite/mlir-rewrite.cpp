@@ -38,7 +38,7 @@ SMRange getOpRange(const OperationDefinition &op) {
   const char *startOp = op.scopeLoc.Start.getPointer();
   const char *endOp = op.scopeLoc.End.getPointer();
 
-  for (auto res : op.resultGroups) {
+  for (const auto &res : op.resultGroups) {
     SMRange range = res.definition.loc;
     startOp = std::min(startOp, range.Start.getPointer());
   }
@@ -317,28 +317,28 @@ static mlir::RewriterRegistration rewriteSimpleRename("simple-rename",
 
 // Rewriter that insert range markers.
 LogicalResult markRanges(RewritePad &rewriteState, raw_ostream &os) {
-  for (auto it : rewriteState.getOpDefs()) {
+  for (const auto &it : rewriteState.getOpDefs()) {
     auto [startOp, endOp] = getOpRange(it);
 
-    rewriteState.insertText(startOp, "《");
-    rewriteState.insertText(endOp, "》");
+    rewriteState.insertText(startOp, "<");
+    rewriteState.insertText(endOp, ">");
 
     auto nameRange = getOpNameRange(it);
 
     if (isGeneric(it)) {
-      rewriteState.insertText(nameRange.Start, "〖");
-      rewriteState.insertText(nameRange.End, "〗");
+      rewriteState.insertText(nameRange.Start, "[");
+      rewriteState.insertText(nameRange.End, "]");
     } else {
-      rewriteState.insertText(nameRange.Start, "〔");
-      rewriteState.insertText(nameRange.End, "〕");
+      rewriteState.insertText(nameRange.Start, "![");
+      rewriteState.insertText(nameRange.End, "]!");
     }
   }
 
   // Highlight all comment lines.
   // TODO: Could be replaced if this is kept in memory.
   for (auto commentLine : rewriteState.getSingleLineComments()) {
-    rewriteState.insertText(commentLine.Start, "❰");
-    rewriteState.insertText(commentLine.End, "❱");
+    rewriteState.insertText(commentLine.Start, "{");
+    rewriteState.insertText(commentLine.End, "}");
   }
 
   return success();
@@ -348,11 +348,11 @@ static mlir::RewriterRegistration
     rewriteMarkRanges("mark-ranges", "Indicate ranges parsed", markRanges);
 
 int main(int argc, char **argv) {
-  static llvm::cl::opt<std::string> inputFilename(
-      llvm::cl::Positional, llvm::cl::desc("<input file>"),
-      llvm::cl::init("-"));
+  llvm::cl::opt<std::string> inputFilename(llvm::cl::Positional,
+                                           llvm::cl::desc("<input file>"),
+                                           llvm::cl::init("-"));
 
-  static llvm::cl::opt<std::string> outputFilename(
+  llvm::cl::opt<std::string> outputFilename(
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 

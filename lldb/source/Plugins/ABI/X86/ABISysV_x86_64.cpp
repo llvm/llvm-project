@@ -15,9 +15,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -30,6 +27,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 
 #include <optional>
 #include <vector>
@@ -79,6 +79,7 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
     case llvm::Triple::OSType::IOS:
     case llvm::Triple::OSType::TvOS:
     case llvm::Triple::OSType::WatchOS:
+    case llvm::Triple::OSType::XROS:
       switch (os_env) {
       case llvm::Triple::EnvironmentType::MacABI:
       case llvm::Triple::EnvironmentType::Simulator:
@@ -95,6 +96,7 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::MacOSX:
     case llvm::Triple::OSType::NetBSD:
+    case llvm::Triple::OSType::OpenBSD:
     case llvm::Triple::OSType::Solaris:
     case llvm::Triple::OSType::UnknownOS:
       return ABISP(

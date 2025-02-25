@@ -122,7 +122,6 @@ protected:
     // Returns zero if no match is found.
     unsigned match(StringRef Query) const;
 
-  private:
     StringMap<std::pair<GlobPattern, unsigned>> Globs;
     std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
   };

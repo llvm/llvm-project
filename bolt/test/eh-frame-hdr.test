@@ -1,0 +1,12 @@
+# Check that llvm-bolt overwrites .eh_frame_hdr in-place.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
+RUN: llvm-bolt %t -o %t.bolt --use-old-text \
+RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
+RUN: llvm-readelf -WS %t.bolt | FileCheck %s
+
+CHECK-BOLT: rewriting .eh_frame_hdr in-place
+
+CHECK-NOT: .bolt.org.eh_frame_hdr

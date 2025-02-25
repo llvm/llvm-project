@@ -23,7 +23,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcRemapFilePagesTest, NoError) {
-  size_t page_size = sysconf(_SC_PAGE_SIZE);
+  size_t page_size = LIBC_NAMESPACE::sysconf(_SC_PAGE_SIZE);
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
@@ -53,7 +53,7 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
 }
 
 TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
-  size_t page_size = sysconf(_SC_PAGE_SIZE);
+  size_t page_size = LIBC_NAMESPACE::sysconf(_SC_PAGE_SIZE);
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
@@ -81,7 +81,7 @@ TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
 }
 
 TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidAddress) {
-  size_t page_size = sysconf(_SC_PAGESIZE);
+  size_t page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
   ASSERT_GT(page_size, size_t(0));
 
   // Use an address that we haven't mapped

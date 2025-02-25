@@ -34,15 +34,32 @@ struct test_alloc {
     typedef test_alloc<U, Sz> other;
   };
 
-  TEST_CONSTEXPR_CXX14 pointer allocate(size_type n, const void* = nullptr) {
+  TEST_CONSTEXPR test_alloc() TEST_NOEXCEPT {}
+
+  template <class U>
+  TEST_CONSTEXPR test_alloc(const test_alloc<U, Sz>&) TEST_NOEXCEPT {}
+
+  pointer allocate(size_type n, const void* = nullptr) {
     allocated_ += n;
     return std::allocator<value_type>().allocate(n);
   }
 
-  TEST_CONSTEXPR_CXX14 void deallocate(pointer p, size_type s) {
+  void deallocate(pointer p, size_type s) {
     allocated_ -= s;
     std::allocator<value_type>().deallocate(p, s);
   }
+
+  template <class U>
+  friend TEST_CONSTEXPR bool operator==(const test_alloc&, const test_alloc<U, Sz>&) TEST_NOEXCEPT {
+    return true;
+  }
+
+#if TEST_STD_VER < 20
+  template <class U>
+  friend TEST_CONSTEXPR bool operator!=(const test_alloc&, const test_alloc<U, Sz>&) TEST_NOEXCEPT {
+    return false;
+  }
+#endif
 };
 
 template <class Sz>

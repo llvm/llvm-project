@@ -210,7 +210,7 @@ void DeclInfo::fill() {
   IsInstanceMethod = false;
   IsClassMethod = false;
   IsVariadic = false;
-  ParamVars = std::nullopt;
+  ParamVars = {};
   TemplateParameters = nullptr;
 
   if (!CommentDecl) {

@@ -116,8 +116,11 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_iOS_SaveList;
 
   if (PushPopSplit == ARMSubtarget::SplitR7)
-    return STI.createAAPCSFrameChain() ? CSR_AAPCS_SplitPush_SaveList
+    return STI.createAAPCSFrameChain() ? CSR_AAPCS_SplitPush_R7_SaveList
                                        : CSR_ATPCS_SplitPush_SaveList;
+
+  if (PushPopSplit == ARMSubtarget::SplitR11AAPCSSignRA)
+    return CSR_AAPCS_SplitPush_R11_SaveList;
 
   return CSR_AAPCS_SaveList;
 }
@@ -259,30 +262,31 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
 const TargetRegisterClass *
 ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                                const MachineFunction &MF) const {
-  const TargetRegisterClass *Super = RC;
-  TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
+  unsigned SuperID = RC->getID();
+  auto I = RC->superclasses().begin();
+  auto E = RC->superclasses().end();
   do {
-    switch (Super->getID()) {
+    switch (SuperID) {
     case ARM::GPRRegClassID:
     case ARM::SPRRegClassID:
     case ARM::DPRRegClassID:
     case ARM::GPRPairRegClassID:
-      return Super;
+      return getRegClass(SuperID);
     case ARM::QPRRegClassID:
     case ARM::QQPRRegClassID:
     case ARM::QQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasNEON())
-        return Super;
+        return getRegClass(SuperID);
       break;
     case ARM::MQPRRegClassID:
     case ARM::MQQPRRegClassID:
     case ARM::MQQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasMVEIntegerOps())
-        return Super;
+        return getRegClass(SuperID);
       break;
     }
-    Super = *I++;
-  } while (Super);
+    SuperID = (I != E) ? *I++ : ~0U;
+  } while (SuperID != ~0U);
   return RC;
 }
 
@@ -296,6 +300,8 @@ const TargetRegisterClass *
 ARMBaseRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &ARM::CCRRegClass)
     return &ARM::rGPRRegClass;  // Can't copy CCR registers.
+  if (RC == &ARM::cl_FPSCR_NZCVRegClass)
+    return &ARM::rGPRRegClass;
   return RC;
 }
 
@@ -328,12 +334,12 @@ ARMBaseRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 }
 
 // Get the other register in a GPRPair.
-static MCPhysReg getPairedGPR(MCPhysReg Reg, bool Odd,
-                              const MCRegisterInfo *RI) {
+static MCRegister getPairedGPR(MCRegister Reg, bool Odd,
+                               const MCRegisterInfo *RI) {
   for (MCPhysReg Super : RI->superregs(Reg))
     if (ARM::GPRPairRegClass.contains(Super))
       return RI->getSubReg(Super, Odd ? ARM::gsub_1 : ARM::gsub_0);
-  return 0;
+  return MCRegister();
 }
 
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
@@ -384,7 +390,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     if (Reg == PairedPhys || (getEncodingValue(Reg) & 1) != Odd)
       continue;
     // Don't provide hints that are paired to a reserved register.
-    MCPhysReg Paired = getPairedGPR(Reg, !Odd, this);
+    MCRegister Paired = getPairedGPR(Reg, !Odd, this);
     if (!Paired || MRI.isReserved(Paired))
       continue;
     Hints.push_back(Reg);

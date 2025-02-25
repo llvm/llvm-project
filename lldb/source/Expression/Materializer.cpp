@@ -8,8 +8,6 @@
 
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
@@ -22,6 +20,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-forward.h"
 
 #include <memory>
@@ -1187,6 +1187,9 @@ public:
 
 private:
   CompilerType m_type;
+  /// This is used both to control whether this result entity can (and should)
+  /// track the value in inferior memory, as well as to control whether LLDB
+  /// needs to allocate memory for the variable during materialization.
   bool m_is_program_reference;
   bool m_keep_in_memory;
 

@@ -11,7 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/Sema/DeclSpec.h"
+#include "clang/AST/Type.h"
 #include <optional>
 
 namespace clang::tidy::utils::fixit {
@@ -41,7 +41,7 @@ enum class QualifierTarget {
 /// Requires that `Var` is isolated in written code like in `int foo = 42;`.
 std::optional<FixItHint>
 addQualifierToVarDecl(const VarDecl &Var, const ASTContext &Context,
-                      DeclSpec::TQ Qualifier,
+                      Qualifiers::TQ Qualifier,
                       QualifierTarget QualTarget = QualifierTarget::Pointee,
                       QualifierPolicy QualPolicy = QualifierPolicy::Left);
 

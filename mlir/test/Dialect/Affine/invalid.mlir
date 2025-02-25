@@ -21,36 +21,6 @@ func.func @affine_apply_resul_non_index(%arg0 : index) {
 }
 
 // -----
-
-#map = affine_map<(d0)[s0] -> (d0 + s0)>
-
-func.func @affine_for_lower_bound_invalid_dim(%arg : index) {
-  affine.for %n0 = 0 to 7 {
-    %dim = arith.addi %arg, %arg : index
-
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    affine.for %n1 = 0 to #map(%dim)[%arg] {
-    }
-  }
-  return
-}
-
-// -----
-
-#map = affine_map<(d0)[s0] -> (d0 + s0)>
-
-func.func @affine_for_upper_bound_invalid_dim(%arg : index) {
-  affine.for %n0 = 0 to 7 {
-    %dim = arith.addi %arg, %arg : index
-
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    affine.for %n1 = #map(%dim)[%arg] to 7 {
-    }
-  }
-  return
-}
-
-// -----
 func.func @affine_load_invalid_dim(%M : memref<10xi32>) {
   "unknown"() ({
   ^bb0(%arg: index):
@@ -85,20 +55,6 @@ func.func @affine_for_upper_bound_invalid_sym() {
     // expected-error@+1 {{operand cannot be used as a symbol}}
     affine.for %n0 = 0 to #map0(%i0)[%i0] {
     }
-  }
-  return
-}
-
-// -----
-
-#set0 = affine_set<(i)[N] : (i >= 0, N - i >= 0)>
-
-func.func @affine_if_invalid_dim(%arg : index) {
-  affine.for %n0 = 0 to 7 {
-    %dim = arith.addi %arg, %arg : index
-
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    affine.if #set0(%dim)[%n0] {}
   }
   return
 }
@@ -341,6 +297,24 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @no_upper_bound_affine_parallel() {
+  // expected-error@+1 {{expected lower bound map to have at least one result}}
+  affine.parallel (%arg2) = (max()) to (1) {
+  }
+  return
+}
+
+// -----
+
+func.func @no_upper_bound_affine_parallel() {
+  // expected-error@+1 {{expected upper bound map to have at least one result}}
+  affine.parallel (%arg3) = (0) to (min()) {
+  }
+  return
+}
+
+// -----
+
 func.func @vector_load_invalid_vector_type() {
   %0 = memref.alloc() : memref<100xf32>
   affine.for %i0 = 0 to 16 step 8 {
@@ -533,17 +507,25 @@ func.func @missing_for_min(%arg0: index, %arg1: index, %arg2: memref<100xf32>) {
 // -----
 
 func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
-  // expected-error@+1 {{'affine.delinearize_index' op should return an index for each basis element}}
+  // expected-error@+1 {{'affine.delinearize_index' op should return an index for each basis element and up to one extra index}}
   %1 = affine.delinearize_index %idx into (%basis0, %basis1) : index
   return
 }
 
 // -----
 
-func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
-  // expected-error@+1 {{'affine.delinearize_index' op basis should not be empty}}
-  affine.delinearize_index %idx into () : index
+func.func @delinearize(%idx: index) {
+  // expected-error@+1 {{'affine.delinearize_index' op no basis element may be statically non-positive}}
+  %1:2 = affine.delinearize_index %idx into (2, -2) : index, index
   return
+}
+
+// -----
+
+func.func @linearize(%idx: index, %basis0: index, %basis1 :index) -> index {
+  // expected-error@+1 {{'affine.linearize_index' op should be passed a basis element for each index except possibly the first}}
+  %0 = affine.linearize_index [%idx] by (%basis0, %basis1) : index
+  return %0 : index
 }
 
 // -----

@@ -25,34 +25,36 @@
 namespace clang {
 class DeclGroupRef;
 class DiagnosticsEngine;
+namespace CIRGen {
+class CIRGenModule;
+} // namespace CIRGen
 } // namespace clang
 
 namespace mlir {
 class MLIRContext;
 } // namespace mlir
 namespace cir {
-class CIRGenModule;
-
 class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
   clang::DiagnosticsEngine &diags;
-  clang::ASTContext *astCtx;
+  clang::ASTContext *astContext;
   // Only used for debug info.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs;
 
   const clang::CodeGenOptions &codeGenOpts;
 
 protected:
-  std::unique_ptr<mlir::MLIRContext> mlirCtx;
-  std::unique_ptr<CIRGenModule> cgm;
+  std::unique_ptr<mlir::MLIRContext> mlirContext;
+  std::unique_ptr<clang::CIRGen::CIRGenModule> cgm;
 
 public:
   CIRGenerator(clang::DiagnosticsEngine &diags,
                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
                const clang::CodeGenOptions &cgo);
   ~CIRGenerator() override;
-  void Initialize(clang::ASTContext &astCtx) override;
+  void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
+  mlir::ModuleOp getModule() const;
 };
 
 } // namespace cir

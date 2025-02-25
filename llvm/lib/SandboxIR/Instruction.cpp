@@ -73,6 +73,8 @@ void Instruction::removeFromParent() {
 
 void Instruction::eraseFromParent() {
   assert(users().empty() && "Still connected to users, can't erase!");
+
+  Ctx.runEraseInstrCallbacks(this);
   std::unique_ptr<Value> Detached = Ctx.detach(this);
   auto LLVMInstrs = getLLVMInstrs();
 
@@ -100,6 +102,7 @@ void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
     // Destination is same as origin, nothing to do.
     return;
 
+  Ctx.runMoveInstrCallbacks(this, WhereIt);
   Ctx.getTracker().emplaceIfTracking<MoveInstr>(this);
 
   auto *LLVMBB = cast<llvm::BasicBlock>(BB.Val);
@@ -121,16 +124,12 @@ void Instruction::moveBefore(BasicBlock &BB, const BBIterator &WhereIt) {
 
 void Instruction::insertBefore(Instruction *BeforeI) {
   llvm::Instruction *BeforeTopI = BeforeI->getTopmostLLVMInstruction();
-  // TODO: Move this to the verifier of sandboxir::Instruction.
-  assert(is_sorted(getLLVMInstrs(),
-                   [](auto *I1, auto *I2) { return I1->comesBefore(I2); }) &&
-         "Expected program order!");
 
   Ctx.getTracker().emplaceIfTracking<InsertIntoBB>(this);
 
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
-    I->insertBefore(BeforeTopI);
+    I->insertBefore(BeforeTopI->getIterator());
 }
 
 void Instruction::insertAfter(Instruction *AfterI) {
@@ -927,21 +926,26 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
   }
 }
 
-CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
-                         Context &Ctx, const Twine &Name) {
+Value *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
+                       Context &Ctx, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
-  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
-  if (dyn_cast<llvm::ICmpInst>(LLVMI))
-    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
-  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
+  auto *LLVMV = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
+  // It may have been folded into a constant.
+  if (auto *LLVMC = dyn_cast<llvm::Constant>(LLVMV))
+    return Ctx.getOrCreateConstant(LLVMC);
+  if (isa<llvm::ICmpInst>(LLVMV))
+    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMV));
+  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMV));
 }
-CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
-                                        const Instruction *F,
-                                        InsertPosition Pos, Context &Ctx,
-                                        const Twine &Name) {
-  CmpInst *Inst = create(P, S1, S2, Pos, Ctx, Name);
-  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
-  return Inst;
+
+Value *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
+                                      const Instruction *F, InsertPosition Pos,
+                                      Context &Ctx, const Twine &Name) {
+  Value *V = create(P, S1, S2, Pos, Ctx, Name);
+  if (auto *C = dyn_cast<Constant>(V))
+    return C;
+  cast<llvm::CmpInst>(V->Val)->copyIRFlags(F->Val);
+  return V;
 }
 
 Type *CmpInst::makeCmpResultType(Type *OpndType) {
@@ -1132,9 +1136,7 @@ void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
 }
 
 SwitchInst::CaseIt SwitchInst::removeCase(CaseIt It) {
-  auto &Case = *It;
-  Ctx.getTracker().emplaceIfTracking<SwitchRemoveCase>(
-      this, Case.getCaseValue(), Case.getCaseSuccessor());
+  Ctx.getTracker().emplaceIfTracking<SwitchRemoveCase>(this);
 
   auto *LLVMSwitch = cast<llvm::SwitchInst>(Val);
   unsigned CaseNum = It - case_begin();

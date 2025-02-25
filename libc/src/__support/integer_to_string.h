@@ -69,6 +69,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h" // make_integral_or_big_int_unsigned_t
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -163,6 +164,170 @@ template <size_t radix> using Custom = details::Fmt<radix>;
 
 } // namespace radix
 
+// Extract the low-order decimal digit from a value of integer type T. The
+// returned value is the digit itself, from 0 to 9. The input value is passed
+// by reference, and modified by dividing by 10, so that iterating this
+// function extracts all the digits of the original number one at a time from
+// low to high.
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_integral_v<T>, uint8_t>
+extract_decimal_digit(T &value) {
+  const uint8_t digit(static_cast<uint8_t>(value % 10));
+  // For built-in integer types, we assume that an adequately fast division is
+  // available. If hardware division isn't implemented, then with a divisor
+  // known at compile time the compiler might be able to generate an optimized
+  // sequence instead.
+  value /= 10;
+  return digit;
+}
+
+// A specialization of extract_decimal_digit for the BigInt type in big_int.h,
+// avoiding the use of general-purpose BigInt division which is very slow.
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<is_big_int_v<T>, uint8_t>
+extract_decimal_digit(T &value) {
+  // There are two essential ways you can turn n into (n/10,n%10). One is
+  // ordinary integer division. The other is a modular-arithmetic approach in
+  // which you first compute n%10 by bit twiddling, then subtract it off to get
+  // a value that is definitely a multiple of 10. Then you divide that by 10 in
+  // two steps: shift right to divide off a factor of 2, and then divide off a
+  // factor of 5 by multiplying by the modular inverse of 5 mod 2^BITS. (That
+  // last step only works if you know there's no remainder, which is why you
+  // had to subtract off the output digit first.)
+  //
+  // Either approach can be made to work in linear time. This code uses the
+  // modular-arithmetic technique, because the other approach either does a lot
+  // of integer divisions (requiring a fast hardware divider), or else uses a
+  // "multiply by an approximation to the reciprocal" technique which depends
+  // on careful error analysis which might go wrong in an untested edge case.
+
+  using Word = typename T::word_type;
+
+  // Find the remainder (value % 10). We do this by breaking up the input
+  // integer into chunks of size WORD_SIZE/2, so that the sum of them doesn't
+  // overflow a Word. Then we sum all the half-words times 6, except the bottom
+  // one, which is added to that sum without scaling.
+  //
+  // Why 6? Because you can imagine that the original number had the form
+  //
+  //   halfwords[0] + K*halfwords[1] + K^2*halfwords[2] + ...
+  //
+  // where K = 2^(WORD_SIZE/2). Since WORD_SIZE is expected to be a multiple of
+  // 8, that makes WORD_SIZE/2 a multiple of 4, so that K is a power of 16. And
+  // all powers of 16 (larger than 1) are congruent to 6 mod 10, by induction:
+  // 16 itself is, and 6^2=36 is also congruent to 6.
+  Word acc_remainder = 0;
+  constexpr Word HALFWORD_BITS = T::WORD_SIZE / 2;
+  constexpr Word HALFWORD_MASK = ((Word(1) << HALFWORD_BITS) - 1);
+  // Sum both halves of all words except the low one.
+  for (size_t i = 1; i < T::WORD_COUNT; i++) {
+    acc_remainder += value.val[i] >> HALFWORD_BITS;
+    acc_remainder += value.val[i] & HALFWORD_MASK;
+  }
+  // Add the high half of the low word. Then we have everything that needs to
+  // be multiplied by 6, so do that.
+  acc_remainder += value.val[0] >> HALFWORD_BITS;
+  acc_remainder *= 6;
+  // Having multiplied it by 6, add the lowest half-word, and then reduce mod
+  // 10 by normal integer division to finish.
+  acc_remainder += value.val[0] & HALFWORD_MASK;
+  uint8_t digit = static_cast<uint8_t>(acc_remainder % 10);
+
+  // Now we have the output digit. Subtract it from the input value, and shift
+  // right to divide by 2.
+  value -= digit;
+  value >>= 1;
+
+  // Now all that's left is to multiply by the inverse of 5 mod 2^BITS. No
+  // matter what the value of BITS, the inverse of 5 has the very convenient
+  // form 0xCCCC...CCCD, with as many C hex digits in the middle as necessary.
+  //
+  // We could construct a second BigInt with all words 0xCCCCCCCCCCCCCCCC,
+  // increment the bottom word, and call a general-purpose multiply function.
+  // But we can do better, by taking advantage of the regularity: we can do
+  // this particular operation in linear time, whereas a general multiplier
+  // would take superlinear time (quadratic in small cases).
+  //
+  // To begin with, instead of computing n*0xCCCC...CCCD, we'll compute
+  // n*0xCCCC...CCCC and then add it to the original n. Then all the words of
+  // the multiplier have the same value 0xCCCCCCCCCCCCCCCC, which I'll just
+  // denote as C. If we also write t = 2^WORD_SIZE, and imagine (as an example)
+  // that the input number has three words x,y,z with x being the low word,
+  // then we're computing
+  //
+  //   (x + y t + z t^2) * (C + C t + C t^2)
+  //
+  // = x C + y C t + z C t^2
+  //       + x C t + y C t^2 + z C t^3
+  //               + x C t^2 + y C t^3 + z C t^4
+  //
+  // but we're working mod t^3, so the high-order terms vanish and this becomes
+  //
+  //   x C + y C t + z C t^2
+  //       + x C t + y C t^2
+  //               + x C t^2
+  //
+  // = x C + (x+y) C t + (x+y+z) C t^2
+  //
+  // So all you have to do is to work from the low word of the integer upwards,
+  // accumulating C times the sum of all the words you've seen so far to get
+  // x*C, (x+y)*C, (x+y+z)*C and so on. In each step you add another product to
+  // the accumulator, and add the accumulator to the corresponding word of the
+  // original number (so that we end up with value*CCCD, not just value*CCCC).
+  //
+  // If you do that literally, then your accumulator has to be three words
+  // wide, because the sum of words can overflow into a second word, and
+  // multiplying by C adds another word. But we can do slightly better by
+  // breaking each product word*C up into a bottom half and a top half. If we
+  // write x*C = xl + xh*t, and similarly for y and z, then our sum becomes
+  //
+  //   (xl + xh t) + (yl + yh t) t + (zl + zh t) t^2
+  //               + (xl + xh t) t + (yl + yh t) t^2
+  //                               + (xl + xh t) t^2
+  //
+  // and if you expand out again, collect terms, and discard t^3 terms, you get
+  //
+  //   (xl)
+  // + (xl + xh + yl) t
+  // + (xl + xh + yl + yh + zl) t^2
+  //
+  // in which each coefficient is the sum of all the low words of the products
+  // up to _and including_ the current word, plus all the high words up to but
+  // _not_ including the current word. So now you only have to retain two words
+  // of sum instead of three.
+  //
+  // We do this entire procedure in a single in-place pass over the input
+  // number, reading each word to make its product with C and then adding the
+  // low word of the accumulator to it.
+  constexpr Word C = Word(-1) / 5 * 4; // calculate 0xCCCC as 4/5 of 0xFFFF
+  Word acc_lo = 0, acc_hi = 0; // accumulator of all the half-products so far
+  Word carry_bit, carry_word = 0;
+
+  for (size_t i = 0; i < T::WORD_COUNT; i++) {
+    // Make the two-word product of C with the current input word.
+    multiword::DoubleWide<Word> product = multiword::mul2(C, value.val[i]);
+
+    // Add the low half of the product to our accumulator, but not yet the high
+    // half.
+    acc_lo = add_with_carry<Word>(acc_lo, product[0], 0, carry_bit);
+    acc_hi += carry_bit;
+
+    // Now the accumulator contains exactly the value we need to add to the
+    // current input word. Add it, plus any carries from lower words, and make
+    // a new word of carry data to propagate into the next iteration.
+    value.val[i] = add_with_carry<Word>(value.val[i], carry_word, 0, carry_bit);
+    carry_word = acc_hi + carry_bit;
+    value.val[i] = add_with_carry<Word>(value.val[i], acc_lo, 0, carry_bit);
+    carry_word += carry_bit;
+
+    // Now add the high half of the current product to our accumulator.
+    acc_lo = add_with_carry<Word>(acc_lo, product[1], 0, carry_bit);
+    acc_hi += carry_bit;
+  }
+
+  return digit;
+}
+
 // See file header for documentation.
 template <typename T, typename Fmt = radix::Dec> class IntegerToString {
   static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
@@ -214,9 +379,9 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
     using UNSIGNED_T = make_integral_or_big_int_unsigned_t<T>;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
-      if (digit < 10)
-        return '0' + static_cast<char>(digit);
-      return (Fmt::IS_UPPERCASE ? 'A' : 'a') + static_cast<char>(digit - 10);
+      const int result = internal::int_to_b36_char(digit);
+      return static_cast<char>(Fmt::IS_UPPERCASE ? internal::toupper(result)
+                                                 : result);
     }
 
     LIBC_INLINE static void
@@ -224,6 +389,15 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
                           details::BackwardStringBufferWriter &sink) {
       for (; sink.ok() && value != 0; value /= Fmt::BASE) {
         const uint8_t digit(static_cast<uint8_t>(value % Fmt::BASE));
+        sink.push(digit_char(digit));
+      }
+    }
+
+    LIBC_INLINE static void
+    write_unsigned_number_dec(UNSIGNED_T value,
+                              details::BackwardStringBufferWriter &sink) {
+      while (sink.ok() && value != 0) {
+        const uint8_t digit = extract_decimal_digit(value);
         sink.push(digit_char(digit));
       }
     }
@@ -255,7 +429,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
     LIBC_INLINE static void write(T value,
                                   details::BackwardStringBufferWriter &sink) {
       if constexpr (Fmt::BASE == 10) {
-        write_unsigned_number(abs(value), sink);
+        write_unsigned_number_dec(abs(value), sink);
       } else {
         write_unsigned_number(static_cast<UNSIGNED_T>(value), sink);
       }

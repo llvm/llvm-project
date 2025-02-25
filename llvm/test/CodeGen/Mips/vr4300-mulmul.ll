@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mfix4300 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mfix4300 -verify-machineinstrs < %s | FileCheck %s
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
 define dso_local float @fun_s(float %x) local_unnamed_addr !dbg !7  {

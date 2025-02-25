@@ -12,35 +12,7 @@
 #include "condition_variable.h"
 #include "internal_defs.h"
 #include "secondary.h"
-
-namespace {
-
-template <typename T> struct removeConst {
-  using type = T;
-};
-template <typename T> struct removeConst<const T> {
-  using type = T;
-};
-
-// This is only used for SFINAE when detecting if a type is defined.
-template <typename T> struct voidAdaptor {
-  using type = void;
-};
-
-// This is used for detecting the case that defines the flag with wrong type and
-// it'll be viewed as undefined optional flag.
-template <typename L, typename R> struct assertSameType {
-  template <typename, typename> struct isSame {
-    static constexpr bool value = false;
-  };
-  template <typename T> struct isSame<T, T> {
-    static constexpr bool value = true;
-  };
-  static_assert(isSame<L, R>::value, "Flag type mismatches");
-  using type = R;
-};
-
-} // namespace
+#include "type_traits.h"
 
 namespace scudo {
 
@@ -123,6 +95,13 @@ template <typename AllocatorConfig> struct SecondaryConfig {
 #define SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)                                 \
   template <typename T>                                                        \
   using NAME = typename AllocatorConfig::Secondary::template NAME<T>;
+
+#define SECONDARY_OPTIONAL(TYPE, NAME, DEFAULT)                                \
+  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, NAME)                                 \
+  static constexpr removeConst<TYPE>::type get##NAME() {                       \
+    return NAME##State<typename AllocatorConfig::Secondary>::getValue();       \
+  }
+
 #include "allocator_config.def"
 
   struct CacheConfig {
