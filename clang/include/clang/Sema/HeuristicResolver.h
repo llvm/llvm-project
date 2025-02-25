@@ -69,6 +69,13 @@ public:
   QualType
   resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS) const;
 
+  // Perform an imprecise lookup of a dependent name in `RD`.
+  // This function does not follow strict semantic rules and should be used
+  // only when lookup rules can be relaxed, e.g. indexing.
+  std::vector<const NamedDecl *>
+  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+
   // Given the type T of a dependent expression that appears of the LHS of a
   // "->", heuristically find a corresponding pointee type in whose scope we
   // could look up the name appearing on the RHS.
