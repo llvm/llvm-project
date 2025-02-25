@@ -23,6 +23,20 @@ int main(int argc, char** argv) {
   auto std_find_first_of = [](auto first1, auto last1, auto first2, auto last2) {
     return std::find_first_of(first1, last1, first2, last2);
   };
+  auto std_find_first_of_pred = [](auto first1, auto last1, auto first2, auto last2) {
+    return std::find_first_of(first1, last1, first2, last2, [](auto x, auto y) {
+      benchmark::DoNotOptimize(x);
+      benchmark::DoNotOptimize(y);
+      return x == y;
+    });
+  };
+  auto ranges_find_first_of_pred = [](auto first1, auto last1, auto first2, auto last2) {
+    return std::ranges::find_first_of(first1, last1, first2, last2, [](auto x, auto y) {
+      benchmark::DoNotOptimize(x);
+      benchmark::DoNotOptimize(y);
+      return x == y;
+    });
+  };
 
   // Benchmark {std,ranges}::find_first_of where we have a hit at 25% of the haystack
   // and at the end of the needle. This measures how quickly we're able to search inside
@@ -55,6 +69,7 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
+    // {std,ranges}::find_first_of(it1, it1, it2, it2)
     bm.operator()<std::vector<int>>("std::find_first_of(vector<int>) (25% haystack, late needle)", std_find_first_of);
     bm.operator()<std::deque<int>>("std::find_first_of(deque<int>) (25% haystack, late needle)", std_find_first_of);
     bm.operator()<std::list<int>>("std::find_first_of(list<int>) (25% haystack, late needle)", std_find_first_of);
@@ -64,6 +79,19 @@ int main(int argc, char** argv) {
         "rng::find_first_of(deque<int>) (25% haystack, late needle)", std::ranges::find_first_of);
     bm.operator()<std::list<int>>(
         "rng::find_first_of(list<int>) (25% haystack, late needle)", std::ranges::find_first_of);
+
+    // {std,ranges}::find_first_of(it1, it1, it2, it2, pred)
+    bm.operator()<std::vector<int>>(
+        "std::find_first_of(vector<int>, pred) (25% haystack, late needle)", std_find_first_of);
+    bm.operator()<std::deque<int>>(
+        "std::find_first_of(deque<int>, pred) (25% haystack, late needle)", std_find_first_of);
+    bm.operator()<std::list<int>>("std::find_first_of(list<int>, pred) (25% haystack, late needle)", std_find_first_of);
+    bm.operator()<std::vector<int>>(
+        "rng::find_first_of(vector<int>, pred) (25% haystack, late needle)", std::ranges::find_first_of);
+    bm.operator()<std::deque<int>>(
+        "rng::find_first_of(deque<int>, pred) (25% haystack, late needle)", std::ranges::find_first_of);
+    bm.operator()<std::list<int>>(
+        "rng::find_first_of(list<int>, pred) (25% haystack, late needle)", std::ranges::find_first_of);
   }
 
   // Benchmark {std,ranges}::find_first_of where we have a hit at 90% of the haystack
@@ -97,6 +125,7 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
+    // {std,ranges}::find_first_of(it1, it1, it2, it2)
     bm.operator()<std::vector<int>>("std::find_first_of(vector<int>) (90% haystack, early needle)", std_find_first_of);
     bm.operator()<std::deque<int>>("std::find_first_of(deque<int>) (90% haystack, early needle)", std_find_first_of);
     bm.operator()<std::list<int>>("std::find_first_of(list<int>) (90% haystack, early needle)", std_find_first_of);
@@ -106,6 +135,20 @@ int main(int argc, char** argv) {
         "rng::find_first_of(deque<int>) (90% haystack, early needle)", std::ranges::find_first_of);
     bm.operator()<std::list<int>>(
         "rng::find_first_of(list<int>) (90% haystack, early needle)", std::ranges::find_first_of);
+
+    // {std,ranges}::find_first_of(it1, it1, it2, it2, pred)
+    bm.operator()<std::vector<int>>(
+        "std::find_first_of(vector<int>, pred) (90% haystack, early needle)", std_find_first_of_pred);
+    bm.operator()<std::deque<int>>(
+        "std::find_first_of(deque<int>, pred) (90% haystack, early needle)", std_find_first_of_pred);
+    bm.operator()<std::list<int>>(
+        "std::find_first_of(list<int>, pred) (90% haystack, early needle)", std_find_first_of_pred);
+    bm.operator()<std::vector<int>>(
+        "rng::find_first_of(vector<int>, pred) (90% haystack, early needle)", ranges_find_first_of_pred);
+    bm.operator()<std::deque<int>>(
+        "rng::find_first_of(deque<int>, pred) (90% haystack, early needle)", ranges_find_first_of_pred);
+    bm.operator()<std::list<int>>(
+        "rng::find_first_of(list<int>, pred) (90% haystack, early needle)", ranges_find_first_of_pred);
   }
 
   benchmark::Initialize(&argc, argv);

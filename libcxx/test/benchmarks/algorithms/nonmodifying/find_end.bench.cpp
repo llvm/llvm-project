@@ -22,6 +22,20 @@ int main(int argc, char** argv) {
   auto std_find_end = [](auto first1, auto last1, auto first2, auto last2) {
     return std::find_end(first1, last1, first2, last2);
   };
+  auto std_find_end_pred = [](auto first1, auto last1, auto first2, auto last2) {
+    return std::find_end(first1, last1, first2, last2, [](auto x, auto y) {
+      benchmark::DoNotOptimize(x);
+      benchmark::DoNotOptimize(y);
+      return x == y;
+    });
+  };
+  auto ranges_find_end_pred = [](auto first1, auto last1, auto first2, auto last2) {
+    return std::ranges::find_end(first1, last1, first2, last2, [](auto x, auto y) {
+      benchmark::DoNotOptimize(x);
+      benchmark::DoNotOptimize(y);
+      return x == y;
+    });
+  };
 
   // Benchmark {std,ranges}::find_end where the subsequence is found
   // 25% into the sequence
@@ -51,12 +65,21 @@ int main(int argc, char** argv) {
           ->Arg(8192)
           ->Arg(1 << 20);
     };
+    // {std,ranges}::find_end(it1, it1, it2, it2)
     bm.operator()<std::vector<int>>("std::find_end(vector<int>) (bail 25%)", std_find_end);
     bm.operator()<std::deque<int>>("std::find_end(deque<int>) (bail 25%)", std_find_end);
     bm.operator()<std::list<int>>("std::find_end(list<int>) (bail 25%)", std_find_end);
     bm.operator()<std::vector<int>>("rng::find_end(vector<int>) (bail 25%)", std::ranges::find_end);
     bm.operator()<std::deque<int>>("rng::find_end(deque<int>) (bail 25%)", std::ranges::find_end);
     bm.operator()<std::list<int>>("rng::find_end(list<int>) (bail 25%)", std::ranges::find_end);
+
+    // {std,ranges}::find_end(it1, it1, it2, it2, pred)
+    bm.operator()<std::vector<int>>("std::find_end(vector<int>, pred) (bail 25%)", std_find_end_pred);
+    bm.operator()<std::deque<int>>("std::find_end(deque<int>, pred) (bail 25%)", std_find_end_pred);
+    bm.operator()<std::list<int>>("std::find_end(list<int>, pred) (bail 25%)", std_find_end_pred);
+    bm.operator()<std::vector<int>>("rng::find_end(vector<int>, pred) (bail 25%)", ranges_find_end_pred);
+    bm.operator()<std::deque<int>>("rng::find_end(deque<int>, pred) (bail 25%)", ranges_find_end_pred);
+    bm.operator()<std::list<int>>("rng::find_end(list<int>, pred) (bail 25%)", ranges_find_end_pred);
   }
 
   // Benchmark {std,ranges}::find_end where the subsequence is found
@@ -87,12 +110,21 @@ int main(int argc, char** argv) {
           ->Arg(8192)
           ->Arg(1 << 20);
     };
+    // {std,ranges}::find_end(it1, it1, it2, it2)
     bm.operator()<std::vector<int>>("std::find_end(vector<int>) (bail 90%)", std_find_end);
     bm.operator()<std::deque<int>>("std::find_end(deque<int>) (bail 90%)", std_find_end);
     bm.operator()<std::list<int>>("std::find_end(list<int>) (bail 90%)", std_find_end);
     bm.operator()<std::vector<int>>("rng::find_end(vector<int>) (bail 90%)", std::ranges::find_end);
     bm.operator()<std::deque<int>>("rng::find_end(deque<int>) (bail 90%)", std::ranges::find_end);
     bm.operator()<std::list<int>>("rng::find_end(list<int>) (bail 90%)", std::ranges::find_end);
+
+    // {std,ranges}::find_end(it1, it1, it2, it2, pred)
+    bm.operator()<std::vector<int>>("std::find_end(vector<int>, pred) (bail 90%)", std_find_end_pred);
+    bm.operator()<std::deque<int>>("std::find_end(deque<int>, pred) (bail 90%)", std_find_end_pred);
+    bm.operator()<std::list<int>>("std::find_end(list<int>, pred) (bail 90%)", std_find_end_pred);
+    bm.operator()<std::vector<int>>("rng::find_end(vector<int>, pred) (bail 90%)", ranges_find_end_pred);
+    bm.operator()<std::deque<int>>("rng::find_end(deque<int>, pred) (bail 90%)", ranges_find_end_pred);
+    bm.operator()<std::list<int>>("rng::find_end(list<int>, pred) (bail 90%)", ranges_find_end_pred);
   }
 
   benchmark::Initialize(&argc, argv);
