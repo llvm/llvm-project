@@ -17271,6 +17271,9 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 // prefer it.
 SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
   EVT VT = N->getValueType(0);
+  if (!APFloat::isIEEELikeFP(VT.getFltSemantics()))
+    return SDValue();
+
   SDValue ConstOp, Pow2Op;
 
   std::optional<int> Mantissa;
@@ -17297,8 +17300,8 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
       const APFloat &APF = CFP->getValueAPF();
 
-      // Make sure we have normal/ieee constant.
-      if (!APF.isNormal() || !APF.isIEEE())
+      // Make sure we have normal constant.
+      if (!APF.isNormal())
         return false;
 
       // Make sure the floats exponent is within the bounds that this transform
