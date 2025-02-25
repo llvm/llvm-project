@@ -388,6 +388,7 @@ enum MetadataCodes {
   METADATA_EXPR = 48,             // [distinct, ...]
   METADATA_FRAGMENT = 49,         // []
   METADATA_LIFETIME = 50,         // [obj, loc, n x args]
+  METADATA_SUBRANGE_TYPE = 51,    // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each

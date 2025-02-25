@@ -577,8 +577,7 @@ template <typename T> static T *getEnclosingLoopRegionForRegion(T *P) {
     P = P->getParent();
     // Multiple loop regions can be nested, but replicate regions can only be
     // nested inside a loop region or must be outside any other region.
-    assert((!P || !cast<VPRegionBlock>(P)->isReplicator()) &&
-           "unexpected nested replicate regions");
+    assert((!P || !P->isReplicator()) && "unexpected nested replicate regions");
   }
   return P;
 }
