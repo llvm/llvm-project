@@ -1694,13 +1694,14 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
         break;
       case Instruction::Operand::Type::Immediate: {
         SymbolContext sc;
-        Address load_address;
-        if (!frame.CalculateTarget()->ResolveLoadAddress(
-                operands[0].m_immediate, load_address)) {
+        if (!pc.GetModule())
           break;
-        }
+        Address address(operands[0].m_immediate,
+                        pc.GetModule()->GetSectionList());
+        if (!address.IsValid())
+          break;
         frame.CalculateTarget()->GetImages().ResolveSymbolContextForAddress(
-            load_address, eSymbolContextFunction, sc);
+            address, eSymbolContextFunction, sc);
         if (!sc.function) {
           break;
         }
