@@ -1084,8 +1084,79 @@ def LLVM_TBAATagAttr : LLVM_Attr<"TBAATag", "tbaa_tag"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def LLVM_TBAAStructFieldAttr : LLVM_Attr<"TBAAStructField", "tbaa_struct_field"> {
+  let parameters = (ins
+    "TBAANodeAttr":$typeDesc,
+    "int64_t":$offset,
+    "int64_t":$size
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+
+def LLVM_TBAAStructFieldAttrArray : ArrayRefParameter<"TBAAStructFieldAttr"> {
+  let printer = [{
+    $_printer << '{';
+    llvm::interleaveComma($_self, $_printer, [&](TBAAStructFieldAttr attr) {
+        $_printer.printStrippedAttrOrType(attr);
+    });
+    $_printer << '}';
+  }];
+
+  let parser = [{
+    [&]() -> FailureOr<SmallVector<TBAAStructFieldAttr>> {
+        using Result = SmallVector<TBAAStructFieldAttr>;
+        if ($_parser.parseLBrace())
+            return failure();
+        FailureOr<Result> result = FieldParser<Result>::parse($_parser);
+        if (failed(result))
+            return failure();
+        if ($_parser.parseRBrace())
+            return failure();
+        return result;
+    }()
+  }];
+}
+
+def LLVM_TBAATypeNodeAttr : LLVM_Attr<"TBAATypeNode", "tbaa_type_node", [], "TBAANodeAttr"> {
+  let parameters = (ins
+    "TBAANodeAttr":$parent,
+    "int64_t":$size,
+    StringRefParameter<>:$id,
+    LLVM_TBAAStructFieldAttrArray:$fields
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LLVM_TBAAAccessTagAttr : LLVM_Attr<"TBAAAccessTag", "tbaa_access_tag"> {
+  let parameters = (ins
+    "TBAATypeNodeAttr":$base_type,
+    "TBAATypeNodeAttr":$access_type,
+    "int64_t":$offset,
+    "int64_t":$size
+  );
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "TBAATypeNodeAttr":$baseType,
+                                        "TBAATypeNodeAttr":$accessType,
+                                        "int64_t":$offset,
+                                        "int64_t":$size), [{
+      return $_get(baseType.getContext(), baseType, accessType, offset, size);
+    }]>
+  ];
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LLVM_TBAAAccessTagArrayAttr
+    : TypedArrayAttrBase<LLVM_TBAAAccessTagAttr,
+                         LLVM_TBAAAccessTagAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
 def LLVM_TBAATagArrayAttr
-    : TypedArrayAttrBase<LLVM_TBAATagAttr,
+    : TypedArrayAttrBase<AnyAttrOf<[
+  LLVM_TBAATagAttr,
+  LLVM_TBAAAccessTagAttr
+]>,
                          LLVM_TBAATagAttr.summary # " array"> {
   let constBuilderCall = ?;
 }

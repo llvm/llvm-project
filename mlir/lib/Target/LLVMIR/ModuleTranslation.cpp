@@ -1882,7 +1882,7 @@ void ModuleTranslation::setAliasScopeMetadata(AliasAnalysisOpInterface op,
                         llvm::LLVMContext::MD_noalias);
 }
 
-llvm::MDNode *ModuleTranslation::getTBAANode(TBAATagAttr tbaaAttr) const {
+llvm::MDNode *ModuleTranslation::getTBAANode(Attribute tbaaAttr) const {
   return tbaaMetadataMapping.lookup(tbaaAttr);
 }
 
@@ -1902,7 +1902,7 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
     return;
   }
 
-  llvm::MDNode *node = getTBAANode(cast<TBAATagAttr>(tagRefs[0]));
+  llvm::MDNode *node = getTBAANode(tagRefs[0]);
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
@@ -1922,6 +1922,7 @@ void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
 LogicalResult ModuleTranslation::createTBAAMetadata() {
   llvm::LLVMContext &ctx = llvmModule->getContext();
   llvm::IntegerType *offsetTy = llvm::IntegerType::get(ctx, 64);
+  llvm::IntegerType *sizeTy = llvm::IntegerType::get(ctx, 64);
 
   // Walk the entire module and create all metadata nodes for the TBAA
   // attributes. The code below relies on two invariants of the
@@ -1949,6 +1950,23 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
     tbaaMetadataMapping.insert({descriptor, llvm::MDNode::get(ctx, operands)});
   });
 
+  walker.addWalk([&](TBAATypeNodeAttr descriptor) {
+    SmallVector<llvm::Metadata *> operands;
+    operands.push_back(tbaaMetadataMapping.lookup(descriptor.getParent()));
+    operands.push_back(llvm::ConstantAsMetadata::get(
+        llvm::ConstantInt::get(sizeTy, descriptor.getSize())));
+    operands.push_back(llvm::MDString::get(ctx, descriptor.getId()));
+    for (auto field : descriptor.getFields()) {
+      operands.push_back(tbaaMetadataMapping.lookup(field.getTypeDesc()));
+      operands.push_back(llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(offsetTy, field.getOffset())));
+      operands.push_back(llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(sizeTy, field.getSize())));
+    }
+
+    tbaaMetadataMapping.insert({descriptor, llvm::MDNode::get(ctx, operands)});
+  });
+
   walker.addWalk([&](TBAATagAttr tag) {
     SmallVector<llvm::Metadata *> operands;
 
@@ -1960,6 +1978,20 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
     if (tag.getConstant())
       operands.push_back(
           llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(offsetTy, 1)));
+
+    tbaaMetadataMapping.insert({tag, llvm::MDNode::get(ctx, operands)});
+  });
+
+  walker.addWalk([&](TBAAAccessTagAttr tag) {
+    SmallVector<llvm::Metadata *> operands;
+
+    operands.push_back(tbaaMetadataMapping.lookup(tag.getBaseType()));
+    operands.push_back(tbaaMetadataMapping.lookup(tag.getAccessType()));
+
+    operands.push_back(llvm::ConstantAsMetadata::get(
+        llvm::ConstantInt::get(offsetTy, tag.getOffset())));
+    operands.push_back(llvm::ConstantAsMetadata::get(
+        llvm::ConstantInt::get(sizeTy, tag.getSize())));
 
     tbaaMetadataMapping.insert({tag, llvm::MDNode::get(ctx, operands)});
   });

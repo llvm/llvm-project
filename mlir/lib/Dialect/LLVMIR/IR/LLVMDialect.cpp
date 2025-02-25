@@ -3594,7 +3594,8 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
               LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
               LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
               LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr,
-              TBAATagAttr, TBAATypeDescriptorAttr>([&](auto attr) {
+              TBAATagAttr, TBAATypeDescriptorAttr, TBAAAccessTagAttr,
+              TBAATypeNodeAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
         })
