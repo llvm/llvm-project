@@ -116,8 +116,9 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      bool RemoveKillFlags)
     : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
       RemoveKillFlags(RemoveKillFlags),
-      UnknownValue(UndefValue::get(
-                             Type::getVoidTy(mf.getFunction().getContext()))), Topo(SUnits, &ExitSU) {
+      UnknownValue(
+          UndefValue::get(Type::getVoidTy(mf.getFunction().getContext()))),
+      Topo(SUnits, &ExitSU) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
