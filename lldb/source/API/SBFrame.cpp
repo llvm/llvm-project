@@ -1020,33 +1020,26 @@ bool SBFrame::GetDescription(SBStream &description) {
 SBValue SBFrame::EvaluateExpression(const char *expr) {
   LLDB_INSTRUMENT_VA(this, expr);
 
-  SBValue result;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   StackFrame *frame = exe_ctx.GetFramePtr();
   Target *target = exe_ctx.GetTargetPtr();
+  SBExpressionOptions options;
   if (frame && target) {
-    SBExpressionOptions options;
     lldb::DynamicValueType fetch_dynamic_value =
         frame->CalculateTarget()->GetPreferDynamicValue();
     options.SetFetchDynamicValue(fetch_dynamic_value);
-    options.SetUnwindOnError(true);
-    options.SetIgnoreBreakpoints(true);
-    SourceLanguage language = target->GetLanguage();
-    if (!language)
-      language = frame->GetLanguage();
-    options.SetLanguage((SBSourceLanguageName)language.name, language.version);
-    return EvaluateExpression(expr, options);
-  } else {
-    Status error;
-    error = Status::FromErrorString("can't evaluate expressions when the "
-                                    "process is running.");
-    ValueObjectSP error_val_sp =
-        ValueObjectConstResult::Create(nullptr, std::move(error));
-    result.SetSP(error_val_sp, false);
   }
-  return result;
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+  SourceLanguage language;
+  if (target)
+    language = target->GetLanguage();
+  if (!language && frame)
+    language = frame->GetLanguage();
+  options.SetLanguage((SBSourceLanguageName)language.name, language.version);
+  return EvaluateExpression(expr, options);
 }
 
 SBValue
