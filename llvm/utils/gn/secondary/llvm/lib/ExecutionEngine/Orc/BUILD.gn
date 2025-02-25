@@ -23,6 +23,7 @@ static_library("Orc") {
     "Core.cpp",
     "DebugObjectManagerPlugin.cpp",
     "DebugUtils.cpp",
+    "EHFrameRegistrationPlugin.cpp",
     "ELFNixPlatform.cpp",
     "EPCDebugObjectRegistrar.cpp",
     "EPCDynamicLibrarySearchGenerator.cpp",
@@ -33,6 +34,7 @@ static_library("Orc") {
     "EPCIndirectionUtils.cpp",
     "ExecutionUtils.cpp",
     "ExecutorProcessControl.cpp",
+    "GetTapiInterface.cpp",
     "IRCompileLayer.cpp",
     "IRPartitionLayer.cpp",
     "IRTransformLayer.cpp",
@@ -44,6 +46,8 @@ static_library("Orc") {
     "Layer.cpp",
     "LazyObjectLinkingLayer.cpp",
     "LazyReexports.cpp",
+    "LinkGraphLayer.cpp",
+    "LinkGraphLinkingLayer.cpp",
     "LoadLinkableFile.cpp",
     "LookupAndRecordAddrs.cpp",
     "MachO.cpp",
@@ -65,5 +69,6 @@ static_library("Orc") {
     "Speculation.cpp",
     "TaskDispatch.cpp",
     "ThreadSafeModule.cpp",
+    "UnwindInfoRegistrationPlugin.cpp",
   ]
 }

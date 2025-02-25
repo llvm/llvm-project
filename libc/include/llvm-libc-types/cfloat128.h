@@ -18,22 +18,24 @@
 //
 // TODO: Update the complex variant of C23 `_Float128` type detection again when
 // clang supports it.
-#if defined(__STDC_IEC_60559_COMPLEX__) && !defined(__clang__)
-#if !defined(__cplusplus)
-#define LIBC_TYPES_HAS_CFLOAT128
-typedef _Complex _Float128 cfloat128;
-#elif defined(__GNUC__) && __GNUC__ >= 13
-#define LIBC_TYPES_HAS_CFLOAT128
-typedef _Complex _Float128 cfloat128;
-#endif
-#elif __clang_major__ >= 11 &&                                                 \
+#ifdef __clang__
+#if (__clang_major__ >= 11) &&                                                 \
     (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
 // Use _Complex __float128 type. clang uses __SIZEOF_FLOAT128__ or __FLOAT128__
 // macro to notify the availability of __float128 type:
 // https://reviews.llvm.org/D15120
 #define LIBC_TYPES_HAS_CFLOAT128
 typedef _Complex __float128 cfloat128;
-#elif (LDBL_MANT_DIG == 113)
+#endif
+#elif defined(__GNUC__)
+#if (defined(__STDC_IEC_60559_COMPLEX__) || defined(__SIZEOF_FLOAT128__)) &&   \
+    (__GNUC__ >= 13 || (!defined(__cplusplus)))
+#define LIBC_TYPES_HAS_CFLOAT128
+typedef _Complex _Float128 cfloat128;
+#endif
+#endif
+
+#if !defined(LIBC_TYPES_HAS_CFLOAT128) && (LDBL_MANT_DIG == 113)
 #define LIBC_TYPES_HAS_CFLOAT128
 #define LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE
 typedef _Complex long double cfloat128;

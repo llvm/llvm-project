@@ -793,9 +793,9 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   VoidTy = Type::getVoidTy(M->getContext());
 
   GuardFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy}, false);
-  GuardFnPtrType = PointerType::get(GuardFnType, 0);
+  GuardFnPtrType = PointerType::get(M->getContext(), 0);
   DispatchFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy, PtrTy}, false);
-  DispatchFnPtrType = PointerType::get(DispatchFnType, 0);
+  DispatchFnPtrType = PointerType::get(M->getContext(), 0);
   GuardFnCFGlobal =
       M->getOrInsertGlobal("__os_arm64x_check_icall_cfg", GuardFnPtrType);
   GuardFnGlobal =

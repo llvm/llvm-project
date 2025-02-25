@@ -181,6 +181,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_unistd_macros",
+    hdrs = ["hdr/unistd_macros.h"],
+    deps = [
+        ":hdr_unistd_overlay",
+    ],
+)
+
+libc_support_library(
     name = "hdr_limits_macros",
     hdrs = ["hdr/limits_macros.h"],
 )
@@ -193,6 +201,11 @@ libc_support_library(
 libc_support_library(
     name = "hdr_stdlib_overlay",
     hdrs = ["hdr/stdlib_overlay.h"],
+)
+
+libc_support_library(
+    name = "hdr_unistd_overlay",
+    hdrs = ["hdr/unistd_overlay.h"],
 )
 
 ############################ Type Proxy Header Files ###########################
@@ -298,6 +311,11 @@ libc_support_library(
 libc_support_library(
     name = "types_pid_t",
     hdrs = ["hdr/types/pid_t.h"],
+)
+
+libc_support_library(
+    name = "types_uid_t",
+    hdrs = ["hdr/types/uid_t.h"],
 )
 
 libc_support_library(
@@ -652,6 +670,8 @@ libc_support_library(
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_iterator",
+        ":__support_libc_assert",
+        ":string_memory_utils",
     ],
 )
 
@@ -1377,10 +1397,6 @@ libc_support_library(
     hdrs = [
         "src/__support/threads/linux/raw_mutex.h",
     ],
-    defines = [
-        "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY",
-        "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT",
-    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -1779,7 +1795,6 @@ libc_support_library(
     hdrs = ["src/math/generic/sincosf16_utils.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
     ],
@@ -1828,11 +1843,8 @@ libc_support_library(
     name = "exp10f_impl",
     hdrs = ["src/math/generic/exp10f_impl.h"],
     deps = [
-        ":__support_fputil_basic_operations",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":common_constants",
@@ -3467,11 +3479,13 @@ libc_support_library(
     hdrs = [
         "src/stdlib/heap_sort.h",
         "src/stdlib/qsort_data.h",
+        "src/stdlib/qsort_pivot.h",
         "src/stdlib/qsort_util.h",
         "src/stdlib/quick_sort.h",
     ],
     deps = [
         ":__support_common",
+        ":__support_cpp_bit",
         ":__support_cpp_cstddef",
         ":__support_macros_attributes",
     ],
@@ -3578,13 +3592,6 @@ libc_function(
 
 ############################### string targets ###############################
 
-no_sanitize_features = [
-    "-asan",
-    "-msan",
-    "-tsan",
-    "-ubsan",
-]
-
 libc_support_library(
     name = "string_memory_utils",
     hdrs = [
@@ -3645,6 +3652,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":llvm_libc_types_size_t",
         ":string_memory_utils",
+        ":types_size_t",
     ],
 )
 
@@ -3662,7 +3670,6 @@ libc_function(
     name = "memcpy",
     srcs = ["src/string/memcpy.cpp"],
     hdrs = ["src/string/memcpy.h"],
-    features = no_sanitize_features,
     weak = True,
     deps = [
         ":__support_common",
@@ -3674,7 +3681,6 @@ libc_function(
     name = "memset",
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
-    features = no_sanitize_features,
     weak = True,
     deps = [
         ":__support_common",
@@ -3686,7 +3692,6 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
-    features = no_sanitize_features,
     weak = True,
     deps = [
         ":__support_common",
@@ -3698,7 +3703,6 @@ libc_function(
     name = "mempcpy",
     srcs = ["src/string/mempcpy.cpp"],
     hdrs = ["src/string/mempcpy.h"],
-    features = no_sanitize_features,
     weak = True,
     deps = [
         ":__support_common",
@@ -3710,7 +3714,6 @@ libc_function(
     name = "bcopy",
     srcs = ["src/strings/bcopy.cpp"],
     hdrs = ["src/strings/bcopy.h"],
-    features = no_sanitize_features,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -3721,7 +3724,6 @@ libc_function(
     name = "memcmp",
     srcs = ["src/string/memcmp.cpp"],
     hdrs = ["src/string/memcmp.h"],
-    features = no_sanitize_features,
     weak = True,
     deps = [
         ":__support_common",
@@ -3734,7 +3736,6 @@ libc_function(
     name = "bcmp",
     srcs = ["src/strings/bcmp.cpp"],
     hdrs = ["src/strings/bcmp.h"],
-    features = no_sanitize_features,
     weak = True,
     deps = [
         ":__support_common",
@@ -3746,7 +3747,6 @@ libc_function(
     name = "bzero",
     srcs = ["src/strings/bzero.cpp"],
     hdrs = ["src/strings/bzero.h"],
-    features = no_sanitize_features,
     weak = True,
     deps = [
         ":__support_common",
@@ -3768,7 +3768,6 @@ libc_function(
     name = "strlen",
     srcs = ["src/string/strlen.cpp"],
     hdrs = ["src/string/strlen.h"],
-    features = no_sanitize_features,
     deps = [
         ":__support_common",
         ":string_utils",
@@ -3777,21 +3776,6 @@ libc_function(
 
 libc_function(
     name = "strcpy",
-    srcs = ["src/string/strcpy.cpp"],
-    hdrs = ["src/string/strcpy.h"],
-    features = no_sanitize_features,
-    deps = [
-        ":__support_common",
-        ":memcpy",
-        ":string_memory_utils",
-        ":string_utils",
-    ],
-)
-
-# A sanitizer instrumented flavor of strcpy to be used with unittests.
-libc_function(
-    name = "strcpy_sanitized",
-    testonly = 1,
     srcs = ["src/string/strcpy.cpp"],
     hdrs = ["src/string/strcpy.h"],
     deps = [
@@ -3996,6 +3980,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4008,6 +3993,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4023,6 +4009,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4067,6 +4054,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
     ],
 )
 
@@ -4078,6 +4067,8 @@ libc_function(
 #         ":__support_common",
 #         ":__support_osutil_syscall",
 #         ":errno",
+#         ":hdr_unistd_macros",
+#         ":types_size_t",
 #     ],
 # )
 
@@ -4089,6 +4080,9 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_uid_t",
     ],
 )
 
@@ -4100,6 +4094,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_pid_t",
     ],
 )
 
@@ -4111,6 +4107,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_uid_t",
     ],
 )
 
@@ -4125,6 +4123,7 @@ libc_function(
 #         ":__support_file_file",
 #         ":__support_osutil_syscall",
 #         ":errno",
+#         ":hdr_unistd_macros",
 #     ],
 # )
 
@@ -4136,6 +4135,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4148,6 +4148,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4160,6 +4161,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4184,6 +4186,8 @@ libc_function(
         ":__support_file_linux_lseekimpl",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
     ],
 )
 
@@ -4200,6 +4204,10 @@ libc_function(
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4215,6 +4223,10 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4228,6 +4240,9 @@ libc_function(
         ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4240,6 +4255,9 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4252,6 +4270,9 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4276,6 +4297,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4288,6 +4310,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_fcntl_macros",
+        ":hdr_unistd_macros",
     ],
 )
 
@@ -4302,6 +4325,7 @@ libc_function(
 #         ":__support_common",
 #         ":__support_osutil_syscall",
 #         ":errno",
+#         ":hdr_unistd_macros",
 #     ],
 # )
 
@@ -4313,6 +4337,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_ssize_t",
     ],
 )
 
@@ -4324,6 +4350,8 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_off_t",
     ],
 )
 
@@ -4360,6 +4388,9 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
@@ -4397,26 +4428,6 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_str_to_integer",
         ":errno",
-        ":printf_config",
-        ":printf_core_structs",
-    ],
-)
-
-# Only used for testing.
-libc_support_library(
-    name = "printf_mock_parser",
-    hdrs = ["src/stdio/printf_core/parser.h"],
-    local_defines = ["LIBC_COPT_MOCK_ARG_LIST"],
-    deps = [
-        ":__support_arg_list",
-        ":__support_common",
-        ":__support_cpp_bit",
-        ":__support_cpp_optional",
-        ":__support_cpp_string_view",
-        ":__support_cpp_type_traits",
-        ":__support_ctype_utils",
-        ":__support_fputil_fp_bits",
-        ":__support_str_to_integer",
         ":printf_config",
         ":printf_core_structs",
     ],
@@ -4597,6 +4608,176 @@ libc_function(
         ":errno",
         ":types_FILE",
         ":vfprintf_internal",
+    ],
+)
+
+libc_support_library(
+    name = "scanf_config",
+    hdrs = ["src/stdio/scanf_core/scanf_config.h"],
+)
+
+libc_support_library(
+    name = "scanf_core_structs",
+    hdrs = ["src/stdio/scanf_core/core_structs.h"],
+    deps = [
+        ":__support_cpp_bitset",
+        ":__support_cpp_string_view",
+        ":__support_fputil_fp_bits",
+        ":scanf_config",
+    ],
+)
+
+libc_support_library(
+    name = "scanf_parser",
+    hdrs = ["src/stdio/scanf_core/parser.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_cpp_bitset",
+        ":__support_ctype_utils",
+        ":__support_str_to_integer",
+        ":scanf_config",
+        ":scanf_core_structs",
+    ],
+)
+
+libc_support_library(
+    name = "scanf_reader",
+    hdrs = ["src/stdio/scanf_core/reader.h"],
+    deps = [
+        ":__support_cpp_string_view",
+        ":__support_macros_attributes",
+        ":types_FILE",
+    ],
+)
+
+libc_support_library(
+    name = "scanf_converter",
+    srcs = [
+        "src/stdio/scanf_core/converter.cpp",
+        "src/stdio/scanf_core/converter_utils.h",
+        "src/stdio/scanf_core/current_pos_converter.h",
+        "src/stdio/scanf_core/float_converter.cpp",
+        "src/stdio/scanf_core/float_converter.h",
+        "src/stdio/scanf_core/int_converter.cpp",
+        "src/stdio/scanf_core/int_converter.h",
+        "src/stdio/scanf_core/ptr_converter.cpp",
+        "src/stdio/scanf_core/ptr_converter.h",
+        "src/stdio/scanf_core/string_converter.cpp",
+        "src/stdio/scanf_core/string_converter.h",
+    ],
+    hdrs = [
+        "src/stdio/scanf_core/converter.h",
+    ],
+    deps = [
+        ":__support_char_vector",
+        ":__support_cpp_bitset",
+        ":__support_cpp_limits",
+        ":__support_cpp_string_view",
+        ":__support_ctype_utils",
+        ":__support_str_to_float",
+        ":scanf_core_structs",
+        ":scanf_reader",
+    ],
+)
+
+libc_support_library(
+    name = "scanf_main",
+    srcs = ["src/stdio/scanf_core/scanf_main.cpp"],
+    hdrs = ["src/stdio/scanf_core/scanf_main.h"],
+    deps = [
+        ":__support_arg_list",
+        ":scanf_config",
+        ":scanf_converter",
+        ":scanf_core_structs",
+        ":scanf_parser",
+        ":scanf_reader",
+    ],
+)
+
+libc_support_library(
+    name = "vfscanf_internal",
+    hdrs = ["src/stdio/scanf_core/vfscanf_internal.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":__support_macros_attributes",
+        ":scanf_main",
+        ":scanf_reader",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "scanf",
+    srcs = ["src/stdio/scanf.cpp"],
+    hdrs = ["src/stdio/scanf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":types_FILE",
+        ":vfscanf_internal",
+    ],
+)
+
+libc_function(
+    name = "vscanf",
+    srcs = ["src/stdio/vscanf.cpp"],
+    hdrs = ["src/stdio/vscanf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":types_FILE",
+        ":vfscanf_internal",
+    ],
+)
+
+libc_function(
+    name = "fscanf",
+    srcs = ["src/stdio/fscanf.cpp"],
+    hdrs = ["src/stdio/fscanf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":types_FILE",
+        ":vfscanf_internal",
+    ],
+)
+
+libc_function(
+    name = "vfscanf",
+    srcs = ["src/stdio/vfscanf.cpp"],
+    hdrs = ["src/stdio/vfscanf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":types_FILE",
+        ":vfscanf_internal",
+    ],
+)
+
+libc_function(
+    name = "sscanf",
+    srcs = ["src/stdio/sscanf.cpp"],
+    hdrs = ["src/stdio/sscanf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":scanf_main",
+        ":scanf_reader",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "vsscanf",
+    srcs = ["src/stdio/vsscanf.cpp"],
+    hdrs = ["src/stdio/vsscanf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":scanf_main",
+        ":scanf_reader",
+        ":types_FILE",
     ],
 )
 

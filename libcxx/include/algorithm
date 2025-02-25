@@ -1530,11 +1530,11 @@ template <class RandomAccessIterator, class Compare>
     sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void               // constexpr in C++26
     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void               // constexpr in C++26
     stable_sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
@@ -1827,8 +1827,9 @@ template <class BidirectionalIterator, class Compare>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/algorithm>
+#else
 #  include <__config>
 
 #  include <__algorithm/adjacent_find.h>
@@ -2056,6 +2057,6 @@ template <class BidirectionalIterator, class Compare>
 #    include <type_traits>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ALGORITHM

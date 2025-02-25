@@ -139,6 +139,13 @@ inline bool isa_builtin_cptr_type(mlir::Type t) {
   return false;
 }
 
+// Is `t` type(c_devptr)?
+inline bool isa_builtin_c_devptr_type(mlir::Type t) {
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_devptr");
+  return false;
+}
+
 /// Is `t` type(c_devptr)?
 inline bool isa_builtin_cdevptr_type(mlir::Type t) {
   if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
@@ -268,6 +275,13 @@ inline mlir::Type unwrapPassByRefType(mlir::Type t) {
     return eleTy;
   return t;
 }
+
+/// Extracts the innermost type, T, **potentially** wrapped inside:
+///   <fir.[ref|ptr|heap] <fir.[ref|ptr|heap|box] <fir.array<T>>>
+///
+/// Any element absent from the above pattern does not affect the returned
+/// value: T.
+mlir::Type getFortranElementType(mlir::Type ty);
 
 /// Unwrap either a sequence or a boxed sequence type, returning the element
 /// type of the sequence type.
@@ -439,7 +453,7 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///
-/// i32 -> none
+/// i32 -> ()
 /// !fir.array<2xf32> -> !fir.array<2xnone>
 /// !fir.heap<!fir.array<2xf32>> -> !fir.heap<!fir.array<2xnone>>
 inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {

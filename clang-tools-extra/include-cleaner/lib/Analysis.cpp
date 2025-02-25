@@ -64,7 +64,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
       // FIXME: Most of the work done here is repetitive. It might be useful to
       // have a cache/batching.
       SymbolReference SymRef{ND, Loc, RT};
-      return CB(SymRef, headersForSymbol(ND, SM, PI));
+      return CB(SymRef, headersForSymbol(ND, PP, PI));
     });
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
@@ -72,7 +72,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)) ||
         shouldIgnoreMacroReference(PP, MacroRef.Target.macro()))
       continue;
-    CB(MacroRef, headersForSymbol(MacroRef.Target, SM, PI));
+    CB(MacroRef, headersForSymbol(MacroRef.Target, PP, PI));
   }
 }
 
@@ -85,8 +85,9 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   const auto MainFile = *SM.getFileEntryRefForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
   llvm::StringMap<Header> Missing;
+  constexpr auto DefaultHeaderFilter = [](llvm::StringRef) { return false; };
   if (!HeaderFilter)
-    HeaderFilter = [](llvm::StringRef) { return false; };
+    HeaderFilter = DefaultHeaderFilter;
   OptionalDirectoryEntryRef ResourceDir =
       PP.getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   walkUsed(ASTRoots, MacroRefs, PI, PP,

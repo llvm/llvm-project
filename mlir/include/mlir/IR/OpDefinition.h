@@ -272,8 +272,9 @@ public:
   void dump() const { llvm::errs() << *this << "\n"; }
 
   MLIRContext *getContext() const {
-    return is<Attribute>() ? get<Attribute>().getContext()
-                           : get<Value>().getContext();
+    PointerUnion pu = *this;
+    return isa<Attribute>(pu) ? cast<Attribute>(pu).getContext()
+                              : cast<Value>(pu).getContext();
   }
 };
 

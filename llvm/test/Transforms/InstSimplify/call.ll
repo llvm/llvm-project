@@ -1582,9 +1582,7 @@ define i1 @ctlz_i1_non_poison_eq_false(i1 %x) {
 
 define i1 @ctlz_i1_poison_eq_false(i1 %x) {
 ; CHECK-LABEL: @ctlz_i1_poison_eq_false(
-; CHECK-NEXT:    [[CT:%.*]] = call i1 @llvm.ctlz.i1(i1 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[CT]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ct = call i1 @llvm.ctlz.i1(i1 %x, i1 true)
   %cmp = icmp eq i1 %ct, false
@@ -1604,9 +1602,7 @@ define i1 @cttz_i1_non_poison_eq_false(i1 %x) {
 
 define i1 @cttz_i1_poison_eq_false(i1 %x) {
 ; CHECK-LABEL: @cttz_i1_poison_eq_false(
-; CHECK-NEXT:    [[CT:%.*]] = call i1 @llvm.cttz.i1(i1 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[CT]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ct = call i1 @llvm.cttz.i1(i1 %x, i1 true)
   %cmp = icmp eq i1 %ct, false

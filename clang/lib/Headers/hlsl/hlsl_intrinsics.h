@@ -250,6 +250,28 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double4);
 
 //===----------------------------------------------------------------------===//
+// and builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool and(bool x, bool y)
+/// \brief Logically ands two boolean vectors elementwise and produces a bool
+/// vector output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/127851
+//
+// clang-format off
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool and(bool x, bool y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2 and(bool2 x, bool2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3 and(bool3 x, bool3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4 and(bool4 x, bool4 y);
+// clang-format on
+
+//===----------------------------------------------------------------------===//
 // any builtins
 //===----------------------------------------------------------------------===//
 
@@ -872,6 +894,35 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
 float4 degrees(float4);
 
 //===----------------------------------------------------------------------===//
+// distance builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn K distance(T X, T Y)
+/// \brief Returns a distance scalar between \a X and \a Y.
+/// \param X The X input value.
+/// \param Y The Y input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(half X, half Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+const inline float distance(float X, float Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(vector<half, N> X, vector<half, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
+
+template <int N>
+const inline float distance(vector<float, N> X, vector<float, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
+
+//===----------------------------------------------------------------------===//
 // dot product builtins
 //===----------------------------------------------------------------------===//
 
@@ -1122,6 +1173,78 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
 uint4 firstbithigh(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// firstbitlow builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T firstbitlow(T Val)
+/// \brief Returns the location of the first set bit starting from the lowest
+/// order bit and working upward, per component.
+/// \param Val the input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int16_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint64_t4);
+
+//===----------------------------------------------------------------------===//
 // floor builtins
 //===----------------------------------------------------------------------===//
 
@@ -1298,26 +1421,18 @@ float4 lerp(float4, float4, float4);
 /// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half2);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half3);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half4);
+const inline half length(half X) { return __detail::length_impl(X); }
+const inline float length(float X) { return __detail::length_impl(X); }
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float4);
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half length(vector<half, N> X) {
+  return __detail::length_vec_impl(X);
+}
+
+template <int N> const inline float length(vector<float, N> X) {
+  return __detail::length_vec_impl(X);
+}
 
 //===----------------------------------------------------------------------===//
 // log builtins
@@ -1858,6 +1973,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
 float3 cross(float3, float3);
 
 //===----------------------------------------------------------------------===//
+// D3DCOLORtoUBYTE4 builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T D3DCOLORtoUBYTE4(T x)
+/// \brief Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+/// \param x [in] The floating-point vector4 to convert.
+///
+/// The return value is the UBYTE4 representation of the \a x parameter.
+///
+/// This function swizzles and scales components of the \a x parameter. Use this
+/// function to compensate for the lack of UBYTE4 support in some hardware.
+
+constexpr vector<uint, 4> D3DCOLORtoUBYTE4(vector<float, 4> V) {
+  return __detail::d3d_color_to_ubyte4_impl(V);
+}
+
+//===----------------------------------------------------------------------===//
 // rcp builtins
 //===----------------------------------------------------------------------===//
 
@@ -1897,6 +2029,49 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
 double3 rcp(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
 double4 rcp(double4);
+
+//===----------------------------------------------------------------------===//
+// reflect builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T reflect(T I, T N)
+/// \brief Returns a reflection using an incident ray, \a I, and a surface
+/// normal, \a N.
+/// \param I The incident ray.
+/// \param N The surface normal.
+///
+/// The return value is a floating-point vector that represents the reflection
+/// of the incident ray, \a I, off a surface with the normal \a N.
+///
+/// This function calculates the reflection vector using the following formula:
+/// V = I - 2 * N * dot(I N) .
+///
+/// N must already be normalized in order to achieve the desired result.
+///
+/// The operands must all be a scalar or vector whose component type is
+/// floating-point.
+///
+/// Result type and the type of all operands must be the same type.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half reflect(half I, half N) {
+  return __detail::reflect_impl(I, N);
+}
+
+const inline float reflect(float I, float N) {
+  return __detail::reflect_impl(I, N);
+}
+
+template <int L>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline vector<half, L> reflect(vector<half, L> I, vector<half, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
+
+template <int L>
+const inline vector<float, L> reflect(vector<float, L> I, vector<float, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
 
 //===----------------------------------------------------------------------===//
 // rsqrt builtins
@@ -2241,6 +2416,15 @@ float4 trunc(float4);
 // Wave* builtins
 //===----------------------------------------------------------------------===//
 
+/// \brief Returns true if the expression is true in all active lanes in the
+/// current wave.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return True if the expression is true in all lanes.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_true)
+__attribute__((convergent)) bool WaveActiveAllTrue(bool Val);
+
 /// \brief Returns true if the expression is true in any active lane in the
 /// current wave.
 ///
@@ -2348,6 +2532,204 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) double3 WaveReadLaneAt(double3, int32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) double4 WaveReadLaneAt(double4, int32_t);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveMax builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half WaveActiveMax(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half2 WaveActiveMax(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half3 WaveActiveMax(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half4 WaveActiveMax(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t WaveActiveMax(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t2 WaveActiveMax(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t3 WaveActiveMax(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t4 WaveActiveMax(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t WaveActiveMax(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t2 WaveActiveMax(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t3 WaveActiveMax(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t4 WaveActiveMax(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int WaveActiveMax(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int2 WaveActiveMax(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int3 WaveActiveMax(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int4 WaveActiveMax(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint WaveActiveMax(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint2 WaveActiveMax(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint3 WaveActiveMax(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint4 WaveActiveMax(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t WaveActiveMax(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t2 WaveActiveMax(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t3 WaveActiveMax(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t4 WaveActiveMax(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t WaveActiveMax(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t2 WaveActiveMax(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t3 WaveActiveMax(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t4 WaveActiveMax(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float WaveActiveMax(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float2 WaveActiveMax(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float3 WaveActiveMax(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float4 WaveActiveMax(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double WaveActiveMax(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double2 WaveActiveMax(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double3 WaveActiveMax(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double4 WaveActiveMax(double4);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveSum builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) half WaveActiveSum(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) half2 WaveActiveSum(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) half3 WaveActiveSum(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) half4 WaveActiveSum(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int16_t WaveActiveSum(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int16_t2 WaveActiveSum(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int16_t3 WaveActiveSum(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int16_t4 WaveActiveSum(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint16_t WaveActiveSum(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint16_t2 WaveActiveSum(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint16_t3 WaveActiveSum(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint16_t4 WaveActiveSum(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int WaveActiveSum(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int2 WaveActiveSum(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int3 WaveActiveSum(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int4 WaveActiveSum(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint WaveActiveSum(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint2 WaveActiveSum(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint3 WaveActiveSum(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint4 WaveActiveSum(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int64_t WaveActiveSum(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int64_t2 WaveActiveSum(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int64_t3 WaveActiveSum(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) int64_t4 WaveActiveSum(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint64_t WaveActiveSum(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint64_t2 WaveActiveSum(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint64_t3 WaveActiveSum(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) uint64_t4 WaveActiveSum(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) float WaveActiveSum(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) float2 WaveActiveSum(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) float3 WaveActiveSum(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) float4 WaveActiveSum(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) double WaveActiveSum(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) double2 WaveActiveSum(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) double3 WaveActiveSum(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
+__attribute__((convergent)) double4 WaveActiveSum(double4);
 
 //===----------------------------------------------------------------------===//
 // sign builtins

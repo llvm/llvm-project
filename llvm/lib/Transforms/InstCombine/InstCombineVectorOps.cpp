@@ -86,7 +86,7 @@ static bool cheapToScalarize(Value *V, Value *EI) {
     if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
 
-  CmpInst::Predicate UnusedPred;
+  CmpPredicate UnusedPred;
   if (match(V, m_OneUse(m_Cmp(UnusedPred, m_Value(V0), m_Value(V1)))))
     if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
@@ -486,7 +486,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   }
 
   Value *X, *Y;
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(SrcVec, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
       cheapToScalarize(SrcVec, Index)) {
     // extelt (cmp X, Y), Index --> cmp (extelt X, Index), (extelt Y, Index)
@@ -747,7 +747,7 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   // extract, so any subsequent extracts in the same basic block can use it.
   // TODO: Insert before the earliest ExtractElementInst that is replaced.
   if (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
-    WideVec->insertAfter(ExtVecOpInst);
+    WideVec->insertAfter(ExtVecOpInst->getIterator());
   else
     IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
 
@@ -3060,14 +3060,10 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       unsigned SrcElemsPerTgtElem = TgtElemBitWidth / SrcElemBitWidth;
       assert(SrcElemsPerTgtElem);
       BegIdx /= SrcElemsPerTgtElem;
-      bool BCAlreadyExists = NewBCs.contains(CastSrcTy);
-      auto *NewBC =
-          BCAlreadyExists
-              ? NewBCs[CastSrcTy]
-              : Builder.CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
-      if (!BCAlreadyExists)
-        NewBCs[CastSrcTy] = NewBC;
-      auto *Ext = Builder.CreateExtractElement(NewBC, BegIdx,
+      auto [It, Inserted] = NewBCs.try_emplace(CastSrcTy);
+      if (Inserted)
+        It->second = Builder.CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
+      auto *Ext = Builder.CreateExtractElement(It->second, BegIdx,
                                                SVI.getName() + ".extract");
       // The shufflevector isn't being replaced: the bitcast that used it
       // is. InstCombine will visit the newly-created instructions.

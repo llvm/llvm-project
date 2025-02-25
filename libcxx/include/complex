@@ -256,8 +256,9 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/complex>
+#else
 #  include <__config>
 #  include <__fwd/complex.h>
 #  include <__fwd/tuple.h>
@@ -399,7 +400,7 @@ class _LIBCPP_TEMPLATE_VIS complex<long double>;
 struct __from_builtin_tag {};
 
 template <class _Tp>
-using __complex_t =
+using __complex_t _LIBCPP_NODEBUG =
     __conditional_t<is_same<_Tp, float>::value,
                     _Complex float,
                     __conditional_t<is_same<_Tp, double>::value, _Complex double, _Complex long double> >;
@@ -1476,6 +1477,6 @@ _LIBCPP_POP_MACROS
 #    include <stdexcept>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_COMPLEX

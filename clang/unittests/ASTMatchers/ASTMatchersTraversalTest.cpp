@@ -665,6 +665,7 @@ void check_match_co_return() {
 #include <coro_header>
 void check_match_co_await() {
   co_await a;
+  co_return 1;
 }
 )cpp";
   EXPECT_TRUE(matchesConditionally(CoAwaitCode,
@@ -674,6 +675,7 @@ void check_match_co_await() {
 #include <coro_header>
 void check_match_co_yield() {
   co_yield 1.0;
+  co_return 1;
 }
 )cpp";
   EXPECT_TRUE(matchesConditionally(CoYieldCode,
@@ -714,7 +716,7 @@ void coro() {
 void coro() try {
   int thevar;
   co_return 1;
-} catch (...) {}
+} catch (...) { co_return 1; }
 )cpp";
   EXPECT_TRUE(matchesConditionally(
       CoroWithTryCatchDeclCode,

@@ -1,5 +1,5 @@
 # Xqcics - Qualcomm uC Conditional Select Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcics -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcics -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcics < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcics -M no-aliases --no-print-imm-hex -d - \

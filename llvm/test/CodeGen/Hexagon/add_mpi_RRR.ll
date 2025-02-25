@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK: [[REG0:(r[0-9]+)]] = add(r{{[0-9]+}},mpyi([[REG0]],r{{[0-9]+}})
 ; CHECK: [[REG0:(r[0-9]+)]] = add(r{{[0-9]+}},mpyi([[REG0]],r{{[0-9]+}})

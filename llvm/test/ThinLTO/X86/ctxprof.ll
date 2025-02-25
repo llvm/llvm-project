@@ -55,8 +55,8 @@
 ; RUN: echo '[ \
 ; RUN:        {"Guid": 6019442868614718803, "Counters": [1], "Callsites": [[{"Guid": 15593096274670919754, "Counters": [1]}]]}, \
 ; RUN:        {"Guid": 15593096274670919754, "Counters": [1], "Callsites": [[{"Guid": 6019442868614718803, "Counters": [1]}]]} \
-; RUN:  ]' > %t_exp/ctxprof.json
-; RUN: llvm-ctxprof-util fromJSON --input %t_exp/ctxprof.json --output %t_exp/ctxprof.bitstream
+; RUN:  ]' > %t_exp/ctxprof.yaml
+; RUN: llvm-ctxprof-util fromYAML --input %t_exp/ctxprof.yaml --output %t_exp/ctxprof.bitstream
 ; RUN: llvm-lto2 run %t/m1-instr.bc %t/m2-instr.bc \
 ; RUN:  -o %t_exp/result.o -save-temps \
 ; RUN:  -use-ctx-profile=%t_exp/ctxprof.bitstream \

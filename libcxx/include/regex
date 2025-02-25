@@ -789,8 +789,9 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 } // std
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/regex>
+#else
 #  include <__algorithm/find.h>
 #  include <__algorithm/search.h>
 #  include <__assert>
@@ -1680,7 +1681,7 @@ public:
 template <class _CharT>
 void __back_ref<_CharT>::__exec(__state& __s) const {
   if (__mexp_ > __s.__sub_matches_.size())
-    __throw_regex_error<regex_constants::error_backref>();
+    std::__throw_regex_error<regex_constants::error_backref>();
   sub_match<const _CharT*>& __sm = __s.__sub_matches_[__mexp_ - 1];
   if (__sm.matched) {
     ptrdiff_t __len = __sm.second - __sm.first;
@@ -2116,7 +2117,7 @@ public:
           std::make_pair(__traits_.transform(__b.begin(), __b.end()), __traits_.transform(__e.begin(), __e.end())));
     } else {
       if (__b.size() != 1 || __e.size() != 1)
-        __throw_regex_error<regex_constants::error_range>();
+        std::__throw_regex_error<regex_constants::error_range>();
       if (__icase_) {
         __b[0] = __traits_.translate_nocase(__b[0]);
         __e[0] = __traits_.translate_nocase(__e[0]);
@@ -2742,7 +2743,7 @@ void basic_regex<_CharT, _Traits>::__init(_ForwardIterator __first, _ForwardIter
     __flags_ |= regex_constants::ECMAScript;
   _ForwardIterator __temp = __parse(__first, __last);
   if (__temp != __last)
-    __throw_regex_error<regex_constants::__re_err_parse>();
+    std::__throw_regex_error<regex_constants::__re_err_parse>();
 }
 
 template <class _CharT, class _Traits>
@@ -2772,7 +2773,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse(_ForwardIterator __first,
     __first = __parse_egrep(__first, __last);
     break;
   default:
-    __throw_regex_error<regex_constants::__re_err_grammar>();
+    std::__throw_regex_error<regex_constants::__re_err_grammar>();
   }
   return __first;
 }
@@ -2797,7 +2798,7 @@ basic_regex<_CharT, _Traits>::__parse_basic_reg_exp(_ForwardIterator __first, _F
       }
     }
     if (__first != __last)
-      __throw_regex_error<regex_constants::__re_err_empty>();
+      std::__throw_regex_error<regex_constants::__re_err_empty>();
   }
   return __first;
 }
@@ -2809,13 +2810,13 @@ basic_regex<_CharT, _Traits>::__parse_extended_reg_exp(_ForwardIterator __first,
   __owns_one_state<_CharT>* __sa = __end_;
   _ForwardIterator __temp        = __parse_ERE_branch(__first, __last);
   if (__temp == __first)
-    __throw_regex_error<regex_constants::__re_err_empty>();
+    std::__throw_regex_error<regex_constants::__re_err_empty>();
   __first = __temp;
   while (__first != __last && *__first == '|') {
     __owns_one_state<_CharT>* __sb = __end_;
     __temp                         = __parse_ERE_branch(++__first, __last);
     if (__temp == __first)
-      __throw_regex_error<regex_constants::__re_err_empty>();
+      std::__throw_regex_error<regex_constants::__re_err_empty>();
     __push_alternation(__sa, __sb);
     __first = __temp;
   }
@@ -2827,7 +2828,7 @@ template <class _ForwardIterator>
 _ForwardIterator basic_regex<_CharT, _Traits>::__parse_ERE_branch(_ForwardIterator __first, _ForwardIterator __last) {
   _ForwardIterator __temp = __parse_ERE_expression(__first, __last);
   if (__temp == __first)
-    __throw_regex_error<regex_constants::__re_err_empty>();
+    std::__throw_regex_error<regex_constants::__re_err_empty>();
   do {
     __first = __temp;
     __temp  = __parse_ERE_expression(__first, __last);
@@ -2858,7 +2859,7 @@ basic_regex<_CharT, _Traits>::__parse_ERE_expression(_ForwardIterator __first, _
       ++__open_count_;
       __temp = __parse_extended_reg_exp(++__temp, __last);
       if (__temp == __last || *__temp != ')')
-        __throw_regex_error<regex_constants::error_paren>();
+        std::__throw_regex_error<regex_constants::error_paren>();
       __push_end_marked_subexpression(__temp_count);
       --__open_count_;
       ++__temp;
@@ -2910,7 +2911,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_nondupl_RE(_ForwardIterat
       __first               = __parse_RE_expression(__temp, __last);
       __temp                = __parse_Back_close_paren(__first, __last);
       if (__temp == __first)
-        __throw_regex_error<regex_constants::error_paren>();
+        std::__throw_regex_error<regex_constants::error_paren>();
       __push_end_marked_subexpression(__temp_count);
       __first = __temp;
     } else
@@ -3153,14 +3154,14 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_RE_dupl_symbol(
         __first   = __temp;
         __temp    = __parse_DUP_COUNT(__first, __last, __min);
         if (__temp == __first)
-          __throw_regex_error<regex_constants::error_badbrace>();
+          std::__throw_regex_error<regex_constants::error_badbrace>();
         __first = __temp;
         if (__first == __last)
-          __throw_regex_error<regex_constants::error_brace>();
+          std::__throw_regex_error<regex_constants::error_brace>();
         if (*__first != ',') {
           __temp = __parse_Back_close_brace(__first, __last);
           if (__temp == __first)
-            __throw_regex_error<regex_constants::error_brace>();
+            std::__throw_regex_error<regex_constants::error_brace>();
           __push_loop(__min, __min, __s, __mexp_begin, __mexp_end, true);
           __first = __temp;
         } else {
@@ -3169,12 +3170,12 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_RE_dupl_symbol(
           __first   = __parse_DUP_COUNT(__first, __last, __max);
           __temp    = __parse_Back_close_brace(__first, __last);
           if (__temp == __first)
-            __throw_regex_error<regex_constants::error_brace>();
+            std::__throw_regex_error<regex_constants::error_brace>();
           if (__max == -1)
             __push_greedy_inf_repeat(__min, __s, __mexp_begin, __mexp_end);
           else {
             if (__max < __min)
-              __throw_regex_error<regex_constants::error_badbrace>();
+              std::__throw_regex_error<regex_constants::error_badbrace>();
             __push_loop(__min, __max, __s, __mexp_begin, __mexp_end, true);
           }
           __first = __temp;
@@ -3224,10 +3225,10 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_ERE_dupl_symbol(
       int __min;
       _ForwardIterator __temp = __parse_DUP_COUNT(++__first, __last, __min);
       if (__temp == __first)
-        __throw_regex_error<regex_constants::error_badbrace>();
+        std::__throw_regex_error<regex_constants::error_badbrace>();
       __first = __temp;
       if (__first == __last)
-        __throw_regex_error<regex_constants::error_brace>();
+        std::__throw_regex_error<regex_constants::error_brace>();
       switch (*__first) {
       case '}':
         ++__first;
@@ -3240,7 +3241,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_ERE_dupl_symbol(
       case ',':
         ++__first;
         if (__first == __last)
-          __throw_regex_error<regex_constants::error_badbrace>();
+          std::__throw_regex_error<regex_constants::error_badbrace>();
         if (*__first == '}') {
           ++__first;
           if (__grammar == ECMAScript && __first != __last && *__first == '?') {
@@ -3252,13 +3253,13 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_ERE_dupl_symbol(
           int __max = -1;
           __temp    = __parse_DUP_COUNT(__first, __last, __max);
           if (__temp == __first)
-            __throw_regex_error<regex_constants::error_brace>();
+            std::__throw_regex_error<regex_constants::error_brace>();
           __first = __temp;
           if (__first == __last || *__first != '}')
-            __throw_regex_error<regex_constants::error_brace>();
+            std::__throw_regex_error<regex_constants::error_brace>();
           ++__first;
           if (__max < __min)
-            __throw_regex_error<regex_constants::error_badbrace>();
+            std::__throw_regex_error<regex_constants::error_badbrace>();
           if (__grammar == ECMAScript && __first != __last && *__first == '?') {
             ++__first;
             __push_loop(__min, __max, __s, __mexp_begin, __mexp_end, false);
@@ -3267,7 +3268,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_ERE_dupl_symbol(
         }
         break;
       default:
-        __throw_regex_error<regex_constants::error_badbrace>();
+        std::__throw_regex_error<regex_constants::error_badbrace>();
       }
     } break;
     }
@@ -3282,7 +3283,7 @@ basic_regex<_CharT, _Traits>::__parse_bracket_expression(_ForwardIterator __firs
   if (__first != __last && *__first == '[') {
     ++__first;
     if (__first == __last)
-      __throw_regex_error<regex_constants::error_brack>();
+      std::__throw_regex_error<regex_constants::error_brack>();
     bool __negate = false;
     if (*__first == '^') {
       ++__first;
@@ -3291,20 +3292,20 @@ basic_regex<_CharT, _Traits>::__parse_bracket_expression(_ForwardIterator __firs
     __bracket_expression<_CharT, _Traits>* __ml = __start_matching_list(__negate);
     // __ml owned by *this
     if (__first == __last)
-      __throw_regex_error<regex_constants::error_brack>();
+      std::__throw_regex_error<regex_constants::error_brack>();
     if (__get_grammar(__flags_) != ECMAScript && *__first == ']') {
       __ml->__add_char(']');
       ++__first;
     }
     __first = __parse_follow_list(__first, __last, __ml);
     if (__first == __last)
-      __throw_regex_error<regex_constants::error_brack>();
+      std::__throw_regex_error<regex_constants::error_brack>();
     if (*__first == '-') {
       __ml->__add_char('-');
       ++__first;
     }
     if (__first == __last || *__first != ']')
-      __throw_regex_error<regex_constants::error_brack>();
+      std::__throw_regex_error<regex_constants::error_brack>();
     ++__first;
   }
   return __first;
@@ -3397,7 +3398,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_class_escape(
     basic_string<_CharT>& __str,
     __bracket_expression<_CharT, _Traits>* __ml) {
   if (__first == __last)
-    __throw_regex_error<regex_constants::error_escape>();
+    std::__throw_regex_error<regex_constants::error_escape>();
   switch (*__first) {
   case 0:
     __str = *__first;
@@ -3435,7 +3436,7 @@ template <class _ForwardIterator>
 _ForwardIterator basic_regex<_CharT, _Traits>::__parse_awk_escape(
     _ForwardIterator __first, _ForwardIterator __last, basic_string<_CharT>* __str) {
   if (__first == __last)
-    __throw_regex_error<regex_constants::error_escape>();
+    std::__throw_regex_error<regex_constants::error_escape>();
   switch (*__first) {
   case '\\':
   case '"':
@@ -3500,7 +3501,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_awk_escape(
     else
       __push_char(_CharT(__val));
   } else
-    __throw_regex_error<regex_constants::error_escape>();
+    std::__throw_regex_error<regex_constants::error_escape>();
   return __first;
 }
 
@@ -3513,11 +3514,11 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_equivalence_class(
   value_type __equal_close[2] = {'=', ']'};
   _ForwardIterator __temp     = std::search(__first, __last, __equal_close, __equal_close + 2);
   if (__temp == __last)
-    __throw_regex_error<regex_constants::error_brack>();
+    std::__throw_regex_error<regex_constants::error_brack>();
   // [__first, __temp) contains all text in [= ... =]
   string_type __collate_name = __traits_.lookup_collatename(__first, __temp);
   if (__collate_name.empty())
-    __throw_regex_error<regex_constants::error_collate>();
+    std::__throw_regex_error<regex_constants::error_collate>();
   string_type __equiv_name = __traits_.transform_primary(__collate_name.begin(), __collate_name.end());
   if (!__equiv_name.empty())
     __ml->__add_equivalence(__equiv_name);
@@ -3530,7 +3531,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_equivalence_class(
       __ml->__add_digraph(__collate_name[0], __collate_name[1]);
       break;
     default:
-      __throw_regex_error<regex_constants::error_collate>();
+      std::__throw_regex_error<regex_constants::error_collate>();
     }
   }
   __first = std::next(__temp, 2);
@@ -3546,12 +3547,12 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_class(
   value_type __colon_close[2] = {':', ']'};
   _ForwardIterator __temp     = std::search(__first, __last, __colon_close, __colon_close + 2);
   if (__temp == __last)
-    __throw_regex_error<regex_constants::error_brack>();
+    std::__throw_regex_error<regex_constants::error_brack>();
   // [__first, __temp) contains all text in [: ... :]
   typedef typename _Traits::char_class_type char_class_type;
   char_class_type __class_type = __traits_.lookup_classname(__first, __temp, __flags_ & icase);
   if (__class_type == 0)
-    __throw_regex_error<regex_constants::error_ctype>();
+    std::__throw_regex_error<regex_constants::error_ctype>();
   __ml->__add_class(__class_type);
   __first = std::next(__temp, 2);
   return __first;
@@ -3566,7 +3567,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_collating_symbol(
   value_type __dot_close[2] = {'.', ']'};
   _ForwardIterator __temp   = std::search(__first, __last, __dot_close, __dot_close + 2);
   if (__temp == __last)
-    __throw_regex_error<regex_constants::error_brack>();
+    std::__throw_regex_error<regex_constants::error_brack>();
   // [__first, __temp) contains all text in [. ... .]
   __col_sym = __traits_.lookup_collatename(__first, __temp);
   switch (__col_sym.size()) {
@@ -3574,7 +3575,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_collating_symbol(
   case 2:
     break;
   default:
-    __throw_regex_error<regex_constants::error_collate>();
+    std::__throw_regex_error<regex_constants::error_collate>();
   }
   __first = std::next(__temp, 2);
   return __first;
@@ -3590,7 +3591,7 @@ basic_regex<_CharT, _Traits>::__parse_DUP_COUNT(_ForwardIterator __first, _Forwa
       __c = __val;
       for (++__first; __first != __last && (__val = __traits_.value(*__first, 10)) != -1; ++__first) {
         if (__c >= numeric_limits<int>::max() / 10)
-          __throw_regex_error<regex_constants::error_badbrace>();
+          std::__throw_regex_error<regex_constants::error_badbrace>();
         __c *= 10;
         __c += __val;
       }
@@ -3683,7 +3684,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_assertion(_ForwardIterato
             __push_lookahead(std::move(__exp), false, __marked_count_);
             __marked_count_ += __mexp;
             if (__temp == __last || *__temp != ')')
-              __throw_regex_error<regex_constants::error_paren>();
+              std::__throw_regex_error<regex_constants::error_paren>();
             __first = ++__temp;
           } break;
           case '!': {
@@ -3694,7 +3695,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_assertion(_ForwardIterato
             __push_lookahead(std::move(__exp), true, __marked_count_);
             __marked_count_ += __mexp;
             if (__temp == __last || *__temp != ')')
-              __throw_regex_error<regex_constants::error_paren>();
+              std::__throw_regex_error<regex_constants::error_paren>();
             __first = ++__temp;
           } break;
           }
@@ -3724,13 +3725,13 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_atom(_ForwardIterator __f
     case '(': {
       ++__first;
       if (__first == __last)
-        __throw_regex_error<regex_constants::error_paren>();
+        std::__throw_regex_error<regex_constants::error_paren>();
       _ForwardIterator __temp = std::next(__first);
       if (__temp != __last && *__first == '?' && *__temp == ':') {
         ++__open_count_;
         __first = __parse_ecma_exp(++__temp, __last);
         if (__first == __last || *__first != ')')
-          __throw_regex_error<regex_constants::error_paren>();
+          std::__throw_regex_error<regex_constants::error_paren>();
         --__open_count_;
         ++__first;
       } else {
@@ -3739,7 +3740,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_atom(_ForwardIterator __f
         ++__open_count_;
         __first = __parse_ecma_exp(__first, __last);
         if (__first == __last || *__first != ')')
-          __throw_regex_error<regex_constants::error_paren>();
+          std::__throw_regex_error<regex_constants::error_paren>();
         __push_end_marked_subexpression(__temp_count);
         --__open_count_;
         ++__first;
@@ -3749,7 +3750,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_atom(_ForwardIterator __f
     case '+':
     case '?':
     case '{':
-      __throw_regex_error<regex_constants::error_badrepeat>();
+      std::__throw_regex_error<regex_constants::error_badrepeat>();
       break;
     default:
       __first = __parse_pattern_character(__first, __last);
@@ -3765,7 +3766,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_atom_escape(_ForwardItera
   if (__first != __last && *__first == '\\') {
     _ForwardIterator __t1 = std::next(__first);
     if (__t1 == __last)
-      __throw_regex_error<regex_constants::error_escape>();
+      std::__throw_regex_error<regex_constants::error_escape>();
 
     _ForwardIterator __t2 = __parse_decimal_escape(__t1, __last);
     if (__t2 != __t1)
@@ -3796,11 +3797,11 @@ basic_regex<_CharT, _Traits>::__parse_decimal_escape(_ForwardIterator __first, _
       unsigned __v = *__first - '0';
       for (++__first; __first != __last && '0' <= *__first && *__first <= '9'; ++__first) {
         if (__v >= numeric_limits<unsigned>::max() / 10)
-          __throw_regex_error<regex_constants::error_backref>();
+          std::__throw_regex_error<regex_constants::error_backref>();
         __v = 10 * __v + *__first - '0';
       }
       if (__v == 0 || __v > mark_count())
-        __throw_regex_error<regex_constants::error_backref>();
+        std::__throw_regex_error<regex_constants::error_backref>();
       __push_back_ref(__v);
     }
   }
@@ -3904,40 +3905,40 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
             __push_char(_CharT(*__t % 32));
           __first = ++__t;
         } else
-          __throw_regex_error<regex_constants::error_escape>();
+          std::__throw_regex_error<regex_constants::error_escape>();
       } else
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       break;
     case 'u':
       ++__first;
       if (__first == __last)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __hd = __traits_.value(*__first, 16);
       if (__hd == -1)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
       ++__first;
       if (__first == __last)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __hd = __traits_.value(*__first, 16);
       if (__hd == -1)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
       _LIBCPP_FALLTHROUGH();
     case 'x':
       ++__first;
       if (__first == __last)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __hd = __traits_.value(*__first, 16);
       if (__hd == -1)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
       ++__first;
       if (__first == __last)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __hd = __traits_.value(*__first, 16);
       if (__hd == -1)
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
       if (__str)
         *__str = _CharT(__sum);
@@ -3960,7 +3961,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
           __push_char(*__first);
         ++__first;
       } else
-        __throw_regex_error<regex_constants::error_escape>();
+        std::__throw_regex_error<regex_constants::error_escape>();
       break;
     }
   }
@@ -4056,7 +4057,7 @@ bool basic_regex<_CharT, _Traits>::__test_back_ref(_CharT __c) {
   unsigned __val = __traits_.value(__c, 10);
   if (__val >= 1 && __val <= 9) {
     if (__val > mark_count())
-      __throw_regex_error<regex_constants::error_backref>();
+      std::__throw_regex_error<regex_constants::error_backref>();
     __push_back_ref(__val);
     return true;
   }
@@ -4228,7 +4229,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(const sub_match<_BiIter>& __x, cons
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _BiIter>
-using __sub_match_cat = compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
+using __sub_match_cat _LIBCPP_NODEBUG =
+    compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
 
 template <class _BiIter>
 _LIBCPP_HIDE_FROM_ABI auto operator<=>(const sub_match<_BiIter>& __x, const sub_match<_BiIter>& __y) {
@@ -4776,7 +4778,7 @@ _OutputIter match_results<_BidirectionalIterator, _Allocator>::format(
             if (__fmt_first + 1 != __fmt_last && '0' <= __fmt_first[1] && __fmt_first[1] <= '9') {
               ++__fmt_first;
               if (__idx >= numeric_limits<size_t>::max() / 10)
-                __throw_regex_error<regex_constants::error_escape>();
+                std::__throw_regex_error<regex_constants::error_escape>();
               __idx = 10 * __idx + *__fmt_first - '0';
             }
             __output_iter = std::copy((*this)[__idx].first, (*this)[__idx].second, __output_iter);
@@ -4863,7 +4865,7 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_ecma(
     do {
       ++__counter;
       if (__counter % _LIBCPP_REGEX_COMPLEXITY_FACTOR == 0 && __counter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
-        __throw_regex_error<regex_constants::error_complexity>();
+        std::__throw_regex_error<regex_constants::error_complexity>();
       __state& __s = __states.back();
       if (__s.__node_)
         __s.__node_->__exec(__s);
@@ -4897,7 +4899,7 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_ecma(
         __states.pop_back();
         break;
       default:
-        __throw_regex_error<regex_constants::__re_err_unknown>();
+        std::__throw_regex_error<regex_constants::__re_err_unknown>();
         break;
       }
     } while (!__states.empty());
@@ -4933,7 +4935,7 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
     do {
       ++__counter;
       if (__counter % _LIBCPP_REGEX_COMPLEXITY_FACTOR == 0 && __counter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
-        __throw_regex_error<regex_constants::error_complexity>();
+        std::__throw_regex_error<regex_constants::error_complexity>();
       __state& __s = __states.back();
       if (__s.__node_)
         __s.__node_->__exec(__s);
@@ -4974,7 +4976,7 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
         __states.pop_back();
         break;
       default:
-        __throw_regex_error<regex_constants::__re_err_unknown>();
+        std::__throw_regex_error<regex_constants::__re_err_unknown>();
         break;
       }
     } while (!__states.empty());
@@ -5023,7 +5025,7 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
     do {
       ++__counter;
       if (__counter % _LIBCPP_REGEX_COMPLEXITY_FACTOR == 0 && __counter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
-        __throw_regex_error<regex_constants::error_complexity>();
+        std::__throw_regex_error<regex_constants::error_complexity>();
       __state& __s = __states.back();
       if (__s.__node_)
         __s.__node_->__exec(__s);
@@ -5061,7 +5063,7 @@ bool basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
         __states.pop_back();
         break;
       default:
-        __throw_regex_error<regex_constants::__re_err_unknown>();
+        std::__throw_regex_error<regex_constants::__re_err_unknown>();
         break;
       }
     } while (!__states.empty());
@@ -5546,9 +5548,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const regex_token_iterator& __x) const;
 #  if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const {
-    return *this == regex_token_iterator();
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const { return *this == regex_token_iterator(); }
 #  endif
 #  if _LIBCPP_STD_VER < 20
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const regex_token_iterator& __x) const { return !(*this == __x); }
@@ -5834,6 +5834,6 @@ _LIBCPP_POP_MACROS
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_REGEX

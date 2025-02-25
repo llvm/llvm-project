@@ -1358,79 +1358,6 @@ INTERCEPTOR(int, forkpty, int *aparent, char *name, const void *termp,
 #define MSAN_MAYBE_INTERCEPT_FORKPTY
 #endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
-INTERCEPTOR(int, __b64_ntop, unsigned char const *src, SIZE_T srclength,
-            char *target, SIZE_T targsize) {
-  ENSURE_MSAN_INITED();
-  CHECK_UNPOISONED(src, srclength);
-  InterceptorScope interceptor_scope;
-  int res = REAL(__b64_ntop)(src, srclength, target, targsize);
-  if (res >= 0)
-    __msan_unpoison(target, res + 1);
-  return res;
-}
-INTERCEPTOR(int, __b64_pton, char const *src, char *target, SIZE_T targsize) {
-  ENSURE_MSAN_INITED();
-  CHECK_UNPOISONED(src, internal_strlen(src) + 1);
-  InterceptorScope interceptor_scope;
-  int res = REAL(__b64_pton)(src, target, targsize);
-  if (res >= 0)
-    __msan_unpoison(target, res);
-  return res;
-}
-#  define MSAN_MAYBE_INTERCEPT___B64_TO \
-    MSAN_INTERCEPT_FUNC(__b64_ntop);    \
-    COMMON_INTERCEPT_FUNCTION(__b64_pton);
-#else
-#  define MSAN_MAYBE_INTERCEPT___B64_TO
-#endif
-
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
-#  if __GLIBC_PREREQ(2, 34)
-// Changed with https://sourceware.org/git/?p=glibc.git;h=640bbdf
-#    define DN_COMP_INTERCEPTOR_NAME dn_comp
-#    define DN_EXPAND_INTERCEPTOR_NAME dn_expand
-#  else
-#    define DN_COMP_INTERCEPTOR_NAME __dn_comp
-#    define DN_EXPAND_INTERCEPTOR_NAME __dn_expand
-#  endif
-INTERCEPTOR(int, DN_COMP_INTERCEPTOR_NAME, unsigned char *exp_dn,
-            unsigned char *comp_dn, int length, unsigned char **dnptrs,
-            unsigned char **lastdnptr) {
-  ENSURE_MSAN_INITED();
-  InterceptorScope interceptor_scope;
-  int res = REAL(DN_COMP_INTERCEPTOR_NAME)(exp_dn, comp_dn, length, dnptrs,
-                                           lastdnptr);
-  if (res >= 0) {
-    __msan_unpoison(comp_dn, res);
-    if (dnptrs && lastdnptr) {
-      unsigned char **p = dnptrs;
-      for (; p != lastdnptr && *p; ++p);
-      if (p != lastdnptr)
-        ++p;
-      __msan_unpoison(dnptrs, (p - dnptrs) * sizeof(*p));
-    }
-  }
-  return res;
-}
-INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
-            unsigned char const *end, unsigned char const *src, char *dest,
-            int space) {
-  ENSURE_MSAN_INITED();
-  // TODO: add read check if __dn_comp intercept added
-  InterceptorScope interceptor_scope;
-  int res = REAL(DN_EXPAND_INTERCEPTOR_NAME)(base, end, src, dest, space);
-  if (res >= 0)
-    __msan_unpoison(dest, internal_strlen(dest) + 1);
-  return res;
-}
-#  define MSAN_MAYBE_INTERCEPT_DN_COMP_EXPAND      \
-    MSAN_INTERCEPT_FUNC(DN_COMP_INTERCEPTOR_NAME); \
-    MSAN_INTERCEPT_FUNC(DN_EXPAND_INTERCEPTOR_NAME);
-#else
-#  define MSAN_MAYBE_INTERCEPT_DN_COMP_EXPAND
-#endif
-
 struct MSanInterceptorContext {
   bool in_interceptor_scope;
 };
@@ -1988,9 +1915,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(shmat);
   MSAN_MAYBE_INTERCEPT_OPENPTY;
   MSAN_MAYBE_INTERCEPT_FORKPTY;
-
-  MSAN_MAYBE_INTERCEPT___B64_TO;
-  MSAN_MAYBE_INTERCEPT_DN_COMP_EXPAND;
 
   inited = 1;
 }

@@ -135,13 +135,29 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     Ctx.NumArgs   = CE->getNumArgs();
     Ctx.FunArgs   = CE->getArgs();
   } else if (const auto *CE = dyn_cast<CallExpr>(DeclExp)) {
-    Ctx.NumArgs = CE->getNumArgs();
-    Ctx.FunArgs = CE->getArgs();
+    // Calls to operators that are members need to be treated like member calls.
+    if (isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(D)) {
+      Ctx.SelfArg = CE->getArg(0);
+      Ctx.SelfArrow = false;
+      Ctx.NumArgs = CE->getNumArgs() - 1;
+      Ctx.FunArgs = CE->getArgs() + 1;
+    } else {
+      Ctx.NumArgs = CE->getNumArgs();
+      Ctx.FunArgs = CE->getArgs();
+    }
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(DeclExp)) {
     Ctx.SelfArg = nullptr;  // Will be set below
     Ctx.NumArgs = CE->getNumArgs();
     Ctx.FunArgs = CE->getArgs();
   }
+
+  // Usually we want to substitute the self-argument for "this", but lambdas
+  // are an exception: "this" on or in a lambda call operator doesn't refer
+  // to the lambda, but to captured "this" in the context it was created in.
+  // This can happen for operator calls and member calls, so fix it up here.
+  if (const auto *CMD = dyn_cast<CXXMethodDecl>(D))
+    if (CMD->getParent()->isLambda())
+      Ctx.SelfArg = nullptr;
 
   if (Self) {
     assert(!Ctx.SelfArg && "Ambiguous self argument");
@@ -320,7 +336,7 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
               : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
         // Substitute call arguments for references to function parameters
         if (const Expr *const *FunArgs =
-                Ctx->FunArgs.dyn_cast<const Expr *const *>()) {
+                dyn_cast<const Expr *const *>(Ctx->FunArgs)) {
           assert(I < Ctx->NumArgs);
           return translate(FunArgs[I], Ctx->Prev);
         }

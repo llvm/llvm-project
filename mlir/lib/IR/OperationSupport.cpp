@@ -62,11 +62,6 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
   return llvm::cast<DictionaryAttr>(dictionarySorted.getPointer());
 }
 
-/// Add an attribute with the specified name.
-void NamedAttrList::append(StringRef name, Attribute attr) {
-  append(StringAttr::get(attr.getContext(), name), attr);
-}
-
 /// Replaces the attributes with new list of attributes.
 void NamedAttrList::assign(const_iterator inStart, const_iterator inEnd) {
   DictionaryAttr::sort(ArrayRef<NamedAttribute>{inStart, inEnd}, attrs);
@@ -657,7 +652,7 @@ ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
     return {value + index};
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return {operand + index};
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
@@ -665,7 +660,7 @@ Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
     return value[index];
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return operand[index].get();
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,6 +1,10 @@
 // Check that ASan correctly detects SEGV on the zero page.
 // RUN: %clangxx_asan %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+#if defined(_MSC_VER) && !defined(__CLANG__)
+#  define __has_feature(x) 0
+#endif
+
 #if __has_feature(ptrauth_calls)
 #  include <ptrauth.h>
 #endif

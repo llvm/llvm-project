@@ -29,6 +29,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cosf16_test.cpp
+  DEPENDS
+    libc.src.math.cosf16
+)
+
+add_fp_unittest(
   cospif_test
   NEED_MPFR
   SUITE
@@ -93,7 +104,7 @@ add_fp_unittest(
   SRCS
     sinf16_test.cpp
   DEPENDS
-    libc.src.math.sinf16  
+    libc.src.math.sinf16
 )
 
 add_fp_unittest(
@@ -177,6 +188,17 @@ add_fp_unittest(
     libc.src.math.tanf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  tanf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tanf16_test.cpp
+  DEPENDS
+    libc.src.math.tanf16
 )
 
 add_fp_unittest(
@@ -1550,6 +1572,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sqrtf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.sqrtf128
+)
+
+add_fp_unittest(
   generic_sqrtf_test
   NEED_MPFR
   SUITE
@@ -1562,7 +1597,7 @@ add_fp_unittest(
     libc.src.math.sqrtf
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -1578,7 +1613,7 @@ add_fp_unittest(
     libc.src.math.sqrt
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -1594,7 +1629,7 @@ add_fp_unittest(
     libc.src.math.sqrtl
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2152,6 +2187,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinf16_test.cpp
+  DEPENDS
+    libc.src.math.asinf16  
+)
+
+add_fp_unittest(
   acosf_test
   NEED_MPFR
   SUITE
@@ -2162,6 +2208,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.acosf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  acosf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acosf16_test.cpp
+  DEPENDS
+    libc.src.math.acosf16  
 )
 
 add_fp_unittest(

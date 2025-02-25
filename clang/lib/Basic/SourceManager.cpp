@@ -1222,7 +1222,7 @@ unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
   return PLoc.getColumn();
 }
 
-// Check if mutli-byte word x has bytes between m and n, included. This may also
+// Check if multi-byte word x has bytes between m and n, included. This may also
 // catch bytes equal to n + 1.
 // The returned value holds a 0x80 at each byte position that holds a match.
 // see http://graphics.stanford.edu/~seander/bithacks.html#HasBetweenInWord

@@ -202,6 +202,7 @@ MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
 MAKE_EMPTY_CLASS(NoOpenmp, NoOpenmp);
 MAKE_EMPTY_CLASS(NoOpenmpRoutines, NoOpenmpRoutines);
+MAKE_EMPTY_CLASS(NoOpenmpConstructs, NoOpenmpConstructs);
 MAKE_EMPTY_CLASS(NoParallelism, NoParallelism);
 MAKE_EMPTY_CLASS(Notinbranch, Notinbranch);
 MAKE_EMPTY_CLASS(Nowait, Nowait);
@@ -230,9 +231,6 @@ MAKE_EMPTY_CLASS(Threadprivate, Threadprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
-MAKE_INCOMPLETE_CLASS(Match, Match);
-// MAKE_INCOMPLETE_CLASS(Otherwise, );   // missing-in-parser
-MAKE_INCOMPLETE_CLASS(When, When);
 
 List<IteratorSpecifier>
 makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
@@ -528,8 +526,13 @@ Copyprivate make(const parser::OmpClause::Copyprivate &inp,
   return Copyprivate{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
-Default make(const parser::OmpClause::Default &inp,
-             semantics::SemanticsContext &semaCtx) {
+// The Default clause is overloaded in OpenMP 5.0 and 5.1: it can be either
+// a data-sharing clause, or a METADIRECTIVE clause. In the latter case, it
+// has been superseded by the OTHERWISE clause.
+// Disambiguate this in this representation: for the DSA case, create Default,
+// and in the other case create Otherwise.
+Default makeDefault(const parser::OmpClause::Default &inp,
+                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDefaultClause
   using wrapped = parser::OmpDefaultClause;
 
@@ -543,7 +546,13 @@ Default make(const parser::OmpClause::Default &inp,
       // clang-format on
   );
 
-  return Default{/*DataSharingAttribute=*/convert(inp.v.v)};
+  auto dsa = std::get<wrapped::DataSharingAttribute>(inp.v.u);
+  return Default{/*DataSharingAttribute=*/convert(dsa)};
+}
+
+Otherwise makeOtherwise(const parser::OmpClause::Default &inp,
+                        semantics::SemanticsContext &semaCtx) {
+  return Otherwise{};
 }
 
 Defaultmap make(const parser::OmpClause::Defaultmap &inp,
@@ -728,8 +737,8 @@ Enter make(const parser::OmpClause::Enter &inp,
 
 Exclusive make(const parser::OmpClause::Exclusive &inp,
                semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: exclusive");
+  // inp.v -> parser::OmpObjectList
+  return Exclusive{makeObjects(/*List=*/inp.v, semaCtx)};
 }
 
 Fail make(const parser::OmpClause::Fail &inp,
@@ -838,8 +847,8 @@ If make(const parser::OmpClause::If &inp,
 
 Inclusive make(const parser::OmpClause::Inclusive &inp,
                semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: inclusive");
+  // inp.v -> parser::OmpObjectList
+  return Inclusive{makeObjects(/*List=*/inp.v, semaCtx)};
 }
 
 Indirect make(const parser::OmpClause::Indirect &inp,
@@ -997,7 +1006,11 @@ Map make(const parser::OmpClause::Map &inp,
               /*LocatorList=*/makeObjects(t4, semaCtx)}};
 }
 
-// Match: incomplete
+Match make(const parser::OmpClause::Match &inp,
+           semantics::SemanticsContext &semaCtx) {
+  return Match{};
+}
+
 // MemoryOrder: empty
 // Mergeable: empty
 
@@ -1023,6 +1036,7 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
 
 // NoOpenmp: empty
 // NoOpenmpRoutines: empty
+// NoOpenmpConstructs: empty
 // NoParallelism: empty
 // Notinbranch: empty
 
@@ -1101,7 +1115,11 @@ Ordered make(const parser::OmpClause::Ordered &inp,
   return Ordered{/*N=*/maybeApply(makeExprFn(semaCtx), inp.v)};
 }
 
-// Otherwise: incomplete, missing-in-parser
+// See also Default.
+Otherwise make(const parser::OmpClause::Otherwise &inp,
+               semantics::SemanticsContext &semaCtx) {
+  return Otherwise{};
+}
 
 Partial make(const parser::OmpClause::Partial &inp,
              semantics::SemanticsContext &semaCtx) {
@@ -1356,15 +1374,32 @@ UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
 }
 
 // Weak: empty
-// When: incomplete
+
+When make(const parser::OmpClause::When &inp,
+          semantics::SemanticsContext &semaCtx) {
+  return When{};
+}
+
 // Write: empty
 } // namespace clause
 
 Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
-  return Fortran::common::visit(
-      [&](auto &&s) {
-        return makeClause(cls.Id(), clause::make(s, semaCtx), cls.source);
+  return Fortran::common::visit( //
+      common::visitors{
+          [&](const parser::OmpClause::Default &s) {
+            using DSA = parser::OmpDefaultClause::DataSharingAttribute;
+            if (std::holds_alternative<DSA>(s.v.u)) {
+              return makeClause(llvm::omp::Clause::OMPC_default,
+                                clause::makeDefault(s, semaCtx), cls.source);
+            } else {
+              return makeClause(llvm::omp::Clause::OMPC_otherwise,
+                                clause::makeOtherwise(s, semaCtx), cls.source);
+            }
+          },
+          [&](auto &&s) {
+            return makeClause(cls.Id(), clause::make(s, semaCtx), cls.source);
+          },
       },
       cls.u);
 }

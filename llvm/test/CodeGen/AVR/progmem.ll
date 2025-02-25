@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mattr=movw,lpm | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mattr=movw,lpm | FileCheck %s
 ; XFAIL: *
 
 ; Tests the standard LPM instruction

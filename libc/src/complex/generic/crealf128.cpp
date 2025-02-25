@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/complex/crealf128.h"
-#if defined(LIBC_TYPES_HAS_CFLOAT128)
-
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
@@ -21,5 +19,3 @@ LLVM_LIBC_FUNCTION(float128, crealf128, (cfloat128 x)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_CFLOAT128

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; We shouldn't see a 32-bit expansion of -120, just the uint8 value.
 ; CHECK: #136
 define i32 @foo(ptr %ptr) {

@@ -124,12 +124,9 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   Table.layout();
   OS << "const std::array<NfaStatePair, " << Table.size() << "> " << Name
      << "TransitionInfo = {{\n";
-  Table.emit(
-      OS,
-      [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
-        OS << "{" << P.first << ", " << P.second << "}";
-      },
-      "{0ULL, 0ULL}");
+  Table.emit(OS, [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
+    OS << "{" << P.first << ", " << P.second << "}";
+  });
 
   OS << "}};\n\n";
 
@@ -352,7 +349,7 @@ void CustomDfaEmitter::printActionType(raw_ostream &OS) { OS << TypeName; }
 void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
   const ActionTuple &AT = Actions[A];
   if (AT.size() > 1)
-    OS << "std::tuple(";
+    OS << "{";
   ListSeparator LS;
   for (const auto &SingleAction : AT) {
     OS << LS;
@@ -364,7 +361,7 @@ void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
       OS << std::get<unsigned>(SingleAction);
   }
   if (AT.size() > 1)
-    OS << ")";
+    OS << "}";
 }
 
 static TableGen::Emitter::OptClass<AutomatonEmitter>

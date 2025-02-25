@@ -331,9 +331,9 @@ Expected<SimpleSegmentAlloc> ELFDebugObject::finalizeWorkingMemory() {
   size_t Size = Buffer->getBufferSize();
 
   // Allocate working memory for debug object in read-only segment.
-  auto Alloc =
-      SimpleSegmentAlloc::Create(MemMgr, ES.getSymbolStringPool(), JD,
-                                 {{MemProt::Read, {Size, Align(PageSize)}}});
+  auto Alloc = SimpleSegmentAlloc::Create(
+      MemMgr, ES.getSymbolStringPool(), ES.getTargetTriple(), JD,
+      {{MemProt::Read, {Size, Align(PageSize)}}});
   if (!Alloc)
     return Alloc;
 

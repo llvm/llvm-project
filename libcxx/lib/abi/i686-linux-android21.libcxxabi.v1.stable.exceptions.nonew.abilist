@@ -1221,7 +1221,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk134__construct_barrier_algorithm_baseERi', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk13cinE', 'size': 88, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk13cinE', 'size': 148, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr15memory_resourceD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr15memory_resourceD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr15memory_resourceD2Ev', 'type': 'FUNC'}
@@ -1230,8 +1230,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr20null_memory_resourceEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr20set_default_resourceEPNS0_15memory_resourceE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr25monotonic_buffer_resource11do_allocateEjj', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEjj', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEjj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr28unsynchronized_pool_resource11do_allocateEjj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr28unsynchronized_pool_resource12__adhoc_pool13__do_allocateEPNS0_15memory_resourceEjj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr28unsynchronized_pool_resource12__adhoc_pool13__release_ptrEPNS0_15memory_resourceE', 'type': 'FUNC'}
@@ -1291,9 +1289,9 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk14__fs10filesystem8__removeERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk14__fs10filesystem8__renameERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk14__fs10filesystem8__statusERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk14cerrE', 'size': 84, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt6__ndk14clogE', 'size': 84, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt6__ndk14coutE', 'size': 84, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk14cerrE', 'size': 136, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk14clogE', 'size': 136, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk14coutE', 'size': 136, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk14stodERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk14stodERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk14stofERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPj', 'type': 'FUNC'}
@@ -1302,7 +1300,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk14stoiERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPji', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk14stolERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPji', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk14stolERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPji', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk14wcinE', 'size': 88, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk14wcinE', 'size': 148, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk15alignEjjRPvRj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk15ctypeIcE10table_sizeE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk15ctypeIcE13classic_tableEv', 'type': 'FUNC'}
@@ -1327,9 +1325,9 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk15stollERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPji', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk15stoulERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPji', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk15stoulERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPji', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk15wcerrE', 'size': 84, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt6__ndk15wclogE', 'size': 84, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt6__ndk15wcoutE', 'size': 84, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk15wcerrE', 'size': 136, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk15wclogE', 'size': 136, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt6__ndk15wcoutE', 'size': 136, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__clocEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__itoa8__u32toaEjPc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__itoa8__u64toaEyPc', 'type': 'FUNC'}
@@ -1731,10 +1729,8 @@
 {'is_defined': True, 'name': '_ZTINSt6__ndk120__time_get_c_storageIwEE', 'size': 8, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr15memory_resourceE', 'size': 8, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr25monotonic_buffer_resourceE', 'size': 12, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTINSt6__ndk13pmr26__null_memory_resource_impE', 'size': 12, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr26synchronized_pool_resourceE', 'size': 12, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr28unsynchronized_pool_resourceE', 'size': 12, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTINSt6__ndk13pmr32__new_delete_memory_resource_impE', 'size': 12, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk14__fs10filesystem16filesystem_errorE', 'size': 12, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk15ctypeIcEE', 'size': 32, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk15ctypeIwEE', 'size': 32, 'type': 'OBJECT'}
@@ -1968,10 +1964,8 @@
 {'is_defined': True, 'name': '_ZTSNSt6__ndk120__time_get_c_storageIwEE', 'size': 37, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr15memory_resourceE', 'size': 33, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr25monotonic_buffer_resourceE', 'size': 43, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr26__null_memory_resource_impE', 'size': 44, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr26synchronized_pool_resourceE', 'size': 44, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr28unsynchronized_pool_resourceE', 'size': 46, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr32__new_delete_memory_resource_impE', 'size': 50, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk14__fs10filesystem16filesystem_errorE', 'size': 47, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk15ctypeIcEE', 'size': 21, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk15ctypeIwEE', 'size': 21, 'type': 'OBJECT'}
@@ -2197,10 +2191,8 @@
 {'is_defined': True, 'name': '_ZTVNSt6__ndk120__codecvt_utf8_utf16IwEE', 'size': 48, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr15memory_resourceE', 'size': 28, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr25monotonic_buffer_resourceE', 'size': 28, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr26__null_memory_resource_impE', 'size': 28, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr26synchronized_pool_resourceE', 'size': 28, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr28unsynchronized_pool_resourceE', 'size': 28, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr32__new_delete_memory_resource_impE', 'size': 28, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk14__fs10filesystem16filesystem_errorE', 'size': 20, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk15ctypeIcEE', 'size': 52, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk15ctypeIwEE', 'size': 68, 'type': 'OBJECT'}

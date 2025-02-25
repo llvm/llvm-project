@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass expand-condsets %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass expand-condsets %s -o - | FileCheck %s
 # REQUIRES: asserts
 
 # The physical register as an operand to C2_mux caused a crash.

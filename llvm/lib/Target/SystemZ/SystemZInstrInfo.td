@@ -884,6 +884,39 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in
 def GOT : Alias<6, (outs GR64:$R1), (ins),
                 [(set GR64:$R1, (global_offset_table))]>;
 
+// Load (logical) indexed address.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  defm LXAB  : LoadIndexedAddressRXY<"lxab",  0xE360, sext32>;
+  defm LXAH  : LoadIndexedAddressRXY<"lxah",  0xE362, sext32, shl1>;
+  defm LXAF  : LoadIndexedAddressRXY<"lxaf",  0xE364, sext32, shl2>;
+  defm LXAG  : LoadIndexedAddressRXY<"lxag",  0xE366, sext32, shl3>;
+  defm LXAQ  : LoadIndexedAddressRXY<"lxaq",  0xE368, sext32, shl4>;
+  defm LLXAB : LoadIndexedAddressRXY<"llxab", 0xE361, zext32>;
+  defm LLXAH : LoadIndexedAddressRXY<"llxah", 0xE363, zext32, shl1>;
+  defm LLXAF : LoadIndexedAddressRXY<"llxaf", 0xE365, zext32, shl2>;
+  defm LLXAG : LoadIndexedAddressRXY<"llxag", 0xE367, zext32, shl3>;
+  defm LLXAQ : LoadIndexedAddressRXY<"llxaq", 0xE369, zext32, shl4>;
+
+  // Peepholes to use load (logical) indexed address to implement
+  // add + shift of an already extended value.
+  def : Pat<(add ADDR64:$base, (shl1 (assertsext32 ADDR64:$index))),
+            (LXAH ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl2 (assertsext32 ADDR64:$index))),
+            (LXAF ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl3 (assertsext32 ADDR64:$index))),
+            (LXAG ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl4 (assertsext32 ADDR64:$index))),
+            (LXAQ ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl1 (assertzext32 ADDR64:$index))),
+            (LLXAH ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl2 (assertzext32 ADDR64:$index))),
+            (LLXAF ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl3 (assertzext32 ADDR64:$index))),
+            (LLXAG ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl4 (assertzext32 ADDR64:$index))),
+            (LLXAQ ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Absolute and Negation
 //===----------------------------------------------------------------------===//
@@ -951,10 +984,10 @@ def IILL : BinaryRI<"iill", 0xA53, insertll, GR32, imm32ll16>;
 def IILH : BinaryRI<"iilh", 0xA52, insertlh, GR32, imm32lh16>;
 def IIHL : BinaryRI<"iihl", 0xA51, insertll, GRH32, imm32ll16>;
 def IIHH : BinaryRI<"iihh", 0xA50, insertlh, GRH32, imm32lh16>;
-def IILL64 : BinaryAliasRI<insertll, GR64, imm64ll16>;
-def IILH64 : BinaryAliasRI<insertlh, GR64, imm64lh16>;
-def IIHL64 : BinaryAliasRI<inserthl, GR64, imm64hl16>;
-def IIHH64 : BinaryAliasRI<inserthh, GR64, imm64hh16>;
+def IILL64 : BinaryAliasRI<insertll64, GR64, imm64ll16>;
+def IILH64 : BinaryAliasRI<insertlh64, GR64, imm64lh16>;
+def IIHL64 : BinaryAliasRI<inserthl64, GR64, imm64hl16>;
+def IIHH64 : BinaryAliasRI<inserthh64, GR64, imm64hh16>;
 
 // ...likewise for 32-bit immediates.  For GR32s this is a general
 // full-width move.  (We use IILF rather than something like LLILF
@@ -1821,6 +1854,19 @@ let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
   def LPDG : BinarySSF<"lpdg", 0xC85, GR128>;
 }
 
+// Compare and load.
+let Predicates = [FeatureConcurrentFunctions], Defs = [CC] in {
+  def CAL   : BinarySSF<"cal", 0xC86, GR32>;
+  def CALGF : BinarySSF<"calgf", 0xC8F, GR64>;
+  def CALG  : BinarySSF<"calg", 0xC87, GR64>;
+}
+
+// Perform function with concurrent results.
+let Predicates = [FeatureConcurrentFunctions], Uses = [R0D], Defs = [CC],
+    mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+  def PFCR : BinaryRSY<"pfcr", 0xEB16, null_frag, GR64>;
+}
+
 //===----------------------------------------------------------------------===//
 // Translate and convert
 //===----------------------------------------------------------------------===//
@@ -1910,6 +1956,11 @@ let mayLoad = 1, mayStore = 1, Uses = [R0L, R1D], Defs = [CC] in {
 
   let Predicates = [FeatureMessageSecurityAssist9] in
     def KDSA : SideEffectBinaryMemRRE<"kdsa", 0xB93A, GR64, GR128>;
+
+  let Predicates = [FeatureMessageSecurityAssist12] in {
+    def KIMDOpt : SideEffectTernaryMemMemRRFc<"kimd", 0xB93E, GR64, GR128, imm32zx4>;
+    def KLMDOpt : SideEffectTernaryMemMemRRFc<"klmd", 0xB93F, GR64, GR128, imm32zx4>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2081,6 +2132,12 @@ let Predicates = [FeatureProcessorAssist] in {
 // Miscellaneous Instructions.
 //===----------------------------------------------------------------------===//
 
+// Count leading/trailing zeros.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  def CLZG : UnaryRRE<"clzg", 0xB968, ctlz, GR64, GR64>;
+  def CTZG : UnaryRRE<"ctzg", 0xB969, cttz, GR64, GR64>;
+}
+
 // Find leftmost one, AKA count leading zeros.  The instruction actually
 // returns a pair of GR64s, the first giving the number of leading zeros
 // and the second giving a copy of the source with the leftmost one bit
@@ -2098,6 +2155,12 @@ let Predicates = [FeatureMiscellaneousExtensions3] in {
 }
 let Predicates = [FeaturePopulationCount], Defs = [CC] in
   def POPCNT : UnaryRRE<"popcnt", 0xB9E1, z_popcnt, GR64, GR64>;
+
+// Bit deposit and bit extract.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  def BDEPG : BinaryRRFa<"bdepg", 0xB96D, int_s390_bdepg, GR64, GR64, GR64>;
+  def BEXTG : BinaryRRFa<"bextg", 0xB96C, int_s390_bextg, GR64, GR64, GR64>;
+}
 
 // Search a block of memory for a character.
 let mayLoad = 1, Defs = [CC] in

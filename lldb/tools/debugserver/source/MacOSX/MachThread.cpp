@@ -509,10 +509,12 @@ void MachThread::DumpRegisterState(nub_size_t regSet) {
     if (m_arch_up->RegisterSetStateIsValid((int)regSet)) {
       const size_t numRegisters = GetNumRegistersInSet(regSet);
       uint32_t regIndex = 0;
-      DNBRegisterValueClass reg;
+      std::unique_ptr<DNBRegisterValueClass> reg =
+          std::make_unique<DNBRegisterValueClass>();
       for (regIndex = 0; regIndex < numRegisters; ++regIndex) {
-        if (m_arch_up->GetRegisterValue((uint32_t)regSet, regIndex, &reg)) {
-          reg.Dump(NULL, NULL);
+        if (m_arch_up->GetRegisterValue((uint32_t)regSet, regIndex,
+                                        reg.get())) {
+          reg->Dump(NULL, NULL);
         }
       }
     } else {

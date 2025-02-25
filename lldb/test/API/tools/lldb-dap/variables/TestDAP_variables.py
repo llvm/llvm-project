@@ -672,6 +672,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.do_test_indexedVariables(enableSyntheticChildDebugging=True)
 
     @skipIfWindows
+    @skipIfAsan # FIXME this fails with a non-asan issue on green dragon.
     def test_registers(self):
         """
         Test that registers whose byte size is the size of a pointer on

@@ -25,14 +25,18 @@ define void @main() #0 {
 ; CHECK: [[ac:%[0-9]+]] = OpAccessChain [[BufferPtrType]] [[Var]] [[Zero]]
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[BufferType]] [[ac]]
   %buffer0 = call target("spirv.Image", i32, 0, 2, 0, 0, 2, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_0_2_0_0_2_24(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_2_24(
           i32 3, i32 4, i32 3, i32 0, i1 false)
+  %ptr0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 0, 2, 0, 0, 2, 24) %buffer0, i32 0)
+  store i32 0, ptr %ptr0, align 4
 
 ; CHECK: [[ac:%[0-9]+]] = OpAccessChain [[BufferPtrType]] [[Var]] [[One]]
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[BufferType]] [[ac]]
   %buffer1 = call target("spirv.Image", i32, 0, 2, 0, 0, 2, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_0_2_0_0_2_24(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_2_24(
           i32 3, i32 4, i32 3, i32 1, i1 false)
+  %ptr1 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 0, 2, 0, 0, 2, 24) %buffer1, i32 0)
+  store i32 0, ptr %ptr1, align 4
   ret void
 }
 

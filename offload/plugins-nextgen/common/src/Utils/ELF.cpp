@@ -47,6 +47,8 @@ uint16_t utils::elf::getTargetMachine() {
   return EM_PPC64;
 #elif defined(__riscv)
   return EM_RISCV;
+#elif defined(__loongarch__)
+  return EM_LOONGARCH;
 #else
 #warning "Unknown ELF compilation target architecture"
   return EM_NONE;

@@ -1,6 +1,8 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" %s | FileCheck %s
 
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},convert-cf-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK32 %s
+
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK-NO-CF %s
 
 // RUN: mlir-opt -transform-interpreter %s | FileCheck --check-prefix=CHECK32 %s
 
@@ -104,6 +106,7 @@ func.func @ml_caller() {
 
 // CHECK-LABEL: llvm.func @body_args(i64) -> i64
 // CHECK32-LABEL: llvm.func @body_args(i32) -> i32
+// CHECK-NO-CF-LABEL: llvm.func @body_args(i64) -> i64
 func.func private @body_args(index) -> index
 // CHECK-LABEL: llvm.func @other(i64, i32) -> i32
 // CHECK32-LABEL: llvm.func @other(i32, i32) -> i32
@@ -397,12 +400,12 @@ func.func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
   %0 = call @get_i64() : () -> (i64)
   %1 = call @get_f32() : () -> (f32)
   %2 = call @get_memref() : () -> (memref<42x?x10x?xf32>)
-// CHECK-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.mlir.poison : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  llvm.return {{.*}} : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.poison : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
@@ -470,7 +473,7 @@ func.func @floorf(%arg0 : f32) {
   func.return
 }
 
-// Wrap the following tests in a module to control the place where 
+// Wrap the following tests in a module to control the place where
 // `llvm.func @abort()` is produced.
 module {
 // Lowers `cf.assert` to a function call to `abort` if the assertion is violated.
@@ -537,6 +540,29 @@ func.func @switchi8(%arg0 : i8) -> i32 {
 // CHECK-NEXT:     llvm.return %[[E1]] : i32
 // CHECK-NEXT:   }
 
+// Convert the entry block but not the unstructured control flow.
+
+// CHECK-NO-CF-LABEL: llvm.func @index_arg(
+//  CHECK-NO-CF-SAME:     %[[arg0:.*]]: i64) -> i64 {
+//       CHECK-NO-CF:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[arg0]] : i64 to index
+//       CHECK-NO-CF:   cf.br ^[[bb1:.*]](%[[cast]] : index)
+//       CHECK-NO-CF: ^[[bb1]](%[[arg1:.*]]: index):
+//       CHECK-NO-CF:   %[[cast2:.*]] = builtin.unrealized_conversion_cast %[[arg1]] : index to i64
+//       CHECK-NO-CF:   llvm.return %[[cast2]] : i64
+func.func @index_arg(%arg0: index) -> index {
+  cf.br ^bb1(%arg0 : index)
+^bb1(%arg1: index):
+  return %arg1 : index
+}
+
+// There is no type conversion rule for tf32, so vector<1xtf32> and, therefore,
+// the func op cannot be converted.
+// CHECK: func.func @non_convertible_arg_type({{.*}}: vector<1xtf32>)
+// CHECK:   llvm.return
+func.func @non_convertible_arg_type(%arg: vector<1xtf32>) {
+  return
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %toplevel_module
@@ -550,7 +576,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
         {index_bitwidth = 32, use_opaque_pointers = true}
     } {
-      legal_dialects = ["llvm"], 
+      legal_dialects = ["llvm"],
       partial_conversion
     } : !transform.any_op
     transform.yield

@@ -19,17 +19,11 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], -2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 1, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP1]], 255
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP1]] to i8
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i8 2, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP8]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP1]], 255
-; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP6]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4

@@ -183,6 +183,18 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                               AATags);
       return MemoryLocation::getAfter(Arg, AATags);
 
+    case Intrinsic::experimental_memset_pattern:
+      assert((ArgIdx == 0 || ArgIdx == 1) &&
+             "Invalid argument index for memory intrinsic");
+      if (ConstantInt *LenCI = dyn_cast<ConstantInt>(II->getArgOperand(2)))
+        return MemoryLocation(
+            Arg,
+            LocationSize::precise(
+                LenCI->getZExtValue() *
+                DL.getTypeAllocSize(II->getArgOperand(1)->getType())),
+            AATags);
+      return MemoryLocation::getAfter(Arg, AATags);
+
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
     case Intrinsic::invariant_start:

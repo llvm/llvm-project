@@ -16,11 +16,11 @@ __extension__ typedef __SIZE_TYPE__ size_t;
 
 namespace std { struct type_info; }
 
-namespace cwg400 { // cwg400: yes
+namespace cwg400 { // cwg400: 2.7
   struct A { int a; struct a {}; }; // #cwg400-A
   struct B { int a; struct a {}; }; // #cwg400-B
   struct C : A, B { using A::a; struct a b; };
-  struct D : A, B { 
+  struct D : A, B {
     using A::a;
     // FIXME: we should issue a single diagnostic
     using B::a; // #cwg400-using-B-a
@@ -36,7 +36,7 @@ namespace cwg400 { // cwg400: yes
   // expected-error@-1 {{member 'a' found in multiple base classes of different types}}
   //   expected-note@#cwg400-A {{member type 'cwg400::A::a' found by ambiguous name lookup}}
   //   expected-note@#cwg400-B {{member type 'cwg400::B::a' found by ambiguous name lookup}}
-}
+} // namespace cwg400
 
 namespace cwg401 { // cwg401: 2.8
   template<class T, class U = typename T::type> class A : public T {}; // #cwg401-A
@@ -87,9 +87,9 @@ namespace cwg401 { // cwg401: 2.8
   void g(B b) { f(b); } // #cwg402-f-b
   // since-cxx11-error@-1 {{no matching function for call to 'f'}}
   //   since-cxx11-note@#cwg402-f {{candidate template ignored: substitution failure [with T = B, U = typename B::type]: 'type' is a protected member of 'cwg401::B'}}
-}
+} // namespace cwg401
 
-namespace cwg403 { // cwg403: yes
+namespace cwg403 { // cwg403: 2.7
   namespace A {
     struct S {};
     int f(void*);
@@ -101,13 +101,13 @@ namespace cwg403 { // cwg403: yes
                 // referring to an elaborated-type-specifier naming a
                 // injected-class-name, which is about as far from a
                 // template-id as we can make it.
-}
+} // namespace cwg403
 
 // cwg404: na
 // (NB: also sup 594)
 
-namespace cwg405 { // cwg405: yes
-                  // NB: also dup 218
+namespace cwg405 { // cwg405: 2.7
+                   // NB: also dup 218
   namespace A {
     struct S {};
     void f(S);
@@ -148,7 +148,7 @@ namespace cwg405 { // cwg405: yes
   }
   void testE(E::S es) { f(es); }
   // expected-error@-1 {{use of undeclared identifier 'f'}}
-}
+} // namespace cwg405
 
 namespace cwg406 { // cwg406: 2.9
   typedef struct {
@@ -159,7 +159,7 @@ namespace cwg406 { // cwg406: 2.9
     static int n;
     // expected-error@-1 {{static data member 'n' not allowed in anonymous union}}
   } B;
-}
+} // namespace cwg406
 
 namespace cwg407 { // cwg407: 3.8
                   // NB: reused by cwg1894 and cwg2199
@@ -219,7 +219,7 @@ namespace cwg407 { // cwg407: 3.8
       struct S s;
     }
   }
-}
+} // namespace cwg407
 
 namespace cwg408 { // cwg408: 3.4
   template<int N> void g() { static_assert(N != 1, ""); }
@@ -248,9 +248,9 @@ namespace cwg408 { // cwg408: 3.4
   }
   template<> int R<int>::arr[2];
   template void R<int>::f();
-}
+} // namespace cwg408
 
-namespace cwg409 { // cwg409: yes
+namespace cwg409 { // cwg409: 2.7
   template<typename T> struct A {
     typedef int B;
     B b1;
@@ -259,7 +259,7 @@ namespace cwg409 { // cwg409: yes
     A<T*>::B b4;
     // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::B; implicit 'typename' is a C++20 extension}}
   };
-}
+} // namespace cwg409
 
 namespace cwg410 { // cwg410: no
   template<class T> void f(T);
@@ -286,11 +286,11 @@ namespace cwg410 { // cwg410: no
   void g(int) { M::A::z(); }
   // expected-error@-1 {{'z' is a private member of 'cwg410::M::A'}}
   //   expected-note@#cwg410-z {{declared private here}}
-}
+} // namespace cwg410
 
 // cwg412 is in cwg412.cpp
 
-namespace cwg413 { // cwg413: yes
+namespace cwg413 { // cwg413: 2.7
   struct S {
     int a;
     int : 17;
@@ -309,7 +309,7 @@ namespace cwg413 { // cwg413: yes
   T t2 = { 1, 2 };
   // expected-error@-1 {{initializer for aggregate with no elements requires explicit braces}}
   //   expected-note@#cwg413-T {{'cwg413::T' declared here}}
-}
+} // namespace cwg413
 
 namespace cwg414 { // cwg414: dup 305
   struct X {};
@@ -318,21 +318,21 @@ namespace cwg414 { // cwg414: dup 305
     struct X {};
     x.~X();
   }
-}
+} // namespace cwg414
 
-namespace cwg415 { // cwg415: yes
+namespace cwg415 { // cwg415: 2.7
   template<typename T> void f(T, ...) { T::error; }
   void f(int, int);
   void g() { f(0, 0); } // ok
-}
+} // namespace cwg415
 
-namespace cwg416 { // cwg416: yes
+namespace cwg416 { // cwg416: 2.7
   extern struct A a;
   int &operator+(const A&, const A&);
   int &k = a + a;
   struct A { float &operator+(A&); };
   float &f = a + a;
-}
+} // namespace cwg416
 
 namespace cwg417 { // cwg417: no
   struct A;
@@ -367,7 +367,7 @@ namespace cwg417 { // cwg417: no
     struct cwg417::H {};
     // expected-error@-1 {{cannot define or redeclare 'H' here because namespace 'M' does not enclose namespace 'cwg417'}}
   }
-}
+} // namespace cwg417
 
 namespace cwg418 { // cwg418: no
 namespace example1 {
@@ -464,17 +464,17 @@ namespace cwg420 { // cwg420: 9
     q->A::template id<int>::~id<int>();
   }
 #endif
-}
+} // namespace cwg420
 
-namespace cwg421 { // cwg421: yes
+namespace cwg421 { // cwg421: 2.7
   struct X { X(); int n; int &r; };
   int *p = &X().n;
   // cxx98-error@-1 {{taking the address of a temporary object of type 'int'}}
   // since-cxx11-error@-2 {{cannot take the address of an rvalue of type 'int'}}
   int *q = &X().r;
-}
+} // namespace cwg421
 
-namespace cwg422 { // cwg422: yes
+namespace cwg422 { // cwg422: 2.7
   template<typename T, typename U> void f() {
     typedef T type; // #cwg422-typedef-T
     typedef U type;
@@ -484,14 +484,14 @@ namespace cwg422 { // cwg422: yes
   }
   template void f<int, int>();
   template void f<int, char>(); // #cwg422-f-int-char
-}
+} // namespace cwg422
 
-namespace cwg423 { // cwg423: yes
+namespace cwg423 { // cwg423: 2.7
   template<typename T> struct X { operator T&(); };
   void f(X<int> x) { x += 1; }
-}
+} // namespace cwg423
 
-namespace cwg424 { // cwg424: yes
+namespace cwg424 { // cwg424: 2.7
   struct A {
     typedef int N; // #cwg424-N
     typedef int N;
@@ -519,13 +519,13 @@ namespace cwg424 { // cwg424: yes
     // expected-error@-1 {{redefinition of 'M'}}
     //   expected-note@#cwg424-M {{previous definition is here}}
   };
-}
+} // namespace cwg424
 
-namespace cwg425 { // cwg425: yes
+namespace cwg425 { // cwg425: 2.7
   struct A { template<typename T> operator T() const; } a;
   float f = 1.0f * a;
   // expected-error@-1 {{use of overloaded operator '*' is ambiguous (with operand types 'float' and 'struct A')}}
-  //   expected-note@-2 +{{built-in candidate}}
+  //   expected-note@-2 +{{built-in candidate operator*}}
 
   template<typename T> struct is_float;
   template<> struct is_float<float> { typedef void type; };
@@ -535,9 +535,9 @@ namespace cwg425 { // cwg425: yes
     // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
   } b;
   float g = 1.0f * b; // ok
-}
+} // namespace cwg425
 
-namespace cwg427 { // cwg427: yes
+namespace cwg427 { // cwg427: 2.7
   struct B {};
   struct D : public B {
     D(B &) = delete; // #cwg427-D
@@ -551,33 +551,33 @@ namespace cwg427 { // cwg427: yes
   const D &d4(b);
   // expected-error@-1 {{conversion function from 'B' to 'const D' invokes a deleted function}}
   //   expected-note@#cwg427-D {{'D' has been explicitly marked deleted here}}
-}
+} // namespace cwg427
 
-namespace cwg428 { // cwg428: yes
+namespace cwg428 { // cwg428: 2.7
   template<typename T> T make();
   extern struct X x; // #cwg428-X
   void f() {
     throw void();
-    // expected-error@-1 {{cannot throw}}
+    // expected-error@-1 {{cannot throw object of incomplete type 'void'}}
     throw make<void*>();
     throw make<const volatile void*>();
     throw x;
-    // expected-error@-1 {{cannot throw}}
+    // expected-error@-1 {{cannot throw object of incomplete type 'struct X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<X&>();
-    // expected-error@-1 {{cannot throw}}
+    // expected-error@-1 {{cannot throw object of incomplete type 'cwg428::X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<X*>();
-    // expected-error@-1 {{cannot throw}}
+    // expected-error@-1 {{cannot throw pointer to object of incomplete type 'cwg428::X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<const volatile X&>();
-    // expected-error@-1 {{cannot throw}}
+    // expected-error@-1 {{cannot throw object of incomplete type 'cwg428::X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<const volatile X*>();
-    // expected-error@-1 {{cannot throw}}
+    // expected-error@-1 {{cannot throw pointer to object of incomplete type 'const volatile cwg428::X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
   }
-}
+} // namespace cwg428
 
 namespace cwg429 { // cwg429: 2.8 c++11
   // FIXME: This rule is obviously intended to apply to C++98 as well.
@@ -592,18 +592,18 @@ namespace cwg429 { // cwg429: 2.8 c++11
     static void operator delete(void*);
     static void operator delete(void*, size_t);
   } *b = new (0) B; // ok, second delete is not a non-placement deallocation function
-}
+} // namespace cwg429
 
-namespace cwg430 { // cwg430: yes c++11
+namespace cwg430 { // cwg430: 2.7 c++11
   // resolved by n2239
   // FIXME: This should apply in C++98 too.
   void f(int n) {
     int a[] = { n++, n++, n++ };
     // cxx98-warning@-1 {{multiple unsequenced modifications to 'n'}}
   }
-}
+} // namespace cwg430
 
-namespace cwg431 { // cwg431: yes
+namespace cwg431 { // cwg431: 2.8
   struct A {
     template<typename T> T *get();
     template<typename T> struct B {
@@ -633,7 +633,7 @@ namespace cwg431 { // cwg431: yes
     // expected-error@-1 {{use 'template' keyword to treat 'get' as a dependent template name}}
     c->template get<int>();
   }
-}
+} // namespace cwg431
 
 namespace cwg432 { // cwg432: 3.0
   template<typename T> struct A {};
@@ -646,9 +646,9 @@ namespace cwg432 { // cwg432: 3.0
   // since-cxx11-error@-1 {{use of class template 'D' requires template arguments}}
   //   since-cxx11-note@-2 {{template is declared here}}
 #endif
-}
+} // namespace cwg432
 
-namespace cwg433 { // cwg433: yes
+namespace cwg433 { // cwg433: 2.7
   template<class T> struct S {
     void f(union U*);
   };
@@ -656,7 +656,7 @@ namespace cwg433 { // cwg433: yes
   template<class T> void S<T>::f(union U*) {}
 
   S<int> s;
-}
+} // namespace cwg433
 
 namespace cwg434 { // cwg434: sup 2352
   void f() {
@@ -674,16 +674,16 @@ namespace cwg434 { // cwg434: sup 2352
   const int * const &rcpci = pi;
   static_assert(&rcpci == &pi, "");
 #endif
-}
+} // namespace cwg434
 
 // cwg435: na
 
-namespace cwg436 { // cwg436: yes
+namespace cwg436 { // cwg436: 2.7
   enum E { f }; // #cwg436-f
   void f();
   // expected-error@-1 {{redefinition of 'f' as different kind of symbol}}
   //   expected-note@#cwg436-f {{previous definition is here}}
-}
+} // namespace cwg436
 
 namespace cwg437 { // cwg437: sup 1308
   // This is superseded by 1308, which is in turn superseded by 1330,
@@ -702,7 +702,7 @@ namespace cwg437 { // cwg437: sup 1308
     //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
     struct U {};
   };
-}
+} // namespace cwg437
 
 // cwg438 is in cwg438.cpp
 // cwg439 is in cwg439.cpp
@@ -710,7 +710,7 @@ namespace cwg437 { // cwg437: sup 1308
 // cwg442: sup 348
 // cwg443: na
 
-namespace cwg444 { // cwg444: yes
+namespace cwg444 { // cwg444: 2.7
   struct D;
   struct B { // #cwg444-B
     D &operator=(D &) = delete; // #cwg444-deleted
@@ -728,7 +728,7 @@ namespace cwg444 { // cwg444: yes
     //   since-cxx11-note@#cwg444-B {{candidate function (the implicit move assignment operator) not viable: expects an rvalue for 1st argument}}
     //   since-cxx11-note@#cwg444-D {{candidate function (the implicit move assignment operator) not viable: expects an rvalue for 1st argument}}
   }
-}
+} // namespace cwg444
 
 namespace cwg445 { // cwg445: 3.2
   class A { void f(); }; // #cwg445-f
@@ -737,7 +737,7 @@ namespace cwg445 { // cwg445: 3.2
     // expected-error@-1 {{friend function 'f' is a private member of 'cwg445::A'}}
     //   expected-note@#cwg445-f {{implicitly declared private here}}
   };
-}
+} // namespace cwg445
 
 namespace cwg446 { // cwg446: 2.8
   struct C;
@@ -771,9 +771,9 @@ namespace cwg446 { // cwg446: 2.8
     // cxx98-14-error@-1 {{call to deleted constructor of 'A'}}
     //   cxx98-14-note@#cwg446-deleted {{'A' has been explicitly marked deleted here}}
   }
-}
+} // namespace cwg446
 
-namespace cwg447 { // cwg447: yes
+namespace cwg447 { // cwg447: 2.8
   struct A { int n; int a[4]; };
   template<int> struct U {
     typedef int type;
@@ -799,7 +799,7 @@ namespace cwg447 { // cwg447: yes
     // expected-error@-1 {{expected ';' after expression}}
     // expected-error@-2 {{use of undeclared identifier 'd'}}
   }
-}
+} // namespace cwg447
 
 namespace cwg448 { // cwg448: 2.8
   template<typename T = int> void f(int); // #cwg448-f-int
@@ -817,11 +817,11 @@ namespace cwg448 { // cwg448: 2.8
   namespace HideFromADL { struct X {}; }
   template void g(int); // ok
   template void g(HideFromADL::X); // #cwg448-g
-}
+} // namespace cwg448
 
 // cwg449: na
 
-namespace cwg450 { // cwg450: yes
+namespace cwg450 { // cwg450: 3.2
   typedef int A[3];
   void f1(const A &);
   void f2(A &); // #cwg450-f2
@@ -836,13 +836,13 @@ namespace cwg450 { // cwg450: yes
   void h() {
     f1(A{});
     f2(A{});
-    // expected-error@-1 {{no matching function for call to 'f2'}}}
-    //   expected-note@#cwg450-f2 {{candidate function not viable: expects an lvalue for 1st argument}}
+    // since-cxx11-error@-1 {{no matching function for call to 'f2'}}}
+    //   since-cxx11-note@#cwg450-f2 {{candidate function not viable: expects an lvalue for 1st argument}}
   }
 #endif
-}
+} // namespace cwg450
 
-namespace cwg451 { // cwg451: yes
+namespace cwg451 { // cwg451: 2.7
   const int a = 1 / 0;
   // expected-warning@-1 {{division by zero is undefined}}
   const int b = 1 / 0; // #cwg451-b
@@ -851,20 +851,20 @@ namespace cwg451 { // cwg451: yes
   // expected-error@-1 {{expression is not an integral constant expression}}
   //   expected-note@-2 {{initializer of 'b' is not a constant expression}}
   //   expected-note@#cwg451-b {{declared here}}
-}
+} // namespace cwg451
 
-namespace cwg452 { // cwg452: yes
+namespace cwg452 { // cwg452: 2.7
   struct A {
     int a, b, c;
     A *p;
     int f();
     A() : a(f()), b(this->f() + a), c(this->a), p(this) {}
   };
-}
+} // namespace cwg452
 
 // cwg454 FIXME write a codegen test
 
-namespace cwg456 { // cwg456: yes
+namespace cwg456 { // cwg456: 3.4
   // sup 903 c++11
   const int null = 0;
   void *p = null;
@@ -875,9 +875,9 @@ namespace cwg456 { // cwg456: yes
   void *q = f;
   // cxx98-warning@-1 {{initialization of pointer of type 'void *' to null from a constant boolean}}
   // since-cxx11-error@-2 {{cannot initialize a variable of type 'void *' with an lvalue of type 'const bool'}}
-}
+} // namespace cwg456
 
-namespace cwg457 { // cwg457: yes
+namespace cwg457 { // cwg457: 2.7
   const int a = 1;
   const volatile int b = 1;
   static_assert(a, "");
@@ -891,7 +891,7 @@ namespace cwg457 { // cwg457: yes
     // expected-error@-1 {{expression is not an integral constant expression}}
     //   expected-note@-2 {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
   };
-}
+} // namespace cwg457
 
 namespace cwg458 { // cwg458: 11
   struct A {
@@ -932,9 +932,9 @@ namespace cwg458 { // cwg458: 11
     // expected-error@-1 {{'T' does not refer to a value}}
     //   expected-note@#cwg458-h-T {{declared here}}
   }
-}
+} // namespace cwg458
 
-namespace cwg460 { // cwg460: yes
+namespace cwg460 { // cwg460: 2.7
   namespace X { namespace Q { int n; } }
   namespace Y {
     using X;
@@ -946,7 +946,7 @@ namespace cwg460 { // cwg460: yes
     // expected-error@-1 {{using declaration cannot refer to a namespace}}
     // expected-note@-2 {{did you mean 'using namespace'?}}
   }
-}
+} // namespace cwg460
 
 // cwg461: na
 // cwg462 is in cwg462.cpp
@@ -983,9 +983,9 @@ void g(int a, CI b, VI c) {
   c.CI::~CI();
   c.VI::~VI();
 }
-}
+} // namespace cwg466
 
-namespace cwg467 { // cwg467: yes
+namespace cwg467 { // cwg467: 2.7
   int stuff();
 
   int f() {
@@ -1005,9 +1005,9 @@ namespace cwg467 { // cwg467: yes
   later:
     return k;
   }
-}
+} // namespace cwg467
 
-namespace cwg468 { // cwg468: yes c++11
+namespace cwg468 { // cwg468: 2.7 c++11
   // FIXME: Should we allow this in C++98 too?
   template<typename> struct A {
     template<typename> struct B {
@@ -1017,7 +1017,7 @@ namespace cwg468 { // cwg468: yes c++11
   int k = cwg468::template A<int>::template B<char>::C;
   // cxx98-error@-1 {{'template' keyword outside of a template}}
   // cxx98-error@-2 {{'template' keyword outside of a template}}
-}
+} // namespace cwg468
 
 namespace cwg469 { // cwg469: no
   template<typename T> struct X; // #cwg469-X
@@ -1025,9 +1025,9 @@ namespace cwg469 { // cwg469: no
   X<int&> x;
   // expected-error@-1 {{implicit instantiation of undefined template 'cwg469::X<int &>'}}
   //   expected-note@#cwg469-X {{template is declared here}}
-}
+} // namespace cwg469
 
-namespace cwg470 { // cwg470: yes
+namespace cwg470 { // cwg470: 2.7
   template<typename T> struct A {
     struct B {};
   };
@@ -1042,7 +1042,7 @@ namespace cwg470 { // cwg470: yes
   // ok, instantiating C<char> doesn't instantiate base class members.
   template struct A<char>;
   template struct C<char>;
-}
+} // namespace cwg470
 
 namespace cwg471 { // cwg471: 2.8
   struct A { int n; };
@@ -1060,7 +1060,7 @@ namespace cwg471 { // cwg471: 2.8
   struct H : B, G { int f() { return n; } };
   // expected-error@-1 {{'n' is a private member of 'cwg471::G'}}
   //   expected-note@#cwg471-G-using {{declared private here}}
-}
+} // namespace cwg471
 
 namespace cwg472 { // cwg472: no drafting 2011-04
 struct B {
@@ -1077,7 +1077,7 @@ struct D : public I {
     bp->i = 5;
   }
 };
-}
+} // namespace cwg472
 
 namespace cwg474 { // cwg474: 3.4
   namespace N {
@@ -1094,7 +1094,7 @@ namespace cwg474 { // cwg474: 3.4
     // expected-error@-1 {{functions that differ only in their return type cannot be overloaded}}
     //   expected-note@#cwg474-g {{previous declaration is here}}
   }
-}
+} // namespace cwg474
 
 // cwg475 FIXME write a libc++abi test
 
@@ -1113,15 +1113,15 @@ namespace cwg477 { // cwg477: 3.5
   // expected-error@-1 {{can only be specified inside the class definition}}
   virtual void A::f() {}
   // expected-error@-1 {{can only be specified inside the class definition}}
-}
+} // namespace cwg477
 
-namespace cwg478 { // cwg478: yes
+namespace cwg478 { // cwg478: 2.7
   struct A { virtual void f() = 0; }; // #cwg478-f
   void f(A *a);
   void f(A a[10]);
   // expected-error@-1 {{array of abstract class type 'A'}}
   //   expected-note@#cwg478-f {{unimplemented pure virtual method 'f' in 'A'}}
-}
+} // namespace cwg478
 
 namespace cwg479 { // cwg479: 2.8
   struct S {
@@ -1162,9 +1162,9 @@ namespace cwg479 { // cwg479: 2.8
       //   expected-note@#cwg479-S-dtor {{declared private here}}
     }
   }
-}
+} // namespace cwg479
 
-namespace cwg480 { // cwg480: yes
+namespace cwg480 { // cwg480: 2.7
   struct A { int n; };
   struct B : A {};
   struct C : virtual B {};
@@ -1187,7 +1187,7 @@ namespace cwg480 { // cwg480: yes
   A &j = i;
   D &k = static_cast<D&>(j);
   // expected-error@-1 {{cannot cast 'A' to 'D &' via virtual base 'cwg480::B'}}
-}
+} // namespace cwg480
 
 namespace cwg481 { // cwg481: 2.8
   template<class T, T U> class A { T *x; };
@@ -1232,7 +1232,7 @@ namespace cwg481 { // cwg481: 2.8
   template<N X, typename N, template<N Y> class T> struct I;
   template<char*> struct J;
   I<123, char*, J> *j;
-}
+} // namespace cwg481
 
 namespace cwg482 { // cwg482: 3.5
   extern int a;
@@ -1274,12 +1274,12 @@ namespace cwg482 { // cwg482: 3.5
 #if __cplusplus >= 201103L
     enum class C;
     enum class A::C {};
-    // expected-error@-1 {{extra qualification on member 'C'}}
+    // since-cxx11-error@-1 {{extra qualification on member 'C'}}
 #endif
   };
-}
+} // namespace cwg482
 
-namespace cwg483 { // cwg483: yes
+namespace cwg483 { // cwg483: 2.7
   namespace climits {
     static_assert(__SCHAR_MAX__ >= 127, "");
     static_assert(__SHRT_MAX__ >= 32767, "");
@@ -1294,9 +1294,9 @@ namespace cwg483 { // cwg483: yes
     static_assert(__WCHAR_WIDTH__ >= 8, "");
     static_assert(__WINT_WIDTH__ >= 16, "");
   }
-}
+} // namespace cwg483
 
-namespace cwg484 { // cwg484: yes
+namespace cwg484 { // cwg484: 2.8
   struct A {
     A();
     void f();
@@ -1332,9 +1332,9 @@ namespace cwg484 { // cwg484: yes
     S();
     // expected-error@-1 {{a type specifier is required for all declarations}}
   } S;
-}
+} // namespace cwg484
 
-namespace cwg485 { // cwg485: yes
+namespace cwg485 { // cwg485: 2.7
   namespace N {
     struct S {};
     int operator+(S, S);
@@ -1345,9 +1345,9 @@ namespace cwg485 { // cwg485: yes
   N::S s;
   int a = operator+(s, s);
   int b = f<int>(s);
-}
+} // namespace cwg485
 
-namespace cwg486 { // cwg486: yes
+namespace cwg486 { // cwg486: 2.7
   template<typename T> T f(T *); // #cwg486-f
   int &f(...);
 
@@ -1364,18 +1364,18 @@ namespace cwg486 { // cwg486: yes
     // expected-error@-1 {{no matching function for call to 'f'}}
     //   expected-note@#cwg486-f {{candidate template ignored: substitution failure [with T = int[10]]: function cannot return array type 'int[10]'}}
   }
-}
+} // namespace cwg486
 
-namespace cwg487 { // cwg487: yes
+namespace cwg487 { // cwg487: 2.7
   enum E { e };
   int operator+(int, E); // #cwg487-operator-plus
   static_assert(4 + e, "");
   // expected-error@-1 {{expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{non-constexpr function 'operator+' cannot be used in a constant expression}}
   //   since-cxx11-note@#cwg487-operator-plus {{declared here}}
-}
+} // namespace cwg487
 
-namespace cwg488 { // cwg488: yes c++11
+namespace cwg488 { // cwg488: 2.9 c++11
   template <typename T> void f(T);
   void f(int);
   void g() {
@@ -1386,8 +1386,9 @@ namespace cwg488 { // cwg488: yes c++11
     enum E { e };
     f(e);
     // cxx98-error@-1 {{template argument uses local type 'E'}}
+    //   cxx98-note@-2 {{while substituting deduced template arguments}}
   }
-}
+} // namespace cwg488
 
 // cwg489: na
 
@@ -1433,13 +1434,13 @@ namespace cwg490 { // cwg490: 2.8
     // the class of the conversion function first.
     friend A::operator X<T>();
   };
-}
+} // namespace cwg490
 
 namespace cwg491 { // cwg491: dup 413
   struct A {} a, b[3] = { a, {} };
   A c[2] = { a, {}, b[1] };
   // expected-error@-1 {{excess elements in array initializer}}
-}
+} // namespace cwg491
 
 // cwg492 is in cwg492.cpp
 
@@ -1451,7 +1452,7 @@ namespace cwg493 { // cwg493: dup 976
     if (X()) {
     }
   }
-}
+} // namespace cwg493
 
 namespace cwg494 { // cwg494: dup 372
   class A {
@@ -1464,7 +1465,7 @@ namespace cwg494 { // cwg494: dup 372
       A::B y;
     };
   };
-}
+} // namespace cwg494
 
 namespace cwg495 { // cwg495: 3.5
   template<typename T>
@@ -1482,7 +1483,7 @@ namespace cwg495 { // cwg495: 3.5
   };
   S2<int> s2;
   long n2 = s2;
-}
+} // namespace cwg495
 
 namespace cwg496 { // cwg496: sup 2094
   struct A { int n; };
@@ -1494,7 +1495,7 @@ namespace cwg496 { // cwg496: sup 2094
   static_assert(__is_trivially_constructible(B, const B&), "");
   static_assert(__is_trivially_assignable(A, const A&), "");
   static_assert(__is_trivially_assignable(B, const B&), "");
-}
+} // namespace cwg496
 
 namespace cwg497 { // cwg497: sup 253
   void before() {
@@ -1517,9 +1518,9 @@ namespace cwg497 { // cwg497: sup 253
     cs.*pm = 88;
     // expected-error@-1 {{read-only variable is not assignable}}
   }
-}
+} // namespace cwg497
 
-namespace cwg499 { // cwg499: yes
+namespace cwg499 { // cwg499: 2.7
   extern char str[];
   void f() { throw str; }
-}
+} // namespace cwg499

@@ -76,3 +76,30 @@ namespace IfScope {
   }
   static_assert(foo() == 13, "");
 }
+
+namespace IfScope2 {
+  struct __bit_iterator {
+    unsigned __ctz_;
+  };
+  constexpr void __fill_n_bool(__bit_iterator) {}
+
+  constexpr void fill_n(__bit_iterator __first) {
+    if (false)
+      __fill_n_bool(__first);
+    else
+      __fill_n_bool(__first);
+  }
+
+  struct bitset{
+    constexpr void reset() {
+      auto m = __bit_iterator(8);
+      fill_n(m);
+    }
+  };
+  consteval bool foo() {
+    bitset v;
+    v.reset();
+    return true;
+  }
+  static_assert(foo());
+}

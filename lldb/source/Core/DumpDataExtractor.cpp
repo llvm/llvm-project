@@ -136,10 +136,10 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
       lldb::addr_t addr = base_addr + start_offset;
       lldb_private::Address so_addr;
       bool data_from_file = true;
-      if (target_sp->GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
+      if (target_sp->ResolveLoadAddress(addr, so_addr)) {
         data_from_file = false;
       } else {
-        if (target_sp->GetSectionLoadList().IsEmpty() ||
+        if (!target_sp->HasLoadedSections() ||
             !target_sp->GetImages().ResolveFileAddress(addr, so_addr))
           so_addr.SetRawAddress(addr);
       }
@@ -707,8 +707,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         TargetSP target_sp(exe_scope->CalculateTarget());
         lldb_private::Address so_addr;
         if (target_sp) {
-          if (target_sp->GetSectionLoadList().ResolveLoadAddress(addr,
-                                                                 so_addr)) {
+          if (target_sp->ResolveLoadAddress(addr, so_addr)) {
             s->PutChar(' ');
             so_addr.Dump(s, exe_scope, Address::DumpStyleResolvedDescription,
                          Address::DumpStyleModuleWithFileAddress);
@@ -719,8 +718,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
             if (ProcessSP process_sp = exe_scope->CalculateProcess()) {
               if (ABISP abi_sp = process_sp->GetABI()) {
                 addr_t addr_fixed = abi_sp->FixCodeAddress(addr);
-                if (target_sp->GetSectionLoadList().ResolveLoadAddress(
-                        addr_fixed, so_addr)) {
+                if (target_sp->ResolveLoadAddress(addr_fixed, so_addr)) {
                   s->PutChar(' ');
                   s->Printf("(0x%*.*" PRIx64 ")", (int)(2 * item_byte_size),
                             (int)(2 * item_byte_size), addr_fixed);

@@ -14,8 +14,10 @@
 
 namespace Fortran::common {
 
-// Fortran has five kinds of intrinsic data types, plus the derived types.
-ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
+// Fortran has five kinds of standard intrinsic data types, the Unsigned
+// extension, and derived types.
+ENUM_CLASS(
+    TypeCategory, Integer, Unsigned, Real, Complex, Character, Logical, Derived)
 ENUM_CLASS(VectorElementCategory, Integer, Unsigned, Real)
 
 ENUM_CLASS(IoStmtKind, None, Backspace, Close, Endfile, Flush, Inquire, Open,

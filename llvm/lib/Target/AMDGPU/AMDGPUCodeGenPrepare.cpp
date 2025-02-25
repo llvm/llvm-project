@@ -254,9 +254,8 @@ public:
 
   bool divHasSpecialOptimization(BinaryOperator &I,
                                  Value *Num, Value *Den) const;
-  int getDivNumBits(BinaryOperator &I,
-                    Value *Num, Value *Den,
-                    unsigned AtLeast, bool Signed) const;
+  unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
+                         unsigned MaxDivBits, bool Signed) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
@@ -1189,27 +1188,29 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
   return getMul64(Builder, LHS, RHS).second;
 }
 
-/// Figure out how many bits are really needed for this division. \p AtLeast is
-/// an optimization hint to bypass the second ComputeNumSignBits call if we the
-/// first one is insufficient. Returns -1 on failure.
-int AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
-                                            Value *Den, unsigned AtLeast,
-                                            bool IsSigned) const {
+/// Figure out how many bits are really needed for this division.
+/// \p MaxDivBits is an optimization hint to bypass the second
+/// ComputeNumSignBits/computeKnownBits call if the first one is
+/// insufficient.
+unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
+                                                 Value *Den,
+                                                 unsigned MaxDivBits,
+                                                 bool IsSigned) const {
   assert(Num->getType()->getScalarSizeInBits() ==
          Den->getType()->getScalarSizeInBits());
   unsigned SSBits = Num->getType()->getScalarSizeInBits();
   if (IsSigned) {
     unsigned RHSSignBits = ComputeNumSignBits(Den, DL, 0, AC, &I);
-    if (RHSSignBits < AtLeast)
-      return -1;
+    // A sign bit needs to be reserved for shrinking.
+    unsigned DivBits = SSBits - RHSSignBits + 1;
+    if (DivBits > MaxDivBits)
+      return SSBits;
 
     unsigned LHSSignBits = ComputeNumSignBits(Num, DL, 0, AC, &I);
-    if (LHSSignBits < AtLeast)
-      return -1;
 
     unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-    unsigned DivBits = SSBits - SignBits + 1;
-    return DivBits; // a SignBit needs to be reserved for shrinking
+    DivBits = SSBits - SignBits + 1;
+    return DivBits;
   }
 
   // All bits are used for unsigned division for Num or Den in range
@@ -1218,6 +1219,9 @@ int AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned RHSSignBits = Known.countMinLeadingZeros();
+  unsigned DivBits = SSBits - RHSSignBits;
+  if (DivBits > MaxDivBits)
+    return SSBits;
 
   Known = computeKnownBits(Num, DL, 0, AC, &I);
   if (Known.isNegative() || !Known.isNonNegative())
@@ -1225,7 +1229,7 @@ int AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   unsigned LHSSignBits = Known.countMinLeadingZeros();
 
   unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-  unsigned DivBits = SSBits - SignBits;
+  DivBits = SSBits - SignBits;
   return DivBits;
 }
 
@@ -1235,11 +1239,8 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den, bool IsDiv,
                                                 bool IsSigned) const {
-  unsigned SSBits = Num->getType()->getScalarSizeInBits();
-  // If Num bits <= 24, assume 0 signbits.
-  unsigned AtLeast = (SSBits <= 24) ? 0 : (SSBits - 24 + IsSigned);
-  int DivBits = getDivNumBits(I, Num, Den, AtLeast, IsSigned);
-  if (DivBits == -1 || DivBits > 24)
+  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
+  if (DivBits > 24)
     return nullptr;
   return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
 }
@@ -1523,8 +1524,8 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
   bool IsDiv = Opc == Instruction::SDiv || Opc == Instruction::UDiv;
   bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
 
-  int NumDivBits = getDivNumBits(I, Num, Den, 32, IsSigned);
-  if (NumDivBits == -1)
+  unsigned NumDivBits = getDivNumBits(I, Num, Den, 32, IsSigned);
+  if (NumDivBits > 32)
     return nullptr;
 
   Value *Narrowed = nullptr;
@@ -1707,7 +1708,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   Value *TrueVal = I.getTrueValue();
   Value *FalseVal = I.getFalseValue();
   Value *CmpVal;
-  FCmpInst::Predicate Pred;
+  CmpPredicate Pred;
 
   if (ST.has16BitInsts() && needsPromotionToI32(I.getType())) {
     if (UA.isUniform(&I))

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
@@ -102,12 +102,13 @@ void PCHGenerator::anchor() {}
 CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
                                              InMemoryModuleCache &ModuleCache,
                                              StringRef OutputFile,
-                                             bool GeneratingReducedBMI)
+                                             bool GeneratingReducedBMI,
+                                             bool AllowASTWithErrors)
     : PCHGenerator(
           PP, ModuleCache, OutputFile, llvm::StringRef(),
           std::make_shared<PCHBuffer>(),
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
-          /*AllowASTWithErrors*/ false, /*IncludeTimestamps=*/false,
+          AllowASTWithErrors, /*IncludeTimestamps=*/false,
           /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
           GeneratingReducedBMI) {}
 

@@ -73,10 +73,8 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
 static bool python_is_finalizing() {
 #if PY_VERSION_HEX >= 0x030d0000
   return Py_IsFinalizing();
-#elif PY_VERSION_HEX >= 0x03070000
-  return _Py_IsFinalizing();
 #else
-  return _Py_Finalizing != nullptr;
+  return _Py_IsFinalizing();
 #endif
 }
 
@@ -810,7 +808,6 @@ bool PythonCallable::Check(PyObject *py_obj) {
   return PyCallable_Check(py_obj);
 }
 
-#if PY_VERSION_HEX >= 0x03030000
 static const char get_arg_info_script[] = R"(
 from inspect import signature, Parameter, ismethod
 from collections import namedtuple
@@ -832,14 +829,11 @@ def main(f):
             raise Exception(f'unknown parameter kind: {kind}')
     return ArgInfo(count, varargs)
 )";
-#endif
 
 Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
   ArgInfo result = {};
   if (!IsValid())
     return nullDeref();
-
-#if PY_VERSION_HEX >= 0x03030000
 
   // no need to synchronize access to this global, we already have the GIL
   static PythonScript get_arg_info(get_arg_info_script);
@@ -851,57 +845,6 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
   bool has_varargs =
       cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
   result.max_positional_args = has_varargs ? ArgInfo::UNBOUNDED : count;
-
-#else
-  PyObject *py_func_obj;
-  bool is_bound_method = false;
-  bool is_class = false;
-
-  if (PyType_Check(m_py_obj) || PyClass_Check(m_py_obj)) {
-    auto init = GetAttribute("__init__");
-    if (!init)
-      return init.takeError();
-    py_func_obj = init.get().get();
-    is_class = true;
-  } else {
-    py_func_obj = m_py_obj;
-  }
-
-  if (PyMethod_Check(py_func_obj)) {
-    py_func_obj = PyMethod_GET_FUNCTION(py_func_obj);
-    PythonObject im_self = GetAttributeValue("im_self");
-    if (im_self.IsValid() && !im_self.IsNone())
-      is_bound_method = true;
-  } else {
-    // see if this is a callable object with an __call__ method
-    if (!PyFunction_Check(py_func_obj)) {
-      PythonObject __call__ = GetAttributeValue("__call__");
-      if (__call__.IsValid()) {
-        auto __callable__ = __call__.AsType<PythonCallable>();
-        if (__callable__.IsValid()) {
-          py_func_obj = PyMethod_GET_FUNCTION(__callable__.get());
-          PythonObject im_self = __callable__.GetAttributeValue("im_self");
-          if (im_self.IsValid() && !im_self.IsNone())
-            is_bound_method = true;
-        }
-      }
-    }
-  }
-
-  if (!py_func_obj)
-    return result;
-
-  PyCodeObject *code = (PyCodeObject *)PyFunction_GET_CODE(py_func_obj);
-  if (!code)
-    return result;
-
-  auto count = code->co_argcount;
-  bool has_varargs = !!(code->co_flags & CO_VARARGS);
-  result.max_positional_args =
-      has_varargs ? ArgInfo::UNBOUNDED
-                  : (count - (int)is_bound_method) - (int)is_class;
-
-#endif
 
   return result;
 }

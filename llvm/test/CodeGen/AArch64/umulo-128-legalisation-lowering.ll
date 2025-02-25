@@ -35,41 +35,33 @@ start:
 define i128 @__muloti4(i128 %0, i128 %1, ptr nocapture nonnull writeonly align 4 %2) #2 {
 ; AARCH-LABEL: __muloti4:
 ; AARCH:       // %bb.0: // %Entry
-; AARCH-NEXT:    asr x10, x1, #63
+; AARCH-NEXT:    asr x11, x1, #63
 ; AARCH-NEXT:    asr x9, x3, #63
-; AARCH-NEXT:    umulh x14, x0, x2
+; AARCH-NEXT:    umulh x12, x0, x2
 ; AARCH-NEXT:    mov x8, x1
 ; AARCH-NEXT:    str wzr, [x4]
-; AARCH-NEXT:    mul x12, x2, x10
-; AARCH-NEXT:    umulh x13, x2, x10
-; AARCH-NEXT:    umulh x11, x9, x0
-; AARCH-NEXT:    mul x15, x1, x2
-; AARCH-NEXT:    add x13, x13, x12
-; AARCH-NEXT:    madd x11, x9, x1, x11
-; AARCH-NEXT:    mul x9, x9, x0
-; AARCH-NEXT:    madd x10, x3, x10, x13
-; AARCH-NEXT:    umulh x13, x1, x2
-; AARCH-NEXT:    add x11, x11, x9
-; AARCH-NEXT:    adds x9, x9, x12
-; AARCH-NEXT:    mul x16, x0, x3
-; AARCH-NEXT:    adc x10, x11, x10
-; AARCH-NEXT:    adds x11, x15, x14
-; AARCH-NEXT:    umulh x17, x0, x3
-; AARCH-NEXT:    cinc x13, x13, hs
-; AARCH-NEXT:    mul x12, x1, x3
-; AARCH-NEXT:    adds x1, x16, x11
-; AARCH-NEXT:    umulh x11, x8, x3
-; AARCH-NEXT:    cinc x14, x17, hs
-; AARCH-NEXT:    adds x13, x13, x14
+; AARCH-NEXT:    mul x13, x1, x2
+; AARCH-NEXT:    umulh x10, x1, x2
+; AARCH-NEXT:    mul x11, x11, x2
+; AARCH-NEXT:    adds x12, x13, x12
+; AARCH-NEXT:    mul x15, x0, x3
+; AARCH-NEXT:    umulh x14, x0, x3
+; AARCH-NEXT:    adc x10, x10, x11
+; AARCH-NEXT:    mul x9, x0, x9
+; AARCH-NEXT:    mul x16, x1, x3
+; AARCH-NEXT:    adds x1, x15, x12
+; AARCH-NEXT:    asr x12, x10, #63
+; AARCH-NEXT:    smulh x11, x8, x3
+; AARCH-NEXT:    adc x9, x14, x9
+; AARCH-NEXT:    asr x13, x9, #63
+; AARCH-NEXT:    adds x9, x10, x9
+; AARCH-NEXT:    asr x10, x1, #63
 ; AARCH-NEXT:    mul x0, x0, x2
-; AARCH-NEXT:    cset w14, hs
-; AARCH-NEXT:    adds x12, x12, x13
-; AARCH-NEXT:    asr x13, x1, #63
-; AARCH-NEXT:    adc x11, x11, x14
-; AARCH-NEXT:    adds x9, x12, x9
-; AARCH-NEXT:    adc x10, x11, x10
-; AARCH-NEXT:    cmp x9, x13
-; AARCH-NEXT:    ccmp x10, x13, #0, eq
+; AARCH-NEXT:    adc x12, x12, x13
+; AARCH-NEXT:    adds x9, x16, x9
+; AARCH-NEXT:    adc x11, x11, x12
+; AARCH-NEXT:    cmp x9, x10
+; AARCH-NEXT:    ccmp x11, x10, #0, eq
 ; AARCH-NEXT:    cset w9, ne
 ; AARCH-NEXT:    tbz x8, #63, .LBB1_2
 ; AARCH-NEXT:  // %bb.1: // %Entry

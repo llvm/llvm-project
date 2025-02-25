@@ -92,8 +92,8 @@ set(SOURCES
     header_exportable_declarations.cpp
     hide_from_abi.cpp
     internal_ftm_use.cpp
+    nodebug_on_aliases.cpp
     proper_version_checks.cpp
-    qualify_declval.cpp
     robust_against_adl.cpp
     uglify_attributes.cpp
 

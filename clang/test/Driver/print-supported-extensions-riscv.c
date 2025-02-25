@@ -5,7 +5,7 @@
 // CHECK-EMPTY:
 // CHECK-NEXT:     Name                 Version   Description
 // CHECK-NEXT:     i                    2.1       'I' (Base Integer Instruction Set)
-// CHECK-NEXT:     e                    2.0       Implements RV{32,64}E (provides 16 rather than 32 GPRs)
+// CHECK-NEXT:     e                    2.0       'E' (Embedded Instruction Set with 16 GPRs)
 // CHECK-NEXT:     m                    2.0       'M' (Integer Multiplication and Division)
 // CHECK-NEXT:     a                    2.1       'A' (Atomic Instructions)
 // CHECK-NEXT:     f                    2.2       'F' (Single-Precision Floating-Point)
@@ -24,7 +24,7 @@
 // CHECK-NEXT:     ziccrse              1.0       'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences)
 // CHECK-NEXT:     zicntr               2.0       'Zicntr' (Base Counters and Timers)
 // CHECK-NEXT:     zicond               1.0       'Zicond' (Integer Conditional Operations)
-// CHECK-NEXT:     zicsr                2.0       'zicsr' (CSRs)
+// CHECK-NEXT:     zicsr                2.0       'Zicsr' (CSRs)
 // CHECK-NEXT:     zifencei             2.0       'Zifencei' (fence.i)
 // CHECK-NEXT:     zihintntl            1.0       'Zihintntl' (Non-Temporal Locality Hints)
 // CHECK-NEXT:     zihintpause          2.0       'Zihintpause' (Pause Hint)
@@ -78,7 +78,7 @@
 // CHECK-NEXT:     zve64d               1.0       'Zve64d' (Vector Extensions for Embedded Processors with maximal 64 EEW, F and D extension)
 // CHECK-NEXT:     zve64f               1.0       'Zve64f' (Vector Extensions for Embedded Processors with maximal 64 EEW and F extension)
 // CHECK-NEXT:     zve64x               1.0       'Zve64x' (Vector Extensions for Embedded Processors with maximal 64 EEW)
-// CHECK-NEXT:     zvfbfmin             1.0       'Zvbfmin' (Vector BF16 Converts)
+// CHECK-NEXT:     zvfbfmin             1.0       'Zvfbfmin' (Vector BF16 Converts)
 // CHECK-NEXT:     zvfbfwma             1.0       'Zvfbfwma' (Vector BF16 widening mul-add)
 // CHECK-NEXT:     zvfh                 1.0       'Zvfh' (Vector Half-Precision Floating-Point)
 // CHECK-NEXT:     zvfhmin              1.0       'Zvfhmin' (Vector Half-Precision Floating-Point Minimal)
@@ -87,7 +87,7 @@
 // CHECK-NEXT:     zvkn                 1.0       'Zvkn' (shorthand for 'Zvkned', 'Zvknhb', 'Zvkb', and 'Zvkt')
 // CHECK-NEXT:     zvknc                1.0       'Zvknc' (shorthand for 'Zvknc' and 'Zvbc')
 // CHECK-NEXT:     zvkned               1.0       'Zvkned' (Vector AES Encryption & Decryption (Single Round))
-// CHECK-NEXT:     zvkng                1.0       'zvkng' (shorthand for 'Zvkn' and 'Zvkg')
+// CHECK-NEXT:     zvkng                1.0       'Zvkng' (shorthand for 'Zvkn' and 'Zvkg')
 // CHECK-NEXT:     zvknha               1.0       'Zvknha' (Vector SHA-2 (SHA-256 only))
 // CHECK-NEXT:     zvknhb               1.0       'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))
 // CHECK-NEXT:     zvks                 1.0       'Zvks' (shorthand for 'Zvksed', 'Zvksh', 'Zvkb', and 'Zvkt')
@@ -96,25 +96,25 @@
 // CHECK-NEXT:     zvksg                1.0       'Zvksg' (shorthand for 'Zvks' and 'Zvkg')
 // CHECK-NEXT:     zvksh                1.0       'Zvksh' (SM3 Hash Function Instructions)
 // CHECK-NEXT:     zvkt                 1.0       'Zvkt' (Vector Data-Independent Execution Latency)
-// CHECK-NEXT:     zvl1024b             1.0       'Zvl' (Minimum Vector Length) 1024
-// CHECK-NEXT:     zvl128b              1.0       'Zvl' (Minimum Vector Length) 128
-// CHECK-NEXT:     zvl16384b            1.0       'Zvl' (Minimum Vector Length) 16384
-// CHECK-NEXT:     zvl2048b             1.0       'Zvl' (Minimum Vector Length) 2048
-// CHECK-NEXT:     zvl256b              1.0       'Zvl' (Minimum Vector Length) 256
-// CHECK-NEXT:     zvl32768b            1.0       'Zvl' (Minimum Vector Length) 32768
-// CHECK-NEXT:     zvl32b               1.0       'Zvl' (Minimum Vector Length) 32
-// CHECK-NEXT:     zvl4096b             1.0       'Zvl' (Minimum Vector Length) 4096
-// CHECK-NEXT:     zvl512b              1.0       'Zvl' (Minimum Vector Length) 512
-// CHECK-NEXT:     zvl64b               1.0       'Zvl' (Minimum Vector Length) 64
-// CHECK-NEXT:     zvl65536b            1.0       'Zvl' (Minimum Vector Length) 65536
-// CHECK-NEXT:     zvl8192b             1.0       'Zvl' (Minimum Vector Length) 8192
+// CHECK-NEXT:     zvl1024b             1.0       'Zvl1024b' (Minimum Vector Length 1024)
+// CHECK-NEXT:     zvl128b              1.0       'Zvl128b' (Minimum Vector Length 128)
+// CHECK-NEXT:     zvl16384b            1.0       'Zvl16384b' (Minimum Vector Length 16384)
+// CHECK-NEXT:     zvl2048b             1.0       'Zvl2048b' (Minimum Vector Length 2048)
+// CHECK-NEXT:     zvl256b              1.0       'Zvl256b' (Minimum Vector Length 256)
+// CHECK-NEXT:     zvl32768b            1.0       'Zvl32768b' (Minimum Vector Length 32768)
+// CHECK-NEXT:     zvl32b               1.0       'Zvl32b' (Minimum Vector Length 32)
+// CHECK-NEXT:     zvl4096b             1.0       'Zvl4096b' (Minimum Vector Length 4096)
+// CHECK-NEXT:     zvl512b              1.0       'Zvl512b' (Minimum Vector Length 512)
+// CHECK-NEXT:     zvl64b               1.0       'Zvl64b' (Minimum Vector Length 64)
+// CHECK-NEXT:     zvl65536b            1.0       'Zvl65536b' (Minimum Vector Length 65536)
+// CHECK-NEXT:     zvl8192b             1.0       'Zvl8192b' (Minimum Vector Length 8192)
 // CHECK-NEXT:     zhinx                1.0       'Zhinx' (Half Float in Integer)
 // CHECK-NEXT:     zhinxmin             1.0       'Zhinxmin' (Half Float in Integer Minimal)
 // CHECK-NEXT:     sha                  1.0       'Sha' (Augmented Hypervisor)
 // CHECK-NEXT:     shcounterenw         1.0       'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero)
-// CHECK-NEXT:     shgatpa              1.0       'Sgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare)
+// CHECK-NEXT:     shgatpa              1.0       'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare)
 // CHECK-NEXT:     shtvala              1.0       'Shtvala' (htval provides all needed values)
-// CHECK-NEXT:     shvsatpa             1.0       'Svsatpa' (vsatp supports all modes supported by satp)
+// CHECK-NEXT:     shvsatpa             1.0       'Shvsatpa' (vsatp supports all modes supported by satp)
 // CHECK-NEXT:     shvstvala            1.0       'Shvstvala' (vstval provides all needed values)
 // CHECK-NEXT:     shvstvecd            1.0       'Shvstvecd' (vstvec supports Direct mode)
 // CHECK-NEXT:     smaia                1.0       'Smaia' (Advanced Interrupt Architecture Machine Level)
@@ -145,11 +145,11 @@
 // CHECK-NEXT:     supm                 1.0       'Supm' (Indicates User-mode Pointer Masking)
 // CHECK-NEXT:     svade                1.0       'Svade' (Raise exceptions on improper A/D bits)
 // CHECK-NEXT:     svadu                1.0       'Svadu' (Hardware A/D updates)
-// CHECK-NEXT:     svbare               1.0       'Svbare' $(satp mode Bare supported)
+// CHECK-NEXT:     svbare               1.0       'Svbare' (satp mode Bare supported)
 // CHECK-NEXT:     svinval              1.0       'Svinval' (Fine-Grained Address-Translation Cache Invalidation)
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
-// CHECK-NEXT:     svvptc               1.0       'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
+// CHECK-NEXT:     svvptc               1.0       'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
 // CHECK-NEXT:     xcvbitmanip          1.0       'XCVbitmanip' (CORE-V Bit Manipulation)
@@ -157,6 +157,8 @@
 // CHECK-NEXT:     xcvmac               1.0       'XCVmac' (CORE-V Multiply-Accumulate)
 // CHECK-NEXT:     xcvmem               1.0       'XCVmem' (CORE-V Post-incrementing Load & Store)
 // CHECK-NEXT:     xcvsimd              1.0       'XCVsimd' (CORE-V SIMD ALU)
+// CHECK-NEXT:     xmipscmove           1.0       'XMIPSCMove' (MIPS conditional move instruction(s) (ccmov))
+// CHECK-NEXT:     xmipslsp             1.0       'XMIPSLSP' (MIPS optimization for hardware load-store bonding)
 // CHECK-NEXT:     xsfcease             1.0       'XSfcease' (SiFive sf.cease Instruction)
 // CHECK-NEXT:     xsfvcp               1.0       'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)
 // CHECK-NEXT:     xsfvfnrclipxfqf      1.0       'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)
@@ -180,18 +182,29 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
+// CHECK-NEXT:     p                    0.14      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
+// CHECK-NEXT:     sdext                1.0       'Sdext' (External debugger)
+// CHECK-NEXT:     sdtrig               1.0       'Sdtrig' (Debugger triggers)
 // CHECK-NEXT:     smctr                1.0       'Smctr' (Control Transfer Records Machine Level)
 // CHECK-NEXT:     ssctr                1.0       'Ssctr' (Control Transfer Records Supervisor Level)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-NEXT:     xqcia                0.2       'Xqcia' (Qualcomm uC Arithmetic Extension)
+// CHECK-NEXT:     xqciac               0.3       'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
+// CHECK-NEXT:     xqcicli              0.2       'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)
+// CHECK-NEXT:     xqcicm               0.2       'Xqcicm' (Qualcomm uC Conditional Move Extension)
 // CHECK-NEXT:     xqcics               0.2       'Xqcics' (Qualcomm uC Conditional Select Extension)
 // CHECK-NEXT:     xqcicsr              0.2       'Xqcicsr' (Qualcomm uC CSR Extension)
+// CHECK-NEXT:     xqciint              0.2       'Xqciint' (Qualcomm uC Interrupts Extension)
+// CHECK-NEXT:     xqcilia              0.2       'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)
+// CHECK-NEXT:     xqcilo               0.2       'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
+// CHECK-NEXT:     xqcilsm              0.2       'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 // CHECK-NEXT:     xqcisls              0.2       'Xqcisls' (Qualcomm uC Scaled Load Store Extension)
+// CHECK-NEXT:     xrivosvizip          0.1       'XRivosVizip' (Rivos Vector Register Zips)
 // CHECK-EMPTY:
 // CHECK-NEXT: Supported Profiles
 // CHECK-NEXT:     rva20s64

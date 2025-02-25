@@ -1,16 +1,22 @@
+; RUN: opt -mcpu=cortex-m7 -mtriple=thumbv8.1m.main -passes=loop-unroll -S  %s -o - | FileCheck %s --check-prefix=NLOB
 ; RUN: opt -mcpu=cortex-m55 -mtriple=thumbv8.1m.main -passes=loop-unroll -S  %s -o - | FileCheck %s --check-prefix=LOB
 
 ; This test checks behaviour of loop unrolling on processors with low overhead branching available 
 
-; LOB-CHECK-LABEL: for.body{{.*}}.prol
-; LOB-COUNT-1:     fmul fast float 
-; LOB-CHECK-LABEL: for.body{{.*}}.prol.1
-; LOB-COUNT-1:     fmul fast float 
-; LOB-CHECK-LABEL: for.body{{.*}}.prol.2
-; LOB-COUNT-1:     fmul fast float 
-; LOB-CHECK-LABEL: for.body{{.*}}
-; LOB-COUNT-4:     fmul fast float 
+; NLOB-LABEL: for.body{{.*}}.prol:
+; NLOB-COUNT-1:     fmul fast float 
+; NLOB-LABEL: for.body{{.*}}.prol.1:
+; NLOB-COUNT-1:     fmul fast float 
+; NLOB-LABEL: for.body{{.*}}.prol.2:
+; NLOB-COUNT-1:     fmul fast float 
+; NLOB-LABEL: for.body{{.*}}:
+; NLOB-COUNT-4:     fmul fast float 
+; NLOB-NOT:     fmul fast float 
+
+; LOB-LABEL: for.body{{.*}}:
+; LOB:     fmul fast float 
 ; LOB-NOT:     fmul fast float 
+
 
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 define dso_local void @test(i32 noundef %n, ptr nocapture noundef %pA) local_unnamed_addr #0 {
@@ -20,7 +26,7 @@ entry:
 
 for.cond.loopexit:                                ; preds = %for.cond6.for.cond.cleanup8_crit_edge.us, %for.body
   %exitcond49.not = icmp eq i32 %add, %n
-  br i1 %exitcond49.not, label %for.cond.cleanup, label %for.body
+  br i1 %exitcond49.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
 for.cond.cleanup:                                 ; preds = %for.cond.loopexit, %entry
   ret void
@@ -61,3 +67,6 @@ for.cond6.for.cond.cleanup8_crit_edge.us:         ; preds = %for.body9.us
   br i1 %exitcond48.not, label %for.cond.loopexit, label %for.cond6.preheader.us
 }
 
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.mustprogress"}
+!2 = !{!"llvm.loop.unroll.disable"}

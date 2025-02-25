@@ -309,58 +309,58 @@ Type Parser::parseNonFunctionType() {
   // float-type
   case Token::kw_f4E2M1FN:
     consumeToken(Token::kw_f4E2M1FN);
-    return builder.getFloat4E2M1FNType();
+    return builder.getType<Float4E2M1FNType>();
   case Token::kw_f6E2M3FN:
     consumeToken(Token::kw_f6E2M3FN);
-    return builder.getFloat6E2M3FNType();
+    return builder.getType<Float6E2M3FNType>();
   case Token::kw_f6E3M2FN:
     consumeToken(Token::kw_f6E3M2FN);
-    return builder.getFloat6E3M2FNType();
+    return builder.getType<Float6E3M2FNType>();
   case Token::kw_f8E5M2:
     consumeToken(Token::kw_f8E5M2);
-    return builder.getFloat8E5M2Type();
+    return builder.getType<Float8E5M2Type>();
   case Token::kw_f8E4M3:
     consumeToken(Token::kw_f8E4M3);
-    return builder.getFloat8E4M3Type();
+    return builder.getType<Float8E4M3Type>();
   case Token::kw_f8E4M3FN:
     consumeToken(Token::kw_f8E4M3FN);
-    return builder.getFloat8E4M3FNType();
+    return builder.getType<Float8E4M3FNType>();
   case Token::kw_f8E5M2FNUZ:
     consumeToken(Token::kw_f8E5M2FNUZ);
-    return builder.getFloat8E5M2FNUZType();
+    return builder.getType<Float8E5M2FNUZType>();
   case Token::kw_f8E4M3FNUZ:
     consumeToken(Token::kw_f8E4M3FNUZ);
-    return builder.getFloat8E4M3FNUZType();
+    return builder.getType<Float8E4M3FNUZType>();
   case Token::kw_f8E4M3B11FNUZ:
     consumeToken(Token::kw_f8E4M3B11FNUZ);
-    return builder.getFloat8E4M3B11FNUZType();
+    return builder.getType<Float8E4M3B11FNUZType>();
   case Token::kw_f8E3M4:
     consumeToken(Token::kw_f8E3M4);
-    return builder.getFloat8E3M4Type();
+    return builder.getType<Float8E3M4Type>();
   case Token::kw_f8E8M0FNU:
     consumeToken(Token::kw_f8E8M0FNU);
-    return builder.getFloat8E8M0FNUType();
+    return builder.getType<Float8E8M0FNUType>();
   case Token::kw_bf16:
     consumeToken(Token::kw_bf16);
-    return builder.getBF16Type();
+    return builder.getType<BFloat16Type>();
   case Token::kw_f16:
     consumeToken(Token::kw_f16);
-    return builder.getF16Type();
+    return builder.getType<Float16Type>();
   case Token::kw_tf32:
     consumeToken(Token::kw_tf32);
-    return builder.getTF32Type();
+    return builder.getType<FloatTF32Type>();
   case Token::kw_f32:
     consumeToken(Token::kw_f32);
-    return builder.getF32Type();
+    return builder.getType<Float32Type>();
   case Token::kw_f64:
     consumeToken(Token::kw_f64);
-    return builder.getF64Type();
+    return builder.getType<Float64Type>();
   case Token::kw_f80:
     consumeToken(Token::kw_f80);
-    return builder.getF80Type();
+    return builder.getType<Float80Type>();
   case Token::kw_f128:
     consumeToken(Token::kw_f128);
-    return builder.getF128Type();
+    return builder.getType<Float128Type>();
 
   // index-type
   case Token::kw_index:

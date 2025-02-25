@@ -83,12 +83,14 @@ void VirtRegMap::grow() {
   Virt2SplitMap.resize(NumRegs);
 }
 
-void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
-  assert(virtReg.isVirtual() && Register::isPhysicalRegister(physReg));
+void VirtRegMap::assignVirt2Phys(Register virtReg, MCRegister physReg) {
+  assert(virtReg.isVirtual() && physReg.isPhysical());
   assert(!Virt2PhysMap[virtReg] &&
          "attempt to assign physical register to already mapped "
          "virtual register");
-  assert(!getRegInfo().isReserved(physReg) &&
+  assert((!getRegInfo().isReserved(physReg) ||
+          MF->getProperties().hasProperty(
+              MachineFunctionProperties::Property::FailedRegAlloc)) &&
          "Attempt to map virtReg to a reserved physReg");
   Virt2PhysMap[virtReg] = physReg;
 }
@@ -219,7 +221,7 @@ class VirtRegRewriter : public MachineFunctionPass {
   bool subRegLiveThrough(const MachineInstr &MI, MCRegister SuperPhysReg) const;
   LaneBitmask liveOutUndefPhiLanesForUndefSubregDef(
       const LiveInterval &LI, const MachineBasicBlock &MBB, unsigned SubReg,
-      MCPhysReg PhysReg, const MachineInstr &MI) const;
+      MCRegister PhysReg, const MachineInstr &MI) const;
 
 public:
   static char ID;
@@ -561,7 +563,7 @@ bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
 /// is assigned to \p LI, which is the main range.
 LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
     const LiveInterval &LI, const MachineBasicBlock &MBB, unsigned SubReg,
-    MCPhysReg PhysReg, const MachineInstr &MI) const {
+    MCRegister PhysReg, const MachineInstr &MI) const {
   LaneBitmask UndefMask = ~TRI->getSubRegIndexLaneMask(SubReg);
   LaneBitmask LiveOutUndefLanes;
 
@@ -615,7 +617,10 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
+        assert((!MRI->isReserved(PhysReg) ||
+                MF->getProperties().hasProperty(
+                    MachineFunctionProperties::Property::FailedRegAlloc)) &&
+               "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();
@@ -655,9 +660,9 @@ void VirtRegRewriter::rewrite() {
 
                   // TODO: Just use one super register def if none of the lanes
                   // are needed?
-                  if (!TRI->getCoveringSubRegIndexes(
-                          *MRI, MRI->getRegClass(VirtReg), LiveOutUndefLanes,
-                          CoveringIndexes))
+                  if (!TRI->getCoveringSubRegIndexes(MRI->getRegClass(VirtReg),
+                                                     LiveOutUndefLanes,
+                                                     CoveringIndexes))
                     llvm_unreachable(
                         "cannot represent required subregister defs");
 

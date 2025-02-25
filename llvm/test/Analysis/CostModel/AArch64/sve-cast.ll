@@ -418,27 +418,27 @@ define void @trunc() {
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s2i8i16 = trunc <2 x i16> undef to <2 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s2i8i32 = trunc <2 x i32> undef to <2 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s2i8i64 = trunc <2 x i64> undef to <2 x i8>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2i16i32 = trunc <2 x i32> undef to <2 x i16>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s2i16i32 = trunc <2 x i32> undef to <2 x i16>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s2i16i64 = trunc <2 x i64> undef to <2 x i16>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2i32i64 = trunc <2 x i64> undef to <2 x i32>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s2i32i64 = trunc <2 x i64> undef to <2 x i32>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i8i16 = trunc <4 x i16> undef to <4 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i8i32 = trunc <4 x i32> undef to <4 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i8i64 = trunc <4 x i64> undef to <4 x i8>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i16i32 = trunc <4 x i32> undef to <4 x i16>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i16i32 = trunc <4 x i32> undef to <4 x i16>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i16i64 = trunc <4 x i64> undef to <4 x i16>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i8i16 = trunc <8 x i16> undef to <8 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i8i32 = trunc <8 x i32> undef to <8 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i8i64 = trunc <8 x i64> undef to <8 x i8>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i16i32 = trunc <8 x i32> undef to <8 x i16>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i16i32 = trunc <8 x i32> undef to <8 x i16>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i16i64 = trunc <8 x i64> undef to <8 x i16>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s8i32i64 = trunc <8 x i64> undef to <8 x i32>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i32i64 = trunc <8 x i64> undef to <8 x i32>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i16 = trunc <16 x i16> undef to <16 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i32 = trunc <16 x i32> undef to <16 x i8>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i64 = trunc <16 x i64> undef to <16 x i8>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s16i16i32 = trunc <16 x i32> undef to <16 x i16>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i16i32 = trunc <16 x i32> undef to <16 x i16>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i16i64 = trunc <16 x i64> undef to <16 x i16>
-; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %s16i32i64 = trunc <16 x i64> undef to <16 x i32>
+; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i32i64 = trunc <16 x i64> undef to <16 x i32>
 ; SVE128-NO-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; FIXED-MIN-256-LABEL: 'trunc'
@@ -463,19 +463,19 @@ define void @trunc() {
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i8i64 = trunc <4 x i64> undef to <4 x i8>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i16i32 = trunc <4 x i32> undef to <4 x i16>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i16i64 = trunc <4 x i64> undef to <4 x i16>
-; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
+; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i8i16 = trunc <8 x i16> undef to <8 x i8>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i8i32 = trunc <8 x i32> undef to <8 x i8>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i8i64 = trunc <8 x i64> undef to <8 x i8>
-; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i16i32 = trunc <8 x i32> undef to <8 x i16>
+; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i16i32 = trunc <8 x i32> undef to <8 x i16>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i16i64 = trunc <8 x i64> undef to <8 x i16>
-; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i32i64 = trunc <8 x i64> undef to <8 x i32>
+; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i32i64 = trunc <8 x i64> undef to <8 x i32>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i16 = trunc <16 x i16> undef to <16 x i8>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i32 = trunc <16 x i32> undef to <16 x i8>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i64 = trunc <16 x i64> undef to <16 x i8>
-; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s16i16i32 = trunc <16 x i32> undef to <16 x i16>
+; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i16i32 = trunc <16 x i32> undef to <16 x i16>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i16i64 = trunc <16 x i64> undef to <16 x i16>
-; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s16i32i64 = trunc <16 x i64> undef to <16 x i32>
+; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i32i64 = trunc <16 x i64> undef to <16 x i32>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; FIXED-MIN-2048-LABEL: 'trunc'
@@ -500,19 +500,19 @@ define void @trunc() {
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i8i64 = trunc <4 x i64> undef to <4 x i8>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i16i32 = trunc <4 x i32> undef to <4 x i16>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i16i64 = trunc <4 x i64> undef to <4 x i16>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i8i16 = trunc <8 x i16> undef to <8 x i8>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i8i32 = trunc <8 x i32> undef to <8 x i8>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i8i64 = trunc <8 x i64> undef to <8 x i8>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i16i32 = trunc <8 x i32> undef to <8 x i16>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i16i32 = trunc <8 x i32> undef to <8 x i16>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i16i64 = trunc <8 x i64> undef to <8 x i16>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i32i64 = trunc <8 x i64> undef to <8 x i32>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s8i32i64 = trunc <8 x i64> undef to <8 x i32>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i16 = trunc <16 x i16> undef to <16 x i8>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i32 = trunc <16 x i32> undef to <16 x i8>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i8i64 = trunc <16 x i64> undef to <16 x i8>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s16i16i32 = trunc <16 x i32> undef to <16 x i16>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i16i32 = trunc <16 x i32> undef to <16 x i16>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i16i64 = trunc <16 x i64> undef to <16 x i16>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s16i32i64 = trunc <16 x i64> undef to <16 x i32>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s16i32i64 = trunc <16 x i64> undef to <16 x i32>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %r8 = trunc i8 undef to i1

@@ -90,6 +90,10 @@ SourcePosition OpenMPCounterVisitor::getLocation(const OpenMPConstruct &c) {
             const CharBlock &source{c.source};
             return (parsing->allCooked().GetSourcePositionRange(source))->first;
           },
+          [&](const OpenMPUtilityConstruct &c) -> SourcePosition {
+            const CharBlock &source{c.source};
+            return (parsing->allCooked().GetSourcePositionRange(source))->first;
+          },
       },
       c.u);
 }
@@ -102,10 +106,20 @@ std::string OpenMPCounterVisitor::getName(const OmpWrapperType &w) {
   return getName(*std::get<const OpenMPDeclarativeConstruct *>(w));
 }
 std::string OpenMPCounterVisitor::getName(const OpenMPDeclarativeConstruct &c) {
-  return std::visit(
-      [&](const auto &o) -> std::string {
-        const CharBlock &source{std::get<Verbatim>(o.t).source};
-        return normalize_construct_name(source.ToString());
+  return std::visit( //
+      Fortran::common::visitors{
+          [&](const OpenMPUtilityConstruct &o) -> std::string {
+            const CharBlock &source{o.source};
+            return normalize_construct_name(source.ToString());
+          },
+          [&](const OmpMetadirectiveDirective &o) -> std::string {
+            const CharBlock &source{o.source};
+            return normalize_construct_name(source.ToString());
+          },
+          [&](const auto &o) -> std::string {
+            const CharBlock &source{std::get<Verbatim>(o.t).source};
+            return normalize_construct_name(source.ToString());
+          },
       },
       c.u);
 }
@@ -142,6 +156,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
                       normalize_construct_name(source.ToString());
                 },
                 c.u);
+          },
+          [&](const OpenMPUtilityConstruct &c) -> std::string {
+            const CharBlock &source{c.source};
+            return normalize_construct_name(source.ToString());
           },
           [&](const OpenMPSectionConstruct &c) -> std::string {
             return "section";

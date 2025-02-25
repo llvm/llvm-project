@@ -1,4 +1,4 @@
-; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
+; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 -o /dev/null | FileCheck %s
 
 ; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
@@ -8,15 +8,6 @@ bb1:
   ret i32 0
 bb2:
   ret i32 1
-}
-
-; // -----
-
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled value: ptr asm "bswap $0", "=r,r"
-define i32 @unhandled_value(i32 %arg1) {
-  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
-  ret i32 %1
 }
 
 ; // -----
@@ -362,3 +353,32 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: unhandled data layout token: ni:42
 target datalayout = "e-ni:42-i64:64"
+
+; // -----
+
+; CHECK:      <unknown>
+; CHECK-SAME: incompatible call and callee types: '!llvm.func<void (i64)>' and '!llvm.func<void (ptr)>'
+define void @incompatible_call_and_callee_types() {
+  call void @callee(i64 0)
+  ret void
+}
+
+declare void @callee(ptr)
+
+; // -----
+
+; CHECK:      <unknown>
+; CHECK-SAME: incompatible call and callee types: '!llvm.func<void ()>' and '!llvm.func<i32 ()>'
+define void @f() personality ptr @__gxx_personality_v0 {
+entry:
+  invoke void @g() to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+declare i32 @g()
+
+declare i32 @__gxx_personality_v0(...)

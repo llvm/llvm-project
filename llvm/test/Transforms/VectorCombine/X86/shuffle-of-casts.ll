@@ -165,11 +165,17 @@ define <16 x float> @concat_fptrunc_v8f64_v16f32(<8 x double> %a0, <8 x double> 
 ; commuted vector concatenation
 
 define <16 x i32> @rconcat_sext_v8i16_v16i32(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: define <16 x i32> @rconcat_sext_v8i16_v16i32(
-; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = sext <16 x i16> [[TMP1]] to <16 x i32>
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; SSE-LABEL: define <16 x i32> @rconcat_sext_v8i16_v16i32(
+; SSE-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A1]], <8 x i16> [[A0]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; SSE-NEXT:    [[R:%.*]] = sext <16 x i16> [[TMP1]] to <16 x i32>
+; SSE-NEXT:    ret <16 x i32> [[R]]
+;
+; AVX-LABEL: define <16 x i32> @rconcat_sext_v8i16_v16i32(
+; AVX-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A1]], <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:    [[R:%.*]] = sext <16 x i16> [[TMP1]] to <16 x i32>
+; AVX-NEXT:    ret <16 x i32> [[R]]
 ;
   %x0 = sext <8 x i16> %a0 to <8 x i32>
   %x1 = sext <8 x i16> %a1 to <8 x i32>

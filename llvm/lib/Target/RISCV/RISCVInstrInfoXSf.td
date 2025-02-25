@@ -202,7 +202,7 @@ let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
 }
 
 let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod",
-    DestEEW = EEWSEWx4 in {
+    DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
   def VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
   def VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
   def VQMACCUS_2x8x2 : CustomSiFiveVMACC<0b101110, OPMVV, "sf.vqmaccus.2x8x2">;
@@ -210,7 +210,7 @@ let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod",
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq",
-    DestEEW = EEWSEWx4 in {
+    DestEEW = EEWSEWx4, RVVConstraint=WidenV in {
   def VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
   def VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
   def VQMACCUS_4x8x4 : CustomSiFiveVMACC<0b111110, OPMVV, "sf.vqmaccus.4x8x4">;
@@ -218,7 +218,7 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq",
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq",
-    DestEEW = EEWSEWx2 in {
+    DestEEW = EEWSEWx2, RVVConstraint=WidenV in {
   def VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 
@@ -238,7 +238,6 @@ class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
@@ -251,7 +250,6 @@ class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -265,7 +263,6 @@ class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
@@ -278,7 +275,6 @@ class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -292,7 +288,6 @@ class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -307,7 +302,6 @@ class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasSEWOp = 1;
   let hasSideEffects = 0;
   let Constraints = "$rd = $rs3";
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,
@@ -380,28 +374,28 @@ multiclass VPseudoVC_XVW<LMULInfo m, DAGOperand RS1Class,
   }
 }
 
-multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type,
-                              string Constraint = ""> {
+multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type> {
   def "Pseudo" # NAME # "_" # mx
-      : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type, Constraint>;
+      : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type,
+                                       "@earlyclobber $rd">;
 }
 
-multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCDOD {
   foreach m = MxListVF8 in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass>;
 }
 
-multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCQOQ {
   foreach m = [V_MF2, V_M1, V_M2, V_M4] in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass>;
 }
 
-multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
+multiclass VPseudoSiFiveVFWMACC {
   foreach m = MxListVF2 in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass>;
 }
 
 multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {

@@ -15,6 +15,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
@@ -23,15 +24,18 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::SystemZ::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
 #define BUILTIN CLANG_BUILTIN_STR_TABLE
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsSystemZ.def"
-    , {
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
 #include "clang/Basic/BuiltinsSystemZ.def"
-      });
+});
 
 const char *const SystemZTargetInfo::GCCRegNames[] = {
     "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -110,6 +114,7 @@ static constexpr ISANameRevision ISARevisions[] = {
   {{"arch12"}, 12}, {{"z14"}, 12},
   {{"arch13"}, 13}, {{"z15"}, 13},
   {{"arch14"}, 14}, {{"z16"}, 14},
+  {{"arch15"}, 15},
 };
 
 int SystemZTargetInfo::getISARevision(StringRef Name) const {
@@ -138,6 +143,7 @@ bool SystemZTargetInfo::hasFeature(StringRef Feature) const {
       .Case("arch12", ISARevision >= 12)
       .Case("arch13", ISARevision >= 13)
       .Case("arch14", ISARevision >= 14)
+      .Case("arch15", ISARevision >= 15)
       .Case("htm", HasTransactionalExecution)
       .Case("vx", HasVector)
       .Default(false);
@@ -172,10 +178,25 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasVector)
     Builder.defineMacro("__VX__");
   if (Opts.ZVector)
-    Builder.defineMacro("__VEC__", "10304");
+    Builder.defineMacro("__VEC__", "10305");
+
+  /* Set __TARGET_LIB__ only if a value was given.  If no value was given  */
+  /* we rely on the LE headers to define __TARGET_LIB__.                   */
+  if (!getTriple().getOSVersion().empty()) {
+    llvm::VersionTuple V = getTriple().getOSVersion();
+    // Create string with form: 0xPVRRMMMM, where P=4
+    std::string Str("0x");
+    unsigned int Librel = 0x40000000;
+    Librel |= V.getMajor() << 24;
+    Librel |= (V.getMinor() ? V.getMinor().value() : 1) << 16;
+    Librel |= V.getSubminor() ? V.getSubminor().value() : 0;
+    Str += llvm::utohexstr(Librel);
+
+    Builder.defineMacro("__TARGET_LIB__", Str.c_str());
+  }
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-SystemZTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+SystemZTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }

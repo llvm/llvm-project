@@ -1,0 +1,28 @@
+//===--- RISC-V Nonstandard Relocation List ---------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef ELF_RISCV_NONSTANDARD_RELOC
+#error "ELF_RISCV_NONSTANDARD_RELOC must be defined"
+#endif
+
+// ELF_RISCV_NONSTANDARD_RELOC(VENDOR, NAME, ID) defines information about
+// nonstandard relocation codes. This can be used when parsing relocations, or
+// when printing them, to provide better information.
+//
+// VENDOR should be the symbol name expected in the associated `R_RISCV_VENDOR`
+// relocation. NAME and ID work like `ELF_RELOC` but the mapping is not expected
+// to be 1:1.
+//
+// The mapping in RISCV.def is 1:1, and should be used when the only information
+// available is the relocation enum value.
+
+// Qualcomm Nonstandard Relocations
+ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_ABS20_U,    192)
+ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_E_BRANCH,   193)
+ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_E_32,       194)
+ELF_RISCV_NONSTANDARD_RELOC(QUALCOMM, R_RISCV_QC_E_JUMP_PLT, 195)

@@ -58,9 +58,9 @@ public:
 
     forward_list& operator=(const forward_list& x);
     forward_list& operator=(forward_list&& x)
-        noexcept(
-             allocator_type::propagate_on_container_move_assignment::value &&
-             is_nothrow_move_assignable<allocator_type>::value);
+        noexcept((__node_traits::propagate_on_container_move_assignment::value &&
+                  is_nothrow_move_assignable<allocator_type>::value) ||
+                 allocator_traits<allocator_type>::is_always_equal::value);
     forward_list& operator=(initializer_list<value_type> il);
 
     template <class InputIterator>
@@ -195,12 +195,14 @@ template <class T, class Allocator, class Predicate>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/forward_list>
+#else
 #  include <__algorithm/comp.h>
 #  include <__algorithm/lexicographical_compare.h>
 #  include <__algorithm/lexicographical_compare_three_way.h>
 #  include <__algorithm/min.h>
+#  include <__assert>
 #  include <__config>
 #  include <__cstddef/nullptr_t.h>
 #  include <__iterator/distance.h>
@@ -216,6 +218,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__memory/pointer_traits.h>
 #  include <__memory/swap_allocator.h>
 #  include <__memory_resource/polymorphic_allocator.h>
+#  include <__new/launder.h>
 #  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
@@ -235,7 +238,6 @@ template <class T, class Allocator, class Predicate>
 #  include <__utility/move.h>
 #  include <__utility/swap.h>
 #  include <limits>
-#  include <new> // __launder
 #  include <version>
 
 // standard-mandated includes
@@ -315,7 +317,8 @@ struct __forward_begin_node {
 };
 
 template <class _Tp, class _VoidPtr>
-using __begin_node_of = __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
+using __begin_node_of _LIBCPP_NODEBUG =
+    __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
 
 template <class _Tp, class _VoidPtr>
 struct __forward_list_node : public __begin_node_of<_Tp, _VoidPtr> {
@@ -714,8 +717,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI forward_list(initializer_list<value_type> __il, const allocator_type& __a);
 
   _LIBCPP_HIDE_FROM_ABI forward_list& operator=(forward_list&& __x) noexcept(
-      __node_traits::propagate_on_container_move_assignment::value &&
-      is_nothrow_move_assignable<allocator_type>::value);
+      (__node_traits::propagate_on_container_move_assignment::value &&
+       is_nothrow_move_assignable<allocator_type>::value) ||
+      allocator_traits<allocator_type>::is_always_equal::value);
 
   _LIBCPP_HIDE_FROM_ABI forward_list& operator=(initializer_list<value_type> __il);
 
@@ -765,8 +769,14 @@ public:
     return std::min<size_type>(__node_traits::max_size(this->__alloc_), numeric_limits<difference_type>::max());
   }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() { return __base::__before_begin()->__next_->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return __base::__before_begin()->__next_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference front() {
+    _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::front called on an empty list");
+    return __base::__before_begin()->__next_->__get_value();
+  }
+  _LIBCPP_HIDE_FROM_ABI const_reference front() const {
+    _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::front called on an empty list");
+    return __base::__before_begin()->__next_->__get_value();
+  }
 
 #  ifndef _LIBCPP_CXX03_LANG
 #    if _LIBCPP_STD_VER >= 17
@@ -1000,8 +1010,10 @@ void forward_list<_Tp, _Alloc>::__move_assign(forward_list& __x, false_type) {
 }
 
 template <class _Tp, class _Alloc>
-inline forward_list<_Tp, _Alloc>& forward_list<_Tp, _Alloc>::operator=(forward_list&& __x) _NOEXCEPT_(
-    __node_traits::propagate_on_container_move_assignment::value&& is_nothrow_move_assignable<allocator_type>::value) {
+inline forward_list<_Tp, _Alloc>& forward_list<_Tp, _Alloc>::operator=(forward_list&& __x) noexcept(
+    (__node_traits::propagate_on_container_move_assignment::value &&
+     is_nothrow_move_assignable<allocator_type>::value) ||
+    allocator_traits<allocator_type>::is_always_equal::value) {
   __move_assign(__x, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1084,6 +1096,7 @@ void forward_list<_Tp, _Alloc>::push_front(const value_type& __v) {
 
 template <class _Tp, class _Alloc>
 void forward_list<_Tp, _Alloc>::pop_front() {
+  _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::pop_front called on an empty list");
   __node_pointer __p                = __base::__before_begin()->__next_;
   __base::__before_begin()->__next_ = __p->__next_;
   this->__delete_node(__p);
@@ -1586,6 +1599,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #    include <typeinfo>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FORWARD_LIST

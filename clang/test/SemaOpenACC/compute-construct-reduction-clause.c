@@ -105,8 +105,7 @@ void uses(unsigned Parm) {
 #pragma acc parallel reduction(&:HA.array[1:2])
   while (1);
 
-  // expected-error@+2{{OpenACC 'reduction' clause is not valid on 'init' directive}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented}}
+  // expected-error@+1{{OpenACC 'reduction' clause is not valid on 'init' directive}}
 #pragma acc init reduction(+:I)
   for(;;);
 }

@@ -266,6 +266,30 @@ void Lint::visitCallBase(CallBase &I) {
           visitMemoryReference(I, Loc, DL->getABITypeAlign(Ty), Ty,
                                MemRef::Read | MemRef::Write);
         }
+
+        // Check that ABI attributes for the function and call-site match.
+        unsigned ArgNo = AI->getOperandNo();
+        Attribute::AttrKind ABIAttributes[] = {
+            Attribute::ZExt,         Attribute::SExt,     Attribute::InReg,
+            Attribute::ByVal,        Attribute::ByRef,    Attribute::InAlloca,
+            Attribute::Preallocated, Attribute::StructRet};
+        AttributeList CallAttrs = I.getAttributes();
+        for (Attribute::AttrKind Attr : ABIAttributes) {
+          Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
+          Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
+          Check(CallAttr.isValid() == FnAttr.isValid(),
+                Twine("Undefined behavior: ABI attribute ") +
+                    Attribute::getNameFromAttrKind(Attr) +
+                    " not present on both function and call-site",
+                &I);
+          if (CallAttr.isValid() && FnAttr.isValid()) {
+            Check(CallAttr == FnAttr,
+                  Twine("Undefined behavior: ABI attribute ") +
+                      Attribute::getNameFromAttrKind(Attr) +
+                      " does not have same argument for function and call-site",
+                  &I);
+          }
+        }
       }
     }
   }

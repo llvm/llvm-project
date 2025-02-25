@@ -38,12 +38,10 @@ void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                          const SanitizerArgs &SanArgs,
                           llvm::opt::ArgStringList &CmdArgs);
 
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
                               const llvm::opt::ArgList &Args,
-                              const SanitizerArgs &SanArgs,
                               llvm::opt::ArgStringList &CmdArgs);
 
 bool addXRayRuntime(const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -267,6 +265,8 @@ bool shouldRecordCommandLine(const ToolChain &TC,
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
                                         llvm::opt::ArgStringList &CmdArgs);
 
+bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
+                                    bool isSlpVec);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

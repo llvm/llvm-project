@@ -69,8 +69,9 @@ Macros:
     LDBL_TRUE_MIN       // C11
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cfloat>
+#else
 #  include <__config>
 
 #  include <float.h>
@@ -86,6 +87,6 @@ Macros:
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CFLOAT

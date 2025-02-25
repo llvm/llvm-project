@@ -65,6 +65,8 @@ void f5(int i) {
   bl2_t arr[] = {bl1, bl2}; // expected-error {{array of 'bl2_t' (aka 'int (__generic ^const)(__private int)') type is invalid in OpenCL}}
   int tmp = i ? bl1(i)      // expected-error {{block type cannot be used as expression in ternary expression in OpenCL}}
               : bl2(i);     // expected-error {{block type cannot be used as expression in ternary expression in OpenCL}}
+  bl2_t bref = i ? bl1      // expected-error {{block type cannot be used as expression in ternary expression in OpenCL}}
+                 : bl2;     // expected-error {{block type cannot be used as expression in ternary expression in OpenCL}}
 }
 // A block pointer type and all pointer operations are disallowed
 void f6(bl2_t *bl_ptr) { // expected-error{{pointer to type 'bl2_t' (aka 'int (__generic ^const)(__private int)') is invalid in OpenCL}}

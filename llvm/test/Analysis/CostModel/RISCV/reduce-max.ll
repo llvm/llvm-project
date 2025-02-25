@@ -176,7 +176,7 @@ define i32 @reduce_umax_i64(i32 %arg) {
 
 define i32 @reduce_smin_i1(i32 %arg) {
 ; CHECK-LABEL: 'reduce_smin_i1'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.vector.reduce.smax.v2i1(<2 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call i1 @llvm.vector.reduce.smax.v4i1(<4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call i1 @llvm.vector.reduce.smax.v8i1(<8 x i1> undef)
@@ -187,7 +187,7 @@ define i32 @reduce_smin_i1(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SIZE-LABEL: 'reduce_smin_i1'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.vector.reduce.smax.v2i1(<2 x i1> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call i1 @llvm.vector.reduce.smax.v4i1(<4 x i1> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call i1 @llvm.vector.reduce.smax.v8i1(<8 x i1> undef)

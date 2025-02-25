@@ -211,90 +211,58 @@ def ReadFClass16         : SchedRead;
 def ReadFClass32         : SchedRead;
 def ReadFClass64         : SchedRead;
 
+// For CPUs that support Zfhmin, but not Zfh.
 multiclass UnsupportedSchedZfh {
 let Unsupported = true in {
 def : WriteRes<WriteFAdd16, []>;
 def : WriteRes<WriteFClass16, []>;
-def : WriteRes<WriteFCvtF16ToF64, []>;
-def : WriteRes<WriteFCvtF64ToF16, []>;
 def : WriteRes<WriteFCvtI64ToF16, []>;
-def : WriteRes<WriteFCvtF32ToF16, []>;
 def : WriteRes<WriteFCvtI32ToF16, []>;
 def : WriteRes<WriteFCvtF16ToI64, []>;
-def : WriteRes<WriteFCvtF16ToF32, []>;
 def : WriteRes<WriteFCvtF16ToI32, []>;
 def : WriteRes<WriteFDiv16, []>;
 def : WriteRes<WriteFCmp16, []>;
-def : WriteRes<WriteFLD16, []>;
 def : WriteRes<WriteFMA16, []>;
 def : WriteRes<WriteFMinMax16, []>;
 def : WriteRes<WriteFMul16, []>;
-def : WriteRes<WriteFMovI16ToF16, []>;
-def : WriteRes<WriteFMovF16ToI16, []>;
 def : WriteRes<WriteFSGNJ16, []>;
-def : WriteRes<WriteFST16, []>;
 def : WriteRes<WriteFSqrt16, []>;
 
 def : ReadAdvance<ReadFAdd16, 0>;
 def : ReadAdvance<ReadFClass16, 0>;
-def : ReadAdvance<ReadFCvtF16ToF64, 0>;
-def : ReadAdvance<ReadFCvtF64ToF16, 0>;
 def : ReadAdvance<ReadFCvtI64ToF16, 0>;
-def : ReadAdvance<ReadFCvtF32ToF16, 0>;
 def : ReadAdvance<ReadFCvtI32ToF16, 0>;
 def : ReadAdvance<ReadFCvtF16ToI64, 0>;
-def : ReadAdvance<ReadFCvtF16ToF32, 0>;
 def : ReadAdvance<ReadFCvtF16ToI32, 0>;
 def : ReadAdvance<ReadFDiv16, 0>;
 def : ReadAdvance<ReadFCmp16, 0>;
 def : ReadAdvance<ReadFMA16, 0>;
+def : ReadAdvance<ReadFMA16Addend, 0>;
 def : ReadAdvance<ReadFMinMax16, 0>;
 def : ReadAdvance<ReadFMul16, 0>;
-def : ReadAdvance<ReadFMovI16ToF16, 0>;
-def : ReadAdvance<ReadFMovF16ToI16, 0>;
 def : ReadAdvance<ReadFSGNJ16, 0>;
 def : ReadAdvance<ReadFSqrt16, 0>;
 } // Unsupported = true
 }
 
-multiclass UnsupportedSchedF {
+// For CPUs that support neither Zfhmin or Zfh.
+multiclass UnsupportedSchedZfhmin : UnsupportedSchedZfh {
 let Unsupported = true in {
-def : WriteRes<WriteFST32, []>;
-def : WriteRes<WriteFLD32, []>;
-def : WriteRes<WriteFAdd32, []>;
-def : WriteRes<WriteFSGNJ32, []>;
-def : WriteRes<WriteFMinMax32, []>;
-def : WriteRes<WriteFCvtI32ToF32, []>;
-def : WriteRes<WriteFCvtI64ToF32, []>;
-def : WriteRes<WriteFCvtF32ToI32, []>;
-def : WriteRes<WriteFCvtF32ToI64, []>;
-def : WriteRes<WriteFClass32, []>;
-def : WriteRes<WriteFCmp32, []>;
-def : WriteRes<WriteFMovF32ToI32, []>;
-def : WriteRes<WriteFMovI32ToF32, []>;
-def : WriteRes<WriteFMul32, []>;
-def : WriteRes<WriteFMA32, []>;
-def : WriteRes<WriteFDiv32, []>;
-def : WriteRes<WriteFSqrt32, []>;
+def : WriteRes<WriteFCvtF16ToF64, []>;
+def : WriteRes<WriteFCvtF64ToF16, []>;
+def : WriteRes<WriteFCvtF16ToF32, []>;
+def : WriteRes<WriteFCvtF32ToF16, []>;
+def : WriteRes<WriteFLD16, []>;
+def : WriteRes<WriteFMovI16ToF16, []>;
+def : WriteRes<WriteFMovF16ToI16, []>;
+def : WriteRes<WriteFST16, []>;
 
-def : ReadAdvance<ReadFAdd32, 0>;
-def : ReadAdvance<ReadFMul32, 0>;
-def : ReadAdvance<ReadFMA32, 0>;
-def : ReadAdvance<ReadFMA32Addend, 0>;
-def : ReadAdvance<ReadFDiv32, 0>;
-def : ReadAdvance<ReadFSqrt32, 0>;
-def : ReadAdvance<ReadFCmp32, 0>;
-def : ReadAdvance<ReadFSGNJ32, 0>;
-def : ReadAdvance<ReadFMinMax32, 0>;
-def : ReadAdvance<ReadFCvtF32ToI32, 0>;
-def : ReadAdvance<ReadFCvtF32ToI64, 0>;
-def : ReadAdvance<ReadFCvtI32ToF32, 0>;
-def : ReadAdvance<ReadFCvtI64ToF32, 0>;
-def : ReadAdvance<ReadFMovF32ToI32, 0>;
-def : ReadAdvance<ReadFMovI32ToF32, 0>;
-def : ReadAdvance<ReadFClass32, 0>;
-def : ReadAdvance<ReadFStoreData, 0>;
-def : ReadAdvance<ReadFMemBase, 0>;
+def : ReadAdvance<ReadFCvtF16ToF64, 0>;
+def : ReadAdvance<ReadFCvtF64ToF16, 0>;
+def : ReadAdvance<ReadFCvtF16ToF32, 0>;
+def : ReadAdvance<ReadFCvtF32ToF16, 0>;
+def : ReadAdvance<ReadFMovI16ToF16, 0>;
+def : ReadAdvance<ReadFMovF16ToI16, 0>;
 } // Unsupported = true
 }
 
@@ -338,6 +306,48 @@ def : ReadAdvance<ReadFCvtF64ToF32, 0>;
 def : ReadAdvance<ReadFMovF64ToI64, 0>;
 def : ReadAdvance<ReadFMovI64ToF64, 0>;
 def : ReadAdvance<ReadFClass64, 0>;
+} // Unsupported = true
+}
+
+// For CPUs with no floating point.
+multiclass UnsupportedSchedF : UnsupportedSchedD, UnsupportedSchedZfhmin {
+let Unsupported = true in {
+def : WriteRes<WriteFST32, []>;
+def : WriteRes<WriteFLD32, []>;
+def : WriteRes<WriteFAdd32, []>;
+def : WriteRes<WriteFSGNJ32, []>;
+def : WriteRes<WriteFMinMax32, []>;
+def : WriteRes<WriteFCvtI32ToF32, []>;
+def : WriteRes<WriteFCvtI64ToF32, []>;
+def : WriteRes<WriteFCvtF32ToI32, []>;
+def : WriteRes<WriteFCvtF32ToI64, []>;
+def : WriteRes<WriteFClass32, []>;
+def : WriteRes<WriteFCmp32, []>;
+def : WriteRes<WriteFMovF32ToI32, []>;
+def : WriteRes<WriteFMovI32ToF32, []>;
+def : WriteRes<WriteFMul32, []>;
+def : WriteRes<WriteFMA32, []>;
+def : WriteRes<WriteFDiv32, []>;
+def : WriteRes<WriteFSqrt32, []>;
+
+def : ReadAdvance<ReadFAdd32, 0>;
+def : ReadAdvance<ReadFMul32, 0>;
+def : ReadAdvance<ReadFMA32, 0>;
+def : ReadAdvance<ReadFMA32Addend, 0>;
+def : ReadAdvance<ReadFDiv32, 0>;
+def : ReadAdvance<ReadFSqrt32, 0>;
+def : ReadAdvance<ReadFCmp32, 0>;
+def : ReadAdvance<ReadFSGNJ32, 0>;
+def : ReadAdvance<ReadFMinMax32, 0>;
+def : ReadAdvance<ReadFCvtF32ToI32, 0>;
+def : ReadAdvance<ReadFCvtF32ToI64, 0>;
+def : ReadAdvance<ReadFCvtI32ToF32, 0>;
+def : ReadAdvance<ReadFCvtI64ToF32, 0>;
+def : ReadAdvance<ReadFMovF32ToI32, 0>;
+def : ReadAdvance<ReadFMovI32ToF32, 0>;
+def : ReadAdvance<ReadFClass32, 0>;
+def : ReadAdvance<ReadFStoreData, 0>;
+def : ReadAdvance<ReadFMemBase, 0>;
 } // Unsupported = true
 }
 
