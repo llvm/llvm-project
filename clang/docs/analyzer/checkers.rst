@@ -3487,6 +3487,19 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
 
 See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
 
+alpha.webkit.NoUnretainedMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed.
+
+.. code-block:: cpp
+
+ struct Foo {
+   NSObject *ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
 .. _alpha-webkit-UncountedCallArgsChecker:
 
 alpha.webkit.UncountedCallArgsChecker
