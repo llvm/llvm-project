@@ -20,7 +20,10 @@ namespace llvm {
 /// A suitably aligned and sized character array member which can hold elements
 /// of any type.
 template <typename T, typename... Ts> struct AlignedCharArrayUnion {
-  alignas(T) alignas(Ts...) char buffer[std::max({sizeof(T), sizeof(Ts)...})];
+  // Work around "internal compiler error: Segmentation fault" with GCC 7.5,
+  // apparently caused by alignas(Ts...).
+  static constexpr std::size_t Align = std::max({alignof(T), alignof(Ts)...});
+  alignas(Align) char buffer[std::max({sizeof(T), sizeof(Ts)...})];
 };
 
 } // end namespace llvm
