@@ -2896,59 +2896,6 @@ bool QualType::isTriviallyCopyConstructibleType(
                                      /*IsCopyConstructible=*/true);
 }
 
-bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
-  QualType BaseElementType = Context.getBaseElementType(*this);
-
-  if (BaseElementType->isIncompleteType()) {
-    return false;
-  } else if (!BaseElementType->isObjectType()) {
-    return false;
-  } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
-    return RD->canPassInRegisters();
-  } else if (BaseElementType.isCXXTriviallyRelocatableType(Context)) {
-    return true;
-  } else {
-    switch (isNonTrivialToPrimitiveDestructiveMove()) {
-    case PCK_Trivial:
-      return !isDestructedType();
-    case PCK_ARCStrong:
-      return true;
-    default:
-      return false;
-    }
-  }
-}
-
-bool QualType::isCXXTriviallyRelocatableType(const ASTContext &Context) const {
-  QualType BaseElementType = Context.getBaseElementType(*this);
-
-  if (hasNonTrivialObjCLifetime())
-    return false;
-
-  if (BaseElementType->isIncompleteType())
-    return false;
-
-  if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
-    return true;
-
-  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
-    return RD->isTriviallyRelocatable();
-  return false;
-}
-
-bool QualType::isReplaceableType(const ASTContext &Context) const {
-  if (isConstQualified() || isVolatileQualified())
-    return false;
-  QualType BaseElementType = Context.getBaseElementType(getUnqualifiedType());
-  if (BaseElementType->isIncompleteType())
-    return false;
-  if (BaseElementType->isScalarType())
-    return true;
-  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
-    return RD->isReplaceable();
-  return false;
-}
-
 bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
   return !Context.getLangOpts().ObjCAutoRefCount &&
          Context.getLangOpts().ObjCWeak &&

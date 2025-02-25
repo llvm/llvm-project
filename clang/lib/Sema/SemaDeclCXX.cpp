@@ -7290,8 +7290,6 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   checkClassLevelDLLAttribute(Record);
   checkClassLevelCodeSegAttribute(Record);
 
-  CheckCXX2CRelocatableAndReplaceable(Record);
-
   bool ClangABICompat4 =
       Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver4;
   TargetInfo::CallingConvKind CCK =
@@ -7371,8 +7369,9 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
 }
 
-static CXXMethodDecl *
-LookupSpecialMemberFromXValue(Sema &SemaRef, CXXRecordDecl *RD, bool Assign) {
+static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
+                                                    const CXXRecordDecl *RD,
+                                                    bool Assign) {
   RD = RD->getDefinition();
   SourceLocation LookupLoc = RD->getLocation();
 
@@ -7423,7 +7422,8 @@ LookupSpecialMemberFromXValue(Sema &SemaRef, CXXRecordDecl *RD, bool Assign) {
     auto CtorInfo = getConstructorInfo(Cand);
     if (CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(Cand->getUnderlyingDecl())) {
       if (Assign)
-        SemaRef.AddMethodCandidate(M, Cand, RD, ThisTy, Classification,
+        SemaRef.AddMethodCandidate(M, Cand, const_cast<CXXRecordDecl *>(RD),
+                                   ThisTy, Classification,
                                    llvm::ArrayRef(&Arg, NumArgs), OCS, true);
       else {
         assert(CtorInfo);
@@ -7435,8 +7435,8 @@ LookupSpecialMemberFromXValue(Sema &SemaRef, CXXRecordDecl *RD, bool Assign) {
                    dyn_cast<FunctionTemplateDecl>(Cand->getUnderlyingDecl())) {
       if (Assign)
         SemaRef.AddMethodTemplateCandidate(
-            Tmpl, Cand, RD, nullptr, ThisTy, Classification,
-            llvm::ArrayRef(&Arg, NumArgs), OCS, true);
+            Tmpl, Cand, const_cast<CXXRecordDecl *>(RD), nullptr, ThisTy,
+            Classification, llvm::ArrayRef(&Arg, NumArgs), OCS, true);
       else {
         assert(CtorInfo);
         SemaRef.AddTemplateOverloadCandidate(
@@ -7455,7 +7455,8 @@ LookupSpecialMemberFromXValue(Sema &SemaRef, CXXRecordDecl *RD, bool Assign) {
   }
 }
 
-static bool hasSuitableConstructorForRelocation(Sema &SemaRef, CXXRecordDecl *D,
+static bool hasSuitableConstructorForRelocation(Sema &SemaRef,
+                                                const CXXRecordDecl *D,
                                                 bool AllowUserDefined) {
   assert(D->hasDefinition() && !D->isInvalidDecl());
 
@@ -7467,9 +7468,8 @@ static bool hasSuitableConstructorForRelocation(Sema &SemaRef, CXXRecordDecl *D,
   return Decl && Decl->isUserProvided() == AllowUserDefined;
 }
 
-static bool
-hasSuitableMoveAssignmentOperatorForRelocation(Sema &SemaRef, CXXRecordDecl *D,
-                                               bool AllowUserDefined) {
+static bool hasSuitableMoveAssignmentOperatorForRelocation(
+    Sema &SemaRef, const CXXRecordDecl *D, bool AllowUserDefined) {
   assert(D->hasDefinition() && !D->isInvalidDecl());
 
   if (D->hasSimpleMoveAssignment() || D->hasSimpleCopyAssignment())
@@ -7492,7 +7492,7 @@ hasSuitableMoveAssignmentOperatorForRelocation(Sema &SemaRef, CXXRecordDecl *D,
 // type C selects an assignment operator function that is a direct member of C
 // and is neither user-provided nor deleted, and C has a destructor that is
 // neither user-provided nor deleted.
-static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D, CXXDestructorDecl* Dtr) {
+static bool IsDefaultMovable(Sema &SemaRef, const CXXRecordDecl *D) {
   if (!hasSuitableConstructorForRelocation(SemaRef, D,
                                            /*AllowUserDefined=*/false))
     return false;
@@ -7500,6 +7500,8 @@ static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D, CXXDestructorDecl*
   if (!hasSuitableMoveAssignmentOperatorForRelocation(
           SemaRef, D, /*AllowUserDefined=*/false))
     return false;
+
+  CXXDestructorDecl *Dtr = D->getDestructor();
 
   if (!Dtr)
     return true;
@@ -7512,7 +7514,8 @@ static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D, CXXDestructorDecl*
 
 // [C++26][class.prop]
 // A class is eligible for trivial relocation unless it...
-static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
+static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
+                                           const CXXRecordDecl *D) {
 
   for (const CXXBaseSpecifier &B : D->bases()) {
     const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
@@ -7520,8 +7523,8 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
       continue;
     // ... has any virtual base classes
     // ... has a base class that is not a trivially relocatable class
-    if (B.isVirtual() ||
-        (!BaseDecl->isDependentType() && !BaseDecl->isTriviallyRelocatable()))
+    if (B.isVirtual() || (!BaseDecl->isDependentType() &&
+                          !SemaRef.IsCXXTriviallyRelocatableType(B.getType())))
       return false;
   }
 
@@ -7532,23 +7535,23 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
       continue;
     // ... has a non-static data member of an object type that is not
     // of a trivially relocatable type
-    if (!Field->getType().isCXXTriviallyRelocatableType(
-            SemaRef.getASTContext()))
+    if (!SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
       return false;
   }
-  return true;
+  return !D->hasDeletedDestructor();
 }
 
 // [C++26][class.prop]
 // A class C is eligible for replacement unless
-static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
+static bool IsEligibleForReplacement(Sema &SemaRef, const CXXRecordDecl *D) {
 
   for (const CXXBaseSpecifier &B : D->bases()) {
     const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
     if (!BaseDecl)
       continue;
     // it has a base class that is not a replaceable class
-    if ((!BaseDecl->isDependentType() && !BaseDecl->isReplaceable()))
+    if (!BaseDecl->isDependentType() &&
+        !SemaRef.IsCXXReplaceableType(B.getType()))
       return false;
   }
 
@@ -7557,15 +7560,18 @@ static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
       continue;
 
     // it has a non-static data member that is not of a replaceable type,
-    if (!Field->getType().isReplaceableType(SemaRef.getASTContext()))
+    if (!SemaRef.IsCXXReplaceableType(Field->getType()))
       return false;
   }
-  return true;
+  return !D->hasDeletedDestructor();
 }
 
-void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
+ASTContext::CXXRecordDeclRelocationInfo
+Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
+  ASTContext::CXXRecordDeclRelocationInfo Info{false, false};
+
   if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
-    return;
+    return Info;
 
   assert(D->hasDefinition());
 
@@ -7587,28 +7593,19 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
     return *Is;
   };
 
-  auto GetDestructor = [&, Dtr = static_cast<CXXDestructorDecl*>(nullptr)]() mutable {
-      if(!Dtr)
-          Dtr = D->getDestructor();
-      return Dtr;
-  };
-
   auto IsDefaultMovable = [&, Is = std::optional<bool>{}]() mutable {
     if (!Is.has_value())
-      Is = isDefaultMovable(*this, D, GetDestructor());
+      Is = ::IsDefaultMovable(*this, D);
     return *Is;
   };
 
-  bool IsTriviallyRelocatable = [&] {
+  Info.IsRelocatable = [&] {
     if (D->isDependentType())
       return false;
 
     // if it is eligible for trivial relocation
-    if (!isEligibleForTrivialRelocation(*this, D))
+    if (!IsEligibleForTrivialRelocation(*this, D))
       return false;
-
-    if(auto* Dtr = GetDestructor(); Dtr && Dtr->isDeleted())
-        return false;
 
     // has the trivially_relocatable_if_eligible class-property-specifier,
     if (D->hasAttr<TriviallyRelocatableAttr>())
@@ -7622,18 +7619,13 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
     return IsDefaultMovable();
   }();
 
-  D->setIsTriviallyRelocatable(IsTriviallyRelocatable);
-
-  bool IsReplaceable = [&] {
+  Info.IsReplaceable = [&] {
     if (D->isDependentType())
       return false;
 
     // A class C is a replaceable class if it is eligible for replacement
-    if (!isEligibleForReplacement(*this, D))
+    if (!IsEligibleForReplacement(*this, D))
       return false;
-
-    if(auto* Dtr = GetDestructor(); Dtr && Dtr->isDeleted())
-        return false;
 
     // has the replaceable_if_eligible class-property-specifier
     if (D->hasAttr<ReplaceableAttr>())
@@ -7647,7 +7639,7 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
     return IsDefaultMovable();
   }();
 
-  D->setIsReplaceable(IsReplaceable);
+  return Info;
 }
 
 /// Look up the special member function that would be called by a special

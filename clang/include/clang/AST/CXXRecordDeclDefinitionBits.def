@@ -224,10 +224,6 @@ FIELD(StructuralIfLiteral, 1, NO_MERGE)
 /// explicitly deleted or defaulted).
 FIELD(UserProvidedDefaultConstructor, 1, NO_MERGE)
 
-FIELD(UserProvidedMoveAssignment, 1, NO_MERGE)
-FIELD(UserProvidedCopyAssignment, 1, NO_MERGE)
-FIELD(ExplicitlyDeletedMoveAssignment, 1, NO_MERGE)
-
 /// The special members which have been declared for this class,
 /// either by the user or implicitly.
 FIELD(DeclaredSpecialMembers, 6, MERGE_OR)
@@ -256,9 +252,5 @@ FIELD(IsAnyDestructorNoReturn, 1, NO_MERGE)
 /// Whether the record type is intangible (if any base classes or fields have
 /// type that is intangible). HLSL only.
 FIELD(IsHLSLIntangible, 1, NO_MERGE)
-
-FIELD(IsTriviallyRelocatable, 1, NO_MERGE)
-
-FIELD(IsReplaceable, 1, NO_MERGE)
 
 #undef FIELD

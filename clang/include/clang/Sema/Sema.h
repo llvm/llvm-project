@@ -4325,7 +4325,8 @@ public:
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
                                 SourceRange BraceRange);
 
-  void CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D);
+  ASTContext::CXXRecordDeclRelocationInfo
+  CheckCXX2CRelocatableAndReplaceable(const clang::CXXRecordDecl *D);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -8640,6 +8641,18 @@ public:
   QualType CheckSizelessVectorConditionalTypes(ExprResult &Cond,
                                                ExprResult &LHS, ExprResult &RHS,
                                                SourceLocation QuestionLoc);
+
+  //// Determines if a type is trivially relocatable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXTriviallyRelocatableType(QualType T);
+
+  //// Determines if a type is replaceable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXReplaceableType(QualType T);
 
   /// Check the operands of ?: under C++ semantics.
   ///
