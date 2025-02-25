@@ -287,31 +287,42 @@ def CIR_BoolType :
 def CIR_FuncType : CIR_Type<"Func", "func"> {
   let summary = "CIR function type";
   let description = [{
-    The `!cir.func` is a function type. It consists of a single return type, a
-    list of parameter types and can optionally be variadic.
+    The `!cir.func` is a function type. It consists of an optional return type,
+    a list of parameter types and can optionally be variadic.
 
     Example:
 
     ```mlir
-    !cir.func<!bool ()>
-    !cir.func<!s32i (!s8i, !s8i)>
-    !cir.func<!s32i (!s32i, ...)>
+    !cir.func<()>
+    !cir.func<() -> bool>
+    !cir.func<(!s8i, !s8i)>
+    !cir.func<(!s8i, !s8i) -> !s32i>
+    !cir.func<(!s32i, ...) -> !s32i>
     ```
   }];
 
   let parameters = (ins ArrayRefParameter<"mlir::Type">:$inputs,
-                        "mlir::Type":$returnType, "bool":$varArg);
+                        "mlir::Type":$optionalReturnType, "bool":$varArg);
+  // Use a custom parser to handle the argument types and optional return
   let assemblyFormat = [{
-    `<` $returnType ` ` `(` custom<FuncTypeArgs>($inputs, $varArg) `>`
+    `<` custom<FuncType>($optionalReturnType, $inputs, $varArg) `>`
   }];
 
   let builders = [
+    // Create a FuncType, converting the return type from C-style to
+    // MLIR-style.  If the given return type is `cir::VoidType`, ignore it
+    // and create the FuncType with no return type, which is how MLIR
+    // represents function types.
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<mlir::Type>":$inputs, "mlir::Type":$returnType,
       CArg<"bool", "false">:$isVarArg), [{
-      return $_get(returnType.getContext(), inputs, returnType, isVarArg);
+        return $_get(returnType.getContext(), inputs,
+                     mlir::isa<cir::VoidType>(returnType) ? nullptr : returnType,
+                     isVarArg);
     }]>
   ];
+
+  let genVerifyDecl = 1;
 
   let extraClassDeclaration = [{
     /// Returns whether the function is variadic.
@@ -323,12 +334,17 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     /// Returns the number of arguments to the function.
     unsigned getNumInputs() const { return getInputs().size(); }
 
-    /// Returns the result type of the function as an ArrayRef, enabling better
-    /// integration with generic MLIR utilities.
+    /// Get the C-style return type of the function, which is !cir.void if the
+    /// function returns nothing and the actual return type otherwise.
+    mlir::Type getReturnType() const;
+
+    /// Get the MLIR-style return type of the function, which is an empty
+    /// ArrayRef if the function returns nothing and a single-element ArrayRef
+    /// with the actual return type otherwise.
     llvm::ArrayRef<mlir::Type> getReturnTypes() const;
 
-    /// Returns whether the function is returns void.
-    bool isVoid() const;
+    /// Does the function type return nothing?
+    bool hasVoidReturn() const;
 
     /// Returns a clone of this function type with the given argument
     /// and result types.

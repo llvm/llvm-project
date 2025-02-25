@@ -424,6 +424,10 @@ LogicalResult cir::FuncOp::verifyType() {
   if (!isa<cir::FuncType>(type))
     return emitOpError("requires '" + getFunctionTypeAttrName().str() +
                        "' attribute of function type");
+  if (auto rt = type.getReturnTypes();
+      !rt.empty() && mlir::isa<cir::VoidType>(rt.front()))
+    return emitOpError("The return type for a function returning void should "
+                       "be empty instead of an explicit !cir.void");
   return success();
 }
 
