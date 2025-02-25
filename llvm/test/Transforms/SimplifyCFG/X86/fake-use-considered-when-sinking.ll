@@ -40,9 +40,9 @@ if.else:                                          ; preds = %entry
   br label %common.ret
 }
 
-define void @bar(i1 %bool, ptr %p, ptr %q) {
+define void @bar(i1 %bool, ptr %p) {
 ; CHECK-LABEL: define void @bar(
-; CHECK-SAME: i1 [[BOOL:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-SAME: i1 [[BOOL:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store ptr [[P]], ptr [[P]], align 8
 ; CHECK-NEXT:    notail call void (...) @llvm.fake.use(ptr [[P]])
