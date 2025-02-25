@@ -387,6 +387,8 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
+  bool shouldExpandFRemInIR() const override { return true; };
+
 };
 
 namespace AMDGPUISD {
