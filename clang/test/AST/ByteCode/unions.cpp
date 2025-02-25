@@ -504,4 +504,39 @@ namespace AnonymousUnion {
   static_assert(return_init_all().a.p == 7); // both-error {{}} \
                                              // both-note {{read of member 'p' of union with no active member}}
 }
+
+namespace InactiveDestroy {
+  struct A {
+    constexpr ~A() {}
+  };
+  union U {
+    A a;
+    constexpr ~U() {
+    }
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace InactiveTrivialDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
 #endif

@@ -129,68 +129,6 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
-static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                        AccessKinds AK) {
-  if (Ptr.isActive())
-    return true;
-
-  assert(Ptr.inUnion());
-  assert(Ptr.isField() && Ptr.getField());
-
-  Pointer U = Ptr.getBase();
-  Pointer C = Ptr;
-  while (!U.isRoot() && !U.isActive()) {
-    // A little arbitrary, but this is what the current interpreter does.
-    // See the AnonymousUnion test in test/AST/ByteCode/unions.cpp.
-    // GCC's output is more similar to what we would get without
-    // this condition.
-    if (U.getRecord() && U.getRecord()->isAnonymousUnion())
-      break;
-
-    C = U;
-    U = U.getBase();
-  }
-  assert(C.isField());
-
-  // Consider:
-  // union U {
-  //   struct {
-  //     int x;
-  //     int y;
-  //   } a;
-  // }
-  //
-  // When activating x, we will also activate a. If we now try to read
-  // from y, we will get to CheckActive, because y is not active. In that
-  // case, our U will be a (not a union). We return here and let later code
-  // handle this.
-  if (!U.getFieldDesc()->isUnion())
-    return true;
-
-  // Get the inactive field descriptor.
-  assert(!C.isActive());
-  const FieldDecl *InactiveField = C.getField();
-  assert(InactiveField);
-
-  // Find the active field of the union.
-  const Record *R = U.getRecord();
-  assert(R && R->isUnion() && "Not a union");
-
-  const FieldDecl *ActiveField = nullptr;
-  for (const Record::Field &F : R->fields()) {
-    const Pointer &Field = U.atField(F.Offset);
-    if (Field.isActive()) {
-      ActiveField = Field.getField();
-      break;
-    }
-  }
-
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_inactive_union_member)
-      << AK << InactiveField << !ActiveField << ActiveField;
-  return false;
-}
-
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK) {
   if (auto ID = Ptr.getDeclID()) {
@@ -288,6 +226,68 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
   // at the end.
   for (PrimType Ty : Func->args_reverse())
     TYPE_SWITCH(Ty, S.Stk.discard<T>());
+}
+
+bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                 AccessKinds AK) {
+  if (Ptr.isActive())
+    return true;
+
+  assert(Ptr.inUnion());
+  assert(Ptr.isField() && Ptr.getField());
+
+  Pointer U = Ptr.getBase();
+  Pointer C = Ptr;
+  while (!U.isRoot() && !U.isActive()) {
+    // A little arbitrary, but this is what the current interpreter does.
+    // See the AnonymousUnion test in test/AST/ByteCode/unions.cpp.
+    // GCC's output is more similar to what we would get without
+    // this condition.
+    if (U.getRecord() && U.getRecord()->isAnonymousUnion())
+      break;
+
+    C = U;
+    U = U.getBase();
+  }
+  assert(C.isField());
+
+  // Consider:
+  // union U {
+  //   struct {
+  //     int x;
+  //     int y;
+  //   } a;
+  // }
+  //
+  // When activating x, we will also activate a. If we now try to read
+  // from y, we will get to CheckActive, because y is not active. In that
+  // case, our U will be a (not a union). We return here and let later code
+  // handle this.
+  if (!U.getFieldDesc()->isUnion())
+    return true;
+
+  // Get the inactive field descriptor.
+  assert(!C.isActive());
+  const FieldDecl *InactiveField = C.getField();
+  assert(InactiveField);
+
+  // Find the active field of the union.
+  const Record *R = U.getRecord();
+  assert(R && R->isUnion() && "Not a union");
+
+  const FieldDecl *ActiveField = nullptr;
+  for (const Record::Field &F : R->fields()) {
+    const Pointer &Field = U.atField(F.Offset);
+    if (Field.isActive()) {
+      ActiveField = Field.getField();
+      break;
+    }
+  }
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_access_inactive_union_member)
+      << AK << InactiveField << !ActiveField << ActiveField;
+  return false;
 }
 
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -1265,6 +1265,11 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   return false;
 }
 
+static bool checkDestructor(InterpState &S, CodePtr OpPC, const Function *Func,
+                            const Pointer &ThisPtr) {
+  return CheckActive(S, OpPC, ThisPtr, AK_Destroy);
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1346,6 +1351,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     }
 
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
+      return false;
+    if (Func->isDestructor() && !checkDestructor(S, OpPC, Func, ThisPtr))
       return false;
   }
 
