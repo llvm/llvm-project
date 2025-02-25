@@ -10,6 +10,46 @@
 //
 //===----------------------------------------------------------------------===//
 
+class RVInstVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
+                string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+  bits<5> imm;
+  bits<5> rs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = funct6;
+  let Inst{25} = vm;
+  let Inst{24-20} = imm;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = opv.Value;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_OP_V.Value;
+
+  let Uses = [VTYPE, VL];
+  let RVVConstraint = VMConstraint;
+}
+
+class RVInstXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
+                string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+  bits<5> imm;
+  bits<5> vs2;
+  bits<5> rd;
+  bit vm;
+
+  let Inst{31-26} = funct6;
+  let Inst{25} = vm;
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = imm;
+  let Inst{14-12} = opv.Value;
+  let Inst{11-7} = rd;
+  let Inst{6-0} = OPC_OP_V.Value;
+
+  let Uses = [VTYPE, VL];
+  let RVVConstraint = VMConstraint;
+}
+
 //===----------------------------------------------------------------------===//
 // XRivosVizip
 //===----------------------------------------------------------------------===//
@@ -24,4 +64,28 @@ defm RI_VZIP2A_V : VALU_IV_V<"ri.vzip2a", 0b000100>;
 defm RI_VZIP2B_V : VALU_IV_V<"ri.vzip2b", 0b010100>;
 defm RI_VUNZIP2A_V : VALU_IV_V<"ri.vunzip2a", 0b001000>;
 defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
+}
+
+//===----------------------------------------------------------------------===//
+// XRivosVisni
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
+  Inst<6-0> = OPC_CUSTOM_2.Value, mayLoad = false, mayStore = false,
+  hasSideEffects = false in {
+
+let isReMaterializable = 1, isAsCheapAsAMove = 1, vm = 0, vs2=0 in
+def RI_VZERO : RVInstV<0b000000, 0b00000, OPCFG, (outs VR:$vd),
+                     (ins), "ri.vzero", "$vd">;
+
+let vm = 0, Constraints = "$vd = $vd_wb", RVVConstraint = NoConstraint in
+def RI_VINSERT : RVInstVXI<0b010000, OPMVX, (outs VR:$vd_wb),
+                           (ins VR:$vd, GPR:$rs1, uimm5:$imm),
+                           "ri.vinsert.v.x", "$vd, $rs1, $imm">;
+
+let vm = 1, RVVConstraint = NoConstraint in
+def RI_VEXTRACT : RVInstXVI<0b010111, OPMVV, (outs GPR:$rd),
+                            (ins VR:$vs2, uimm5:$imm),
+                            "ri.vextract.x.v", "$rd, $vs2, $imm">;
+
 }
