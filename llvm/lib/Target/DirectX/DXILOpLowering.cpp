@@ -770,8 +770,11 @@ public:
         continue;
       Intrinsic::ID ID = F.getIntrinsicID();
       switch (ID) {
-      default:
-        continue;
+      default: {
+        DiagnosticInfoUnsupported Diag(F, "Unknown intrinsic?");
+        M.getContext().diagnose(Diag);
+        break;
+      }
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
