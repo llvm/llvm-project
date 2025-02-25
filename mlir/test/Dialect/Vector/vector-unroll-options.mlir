@@ -195,7 +195,7 @@ func.func @negative_vector_fma_3d(%a: vector<3x2x2xf32>) {
 }
 // CHECK-LABEL: func @negative_vector_fma_3d
 //   CHECK-NOT: vector.extract_strided_slice
-//       CHECK: %0 = vector.fma %a, %a, %a : vector<3x2x2xf32>
+//       CHECK: %[[R0:.*]] = vector.fma %{{.+}}, %{{.+}}, %{{.+}} : vector<3x2x2xf32>
 //       CHECK: return 
 
 func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
