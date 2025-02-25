@@ -9,8 +9,10 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <deque>
+#include <forward_list>
 #include <list>
 #include <string>
 #include <vector>
@@ -39,7 +41,8 @@ int main(int argc, char** argv) {
             ValueType y            = random_different_from({x});
             Container c1(size, x);
             Container c2(size, x);
-            c2.back() = y;
+            assert(size != 0);
+            *std::next(c2.begin(), size - 1) = y; // set last element to y
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c1);
@@ -57,10 +60,14 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("rng::ends_with(vector<int>) (mismatch at end)", std::ranges::ends_with);
     bm.operator()<std::deque<int>>("rng::ends_with(deque<int>) (mismatch at end)", std::ranges::ends_with);
     bm.operator()<std::list<int>>("rng::ends_with(list<int>) (mismatch at end)", std::ranges::ends_with);
+    bm.operator()<std::forward_list<int>>(
+        "rng::ends_with(forward_list<int>) (mismatch at end)", std::ranges::ends_with);
 
     bm.operator()<std::vector<int>>("rng::ends_with(vector<int>, pred) (mismatch at end)", ranges_ends_with_pred);
     bm.operator()<std::deque<int>>("rng::ends_with(deque<int>, pred) (mismatch at end)", ranges_ends_with_pred);
     bm.operator()<std::list<int>>("rng::ends_with(list<int>, pred) (mismatch at end)", ranges_ends_with_pred);
+    bm.operator()<std::forward_list<int>>(
+        "rng::ends_with(forward_list<int>, pred) (mismatch at end)", ranges_ends_with_pred);
   }
 
   // Benchmark ranges::ends_with where we find the mismatching element at the very beginning.
@@ -75,6 +82,7 @@ int main(int argc, char** argv) {
             ValueType y            = random_different_from({x});
             Container c1(size, x);
             Container c2(size, x);
+            assert(size != 0);
             c2.front() = y;
 
             for ([[maybe_unused]] auto _ : st) {
@@ -93,10 +101,14 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("rng::ends_with(vector<int>) (mismatch at start)", std::ranges::ends_with);
     bm.operator()<std::deque<int>>("rng::ends_with(deque<int>) (mismatch at start)", std::ranges::ends_with);
     bm.operator()<std::list<int>>("rng::ends_with(list<int>) (mismatch at start)", std::ranges::ends_with);
+    bm.operator()<std::forward_list<int>>(
+        "rng::ends_with(forward_list<int>) (mismatch at start)", std::ranges::ends_with);
 
     bm.operator()<std::vector<int>>("rng::ends_with(vector<int>, pred) (mismatch at start)", ranges_ends_with_pred);
     bm.operator()<std::deque<int>>("rng::ends_with(deque<int>, pred) (mismatch at start)", ranges_ends_with_pred);
     bm.operator()<std::list<int>>("rng::ends_with(list<int>, pred) (mismatch at start)", ranges_ends_with_pred);
+    bm.operator()<std::forward_list<int>>(
+        "rng::ends_with(forward_list<int>, pred) (mismatch at start)", ranges_ends_with_pred);
   }
 
   benchmark::Initialize(&argc, argv);

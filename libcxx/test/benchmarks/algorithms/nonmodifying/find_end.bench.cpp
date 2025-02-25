@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <deque>
+#include <forward_list>
 #include <list>
 #include <string>
 #include <vector>
@@ -52,7 +53,7 @@ int main(int argc, char** argv) {
             Container subrange(size / 10, y); // subrange of length 10% of the full range
 
             // put the element we're searching for at 25% of the sequence
-            std::ranges::copy(subrange, std::next(c.begin(), c.size() / 4));
+            std::ranges::copy(subrange, std::next(c.begin(), size / 4));
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
@@ -70,17 +71,21 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::find_end(vector<int>) (bail 25%)", std_find_end);
     bm.operator()<std::deque<int>>("std::find_end(deque<int>) (bail 25%)", std_find_end);
     bm.operator()<std::list<int>>("std::find_end(list<int>) (bail 25%)", std_find_end);
+    bm.operator()<std::forward_list<int>>("std::find_end(forward_list<int>) (bail 25%)", std_find_end);
     bm.operator()<std::vector<int>>("rng::find_end(vector<int>) (bail 25%)", std::ranges::find_end);
     bm.operator()<std::deque<int>>("rng::find_end(deque<int>) (bail 25%)", std::ranges::find_end);
     bm.operator()<std::list<int>>("rng::find_end(list<int>) (bail 25%)", std::ranges::find_end);
+    bm.operator()<std::forward_list<int>>("rng::find_end(forward_list<int>) (bail 25%)", std::ranges::find_end);
 
     // {std,ranges}::find_end(it1, it1, it2, it2, pred)
     bm.operator()<std::vector<int>>("std::find_end(vector<int>, pred) (bail 25%)", std_find_end_pred);
     bm.operator()<std::deque<int>>("std::find_end(deque<int>, pred) (bail 25%)", std_find_end_pred);
     bm.operator()<std::list<int>>("std::find_end(list<int>, pred) (bail 25%)", std_find_end_pred);
+    bm.operator()<std::forward_list<int>>("std::find_end(forward_list<int>, pred) (bail 25%)", std_find_end_pred);
     bm.operator()<std::vector<int>>("rng::find_end(vector<int>, pred) (bail 25%)", ranges_find_end_pred);
     bm.operator()<std::deque<int>>("rng::find_end(deque<int>, pred) (bail 25%)", ranges_find_end_pred);
     bm.operator()<std::list<int>>("rng::find_end(list<int>, pred) (bail 25%)", ranges_find_end_pred);
+    bm.operator()<std::forward_list<int>>("rng::find_end(forward_list<int>, pred) (bail 25%)", ranges_find_end_pred);
   }
 
   // Benchmark {std,ranges}::find_end where the subsequence is found
@@ -98,7 +103,7 @@ int main(int argc, char** argv) {
             Container subrange(size / 10, y); // subrange of length 10% of the full range
 
             // put the element we're searching for at 90% of the sequence
-            std::ranges::copy(subrange, std::next(c.begin(), 9 * (c.size() / 10)));
+            std::ranges::copy(subrange, std::next(c.begin(), (9 * size) / 10));
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
@@ -116,17 +121,21 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::find_end(vector<int>) (bail 90%)", std_find_end);
     bm.operator()<std::deque<int>>("std::find_end(deque<int>) (bail 90%)", std_find_end);
     bm.operator()<std::list<int>>("std::find_end(list<int>) (bail 90%)", std_find_end);
+    bm.operator()<std::forward_list<int>>("std::find_end(forward_list<int>) (bail 90%)", std_find_end);
     bm.operator()<std::vector<int>>("rng::find_end(vector<int>) (bail 90%)", std::ranges::find_end);
     bm.operator()<std::deque<int>>("rng::find_end(deque<int>) (bail 90%)", std::ranges::find_end);
     bm.operator()<std::list<int>>("rng::find_end(list<int>) (bail 90%)", std::ranges::find_end);
+    bm.operator()<std::forward_list<int>>("rng::find_end(forward_list<int>) (bail 90%)", std::ranges::find_end);
 
     // {std,ranges}::find_end(it1, it1, it2, it2, pred)
     bm.operator()<std::vector<int>>("std::find_end(vector<int>, pred) (bail 90%)", std_find_end_pred);
     bm.operator()<std::deque<int>>("std::find_end(deque<int>, pred) (bail 90%)", std_find_end_pred);
     bm.operator()<std::list<int>>("std::find_end(list<int>, pred) (bail 90%)", std_find_end_pred);
+    bm.operator()<std::forward_list<int>>("std::find_end(forward_list<int>, pred) (bail 90%)", std_find_end_pred);
     bm.operator()<std::vector<int>>("rng::find_end(vector<int>, pred) (bail 90%)", ranges_find_end_pred);
     bm.operator()<std::deque<int>>("rng::find_end(deque<int>, pred) (bail 90%)", ranges_find_end_pred);
     bm.operator()<std::list<int>>("rng::find_end(list<int>, pred) (bail 90%)", ranges_find_end_pred);
+    bm.operator()<std::forward_list<int>>("rng::find_end(forward_list<int>, pred) (bail 90%)", ranges_find_end_pred);
   }
 
   benchmark::Initialize(&argc, argv);

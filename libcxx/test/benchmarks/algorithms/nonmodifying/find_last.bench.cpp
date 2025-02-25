@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <deque>
+#include <forward_list>
 #include <list>
 #include <string>
 #include <vector>
@@ -67,18 +68,22 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("rng::find_last(vector<int>) (bail 25%)", std::ranges::find_last);
     bm.operator()<std::deque<int>>("rng::find_last(deque<int>) (bail 25%)", std::ranges::find_last);
     bm.operator()<std::list<int>>("rng::find_last(list<int>) (bail 25%)", std::ranges::find_last);
+    bm.operator()<std::forward_list<int>>("rng::find_last(forward_list<int>) (bail 25%)", std::ranges::find_last);
 
     // find_last_if
     bm.operator()<std::vector<char>>("rng::find_last_if(vector<char>) (bail 25%)", ranges_find_last_if);
     bm.operator()<std::vector<int>>("rng::find_last_if(vector<int>) (bail 25%)", ranges_find_last_if);
     bm.operator()<std::deque<int>>("rng::find_last_if(deque<int>) (bail 25%)", ranges_find_last_if);
     bm.operator()<std::list<int>>("rng::find_last_if(list<int>) (bail 25%)", ranges_find_last_if);
+    bm.operator()<std::forward_list<int>>("rng::find_last_if(forward_list<int>) (bail 25%)", ranges_find_last_if);
 
     // find_last_if_not
     bm.operator()<std::vector<char>>("rng::find_last_if_not(vector<char>) (bail 25%)", ranges_find_last_if_not);
     bm.operator()<std::vector<int>>("rng::find_last_if_not(vector<int>) (bail 25%)", ranges_find_last_if_not);
     bm.operator()<std::deque<int>>("rng::find_last_if_not(deque<int>) (bail 25%)", ranges_find_last_if_not);
     bm.operator()<std::list<int>>("rng::find_last_if_not(list<int>) (bail 25%)", ranges_find_last_if_not);
+    bm.operator()<std::forward_list<int>>(
+        "rng::find_last_if_not(forward_list<int>) (bail 25%)", ranges_find_last_if_not);
   }
 
   // Benchmark ranges::{find_last,find_last_if,find_last_if_not} where the last element
@@ -115,18 +120,22 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("rng::find_last(vector<int>) (bail 90%)", std::ranges::find_last);
     bm.operator()<std::deque<int>>("rng::find_last(deque<int>) (bail 90%)", std::ranges::find_last);
     bm.operator()<std::list<int>>("rng::find_last(list<int>) (bail 90%)", std::ranges::find_last);
+    bm.operator()<std::forward_list<int>>("rng::find_last(forward_list<int>) (bail 90%)", std::ranges::find_last);
 
     // find_last_if
     bm.operator()<std::vector<char>>("rng::find_last_if(vector<char>) (bail 90%)", ranges_find_last_if);
     bm.operator()<std::vector<int>>("rng::find_last_if(vector<int>) (bail 90%)", ranges_find_last_if);
     bm.operator()<std::deque<int>>("rng::find_last_if(deque<int>) (bail 90%)", ranges_find_last_if);
     bm.operator()<std::list<int>>("rng::find_last_if(list<int>) (bail 90%)", ranges_find_last_if);
+    bm.operator()<std::forward_list<int>>("rng::find_last_if(forward_list<int>) (bail 90%)", ranges_find_last_if);
 
     // find_last_if_not
     bm.operator()<std::vector<char>>("rng::find_last_if_not(vector<char>) (bail 90%)", ranges_find_last_if_not);
     bm.operator()<std::vector<int>>("rng::find_last_if_not(vector<int>) (bail 90%)", ranges_find_last_if_not);
     bm.operator()<std::deque<int>>("rng::find_last_if_not(deque<int>) (bail 90%)", ranges_find_last_if_not);
     bm.operator()<std::list<int>>("rng::find_last_if_not(list<int>) (bail 90%)", ranges_find_last_if_not);
+    bm.operator()<std::forward_list<int>>(
+        "rng::find_last_if_not(forward_list<int>) (bail 90%)", ranges_find_last_if_not);
   }
 
   benchmark::Initialize(&argc, argv);
