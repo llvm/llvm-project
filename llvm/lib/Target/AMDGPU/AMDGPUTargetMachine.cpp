@@ -182,6 +182,13 @@ static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
                 cl::init(&useDefaultRegisterAllocator),
                 cl::desc("Register allocator to use for WWM registers"));
 
+// Option to enable wave transform control flow
+static cl::opt<bool, true> WaveTransformCF(
+    "amdgpu-wave-transform",
+    cl::desc("Enable wave transform control flow implementation"),
+    cl::location(AMDGPUTargetMachine::EnableWaveTransformCF), cl::init(false),
+    cl::Hidden);
+
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
   RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
 
@@ -230,7 +237,7 @@ static FunctionPass *createGreedyVGPRRegisterAllocator() {
 }
 
 static FunctionPass *createFastVGPRRegisterAllocator() {
-  return createFastRegisterAllocator(onlyAllocateVGPRs, true);
+  return createFastRegisterAllocator(onlyAllocateVGPRs, !WaveTransformCF);
 }
 
 static FunctionPass *createBasicWWMRegisterAllocator() {
@@ -242,7 +249,7 @@ static FunctionPass *createGreedyWWMRegisterAllocator() {
 }
 
 static FunctionPass *createFastWWMRegisterAllocator() {
-  return createFastRegisterAllocator(onlyAllocateWWMRegs, false);
+  return createFastRegisterAllocator(onlyAllocateWWMRegs, WaveTransformCF);
 }
 
 static SGPRRegisterRegAlloc basicRegAllocSGPR(
@@ -340,13 +347,6 @@ static cl::opt<bool> EnableDPPCombine(
 static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,
   cl::desc("Enable AMDGPU Alias Analysis"),
   cl::init(true));
-
-// Option to enable wave transform control flow
-static cl::opt<bool, true> WaveTransformCF(
-    "amdgpu-wave-transform",
-    cl::desc("Enable wave transform control flow implementation"),
-    cl::location(AMDGPUTargetMachine::EnableWaveTransformCF), cl::init(false),
-    cl::Hidden);
 
 // Enable lib calls simplifications
 static cl::opt<bool> EnableLibCallSimplify(
