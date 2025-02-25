@@ -58,6 +58,7 @@ int main(int argc, char** argv) {
               benchmark::DoNotOptimize(result);
             }
           })
+          ->Arg(1000) // non power-of-two
           ->Arg(1024)
           ->Arg(8192)
           ->Arg(1 << 20);
@@ -110,6 +111,7 @@ int main(int argc, char** argv) {
               benchmark::DoNotOptimize(result);
             }
           })
+          ->Arg(1000) // non power-of-two
           ->Arg(1024)
           ->Arg(8192);
     };
