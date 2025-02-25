@@ -239,17 +239,13 @@ void Fortran::semantics::dumpEvExpr(const Fortran::semantics::SomeExpr &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::semantics::dumpEvExpr(
-    const Fortran::evaluate::Expr<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>>
-        &x) {
+void Fortran::semantics::dumpEvExpr(const Fortran::evaluate::Expr<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>> &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::semantics::dumpEvExpr(
-    const Fortran::evaluate::Expr<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>>
-        &x) {
+void Fortran::semantics::dumpEvExpr(const Fortran::evaluate::Expr<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>> &x) {
   DumpEvaluateExpr::dump(x);
 }
 
@@ -265,9 +261,7 @@ void Fortran::semantics::dumpEvExpr(const Fortran::evaluate::Substring &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::semantics::dumpEvExpr(
-    const Fortran::evaluate::Designator<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>>
-        &x) {
+void Fortran::semantics::dumpEvExpr(const Fortran::evaluate::Designator<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>> &x) {
   DumpEvaluateExpr::dump(x);
 }

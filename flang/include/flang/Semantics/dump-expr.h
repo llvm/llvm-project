@@ -23,8 +23,7 @@ public:
   DumpEvaluateExpr() : outs(llvm::errs()) {}
   DumpEvaluateExpr(llvm::raw_ostream &str) : outs(str) {}
 
-  template <typename A>
-  static void dump(const A &x) {
+  template <typename A> static void dump(const A &x) {
     DumpEvaluateExpr{}.show(x);
   }
   template <typename A>
@@ -37,40 +36,33 @@ private:
   void show(const Fortran::common::Indirection<A, C> &x) {
     show(x.value());
   }
-  template <typename A>
-  void show(const Fortran::semantics::SymbolRef x) {
+  template <typename A> void show(const Fortran::semantics::SymbolRef x) {
     show(*x);
   }
-  template <typename A>
-  void show(const std::unique_ptr<A> &x) {
+  template <typename A> void show(const std::unique_ptr<A> &x) {
     show(x.get());
   }
-  template <typename A>
-  void show(const std::shared_ptr<A> &x) {
+  template <typename A> void show(const std::shared_ptr<A> &x) {
     show(x.get());
   }
-  template <typename A>
-  void show(const A *x) {
+  template <typename A> void show(const A *x) {
     if (x) {
       show(*x);
       return;
     }
     print("nullptr");
   }
-  template <typename A>
-  void show(const std::optional<A> &x) {
+  template <typename A> void show(const std::optional<A> &x) {
     if (x) {
       show(*x);
       return;
     }
     print("None");
   }
-  template <typename... A>
-  void show(const std::variant<A...> &u) {
+  template <typename... A> void show(const std::variant<A...> &u) {
     Fortran::common::visit([&](const auto &v) { show(v); }, u);
   }
-  template <typename A>
-  void show(const std::vector<A> &x) {
+  template <typename A> void show(const std::vector<A> &x) {
     indent("vector");
     for (const auto &v : x)
       show(v);
@@ -78,8 +70,7 @@ private:
   }
   void show(const Fortran::evaluate::BOZLiteralConstant &);
   void show(const Fortran::evaluate::NullPointer &);
-  template <typename T>
-  void show(const Fortran::evaluate::Constant<T> &x) {
+  template <typename T> void show(const Fortran::evaluate::Constant<T> &x) {
     if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
       indent("derived constant");
       for (const auto &map : x.values())
@@ -104,14 +95,12 @@ private:
   void show(const Fortran::evaluate::DataRef &x);
   void show(const Fortran::evaluate::Substring &x);
   void show(const Fortran::evaluate::ComplexPart &x);
-  template <typename T>
-  void show(const Fortran::evaluate::Designator<T> &x) {
+  template <typename T> void show(const Fortran::evaluate::Designator<T> &x) {
     indent("designator");
     show(x.u);
     outdent();
   }
-  template <typename T>
-  void show(const Fortran::evaluate::Variable<T> &x) {
+  template <typename T> void show(const Fortran::evaluate::Variable<T> &x) {
     indent("variable");
     show(x.u);
     outdent();
@@ -126,8 +115,7 @@ private:
     show(x.arguments());
     outdent();
   }
-  template <typename T>
-  void show(const Fortran::evaluate::FunctionRef<T> &x) {
+  template <typename T> void show(const Fortran::evaluate::FunctionRef<T> &x) {
     indent("function ref");
     show(x.proc());
     show(x.arguments());
@@ -144,8 +132,7 @@ private:
       show(v);
     outdent();
   }
-  template <typename T>
-  void show(const Fortran::evaluate::ImpliedDo<T> &x) {
+  template <typename T> void show(const Fortran::evaluate::ImpliedDo<T> &x) {
     indent("implied do");
     show(x.lower());
     show(x.upper());
@@ -154,9 +141,9 @@ private:
     outdent();
   }
   void show(const Fortran::semantics::ParamValue &x);
-  void
-  show(const Fortran::semantics::DerivedTypeSpec::ParameterMapType::value_type
-           &x);
+  void show(
+      const Fortran::semantics::DerivedTypeSpec::ParameterMapType::value_type
+          &x);
   void show(const Fortran::semantics::DerivedTypeSpec &x);
   void show(const Fortran::evaluate::StructureConstructorValues::value_type &x);
   void show(const Fortran::evaluate::StructureConstructor &x);
@@ -173,10 +160,9 @@ private:
     show(op.right());
     outdent();
   }
-  void
-  show(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x);
-  template <typename T>
-  void show(const Fortran::evaluate::Expr<T> &x) {
+  void show(
+      const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x);
+  template <typename T> void show(const Fortran::evaluate::Expr<T> &x) {
     indent("expr T");
     show(x.u);
     outdent();
@@ -191,20 +177,17 @@ private:
   unsigned level = 0;
 };
 
-LLVM_DUMP_METHOD void
-dumpEvExpr(const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &x);
 LLVM_DUMP_METHOD void dumpEvExpr(
-    const Fortran::evaluate::Expr<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>> &x);
-LLVM_DUMP_METHOD void dumpEvExpr(
-    const Fortran::evaluate::Expr<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>> &x);
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &x);
+LLVM_DUMP_METHOD void dumpEvExpr(const Fortran::evaluate::Expr<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>> &x);
+LLVM_DUMP_METHOD void dumpEvExpr(const Fortran::evaluate::Expr<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>> &x);
 LLVM_DUMP_METHOD void dumpEvExpr(const Fortran::evaluate::ArrayRef &x);
 LLVM_DUMP_METHOD void dumpEvExpr(const Fortran::evaluate::DataRef &x);
 LLVM_DUMP_METHOD void dumpEvExpr(const Fortran::evaluate::Substring &x);
-LLVM_DUMP_METHOD void dumpEvExpr(
-    const Fortran::evaluate::Designator<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>> &x);
+LLVM_DUMP_METHOD void dumpEvExpr(const Fortran::evaluate::Designator<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>> &x);
 
 } // namespace Fortran::semantics
 
