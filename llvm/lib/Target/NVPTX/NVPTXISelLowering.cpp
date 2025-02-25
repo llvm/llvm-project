@@ -5069,26 +5069,78 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static SDValue PerformStoreCombineHelper(SDNode *N, std::size_t Front,
-                                         std::size_t Back) {
+static SDValue PerformStoreCombineHelper(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI,
+                                         std::size_t Front, std::size_t Back) {
   if (all_of(N->ops().drop_front(Front).drop_back(Back),
              [](const SDUse &U) { return U.get()->isUndef(); }))
     // Operand 0 is the previous value in the chain. Cannot return EntryToken
     // as the previous value will become unused and eliminated later.
     return N->getOperand(0);
 
+  auto *MemN = cast<MemSDNode>(N);
+  if (MemN->getMemoryVT() == MVT::v2f32) {
+    // try to fold, and expand:
+    //   c: v2f32 = BUILD_VECTOR (a: f32, b: f32)
+    //   StoreRetval c
+    // -->
+    //   StoreRetvalV2 {a, b}
+    // likewise for V2 -> V4 case
+
+    std::optional<NVPTXISD::NodeType> NewOpcode;
+    switch (N->getOpcode()) {
+    case NVPTXISD::StoreParam:
+      NewOpcode = NVPTXISD::StoreParamV2;
+      break;
+    case NVPTXISD::StoreParamV2:
+      NewOpcode = NVPTXISD::StoreParamV4;
+      break;
+    case NVPTXISD::StoreRetval:
+      NewOpcode = NVPTXISD::StoreRetvalV2;
+      break;
+    case NVPTXISD::StoreRetvalV2:
+      NewOpcode = NVPTXISD::StoreRetvalV4;
+      break;
+    }
+
+    if (NewOpcode) {
+      // copy chain, offset from existing store
+      SmallVector<SDValue> NewOps = {N->getOperand(0), N->getOperand(1)};
+      // gather all operands to expand
+      for (unsigned I = 2, E = N->getNumOperands(); I < E; ++I) {
+        SDValue CurrentOp = N->getOperand(I);
+        if (CurrentOp->getOpcode() == ISD::BUILD_VECTOR) {
+          assert(CurrentOp.getValueType() == MVT::v2f32);
+          NewOps.push_back(CurrentOp.getNode()->getOperand(0));
+          NewOps.push_back(CurrentOp.getNode()->getOperand(1));
+        } else {
+          NewOps.clear();
+          break;
+        }
+      }
+
+      if (!NewOps.empty()) {
+        return DCI.DAG.getMemIntrinsicNode(*NewOpcode, SDLoc(N), N->getVTList(),
+                                           NewOps, MVT::f32,
+                                           MemN->getMemOperand());
+      }
+    }
+  }
+
   return SDValue();
 }
 
-static SDValue PerformStoreParamCombine(SDNode *N) {
+static SDValue PerformStoreParamCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
   // Operands from the 3rd to the 2nd last one are the values to be stored.
   //   {Chain, ArgID, Offset, Val, Glue}
-  return PerformStoreCombineHelper(N, 3, 1);
+  return PerformStoreCombineHelper(N, DCI, 3, 1);
 }
 
-static SDValue PerformStoreRetvalCombine(SDNode *N) {
+static SDValue PerformStoreRetvalCombine(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI) {
   // Operands from the 2nd to the last one are the values to be stored
-  return PerformStoreCombineHelper(N, 2, 0);
+  return PerformStoreCombineHelper(N, DCI, 2, 0);
 }
 
 /// PerformADDCombine - Target-specific dag combine xforms for ISD::ADD.
@@ -5799,11 +5851,11 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
-      return PerformStoreRetvalCombine(N);
+      return PerformStoreRetvalCombine(N, DCI);
     case NVPTXISD::StoreParam:
     case NVPTXISD::StoreParamV2:
     case NVPTXISD::StoreParamV4:
-      return PerformStoreParamCombine(N);
+      return PerformStoreParamCombine(N, DCI);
     case ISD::EXTRACT_VECTOR_ELT:
       return PerformEXTRACTCombine(N, DCI);
     case ISD::VSELECT:
