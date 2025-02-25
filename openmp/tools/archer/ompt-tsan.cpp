@@ -1257,7 +1257,7 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
 
   findTsanFunctionSilent(__tsan_init, (void (*)(void)));
   if (!__tsan_init) // if we are not running on TSAN, give a different
-                          // tool the chance to be loaded
+                    // tool the chance to be loaded
   {
     if (archer_flags->verbose)
       std::cout << "Archer detected OpenMP application without TSan; "
