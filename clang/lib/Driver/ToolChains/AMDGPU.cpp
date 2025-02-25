@@ -718,7 +718,7 @@ static unsigned GetFullLTOPartitions(const Driver &D, const ArgList &Args) {
   // at 16 partitions. More than 16 partitions rarely benefits code splitting
   // and can lead to more empty/small modules each with their own overhead.
   if (!A)
-    return std::max(16u, llvm::hardware_concurrency().compute_thread_count());
+    return std::min(16u, llvm::hardware_concurrency().compute_thread_count());
   int Value;
   if (StringRef(A->getValue()).getAsInteger(10, Value) || (Value < 1)) {
     D.Diag(diag::err_drv_invalid_int_value)
