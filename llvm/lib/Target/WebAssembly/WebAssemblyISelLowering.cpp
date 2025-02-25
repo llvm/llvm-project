@@ -143,8 +143,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
-    // When experimental vector f16 is enabled these instructions don't need to
-    // be expanded for v8f16.
+    // When experimental v8f16 support is enabled these instructions don't need
+    // to be expanded.
     if (T != MVT::v8f16) {
       setOperationAction(ISD::FP16_TO_FP, T, Expand);
       setOperationAction(ISD::FP_TO_FP16, T, Expand);
