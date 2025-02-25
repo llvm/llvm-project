@@ -26,7 +26,6 @@
 # NONE: distributor_args=[]
 
 # OPT:       "linker_output": "a.out"
-# OPT:       "linker_version": "LLD 1.0"
 # BOTH:      "my_clang.exe"
 # OPT:       "-O3"
 # NONE:      "-O2"

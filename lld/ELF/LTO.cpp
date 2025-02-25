@@ -188,13 +188,10 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         std::string(ctx.arg.thinLTOPrefixReplaceNativeObject),
         ctx.arg.thinLTOEmitImportsFiles, indexFile.get(), onIndexWrite);
   } else if (!ctx.arg.dtltoDistributor.empty() && !ctx.bitcodeFiles.empty()) {
-    StringRef version = getenv("LLD_VERSION"); // For testing only.
-    if (version.empty())
-      version = ctx.saver.save(getLLDVersion());
     backend = lto::createOutOfProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(ctx.arg.thinLTOJobs),
         onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
-        ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile, version,
+        ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile,
         ctx.arg.dtltoRemoteOptTool, ctx.arg.dtltoDistributor,
         !ctx.arg.saveTempsArgs.empty());
   } else {
@@ -347,7 +344,7 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
                                 std::make_unique<raw_svector_ostream>(
                                     buf[task].second));
                           },
-                          AddBuffer, cache));
+                          cache, AddBuffer));
 
   // Emit empty index files for non-indexed files but not in single-module mode.
   if (ctx.arg.thinLTOModulesToCompile.empty()) {

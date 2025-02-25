@@ -547,7 +547,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                            Twine(ToolChain.getDriver().getClangProgramPath())));
 
     for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
-      CmdArgs.push_back(Args.MakeArgString("-mllvm=-thinlto-distributor-arg=" + A));
+      CmdArgs.push_back(
+          Args.MakeArgString("-mllvm=-thinlto-distributor-arg=" + A));
   }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))

@@ -212,7 +212,7 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
           return std::make_unique<CachedFileStream>(
               std::make_unique<raw_svector_ostream>(buf[task]));
         },
-        AddBuffer, cache));
+        cache, AddBuffer));
 
   // Emit empty index files for non-indexed files
   for (StringRef s : thinIndices) {

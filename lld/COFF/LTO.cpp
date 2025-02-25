@@ -118,14 +118,11 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
   // Initialize ltoObj.
   lto::ThinBackend backend;
   if (!ctx.config.dtltoDistributor.empty()) {
-    StringRef version = getenv("LLD_VERSION"); // For testing only.
-    if (version.empty())
-      version = ctx.saver.save(getLLDVersion());
     backend = lto::createOutOfProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(ctx.config.thinLTOJobs),
         /*OnWrite=*/nullptr,
         /*ShouldEmitIndexFiles=*/false,
-        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile, version,
+        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
         ctx.config.dtltoRemoteOptTool, ctx.config.dtltoDistributor,
         !ctx.config.saveTempsArgs.empty());
   } else if (ctx.config.thinLTOIndexOnly) {
@@ -210,7 +207,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
         return std::make_unique<CachedFileStream>(
             std::make_unique<raw_svector_ostream>(buf[task].second));
       },
-      AddBuffer, cache));
+      cache, AddBuffer));
 
   // Emit empty index files for non-indexed files
   for (StringRef s : thinIndices) {

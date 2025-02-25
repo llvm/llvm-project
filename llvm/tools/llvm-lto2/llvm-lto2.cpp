@@ -358,8 +358,6 @@ static int run(int argc, char **argv) {
     llvm::errs() << "-thinlto-distributed-indexes cannot be specfied together "
                     "with -dtlto\n";
 
-  std::string TargetTripleStr = "";
-
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -370,18 +368,11 @@ static int run(int argc, char **argv) {
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
   else if (DTLTO) {
-    if (!InputFilenames.empty()) {
-      std::string F = InputFilenames[0];
-      std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
-      std::unique_ptr<InputFile> Input =
-          check(InputFile::create(MB->getMemBufferRef()), F);
-      TargetTripleStr = llvm::Triple::normalize(Input->getTargetTriple());
-    }
 
     Backend = createOutOfProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
-        "DummyVersion", DTLTORemoteOptTool, DTLTODistributor, SaveTemps);
+        DTLTORemoteOptTool, DTLTODistributor, SaveTemps);
   } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
@@ -485,7 +476,7 @@ static int run(int argc, char **argv) {
     Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
                   "failed to create cache");
 
-  check(Lto.run(AddStream, AddBuffer, Cache), "LTO::run failed");
+  check(Lto.run(AddStream, Cache, AddBuffer), "LTO::run failed");
   return static_cast<int>(HasErrors);
 }
 

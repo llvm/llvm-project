@@ -8,8 +8,8 @@
 ; RUN: opt -thinlto-bc x86_64-pc-windows-msvc.ll   -o x86_64-pc-windows-msvc.bc
 
 
-;; Check that any invalid arguments would cause a Clang error. This property is
-;; relied on by the actual testcases later in this test.
+;; Check that invalid arguments cause a Clang error. This property is relied on
+;; by the actual testcases later in this test.
 ; RUN: not %clang -x ir x86_64-unknown-linux-gnu.ll \
 ; RUN:     -invalid-incorrect-not-an-option 2>&1 | FileCheck %s --check-prefix=SANITY1
 ; SANITY1: unknown argument: '-invalid-incorrect-not-an-option'
@@ -25,7 +25,7 @@
 ; DEFINE:   @%{triple}.rsp %{extra_flags}
 
 
-;; Write common arguments to a response files.
+;; Write common arguments to response files.
 
 ; RUN: echo "x86_64-unknown-linux-gnu.bc -o x86_64-unknown-linux-gnu.o \
 ; RUN:       -dtlto \
@@ -63,7 +63,7 @@
 ; RUN: %{command}
 ; REDEFINE: %{distributor} = validate.py
 ; RUN: not %{command} 2>&1 | FileCheck %s --check-prefix=ON \
-; RUN:     --implicit-check-not=-no-pgo-warn-mismatch
+; RUN:   --implicit-check-not=-no-pgo-warn-mismatch
 ; ON-DAG: "-faddrsig"
 ; ON-DAG: "-ffunction-sections"
 ; ON-DAG: "-fdata-sections"
@@ -80,7 +80,7 @@
 ; OFF-NOT: --implicit-check-not=-no-pgo-warn-mismatch
 
 
-;; Check optimisation level.
+;; Check optimization level.
 
 ; RUN: llvm-lto2 run \
 ; RUN:   -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
@@ -124,7 +124,6 @@
 
 
 ;--- x86_64-unknown-linux-gnu.ll
-
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -134,7 +133,6 @@ entry:
 }
 
 ;--- x86_64-pc-windows-msvc.ll
-
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 

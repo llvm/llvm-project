@@ -1172,7 +1172,7 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
-Error LTO::run(AddStreamFn AddStream, AddBufferFn AddBuffer, FileCache Cache) {
+Error LTO::run(AddStreamFn AddStream, FileCache Cache, AddBufferFn AddBuffer) {
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
@@ -2194,7 +2194,7 @@ std::vector<int> lto::generateModulesOrdering(ArrayRef<BitcodeModule *> R) {
 namespace {
 // For this out-of-process backend no codegen is done when invoked for each
 // task. Instead we generate the required information (e.g. the summary index
-// shard,import list, etc..) to allow for the codegen to be performed
+// shard, import list, etc..) to allow for the codegen to be performed
 // externally . This backend's `wait` function then invokes an external
 // distributor process to do backend compilations.
 class OutOfProcessThinBackend : public CGThinBackend {
@@ -2206,7 +2206,6 @@ class OutOfProcessThinBackend : public CGThinBackend {
   StringSaver Saver{Alloc};
 
   SString LinkerOutputFile;
-  StringRef LinkerVersion;
   SString RemoteOptTool;
   SString DistributorPath;
   bool SaveTemps;
@@ -2237,14 +2236,13 @@ public:
       AddStreamFn AddStream, AddBufferFn AddBuffer,
       lto::IndexWriteCallback OnWrite, bool ShouldEmitIndexFiles,
       bool ShouldEmitImportsFiles, StringRef LinkerOutputFile,
-      StringRef LinkerVersion, StringRef RemoteOptTool, StringRef Distributor,
-      bool SaveTemps)
+      StringRef RemoteOptTool, StringRef Distributor, bool SaveTemps)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries, OnWrite,
                       ShouldEmitIndexFiles, ShouldEmitImportsFiles,
                       ThinLTOParallelism),
         AddBuffer(std::move(AddBuffer)), LinkerOutputFile(LinkerOutputFile),
-        LinkerVersion(LinkerVersion), RemoteOptTool(RemoteOptTool),
-        DistributorPath(Distributor), SaveTemps(SaveTemps) {}
+        RemoteOptTool(RemoteOptTool), DistributorPath(Distributor),
+        SaveTemps(SaveTemps) {}
 
   virtual void setup(unsigned MaxTasks) override {
     UID = itostr(sys::Process::getProcessId());
@@ -2342,13 +2340,13 @@ public:
       AdditionalInputs.insert(C.SampleProfile);
     }
 
+    // We don't know which of options will be used by Clang.
+    Ops.push_back("-Wno-unused-command-line-argument");
+
     // Forward any supplied options.
     if (!ThinLTORemoteOptToolArgs.empty())
       for (auto &a : ThinLTORemoteOptToolArgs)
         Ops.push_back(a);
-
-    // We don't know which of those options will be used by Clang.
-    Ops.push_back("-Wno-unused-command-line-argument");
   }
 
   // Generates a JSON file describing the backend compilations, for the
@@ -2366,13 +2364,10 @@ public:
       // referencing by index into the job input and output file arrays.
       JOS.attributeObject("common", [&]() {
         JOS.attribute("linker_output", LinkerOutputFile);
-        JOS.attribute("linker_version", LinkerVersion);
 
         // Common command line template.
         JOS.attributeArray("args", [&]() {
           JOS.value(RemoteOptTool);
-          for (const auto &A : CodegenOptions)
-            JOS.value(A);
 
           // Reference to Job::NativeObjectPath.
           JOS.value("-o");
@@ -2389,6 +2384,9 @@ public:
           // Reference to Job::SummaryIndexPath.
           JOS.value(Array{"summary_index", "-fthinlto-index=", 0});
           JOS.value(Saver.save("--target=" + Twine(Jobs.front().Triple)));
+
+          for (const auto &A : CodegenOptions)
+            JOS.value(A);
         });
       });
       JOS.attributeArray("jobs", [&]() {
@@ -2499,8 +2497,8 @@ public:
 ThinBackend lto::createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, lto::IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef LinkerVersion,
-    StringRef RemoteOptTool, StringRef Distributor, bool SaveTemps) {
+    StringRef LinkerOutputFile, StringRef RemoteOptTool, StringRef Distributor,
+    bool SaveTemps) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
@@ -2508,8 +2506,8 @@ ThinBackend lto::createOutOfProcessThinBackend(
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, AddBuffer, OnWrite, ShouldEmitIndexFiles,
-            ShouldEmitImportsFiles, LinkerOutputFile, LinkerVersion,
-            RemoteOptTool, Distributor, SaveTemps);
+            ShouldEmitImportsFiles, LinkerOutputFile, RemoteOptTool,
+            Distributor, SaveTemps);
       };
   return ThinBackend(Func, Parallelism);
 }

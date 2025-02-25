@@ -205,7 +205,7 @@ std::vector<StringRef> BitcodeCompiler::compile() {
         return std::make_unique<CachedFileStream>(
             std::make_unique<raw_svector_ostream>(buf[task].second));
       },
-      Addbuffer, cache));
+      cache, Addbuffer));
 
   // Emit empty index files for non-indexed files but not in single-module mode.
   for (StringRef s : thinIndices) {

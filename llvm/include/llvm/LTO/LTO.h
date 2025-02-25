@@ -308,28 +308,21 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
 /// This ThinBackend generates the index shards and then runs the individual
 /// backend jobs via an external process. It takes the same parameters as the
 /// InProcessThinBackend, however, these parameters only control the behavior
-/// when generating the index files for the modules. Addtionally:
+/// when generating the index files for the modules. Additionally:
 /// LinkerOutputFile is a string that should identify this LTO invocation in
 /// the context of a wider build. It's used for naming to aid the user in
 /// identifying activity related to a specific LTO invocation.
-/// LinkerVersion is the LLVM version of the tool invoking this backend. This
-/// may be used to check compatibility with external components invoked via this
-/// backend.
 /// RemoteOptTool specifies the path to a Clang executable to be invoked for the
 /// backend jobs.
 /// Distributor specifies the path to a process to invoke to manage the backend
 /// jobs execution.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
 /// backend from being cleaned up.
-ThinBackend createOutOfProcessThinBackend(ThreadPoolStrategy Parallelism,
-                                          IndexWriteCallback OnWrite,
-                                          bool ShouldEmitIndexFiles,
-                                          bool ShouldEmitImportsFiles,
-                                          StringRef LinkerOutputFile,
-                                          StringRef LinkerVersion,
-                                          StringRef RemoteOptTool,
-                                          StringRef Distributor,
-                                          bool SaveTemps);
+ThinBackend createOutOfProcessThinBackend(
+    ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
+    bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
+    StringRef LinkerOutputFile, StringRef RemoteOptTool, StringRef Distributor,
+    bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
@@ -414,9 +407,14 @@ public:
   /// The Cache parameter is optional. If supplied, it will be used to cache
   /// native object files and add them to the link.
   ///
+  /// The AddBuffer parameter is only required for DTLTO, currently. It is
+  /// optional to minimise the impact on current LTO users (DTLTO is not used
+  /// currently).
+  ///
   /// The client will receive at most one callback (via AddStream, AddBuffer or
   /// Cache) for each task identifier.
-  Error run(AddStreamFn AddStream, AddBufferFn AddBuffer, FileCache Cache = {});
+  Error run(AddStreamFn AddStream, FileCache Cache = {},
+            AddBufferFn AddBuffer = nullptr);
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
