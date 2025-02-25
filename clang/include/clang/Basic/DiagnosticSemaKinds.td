@@ -8474,9 +8474,6 @@ def err_cannot_form_pointer_to_member_of_reference_type : Error<
 def err_incomplete_object_call : Error<
   "incomplete type in call to object of type %0">;
 
-def warn_condition_is_assignment : Warning<"using the result of an "
-  "assignment as a condition without parentheses">,
-  InGroup<Parentheses>;
 def warn_assignment_bool_context : Warning<"using the result of an assignment as a truth value without parentheses">,
   InGroup<Parentheses>;
 

@@ -6,7 +6,7 @@
 @import diag_pragma;
 
 int foo(int x) {
-  if (x = DIAG_PRAGMA_MACRO) // expected-warning {{using the result of an assignment as a condition without parentheses}} \
+  if (x = DIAG_PRAGMA_MACRO) // expected-warning {{using the result of an assignment as a truth value without parentheses}} \
                              // expected-note {{place parentheses}} expected-note {{use '=='}}
     return 0;
   return 1;

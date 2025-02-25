@@ -20203,7 +20203,7 @@ bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,
 void Sema::DiagnoseAssignmentAsCondition(Expr *E) {
   SourceLocation Loc;
 
-  unsigned diagnostic = diag::warn_condition_is_assignment;
+  unsigned diagnostic = diag::warn_assignment_bool_context;
   bool IsOrAssign = false;
 
   if (BinaryOperator *Op = dyn_cast<BinaryOperator>(E)) {

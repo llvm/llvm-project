@@ -7,7 +7,7 @@ auto not_skipped() {
   int x;
   if (x = 10) {}
   // Check that this function is not skipped.
-  // CHECK: 8:9: warning: using the result of an assignment as a condition without parentheses
+  // CHECK: 8:9: warning: using the result of an assignment as a truth value without parentheses
   return 1;
 }
 
@@ -16,7 +16,7 @@ auto lambda_not_skipped = []() {
   int x;
   if (x = 10) {}
   // Check that this function is not skipped.
-  // CHECK: 17:9: warning: using the result of an assignment as a condition without parentheses
+  // CHECK: 17:9: warning: using the result of an assignment as a truth value without parentheses
   return 1;
 }
 
@@ -25,7 +25,7 @@ auto skipped() -> T {
   int x;
   if (x = 10) {}
   // Check that this function is skipped.
-  // CHECK-NOT: 26:9: warning: using the result of an assignment as a condition without parentheses
+  // CHECK-NOT: 26:9: warning: using the result of an assignment as a truth value without parentheses
   return 1;
 };
 
@@ -33,7 +33,7 @@ auto lambda_skipped = []() -> int {
   int x;
   if (x = 10) {}
   // This could potentially be skipped, but it isn't at the moment.
-  // CHECK: 34:9: warning: using the result of an assignment as a condition without parentheses
+  // CHECK: 34:9: warning: using the result of an assignment as a truth value without parentheses
   return 1;
 };
 
@@ -42,7 +42,7 @@ decltype(auto)** not_skipped_ptr() {
   int x;
   if (x = 10) {}
   // Check that this function is not skipped.
-  // CHECK: 43:9: warning: using the result of an assignment as a condition without parentheses
+  // CHECK: 43:9: warning: using the result of an assignment as a truth value without parentheses
   return T();
 }
 
@@ -51,7 +51,7 @@ decltype(auto) not_skipped_decltypeauto() {
   int x;
   if (x = 10) {}
   // Check that this function is not skipped.
-  // CHECK: 52:9: warning: using the result of an assignment as a condition without parentheses
+  // CHECK: 52:9: warning: using the result of an assignment as a truth value without parentheses
   return 1;
 }
 

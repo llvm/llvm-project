@@ -28,7 +28,7 @@ void BoolExpr(int *I, float *F) {
   while(0);
 
   // expected-warning@+4{{incompatible pointer types assigning to 'int *' from 'float *'}}
-  // expected-warning@+3{{using the result of an assignment as a condition without parentheses}}
+  // expected-warning@+3{{using the result of an assignment as a truth value without parentheses}}
   // expected-note@+2{{place parentheses around the assignment to silence this warning}}
   // expected-note@+1{{use '==' to turn this assignment into an equality comparison}}
 #pragma acc kernels if (I = F)

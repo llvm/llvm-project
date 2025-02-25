@@ -14,12 +14,12 @@ bool f3(bool x) { return x = 0; }
 void test() {
   int x;
 
-  // This should emit the `warn_condition_is_assignment` warning, since
+  // This should emit the `warn_assignment_bool_context` warning once, since
   // C doesn't do implicit conversion booleans for conditions.
-  if (x = 0) {} // expected-warning {{using the result of an assignment as a condition without parentheses}} \
+  if (x = 0) {} // expected-warning {{using the result of an assignment as a truth value without parentheses}} \
                 // expected-note{{place parentheses around the assignment to silence this warning}}\
                 // expected-note{{use '==' to turn this assignment into an equality comparison}}
-  if (x = 4 && x){} // expected-warning {{using the result of an assignment as a condition without parentheses}} \
+  if (x = 4 && x){} // expected-warning {{using the result of an assignment as a truth value without parentheses}} \
                     // expected-note{{place parentheses around the assignment to silence this warning}}\
                     // expected-note{{use '==' to turn this assignment into an equality comparison}}
 

@@ -10,11 +10,11 @@ bool f3(bool x) { return x = 0; }
 void test() {
   int x;
 
-  // Assignments inside of conditions should still emit the more specific `warn_condition_is_assignment` warning.
-  if (x = 0) {} // expected-warning {{using the result of an assignment as a condition without parentheses}} \
+  // Assignments inside of conditions should still emit the more specific `==` fixits.
+  if (x = 0) {} // expected-warning {{using the result of an assignment as a truth value without parentheses}} \
                 // expected-note{{use '==' to turn this assignment into an equality comparison}} \
                 // expected-note{{place parentheses around the assignment to silence this warning}}
-  if (x = 4 && x){} // expected-warning {{using the result of an assignment as a condition without parentheses}} \
+  if (x = 4 && x){} // expected-warning {{using the result of an assignment as a truth value without parentheses}} \
                     // expected-note{{use '==' to turn this assignment into an equality comparison}} \
                     // expected-note{{place parentheses around the assignment to silence this warning}}
 
