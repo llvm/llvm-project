@@ -5244,21 +5244,22 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
     // Estimate the cost of masked gather GEP. If not a splat, roughly
     // estimate as a buildvector, otherwise estimate as splat.
     APInt DemandedElts = APInt::getAllOnes(Sz);
-    VectorType *PtrVecTy =
-        getWidenedType(PointerOps.front()->getType()->getScalarType(), Sz);
+    Type *PtrScalarTy = PointerOps.front()->getType()->getScalarType();
+    VectorType *PtrVecTy = getWidenedType(PtrScalarTy, Sz);
     if (static_cast<unsigned>(count_if(
             PointerOps, IsaPred<GetElementPtrInst>)) < PointerOps.size() - 1 ||
         any_of(PointerOps, [&](Value *V) {
           return getUnderlyingObject(V) !=
                  getUnderlyingObject(PointerOps.front());
         }))
-      VectorGEPCost += TTI.getScalarizationOverhead(
-          PtrVecTy, DemandedElts, /*Insert=*/true, /*Extract=*/false, CostKind);
+      VectorGEPCost += getScalarizationOverhead(TTI, PtrScalarTy, PtrVecTy,
+                                                DemandedElts, /*Insert=*/true,
+                                                /*Extract=*/false, CostKind);
     else
       VectorGEPCost +=
-          TTI.getScalarizationOverhead(PtrVecTy, APInt::getOneBitSet(Sz, 0),
-                                       /*Insert=*/true, /*Extract=*/false,
-                                       CostKind) +
+          getScalarizationOverhead(
+              TTI, PtrScalarTy, PtrVecTy, APInt::getOneBitSet(Sz, 0),
+              /*Insert=*/true, /*Extract=*/false, CostKind) +
           ::getShuffleCost(TTI, TTI::SK_Broadcast, PtrVecTy, {}, CostKind);
     // The cost of scalar loads.
     InstructionCost ScalarLoadsCost =
