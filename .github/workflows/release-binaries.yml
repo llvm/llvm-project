@@ -142,7 +142,7 @@ jobs:
             # 2-3 hours to build on macOS, much slower than on Linux.
             # The long build time causes the release build to time out on x86_64,
             # so we need to disable flang there.
-            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;bolt;polly;mlir'"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
