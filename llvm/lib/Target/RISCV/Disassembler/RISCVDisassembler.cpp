@@ -328,6 +328,19 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
+template <unsigned Width, unsigned LowerBound>
+static DecodeStatus decodeUImmOperandGE(MCInst &Inst, uint32_t Imm,
+                                        int64_t Address,
+                                        const MCDisassembler *Decoder) {
+  assert(isUInt<Width>(Imm) && "Invalid immediate");
+
+  if (Imm < LowerBound)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
                                               int64_t Address,
                                               const MCDisassembler *Decoder) {
@@ -606,6 +619,17 @@ void RISCVDisassembler::addSPOperands(MCInst &MI) const {
                                           (void)nullptr)
 #define TRY_TO_DECODE_FEATURE(FEATURE, DECODER_TABLE, DESC)                    \
   TRY_TO_DECODE(STI.hasFeature(FEATURE), DECODER_TABLE, DESC)
+#define TRY_TO_DECODE_FEATURE_ANY(FEATURES, DECODER_TABLE, DESC)               \
+  TRY_TO_DECODE((STI.getFeatureBits() & (FEATURES)).any(), DECODER_TABLE, DESC)
+
+static constexpr FeatureBitset XqciFeatureGroup = {
+    RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
+    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqcilia,
+    RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
+    RISCV::FeatureVendorXqcisls,
+};
 
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
@@ -693,24 +717,10 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "CORE-V SIMD extensions");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
                         "CORE-V Immediate Branching");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicsr, DecoderTableXqcicsr32,
-                        "Qualcomm uC CSR");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcisls, DecoderTableXqcisls32,
-                        "Qualcomm uC Scaled Load Store");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcia, DecoderTableXqcia32,
-                        "Qualcomm uC Arithmetic");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcics, DecoderTableXqcics32,
-                        "Qualcomm uC Conditional Select");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilsm, DecoderTableXqcilsm32,
-                        "Qualcomm uC Load Store Multiple");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciac, DecoderTableXqciac32,
-                        "Qualcomm uC Load-Store Address Calculation");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicli, DecoderTableXqcicli32,
-                        "Qualcomm uC Conditional Load Immediate");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicm, DecoderTableXqcicm32,
-                        "Qualcomm uC Conditional Move");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint32,
-                        "Qualcomm uC Interrupts");
+
+  TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci32,
+                            "Qualcomm uC Extensions");
+
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXRivosVizip, DecoderTableXRivos32,
                         "Rivos");
 
@@ -739,12 +749,10 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
                         "Zcmt (16-bit Table Jump Instructions)");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
                         "Zcmp (16-bit Push/Pop & Double Move Instructions)");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciac, DecoderTableXqciac16,
-                        "Qualcomm uC Load-Store Address Calculation 16bit");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicm, DecoderTableXqcicm16,
-                        "Qualcomm uC Conditional Move 16bit");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint16,
-                        "Qualcomm uC Interrupts 16bit");
+
+  TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci16,
+                            "Qualcomm uC 16bit");
+
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
                            DecoderTableXwchc16, "WCH QingKe XW");
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
@@ -767,10 +775,8 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
   for (size_t i = Size; i-- != 0;) {
     Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
   }
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilia, DecoderTableXqcilia48,
-                        "Qualcomm uC Large Immediate Arithmetic 48bit");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilo, DecoderTableXqcilo48,
-                        "Qualcomm uC Large Offset Load Store 48bit");
+  TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci48,
+                            "Qualcomm uC 48bit");
 
   return MCDisassembler::Fail;
 }
