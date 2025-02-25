@@ -1,5 +1,6 @@
 add_subdirectory(__support)
 
+add_subdirectory(arpa)
 add_subdirectory(complex)
 add_subdirectory(ctype)
 add_subdirectory(dlfcn)
@@ -31,7 +32,6 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-add_subdirectory(arpa)
 add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(locale)

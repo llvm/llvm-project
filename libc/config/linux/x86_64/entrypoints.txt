@@ -17,12 +17,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
-    # dlfcn.h entrypoints
-    libc.src.dlfcn.dlclose
-    libc.src.dlfcn.dlerror
-    libc.src.dlfcn.dlopen
-    libc.src.dlfcn.dlsym
-
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -231,6 +225,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsprintf
     libc.src.stdio.vasprintf
 
+    # arpa/inet.h entrypoints
+    libc.src.arpa.inet.htonl
+    libc.src.arpa.inet.htons
+    libc.src.arpa.inet.ntohl
+    libc.src.arpa.inet.ntohs
+
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create
     libc.src.sys.epoll.epoll_create1
@@ -297,6 +297,20 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
 
+    # sys/select.h entrypoints
+    libc.src.sys.select.select
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.send
+    libc.src.sys.socket.sendto
+    libc.src.sys.socket.sendmsg
+    libc.src.sys.socket.recv
+    libc.src.sys.socket.recvfrom
+    libc.src.sys.socket.recvmsg
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -362,6 +376,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.uio.readv
 )
 
+# TODO: make this check having malloc instead of scudo specifically
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # malloc.h external entrypoints
@@ -909,6 +924,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.ctype.tolower_l
     libc.src.ctype.toupper_l
 
+    # dlfcn.h entrypoints
+    # currently these are stubs which could work in overlay mode, but once
+    # implemented they'll need to interface with the loader, which would require
+    # fullbuild.
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+
     # stdlib.h entrypoints
     libc.src.stdlib.strtod_l
     libc.src.stdlib.strtof_l
@@ -933,12 +957,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
-
-    # arpa/inet.h entrypoints
-    libc.src.arpa.inet.htonl
-    libc.src.arpa.inet.htons
-    libc.src.arpa.inet.ntohl
-    libc.src.arpa.inet.ntohs
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
@@ -1156,20 +1174,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.optind
     libc.src.unistd.optopt
     libc.src.unistd.swab
-
-    # sys/select.h entrypoints
-    libc.src.sys.select.select
-
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.socket
-    libc.src.sys.socket.bind
-    libc.src.sys.socket.socketpair
-    libc.src.sys.socket.send
-    libc.src.sys.socket.sendto
-    libc.src.sys.socket.sendmsg
-    libc.src.sys.socket.recv
-    libc.src.sys.socket.recvfrom
-    libc.src.sys.socket.recvmsg
   )
 endif()
 
