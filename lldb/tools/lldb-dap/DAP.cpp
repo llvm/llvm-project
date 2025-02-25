@@ -223,10 +223,7 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   return llvm::Error::success();
 }
 
-void DAP::StopIO() {
-  out.Stop();
-  err.Stop();
-
+void DAP::StopEventHandlers() {
   if (event_thread.joinable()) {
     broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
     event_thread.join();
@@ -853,13 +850,17 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 
   SendTerminatedEvent();
 
+  // Stop forwarding the debugger output and error handles.
+  out.Stop();
+  err.Stop();
+
   disconnecting = true;
 
   return error;
 }
 
 llvm::Error DAP::Loop() {
-  auto stop_io = llvm::make_scope_exit([this]() { StopIO(); });
+  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
