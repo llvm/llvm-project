@@ -1688,3 +1688,43 @@ define float @fdiv_pow_shl_cnt32_okay(i32 %cnt) nounwind {
   %mul = fdiv float 0x3a20000000000000, %conv
   ret float %mul
 }
+
+define x86_fp80 @pr128528(i1 %cond) {
+; CHECK-SSE-LABEL: pr128528:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    xorl %eax, %eax
+; CHECK-SSE-NEXT:    testb $1, %dil
+; CHECK-SSE-NEXT:    setne %al
+; CHECK-SSE-NEXT:    movq %rax, %rcx
+; CHECK-SSE-NEXT:    shlq $63, %rcx
+; CHECK-SSE-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK-SSE-NEXT:    fstpt -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    addq -{{[0-9]+}}(%rsp), %rcx
+; CHECK-SSE-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; CHECK-SSE-NEXT:    adcq %rax, %rcx
+; CHECK-SSE-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    fldt -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: pr128528:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    xorl %eax, %eax
+; CHECK-AVX-NEXT:    testb $1, %dil
+; CHECK-AVX-NEXT:    setne %al
+; CHECK-AVX-NEXT:    movq %rax, %rcx
+; CHECK-AVX-NEXT:    shlq $63, %rcx
+; CHECK-AVX-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK-AVX-NEXT:    fstpt -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    addq -{{[0-9]+}}(%rsp), %rcx
+; CHECK-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX-NEXT:    adcq %rax, %rcx
+; CHECK-AVX-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    fldt -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    retq
+  %sub9 = select i1 %cond, i32 8, i32 1
+  %conv = uitofp i32 %sub9 to x86_fp80
+  %mul = fmul x86_fp80 %conv, 0xK4007D055555555555800
+  ret x86_fp80 %mul
+}
