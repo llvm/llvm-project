@@ -2429,7 +2429,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Value *SrcVal = Src.getScalarVal();
 
       if (SrcVal->getType()->getPrimitiveSizeInBits() <
-                                     VecTy->getScalarSizeInBits())
+          VecTy->getScalarSizeInBits())
         SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
       auto *IRStoreTy = dyn_cast<llvm::IntegerType>(Vec->getType());
@@ -2655,8 +2655,7 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
 
   if (const VectorType *VTy = Dst.getType()->getAs<VectorType>()) {
     unsigned NumSrcElts = VTy->getNumElements();
-    unsigned NumDstElts =
-        cast<llvm::FixedVectorType>(VecTy)->getNumElements();
+    unsigned NumDstElts = cast<llvm::FixedVectorType>(VecTy)->getNumElements();
     if (NumDstElts == NumSrcElts) {
       // Use shuffle vector is the src and destination are the same number of
       // elements and restore the vector mask since it is on the side it will be
@@ -2666,7 +2665,8 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
         Mask[getAccessedFieldNo(i, Elts)] = i;
 
       llvm::Value *SrcVal = Src.getScalarVal();
-      if (VecTy->getScalarSizeInBits() > SrcVal->getType()->getScalarSizeInBits())
+      if (VecTy->getScalarSizeInBits() >
+          SrcVal->getType()->getScalarSizeInBits())
         SrcVal = Builder.CreateZExt(SrcVal, VecTy);
 
       Vec = Builder.CreateShuffleVector(SrcVal, Mask);
@@ -2679,7 +2679,8 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         ExtMask.push_back(i);
       ExtMask.resize(NumDstElts, -1);
-      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(Src.getScalarVal(), ExtMask);
+      llvm::Value *ExtSrcVal =
+          Builder.CreateShuffleVector(Src.getScalarVal(), ExtMask);
       // build identity
       SmallVector<int, 4> Mask;
       for (unsigned i = 0; i != NumDstElts; ++i)
