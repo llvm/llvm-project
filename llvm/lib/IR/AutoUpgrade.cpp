@@ -4375,13 +4375,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         not_consumed = false;
         if (entry.first == prefix_x86 || Name != "stackprotectorcheck") {
           if (entry.first == prefix_dbg) {
-            // We might have decided we don't want the new format after all between
-            // first requesting the upgrade and now; skip the conversion if that is
-            // the case, and check here to see if the intrinsic needs to be upgraded
-            // normally.
+            // We might have decided we don't want the new format after all
+            // between first requesting the upgrade and now; skip the conversion
+            // if that is the case, and check here to see if the intrinsic needs
+            // to be upgraded normally.
             if (!CI->getModule()->IsNewDbgInfoFormat) {
-              bool NeedsUpgrade =
-                  upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
+              bool NeedsUpgrade = upgradeIntrinsicFunction1(
+                  CI->getCalledFunction(), NewFn, false);
               if (!NeedsUpgrade)
                 return;
               FallthroughToDefaultUpgrade = true;
