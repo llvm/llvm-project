@@ -143,28 +143,34 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
 }
 
 // Merge two adjacent load/store instructions into a paired instruction
-// (LDP/SDP/SWP/LWP) if the effective address is 16-byte aligned. This function
-// selects the appropriate paired opcode, verifies that the memory operand is
-// 16-byte aligned, and checks that the offset is valid. If all conditions are
-// met, it builds and inserts the paired instruction.
+// (LDP/SDP/SWP/LWP) if the effective address is 8-byte aligned in case of
+// SWP/LWP 16-byte aligned in case of LDP/SDP. This function selects the
+// appropriate paired opcode, verifies that the memory operand is properly
+// aligned, and checks that the offset is valid. If all conditions are met, it
+// builds and inserts the paired instruction.
 bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
   unsigned PairOpc;
   // TODO: Handle the rest from RISCVInstrInfo::isPairableLdStInstOpc.
+  Align RequiredAlignment;
   switch (First->getOpcode()) {
   default:
     return false;
   case RISCV::SW:
     PairOpc = RISCV::MIPS_SWP;
+    RequiredAlignment = Align(8);
     break;
   case RISCV::LW:
     PairOpc = RISCV::MIPS_LWP;
+    RequiredAlignment = Align(8);
     break;
   case RISCV::SD:
     PairOpc = RISCV::MIPS_SDP;
+    RequiredAlignment = Align(16);
     break;
   case RISCV::LD:
     PairOpc = RISCV::MIPS_LDP;
+    RequiredAlignment = Align(16);
     break;
   }
 
@@ -172,8 +178,8 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
   const MachineMemOperand *MMO = *First->memoperands_begin();
   Align MMOAlign = MMO->getAlign();
 
-  // Only pair if alignment is exactly 16 bytes.
-  if (MMOAlign != 16)
+  // Only pair if alignment is exactly RequiredAlignment bytes.
+  if (MMOAlign != RequiredAlignment)
     return false;
 
   int64_t Offset = First->getOperand(2).getImm();

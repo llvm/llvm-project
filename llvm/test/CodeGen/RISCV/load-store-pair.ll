@@ -153,7 +153,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV32I_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32I_PAIR-NEXT:    .cfi_offset s4, -12
 ; RV32I_PAIR-NEXT:    .cfi_offset s5, -16
-; RV32I_PAIR-NEXT:    mips.lwp s3, s2, 0(a0)
+; RV32I_PAIR-NEXT:    lw s3, 0(a0)
+; RV32I_PAIR-NEXT:    lw s2, 4(a0)
 ; RV32I_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32I_PAIR-NEXT:    #APP
 ; RV32I_PAIR-NEXT:    #NO_APP
@@ -181,7 +182,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV32D_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32D_PAIR-NEXT:    .cfi_offset s4, -12
 ; RV32D_PAIR-NEXT:    .cfi_offset s5, -16
-; RV32D_PAIR-NEXT:    mips.lwp s3, s2, 0(a0)
+; RV32D_PAIR-NEXT:    lw s3, 0(a0)
+; RV32D_PAIR-NEXT:    lw s2, 4(a0)
 ; RV32D_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32D_PAIR-NEXT:    #APP
 ; RV32D_PAIR-NEXT:    #NO_APP
@@ -210,7 +212,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64I_PAIR-NEXT:    .cfi_offset s4, -24
 ; RV64I_PAIR-NEXT:    .cfi_offset s5, -32
 ; RV64I_PAIR-NEXT:    mips.ldp s3, s2, 0(a0)
-; RV64I_PAIR-NEXT:    mips.ldp s5, s4, 16(a0)
+; RV64I_PAIR-NEXT:    ld s5, 16(a0)
+; RV64I_PAIR-NEXT:    ld s4, 24(a0)
 ; RV64I_PAIR-NEXT:    #APP
 ; RV64I_PAIR-NEXT:    #NO_APP
 ; RV64I_PAIR-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
@@ -238,7 +241,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64P_8700-NEXT:    .cfi_offset s4, -24
 ; RV64P_8700-NEXT:    .cfi_offset s5, -32
 ; RV64P_8700-NEXT:    mips.ldp s3, s2, 0(a0)
-; RV64P_8700-NEXT:    mips.ldp s5, s4, 16(a0)
+; RV64P_8700-NEXT:    ld s5, 16(a0)
+; RV64P_8700-NEXT:    ld s4, 24(a0)
 ; RV64P_8700-NEXT:    #APP
 ; RV64P_8700-NEXT:    #NO_APP
 ; RV64P_8700-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
@@ -266,7 +270,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64D_PAIR-NEXT:    .cfi_offset s4, -24
 ; RV64D_PAIR-NEXT:    .cfi_offset s5, -32
 ; RV64D_PAIR-NEXT:    mips.ldp s3, s2, 0(a0)
-; RV64D_PAIR-NEXT:    mips.ldp s5, s4, 16(a0)
+; RV64D_PAIR-NEXT:    ld s5, 16(a0)
+; RV64D_PAIR-NEXT:    ld s4, 24(a0)
 ; RV64D_PAIR-NEXT:    #APP
 ; RV64D_PAIR-NEXT:    #NO_APP
 ; RV64D_PAIR-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
@@ -317,7 +322,7 @@ entry:
   %arrayidx2 = getelementptr inbounds i8*, i8** %a, i64 3
   %2 = load i8*, i8** %arrayidx2, align 16
   %arrayidx3 = getelementptr inbounds i8*, i8** %a, i64 2
-  %3 = load i8*, i8** %arrayidx3, align 16
+  %3 = load i8*, i8** %arrayidx3, align 8
   tail call void asm sideeffect "", "{x18},{x19},{x20},{x21}"(i8* %0, i8* %1, i8* %2, i8* %3)
   ret void
 }
