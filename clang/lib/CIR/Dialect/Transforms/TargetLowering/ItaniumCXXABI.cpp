@@ -103,6 +103,10 @@ public:
                                  mlir::Value loweredRhs,
                                  mlir::OpBuilder &builder) const override;
 
+  mlir::Value lowerMethodCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                             mlir::Value loweredRhs,
+                             mlir::OpBuilder &builder) const override;
+
   mlir::Value lowerDataMemberBitcast(cir::CastOp op, mlir::Type loweredDstTy,
                                      mlir::Value loweredSrc,
                                      mlir::OpBuilder &builder) const override;
@@ -476,6 +480,61 @@ mlir::Value ItaniumCXXABI::lowerDataMemberCmp(cir::CmpOp op,
                                               mlir::OpBuilder &builder) const {
   return builder.create<cir::CmpOp>(op.getLoc(), op.getKind(), loweredLhs,
                                     loweredRhs);
+}
+
+mlir::Value ItaniumCXXABI::lowerMethodCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                                          mlir::Value loweredRhs,
+                                          mlir::OpBuilder &builder) const {
+  assert(op.getKind() == cir::CmpOpKind::eq ||
+         op.getKind() == cir::CmpOpKind::ne);
+
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(LM);
+  mlir::Value ptrdiffZero = builder.create<cir::ConstantOp>(
+      op.getLoc(), ptrdiffCIRTy, cir::IntAttr::get(ptrdiffCIRTy, 0));
+
+  mlir::Value lhsPtrField = builder.create<cir::ExtractMemberOp>(
+      op.getLoc(), ptrdiffCIRTy, loweredLhs, 0);
+  mlir::Value rhsPtrField = builder.create<cir::ExtractMemberOp>(
+      op.getLoc(), ptrdiffCIRTy, loweredRhs, 0);
+  mlir::Value ptrCmp = builder.create<cir::CmpOp>(op.getLoc(), op.getKind(),
+                                                  lhsPtrField, rhsPtrField);
+  mlir::Value ptrCmpToNull = builder.create<cir::CmpOp>(
+      op.getLoc(), op.getKind(), lhsPtrField, ptrdiffZero);
+
+  mlir::Value lhsAdjField = builder.create<cir::ExtractMemberOp>(
+      op.getLoc(), ptrdiffCIRTy, loweredLhs, 1);
+  mlir::Value rhsAdjField = builder.create<cir::ExtractMemberOp>(
+      op.getLoc(), ptrdiffCIRTy, loweredRhs, 1);
+  mlir::Value adjCmp = builder.create<cir::CmpOp>(op.getLoc(), op.getKind(),
+                                                  lhsAdjField, rhsAdjField);
+
+  // We use cir.select to represent "||" and "&&" operations below:
+  //   - cir.select if %a then %b else false => %a && %b
+  //   - cir.select if %a then true else %b  => %a || %b
+  // TODO: Do we need to invent dedicated "cir.logical_or" and "cir.logical_and"
+  // operations for this?
+  auto boolTy = cir::BoolType::get(op.getContext());
+  mlir::Value trueValue = builder.create<cir::ConstantOp>(
+      op.getLoc(), boolTy, cir::BoolAttr::get(op.getContext(), boolTy, true));
+  mlir::Value falseValue = builder.create<cir::ConstantOp>(
+      op.getLoc(), boolTy, cir::BoolAttr::get(op.getContext(), boolTy, false));
+  auto create_and = [&](mlir::Value lhs, mlir::Value rhs) {
+    return builder.create<cir::SelectOp>(op.getLoc(), lhs, rhs, falseValue);
+  };
+  auto create_or = [&](mlir::Value lhs, mlir::Value rhs) {
+    return builder.create<cir::SelectOp>(op.getLoc(), lhs, trueValue, rhs);
+  };
+
+  mlir::Value result;
+  if (op.getKind() == cir::CmpOpKind::eq) {
+    // (lhs.ptr == null || lhs.adj == rhs.adj) && lhs.ptr == rhs.ptr
+    result = create_and(create_or(ptrCmpToNull, adjCmp), ptrCmp);
+  } else {
+    // (lhs.ptr != null && lhs.adj != rhs.adj) || lhs.ptr != rhs.ptr
+    result = create_or(create_and(ptrCmpToNull, adjCmp), ptrCmp);
+  }
+
+  return result;
 }
 
 mlir::Value

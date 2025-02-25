@@ -2893,10 +2893,17 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   auto type = cmpOp.getLhs().getType();
 
-  if (mlir::isa<cir::DataMemberType>(type)) {
+  if (mlir::isa<cir::DataMemberType, cir::MethodType>(type)) {
     assert(lowerMod && "lowering module is not available");
-    mlir::Value loweredResult = lowerMod->getCXXABI().lowerDataMemberCmp(
-        cmpOp, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+
+    mlir::Value loweredResult;
+    if (mlir::isa<cir::DataMemberType>(type))
+      loweredResult = lowerMod->getCXXABI().lowerDataMemberCmp(
+          cmpOp, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+    else
+      loweredResult = lowerMod->getCXXABI().lowerMethodCmp(
+          cmpOp, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+
     rewriter.replaceOp(cmpOp, loweredResult);
     return mlir::success();
   }

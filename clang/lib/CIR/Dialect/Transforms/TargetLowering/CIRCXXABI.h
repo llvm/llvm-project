@@ -122,6 +122,10 @@ public:
                                          mlir::Value loweredRhs,
                                          mlir::OpBuilder &builder) const = 0;
 
+  virtual mlir::Value lowerMethodCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                                     mlir::Value loweredRhs,
+                                     mlir::OpBuilder &builder) const = 0;
+
   virtual mlir::Value
   lowerDataMemberBitcast(cir::CastOp op, mlir::Type loweredDstTy,
                          mlir::Value loweredSrc,

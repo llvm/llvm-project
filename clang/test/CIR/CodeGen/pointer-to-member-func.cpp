@@ -78,3 +78,43 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // LLVM-NEXT:    %[[#arg:]] = load i32, ptr %{{.+}}
 // LLVM-NEXT:    call void %[[#callee_ptr]](ptr %[[#adjusted_this]], i32 %[[#arg]])
 //      LLVM: }
+
+bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
+  return lhs == rhs;
+}
+
+// CHECK-LABEL: @_Z6cmp_eqM3FooFviES1_
+// CHECK: %{{.+}} = cir.cmp(eq, %{{.+}}, %{{.+}}) : !cir.method<!cir.func<(!s32i)> in !ty_Foo>, !cir.bool
+
+// LLVM-LABEL: @_Z6cmp_eqM3FooFviES1_
+//      LLVM: %[[#lhs:]] = load { i64, i64 }, ptr %{{.+}}
+// LLVM-NEXT: %[[#rhs:]] = load { i64, i64 }, ptr %{{.+}}
+// LLVM-NEXT: %[[#lhs_ptr:]] = extractvalue { i64, i64 } %[[#lhs]], 0
+// LLVM-NEXT: %[[#rhs_ptr:]] = extractvalue { i64, i64 } %[[#rhs]], 0
+// LLVM-NEXT: %[[#ptr_cmp:]] = icmp eq i64 %[[#lhs_ptr]], %[[#rhs_ptr]]
+// LLVM-NEXT: %[[#ptr_null:]] = icmp eq i64 %[[#lhs_ptr]], 0
+// LLVM-NEXT: %[[#lhs_adj:]] = extractvalue { i64, i64 } %[[#lhs]], 1
+// LLVM-NEXT: %[[#rhs_adj:]] = extractvalue { i64, i64 } %[[#rhs]], 1
+// LLVM-NEXT: %[[#adj_cmp:]] = icmp eq i64 %[[#lhs_adj]], %[[#rhs_adj]]
+// LLVM-NEXT: %[[#tmp:]] = or i1 %[[#ptr_null]], %[[#adj_cmp]]
+// LLVM-NEXT: %{{.+}} = and i1 %[[#tmp]], %[[#ptr_cmp]]
+
+bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
+  return lhs != rhs;
+}
+
+// CHECK-LABEL: @_Z6cmp_neM3FooFviES1_
+// CHECK: %{{.+}} = cir.cmp(ne, %{{.+}}, %{{.+}}) : !cir.method<!cir.func<(!s32i)> in !ty_Foo>, !cir.bool
+
+// LLVM-LABEL: @_Z6cmp_neM3FooFviES1_
+//      LLVM: %[[#lhs:]] = load { i64, i64 }, ptr %{{.+}}
+// LLVM-NEXT: %[[#rhs:]] = load { i64, i64 }, ptr %{{.+}}
+// LLVM-NEXT: %[[#lhs_ptr:]] = extractvalue { i64, i64 } %[[#lhs]], 0
+// LLVM-NEXT: %[[#rhs_ptr:]] = extractvalue { i64, i64 } %[[#rhs]], 0
+// LLVM-NEXT: %[[#ptr_cmp:]] = icmp ne i64 %[[#lhs_ptr]], %[[#rhs_ptr]]
+// LLVM-NEXT: %[[#ptr_null:]] = icmp ne i64 %[[#lhs_ptr]], 0
+// LLVM-NEXT: %[[#lhs_adj:]] = extractvalue { i64, i64 } %[[#lhs]], 1
+// LLVM-NEXT: %[[#rhs_adj:]] = extractvalue { i64, i64 } %[[#rhs]], 1
+// LLVM-NEXT: %[[#adj_cmp:]] = icmp ne i64 %[[#lhs_adj]], %[[#rhs_adj]]
+// LLVM-NEXT: %[[#tmp:]] = and i1 %[[#ptr_null]], %[[#adj_cmp]]
+// LLVM-NEXT: %{{.+}} = or i1 %[[#tmp]], %[[#ptr_cmp]]
