@@ -994,8 +994,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     // or src pointer.
     Value *DestObj = getUnderlyingObject(cpyDest);
     if (!isIdentifiedFunctionLocal(DestObj) ||
-        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true,
-                                   /* StoreCaptures */ true, C, DT,
+        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true, C, DT,
                                    /* IncludeI */ true))
       return false;
 

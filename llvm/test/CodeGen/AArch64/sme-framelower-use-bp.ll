@@ -531,18 +531,18 @@ define void @quux() #1 {
 ; CHECK-NEXT:    ldr x18, [x19, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x0, [x19, #72] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x1, [x19, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x15, [x19, #224] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x2, [x19, #216] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x3, [x19, #120] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x4, [x19, #112] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x5, [x19, #104] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x6, [x19, #96] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x7, [x19, #224] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x20, [x19, #152] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x21, [x19, #144] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x22, [x19, #136] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x23, [x19, #128] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x16, [x19, #200] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x15, [x19, #208] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x16, [x19, #152] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x7, [x19, #144] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x20, [x19, #136] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x21, [x19, #128] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x23, [x19, #200] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x22, [x19, #208] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x24, [x19, #192] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x26, [x19, #176] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldr x25, [x19, #184] // 8-byte Folded Reload
@@ -562,36 +562,34 @@ define void @quux() #1 {
 ; CHECK-NEXT:    add x25, x25, x27, lsl #2
 ; CHECK-NEXT:    str x25, [x26]
 ; CHECK-NEXT:    ldr p0, [x24]
-; CHECK-NEXT:    ldr x24, [x16]
+; CHECK-NEXT:    ldr x24, [x23]
 ; CHECK-NEXT:    mov p8.b, p0.b
 ; CHECK-NEXT:    ld1w { z16.s, z24.s }, pn8/z, [x24]
 ; CHECK-NEXT:    mov z0.d, z16.d
 ; CHECK-NEXT:    mov z1.d, z24.d
 ; CHECK-NEXT:    st1w { z1.s }, p2, [x13, #1, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p2, [x13]
-; CHECK-NEXT:    ldr x24, [x15]
-; CHECK-NEXT:    ldr x15, [x16]
-; CHECK-NEXT:    add x15, x15, x24, lsl #2
-; CHECK-NEXT:    str x15, [x16]
-; CHECK-NEXT:    mov x16, x2
-; CHECK-NEXT:    incd x16
+; CHECK-NEXT:    ldr x24, [x22]
+; CHECK-NEXT:    ldr x22, [x23]
+; CHECK-NEXT:    add x22, x22, x24, lsl #2
+; CHECK-NEXT:    str x22, [x23]
 ; CHECK-NEXT:    ldr p1, [x2]
-; CHECK-NEXT:    mov x15, x7
-; CHECK-NEXT:    incd x15
-; CHECK-NEXT:    ldr p0, [x7]
+; CHECK-NEXT:    ldr p0, [x15]
 ; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x14]
 ; CHECK-NEXT:    ld1w { z0.s }, p2/z, [x13]
-; CHECK-NEXT:    str p1, [x23]
-; CHECK-NEXT:    str p0, [x22]
-; CHECK-NEXT:    st1w { z1.s }, p2, [x21]
-; CHECK-NEXT:    st1w { z0.s }, p2, [x20]
-; CHECK-NEXT:    ldr p0, [x23]
-; CHECK-NEXT:    ldr p1, [x22]
-; CHECK-NEXT:    ld1w { z0.s }, p2/z, [x21]
-; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x20]
+; CHECK-NEXT:    str p1, [x21]
+; CHECK-NEXT:    str p0, [x20]
+; CHECK-NEXT:    st1w { z1.s }, p2, [x7]
+; CHECK-NEXT:    st1w { z0.s }, p2, [x16]
+; CHECK-NEXT:    ldr p0, [x21]
+; CHECK-NEXT:    ldr p1, [x20]
+; CHECK-NEXT:    ld1w { z0.s }, p2/z, [x7]
+; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x16]
 ; CHECK-NEXT:    fmopa za0.s, p0/m, p1/m, z0.s, z1.s
+; CHECK-NEXT:    mov x16, x2
+; CHECK-NEXT:    incd x16
 ; CHECK-NEXT:    ldr p1, [x16]
-; CHECK-NEXT:    ldr p0, [x7]
+; CHECK-NEXT:    ldr p0, [x15]
 ; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x14, #1, mul vl]
 ; CHECK-NEXT:    ld1w { z0.s }, p2/z, [x13]
 ; CHECK-NEXT:    str p1, [x6]
@@ -604,6 +602,7 @@ define void @quux() #1 {
 ; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x3]
 ; CHECK-NEXT:    fmopa za1.s, p0/m, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    ldr p1, [x2]
+; CHECK-NEXT:    incd x15
 ; CHECK-NEXT:    ldr p0, [x15]
 ; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x14]
 ; CHECK-NEXT:    ld1w { z0.s }, p2/z, [x13, #1, mul vl]

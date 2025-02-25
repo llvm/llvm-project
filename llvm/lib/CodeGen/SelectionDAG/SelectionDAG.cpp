@@ -12444,25 +12444,6 @@ const EVT *SDNode::getValueTypeList(MVT VT) {
   return &SimpleVTArray.VTs[VT.SimpleTy];
 }
 
-/// hasNUsesOfValue - Return true if there are exactly NUSES uses of the
-/// indicated value.  This method ignores uses of other values defined by this
-/// operation.
-bool SDNode::hasNUsesOfValue(unsigned NUses, unsigned Value) const {
-  assert(Value < getNumValues() && "Bad value!");
-
-  // TODO: Only iterate over uses of a given value of the node
-  for (SDUse &U : uses()) {
-    if (U.getResNo() == Value) {
-      if (NUses == 0)
-        return false;
-      --NUses;
-    }
-  }
-
-  // Found exactly the right number of uses?
-  return NUses == 0;
-}
-
 /// hasAnyUseOfValue - Return true if there are any use of the indicated
 /// value. This method ignores uses of other values defined by this operation.
 bool SDNode::hasAnyUseOfValue(unsigned Value) const {
