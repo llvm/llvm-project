@@ -188,6 +188,7 @@ func.func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf
 //   CHECK-LABEL: func @vector_fma
 // CHECK-COUNT-4: vector.fma %{{.+}}, %{{.+}}, %{{.+}} : vector<2x2xf32>
 
+// TODO: We should be able to unroll this like the example above - this will require extending UnrollElementwisePattern.
 func.func @negative_vector_fma_3d(%a: vector<3x2x2xf32>) {
   %0 = vector.fma %a, %a, %a : vector<3x2x2xf32>
   return 
