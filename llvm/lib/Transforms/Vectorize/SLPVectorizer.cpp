@@ -910,7 +910,8 @@ public:
         return trySet(MainOp_BIT);
       return false;
     }
-    SeenBefore |= opcodeToMask(Opcode);
+    MaskType opcodeMask = opcodeToMask(Opcode);
+    SeenBefore |= opcodeMask;
     ConstantInt *CI = isBinOpWithConstantInt(I).first;
     if (CI) {
       constexpr MaskType CanBeAll = Xor_BIT | Or_BIT | And_BIT | Sub_BIT |
@@ -937,7 +938,7 @@ public:
         break;
       }
     }
-    return trySet(opcodeToMask(Opcode));
+    return trySet(opcodeMask);
   }
   unsigned getOpcode() const {
     if (Mask & MainOp_BIT)
