@@ -88,6 +88,7 @@ add_llvm_component_library(LLVMOrcJIT
   Support
   Target
   TargetParser
+  TextAPI
   TransformUtils
   )
 
