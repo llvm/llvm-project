@@ -30,7 +30,7 @@ _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_log, double);
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 _CLC_OVERLOAD _CLC_DEF half __clc_log(half x) {
-  return (half)__clc_log2((float)x);
+  return (half)__clc_log2((float)x) * (1.0h / M_LOG2E_H);
 }
 
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_log, half);
