@@ -13,20 +13,14 @@
 #ifndef LLVM_SUPPORT_ALIGNOF_H
 #define LLVM_SUPPORT_ALIGNOF_H
 
-#include <type_traits>
+#include <algorithm>
 
 namespace llvm {
 
 /// A suitably aligned and sized character array member which can hold elements
 /// of any type.
-///
-/// This template is equivalent to std::aligned_union_t<1, ...>, but we cannot
-/// use it due to a bug in the MSVC x86 compiler:
-/// https://github.com/microsoft/STL/issues/1533
-/// Using `alignas` here works around the bug.
 template <typename T, typename... Ts> struct AlignedCharArrayUnion {
-  using AlignedUnion = std::aligned_union_t<1, T, Ts...>;
-  alignas(alignof(AlignedUnion)) char buffer[sizeof(AlignedUnion)];
+  alignas(T) alignas(Ts...) char buffer[std::max({sizeof(T), sizeof(Ts)...})];
 };
 
 } // end namespace llvm
