@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import subprocess
+import tempfile
 
 import lldb
 
@@ -17,9 +18,17 @@ def fzf_history(debugger, cmdstr, ctx, result, _):
 
     if sys.platform != "darwin":
         # The ability to integrate fzf's result into lldb uses copy and paste.
-        # In absense of copy and paste, do the basics and forgo features.
-        fzf_command = ("fzf", "--no-sort", f"--query={cmdstr}")
+        # In absense of copy and paste, run the selected command directly.
+        temp_file = tempfile.NamedTemporaryFile("r")
+        fzf_command = (
+            "fzf",
+            "--no-sort",
+            f"--query={cmdstr}",
+            f"--bind=enter:execute-silent(echo -n {{}} > {temp_file.name})+accept",
+        )
         subprocess.run(fzf_command, input=history, text=True)
+        command = temp_file.read()
+        debugger.HandleCommand(command)
         return
 
     # Capture the current pasteboard contents to restore after overwriting.
