@@ -10,12 +10,9 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/TypeUtilities.h"
 
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "xegpu"
 
