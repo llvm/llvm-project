@@ -240,6 +240,10 @@ def getArchitecture():
         arch = "x86_64"
     if arch in ["armv7l", "armv8l"]:
         arch = "arm"
+    if re.match("rv64*", arch):
+        arch = "riscv64"
+    if re.match("rv32*", arch):
+        arch = "riscv32"
     return arch
 
 
