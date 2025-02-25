@@ -45,10 +45,10 @@ private:
   const object::XCOFFObjectFile &Obj;
   std::unique_ptr<LinkGraph> G;
 
-  Section* UndefSection;
+  Section *UndefSection;
 
   struct SectionEntry {
-    jitlink::Section* Section;
+    jitlink::Section *Section;
     object::SectionRef SectionData;
   };
 
