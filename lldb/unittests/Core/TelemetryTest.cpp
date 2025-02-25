@@ -58,10 +58,10 @@ public:
   }
 
   static void Initialize() {
-    telemetry::TelemetryManager::setInstance(std::make_unique<FakePlugin>());
+    telemetry::TelemetryManager::SetInstance(std::make_unique<FakePlugin>());
   }
 
-  static void Terminate() { telemetry::TelemetryManager::setInstance(nullptr); }
+  static void Terminate() { telemetry::TelemetryManager::SetInstance(nullptr); }
 };
 
 } // namespace lldb_private
@@ -71,7 +71,7 @@ TEST(TelemetryTest, PluginTest) {
   // For tests, we just call it directly.
   lldb_private::FakePlugin::Initialize();
 
-  auto *ins = lldb_private::telemetry::TelemetryManager::getInstance();
+  auto *ins = lldb_private::telemetry::TelemetryManager::GetInstance();
   ASSERT_NE(ins, nullptr);
 
   std::vector<const ::llvm::telemetry::TelemetryInfo *> expected_entries;

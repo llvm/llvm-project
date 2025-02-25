@@ -393,7 +393,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       R.moveBefore(*PredVPBB, PredVPBB->end());
     VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-    auto *ParentRegion = cast_or_null<VPRegionBlock>(VPBB->getParent());
+    auto *ParentRegion = VPBB->getParent();
     if (ParentRegion && ParentRegion->getExiting() == VPBB)
       ParentRegion->setExiting(PredVPBB);
     for (auto *Succ : to_vector(VPBB->successors())) {
@@ -1240,9 +1240,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       LoopBuilder.setInsertPoint(InsertBlock,
                                  std::next(Previous->getIterator()));
 
-    auto *RecurSplice = cast<VPInstruction>(
+    auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                                 {FOR, FOR->getBackedgeValue()}));
+                                 {FOR, FOR->getBackedgeValue()});
 
     FOR->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to FOR again, after replacing
@@ -2049,18 +2049,9 @@ void VPlanTransforms::handleUncountableEarlyExit(
       cast<BranchInst>(UncountableExitingBlock->getTerminator());
   BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
   BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
-
-  // The early exit block may or may not be the same as the "countable" exit
-  // block. Creates a new VPIRBB for the early exit block in case it is distinct
-  // from the countable exit block.
-  // TODO: Introduce both exit blocks during VPlan skeleton construction.
-  VPIRBasicBlock *VPEarlyExitBlock;
-  if (OrigLoop->getUniqueExitBlock()) {
-    VPEarlyExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
-  } else {
-    VPEarlyExitBlock = Plan.createVPIRBasicBlock(
-        !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  }
+  BasicBlock *EarlyExitIRBB =
+      !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
+  VPIRBasicBlock *VPEarlyExitBlock = Plan.getExitBlock(EarlyExitIRBB);
 
   VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
       OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
