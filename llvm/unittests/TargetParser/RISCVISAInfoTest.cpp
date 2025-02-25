@@ -662,6 +662,11 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
   }
+
+  for (StringRef Input : {"rv32i_zcmp_xqccmp0p1", "rv64i_zcmp_xqccmp0p1"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmp' and 'xqccmp' extensions are incompatible");
+  }
 }
 
 TEST(ParseArchString, MissingDepency) {
@@ -1119,6 +1124,7 @@ Experimental extensions
     smctr                1.0
     ssctr                1.0
     svukte               0.3
+    xqccmp               0.1
     xqcia                0.2
     xqciac               0.3
     xqcicli              0.2

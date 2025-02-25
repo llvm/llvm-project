@@ -2147,6 +2147,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 

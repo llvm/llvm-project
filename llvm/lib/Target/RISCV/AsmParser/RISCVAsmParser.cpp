@@ -3640,7 +3640,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
-  if (Opcode == RISCV::CM_MVSA01) {
+  if (Opcode == RISCV::CM_MVSA01 || Opcode == RISCV::QC_CM_MVSA01) {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
     MCRegister Rd2 = Inst.getOperand(1).getReg();
     if (Rd1 == Rd2) {
