@@ -2,13 +2,15 @@
 ; RUN: llc < %s --global-isel=0 -mtriple=aarch64-linux-gnu -mattr=+fp-armv8 | FileCheck %s
 ; RUN: llc < %s --global-isel=1 -mtriple=aarch64-linux-gnu -mattr=+fp-armv8 | FileCheck %s --check-prefix=GISEL
 
+%struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
+
 define void @va(i32 %count, half %f, ...) nounwind {
-; CHECK-LABEL: va:                                     // @va
-; CHECK:       // %bb.0:                               // %entry
+; CHECK-LABEL: va:
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ret
 ;
-; GISEL-LABEL: va:                                     // @va
-; GISEL:       // %bb.0:                               // %entry
+; GISEL-LABEL: va:
+; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    sub sp, sp, #176
 ; GISEL-NEXT:    stp x1, x2, [sp, #120]
 ; GISEL-NEXT:    stp x3, x4, [sp, #136]
@@ -21,5 +23,57 @@ define void @va(i32 %count, half %f, ...) nounwind {
 ; GISEL-NEXT:    add sp, sp, #176
 ; GISEL-NEXT:    ret
 entry:
+  ret void
+}
+
+define void @va_used(i32 %count, half %f, ...) nounwind {
+; CHECK-LABEL: va_used:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #208
+; CHECK-NEXT:    mov x8, #-56 // =0xffffffffffffffc8
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    add x10, sp, #120
+; CHECK-NEXT:    movk x8, #65424, lsl #32
+; CHECK-NEXT:    add x9, x9, #112
+; CHECK-NEXT:    stp x2, x3, [sp, #128]
+; CHECK-NEXT:    stp x9, x8, [sp, #192]
+; CHECK-NEXT:    add x8, x10, #56
+; CHECK-NEXT:    add x9, sp, #208
+; CHECK-NEXT:    str x1, [sp, #120]
+; CHECK-NEXT:    stp x4, x5, [sp, #144]
+; CHECK-NEXT:    stp x6, x7, [sp, #160]
+; CHECK-NEXT:    stp q1, q2, [sp]
+; CHECK-NEXT:    stp q3, q4, [sp, #32]
+; CHECK-NEXT:    stp q5, q6, [sp, #64]
+; CHECK-NEXT:    str q7, [sp, #96]
+; CHECK-NEXT:    stp x9, x8, [sp, #176]
+; CHECK-NEXT:    add sp, sp, #208
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: va_used:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    sub sp, sp, #208
+; GISEL-NEXT:    mov x8, sp
+; GISEL-NEXT:    add x9, sp, #208
+; GISEL-NEXT:    add x10, sp, #208
+; GISEL-NEXT:    stp x9, x10, [x8]
+; GISEL-NEXT:    add x9, sp, #144
+; GISEL-NEXT:    mov w10, #-112 // =0xffffff90
+; GISEL-NEXT:    str x9, [x8, #16]
+; GISEL-NEXT:    mov w9, #-56 // =0xffffffc8
+; GISEL-NEXT:    stp x1, x2, [sp, #152]
+; GISEL-NEXT:    stp x3, x4, [sp, #168]
+; GISEL-NEXT:    stp x5, x6, [sp, #184]
+; GISEL-NEXT:    str x7, [sp, #200]
+; GISEL-NEXT:    stp q1, q2, [sp, #32]
+; GISEL-NEXT:    stp q3, q4, [sp, #64]
+; GISEL-NEXT:    stp q5, q6, [sp, #96]
+; GISEL-NEXT:    str q7, [sp, #128]
+; GISEL-NEXT:    stp w9, w10, [x8, #24]
+; GISEL-NEXT:    add sp, sp, #208
+; GISEL-NEXT:    ret
+  %valist = alloca %struct.__va_list
+  call void @llvm.va_start(ptr %valist)
+  call void @llvm.va_end(ptr %valist)
   ret void
 }

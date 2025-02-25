@@ -16,6 +16,8 @@ define dso_local ptr @func() hybrid_patchable nounwind {
   ret ptr @func
 }
 
+%struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
+
 define void @has_varargs(...) hybrid_patchable nounwind {
 ; SYM: [11](sec  5)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #has_varargs$hp_target
 ; CHECK-LABEL:     .def "#has_varargs$hp_target";
@@ -24,7 +26,14 @@ define void @has_varargs(...) hybrid_patchable nounwind {
 ; CHECK-NEXT:      .p2align 2
 ; CHECK-NEXT:  "#has_varargs$hp_target":               // @"#has_varargs$hp_target"
 ; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:      sub     sp, sp, #64
+; CHECK-NEXT:      stp     x0, x1, [x4, #-32]!
+; CHECK-NEXT:      stp     x2, x3, [x4, #16]
+; CHECK-NEXT:      str     x4, [sp], #64
 ; CHECK-NEXT:      ret
+  %valist = alloca %struct.__va_list
+  call void @llvm.va_start(ptr %valist)
+  call void @llvm.va_end(ptr %valist)
   ret void
 }
 
