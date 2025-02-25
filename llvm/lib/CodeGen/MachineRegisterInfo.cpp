@@ -454,12 +454,14 @@ bool MachineRegisterInfo::isLiveIn(Register Reg) const {
 
     // Check if Reg is a subreg of live-in register
     MCRegister PhysReg = LI.first;
-    if (!PhysReg.isValid())
+    if (!PhysReg.isValid() || !Reg.isPhysical())
       continue;
 
-    for (MCPhysReg SubReg : getTargetRegisterInfo()->subregs(PhysReg))
-      if (SubReg == Reg)
-        return true;
+    const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+    if (all_of(TRI->regunits(Reg), [&](const MCRegUnit RegUnit) {
+          return llvm::is_contained(TRI->regunits(PhysReg), RegUnit);
+        }))
+      return true;
   }
   return false;
 }
