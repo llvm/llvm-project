@@ -197,6 +197,7 @@ void g() {
 } // namespace cwg2277
 
 namespace cwg2285 { // cwg2285: 4
+// Note: Clang 4 implements this DR but it set a wrong value of `__cplusplus`
 #if __cplusplus >= 201703L
   void test() {
     using T = int[1];
