@@ -19,7 +19,7 @@ define noundef i16 @uaddc_i16(i16 noundef %a, i16 noundef %b) "hlsl.export" {
 
 ; CHECK: error:
 ; CHECK-SAME: in function uaddc_return
-; CHECK-SAME: llvm.uadd.with.overflow.i32 use is not a ExtractValueInst or InsertValueInst
+; CHECK-SAME: DXIL ops that return structs may only be used by insert- and extractvalue
 
 define noundef { i32, i1 } @uaddc_return(i32 noundef %a, i32 noundef %b) "hlsl.export" {
   %uaddc = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)

@@ -50,9 +50,6 @@ public:
   /// Get a `%dx.types.ResRet` type with the given element type.
   StructType *getResRetType(Type *ElementTy);
 
-  /// Get the `%dx.types.i32c` type.
-  StructType *getBinaryWithCarryType(LLVMContext &Context);
-
   /// Get the `%dx.types.Handle` type.
   StructType *getHandleType();
 

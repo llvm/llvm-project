@@ -545,10 +545,6 @@ StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
   return ::getResRetType(ElementTy);
 }
 
-StructType *DXILOpBuilder::getBinaryWithCarryType(LLVMContext &Context) {
-  return ::getBinaryWithCarryType(Context);
-}
-
 StructType *DXILOpBuilder::getHandleType() {
   return ::getHandleType(IRB.getContext());
 }

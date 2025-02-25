@@ -818,15 +818,6 @@ public:
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
-      // TODO: this can be removed when
-      // https://github.com/llvm/llvm-project/issues/113192 is fixed
-      case Intrinsic::uadd_with_overflow:
-        HasErrors |= replaceFunctionWithNamedStructOp(
-            F, OpCode::UAddc, OpBuilder.getBinaryWithCarryType(M.getContext()),
-            [&](CallInst *CI, CallInst *Op) {
-              return replaceAggregateTypeOfCallUsages(CI, Op);
-            });
-        break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
         break;

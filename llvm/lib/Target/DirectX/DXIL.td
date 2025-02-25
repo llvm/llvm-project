@@ -741,9 +741,7 @@ def UMin : DXILOp<40, binary> {
 
 def UAddc : DXILOp<44, binaryWithCarryOrBorrow > {
   let Doc = "Unsigned 32-bit integer arithmetic add with carry. uaddc(a,b) = (a+b, a+b overflowed ? 1 : 0)";
-  // TODO: This `let intrinsics = ...` line may be uncommented when 
-  // https://github.com/llvm/llvm-project/issues/113192 is fixed
-  // let intrinsics = [IntrinSelect<int_uadd_with_overflow>];
+  let intrinsics = [IntrinSelect<int_uadd_with_overflow>];
   let arguments = [OverloadTy, OverloadTy];
   let result = BinaryWithCarryTy;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
