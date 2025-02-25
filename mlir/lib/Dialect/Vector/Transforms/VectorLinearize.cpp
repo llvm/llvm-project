@@ -58,59 +58,25 @@ static bool isLessThanOrEqualTargetBitWidth(Type t, unsigned targetBitWidth) {
 }
 
 namespace {
-struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
-  LinearizeConstant(
+struct LinearizeConstantLike final
+    : OpTraitConversionPattern<OpTrait::ConstantLike> {
+  using OpTraitConversionPattern::OpTraitConversionPattern;
+
+  LinearizeConstantLike(
       const TypeConverter &typeConverter, MLIRContext *context,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
-      : OpConversionPattern(typeConverter, context, benefit),
+      : OpTraitConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
   LogicalResult
-  matchAndRewrite(arith::ConstantOp constOp, OpAdaptor adaptor,
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    Location loc = constOp.getLoc();
+    Location loc = op->getLoc();
+    if (op->getNumResults() != 1)
+      return rewriter.notifyMatchFailure(loc, "expected 1 result");
+
     auto resType =
-        getTypeConverter()->convertType<VectorType>(constOp.getType());
-
-    if (!resType)
-      return rewriter.notifyMatchFailure(loc, "can't convert return type");
-
-    if (resType.isScalable() && !isa<SplatElementsAttr>(constOp.getValue()))
-      return rewriter.notifyMatchFailure(
-          loc,
-          "Cannot linearize a constant scalable vector that's not a splat");
-
-    if (!isLessThanTargetBitWidth(constOp, targetVectorBitWidth))
-      return rewriter.notifyMatchFailure(
-          loc, "Can't flatten since targetBitWidth <= OpSize");
-    auto dstElementsAttr = dyn_cast<DenseElementsAttr>(constOp.getValue());
-    if (!dstElementsAttr)
-      return rewriter.notifyMatchFailure(loc, "unsupported attr type");
-
-    dstElementsAttr = dstElementsAttr.reshape(resType);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(constOp, resType,
-                                                   dstElementsAttr);
-    return success();
-  }
-
-private:
-  unsigned targetVectorBitWidth;
-};
-
-struct LinearizePoison final : OpConversionPattern<ub::PoisonOp> {
-  using OpConversionPattern::OpConversionPattern;
-  LinearizePoison(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
-      PatternBenefit benefit = 1)
-      : OpConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
-  LogicalResult
-  matchAndRewrite(ub::PoisonOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    auto resType = getTypeConverter()->convertType<VectorType>(op.getType());
+        getTypeConverter()->convertType<VectorType>(op->getResult(0).getType());
 
     if (!resType)
       return rewriter.notifyMatchFailure(loc, "can't convert return type");
@@ -119,8 +85,40 @@ struct LinearizePoison final : OpConversionPattern<ub::PoisonOp> {
       return rewriter.notifyMatchFailure(
           loc, "Can't flatten since targetBitWidth <= OpSize");
 
-    rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, resType);
-    return success();
+    StringAttr attrName = rewriter.getStringAttr("value");
+    Attribute value = op->getAttr(attrName);
+    if (!value)
+      return rewriter.notifyMatchFailure(loc, "no 'value' attr");
+
+    if (auto dstElementsAttr = dyn_cast<DenseElementsAttr>(value)) {
+      if (resType.isScalable() && !isa<SplatElementsAttr>(value))
+        return rewriter.notifyMatchFailure(
+            loc,
+            "Cannot linearize a constant scalable vector that's not a splat");
+
+      dstElementsAttr = dstElementsAttr.reshape(resType);
+      FailureOr<Operation *> newOp =
+          convertOpResultTypes(op, {}, *getTypeConverter(), rewriter);
+      if (failed(newOp))
+        return failure();
+
+      (*newOp)->setAttr(attrName, dstElementsAttr);
+      rewriter.replaceOp(op, *newOp);
+      return success();
+    }
+
+    if (auto poisonAttr = dyn_cast<ub::PoisonAttr>(value)) {
+      FailureOr<Operation *> newOp =
+          convertOpResultTypes(op, {}, *getTypeConverter(), rewriter);
+      if (failed(newOp))
+        return failure();
+
+      (*newOp)->setAttr(attrName, poisonAttr);
+      rewriter.replaceOp(op, *newOp);
+      return success();
+    }
+
+    return rewriter.notifyMatchFailure(loc, "unsupported attr type");
   }
 
 private:
@@ -555,7 +553,8 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
   typeConverter.addTargetMaterialization(materializeCast);
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
-        if ((isa<arith::ConstantOp, ub::PoisonOp, vector::BitCastOp>(op) ||
+        if ((isa<vector::BitCastOp>(op) ||
+             op->hasTrait<OpTrait::ConstantLike>() ||
              op->hasTrait<OpTrait::Vectorizable>())) {
           return (isLessThanTargetBitWidth(op, targetBitWidth)
                       ? typeConverter.isLegal(op)
@@ -564,7 +563,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
         return std::nullopt;
       });
 
-  patterns.add<LinearizeConstant, LinearizePoison, LinearizeVectorizable,
+  patterns.add<LinearizeConstantLike, LinearizeVectorizable,
                LinearizeVectorBitCast>(typeConverter, patterns.getContext(),
                                        targetBitWidth);
 }
