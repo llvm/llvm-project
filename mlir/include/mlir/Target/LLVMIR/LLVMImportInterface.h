@@ -165,6 +165,7 @@ public:
   LogicalResult convertIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
                                  LLVM::ModuleImport &moduleImport) const {
     // Lookup the dialect interface for the given intrinsic.
+    // Verify the intrinsic identifier maps to an actual intrinsic.
     llvm::Intrinsic::ID intrinId = inst->getIntrinsicID();
     if (intrinId == llvm::Intrinsic::not_intrinsic)
       return failure();
