@@ -746,8 +746,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // FIXME: It isn't clear why we do this *after* loop passes rather than
   // before...
   FPM.addPass(SCCPPass());
-  if (EnableConstraintElimination)
-    FPM.addPass(ConstraintEliminationPass());
 
   // Delete dead bit computations (instcombine runs after to fold away the dead
   // computations, and then ADCE will run later to exploit any new DCE
@@ -758,6 +756,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // opportunities opened up by them.
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
+
+  if (EnableConstraintElimination)
+    FPM.addPass(ConstraintEliminationPass());
 
   // Re-consider control flow based optimizations after redundancy elimination,
   // redo DCE, etc.
