@@ -10,7 +10,6 @@
 // selection DAG.
 //
 //===----------------------------------------------------------------------===//
-
 #include "X86ISelLowering.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "X86.h"
@@ -21987,8 +21986,6 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getNode(X86ISD::STRICT_VFPEXT, DL, {VT, MVT::Other},
                          {Op->getOperand(0), Res});
     return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
-  } else if (VT == MVT::v4f64 || VT == MVT::v8f64) {
-    return Op;
   }
 
   assert(SVT == MVT::v2f32 && "Only customize MVT::v2f32 type legalization!");
@@ -22285,10 +22282,46 @@ static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
 /// The only differences between FABS and FNEG are the mask and the logic op.
 /// FNEG also has a folding opportunity for FNEG(FABS(x)).
 static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
+
   assert((Op.getOpcode() == ISD::FABS || Op.getOpcode() == ISD::FNEG) &&
          "Wrong opcode for lowering FABS or FNEG.");
 
   bool IsFABS = (Op.getOpcode() == ISD::FABS);
+  SDLoc dl(Op);
+  MVT VT 
+  = Op.getSimpleValueType();
+
+  // Handle scalar _Float16 (f16) directly via integer bitwise operations.
+  if (VT == MVT::f16) {
+    SDValue Op0 = Op.getOperand(0);
+    bool IsFNABS = !IsFABS && Op0.getOpcode() == ISD::FABS;
+
+    // For FNABS (FNEG of FABS), bypass FABS.
+    if (IsFNABS)
+      Op0 = Op0.getOperand(0);
+
+    // Bitcast f16 to i16 for bitwise operations.
+    SDValue IntVal = DAG.getNode(ISD::BITCAST, dl, MVT::i16, Op0);
+
+    APInt MaskVal;
+    unsigned LogicOp;
+    if (IsFABS) {
+      MaskVal = APInt(16, 0x7FFF);  // Clear sign bit.
+      LogicOp = ISD::AND;
+    } else if (IsFNABS) {
+      MaskVal = APInt(16, 0x8000);  // Combine masks via OR.
+      LogicOp = ISD::OR;
+    } else {
+      MaskVal = APInt(16, 0x8000);  // Flip sign bit.
+      LogicOp = ISD::XOR;
+    }
+
+    SDValue Mask = DAG.getConstant(MaskVal, dl, MVT::i16);
+    SDValue LogicNode = DAG.getNode(LogicOp, dl, MVT::i16, IntVal, Mask);
+
+    // Bitcast back to f16.
+    return DAG.getNode(ISD::BITCAST, dl, MVT::f16, LogicNode);
+  }
 
   // If this is a FABS and it has an FNEG user, bail out to fold the combination
   // into an FNABS. We'll lower the FABS after that if it is still in use.
@@ -22297,8 +22330,7 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
       if (User->getOpcode() == ISD::FNEG)
         return Op;
 
-  SDLoc dl(Op);
-  MVT VT = Op.getSimpleValueType();
+  VT = Op.getSimpleValueType();
 
   bool IsF128 = (VT == MVT::f128);
   assert(VT.isFloatingPoint() && VT != MVT::f80 &&
@@ -22313,7 +22345,7 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
   // generate a 16-byte vector constant and logic op even for the scalar case.
   // Using a 16-byte mask allows folding the load of the mask with
   // the logic op, so it can save (~4 bytes) on code size.
-  bool IsFakeVector = !VT.isVector() && !IsF128;
+  bool IsFakeVector = !VT.isVector() && !IsF128 && VT != MVT::f16;
   MVT LogicVT = VT;
   if (IsFakeVector)
     LogicVT = (VT == MVT::f64)   ? MVT::v2f64
