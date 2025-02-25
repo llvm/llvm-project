@@ -4579,23 +4579,95 @@ public:
 /// ConvertVectorExpr - Clang builtin function __builtin_convertvector
 /// This AST node provides support for converting a vector type to another
 /// vector type of the same arity.
-class ConvertVectorExpr : public Expr {
+class ConvertVectorExpr final
+    : public Expr,
+      private llvm::TrailingObjects<ConvertVectorExpr, FPOptionsOverride> {
 private:
   Stmt *SrcExpr;
   TypeSourceInfo *TInfo;
   SourceLocation BuiltinLoc, RParenLoc;
 
+  friend TrailingObjects;
   friend class ASTReader;
   friend class ASTStmtReader;
-  explicit ConvertVectorExpr(EmptyShell Empty) : Expr(ConvertVectorExprClass, Empty) {}
+  explicit ConvertVectorExpr(bool HasFPFeatures, EmptyShell Empty)
+      : Expr(ConvertVectorExprClass, Empty) {
+    ConvertVectorExprBits.HasFPFeatures = HasFPFeatures;
+  }
 
-public:
   ConvertVectorExpr(Expr *SrcExpr, TypeSourceInfo *TI, QualType DstType,
                     ExprValueKind VK, ExprObjectKind OK,
-                    SourceLocation BuiltinLoc, SourceLocation RParenLoc)
+                    SourceLocation BuiltinLoc, SourceLocation RParenLoc,
+                    FPOptionsOverride FPFeatures)
       : Expr(ConvertVectorExprClass, DstType, VK, OK), SrcExpr(SrcExpr),
         TInfo(TI), BuiltinLoc(BuiltinLoc), RParenLoc(RParenLoc) {
+    ConvertVectorExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
+    if (hasStoredFPFeatures())
+      setStoredFPFeatures(FPFeatures);
     setDependence(computeDependence(this));
+  }
+
+  size_t numTrailingObjects(OverloadToken<FPOptionsOverride>) const {
+    return ConvertVectorExprBits.HasFPFeatures ? 1 : 0;
+  }
+
+  FPOptionsOverride &getTrailingFPFeatures() {
+    assert(ConvertVectorExprBits.HasFPFeatures);
+    return *getTrailingObjects<FPOptionsOverride>();
+  }
+
+  const FPOptionsOverride &getTrailingFPFeatures() const {
+    assert(ConvertVectorExprBits.HasFPFeatures);
+    return *getTrailingObjects<FPOptionsOverride>();
+  }
+
+public:
+  static ConvertVectorExpr *CreateEmpty(const ASTContext &C,
+                                        bool hasFPFeatures);
+
+  static ConvertVectorExpr *Create(const ASTContext &C, Expr *SrcExpr,
+                                   TypeSourceInfo *TI, QualType DstType,
+                                   ExprValueKind VK, ExprObjectKind OK,
+                                   SourceLocation BuiltinLoc,
+                                   SourceLocation RParenLoc,
+                                   FPOptionsOverride FPFeatures);
+
+  /// Get the FP contractibility status of this operator. Only meaningful for
+  /// operations on floating point types.
+  bool isFPContractableWithinStatement(const LangOptions &LO) const {
+    return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
+  }
+
+  /// Is FPFeatures in Trailing Storage?
+  bool hasStoredFPFeatures() const {
+    return ConvertVectorExprBits.HasFPFeatures;
+  }
+
+  /// Get FPFeatures from trailing storage.
+  FPOptionsOverride getStoredFPFeatures() const {
+    return getTrailingFPFeatures();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
+  /// Set FPFeatures in trailing storage, used by Serialization & ASTImporter.
+  void setStoredFPFeatures(FPOptionsOverride F) { getTrailingFPFeatures() = F; }
+
+  /// Get the FP features status of this operator. Only meaningful for
+  /// operations on floating point types.
+  FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
+    if (ConvertVectorExprBits.HasFPFeatures)
+      return getStoredFPFeatures().applyOverrides(LO);
+    return FPOptions::defaultWithoutTrailingStorage(LO);
+  }
+
+  FPOptionsOverride getFPOptionsOverride() const {
+    if (ConvertVectorExprBits.HasFPFeatures)
+      return getStoredFPFeatures();
+    return FPOptionsOverride();
   }
 
   /// getSrcExpr - Return the Expr to be converted.

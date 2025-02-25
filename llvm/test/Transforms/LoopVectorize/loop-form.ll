@@ -1321,3 +1321,93 @@ exit:
   ret i32 %accum
 }
 
+define i16 @multiple_exit_none_via_latch(ptr %dst, i64 %x) {
+; CHECK-LABEL: @multiple_exit_none_via_latch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[X:%.*]], i64 100)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 2, i64 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEXT:    store i64 0, ptr [[TMP5]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[CMP120:%.*]] = icmp slt i64 [[IV]], 100
+; CHECK-NEXT:    br i1 [[CMP120]], label [[LOOP_THEN:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       loop.then:
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[IV]], [[X]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]], !llvm.loop [[LOOP25:![0-9]+]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    ret i16 0
+; CHECK:       exit.2:
+; CHECK-NEXT:    ret i16 1
+;
+; TAILFOLD-LABEL: @multiple_exit_none_via_latch(
+; TAILFOLD-NEXT:  entry:
+; TAILFOLD-NEXT:    br label [[LOOP_HEADER:%.*]]
+; TAILFOLD:       loop.header:
+; TAILFOLD-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; TAILFOLD-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IV]]
+; TAILFOLD-NEXT:    store i64 0, ptr [[GEP]], align 8
+; TAILFOLD-NEXT:    [[CMP120:%.*]] = icmp slt i64 [[IV]], 100
+; TAILFOLD-NEXT:    br i1 [[CMP120]], label [[LOOP_THEN:%.*]], label [[EXIT_2:%.*]]
+; TAILFOLD:       loop.then:
+; TAILFOLD-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[IV]], [[X:%.*]]
+; TAILFOLD-NEXT:    br i1 [[CMP3]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; TAILFOLD:       loop.latch:
+; TAILFOLD-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; TAILFOLD-NEXT:    br label [[LOOP_HEADER]]
+; TAILFOLD:       exit.1:
+; TAILFOLD-NEXT:    ret i16 0
+; TAILFOLD:       exit.2:
+; TAILFOLD-NEXT:    ret i16 1
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i64 0, ptr %gep
+  %cmp120 = icmp slt i64 %iv, 100
+  br i1 %cmp120, label %loop.then, label %exit.2
+
+loop.then:
+  %cmp3 = icmp ne i64 %iv, %x
+  br i1 %cmp3, label %loop.latch, label %exit.1
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  br label %loop.header
+
+exit.1:
+  ret i16 0
+
+exit.2:
+  ret i16 1
+}

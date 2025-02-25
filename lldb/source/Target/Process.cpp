@@ -2743,10 +2743,9 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 
     // Now that we know the process type, update its signal responses from the
     // ones stored in the Target:
-    if (m_unix_signals_sp) {
-      StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
-      GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
-    }
+    if (m_unix_signals_sp)
+      GetTarget().UpdateSignalsFromDummy(
+          m_unix_signals_sp, GetTarget().GetDebugger().GetAsyncErrorStream());
 
     DynamicLoader *dyld = GetDynamicLoader();
     if (dyld)
@@ -3131,10 +3130,9 @@ void Process::CompleteAttach() {
   }
   // Now that we know the process type, update its signal responses from the
   // ones stored in the Target:
-  if (m_unix_signals_sp) {
-    StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
-    GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
-  }
+  if (m_unix_signals_sp)
+    GetTarget().UpdateSignalsFromDummy(
+        m_unix_signals_sp, GetTarget().GetDebugger().GetAsyncErrorStream());
 
   // We have completed the attach, now it is time to find the dynamic loader
   // plug-in

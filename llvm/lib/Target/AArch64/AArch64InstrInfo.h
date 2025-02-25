@@ -692,6 +692,10 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBZX:
   case AArch64::TBNZW:
   case AArch64::TBNZX:
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
     return true;
   default:
     return false;

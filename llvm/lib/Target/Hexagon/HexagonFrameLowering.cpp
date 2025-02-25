@@ -1076,20 +1076,18 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
         .addCFIIndex(MF.addFrameInst(OffR30));
   }
 
-  static Register RegsToMove[] = {
+  static const MCPhysReg RegsToMove[] = {
     Hexagon::R1,  Hexagon::R0,  Hexagon::R3,  Hexagon::R2,
     Hexagon::R17, Hexagon::R16, Hexagon::R19, Hexagon::R18,
     Hexagon::R21, Hexagon::R20, Hexagon::R23, Hexagon::R22,
     Hexagon::R25, Hexagon::R24, Hexagon::R27, Hexagon::R26,
     Hexagon::D0,  Hexagon::D1,  Hexagon::D8,  Hexagon::D9,
-    Hexagon::D10, Hexagon::D11, Hexagon::D12, Hexagon::D13,
-    Hexagon::NoRegister
+    Hexagon::D10, Hexagon::D11, Hexagon::D12, Hexagon::D13
   };
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  for (unsigned i = 0; RegsToMove[i] != Hexagon::NoRegister; ++i) {
-    Register Reg = RegsToMove[i];
+  for (MCPhysReg Reg : RegsToMove) {
     auto IfR = [Reg] (const CalleeSavedInfo &C) -> bool {
       return C.getReg() == Reg;
     };
@@ -1411,7 +1409,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     // Add live in registers. We treat eh_return callee saved register r0 - r3
     // specially. They are not really callee saved registers as they are not
     // supposed to be killed.
@@ -1480,7 +1478,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
     int FI = I.getFrameIdx();
     HII.loadRegFromStackSlot(MBB, MI, Reg, FI, RC, &HRI, Register());
@@ -1514,7 +1512,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     return;
 
   // Set the physical aligned-stack base address register.
-  Register AP = 0;
+  MCRegister AP;
   if (const MachineInstr *AI = getAlignaInstr(MF))
     AP = AI->getOperand(0).getReg();
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
@@ -2590,7 +2588,7 @@ bool HexagonFrameLowering::shouldInlineCSR(const MachineFunction &MF,
   // a contiguous block starting from D8.
   BitVector Regs(Hexagon::NUM_TARGET_REGS);
   for (const CalleeSavedInfo &I : CSI) {
-    Register R = I.getReg();
+    MCRegister R = I.getReg();
     if (!Hexagon::DoubleRegsRegClass.contains(R))
       return true;
     Regs[R] = true;

@@ -305,6 +305,14 @@ LogicalResult emitc::AssignOp::verify() {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
 
+  if (auto arrayType = dyn_cast<emitc::ArrayType>(input)) {
+    if (auto pointerType = dyn_cast<emitc::PointerType>(output)) {
+      return (arrayType.getElementType() == pointerType.getPointee()) &&
+             arrayType.getShape().size() == 1 && arrayType.getShape()[0] >= 1;
+    }
+    return false;
+  }
+
   return (
       (emitc::isIntegerIndexOrOpaqueType(input) ||
        emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
@@ -757,9 +765,9 @@ void IfOp::print(OpAsmPrinter &p) {
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
+/// during the flow of control. `operands` is a set of optional attributes
+/// that correspond to a constant value for each operand, or null if that
+/// operand is not a constant.
 void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
@@ -991,27 +999,6 @@ LogicalResult emitc::VerbatimOp::verify() {
   return success();
 }
 
-[[maybe_unused]] static ParseResult
-parseVariadicTypeFmtArgs(AsmParser &p, SmallVector<Type> &params) {
-  Type type;
-  if (p.parseType(type))
-    return failure();
-
-  params.push_back(type);
-  while (succeeded(p.parseOptionalComma())) {
-    if (p.parseType(type))
-      return failure();
-    params.push_back(type);
-  }
-
-  return success();
-}
-
-[[maybe_unused]] static void printVariadicTypeFmtArgs(AsmPrinter &p,
-                                                      ArrayRef<Type> params) {
-  llvm::interleaveComma(params, p, [&](Type type) { p.printType(type); });
-}
-
 FailureOr<SmallVector<ReplacementItem>> emitc::VerbatimOp::parseFormatString() {
   // Error checking is done in verify.
   return ::parseFormatString(getValue(), getFmtArgs());
@@ -1107,8 +1094,8 @@ emitc::ArrayType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
 LogicalResult mlir::emitc::LValueType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type value) {
-  // Check that the wrapped type is valid. This especially forbids nested lvalue
-  // types.
+  // Check that the wrapped type is valid. This especially forbids nested
+  // lvalue types.
   if (!isSupportedEmitCType(value))
     return emitError()
            << "!emitc.lvalue must wrap supported emitc type, but got " << value;

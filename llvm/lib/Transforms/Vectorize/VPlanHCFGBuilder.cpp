@@ -366,24 +366,6 @@ void PlainCFGBuilder::buildPlainCFG(
   // latter.
   BB2VPBB[ThePreheaderBB] = VectorPreheaderVPBB;
   Loop2Region[LI->getLoopFor(TheLoop->getHeader())] = TheRegion;
-  BasicBlock *ExitBB = TheLoop->getUniqueExitBlock();
-  if (!ExitBB) {
-    // If there is no unique exit block, we must exit via the latch. This exit
-    // is mapped to the middle block in the input plan.
-    BasicBlock *Latch = TheLoop->getLoopLatch();
-    auto *Br = cast<BranchInst>(Latch->getTerminator());
-    if (TheLoop->contains(Br->getSuccessor(0))) {
-      assert(!TheLoop->contains(Br->getSuccessor(1)) &&
-             "latch must exit the loop");
-      ExitBB = Br->getSuccessor(1);
-    } else {
-      assert(!TheLoop->contains(Br->getSuccessor(0)) &&
-             "latch must exit the loop");
-      ExitBB = Br->getSuccessor(0);
-    }
-  }
-  assert(ExitBB && "Must have a unique exit block or also exit via the latch.");
-  BB2VPBB[ExitBB] = cast<VPBasicBlock>(TheRegion->getSingleSuccessor());
 
   // The existing vector region's entry and exiting VPBBs correspond to the loop
   // header and latch.
@@ -457,10 +439,6 @@ void PlainCFGBuilder::buildPlainCFG(
     }
     assert(BI->isConditional() && NumSuccs == 2 && BI->isConditional() &&
            "block must have conditional branch with 2 successors");
-    // Look up the branch condition to get the corresponding VPValue
-    // representing the condition bit in VPlan (which may be in another VPBB).
-    assert(IRDef2VPValue.contains(BI->getCondition()) &&
-           "Missing condition bit in IRDef2VPValue!");
 
     BasicBlock *IRSucc0 = BI->getSuccessor(0);
     BasicBlock *IRSucc1 = BI->getSuccessor(1);

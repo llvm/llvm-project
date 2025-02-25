@@ -14,8 +14,6 @@ on:
       # do this is that it allows us to take advantage of concurrency groups
       # to cancel in progress CI jobs whenever the PR is closed.
       - closed
-    paths:
-      - .github/workflows/premerge.yaml
   push:
     branches:
       - 'main'

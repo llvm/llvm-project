@@ -907,6 +907,12 @@ namespace IncompleteArray {
     return c;
   }
   static_assert(test4() == 12);
+
+
+  constexpr char *f(int n) {
+    return new char[n]();
+  }
+  static_assert((delete[] f(2), true));
 }
 
 namespace NonConstexprArrayCtor {

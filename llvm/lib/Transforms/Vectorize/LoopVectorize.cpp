@@ -1243,8 +1243,8 @@ public:
       return false;
 
     // Get the source and destination types of the truncate.
-    Type *SrcTy = toVectorTy(cast<CastInst>(I)->getSrcTy(), VF);
-    Type *DestTy = toVectorTy(cast<CastInst>(I)->getDestTy(), VF);
+    Type *SrcTy = toVectorTy(Trunc->getSrcTy(), VF);
+    Type *DestTy = toVectorTy(Trunc->getDestTy(), VF);
 
     // If the truncate is free for the given types, return false. Replacing a
     // free truncate with an induction variable would add an induction variable
@@ -5132,7 +5132,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
         return 1;
       }
 
-      unsigned F = static_cast<unsigned>(MaxNestedScalarReductionIC);
+      unsigned F = MaxNestedScalarReductionIC;
       SmallIC = std::min(SmallIC, F);
       StoresIC = std::min(StoresIC, F);
       LoadsIC = std::min(LoadsIC, F);
@@ -10303,8 +10303,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
   }
-  for (VPRecipeBase &R : make_early_inc_range(
-           *cast<VPIRBasicBlock>(MainPlan.getScalarHeader()))) {
+  for (VPRecipeBase &R : make_early_inc_range(*MainPlan.getScalarHeader())) {
     auto *VPIRInst = cast<VPIRInstruction>(&R);
     auto *IRI = dyn_cast<PHINode>(&VPIRInst->getInstruction());
     if (!IRI)
