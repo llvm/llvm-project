@@ -770,6 +770,9 @@ public:
         continue;
       Intrinsic::ID ID = F.getIntrinsicID();
       switch (ID) {
+      case Intrinsic::dx_resource_casthandle:
+      case Intrinsic::not_intrinsic:
+        continue;
       default: {
         DiagnosticInfoUnsupported Diag(F, "Unknown intrinsic?");
         M.getContext().diagnose(Diag);
