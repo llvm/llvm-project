@@ -3361,8 +3361,8 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
     // wasm_throw, wasm_rethrow: This is usually done in visitTargetIntrinsic,
-    // but these intrinsics are special because they can be invoked, so we manually
-    // lower it to a DAG node here.
+    // but these intrinsics are special because they can be invoked, so we
+    // manually lower it to a DAG node here.
     case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       std::array<SDValue, 4> Ops = {
