@@ -205,7 +205,7 @@ bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
 
 /// Does this shuffle mask represent either one slide shuffle or a pair of
 /// two slide shuffles, combined with a select on some constant vector mask?
-/// A slide is a shuffle masks which shifts some set of elements up or down
+/// A slide is a shuffle mask which shifts some set of elements up or down
 /// the vector, with all other elements being undefined.  An identity shuffle
 /// will be matched a slide by 0.  The output parameter provides the source
 /// (-1 means no source), and slide direction for each slide.
