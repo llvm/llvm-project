@@ -27321,7 +27321,7 @@ SDValue DAGCombiner::visitVPUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   EVT VT = N->getValueType(0);
 
   // fold (vp.udiv x, (1 << c)) -> vp.lshr(x, c)
-  if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
+  if (isConstantOrConstantVector(N1, /*NoOpaques=*/true) &&
       DAG.isKnownToBeAPowerOfTwo(N1)) {
     SDValue LogBase2 = BuildLogBase2(N1, DL);
     AddToWorklist(LogBase2.getNode());
@@ -27337,7 +27337,7 @@ SDValue DAGCombiner::visitVPUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   if (N1.getOpcode() == ISD::VP_SHL && N1->getOperand(2) == Mask &&
       N1->getOperand(3) == VL) {
     SDValue N10 = N1.getOperand(0);
-    if (isConstantOrConstantVector(N10, /*NoOpaques=*/ true) &&
+    if (isConstantOrConstantVector(N10, /*NoOpaques=*/true) &&
         DAG.isKnownToBeAPowerOfTwo(N10)) {
       SDValue LogBase2 = BuildLogBase2(N10, DL);
       AddToWorklist(LogBase2.getNode());
