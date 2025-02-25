@@ -87,7 +87,7 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
   // of the blocks or operation results contained within this region as that
   // would lead to a write in their use-def list. This is unavoidable for
   // 'Value's from outside the region however, in which case it is not read
-  // only. Using the BlockAndValueMapper it is possible to remap such 'Value's
+  // only. Using the IRMapper it is possible to remap such 'Value's
   // to ones owned by the calling thread however, making it read only once
   // again.
 
