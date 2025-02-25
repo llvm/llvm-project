@@ -49,7 +49,6 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       nb::arg("registry"));
 
   m.def("test_diagnostics_with_errors_and_notes", [](MlirContext ctx) {
-    mlirContextPrintStackTraceOnDiagnostic(ctx, true);
     mlir::python::CollectDiagnosticsToStringScope handler(ctx);
 
     mlirPythonTestEmitDiagnosticWithNote(ctx);
