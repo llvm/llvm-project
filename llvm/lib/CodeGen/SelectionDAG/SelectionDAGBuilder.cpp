@@ -3373,16 +3373,28 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
-    case Intrinsic::wasm_rethrow: {
-      // This is usually done in visitTargetIntrinsic, but this intrinsic is
-      // special because it can be invoked, so we manually lower it to a DAG
-      // node here.
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
+    // wasm_throw, wasm_rethrow: This is usually done in visitTargetIntrinsic,
+    // but these intrinsics are special because they can be invoked, so we
+    // manually lower it to a DAG node here.
+    case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      std::array<SDValue, 4> Ops = {
+          getControlRoot(), // inchain for the terminator node
+          DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout())),
+          getValue(I.getArgOperand(0)), // tag
+          getValue(I.getArgOperand(1))  // thrown value
+      };
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    case Intrinsic::wasm_rethrow: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
+                                TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;

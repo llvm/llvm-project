@@ -5315,10 +5315,12 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::fake_use ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
+                F->getIntrinsicID() == Intrinsic::wasm_throw ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
             "Cannot invoke an intrinsic other than donothing, patchpoint, "
-            "statepoint, coro_resume, coro_destroy or clang.arc.attachedcall",
+            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall or "
+            "wasm.(re)throw",
             &I);
       Check(F->getParent() == &M, "Referencing function in another module!", &I,
             &M, F, F->getParent());
