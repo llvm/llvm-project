@@ -8,63 +8,61 @@
 
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
-void setRewrite(raw_ostream &Stream, uint32_t &Offset) {
+static uint32_t writePlaceholder(raw_ostream &Stream) {
   const uint32_t DummyValue = std::numeric_limits<uint32_t>::max();
-  Offset = Stream.tell();
+  uint32_t Offset = Stream.tell();
   support::endian::write(Stream, DummyValue, llvm::endianness::little);
+  return Offset;
 }
 
-void rewriteOffset(buffer_ostream &Stream, uint32_t Offset) {
-  uint32_t Value = Stream.tell();
-  auto *InsertPoint = &Stream.buffer()[Offset];
-  support::endian::write(InsertPoint, Value, llvm::endianness::little);
+static void rewriteOffset(buffer_ostream &Stream, uint32_t Offset) {
+  uint32_t Value =
+      support::endian::byte_swap<uint32_t, llvm::endianness::little>(
+          Stream.tell());
+  Stream.pwrite(reinterpret_cast<const char *>(&Value), sizeof(Value), Offset);
 }
 
 void RootSignatureDesc::write(raw_ostream &OS) const {
-  buffer_ostream Writer(OS);
+  buffer_ostream BOS(OS);
   const uint32_t NumParameters = Parameters.size();
   const uint32_t Zero = 0;
 
-  support::endian::write(Writer, Header.Version, llvm::endianness::little);
-  support::endian::write(Writer, NumParameters, llvm::endianness::little);
+  support::endian::write(BOS, Header.Version, llvm::endianness::little);
+  support::endian::write(BOS, NumParameters, llvm::endianness::little);
 
-  uint32_t HeaderPoint;
-  setRewrite(Writer, HeaderPoint);
+  uint32_t HeaderPoint = writePlaceholder(BOS);
 
-  support::endian::write(Writer, Zero, llvm::endianness::little);
-  support::endian::write(Writer, Zero, llvm::endianness::little);
-  support::endian::write(Writer, Header.Flags, llvm::endianness::little);
+  support::endian::write(BOS, Zero, llvm::endianness::little);
+  support::endian::write(BOS, Zero, llvm::endianness::little);
+  support::endian::write(BOS, Header.Flags, llvm::endianness::little);
 
-  rewriteOffset(Writer, HeaderPoint);
+  rewriteOffset(BOS, HeaderPoint);
 
-  SmallVector<uint32_t> ParamsOffset;
+  SmallVector<uint32_t> ParamsOffsets;
   for (const auto &P : Parameters) {
-    support::endian::write(Writer, P.ParameterType, llvm::endianness::little);
-    support::endian::write(Writer, P.ShaderVisibility,
-                           llvm::endianness::little);
+    support::endian::write(BOS, P.ParameterType, llvm::endianness::little);
+    support::endian::write(BOS, P.ShaderVisibility, llvm::endianness::little);
 
-    uint32_t Offset;
-    setRewrite(Writer, Offset);
-
-    ParamsOffset.push_back(Offset);
+    ParamsOffsets.push_back(writePlaceholder(BOS));
   }
 
-  assert(NumParameters == ParamsOffset.size());
+  assert(NumParameters == ParamsOffsets.size());
   for (size_t I = 0; I < NumParameters; ++I) {
-    rewriteOffset(Writer, ParamsOffset[I]);
+    rewriteOffset(BOS, ParamsOffsets[I]);
     const auto &P = Parameters[I];
 
     switch (P.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit: {
-      support::endian::write(Writer, P.Constants.ShaderRegister,
+      support::endian::write(BOS, P.Constants.ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(Writer, P.Constants.RegisterSpace,
+      support::endian::write(BOS, P.Constants.RegisterSpace,
                              llvm::endianness::little);
-      support::endian::write(Writer, P.Constants.Num32BitValues,
+      support::endian::write(BOS, P.Constants.Num32BitValues,
                              llvm::endianness::little);
     } break;
     case dxbc::RootParameterType::Empty:
