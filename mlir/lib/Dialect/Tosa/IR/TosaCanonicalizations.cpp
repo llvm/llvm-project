@@ -65,12 +65,12 @@ void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
-  auto notOp = op.getPred().getDefiningOp<tosa::LogicalNotOp>();
+  auto notOp = op.getInput1().getDefiningOp<tosa::LogicalNotOp>();
   if (!notOp)
     return failure();
   rewriter.modifyOpInPlace(op, [&]() {
     op.getOperation()->setOperands(
-        {notOp.getInput1(), op.getOnFalse(), op.getOnTrue()});
+        {notOp.getInput1(), op.getInput3(), op.getInput2()});
   });
   return success();
 }
@@ -1034,9 +1034,22 @@ OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
 // Fold away cases where a tosa.resize operation returns a copy
 // of the input image.
 OpFoldResult ResizeOp::fold(FoldAdaptor adaptor) {
-  ArrayRef<int64_t> offset = getOffset();
-  ArrayRef<int64_t> border = getBorder();
-  ArrayRef<int64_t> scale = getScale();
+  auto scaleAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getScale());
+  auto offsetAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getOffset());
+  auto borderAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getBorder());
+  if (!scaleAttr || !offsetAttr || !borderAttr) {
+    return {};
+  }
+
+  auto scale = tosa::convertFromIntAttr(scaleAttr, /* rank = */ 4);
+  auto offset = tosa::convertFromIntAttr(offsetAttr, /* rank = */ 2);
+  auto border = tosa::convertFromIntAttr(borderAttr, /* rank = */ 2);
+  if (scale.size() != 4 || offset.size() != 2 || border.size() != 2) {
+    return {};
+  }
 
   // Check unit scaling.
   if (scale[0] != scale[1] || scale[2] != scale[3]) {
@@ -1118,18 +1131,18 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
-  if (getOnTrue() == getOnFalse())
-    return getOnTrue();
+  if (getInput2() == getInput3())
+    return getInput2();
 
   auto predicate =
-      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getPred());
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput1());
   if (!predicate)
     return {};
 
   if (!predicate.isSplat())
     return {};
-  return predicate.getSplatValue<APInt>().getBoolValue() ? getOnTrue()
-                                                         : getOnFalse();
+  return predicate.getSplatValue<APInt>().getBoolValue() ? getInput2()
+                                                         : getInput3();
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {

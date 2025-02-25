@@ -249,6 +249,7 @@ bool MemRefDependenceGraph::init() {
   // the memref.
   DenseMap<Value, SetVector<unsigned>> memrefAccesses;
 
+  // Create graph nodes.
   DenseMap<Operation *, unsigned> forToNodeMap;
   for (Operation &op : block) {
     if (auto forOp = dyn_cast<AffineForOp>(op)) {
@@ -281,9 +282,8 @@ bool MemRefDependenceGraph::init() {
       // Create graph node for top-level op unless it is known to be
       // memory-effect free. This covers all unknown/unregistered ops,
       // non-affine ops with memory effects, and region-holding ops with a
-      // well-defined control flow. During the fusion validity checks, we look
-      // for non-affine ops on the path from source to destination, at which
-      // point we check which memrefs if any are used in the region.
+      // well-defined control flow. During the fusion validity checks, edges
+      // to/from these ops get looked at.
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
         return false;
@@ -300,11 +300,7 @@ bool MemRefDependenceGraph::init() {
     // interface.
   }
 
-  for (auto &idAndNode : nodes) {
-    LLVM_DEBUG(llvm::dbgs() << "Create node " << idAndNode.first << " for:\n"
-                            << *(idAndNode.second.op) << "\n");
-    (void)idAndNode;
-  }
+  LLVM_DEBUG(llvm::dbgs() << "Created " << nodes.size() << " nodes\n");
 
   // Add dependence edges between nodes which produce SSA values and their
   // users. Load ops can be considered as the ones producing SSA values.
@@ -1556,9 +1552,9 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolVars() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (auto *i : opsA) {
+  for (Operation *i : opsA) {
     MemRefAccess srcAccess(i);
-    for (auto *j : opsB) {
+    for (Operation *j : opsB) {
       MemRefAccess dstAccess(j);
       if (srcAccess.memref != dstAccess.memref)
         continue;
@@ -1587,7 +1583,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
 
       // Compute slice bounds for 'srcAccess' and 'dstAccess'.
       ComputationSliceState tmpSliceState;
-      mlir::affine::getComputationSliceState(i, j, &dependenceConstraints,
+      mlir::affine::getComputationSliceState(i, j, dependenceConstraints,
                                              loopDepth, isBackwardSlice,
                                              &tmpSliceState);
 
@@ -1646,8 +1642,10 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   }
 
   // Empty union.
-  if (sliceUnionCst.getNumDimAndSymbolVars() == 0)
+  if (sliceUnionCst.getNumDimAndSymbolVars() == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "empty slice union - unexpected\n");
     return SliceComputationResult::GenericFailure;
+  }
 
   // Gather loops surrounding ops from loop nest where slice will be inserted.
   SmallVector<Operation *, 4> ops;
@@ -1686,7 +1684,8 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   sliceUnion->ivs.clear();
   sliceUnionCst.getValues(0, numSliceLoopIVs, &sliceUnion->ivs);
 
-  // Set loop nest insertion point to block start at 'loopDepth'.
+  // Set loop nest insertion point to block start at 'loopDepth' for forward
+  // slices, while at the end for backward slices.
   sliceUnion->insertPoint =
       isBackwardSlice
           ? surroundingLoops[loopDepth - 1].getBody()->begin()
@@ -1785,7 +1784,7 @@ const char *const kSliceFusionBarrierAttrName = "slice_fusion_barrier";
 // the other loop nest's IVs, symbols and constants (using 'isBackwardsSlice').
 void mlir::affine::getComputationSliceState(
     Operation *depSourceOp, Operation *depSinkOp,
-    FlatAffineValueConstraints *dependenceConstraints, unsigned loopDepth,
+    const FlatAffineValueConstraints &dependenceConstraints, unsigned loopDepth,
     bool isBackwardSlice, ComputationSliceState *sliceState) {
   // Get loop nest surrounding src operation.
   SmallVector<AffineForOp, 4> srcLoopIVs;
@@ -1804,30 +1803,28 @@ void mlir::affine::getComputationSliceState(
   unsigned pos = isBackwardSlice ? numSrcLoopIVs + loopDepth : loopDepth;
   unsigned num =
       isBackwardSlice ? numDstLoopIVs - loopDepth : numSrcLoopIVs - loopDepth;
-  dependenceConstraints->projectOut(pos, num);
+  FlatAffineValueConstraints sliceCst(dependenceConstraints);
+  sliceCst.projectOut(pos, num);
 
   // Add slice loop IV values to 'sliceState'.
   unsigned offset = isBackwardSlice ? 0 : loopDepth;
   unsigned numSliceLoopIVs = isBackwardSlice ? numSrcLoopIVs : numDstLoopIVs;
-  dependenceConstraints->getValues(offset, offset + numSliceLoopIVs,
-                                   &sliceState->ivs);
+  sliceCst.getValues(offset, offset + numSliceLoopIVs, &sliceState->ivs);
 
   // Set up lower/upper bound affine maps for the slice.
   sliceState->lbs.resize(numSliceLoopIVs, AffineMap());
   sliceState->ubs.resize(numSliceLoopIVs, AffineMap());
 
   // Get bounds for slice IVs in terms of other IVs, symbols, and constants.
-  dependenceConstraints->getSliceBounds(offset, numSliceLoopIVs,
-                                        depSourceOp->getContext(),
-                                        &sliceState->lbs, &sliceState->ubs);
+  sliceCst.getSliceBounds(offset, numSliceLoopIVs, depSourceOp->getContext(),
+                          &sliceState->lbs, &sliceState->ubs);
 
   // Set up bound operands for the slice's lower and upper bounds.
   SmallVector<Value, 4> sliceBoundOperands;
-  unsigned numDimsAndSymbols = dependenceConstraints->getNumDimAndSymbolVars();
+  unsigned numDimsAndSymbols = sliceCst.getNumDimAndSymbolVars();
   for (unsigned i = 0; i < numDimsAndSymbols; ++i) {
-    if (i < offset || i >= offset + numSliceLoopIVs) {
-      sliceBoundOperands.push_back(dependenceConstraints->getValue(i));
-    }
+    if (i < offset || i >= offset + numSliceLoopIVs)
+      sliceBoundOperands.push_back(sliceCst.getValue(i));
   }
 
   // Give each bound its own copy of 'sliceBoundOperands' for subsequent
@@ -2055,16 +2052,18 @@ static std::optional<int64_t> getMemoryFootprintBytes(Block &block,
     if (failed(
             region->compute(opInst,
                             /*loopDepth=*/getNestingDepth(&*block.begin())))) {
-      return opInst->emitError("error obtaining memory region\n");
+      LLVM_DEBUG(opInst->emitError("error obtaining memory region"));
+      return failure();
     }
 
     auto [it, inserted] = regions.try_emplace(region->memref);
     if (inserted) {
       it->second = std::move(region);
     } else if (failed(it->second->unionBoundingBox(*region))) {
-      return opInst->emitWarning(
+      LLVM_DEBUG(opInst->emitWarning(
           "getMemoryFootprintBytes: unable to perform a union on a memory "
-          "region");
+          "region"));
+      return failure();
     }
     return WalkResult::advance();
   });

@@ -408,7 +408,6 @@ def SPV_NV_compute_shader_derivatives    : I32EnumAttrCase<"SPV_NV_compute_shade
 def SPV_NV_cooperative_matrix            : I32EnumAttrCase<"SPV_NV_cooperative_matrix", 5001>;
 def SPV_NV_fragment_shader_barycentric   : I32EnumAttrCase<"SPV_NV_fragment_shader_barycentric", 5002>;
 def SPV_NV_geometry_shader_passthrough   : I32EnumAttrCase<"SPV_NV_geometry_shader_passthrough", 5003>;
-def SPV_NV_mesh_shader                   : I32EnumAttrCase<"SPV_NV_mesh_shader", 5004>;
 def SPV_NV_ray_tracing                   : I32EnumAttrCase<"SPV_NV_ray_tracing", 5005>;
 def SPV_NV_sample_mask_override_coverage : I32EnumAttrCase<"SPV_NV_sample_mask_override_coverage", 5006>;
 def SPV_NV_shader_image_footprint        : I32EnumAttrCase<"SPV_NV_shader_image_footprint", 5007>;
@@ -466,7 +465,7 @@ def SPIRV_ExtensionAttr :
       SPV_INTEL_bfloat16_conversion, SPV_INTEL_cache_controls,
       SPV_NV_compute_shader_derivatives, SPV_NV_cooperative_matrix,
       SPV_NV_fragment_shader_barycentric, SPV_NV_geometry_shader_passthrough,
-      SPV_NV_mesh_shader, SPV_NV_ray_tracing, SPV_NV_sample_mask_override_coverage,
+      SPV_NV_ray_tracing, SPV_NV_sample_mask_override_coverage,
       SPV_NV_shader_image_footprint, SPV_NV_shader_sm_builtins,
       SPV_NV_shader_subgroup_partitioned, SPV_NV_shading_rate,
       SPV_NV_stereo_view_rendering, SPV_NV_viewport_array2, SPV_NV_bindless_texture,
@@ -1203,12 +1202,6 @@ def SPIRV_C_FragmentFullyCoveredEXT                     : I32EnumAttrCase<"Fragm
     Extension<[SPV_EXT_fragment_fully_covered]>
   ];
 }
-def SPIRV_C_MeshShadingNV                               : I32EnumAttrCase<"MeshShadingNV", 5266> {
-  list<I32EnumAttrCase> implies = [SPIRV_C_Shader];
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>
-  ];
-}
 def SPIRV_C_MeshShadingEXT                              : I32EnumAttrCase<"MeshShadingEXT", 5283> {
   list<I32EnumAttrCase> implies = [SPIRV_C_Shader];
   list<Availability> availability = [
@@ -1501,7 +1494,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_RayQueryKHR, SPIRV_C_RayTracingKHR, SPIRV_C_Float16ImageAMD,
       SPIRV_C_ImageGatherBiasLodAMD, SPIRV_C_FragmentMaskAMD, SPIRV_C_StencilExportEXT,
       SPIRV_C_ImageReadWriteLodAMD, SPIRV_C_Int64ImageEXT, SPIRV_C_ShaderClockKHR,
-      SPIRV_C_FragmentFullyCoveredEXT, SPIRV_C_MeshShadingNV, SPIRV_C_FragmentDensityEXT,
+      SPIRV_C_FragmentFullyCoveredEXT, SPIRV_C_FragmentDensityEXT,
       SPIRV_C_ShaderNonUniform, SPIRV_C_RuntimeDescriptorArray,
       SPIRV_C_StorageTexelBufferArrayDynamicIndexing, SPIRV_C_RayTracingNV,
       SPIRV_C_RayTracingMotionBlurNV, SPIRV_C_PhysicalStorageBufferAddresses,
@@ -1584,7 +1577,7 @@ def SPIRV_BI_InstanceId                  : I32EnumAttrCase<"InstanceId", 6> {
 }
 def SPIRV_BI_PrimitiveId                 : I32EnumAttrCase<"PrimitiveId", 7> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_Geometry, SPIRV_C_MeshShadingNV, SPIRV_C_RayTracingKHR, SPIRV_C_RayTracingNV, SPIRV_C_MeshShadingEXT, SPIRV_C_Tessellation]>
+    Capability<[SPIRV_C_Geometry, SPIRV_C_RayTracingKHR, SPIRV_C_RayTracingNV, SPIRV_C_MeshShadingEXT, SPIRV_C_Tessellation]>
   ];
 }
 def SPIRV_BI_InvocationId                : I32EnumAttrCase<"InvocationId", 8> {
@@ -1594,12 +1587,12 @@ def SPIRV_BI_InvocationId                : I32EnumAttrCase<"InvocationId", 8> {
 }
 def SPIRV_BI_Layer                       : I32EnumAttrCase<"Layer", 9> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_Geometry, SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT, SPIRV_C_ShaderLayer, SPIRV_C_ShaderViewportIndexLayerEXT]>
+    Capability<[SPIRV_C_Geometry, SPIRV_C_MeshShadingEXT, SPIRV_C_ShaderLayer, SPIRV_C_ShaderViewportIndexLayerEXT]>
   ];
 }
 def SPIRV_BI_ViewportIndex               : I32EnumAttrCase<"ViewportIndex", 10> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT, SPIRV_C_MultiViewport, SPIRV_C_ShaderViewportIndex, SPIRV_C_ShaderViewportIndexLayerEXT]>
+    Capability<[SPIRV_C_MeshShadingEXT, SPIRV_C_MultiViewport, SPIRV_C_ShaderViewportIndex, SPIRV_C_ShaderViewportIndexLayerEXT]>
   ];
 }
 def SPIRV_BI_TessLevelOuter              : I32EnumAttrCase<"TessLevelOuter", 11> {
@@ -1777,8 +1770,8 @@ def SPIRV_BI_BaseInstance                : I32EnumAttrCase<"BaseInstance", 4425>
 }
 def SPIRV_BI_DrawIndex                   : I32EnumAttrCase<"DrawIndex", 4426> {
   list<Availability> availability = [
-    Extension<[SPV_KHR_shader_draw_parameters, SPV_NV_mesh_shader, SPV_EXT_mesh_shader]>,
-    Capability<[SPIRV_C_DrawParameters, SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT]>
+    Extension<[SPV_KHR_shader_draw_parameters, SPV_EXT_mesh_shader]>,
+    Capability<[SPIRV_C_DrawParameters, SPIRV_C_MeshShadingEXT]>
   ];
 }
 def SPIRV_BI_PrimitiveShadingRateKHR     : I32EnumAttrCase<"PrimitiveShadingRateKHR", 4432> {
@@ -1848,8 +1841,8 @@ def SPIRV_BI_FragStencilRefEXT           : I32EnumAttrCase<"FragStencilRefEXT", 
 }
 def SPIRV_BI_ViewportMaskNV              : I32EnumAttrCase<"ViewportMaskNV", 5253> {
   list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader, SPV_NV_viewport_array2]>,
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_ShaderViewportMaskNV]>
+    Extension<[SPV_NV_viewport_array2]>,
+    Capability<[SPIRV_C_ShaderViewportMaskNV]>
   ];
 }
 def SPIRV_BI_SecondaryPositionNV         : I32EnumAttrCase<"SecondaryPositionNV", 5257> {
@@ -1866,68 +1859,20 @@ def SPIRV_BI_SecondaryViewportMaskNV     : I32EnumAttrCase<"SecondaryViewportMas
 }
 def SPIRV_BI_PositionPerViewNV           : I32EnumAttrCase<"PositionPerViewNV", 5261> {
   list<Availability> availability = [
-    Extension<[SPV_NVX_multiview_per_view_attributes, SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_PerViewAttributesNV]>
+    Extension<[SPV_NVX_multiview_per_view_attributes]>,
+    Capability<[SPIRV_C_PerViewAttributesNV]>
   ];
 }
 def SPIRV_BI_ViewportMaskPerViewNV       : I32EnumAttrCase<"ViewportMaskPerViewNV", 5262> {
   list<Availability> availability = [
-    Extension<[SPV_NVX_multiview_per_view_attributes, SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_PerViewAttributesNV]>
+    Extension<[SPV_NVX_multiview_per_view_attributes]>,
+    Capability<[SPIRV_C_PerViewAttributesNV]>
   ];
 }
 def SPIRV_BI_FullyCoveredEXT             : I32EnumAttrCase<"FullyCoveredEXT", 5264> {
   list<Availability> availability = [
     Extension<[SPV_EXT_fragment_fully_covered]>,
     Capability<[SPIRV_C_FragmentFullyCoveredEXT]>
-  ];
-}
-def SPIRV_BI_TaskCountNV                 : I32EnumAttrCase<"TaskCountNV", 5274> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_BI_PrimitiveCountNV            : I32EnumAttrCase<"PrimitiveCountNV", 5275> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_BI_PrimitiveIndicesNV          : I32EnumAttrCase<"PrimitiveIndicesNV", 5276> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_BI_ClipDistancePerViewNV       : I32EnumAttrCase<"ClipDistancePerViewNV", 5277> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_BI_CullDistancePerViewNV       : I32EnumAttrCase<"CullDistancePerViewNV", 5278> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_BI_LayerPerViewNV              : I32EnumAttrCase<"LayerPerViewNV", 5279> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_BI_MeshViewCountNV             : I32EnumAttrCase<"MeshViewCountNV", 5280> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_BI_MeshViewIndicesNV           : I32EnumAttrCase<"MeshViewIndicesNV", 5281> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
   ];
 }
 def SPIRV_BI_BaryCoordKHR                : I32EnumAttrCase<"BaryCoordKHR", 5286> {
@@ -2130,9 +2075,6 @@ def SPIRV_BuiltInAttr :
       SPIRV_BI_BaryCoordPullModelAMD, SPIRV_BI_FragStencilRefEXT, SPIRV_BI_ViewportMaskNV,
       SPIRV_BI_SecondaryPositionNV, SPIRV_BI_SecondaryViewportMaskNV,
       SPIRV_BI_PositionPerViewNV, SPIRV_BI_ViewportMaskPerViewNV, SPIRV_BI_FullyCoveredEXT,
-      SPIRV_BI_TaskCountNV, SPIRV_BI_PrimitiveCountNV, SPIRV_BI_PrimitiveIndicesNV,
-      SPIRV_BI_ClipDistancePerViewNV, SPIRV_BI_CullDistancePerViewNV,
-      SPIRV_BI_LayerPerViewNV, SPIRV_BI_MeshViewCountNV, SPIRV_BI_MeshViewIndicesNV,
       SPIRV_BI_BaryCoordKHR, SPIRV_BI_BaryCoordNoPerspKHR, SPIRV_BI_FragSizeEXT,
       SPIRV_BI_FragInvocationCountEXT, SPIRV_BI_PrimitivePointIndicesEXT,
       SPIRV_BI_PrimitiveLineIndicesEXT, SPIRV_BI_PrimitiveTriangleIndicesEXT,
@@ -2394,20 +2336,8 @@ def SPIRV_D_SecondaryViewportRelativeNV        : I32EnumAttrCase<"SecondaryViewp
 }
 def SPIRV_D_PerPrimitiveEXT                    : I32EnumAttrCase<"PerPrimitiveEXT", 5271> {
   list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader, SPV_EXT_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT]>
-  ];
-}
-def SPIRV_D_PerViewNV                          : I32EnumAttrCase<"PerViewNV", 5272> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_D_PerTaskNV                          : I32EnumAttrCase<"PerTaskNV", 5273> {
-  list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV]>
+    Extension<[SPV_EXT_mesh_shader]>,
+    Capability<[SPIRV_C_MeshShadingEXT]>
   ];
 }
 def SPIRV_D_PerVertexKHR                       : I32EnumAttrCase<"PerVertexKHR", 5285> {
@@ -2694,8 +2624,8 @@ def SPIRV_DecorationAttr :
       SPIRV_D_AlignmentId, SPIRV_D_MaxByteOffsetId, SPIRV_D_NoSignedWrap,
       SPIRV_D_NoUnsignedWrap, SPIRV_D_ExplicitInterpAMD, SPIRV_D_OverrideCoverageNV,
       SPIRV_D_PassthroughNV, SPIRV_D_ViewportRelativeNV,
-      SPIRV_D_SecondaryViewportRelativeNV, SPIRV_D_PerPrimitiveEXT, SPIRV_D_PerViewNV,
-      SPIRV_D_PerTaskNV, SPIRV_D_PerVertexKHR, SPIRV_D_NonUniform, SPIRV_D_RestrictPointer,
+      SPIRV_D_SecondaryViewportRelativeNV, SPIRV_D_PerPrimitiveEXT,
+      SPIRV_D_PerVertexKHR, SPIRV_D_NonUniform, SPIRV_D_RestrictPointer,
       SPIRV_D_AliasedPointer, SPIRV_D_BindlessSamplerNV, SPIRV_D_BindlessImageNV,
       SPIRV_D_BoundSamplerNV, SPIRV_D_BoundImageNV, SPIRV_D_SIMTCallINTEL,
       SPIRV_D_ReferencedIndirectlyINTEL, SPIRV_D_ClobberINTEL, SPIRV_D_SideEffectsINTEL,
@@ -2877,12 +2807,12 @@ def SPIRV_EM_Isolines                         : I32EnumAttrCase<"Isolines", 25> 
 }
 def SPIRV_EM_OutputVertices                   : I32EnumAttrCase<"OutputVertices", 26> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_Geometry, SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT, SPIRV_C_Tessellation]>
+    Capability<[SPIRV_C_Geometry, SPIRV_C_MeshShadingEXT, SPIRV_C_Tessellation]>
   ];
 }
 def SPIRV_EM_OutputPoints                     : I32EnumAttrCase<"OutputPoints", 27> {
   list<Availability> availability = [
-    Capability<[SPIRV_C_Geometry, SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT]>
+    Capability<[SPIRV_C_Geometry, SPIRV_C_MeshShadingEXT]>
   ];
 }
 def SPIRV_EM_OutputLineStrip                  : I32EnumAttrCase<"OutputLineStrip", 28> {
@@ -3038,14 +2968,14 @@ def SPIRV_EM_StencilRefLessBackAMD            : I32EnumAttrCase<"StencilRefLessB
 }
 def SPIRV_EM_OutputLinesEXT                    : I32EnumAttrCase<"OutputLinesEXT", 5269> {
   list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader, SPV_EXT_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT]>
+    Extension<[SPV_EXT_mesh_shader]>,
+    Capability<[SPIRV_C_MeshShadingEXT]>
   ];
 }
 def SPIRV_EM_OutputPrimitivesEXT              : I32EnumAttrCase<"OutputPrimitivesEXT", 5270> {
   list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader, SPV_EXT_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT]>
+    Extension<[SPV_EXT_mesh_shader]>,
+    Capability<[SPIRV_C_MeshShadingEXT]>
   ];
 }
 def SPIRV_EM_DerivativeGroupQuadsNV           : I32EnumAttrCase<"DerivativeGroupQuadsNV", 5289> {
@@ -3062,8 +2992,8 @@ def SPIRV_EM_DerivativeGroupLinearNV          : I32EnumAttrCase<"DerivativeGroup
 }
 def SPIRV_EM_OutputTrianglesEXT               : I32EnumAttrCase<"OutputTrianglesEXT", 5298> {
   list<Availability> availability = [
-    Extension<[SPV_NV_mesh_shader, SPV_EXT_mesh_shader]>,
-    Capability<[SPIRV_C_MeshShadingNV, SPIRV_C_MeshShadingEXT]>
+    Extension<[SPV_EXT_mesh_shader]>,
+    Capability<[SPIRV_C_MeshShadingEXT]>
   ];
 }
 def SPIRV_EM_PixelInterlockOrderedEXT         : I32EnumAttrCase<"PixelInterlockOrderedEXT", 5366> {
@@ -3237,16 +3167,6 @@ def SPIRV_EM_Kernel                 : I32EnumAttrCase<"Kernel", 6> {
     Capability<[SPIRV_C_Kernel]>
   ];
 }
-def SPIRV_EM_TaskNV                 : I32EnumAttrCase<"TaskNV", 5267> {
-  list<Availability> availability = [
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
-def SPIRV_EM_MeshNV                 : I32EnumAttrCase<"MeshNV", 5268> {
-  list<Availability> availability = [
-    Capability<[SPIRV_C_MeshShadingNV]>
-  ];
-}
 def SPIRV_EM_RayGenerationKHR       : I32EnumAttrCase<"RayGenerationKHR", 5313> {
   list<Availability> availability = [
     Capability<[SPIRV_C_RayTracingKHR, SPIRV_C_RayTracingNV]>
@@ -3292,7 +3212,7 @@ def SPIRV_ExecutionModelAttr :
     SPIRV_I32EnumAttr<"ExecutionModel", "valid SPIR-V ExecutionModel", "execution_model", [
       SPIRV_EM_Vertex, SPIRV_EM_TessellationControl, SPIRV_EM_TessellationEvaluation,
       SPIRV_EM_Geometry, SPIRV_EM_Fragment, SPIRV_EM_GLCompute, SPIRV_EM_Kernel,
-      SPIRV_EM_TaskNV, SPIRV_EM_MeshNV, SPIRV_EM_RayGenerationKHR, SPIRV_EM_IntersectionKHR,
+      SPIRV_EM_RayGenerationKHR, SPIRV_EM_IntersectionKHR,
       SPIRV_EM_AnyHitKHR, SPIRV_EM_ClosestHitKHR, SPIRV_EM_MissKHR, SPIRV_EM_CallableKHR,
       SPIRV_EM_TaskEXT, SPIRV_EM_MeshEXT
     ]>;
@@ -4525,6 +4445,7 @@ def SPIRV_OC_OpSelectionMerge                : I32EnumAttrCase<"OpSelectionMerge
 def SPIRV_OC_OpLabel                         : I32EnumAttrCase<"OpLabel", 248>;
 def SPIRV_OC_OpBranch                        : I32EnumAttrCase<"OpBranch", 249>;
 def SPIRV_OC_OpBranchConditional             : I32EnumAttrCase<"OpBranchConditional", 250>;
+def SPIRV_OC_OpKill                          : I32EnumAttrCase<"OpKill", 252>;
 def SPIRV_OC_OpReturn                        : I32EnumAttrCase<"OpReturn", 253>;
 def SPIRV_OC_OpReturnValue                   : I32EnumAttrCase<"OpReturnValue", 254>;
 def SPIRV_OC_OpUnreachable                   : I32EnumAttrCase<"OpUnreachable", 255>;
@@ -4654,7 +4575,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpAtomicAnd, SPIRV_OC_OpAtomicOr, SPIRV_OC_OpAtomicXor,
       SPIRV_OC_OpPhi, SPIRV_OC_OpLoopMerge, SPIRV_OC_OpSelectionMerge,
       SPIRV_OC_OpLabel, SPIRV_OC_OpBranch, SPIRV_OC_OpBranchConditional,
-      SPIRV_OC_OpReturn, SPIRV_OC_OpReturnValue, SPIRV_OC_OpUnreachable,
+      SPIRV_OC_OpKill, SPIRV_OC_OpReturn, SPIRV_OC_OpReturnValue, SPIRV_OC_OpUnreachable,
       SPIRV_OC_OpGroupBroadcast, SPIRV_OC_OpGroupIAdd, SPIRV_OC_OpGroupFAdd,
       SPIRV_OC_OpGroupFMin, SPIRV_OC_OpGroupUMin, SPIRV_OC_OpGroupSMin,
       SPIRV_OC_OpGroupFMax, SPIRV_OC_OpGroupUMax, SPIRV_OC_OpGroupSMax,

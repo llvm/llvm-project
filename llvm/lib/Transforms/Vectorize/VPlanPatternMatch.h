@@ -155,14 +155,6 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    if (!(std::is_same_v<VPWidenEVLRecipe, RecipeTys> || ...) &&
-        isa<VPWidenEVLRecipe>(R)) {
-      // Don't match VPWidenEVLRecipe if it is not explicitly part of RecipeTys.
-      // Otherwise we might match it unexpectedly when trying to match
-      // VPWidenRecipe, of which VPWidenEVLRecipe is a subclass of.
-      return false;
-    }
-
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
            "recipe with matched opcode the expected number of operands");
 

@@ -593,8 +593,8 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
     llvm_unreachable("Unexpected register class");
 
   // Get the double word register.
-  unsigned DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
-  assert(DoubleRegDest != 0 && "Expect a valid register");
+  MCRegister DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
+  assert(DoubleRegDest.isValid() && "Expect a valid register");
 
   // Setup source operands.
   MachineOperand &LoOperand = IsI1Loreg ? I1.getOperand(1) : I2.getOperand(1);

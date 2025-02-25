@@ -128,7 +128,13 @@ else()
   endif()
 endif()
 
-option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
+# Some targets can only support the full build.
+set(default_to_full_build OFF)
+if(LIBC_TARGET_OS_IS_GPU)
+  set(default_to_full_build ON)
+endif()
+
+option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 

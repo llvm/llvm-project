@@ -6,12 +6,24 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+from functools import total_ordering
 
+
+@total_ordering
 class Macro:
     def __init__(self, name, value=None, header=None):
         self.name = name
         self.value = value
         self.header = header
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __hash__(self):
+        return self.name.__hash__()
 
     def __str__(self):
         if self.header != None:

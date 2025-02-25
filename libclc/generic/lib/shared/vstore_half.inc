@@ -1,6 +1,6 @@
 // This does not exist for fp16
 #if __CLC_FPSIZE > 16
-#ifdef __CLC_VECSIZE
+#ifndef __CLC_SCALAR
 
 #if __CLC_VECSIZE == 3
 #  define __CLC_OFFSET 4

@@ -152,7 +152,39 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicandi", &I::genAtomicAnd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomiccasd",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
+    {"atomiccasf",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
+    {"atomiccasi",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
+    {"atomiccasul",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
     {"atomicdeci", &I::genAtomicDec, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicexchd",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
+    {"atomicexchf",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
+    {"atomicexchi",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
+    {"atomicexchul",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
     {"atomicinci", &I::genAtomicInc, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicmaxd", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicmaxf", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
@@ -167,6 +199,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicsubf", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicsubi", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicsubl", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicxori", &I::genAtomicXor, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -469,6 +502,38 @@ static constexpr IntrinsicHandler handlers[]{
     {"malloc", &I::genMalloc},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
     {"maskr", &I::genMask<mlir::arith::ShRUIOp>},
+    {"match_all_syncjd",
+     &I::genMatchAllSync,
+     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
+     /*isElemental=*/false},
+    {"match_all_syncjf",
+     &I::genMatchAllSync,
+     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
+     /*isElemental=*/false},
+    {"match_all_syncjj",
+     &I::genMatchAllSync,
+     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
+     /*isElemental=*/false},
+    {"match_all_syncjx",
+     &I::genMatchAllSync,
+     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
+     /*isElemental=*/false},
+    {"match_any_syncjd",
+     &I::genMatchAnySync,
+     {{{"mask", asValue}, {"value", asValue}}},
+     /*isElemental=*/false},
+    {"match_any_syncjf",
+     &I::genMatchAnySync,
+     {{{"mask", asValue}, {"value", asValue}}},
+     /*isElemental=*/false},
+    {"match_any_syncjj",
+     &I::genMatchAnySync,
+     {{{"mask", asValue}, {"value", asValue}}},
+     /*isElemental=*/false},
+    {"match_any_syncjx",
+     &I::genMatchAnySync,
+     {{{"mask", asValue}, {"value", asValue}}},
+     /*isElemental=*/false},
     {"matmul",
      &I::genMatmul,
      {{{"matrix_a", asAddr}, {"matrix_b", asAddr}}},
@@ -2659,12 +2724,45 @@ mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
+// ATOMICCAS
+mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+  auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
+  auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
+
+  mlir::Value arg1 = args[1];
+  mlir::Value arg2 = args[2];
+  if (arg1.getType() != arg2.getType()) {
+    // arg1 and arg2 need to have the same type in AtomicCmpXchgOp.
+    arg2 = builder.createConvert(loc, arg1.getType(), arg2);
+  }
+
+  auto address =
+      builder.create<mlir::UnrealizedConversionCastOp>(loc, llvmPtrTy, args[0])
+          .getResult(0);
+  auto cmpxchg = builder.create<mlir::LLVM::AtomicCmpXchgOp>(
+      loc, address, arg1, arg2, successOrdering, failureOrdering);
+  return builder.create<mlir::LLVM::ExtractValueOp>(loc, cmpxchg, 1);
+}
+
 mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
 
   mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::udec_wrap;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+// ATOMICEXCH
+mlir::Value IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
+                                            llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  assert(args[1].getType().isIntOrFloat());
+
+  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
@@ -2696,6 +2794,16 @@ mlir::Value IntrinsicLibrary::genAtomicMin(mlir::Type resultType,
       mlir::isa<mlir::IntegerType>(args[1].getType())
           ? mlir::LLVM::AtomicBinOp::min
           : mlir::LLVM::AtomicBinOp::fmin;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+// ATOMICXOR
+mlir::Value IntrinsicLibrary::genAtomicXor(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+
+  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_xor;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
@@ -5418,13 +5526,33 @@ void IntrinsicLibrary::genIeeeSetRoundingMode(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   // Set the current floating point rounding mode to the value of arg
   // ROUNDING_VALUE. Values are llvm.get.rounding encoding values.
-  // Generate an error if the value of optional arg RADIX is not 2.
+  // Modes ieee_to_zero, ieee_nearest, ieee_up, and ieee_down are supported.
+  // Modes ieee_away and ieee_other are not supported, and are treated as
+  // ieee_nearest. Generate an error if the optional RADIX arg is not 2.
   assert(args.size() == 1 || args.size() == 2);
   if (args.size() == 2)
     checkRadix(builder, loc, fir::getBase(args[1]), "ieee_set_rounding_mode");
-  auto [fieldRef, ignore] = getFieldRef(builder, loc, fir::getBase(args[0]));
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(builder);
   mlir::Value mode = builder.create<fir::LoadOp>(loc, fieldRef);
+  static_assert(
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO <= 3 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST <= 3 && _FORTRAN_RUNTIME_IEEE_UP >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_UP <= 3 && _FORTRAN_RUNTIME_IEEE_DOWN >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_DOWN <= 3 && "unexpected rounding mode mapping");
+  mlir::Value mask = builder.create<mlir::arith::ShLIOp>(
+      loc, builder.createAllOnesInteger(loc, fieldTy),
+      builder.createIntegerConstant(loc, fieldTy, 2));
+  mlir::Value modeIsSupported = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq,
+      builder.create<mlir::arith::AndIOp>(loc, mode, mask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  mlir::Value nearest = builder.createIntegerConstant(
+      loc, fieldTy, _FORTRAN_RUNTIME_IEEE_NEAREST);
+  mode = builder.create<mlir::arith::SelectOp>(loc, modeIsSupported, mode,
+                                               nearest);
   mode = builder.create<fir::ConvertOp>(
       loc, setRound.getFunctionType().getInput(0), mode);
   builder.create<fir::CallOp>(loc, setRound, mode);
@@ -6042,6 +6170,69 @@ mlir::Value IntrinsicLibrary::genMask(mlir::Type resultType,
   if (resultType.isUnsignedInteger())
     return builder.createConvert(loc, resultType, result);
   return result;
+}
+
+// MATCH_ALL_SYNC
+mlir::Value
+IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+  bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
+
+  llvm::StringRef funcName =
+      is32 ? "llvm.nvvm.match.all.sync.i32p" : "llvm.nvvm.match.all.sync.i64p";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type retTy = mlir::TupleType::get(context, {resultType, i1Ty});
+  mlir::Type valTy = is32 ? i32Ty : i64Ty;
+
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {i32Ty, valTy}, {retTy});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  llvm::SmallVector<mlir::Value> filteredArgs;
+  filteredArgs.push_back(args[0]);
+  if (args[1].getType().isF32() || args[1].getType().isF64())
+    filteredArgs.push_back(builder.create<fir::ConvertOp>(loc, valTy, args[1]));
+  else
+    filteredArgs.push_back(args[1]);
+  auto call = builder.create<fir::CallOp>(loc, funcOp, filteredArgs);
+  auto zero = builder.getIntegerAttr(builder.getIndexType(), 0);
+  auto value = builder.create<fir::ExtractValueOp>(
+      loc, resultType, call.getResult(0), builder.getArrayAttr(zero));
+  auto one = builder.getIntegerAttr(builder.getIndexType(), 1);
+  auto pred = builder.create<fir::ExtractValueOp>(loc, i1Ty, call.getResult(0),
+                                                  builder.getArrayAttr(one));
+  auto conv = builder.create<mlir::LLVM::ZExtOp>(loc, resultType, pred);
+  builder.create<fir::StoreOp>(loc, conv, args[2]);
+  return value;
+}
+
+// MATCH_ANY_SYNC
+mlir::Value
+IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
+
+  llvm::StringRef funcName =
+      is32 ? "llvm.nvvm.match.any.sync.i32p" : "llvm.nvvm.match.any.sync.i64p";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type valTy = is32 ? i32Ty : i64Ty;
+
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {i32Ty, valTy}, {i32Ty});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  llvm::SmallVector<mlir::Value> filteredArgs;
+  filteredArgs.push_back(args[0]);
+  if (args[1].getType().isF32() || args[1].getType().isF64())
+    filteredArgs.push_back(builder.create<fir::ConvertOp>(loc, valTy, args[1]));
+  else
+    filteredArgs.push_back(args[1]);
+  return builder.create<fir::CallOp>(loc, funcOp, filteredArgs).getResult(0);
 }
 
 // MATMUL

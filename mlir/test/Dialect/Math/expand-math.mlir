@@ -285,6 +285,17 @@ func.func @powf_func_negtwo(%a: f64) -> f64{
   return %ret : f64
 }
 
+// CHECK-LABEL:   func @powf_func_three
+// CHECK-SAME:    (%[[ARG0:.+]]: f64) -> f64
+func.func @powf_func_three(%a: f64) -> f64{
+  // CHECK: %[[MUL:.+]] = arith.mulf %[[ARG0]], %[[ARG0]] : f64
+  // CHECK: %[[MUL2:.+]] = arith.mulf %[[MUL]], %[[ARG0]] : f64
+  // CHECK: return %[[MUL2]] : f64
+  %b = arith.constant 3.0 : f64
+  %ret = math.powf %a, %b : f64
+  return %ret : f64
+}
+
 // -----
 
 // CHECK-LABEL:   func.func @roundeven64
