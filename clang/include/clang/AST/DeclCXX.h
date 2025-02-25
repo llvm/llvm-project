@@ -820,18 +820,6 @@ public:
     return data().UserDeclaredSpecialMembers & SMF_CopyConstructor;
   }
 
-  bool hasUserProvidedCopyAssignment() const {
-    return data().UserProvidedCopyAssignment;
-  }
-
-  bool hasUserProvidedMoveAssignment() const {
-    return data().UserProvidedCopyAssignment;
-  }
-
-  bool hasExplicitlyDeletedMoveAssignment() const {
-    return data().ExplicitlyDeletedMoveAssignment;
-  }
-
   /// Determine whether this class needs an implicit copy
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
@@ -1496,16 +1484,6 @@ public:
   bool isStructural() const {
     return isLiteral() && data().StructuralIfLiteral;
   }
-
-  bool isTriviallyRelocatable() const { return data().IsTriviallyRelocatable; }
-
-  void setIsTriviallyRelocatable(bool Set) {
-    data().IsTriviallyRelocatable = Set;
-  }
-
-  bool isReplaceable() const { return data().IsReplaceable; }
-
-  void setIsReplaceable(bool Set) { data().IsReplaceable = Set; }
 
   /// Notify the class that this destructor is now selected.
   ///
