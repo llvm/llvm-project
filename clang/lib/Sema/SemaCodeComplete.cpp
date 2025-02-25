@@ -6749,7 +6749,7 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
-void SemaCodeCompletion::CodeCompleteIfConst(Scope *S) const {
+void SemaCodeCompletion::CodeCompleteIfConst(Scope *S, bool AfterExclaim) const {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
@@ -6757,21 +6757,23 @@ void SemaCodeCompletion::CodeCompleteIfConst(Scope *S) const {
                                 Results.getCodeCompletionTUInfo());
   Results.EnterNewScope();
   if (getLangOpts().CPlusPlus17) {
-    if (Results.includeCodePatterns()) {
-      Builder.AddTypedTextChunk("constexpr");
-      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-      Builder.AddChunk(CodeCompletionString::CK_LeftParen);
-      Builder.AddPlaceholderChunk("condition");
-      Builder.AddChunk(CodeCompletionString::CK_RightParen);
-      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-      Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
-      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-      Builder.AddPlaceholderChunk("statements");
-      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-      Builder.AddChunk(CodeCompletionString::CK_RightBrace);
-      Results.AddResult({Builder.TakeString()});
-    } else {
-      Results.AddResult({"constexpr"});
+    if (!AfterExclaim) {
+      if (Results.includeCodePatterns()) {
+        Builder.AddTypedTextChunk("constexpr");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+        Builder.AddPlaceholderChunk("condition");
+        Builder.AddChunk(CodeCompletionString::CK_RightParen);
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddPlaceholderChunk("statements");
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+        Results.AddResult({Builder.TakeString()});
+      } else {
+        Results.AddResult({"constexpr"});
+      }
     }
   }
   if (getLangOpts().CPlusPlus23) {
