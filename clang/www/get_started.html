@@ -74,8 +74,8 @@ follows:</p>
         <a href="https://llvm.org/docs/CMake.html#frequently-used-cmake-variables">frequently used cmake variables</a>
         for more options.
     </li>
-    <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" ../llvm</tt></li>
-    <li><tt>make</tt></li>
+    <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -GNinja ../llvm</tt></li>
+    <li><tt>cmake --build .</tt></li>
     <li>Note: For subsequent Clang development, you can just run
         <tt>make clang</tt>.</li>
     <li>CMake allows you to generate project files for several IDEs: Xcode,
@@ -170,7 +170,7 @@ Visual Studio:</p>
        <tt>build</tt> directory.
   </ul>
   </li>
-  <li>Build Clang:
+  <li>Build Clang (from Visual Studio's GUI):
   <ul>
     <li>Open LLVM.sln in Visual Studio.</li>
     <li>Build the "clang" project for just the compiler driver and front end, or
@@ -182,6 +182,10 @@ Visual Studio:</p>
   <li>See <a href="hacking.html#testingWindows">
      Hacking on clang - Testing using Visual Studio on Windows</a> for information
      on running regression tests on Windows.</li>
+  <li>Alternatively, build Clang (from command-line using `cmake`)</li>
+  <ul>
+    <li><tt>cmake --build .</tt></li>
+  </ul>
 </ol>
 
 <h3 id="buildWindowsNinja">Using Ninja alongside Visual Studio</h3>
