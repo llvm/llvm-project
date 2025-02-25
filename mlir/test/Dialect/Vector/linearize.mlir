@@ -33,7 +33,7 @@ func.func @test_linearize(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 // -----
 
 // ALL-LABEL: test_linearize_poison
-func.func @test_linearize_poison(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
+func.func @test_linearize_poison() -> vector<2x2xf32> {
   // DEFAULT: %[[P:.*]] = ub.poison : vector<4xf32>
   // DEFAULT: %[[RES:.*]] = vector.shape_cast %[[P]] : vector<4xf32> to vector<2x2xf32>
 
