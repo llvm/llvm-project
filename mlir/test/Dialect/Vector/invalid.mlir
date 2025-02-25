@@ -769,9 +769,8 @@ func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<3x2x2xf32>) {
-  // expected-error@+1 {{expected input vector rank to match target shape rank}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}:
-         vector<3x2x2xf32> to vector<2x2xf32>
+  // expected-error@+1 {{op expected input vector rank to match target shape rank}}
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}: vector<3x2x2xf32> to vector<2x2xf32>
   return
 }
 

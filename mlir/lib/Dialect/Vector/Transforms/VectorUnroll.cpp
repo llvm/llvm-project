@@ -441,7 +441,7 @@ struct UnrollElementwisePattern : public RewritePattern {
     // fact that `ExtractStridedSlice` requires the rank for the input and
     // output to match. If needed, we can relax this later.
     if (originalSize.size() != targetShape->size())
-      return failure();
+    return rewriter.notifyMatchFailure(op, "expected input vector rank to match target shape rank");
     Location loc = op->getLoc();
     // Prepare the result vector.
     Value result = rewriter.create<arith::ConstantOp>(
