@@ -2870,7 +2870,7 @@ InstructionCost RISCVTargetLowering::getLMULCost(MVT VT) const {
 
 /// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
 /// may be quadratic in the number of vreg implied by LMUL, and is assumed to
-/// be by default.  VRGartherCostModel reflects available options.  Note that
+/// be by default.  VRGatherCostModel reflects available options.  Note that
 /// operand (index and possibly mask) are handled separately.
 InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
   auto LMULCost = getLMULCost(VT);
@@ -4261,7 +4261,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // Cap the cost at a value linear to the number of elements in the vector.
   // The default lowering is to use the stack.  The vector store + scalar loads
   // is linear in VL.  However, at high lmuls vslide1down and vslidedown end up
-  // being (at least) linear in LMUL.  As a resultdedown
+  // being (at least) linear in LMUL.  As a result, using the vslidedown
   // lowering for every element ends up being VL*LMUL..
   // TODO: Should we be directly costing the stack alternative?  Doing so might
   // give us a more accurate upper bound.
