@@ -3651,13 +3651,11 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Only perform the priority check if the attribute is outside of a system
-  // header. Values <= 100 are reserved for the implementation, and libc++
+  // Values <= 100 are reserved for the implementation, and libc++
   // benefits from being able to specify values in that range.
-  if (prioritynum < 101) {
+  if (prioritynum < 101)
     S.Diag(AL.getLoc(), diag::warn_init_priority_reserved)
         << E->getSourceRange() << prioritynum;
-  }
   D->addAttr(::new (S.Context) InitPriorityAttr(S.Context, AL, prioritynum));
 }
 

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -fsyntax-only -DSYSTEM -verify %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -fsyntax-only -DNOERROR -Wno-error=init-priority-reserved -verify %s
 // RUN: %clang_cc1 -triple=s390x-none-zos -fsyntax-only -verify=unknown %s
 // RUN: %clang_cc1 -triple=s390x-none-zos -fsyntax-only -DSYSTEM -verify=unknown-system %s
 
@@ -37,9 +38,13 @@ Two goo __attribute__((init_priority(2,3))) ( 5, 6 ); // expected-error {{'init_
 
 Two coo[2]  __attribute__((init_priority(100)));
 #if !defined(SYSTEM)
-  // expected-error@-2 {{requested 'init_priority' 100 is reserved for internal use}}
-  // unknown-warning@-3 {{unknown attribute 'init_priority' ignored}}
-#endif
+#if !defined(NOERROR)
+  // expected-error@-3 {{requested 'init_priority' 100 is reserved for internal use}}
+#else  // defined(NOERROR)
+  // expected-warning@-5 {{requested 'init_priority' 100 is reserved for internal use}}
+#endif // !defined(NOERROR)
+  // unknown-warning@-7 {{unknown attribute 'init_priority' ignored}}
+#endif // !defined(SYSTEM)
 
 Two zoo[2]  __attribute__((init_priority(-1))); // expected-error {{'init_priority' attribute requires integer constant between 0 and 65535 inclusive}}
 // unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
