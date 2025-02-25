@@ -51,6 +51,7 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
   }
 }
 
+// Check if a vtable slot loaded with offset value 'Offset' is a type id load.
 static bool hasTypeIdLoadAtConstantOffset(const Module *M, Value *VPtr,
                                           int64_t Offset, const CallInst *CI,
                                           CXXABI *ABI) {
