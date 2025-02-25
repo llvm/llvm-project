@@ -296,18 +296,16 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     NewParam.ParameterType =
         support::endian::read<dxbc::RootParameterType,
                               llvm::endianness::little>(Current);
-    if (!dxbc::RootSignatureValidations::isValidParameterType(
-            NewParam.ParameterType))
+    if (!dxbc::RootSignatureValidations::isValidParameterType(NewParam.ParameterType))
       return validationFailed("unsupported parameter type value read: " +
                               llvm::Twine((uint32_t)NewParam.ParameterType));
 
     Current += sizeof(dxbc::RootParameterType);
 
     NewParam.ShaderVisibility =
-        support::endian::read<dxbc::ShaderVisibility, llvm::endianness::little>(
-            Current);
-    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
-            NewParam.ShaderVisibility))
+        support::endian::read<dxbc::ShaderVisibility, 
+                              llvm::endianness::little>(Current);
+    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(NewParam.ShaderVisibility))
       return validationFailed("unsupported shader visility flag value read: " +
                               llvm::Twine((uint32_t)NewParam.ShaderVisibility));
 
