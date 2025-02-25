@@ -722,20 +722,6 @@ public:
     return data().DefaultedMoveConstructorIsDeleted;
   }
 
-  bool defaultedMoveAssignmentIsDeleted() const {
-    assert((!needsOverloadResolutionForMoveAssignment() ||
-            (data().DeclaredSpecialMembers & SMF_MoveAssignment)) &&
-           "this property has not yet been computed by Sema");
-    return data().DefaultedMoveAssignmentIsDeleted;
-  }
-
-  bool defaultedCopyAssignmentIsDeleted() const {
-    assert((!needsOverloadResolutionForCopyAssignment() ||
-            (data().DeclaredSpecialMembers & SMF_CopyAssignment)) &&
-           "this property has not yet been computed by Sema");
-    return data().DefaultedCopyAssignmentIsDeleted;
-  }
-
   /// \c true if a defaulted destructor for this class would be deleted.
   bool defaultedDestructorIsDeleted() const {
     assert((!needsOverloadResolutionForDestructor() ||
