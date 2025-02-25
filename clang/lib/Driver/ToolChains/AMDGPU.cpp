@@ -736,7 +736,7 @@ void amdgpu::addFullLTOPartitionOption(const Driver &D,
 
   if (unsigned NumParts = GetFullLTOPartitions(D, Args); NumParts > 1) {
     CmdArgs.push_back(
-        Args.MakeArgString("--lto-partitions=" + std::to_string(NumParts)));
+        Args.MakeArgString("--lto-partitions=" + Twine(NumParts)));
   }
 }
 
