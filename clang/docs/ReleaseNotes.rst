@@ -124,6 +124,8 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+Adding [[clang::unsafe_buffer_usage]] attribute to a method definition now turns off all -Wunsafe-buffer-usage
+related warnings within the method body.
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
 - Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
@@ -131,6 +133,50 @@ Attribute Changes in Clang
   ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
   This forces the global to be considered small or large in regards to the
   x86-64 code model, regardless of the code model specified for the compilation.
+
+- There is a new ``format_matches`` attribute to complement the existing
+  ``format`` attribute. ``format_matches`` allows the compiler to verify that
+  a format string argument is equivalent to a reference format string: it is
+  useful when a function accepts a format string without its accompanying
+  arguments to format. For instance:
+
+  .. code-block:: c
+
+    static int status_code;
+    static const char *status_string;
+
+    void print_status(const char *fmt) {
+      fprintf(stderr, fmt, status_code, status_string);
+      // ^ warning: format string is not a string literal [-Wformat-nonliteral]
+    }
+
+    void stuff(void) {
+      print_status("%s (%#08x)\n");
+      // order of %s and %x is swapped but there is no diagnostic
+    }
+  
+  Before the introducion of ``format_matches``, this code cannot be verified
+  at compile-time. ``format_matches`` plugs that hole:
+
+  .. code-block:: c
+
+    __attribute__((format_matches(printf, 1, "%x %s")))
+    void print_status(const char *fmt) {
+      fprintf(stderr, fmt, status_code, status_string);
+      // ^ `fmt` verified as if it was "%x %s" here; no longer triggers
+      //   -Wformat-nonliteral, would warn if arguments did not match "%x %s"
+    }
+
+    void stuff(void) {
+      print_status("%s (%#08x)\n");
+      // warning: format specifier 's' is incompatible with 'x'
+      // warning: format specifier 'x' is incompatible with 's'
+    }
+
+  Like with ``format``, the first argument is the format string flavor and the
+  second argument is the index of the format string parameter.
+  ``format_matches`` accepts an example valid format string as its third
+  argument. For more information, see the Clang attributes documentation.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -271,6 +317,10 @@ clang-format
 - Adds ``BreakBeforeTemplateCloser`` option.
 - Adds ``BinPackLongBracedList`` option to override bin packing options in
   long (20 item or more) braced list initializer lists.
+- Add the C language instead of treating it like C++.
+- Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
+  adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
+  top of the file.
 
 libclang
 --------

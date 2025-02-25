@@ -116,11 +116,9 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
         // Make a copy of the current instruction Row and save it in m_curr_row
         // so we can add updates as we process the instructions.
-        UnwindPlan::RowSP last_row = unwind_plan.GetLastRow();
-        UnwindPlan::Row *newrow = new UnwindPlan::Row;
-        if (last_row.get())
-          *newrow = *last_row.get();
-        m_curr_row.reset(newrow);
+        UnwindPlan::RowSP last_row =
+            std::make_shared<UnwindPlan::Row>(*unwind_plan.GetLastRow());
+        m_curr_row = std::make_shared<UnwindPlan::Row>(*last_row);
 
         // Add the initial state to the save list with offset 0.
         saved_unwind_states.insert({0, {last_row, m_register_values}});

@@ -1012,3 +1012,14 @@ func.func nested @do_not_fold_reciprocal_int() -> tensor<3x600x1200xi32> {
   %2 = "tosa.reciprocal"(%1): (tensor<3x600x1200xi32>) -> tensor<3x600x1200xi32>
   return %2 : tensor<3x600x1200xi32>
 }
+
+// -----
+
+// CHECK-LABEL: @do_not_fold_int_div_division_by_0
+func.func @do_not_fold_int_div_division_by_0() -> tensor<1x24x2xi32> {
+  // CHECK: tosa.int_div
+  %1 = "tosa.const"() <{value = dense<0> : tensor<1x24x2xi32>}> : () -> tensor<1x24x2xi32>
+  %4 = "tosa.const"() <{value = dense<20> : tensor<1x24x2xi32>}> : () -> tensor<1x24x2xi32>
+  %16 = tosa.int_div %4, %1 : (tensor<1x24x2xi32>, tensor<1x24x2xi32>) -> tensor<1x24x2xi32>
+  return %16 : tensor<1x24x2xi32>
+}
