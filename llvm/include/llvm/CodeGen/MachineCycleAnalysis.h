@@ -65,7 +65,7 @@ public:
   explicit MachineCycleInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  bool isRequired() { return true; }
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm
