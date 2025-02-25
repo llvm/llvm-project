@@ -79,6 +79,8 @@ static bool hasTypeIdLoadAtConstantOffset(const Module *M, Value *VPtr,
               hasTypeIdLoadAtConstantOffset(M, User, Offset, CI, ABI);
         }
       }
+    } else if (auto *Phi = dyn_cast<PHINode>(User)) {
+      HasTypeIdLoad |= hasTypeIdLoadAtConstantOffset(M, User, Offset, CI, ABI);
     } else {
       HasTypeIdLoad = true;
     }
