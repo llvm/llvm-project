@@ -5382,6 +5382,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
 
   case CK_Dependent:
@@ -5591,6 +5592,12 @@ CodeGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
 
   assert(e->isUnique() && "RValue for a nonunique OVE hasn't been emitted");
   return EmitAnyExpr(e->getSourceExpr());
+}
+
+bool CodeGenFunction::isOpaqueValueEmitted(const OpaqueValueExpr *E) {
+  if (OpaqueValueMapping::shouldBindAsLValue(E))
+    return OpaqueLValues.contains(E);
+  return OpaqueRValues.contains(E);
 }
 
 RValue CodeGenFunction::EmitRValueForField(LValue LV,

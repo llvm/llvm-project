@@ -216,6 +216,7 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
   // Check if the extracted name begins with:
   // - "__spirv_ImageSampleExplicitLod"
   // - "__spirv_ImageRead"
+  // - "__spirv_ImageWrite"
   // - "__spirv_ImageQuerySizeLod"
   // - "__spirv_UDotKHR"
   // - "__spirv_SDotKHR"
@@ -233,20 +234,21 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
   // - "__spirv_SConvert"
   // - "__spirv_FConvert"
   // - "__spirv_SatConvert"
-  // and contains return type information at the end "_R<type>".
+  // and maybe contains return type information at the end "_R<type>".
   // If so, extract the plain builtin name without the type information.
   static const std::regex SpvWithR(
-      "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageQuerySizeLod|UDotKHR|"
+      "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageWrite|ImageQuerySizeLod|"
+      "UDotKHR|"
       "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
       "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
       "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
       "Convert|"
-      "UConvert|SConvert|FConvert|SatConvert).*)_R[^_]*_?(\\w+)?.*");
+      "UConvert|SConvert|FConvert|SatConvert)[^_]*)(_R[^_]*_?(\\w+)?.*)?");
   std::smatch Match;
   if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 1) {
     std::ssub_match SubMatch;
     if (DecorationId && Match.size() > 3) {
-      SubMatch = Match[3];
+      SubMatch = Match[4];
       *DecorationId = demangledPostfixToDecorationId(SubMatch.str());
     }
     SubMatch = Match[1];
@@ -1041,6 +1043,24 @@ static bool buildExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+/// Helper function for building Intel's bindless image instructions.
+static bool buildBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
+                                        unsigned Opcode,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+
+  MIRBuilder.buildInstr(Opcode)
+      .addDef(Call->ReturnRegister)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(Call->Arguments[0]);
+
+  return true;
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -1779,6 +1799,7 @@ static bool generateGetQueryInst(const SPIRV::IncomingCall *Call,
   SPIRV::BuiltIn::BuiltIn Value =
       SPIRV::lookupGetBuiltin(Call->Builtin->Name, Call->Builtin->Set)->Value;
   uint64_t IsDefault = (Value == SPIRV::BuiltIn::GlobalSize ||
+                        Value == SPIRV::BuiltIn::NumWorkgroups ||
                         Value == SPIRV::BuiltIn::WorkgroupSize ||
                         Value == SPIRV::BuiltIn::EnqueuedWorkgroupSize);
   return genWorkgroupQuery(Call, MIRBuilder, GR, Value, IsDefault ? 1 : 0);
@@ -1931,6 +1952,9 @@ static bool generateReadImageInst(const StringRef DemangledCall,
                                   const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpImageRead, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
   Register Image = Call->Arguments[0];
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   bool HasOclSampler = DemangledCall.contains_insensitive("ocl_sampler");
@@ -2010,6 +2034,9 @@ static bool generateReadImageInst(const StringRef DemangledCall,
 static bool generateWriteImageInst(const SPIRV::IncomingCall *Call,
                                    MachineIRBuilder &MIRBuilder,
                                    SPIRVGlobalRegistry *GR) {
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpImageWrite, Call,
+                              Register(0));
   MIRBuilder.buildInstr(SPIRV::OpImageWrite)
       .addUse(Call->Arguments[0])  // Image.
       .addUse(Call->Arguments[1])  // Coordinate.
@@ -2221,6 +2248,17 @@ static bool generateExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
 
   return buildExtendedBitOpsInst(Call, Opcode, MIRBuilder, GR);
+}
+
+static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
+                                           MachineIRBuilder &MIRBuilder,
+                                           SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
@@ -2800,6 +2838,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateCoopMatrInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ExtendedBitOps:
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::BindlessINTEL:
+    return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

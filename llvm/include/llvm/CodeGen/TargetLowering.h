@@ -1817,7 +1817,7 @@ public:
                                      EVT NewVT) const {
     // By default, assume that it is cheaper to extract a subvector from a wide
     // vector load rather than creating multiple narrow vector loads.
-    if (NewVT.isVector() && !Load->hasOneUse())
+    if (NewVT.isVector() && !SDValue(Load, 0).hasOneUse())
       return false;
 
     return true;
@@ -2171,6 +2171,14 @@ public:
   /// weak memory ordering. Defaults to false.
   virtual bool shouldInsertFencesForAtomic(const Instruction *I) const {
     return false;
+  }
+
+  // The memory ordering that AtomicExpandPass should assign to a atomic
+  // instruction that it has lowered by adding fences. This can be used
+  // to "fold" one of the fences into the atomic instruction.
+  virtual AtomicOrdering
+  atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
+    return AtomicOrdering::Monotonic;
   }
 
   /// Whether AtomicExpandPass should automatically insert a trailing fence
@@ -5563,6 +5571,10 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
+  /// consisting of zext/sext, extract_subvector, mul and add operations.
+  SDValue expandPartialReduceMLA(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
   /// on the current target. A VP_SETCC will additionally be given a Mask

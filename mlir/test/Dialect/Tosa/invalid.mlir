@@ -4,8 +4,7 @@
 // validation flow.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=bi,mi,mt strict-op-spec-alignment"
-
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=pro_int,pro_fp extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable strict-op-spec-alignment"
 
 func.func @test_const() -> tensor<1xf32> {
   // expected-error@+1{{'tosa.const' op expected same attr/result element types}}
@@ -328,28 +327,6 @@ func.func @test_transpose_element_type_mismatch(%arg0: tensor<2x3xi32>) -> tenso
   // expected-error@+1 {{'tosa.transpose' op failed to verify that all of {input1, output} have same element type}}
   %1 = tosa.transpose %arg0, %perms : (tensor<2x3xi32>, tensor<2xi32>) -> tensor<3x2xf32>
   return %1 : tensor<3x2xf32>
-}
-
-// -----
-
-func.func @test_fully_connected_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<2x3xf32>) -> tensor<273x2xf32> {
-  %0 = "tosa.const"() {value = dense<0.000000e+00> : tensor<2xf32>} : () -> tensor<2xf32>
-  %3 = tosa.const_shape {value = dense<[273, 3]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %1 = tosa.reshape %arg0, %3 : (tensor<13x21x3xf32>, !tosa.shape<2>) -> tensor<273x3xf32>
-  // expected-error@+1 {{'tosa.fully_connected' op weight of fully_connected is not constant}}
-  %2 = tosa.fully_connected %1, %arg1, %0 : (tensor<273x3xf32>, tensor<2x3xf32>, tensor<2xf32>) -> tensor<273x2xf32>
-  return %2 : tensor<273x2xf32>
-}
-
-// -----
-
-func.func @test_fully_connected_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<2xf32>) -> tensor<273x2xf32> {
-  %0 = "tosa.const"() {value = dense<[[-0.613216758, -0.63714242, -0.73500061], [0.180762768, 0.773053169, -0.933686495]]> : tensor<2x3xf32>} : () -> tensor<2x3xf32>
-  %3 = tosa.const_shape {value = dense<[273, 3]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %1 = tosa.reshape %arg0, %3 : (tensor<13x21x3xf32>, !tosa.shape<2>) -> tensor<273x3xf32>
-  // expected-error@+1 {{'tosa.fully_connected' op bias of fully_connected is not constant}}
-  %2 = tosa.fully_connected %1, %0, %arg1 : (tensor<273x3xf32>, tensor<2x3xf32>, tensor<2xf32>) -> tensor<273x2xf32>
-  return %2 : tensor<273x2xf32>
 }
 
 // -----
@@ -1134,4 +1111,89 @@ func.func @test_mul_non_broadcast(%arg0: tensor<13x21x2xf32>, %arg1: tensor<3x1x
   // expected-error@+1 {{'tosa.mul' op operands don't have broadcast-compatible shapes}}
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x2xf32>, tensor<3x1x3xf32>, tensor<1xi8>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_resize_invalid_scale_values
+func.func @test_resize_invalid_scale_values(%arg0: tensor<1x8x8x8xf32>) -> tensor<?x?x?x?xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 0, -1, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expect all scale values to be > 0, got 2, 0, -1, 2}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return %1 : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_wholly_divisible_height
+func.func @test_resize_invalid_wholly_divisible_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 3, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expected (input_height - 1) * scale_y_n - offset_y + border_y to be wholly divisible by scale_y_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
+  return %1 : tensor<1x8x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_output_height
+func.func @test_resize_invalid_output_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x9x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 1, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output height did not match expected: calculated=15, expected=9}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x9x8x8xf32>
+  return %1 : tensor<1x9x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_wholly_divisible_width
+func.func @test_resize_invalid_wholly_divisible_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 1, 1, 3]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expected (input_width - 1) * scale_x_n - offset_x + border_x to be wholly divisible by scale_x_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
+  return %1 : tensor<1x8x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_output_width
+func.func @test_resize_invalid_output_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x9x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 1, 2, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output width did not match expected: calculated=15, expected=9}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x9x8xf32>
+  return %1 : tensor<1x8x9x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: broadcast_resize_nearest_f32
+func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output width did not match expected: calculated=1, expected=5}}
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<3x1x1x7xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x5x7xf32>
+
+  return %resize : tensor<3x1x5x7xf32>
+}
+
+// -----
+
+// CHECK-LABEL: broadcast_resize_bilinear_i8
+func.func @broadcast_resize_bilinear_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32> {
+  %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output height did not match expected: calculated=1, expected=4}}
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<3x1x1x7xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x4x5x7xi32>
+
+  return %resize : tensor<3x4x5x7xi32>
 }

@@ -465,12 +465,12 @@ public:
 
   bool useAA() const { return getST()->useAA(); }
 
-  bool isTypeLegal(Type *Ty) {
+  bool isTypeLegal(Type *Ty) const {
     EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isTypeLegal(VT);
   }
 
-  unsigned getRegUsageForType(Type *Ty) {
+  unsigned getRegUsageForType(Type *Ty) const {
     EVT ETy = getTLI()->getValueType(DL, Ty);
     return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
@@ -1675,7 +1675,8 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
+            ICA.getID() == Intrinsic::vp_fneg) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
         }

@@ -66,6 +66,7 @@
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr4-rv32
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr5-rv32
 // TUNE-RISCV32-SAME: {{^}}, generic
+// TUNE-RISCV32-SAME: {{^}}, generic-ooo
 // TUNE-RISCV32-SAME: {{^}}, rocket
 // TUNE-RISCV32-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV32-SAME: {{$}}
@@ -96,6 +97,7 @@
 // TUNE-RISCV64-SAME: {{^}}, veyron-v1
 // TUNE-RISCV64-SAME: {{^}}, xiangshan-nanhu
 // TUNE-RISCV64-SAME: {{^}}, generic
+// TUNE-RISCV64-SAME: {{^}}, generic-ooo
 // TUNE-RISCV64-SAME: {{^}}, rocket
 // TUNE-RISCV64-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV64-SAME: {{$}}

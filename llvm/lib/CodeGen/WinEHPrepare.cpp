@@ -251,15 +251,15 @@ void llvm::calculateCXXStateForAsynchEH(const BasicBlock *BB, int State,
     const BasicBlock *BB = WI->Block;
     int State = WI->State;
     delete WI;
-    if (auto It = EHInfo.BlockToStateMap.find(BB);
-        It != EHInfo.BlockToStateMap.end() && It->second <= State)
+    auto [StateIt, Inserted] = EHInfo.BlockToStateMap.try_emplace(BB);
+    if (!Inserted && StateIt->second <= State)
       continue; // skip blocks already visited by lower State
 
     BasicBlock::const_iterator It = BB->getFirstNonPHIIt();
     const llvm::Instruction *TI = BB->getTerminator();
     if (It->isEHPad())
       State = EHInfo.EHPadStateMap[&*It];
-    EHInfo.BlockToStateMap[BB] = State; // Record state, also flag visiting
+    StateIt->second = State; // Record state, also flag visiting
 
     if ((isa<CleanupReturnInst>(TI) || isa<CatchReturnInst>(TI)) && State > 0) {
       // Retrive the new State

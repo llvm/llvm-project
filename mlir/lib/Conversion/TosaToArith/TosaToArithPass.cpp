@@ -21,7 +21,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_TOSATOARITH
+#define GEN_PASS_DEF_TOSATOARITHPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -29,9 +29,8 @@ using namespace mlir;
 using namespace tosa;
 
 namespace {
-struct TosaToArith : public impl::TosaToArithBase<TosaToArith> {
-public:
-  TosaToArith(TosaToArithOptions &options) : TosaToArithBase(options) {}
+struct TosaToArith : public impl::TosaToArithPassBase<TosaToArith> {
+  using Base::Base;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -53,9 +52,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::tosa::createTosaToArith(bool includeApplyRescale,
-                                                    bool use32BitApplyRescale) {
-  TosaToArithOptions options = {includeApplyRescale, use32BitApplyRescale};
-  return std::make_unique<TosaToArith>(options);
-}

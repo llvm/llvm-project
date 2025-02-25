@@ -1014,7 +1014,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.vector.vector_to_llvm
       transform.apply_conversion_patterns.func.func_to_llvm
       transform.apply_conversion_patterns.dialect_to_llvm "memref"
-      transform.apply_conversion_patterns.gpu.gpu_to_nvvm
+      transform.apply_conversion_patterns.gpu.gpu_to_nvvm {benefit = 10 : i16}
       transform.apply_conversion_patterns.gpu.gpu_wmma_to_nvvm
       transform.apply_conversion_patterns.gpu.gpu_subgroup_reduce_to_nvvm
       transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
@@ -1056,5 +1056,42 @@ gpu.module @test_module_53 {
     %result64 = math.fpowi %arg_f64, %arg_i32 : f64, i32
     // CHECK: llvm.call @__nv_powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
     func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_54 {
+  // CHECK: llvm.func @__nv_isinff(f32) -> i32
+  // CHECK: llvm.func @__nv_isinfd(f64) -> i32
+  // CHECK: llvm.func @__nv_isnanf(f32) -> i32
+  // CHECK: llvm.func @__nv_isnand(f64) -> i32
+  // CHECK: llvm.func @__nv_isfinited(f64) -> i32
+  // CHECK-LABEL: @fpclassify
+  func.func @fpclassify(%f32: f32, %f64: f64) -> (i1, i1, i1, i1, i1, i1) {
+    // CHECK: %[[INFF:.+]] = llvm.call @__nv_isinff(%{{.*}}) : (f32) -> i32
+    // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[R0:.+]] = llvm.icmp "ne" %[[INFF]], %[[ZERO]]
+    %0 = math.isinf %f32 : f32
+    // CHECK: llvm.call @__nv_isinfd(%{{.*}}) : (f64) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %1 = math.isinf %f64 : f64
+    // CHECK: llvm.call @__nv_isnanf(%{{.*}}) : (f32) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %2 = math.isnan %f32 : f32
+    // CHECK: llvm.call @__nv_isnand(%{{.*}}) : (f64) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %3 = math.isnan %f64 : f64
+    // Note: for some reason, libdevice does not provide isfinite for f32, so
+    // this should fail to convert.
+    // CHECK: math.isfinite {{.*}} : f32
+    %4 = math.isfinite %f32 : f32
+    // CHECK: llvm.call @__nv_isfinited(%{{.*}}) : (f64) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %5 = math.isfinite %f64 : f64
+    // CHECK: llvm.return %[[R0]]
+    return %0, %1, %2, %3, %4, %5 : i1, i1, i1, i1, i1, i1
   }
 }

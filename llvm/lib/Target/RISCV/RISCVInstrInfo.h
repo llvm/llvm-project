@@ -88,7 +88,7 @@ public:
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
                          const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                   const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DstReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
@@ -217,10 +217,9 @@ public:
       unsigned MinRepeats) const override;
 
   // Return if/how a given MachineInstr should be outlined.
-  virtual outliner::InstrType
-  getOutliningTypeImpl(const MachineModuleInfo &MMI,
-                       MachineBasicBlock::iterator &MBBI,
-                       unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MBBI,
+                                           unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
@@ -299,6 +298,8 @@ public:
 
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+
+  bool isHighLatencyDef(int Opc) const override;
 
 protected:
   const RISCVSubtarget &STI;

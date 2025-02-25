@@ -325,6 +325,9 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   auto &sem =
       cast<mlir::FloatType>(getElementTypeOrSelf(typeB)).getFloatSemantics();
   APFloat valueB(sem);
+  auto mulf = [&](Value x, Value y) -> Value {
+    return b.create<arith::MulFOp>(x, y);
+  };
   if (matchPattern(operandB, m_ConstantFloat(&valueB))) {
     if (valueB.isZero()) {
       // a^0 -> 1
@@ -358,17 +361,19 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
     }
     if (valueB.isExactlyValue(2.0)) {
       // a^2 -> a * a
-      Value mul = b.create<arith::MulFOp>(operandA, operandA);
-      rewriter.replaceOp(op, mul);
+      rewriter.replaceOp(op, mulf(operandA, operandA));
       return success();
     }
     if (valueB.isExactlyValue(-2.0)) {
       // a^(-2) -> 1 / (a * a)
-      Value mul = b.create<arith::MulFOp>(operandA, operandA);
       Value one =
           createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
-      Value div = b.create<arith::DivFOp>(one, mul);
+      Value div = b.create<arith::DivFOp>(one, mulf(operandA, operandA));
       rewriter.replaceOp(op, div);
+      return success();
+    }
+    if (valueB.isExactlyValue(3.0)) {
+      rewriter.replaceOp(op, mulf(mulf(operandA, operandA), operandA));
       return success();
     }
   }

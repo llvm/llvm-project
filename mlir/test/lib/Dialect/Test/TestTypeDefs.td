@@ -399,7 +399,7 @@ def TestTypeVerification : Test_Type<"TestTypeVerification"> {
 }
 
 def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
-    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAsmName"]>]> {
+    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAsmName", "getAlias"]>]> {
   let mnemonic = "op_asm_type_interface";
 }
 
