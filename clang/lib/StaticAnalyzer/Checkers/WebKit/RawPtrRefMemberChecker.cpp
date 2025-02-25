@@ -100,7 +100,7 @@ public:
           reportBug(Member, MemberType, MemberCXXRD, RD);
       } else {
         std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
-        auto* PointeeType = MemberType->getPointeeType().getTypePtrOrNull();
+        auto *PointeeType = MemberType->getPointeeType().getTypePtrOrNull();
         if (IsCompatible && *IsCompatible) {
           auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
           if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
@@ -205,12 +205,11 @@ public:
   }
 
   enum class PrintDeclKind { Pointee, Pointer };
-  virtual PrintDeclKind printPointer(llvm::raw_svector_ostream& Os,
-                            const Type *T) const {
+  virtual PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
+                                     const Type *T) const {
     T = T->getUnqualifiedDesugaredType();
     bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
-    Os << (IsPtr ? "raw pointer" : "reference") << " to "
-       << typeName() << " ";
+    Os << (IsPtr ? "raw pointer" : "reference") << " to " << typeName() << " ";
     return PrintDeclKind::Pointee;
   }
 };
@@ -286,7 +285,7 @@ public:
     return "member variables must be a RetainPtr";
   }
 
-  PrintDeclKind printPointer(llvm::raw_svector_ostream& Os,
+  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
                              const Type *T) const final {
     if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
       Os << typeName() << " ";
@@ -319,7 +318,6 @@ void ento::registerNoUnretainedMemberChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NoUnretainedMemberChecker>();
 }
 
-bool ento::shouldRegisterNoUnretainedMemberChecker(
-    const CheckerManager &Mgr) {
+bool ento::shouldRegisterNoUnretainedMemberChecker(const CheckerManager &Mgr) {
   return true;
 }
