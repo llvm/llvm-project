@@ -32,6 +32,7 @@ function compute-projects-to-test() {
       # Flang is not stable in Windows CI at the moment
       if [[ $isForWindows == 0 ]]; then
         echo flang
+        echo flang-rt
       fi
     ;;
     clang)
@@ -47,6 +48,7 @@ function compute-projects-to-test() {
       # Flang is not stable in Windows CI at the moment
       if [[ $isForWindows == 0 ]]; then
         echo flang
+        echo flang-rt
       fi
     ;;
     *)
@@ -95,8 +97,13 @@ function add-dependencies() {
     compiler-rt|libc|openmp)
       echo clang lld
     ;;
-    flang|lldb|libclc)
+    lldb|libclc)
       for p in llvm clang; do
+        echo $p
+      done
+    ;;
+    flang)
+      for p in llvm clang mlir flang-rt; do
         echo $p
       done
     ;;
