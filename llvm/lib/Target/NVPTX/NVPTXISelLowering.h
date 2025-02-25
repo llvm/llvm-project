@@ -17,6 +17,7 @@
 #include "NVPTX.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
 namespace NVPTXISD {
@@ -259,6 +260,16 @@ public:
     // already have the source data.
     return true;
   }
+
+  bool shouldInsertFencesForAtomic(const Instruction *) const override;
+
+  AtomicOrdering
+  atomicOperationOrderAfterFenceSplit(const Instruction *I) const override;
+
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here

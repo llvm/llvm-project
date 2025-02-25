@@ -3268,7 +3268,8 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
   // those uses are extracted directly into a store, then the extract + store
   // can be store-folded. Therefore, it's probably not worth splitting the load.
   EVT VT = Load->getValueType(0);
-  if ((VT.is256BitVector() || VT.is512BitVector()) && !Load->hasOneUse()) {
+  if ((VT.is256BitVector() || VT.is512BitVector()) &&
+      !SDValue(Load, 0).hasOneUse()) {
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
@@ -4075,9 +4076,12 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
                                 const SDLoc &dl, unsigned vectorWidth) {
   EVT VT = Vec.getValueType();
   EVT ElVT = VT.getVectorElementType();
-  unsigned Factor = VT.getSizeInBits() / vectorWidth;
-  EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT,
-                                  VT.getVectorNumElements() / Factor);
+  unsigned ResultNumElts =
+      (VT.getVectorNumElements() * vectorWidth) / VT.getSizeInBits();
+  EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT, ResultNumElts);
+
+  assert(ResultVT.getSizeInBits() == vectorWidth &&
+         "Illegal subvector extraction");
 
   // Extract the relevant vectorWidth bits.  Generate an EXTRACT_SUBVECTOR
   unsigned ElemsPerChunk = vectorWidth / ElVT.getSizeInBits();
@@ -53749,23 +53753,20 @@ static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
                                  m_ConstInt(SrlConst)))))
     return SDValue();
 
-  if (SrlConst.ule(32) || AddConst.lshr(SrlConst).shl(SrlConst) != AddConst)
+  if (SrlConst.ule(32) || AddConst.countr_zero() < SrlConst.getZExtValue())
     return SDValue();
 
   SDValue AddLHSSrl =
       DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
 
-  APInt NewAddConstVal =
-      (~((~AddConst).lshr(SrlConst))).trunc(VT.getSizeInBits());
+  APInt NewAddConstVal = AddConst.lshr(SrlConst).trunc(VT.getSizeInBits());
   SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
   SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
 
-  APInt CleanupSizeConstVal = (SrlConst - 32).zextOrTrunc(VT.getSizeInBits());
   EVT CleanUpVT =
-      EVT::getIntegerVT(*DAG.getContext(), CleanupSizeConstVal.getZExtValue());
-  SDValue CleanUp = DAG.getAnyExtOrTrunc(NewAddNode, DL, CleanUpVT);
-  return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
+      EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
+  return DAG.getZeroExtendInReg(NewAddNode, DL, CleanUpVT);
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
@@ -59477,11 +59478,11 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
         User->getValueSizeInBits(0).getFixedValue() > VT.getFixedSizeInBits()) {
       assert(cast<MemIntrinsicSDNode>(User)->isSimple() &&
              MemIntrin->isSimple() && "Illegal broadcast load type");
+      DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
       SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                          VT.getSizeInBits());
       Extract = DAG.getBitcast(VT, Extract);
       Extract = DCI.CombineTo(N, Extract, SDValue(User, 1));
-      DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), Extract.getValue(1));
       return Extract;
     }
 
