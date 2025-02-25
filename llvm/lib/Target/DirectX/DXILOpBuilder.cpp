@@ -208,8 +208,7 @@ static StructType *getCBufRetType(Type *ElementTy) {
 
   // 64-bit types only have two elements
   if (ElementTy->isDoubleTy() || ElementTy->isIntegerTy(64))
-    return getOrCreateStructType(
-        TypeName, {ElementTy, ElementTy}, Ctx);
+    return getOrCreateStructType(TypeName, {ElementTy, ElementTy}, Ctx);
 
   // 16-bit types pack 8 elements and have .8 in their name to differentiate
   // from min-precision types.
