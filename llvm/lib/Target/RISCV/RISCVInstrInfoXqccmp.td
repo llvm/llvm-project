@@ -87,7 +87,7 @@ def QC_CM_POP : RVInstZcCPPP<0b11010, "qc.cm.pop">,
                 Sched<[WriteIALU, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                        WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                        WriteLDW, WriteLDW, WriteLDW, ReadIALU]>;
-} // DecoderNamespace = "RVZcmp", Predicates = [HasVendorXqccmp]...
+} // DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp]...
 
 //===----------------------------------------------------------------------===//
 // Aliases
