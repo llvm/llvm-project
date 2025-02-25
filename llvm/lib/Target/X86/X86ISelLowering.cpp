@@ -39602,7 +39602,7 @@ static bool matchBinaryPermuteShuffle(
 static SDValue combineX86ShuffleChainWithExtract(
     ArrayRef<SDValue> Inputs, SDValue Root, ArrayRef<int> BaseMask, int Depth,
     ArrayRef<const SDNode *> SrcNodes, bool AllowVariableCrossLaneMask,
-    bool AllowVariablePerLaneMask, SelectionDAG &DAG,
+    bool AllowVariablePerLaneMask, bool IsMaskedShuffle, SelectionDAG &DAG,
     const X86Subtarget &Subtarget);
 
 /// Combine an arbitrary chain of shuffles into a single instruction if
@@ -39619,6 +39619,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                                       ArrayRef<const SDNode *> SrcNodes,
                                       bool AllowVariableCrossLaneMask,
                                       bool AllowVariablePerLaneMask,
+                                      bool IsMaskedShuffle,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   assert(!BaseMask.empty() && "Cannot combine an empty shuffle mask!");
@@ -39665,17 +39666,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   bool FloatDomain = VT1.isFloatingPoint() || VT2.isFloatingPoint() ||
                      (RootVT.isFloatingPoint() && Depth >= 1) ||
                      (RootVT.is256BitVector() && !Subtarget.hasAVX2());
-
-  // Don't combine if we are a AVX512/EVEX target and the mask element size
-  // is different from the root element size - this would prevent writemasks
-  // from being reused.
-  bool IsMaskedShuffle = false;
-  if (RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128)) {
-    if (Root.hasOneUse() && Root->user_begin()->getOpcode() == ISD::VSELECT &&
-        Root->user_begin()->getOperand(0).getScalarValueSizeInBits() == 1) {
-      IsMaskedShuffle = true;
-    }
-  }
 
   // If we are shuffling a splat (and not introducing zeros) then we can just
   // use it directly. This works for smaller elements as well as they already
@@ -40167,7 +40157,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     // shuffle with the larger type.
     if (SDValue WideShuffle = combineX86ShuffleChainWithExtract(
             Inputs, Root, BaseMask, Depth, SrcNodes, AllowVariableCrossLaneMask,
-            AllowVariablePerLaneMask, DAG, Subtarget))
+            AllowVariablePerLaneMask, IsMaskedShuffle, DAG, Subtarget))
       return WideShuffle;
 
     // If we have a dual input lane-crossing shuffle then lower to VPERMV3,
@@ -40339,7 +40329,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // shuffle with the larger type.
   if (SDValue WideShuffle = combineX86ShuffleChainWithExtract(
           Inputs, Root, BaseMask, Depth, SrcNodes, AllowVariableCrossLaneMask,
-          AllowVariablePerLaneMask, DAG, Subtarget))
+          AllowVariablePerLaneMask, IsMaskedShuffle, DAG, Subtarget))
     return WideShuffle;
 
   // If we have a dual input shuffle then lower to VPERMV3,
@@ -40378,7 +40368,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 static SDValue combineX86ShuffleChainWithExtract(
     ArrayRef<SDValue> Inputs, SDValue Root, ArrayRef<int> BaseMask, int Depth,
     ArrayRef<const SDNode *> SrcNodes, bool AllowVariableCrossLaneMask,
-    bool AllowVariablePerLaneMask, SelectionDAG &DAG,
+    bool AllowVariablePerLaneMask, bool IsMaskedShuffle, SelectionDAG &DAG,
     const X86Subtarget &Subtarget) {
   unsigned NumMaskElts = BaseMask.size();
   unsigned NumInputs = Inputs.size();
@@ -40504,10 +40494,10 @@ static SDValue combineX86ShuffleChainWithExtract(
   assert(WideRoot.getValueSizeInBits() == WideSizeInBits &&
          "WideRootSize mismatch");
 
-  if (SDValue WideShuffle =
-          combineX86ShuffleChain(WideInputs, WideRoot, WideMask, Depth,
-                                 SrcNodes, AllowVariableCrossLaneMask,
-                                 AllowVariablePerLaneMask, DAG, Subtarget)) {
+  if (SDValue WideShuffle = combineX86ShuffleChain(
+          WideInputs, WideRoot, WideMask, Depth, SrcNodes,
+          AllowVariableCrossLaneMask, AllowVariablePerLaneMask, IsMaskedShuffle,
+          DAG, Subtarget)) {
     WideShuffle =
         extractSubVector(WideShuffle, 0, DAG, SDLoc(Root), RootSizeInBits);
     return DAG.getBitcast(RootVT, WideShuffle);
@@ -41244,6 +41234,16 @@ static SDValue combineX86ShufflesRecursively(
     resolveTargetShuffleInputsAndMask(Ops, Mask);
   }
 
+  // If we are a AVX512/EVEX target the mask element size should match the root
+  // element size to allow writemasks to be reused.
+  bool IsMaskedShuffle = false;
+  if (RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128)) {
+    if (Root.hasOneUse() && Root->user_begin()->getOpcode() == ISD::VSELECT &&
+        Root->user_begin()->getOperand(0).getScalarValueSizeInBits() == 1) {
+      IsMaskedShuffle = true;
+    }
+  }
+
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() <= 2) {
     // Minor canonicalization of the accumulated shuffle mask to make it easier
@@ -41268,7 +41268,7 @@ static SDValue combineX86ShufflesRecursively(
     // Try to combine into a single shuffle instruction.
     if (SDValue Shuffle = combineX86ShuffleChain(
             Ops, Root, Mask, Depth, CombinedNodes, AllowVariableCrossLaneMask,
-            AllowVariablePerLaneMask, DAG, Subtarget))
+            AllowVariablePerLaneMask, IsMaskedShuffle, DAG, Subtarget))
       return Shuffle;
 
     // If all the operands come from the same larger vector, fallthrough and try
@@ -41287,7 +41287,7 @@ static SDValue combineX86ShufflesRecursively(
   // shuffle with the larger type.
   return combineX86ShuffleChainWithExtract(
       Ops, Root, Mask, Depth, CombinedNodes, AllowVariableCrossLaneMask,
-      AllowVariablePerLaneMask, DAG, Subtarget);
+      AllowVariablePerLaneMask, IsMaskedShuffle, DAG, Subtarget);
 }
 
 /// Helper entry wrapper to combineX86ShufflesRecursively.
