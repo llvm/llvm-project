@@ -17271,8 +17271,9 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 // prefer it.
 SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
   EVT VT = N->getValueType(0);
-  if (!Type::getFloatingPointTy(*DAG.getContext(), VT.getFltSemantics())
-           ->isIEEELikeFPTy())
+  const fltSemantics &Sem = VT.getFltSemantics();
+  if (&Sem == &APFloat::x87DoubleExtended() ||
+      &Sem == &APFloat::PPCDoubleDouble())
     return SDValue();
 
   SDValue ConstOp, Pow2Op;
