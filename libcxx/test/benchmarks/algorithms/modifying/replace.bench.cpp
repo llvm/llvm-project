@@ -20,7 +20,21 @@
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
-  auto std_replace = [](auto first, auto last, auto old, auto new_) { return std::replace(first, last, old, new_); };
+  auto std_replace    = [](auto first, auto last, auto old, auto new_) { return std::replace(first, last, old, new_); };
+  auto std_replace_if = [](auto first, auto last, auto old, auto new_) {
+    auto pred = [&](auto element) {
+      benchmark::DoNotOptimize(element);
+      return element == old;
+    };
+    return std::replace_if(first, last, pred, new_);
+  };
+  auto ranges_replace_if = [](auto first, auto last, auto old, auto new_) {
+    auto pred = [&](auto element) {
+      benchmark::DoNotOptimize(element);
+      return element == old;
+    };
+    return std::ranges::replace_if(first, last, pred, new_);
+  };
 
   // Create a sequence of the form xxxxxxxxxxyyyyyyyyyy, replace
   // into zzzzzzzzzzzyyyyyyyyyy and then back.
@@ -54,12 +68,21 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
+    // {std,ranges}::replace
     bm.operator()<std::vector<int>>("std::replace(vector<int>) (prefix)", std_replace);
     bm.operator()<std::deque<int>>("std::replace(deque<int>) (prefix)", std_replace);
     bm.operator()<std::list<int>>("std::replace(list<int>) (prefix)", std_replace);
     bm.operator()<std::vector<int>>("rng::replace(vector<int>) (prefix)", std::ranges::replace);
     bm.operator()<std::deque<int>>("rng::replace(deque<int>) (prefix)", std::ranges::replace);
     bm.operator()<std::list<int>>("rng::replace(list<int>) (prefix)", std::ranges::replace);
+
+    // {std,ranges}::replace_if
+    bm.operator()<std::vector<int>>("std::replace_if(vector<int>) (prefix)", std_replace_if);
+    bm.operator()<std::deque<int>>("std::replace_if(deque<int>) (prefix)", std_replace_if);
+    bm.operator()<std::list<int>>("std::replace_if(list<int>) (prefix)", std_replace_if);
+    bm.operator()<std::vector<int>>("rng::replace_if(vector<int>) (prefix)", ranges_replace_if);
+    bm.operator()<std::deque<int>>("rng::replace_if(deque<int>) (prefix)", ranges_replace_if);
+    bm.operator()<std::list<int>>("rng::replace_if(list<int>) (prefix)", ranges_replace_if);
   }
 
   // Sprinkle elements to replace inside the range, like xyxyxyxyxyxyxyxyxyxy.
@@ -91,12 +114,21 @@ int main(int argc, char** argv) {
           ->Arg(1024)
           ->Arg(8192);
     };
+    // {std,ranges}::replace
     bm.operator()<std::vector<int>>("std::replace(vector<int>) (sprinkled)", std_replace);
     bm.operator()<std::deque<int>>("std::replace(deque<int>) (sprinkled)", std_replace);
     bm.operator()<std::list<int>>("std::replace(list<int>) (sprinkled)", std_replace);
     bm.operator()<std::vector<int>>("rng::replace(vector<int>) (sprinkled)", std::ranges::replace);
     bm.operator()<std::deque<int>>("rng::replace(deque<int>) (sprinkled)", std::ranges::replace);
     bm.operator()<std::list<int>>("rng::replace(list<int>) (sprinkled)", std::ranges::replace);
+
+    // {std,ranges}::replace_if
+    bm.operator()<std::vector<int>>("std::replace_if(vector<int>) (sprinkled)", std_replace_if);
+    bm.operator()<std::deque<int>>("std::replace_if(deque<int>) (sprinkled)", std_replace_if);
+    bm.operator()<std::list<int>>("std::replace_if(list<int>) (sprinkled)", std_replace_if);
+    bm.operator()<std::vector<int>>("rng::replace_if(vector<int>) (sprinkled)", ranges_replace_if);
+    bm.operator()<std::deque<int>>("rng::replace_if(deque<int>) (sprinkled)", ranges_replace_if);
+    bm.operator()<std::list<int>>("rng::replace_if(list<int>) (sprinkled)", ranges_replace_if);
   }
 
   benchmark::Initialize(&argc, argv);
