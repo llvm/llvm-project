@@ -760,7 +760,7 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
       StartingOccupancy(MFI.getOccupancy()), MinOccupancy(StartingOccupancy),
       RegionLiveOuts(this, /*IsLiveOut=*/true) {
   // We want regions with a single MI to be scheduled so that we can reason on
-  // them correctlt during scheduling stages that move MIs between regions (e.g.
+  // them correctly during scheduling stages that move MIs between regions (e.g.
   // rematerialization).
   ScheduleSingleMIRegions = true;
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
