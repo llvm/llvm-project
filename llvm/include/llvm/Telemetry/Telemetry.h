@@ -64,11 +64,7 @@ public:
 /// This struct can be extended as needed to add additional configuration
 /// points specific to a vendor's implementation.
 struct Config {
-#ifdef LLVM_ENABLE_TELEMETRY
-  static const bool BuildTimeEnableTelemetry = true;
-#else
-  static const bool BuildTimeEnableTelemetry = false;
-#endif
+  static const bool BuildTimeEnableTelemetry = LLVM_ENABLE_TELEMETRY;
   virtual ~Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
 
   // If true, telemetry will be enabled.
