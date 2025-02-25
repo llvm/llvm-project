@@ -1747,7 +1747,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
     // for wwm-regalloc before we can use the rest for vgpr-alloc.
     addPass(createVGPRAllocPass(true));
     addPreRewrite();
-    addPass(&VirtRegRewriterID);
+    addPass(createVirtRegRewriter(false));
 
     // Perform the WaveTransform in non-SSA form
     addPass(createGCNWaveTransformPass());
@@ -1791,7 +1791,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // For allocating other whole wave mode registers.
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
-  addPass(createVirtRegRewriter(false));
+  addPass(createVirtRegRewriter(WaveTransformCF));
 
   if (!WaveTransformCF) {
     addPass(&AMDGPUReserveWWMRegsID);
