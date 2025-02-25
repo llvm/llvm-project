@@ -116,9 +116,15 @@ jobs:
         echo "ref=$ref" >> $GITHUB_OUTPUT
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          release_binary_suffix="exe"
+        else
+          release_binary_suffix="tar.xz"
+        fi
+
         release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
-        echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
+        echo "release-binary-filename=$release_binary_basename.$release_binary_suffix" >> $GITHUB_OUTPUT
 
         target="$RUNNER_OS-$RUNNER_ARCH"
         # The hendrikmuhs/ccache-action action does not support installing sccache
@@ -149,11 +155,6 @@ jobs:
 
         build_flang="true"
 
-        if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-        fi
-
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
@@ -176,6 +177,10 @@ jobs:
               build_runs_on="depot-macos-14"
             fi
             test_runs_on="${{ inputs.runs-on }}"
+            ;;
+          windows-2019)
+            build_runs_on="llvm-premerge-windows-runners"
+            test_runs_on="$build_runs_on"
             ;;
           *)
             test_runs_on="${{ inputs.runs-on }}"

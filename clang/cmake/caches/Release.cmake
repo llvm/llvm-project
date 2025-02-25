@@ -49,7 +49,7 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(STAGE1_PROJECTS "clang")
 
 # Build all runtimes so we can statically link them into the stage2 compiler.
-set(STAGE1_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind")
+set(STAGE1_RUNTIMES ${DEFAULT_RUNTIMES})
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
@@ -125,7 +125,10 @@ set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FL
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
-set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+# We want to generate an installer on Windows.
+if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+  set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+endif()
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
