@@ -2718,23 +2718,23 @@ defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
 // Scalar
 
 multiclass LDU_G<string TyStr, NVPTXRegClass regclass> {
- def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
-               !strconcat("ldu.global.", TyStr),
+ def asi:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src, Offseti32imm:$offset),
+               "ldu.global." # TyStr # " \t$result, [$src$offset];",
                       []>, Requires<[hasLDU]>;
  def ari :  NVPTXInst<(outs regclass:$result), (ins MEMri:$src),
-               !strconcat("ldu.global.", TyStr),
+               "ldu.global." # TyStr # " \t$result, [$src];",
                       []>, Requires<[hasLDU]>;
  def ari64 :  NVPTXInst<(outs regclass:$result), (ins MEMri64:$src),
-               !strconcat("ldu.global.", TyStr),
+               "ldu.global." # TyStr # " \t$result, [$src];",
                         []>, Requires<[hasLDU]>;
 }
 
-defm INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32 \t$result, [$src];", Float32Regs>;
-defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
+defm INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8", Int16Regs>;
+defm INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16", Int16Regs>;
+defm INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32", Int32Regs>;
+defm INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64", Int64Regs>;
+defm INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32", Float32Regs>;
+defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64", Float64Regs>;
 
 // vector
 
@@ -2742,56 +2742,40 @@ defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
 multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
+                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
  def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri64:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins imemAny:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
+                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
+ def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
+                     (ins imemAny:$src, Offseti32imm:$offset),
+                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src$offset];", []>;
 }
 
 multiclass VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                             regclass:$dst4), (ins MEMri:$src),
-               !strconcat("ldu.global.", TyStr), []>;
+               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
  def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                             regclass:$dst4), (ins MEMri64:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins imemAny:$src),
-               !strconcat("ldu.global.", TyStr), []>;
+               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+ def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                            regclass:$dst4), (ins imemAny:$src, Offseti32imm:$offset),
+               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src$offset];", []>;
 }
 
-defm INT_PTX_LDU_G_v2i8_ELE
-  : VLDU_G_ELE_V2<"v2.u8 \t{{$dst1, $dst2}}, [$src];",  Int16Regs>;
-defm INT_PTX_LDU_G_v2i16_ELE
-  : VLDU_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
-defm INT_PTX_LDU_G_v2i32_ELE
-  : VLDU_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDU_G_v2f32_ELE
-  : VLDU_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
-defm INT_PTX_LDU_G_v2i64_ELE
-  : VLDU_G_ELE_V2<"v2.u64 \t{{$dst1, $dst2}}, [$src];", Int64Regs>;
-defm INT_PTX_LDU_G_v2f64_ELE
-  : VLDU_G_ELE_V2<"v2.f64 \t{{$dst1, $dst2}}, [$src];", Float64Regs>;
-defm INT_PTX_LDU_G_v4i8_ELE
-  : VLDU_G_ELE_V4<"v4.u8 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDU_G_v4i16_ELE
-  : VLDU_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int16Regs>;
-defm INT_PTX_LDU_G_v4i32_ELE
-  : VLDU_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int32Regs>;
-defm INT_PTX_LDU_G_v4f16_ELE
-  : VLDU_G_ELE_V4<"v4.b16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int16Regs>;
-defm INT_PTX_LDU_G_v4f16x2_ELE
-  : VLDU_G_ELE_V4<"v4.b32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int32Regs>;
-defm INT_PTX_LDU_G_v4f32_ELE
-  : VLDU_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Float32Regs>;
+defm INT_PTX_LDU_G_v2i8_ELE : VLDU_G_ELE_V2<"u8", Int16Regs>;
+defm INT_PTX_LDU_G_v2i16_ELE : VLDU_G_ELE_V2<"u16", Int16Regs>;
+defm INT_PTX_LDU_G_v2i32_ELE : VLDU_G_ELE_V2<"u32", Int32Regs>;
+defm INT_PTX_LDU_G_v2f32_ELE : VLDU_G_ELE_V2<"f32", Float32Regs>;
+defm INT_PTX_LDU_G_v2i64_ELE : VLDU_G_ELE_V2<"u64", Int64Regs>;
+defm INT_PTX_LDU_G_v2f64_ELE : VLDU_G_ELE_V2<"f64", Float64Regs>;
+
+defm INT_PTX_LDU_G_v4i8_ELE : VLDU_G_ELE_V4<"u8", Int16Regs>;
+defm INT_PTX_LDU_G_v4i16_ELE : VLDU_G_ELE_V4<"u16", Int16Regs>;
+defm INT_PTX_LDU_G_v4i32_ELE  : VLDU_G_ELE_V4<"u32", Int32Regs>;
+defm INT_PTX_LDU_G_v4f16_ELE   : VLDU_G_ELE_V4<"b16", Int16Regs>;
+defm INT_PTX_LDU_G_v4f16x2_ELE  : VLDU_G_ELE_V4<"b32", Int32Regs>;
+defm INT_PTX_LDU_G_v4f32_ELE  : VLDU_G_ELE_V4<"f32", Float32Regs>;
 
 
 //-----------------------------------
@@ -2803,29 +2787,23 @@ defm INT_PTX_LDU_G_v4f32_ELE
 // during the lifetime of the kernel.
 
 multiclass LDG_G<string TyStr, NVPTXRegClass regclass> {
- def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
-               !strconcat("ld.global.nc.", TyStr),
+ def asi:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src, Offseti32imm:$offset),
+               "ld.global.nc." # TyStr # " \t$result, [$src$offset];",
                       []>, Requires<[hasLDG]>;
  def ari :  NVPTXInst<(outs regclass:$result), (ins MEMri:$src),
-               !strconcat("ld.global.nc.", TyStr),
+               "ld.global.nc." # TyStr # " \t$result, [$src];",
                       []>, Requires<[hasLDG]>;
  def ari64 :  NVPTXInst<(outs regclass:$result), (ins MEMri64:$src),
-               !strconcat("ld.global.nc.", TyStr),
+               "ld.global.nc." # TyStr # " \t$result, [$src];",
                         []>, Requires<[hasLDG]>;
 }
 
-defm INT_PTX_LDG_GLOBAL_i8
-  : LDG_G<"u8 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDG_GLOBAL_i16
-  : LDG_G<"u16 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDG_GLOBAL_i32
-  : LDG_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDG_GLOBAL_i64
-  : LDG_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDG_GLOBAL_f32
-  : LDG_G<"f32 \t$result, [$src];", Float32Regs>;
-defm INT_PTX_LDG_GLOBAL_f64
-  : LDG_G<"f64 \t$result, [$src];", Float64Regs>;
+defm INT_PTX_LDG_GLOBAL_i8 : LDG_G<"u8", Int16Regs>;
+defm INT_PTX_LDG_GLOBAL_i16 : LDG_G<"u16", Int16Regs>;
+defm INT_PTX_LDG_GLOBAL_i32 : LDG_G<"u32", Int32Regs>;
+defm INT_PTX_LDG_GLOBAL_i64 : LDG_G<"u64", Int64Regs>;
+defm INT_PTX_LDG_GLOBAL_f32 : LDG_G<"f32", Float32Regs>;
+defm INT_PTX_LDG_GLOBAL_f64 : LDG_G<"f64", Float64Regs>;
 
 // vector
 
@@ -2833,54 +2811,39 @@ defm INT_PTX_LDG_GLOBAL_f64
 multiclass VLDG_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
+                     "ld.global.nc.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
  def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri64:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins imemAny:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
+                     "ld.global.nc.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
+ def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
+                     (ins imemAny:$src, Offseti32imm:$offset),
+                     "ld.global.nc.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src$offset];", []>;
 }
 
 multiclass VLDG_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
-  def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                              regclass:$dst4), (ins Int32Regs:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                               regclass:$dst4), (ins Int64Regs:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
   def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                               regclass:$dst4), (ins MEMri:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
+               "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
   def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                               regclass:$dst4), (ins MEMri64:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                             regclass:$dst4), (ins imemAny:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
+               "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+  def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                             regclass:$dst4), (ins imemAny:$src, Offseti32imm:$offset),
+               "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src$offset];", []>;
 }
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
-defm INT_PTX_LDG_G_v2i8_ELE
-  : VLDG_G_ELE_V2<"v2.u8 \t{{$dst1, $dst2}}, [$src];",  Int16Regs>;
-defm INT_PTX_LDG_G_v2i16_ELE
-  : VLDG_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v2i32_ELE
-  : VLDG_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v2f32_ELE
-  : VLDG_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
-defm INT_PTX_LDG_G_v2i64_ELE
-  : VLDG_G_ELE_V2<"v2.u64 \t{{$dst1, $dst2}}, [$src];", Int64Regs>;
-defm INT_PTX_LDG_G_v2f64_ELE
-  : VLDG_G_ELE_V2<"v2.f64 \t{{$dst1, $dst2}}, [$src];", Float64Regs>;
-defm INT_PTX_LDG_G_v4i8_ELE
-  : VLDG_G_ELE_V4<"v4.u8 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v4i16_ELE
-  : VLDG_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v4i32_ELE
-  : VLDG_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v4f32_ELE
-  : VLDG_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float32Regs>;
+defm INT_PTX_LDG_G_v2i8_ELE : VLDG_G_ELE_V2<"u8", Int16Regs>;
+defm INT_PTX_LDG_G_v2i16_ELE : VLDG_G_ELE_V2<"u16", Int16Regs>;
+defm INT_PTX_LDG_G_v2i32_ELE : VLDG_G_ELE_V2<"u32", Int32Regs>;
+defm INT_PTX_LDG_G_v2f32_ELE : VLDG_G_ELE_V2<"f32", Float32Regs>;
+defm INT_PTX_LDG_G_v2i64_ELE : VLDG_G_ELE_V2<"u64", Int64Regs>;
+defm INT_PTX_LDG_G_v2f64_ELE : VLDG_G_ELE_V2<"f64", Float64Regs>;
+
+defm INT_PTX_LDG_G_v4i8_ELE : VLDG_G_ELE_V4<"u8", Int16Regs>;
+defm INT_PTX_LDG_G_v4i16_ELE : VLDG_G_ELE_V4<"u16", Int16Regs>;
+defm INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"u32", Int32Regs>;
+defm INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"f32", Float32Regs>;
 
 
 multiclass NG_TO_G<string Str> {

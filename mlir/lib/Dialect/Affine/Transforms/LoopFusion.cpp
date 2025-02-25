@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopFusionUtils.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Utils.h"
@@ -473,7 +472,8 @@ static Value createPrivateMemRef(AffineForOp forOp,
 //    is lower.
 // TODO: Extend profitability analysis to support scenarios with multiple
 // stores.
-static bool isFusionProfitable(AffineForOp srcForOp, Operation *srcStoreOpInst,
+static bool isFusionProfitable(AffineForOp srcForOp,
+                               ArrayRef<Operation *> producerStores,
                                AffineForOp dstForOp,
                                ArrayRef<ComputationSliceState> depthSliceUnions,
                                unsigned maxLegalFusionDepth,
@@ -503,6 +503,35 @@ static bool isFusionProfitable(AffineForOp srcForOp, Operation *srcStoreOpInst,
   if (!getLoopNestStats(dstForOp, &dstLoopNestStats))
     return false;
 
+  // We limit profitability analysis to only scenarios with
+  // a single producer store for now. Note that some multi-store
+  // producer scenarios will still go through profitability analysis
+  // if only one of the stores is involved in the producer-consumer
+  // relationship of the candidate loops.
+  // TODO: Suppport multiple producer stores in profitability
+  // analysis.
+  if (producerStores.size() > 1) {
+    LLVM_DEBUG(llvm::dbgs() << "Limited profitability analysis. Not "
+                               "supported for multiple producer store case.\n");
+    int64_t sliceCost;
+    int64_t fusedLoopNestComputeCost;
+    // We will still fuse if fusion obeys the specified compute
+    // tolerance at the max legal depth.
+    auto fraction = getAdditionalComputeFraction(
+        srcForOp, dstForOp, maxLegalFusionDepth, depthSliceUnions, sliceCost,
+        fusedLoopNestComputeCost);
+    if (!fraction || fraction > computeToleranceThreshold) {
+      LLVM_DEBUG(llvm::dbgs() << "Additional computation exceeds "
+                                 "compute tolerance. Not fusing.\n");
+      return false;
+    }
+    LLVM_DEBUG(llvm::dbgs()
+               << "Considering fusion profitable at max legal depth.\n");
+    return true;
+  }
+
+  Operation *srcStoreOp = producerStores.front();
+
   // Search for min cost value for 'dstLoopDepth'. At each value of
   // 'dstLoopDepth' from 'maxLegalLoopDepth' to '1', compute computation slice
   // bounds between 'srcOpInst' and each op in 'dstOpinsts' (taking the union
@@ -516,12 +545,9 @@ static bool isFusionProfitable(AffineForOp srcForOp, Operation *srcStoreOpInst,
   // The best loop depth at which to materialize the slice.
   std::optional<unsigned> bestDstLoopDepth;
 
-  // Compute op instance count for the src loop nest without iteration slicing.
-  uint64_t srcLoopNestCost = getComputeCost(srcForOp, srcLoopNestStats);
-
   // Compute src loop nest write region size.
-  MemRefRegion srcWriteRegion(srcStoreOpInst->getLoc());
-  if (failed(srcWriteRegion.compute(srcStoreOpInst, /*loopDepth=*/0))) {
+  MemRefRegion srcWriteRegion(srcStoreOp->getLoc());
+  if (failed(srcWriteRegion.compute(srcStoreOp, /*loopDepth=*/0))) {
     LLVM_DEBUG(llvm::dbgs()
                << "Unable to compute MemRefRegion for source operation\n");
     return false;
@@ -533,7 +559,10 @@ static bool isFusionProfitable(AffineForOp srcForOp, Operation *srcStoreOpInst,
     return false;
   int64_t srcWriteRegionSizeBytes = *maybeSrcWriteRegionSizeBytes;
 
-  // Compute op instance count for the src loop nest.
+  // Compute op instance count for the src loop nest without iteration slicing.
+  uint64_t srcLoopNestCost = getComputeCost(srcForOp, srcLoopNestStats);
+
+  // Compute op instance count for the destination loop nest.
   uint64_t dstLoopNestCost = getComputeCost(dstForOp, dstLoopNestStats);
 
   // Evaluate all depth choices for materializing the slice in the destination
@@ -563,9 +592,8 @@ static bool isFusionProfitable(AffineForOp srcForOp, Operation *srcStoreOpInst,
     // Determine what the slice write MemRefRegion would be, if the src loop
     // nest slice 'slice' were to be inserted into the dst loop nest at loop
     // depth 'i'.
-    MemRefRegion sliceWriteRegion(srcStoreOpInst->getLoc());
-    if (failed(sliceWriteRegion.compute(srcStoreOpInst, /*loopDepth=*/0,
-                                        &slice))) {
+    MemRefRegion sliceWriteRegion(srcStoreOp->getLoc());
+    if (failed(sliceWriteRegion.compute(srcStoreOp, /*loopDepth=*/0, &slice))) {
       LLVM_DEBUG(llvm::dbgs()
                  << "Failed to compute slice write region at loopDepth: " << i
                  << "\n");
@@ -1025,21 +1053,13 @@ public:
                     cast<AffineWriteOpInterface>(op).getMemRef()))
               producerStores.push_back(op);
 
-          // TODO: Suppport multiple producer stores in profitability
-          // analysis. We limit profitability analysis to only scenarios with
-          // a single producer store for now. Note that some multi-store
-          // producer scenarios will still go through profitability analysis
-          // if only one of the stores is involved the producer-consumer
-          // relationship of the candidate loops.
           assert(!producerStores.empty() && "Expected producer store");
-          if (producerStores.size() > 1)
-            LLVM_DEBUG(llvm::dbgs() << "Skipping profitability analysis. Not "
-                                       "supported for this case\n");
-          else if (!isFusionProfitable(srcAffineForOp, producerStores[0],
-                                       dstAffineForOp, depthSliceUnions,
-                                       maxLegalFusionDepth, &bestDstLoopDepth,
-                                       computeToleranceThresholdToUse))
+          if (!isFusionProfitable(srcAffineForOp, producerStores,
+                                  dstAffineForOp, depthSliceUnions,
+                                  maxLegalFusionDepth, &bestDstLoopDepth,
+                                  computeToleranceThresholdToUse)) {
             continue;
+          }
         }
 
         assert(bestDstLoopDepth > 0 && "Unexpected loop fusion depth");
