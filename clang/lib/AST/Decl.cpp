@@ -5754,13 +5754,7 @@ HLSLBufferDecl::CreateDefaultCBuffer(ASTContext &C, DeclContext *LexicalParent,
   HLSLBufferDecl *Result = new (C, DC) HLSLBufferDecl(
       DC, true, SourceLocation(), II, SourceLocation(), SourceLocation());
   Result->setImplicit(true);
-
-  // allocate array for default decls with ASTContext allocator
-  assert(!DefaultCBufferDecls.empty());
-  Decl **DeclsArray = new (C) Decl *[DefaultCBufferDecls.size()];
-  std::copy(DefaultCBufferDecls.begin(), DefaultCBufferDecls.end(), DeclsArray);
-  Result->setDefaultBufferDecls(
-      ArrayRef<Decl *>(DeclsArray, DefaultCBufferDecls.size()));
+  Result->setDefaultBufferDecls(DefaultCBufferDecls);
   return Result;
 }
 
@@ -5777,10 +5771,16 @@ void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
 }
 
 void HLSLBufferDecl::setDefaultBufferDecls(ArrayRef<Decl *> Decls) {
+  assert(!Decls.empty());
+  assert(DefaultBufferDecls.empty() && "default decls are already set");
   assert(isImplicit() &&
          "default decls can only be added to the implicit/default constant "
          "buffer $Globals");
-  DefaultBufferDecls = Decls;
+
+  // allocate array for default decls with ASTContext allocator
+  Decl **DeclsArray = new (getASTContext()) Decl *[Decls.size()];
+  std::copy(Decls.begin(), Decls.end(), DeclsArray);
+  DefaultBufferDecls = ArrayRef<Decl *>(DeclsArray, Decls.size());
 }
 
 HLSLBufferDecl::buffer_decl_iterator
