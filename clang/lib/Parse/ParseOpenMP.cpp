@@ -2886,7 +2886,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     // OMP5.2 Chapter 7.4: If no otherwise clause is specified the effect is as
     // if one was specified without an associated directive variant.
     if (BestIdx == -1 && Idx == 1) {
-      SkipUntil(tok::annot_pragma_openmp_end,tok::identifier);
+      ConsumeAnnotationToken();
+      return StmtEmpty();
     }
     break;
   }
