@@ -97,6 +97,20 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #endif
 }
 
+template <typename T, int N>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
+#if !defined(__DirectX__)
+  return __builtin_elementwise_fmod(X, Y);
+#else 
+  vector<T, N> div = X / Y;
+  vector<T, N> result = __builtin_hlsl_elementwise_frac(__builtin_elementwise_abs(div)) * Y; 
+  vector<bool, N> condition = (div >= -div);
+  vector<T, N> realResult = __builtin_hlsl_select(condition, result, -result);
+  return realResult;
+#endif
+}
+
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_
