@@ -650,12 +650,12 @@ namespace cwg241 { // cwg241: 9
     C::f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
     // expected-note@#cwg241-C-f 2{{template parameter is declared here}}
-    // expected-note@#cwg241-C-f 2{{candidate template ignored: invalid explicitly-specified argument: non-type argument '3' is not compatible with type parameter 'int'}}
+    // expected-note@#cwg241-C-f 2{{candidate template ignored: invalid explicitly-specified argument: non-type argument '3' is not compatible}}
 
     C::g<3>(b);
     // expected-error@-1 {{no matching function for call to 'g'}}
     // expected-note@#cwg241-C-g {{template parameter is declared here}}
-    // expected-note@#cwg241-C-g {{candidate template ignored: invalid explicitly-specified argument: non-type argument '3' is not compatible with type parameter 'int'}}
+    // expected-note@#cwg241-C-g {{candidate template ignored: invalid explicitly-specified argument: non-type argument '3' is not compatible}}
 
     using C::f;
     using C::g;
@@ -955,7 +955,7 @@ namespace cwg258 { // cwg258: 2.8
   int &x = b.g<int>(0);
   // expected-error@-1 {{no matching member function for call to 'g'}}
   // expected-note@#cwg258-B-g {{template parameter is declared here}}
-  // expected-note@#cwg258-B-g {{candidate template ignored: invalid explicitly-specified argument: type argument 'int' is not compatible with non-type parameter 'int'}}
+  // expected-note@#cwg258-B-g {{candidate template ignored: invalid explicitly-specified argument: type argument 'int' is not compatible}}
   int &y = b.h();
   float &z = const_cast<const B&>(b).h();
 

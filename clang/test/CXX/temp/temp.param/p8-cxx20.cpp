@@ -40,7 +40,7 @@ namespace ConstDestruction {
   };
 
   template<D d> // expected-note 2{{template parameter is declared here}}
-  void f() {} // expected-note 2{{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  void f() {} // expected-note 2{{candidate template ignored: invalid explicitly-specified argument}}
 
   void g() {
     f<D{0, true}>();

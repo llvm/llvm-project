@@ -11719,7 +11719,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     TemplateArgument FirstArg = *DeductionFailure.getFirstArg();
     TemplateArgument SecondArg = *DeductionFailure.getSecondArg();
 
-    auto TupleResult = [&]() -> std::tuple<int, int, int, int, QualType> {
+    auto [Which, Provided, Expected, Index,
+          Type] = [&]() -> std::tuple<int, int, int, int, QualType> {
       switch (ParamD->getKind()) {
       case Decl::TemplateTypeParm: {
         auto *TTPD = cast<TemplateTypeParmDecl>(ParamD);
@@ -11743,19 +11744,17 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       }
       case Decl::TemplateTemplateParm: {
         auto *TTempPD = cast<TemplateTemplateParmDecl>(ParamD);
-        return {3, -1, -1, TTempPD->getIndex(), QualType()};
+        return {1, 2, -1, TTempPD->getIndex(), QualType()};
       }
       default:
         llvm_unreachable("unexpected param decl kind");
       }
-    };
-    auto [Which, Provided, Expected, Index, Type] = TupleResult();
-    S.NoteTemplateParameterLocation(*ParamD);
+    }();
     S.Diag(Templated->getLocation(),
            diag::note_ovl_candidate_explicit_arg_mismatch)
         << Which << Provided << Expected << FirstArg << SecondArg << Type
         << (Index + 1);
-
+    S.NoteTemplateParameterLocation(*ParamD);
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
   }

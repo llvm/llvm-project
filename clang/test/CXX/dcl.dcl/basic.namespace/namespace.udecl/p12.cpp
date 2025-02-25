@@ -113,21 +113,21 @@ namespace test3 {
 
   struct Derived1 : Base {
     using Base::foo;
-    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: type argument 'int' is not compatible with non-type parameter 'int'}}
+    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: type argument 'int' is not compatible}}
   };
 
   struct Derived2 : Base {
-    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: type argument 'int' is not compatible with non-type parameter 'int'}}
+    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: type argument 'int' is not compatible}}
     using Base::foo;
   };
 
   struct Derived3 : Base {
     using Base::foo;
-    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: non-type argument '0' is not compatible with type parameter 'int'}}
+    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: non-type argument '0' is not compatible}}
   };
 
   struct Derived4 : Base {
-    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note{{template parameter is declared here}} // expected-note {{andidate template ignored: invalid explicitly-specified argument: non-type argument '0' is not compatible with type parameter 'int'}}
+    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note{{template parameter is declared here}} // expected-note {{andidate template ignored: invalid explicitly-specified argument: non-type argument '0' is not compatible}}
     using Base::foo;
   };
 

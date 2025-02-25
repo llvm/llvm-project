@@ -4874,10 +4874,9 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
 def note_ovl_candidate_explicit_arg_mismatch : Note<
     "candidate template ignored: invalid explicitly-specified argument"
     "%select{"
-    "|: %select{non-type|type}1 argument %select{'%3'|%3}1 is not compatible with "
-    "%select{non-type|type}2 parameter %select{%5|%4}2"
+    "|: %select{non-type|type|template}1 argument %select{'%3'|%3|%3}1 is not compatible"
     "|: could not convert '%3' from %4 to %5"
-    "| for %ordinal6 template parameter}0">;
+    "|}0">;
 
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;

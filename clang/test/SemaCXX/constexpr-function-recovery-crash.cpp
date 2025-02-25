@@ -60,7 +60,7 @@ constexpr void test8() {
   throw "bad";
 }
 
-template<int x> constexpr int f(int y) { //expected-note {{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+template<int x> constexpr int f(int y) { //expected-note {{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument}}
   return x * y;
 }
 constexpr int test9(int x) {
