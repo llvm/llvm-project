@@ -745,8 +745,9 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
                         "Qualcomm uC Conditional Move 16bit");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint16,
                         "Qualcomm uC Interrupts 16bit");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqccmp, DecoderTableXqccmp16,
-                        "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)");
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqccmp, DecoderTableXqccmp16,
+      "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)");
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
                            DecoderTableXwchc16, "WCH QingKe XW");
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
