@@ -3307,3 +3307,54 @@ llvm.func @distribute() {
 // CHECK:         store i64 1, ptr %[[STRIDE]]
 // CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
 // CHECK:         call void @__kmpc_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 92, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[STRIDE]], i64 1, i64 0)
+
+// -----
+
+llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
+  omp.parallel {
+    omp.distribute {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      } {omp.composite}
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+  llvm.return
+}
+
+// CHECK-LABEL: define void @distribute_wsloop
+// CHECK:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[OUTLINED_PARALLEL:.*]],
+
+// CHECK:       define internal void @[[OUTLINED_PARALLEL]]
+// CHECK:         call void @[[OUTLINED_DISTRIBUTE:.*]]({{.*}})
+
+// CHECK:       define internal void @[[OUTLINED_DISTRIBUTE]]
+// CHECK:         %[[LASTITER:.*]] = alloca i32
+// CHECK:         %[[LB:.*]] = alloca i32
+// CHECK:         %[[UB:.*]] = alloca i32
+// CHECK:         %[[STRIDE:.*]] = alloca i32
+// CHECK:         br label %[[AFTER_ALLOCA:.*]]
+
+// CHECK:       [[AFTER_ALLOCA]]:
+// CHECK:         br label %[[DISTRIBUTE_BODY:.*]]
+
+// CHECK:       [[DISTRIBUTE_BODY]]:
+// CHECK-NEXT:    br label %[[DISTRIBUTE_REGION:.*]]
+
+// CHECK:       [[DISTRIBUTE_REGION]]:
+// CHECK-NEXT:    br label %[[WSLOOP_REGION:.*]]
+
+// CHECK:       [[WSLOOP_REGION]]:
+// CHECK:         %omp_loop.tripcount = select {{.*}}
+// CHECK-NEXT:    br label %[[PREHEADER:.*]]
+
+// CHECK:       [[PREHEADER]]:
+// CHECK:         store i32 0, ptr %[[LB]]
+// CHECK:         %[[TRIPCOUNT:.*]] = sub i32 %omp_loop.tripcount, 1
+// CHECK:         store i32 %[[TRIPCOUNT]], ptr %[[UB]]
+// CHECK:         store i32 1, ptr %[[STRIDE]]
+// CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK:         %[[DIST_UB:.*]] = alloca i32
+// CHECK:         call void @__kmpc_dist_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 34, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[DIST_UB]], ptr %[[STRIDE]], i32 1, i32 0)
