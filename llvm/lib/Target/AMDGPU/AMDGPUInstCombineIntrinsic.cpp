@@ -1134,18 +1134,19 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
       if (isTypeLegal(BCSrc->getType())) {
+        Module *M = IC.Builder.GetInsertBlock()->getModule();
+        Function *Remangled =
+            Intrinsic::getOrInsertDeclaration(M, IID, {BCSrc->getType()});
+
         // Make sure convergence tokens are preserved.
         // TODO: CreateIntrinsic should allow directly copying bundles
         SmallVector<OperandBundleDef, 2> OpBundles;
         II.getOperandBundlesAsDefs(OpBundles);
 
-        IRBuilderBase::OperandBundlesGuard Guard(IC.Builder);
-        IC.Builder.setDefaultOperandBundles(OpBundles);
-
         SmallVector<Value *, 3> Args(II.args());
         Args[0] = BCSrc;
-        CallInst *NewCall = IC.Builder.CreateIntrinsic(
-            II.getIntrinsicID(), {BCSrc->getType()}, Args);
+
+        CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
         NewCall->takeName(&II);
         return new BitCastInst(NewCall, II.getType());
       }
