@@ -225,7 +225,7 @@ public:
         BackendThreadPool(ThinLTOParallelism) {}
 
   virtual ~ThinBackendProc() = default;
-  virtual void setup(unsigned MaxTasks) {}
+  virtual void setup(unsigned MaxTasks, unsigned ReservedTasks) {}
   virtual Error start(
       unsigned Task, BitcodeModule BM,
       const FunctionImporter::ImportMapTy &ImportList,

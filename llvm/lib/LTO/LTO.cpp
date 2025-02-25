@@ -2062,7 +2062,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, AddBufferFn AddBuffer,
           ResolvedODR[Mod.first], ThinLTO.ModuleMap, ThinLTO.ModuleTriples);
     };
 
-    BackendProcess->setup(ModuleMap.size());
+    BackendProcess->setup(ModuleMap.size(),
+                          RegularLTO.ParallelCodeGenParallelismLevel);
 
     if (BackendProcess->getThreadCount() == 1 ||
         BackendProcess->isSensitiveToInputOrder()) {
@@ -2228,6 +2229,9 @@ class OutOfProcessThinBackend : public CGThinBackend {
   // A unique string to identify the current link.
   SmallString<8> UID;
 
+  // The first ReservedTasks entries in the task range are used for Full LTO.
+  unsigned ReservedTasks;
+
 public:
   OutOfProcessThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
@@ -2244,9 +2248,10 @@ public:
         RemoteOptTool(RemoteOptTool), DistributorPath(Distributor),
         SaveTemps(SaveTemps) {}
 
-  virtual void setup(unsigned MaxTasks) override {
+  virtual void setup(unsigned MaxTasks, unsigned ReservedTasks) override {
     UID = itostr(sys::Process::getProcessId());
     Jobs.resize((size_t)MaxTasks);
+    this->ReservedTasks = ReservedTasks;
   }
 
   Error start(
@@ -2263,7 +2268,7 @@ public:
     sys::path::append(ObjFilePath, sys::path::stem(ModulePath) + "." +
                                        itostr(Task) + "." + UID + ".native.o");
 
-    Job &J = Jobs[Task - 1]; /*Task 0 is reserved*/
+    Job &J = Jobs[Task - ReservedTasks];
     J = {Task,
          ModulePath,
          ModuleTriples[ModulePath],
