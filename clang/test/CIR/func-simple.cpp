@@ -51,3 +51,9 @@ unsigned long long ullfunc() { return 42ull; }
 // CHECK:   %0 = cir.const #cir.int<42> : !cir.int<u, 64>
 // CHECK:   cir.return %0 : !cir.int<u, 64>
 // CHECK: }
+
+bool boolfunc() { return true; }
+// CHECK: cir.func @boolfunc() -> !cir.bool {
+// CHECK:   %0 = cir.const #true
+// CHECK:   cir.return %0 : !cir.bool
+// CHECK: }
