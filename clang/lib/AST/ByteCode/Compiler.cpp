@@ -1674,6 +1674,7 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   const Expr *Index = E->getIdx();
+  const Expr *Base = E->getBase();
 
   if (DiscardResult)
     return this->discard(LHS) && this->discard(RHS);
@@ -1682,8 +1683,17 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   // side is the base.
   bool Success = true;
   for (const Expr *SubExpr : {LHS, RHS}) {
-    if (!this->visit(SubExpr))
+    if (!this->visit(SubExpr)) {
       Success = false;
+      continue;
+    }
+
+    // Expand the base if this is a subscript on a
+    // pointer expression.
+    if (SubExpr == Base && Base->getType()->isPointerType()) {
+      if (!this->emitExpandPtr(E))
+        Success = false;
+    }
   }
 
   if (!Success)

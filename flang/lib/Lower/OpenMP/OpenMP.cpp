@@ -563,8 +563,11 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_distribute_parallel_do:
     case OMPD_distribute_parallel_do_simd:
-      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       cp.processNumThreads(stmtCtx, hostInfo.ops);
+      [[fallthrough]];
+    case OMPD_distribute:
+    case OMPD_distribute_simd:
+      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       break;
 
     // Cases where 'teams' clauses might be present, and target SPMD is
@@ -574,10 +577,8 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_target_teams:
       cp.processNumTeams(stmtCtx, hostInfo.ops);
-      processSingleNestedIf([](Directive nestedDir) {
-        return nestedDir == OMPD_distribute_parallel_do ||
-               nestedDir == OMPD_distribute_parallel_do_simd;
-      });
+      processSingleNestedIf(
+          [](Directive nestedDir) { return topDistributeSet.test(nestedDir); });
       break;
 
     // Cases where only 'teams' host-evaluated clauses might be present.
@@ -587,6 +588,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
+      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       cp.processNumTeams(stmtCtx, hostInfo.ops);
       break;
 

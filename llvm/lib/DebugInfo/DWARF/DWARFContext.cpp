@@ -1869,7 +1869,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
           LineTable->getFileLineInfoForAddress(
               {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
               CU->getCompilationDir(), Spec.FLIKind, Frame);
-      } else if (CallLine != 0) {
+      } else {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.
         if (LineTable)
