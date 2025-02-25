@@ -78,7 +78,7 @@ convertUnregisteredIntrinsicImpl(OpBuilder &odsBuilder, llvm::CallInst *inst,
           llvmOperands, llvmOpBundles, false, {}, {}, mlirOperands, mlirAttrs)))
     return failure();
 
-  mlir::Type results = moduleImport.convertType(inst->getType());
+  Type results = moduleImport.convertType(inst->getType());
   auto op = odsBuilder.create<::mlir::LLVM::CallIntrinsicOp>(
       moduleImport.translateLoc(inst->getDebugLoc()), results,
       StringAttr::get(odsBuilder.getContext(), intrinName),
