@@ -1563,6 +1563,10 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
     context_.set_currentHermeticModuleFileScope(&hermeticScope);
     ResolveNames(context_, hermeticModules, hermeticScope);
+    for (auto &[_, ref] : hermeticScope) {
+      CHECK(ref->has<ModuleDetails>());
+      ref->set(Symbol::Flag::ModFile);
+    }
   }
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
