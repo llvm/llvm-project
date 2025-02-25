@@ -162,11 +162,6 @@ MLIR_CAPI_EXPORTED bool mlirContextIsRegisteredOperation(MlirContext context,
 MLIR_CAPI_EXPORTED void mlirContextSetThreadPool(MlirContext context,
                                                  MlirLlvmThreadPool threadPool);
 
-/// Sets the context to attach the stack trace for the source code location at
-/// which a diagnostic is emitted.
-MLIR_CAPI_EXPORTED void
-mlirContextPrintStackTraceOnDiagnostic(MlirContext context, bool enable);
-
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//

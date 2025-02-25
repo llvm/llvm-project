@@ -114,10 +114,6 @@ void mlirContextSetThreadPool(MlirContext context,
   unwrap(context)->setThreadPool(*unwrap(threadPool));
 }
 
-void mlirContextPrintStackTraceOnDiagnostic(MlirContext context, bool enable) {
-  unwrap(context)->printStackTraceOnDiagnostic(enable);
-}
-
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
