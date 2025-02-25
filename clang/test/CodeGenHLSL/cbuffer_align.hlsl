@@ -103,3 +103,19 @@ cbuffer CB5Fail {
   float f5f : packoffset(c2.x);
   // expected-error@-1 {{packoffset overlap between 'f5f', 's5f'}}
 }
+
+struct S6 {
+  float a;
+  float2 b;
+};
+
+cbuffer CB6Pass {
+  S6 s6p : packoffset(c0.x);
+  float f6p : packoffset(c0.w);
+}
+
+cbuffer CB6Fail {
+  S6 s6f : packoffset(c0.x);
+  float f6f : packoffset(c0.y);
+  // expected-error@-1 {{packoffset overlap between 'f6f', 's6f'}}
+}
