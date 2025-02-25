@@ -25,6 +25,7 @@ math/clc_floor.cl
 math/clc_frexp.cl
 math/clc_mad.cl
 math/clc_modf.cl
+math/clc_nan.cl
 math/clc_nextafter.cl
 math/clc_rint.cl
 math/clc_sw_fma.cl

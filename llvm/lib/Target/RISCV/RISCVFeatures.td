@@ -1358,6 +1358,14 @@ def HasVendorXqciint
       AssemblerPredicate<(all_of FeatureVendorXqciint),
                          "'Xqciint' (Qualcomm uC Interrupts Extension)">;
 
+def FeatureVendorXqcilia
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Immediate Arithmetic Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcilia
+    : Predicate<"Subtarget->hasVendorXqcilia()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcilia),
+                         "'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)">;
+
 def FeatureVendorXqcilo
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Offset Load Store Extension",
                                  [FeatureStdExtZca]>;
