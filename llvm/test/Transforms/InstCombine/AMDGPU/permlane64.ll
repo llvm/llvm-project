@@ -21,4 +21,17 @@ define i32 @test_bitcast_f32_to_i32_permlane64(float %val) {
   ret i32 %result
 }
 
+define i32 @test_bitcast_f32_to_i32_permlane64_convergencetokenn(float %val) convergent {
+; CHECK-LABEL: @test_bitcast_f32_to_i32_permlane64_convergencetokenn(
+; CHECK-NEXT:    [[T:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.permlane64.i32(i32 [[BITCAST]]) [ "convergencectrl"(token [[T]]) ]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %t = call token @llvm.experimental.convergence.entry()
+  %bitcast = bitcast float %val to i32
+  %result = call i32 @llvm.amdgcn.permlane64.i32(i32 %bitcast) [ "convergencectrl"(token %t) ]
+  ret i32 %result
+}
+
 declare i32 @llvm.amdgcn.permlane64.i32(i32)

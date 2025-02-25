@@ -256,6 +256,22 @@ define i32 @test_bitcast_update_dpp_f32_to_i32(float %val0, float %val1) {
   ret i32 %dpp
 }
 
+define i32 @test_bitcast_update_dpp_f32_to_i32_convergencetoken(float %val0, float %val1) convergent {
+; CHECK-LABEL: define i32 @test_bitcast_update_dpp_f32_to_i32_convergencetoken(
+; CHECK-SAME: float [[VAL0:%.*]], float [[VAL1:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[T:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[BITCAST0:%.*]] = bitcast float [[VAL0]] to i32
+; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast float [[VAL1]] to i32
+; CHECK-NEXT:    [[DPP:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 [[BITCAST0]], i32 [[BITCAST1]], i32 1, i32 1, i32 1, i1 false) [ "convergencectrl"(token [[T]]) ]
+; CHECK-NEXT:    ret i32 [[DPP]]
+;
+  %t = call token @llvm.experimental.convergence.entry()
+  %bitcast0 = bitcast float %val0 to i32
+  %bitcast1 = bitcast float %val1 to i32
+  %dpp = call i32 @llvm.amdgcn.update.dpp.i32(i32 %bitcast0, i32 %bitcast1, i32 1, i32 1, i32 1, i1 false) [ "convergencectrl"(token %t) ]
+  ret i32 %dpp
+}
+
 define i32 @test_bitcast_update_dpp_sources_different_type(float %val0, <2 x half> %val1) {
 ; CHECK-LABEL: define i32 @test_bitcast_update_dpp_sources_different_type(
 ; CHECK-SAME: float [[VAL0:%.*]], <2 x half> [[VAL1:%.*]]) #[[ATTR0]] {
@@ -268,4 +284,32 @@ define i32 @test_bitcast_update_dpp_sources_different_type(float %val0, <2 x hal
   %bitcast1 = bitcast <2 x half> %val1 to i32
   %dpp = call i32 @llvm.amdgcn.update.dpp.i32(i32 %bitcast0, i32 %bitcast1, i32 1, i32 1, i32 1, i1 false)
   ret i32 %dpp
+}
+
+define i32 @test_bitcast_f32_to_i32_readfirstlane_convergencetoken(float %val) convergent {
+; CHECK-LABEL: define i32 @test_bitcast_f32_to_i32_readfirstlane_convergencetoken(
+; CHECK-SAME: float [[VAL:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[T:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[BITCAST]]) [ "convergencectrl"(token [[T]]) ]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %t = call token @llvm.experimental.convergence.entry()
+  %bitcast = bitcast float %val to i32
+  %result = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %bitcast) [ "convergencectrl"(token %t) ]
+  ret i32 %result
+}
+
+define i32 @test_bitcast_f32_to_i32_readlane_convergencetoken(float %val, i32 inreg %lane.index) convergent {
+; CHECK-LABEL: define i32 @test_bitcast_f32_to_i32_readlane_convergencetoken(
+; CHECK-SAME: float [[VAL:%.*]], i32 inreg [[LANE_INDEX:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[T:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[BITCAST]], i32 [[LANE_INDEX]]) [ "convergencectrl"(token [[T]]) ]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %t = call token @llvm.experimental.convergence.entry()
+  %bitcast = bitcast float %val to i32
+  %result = call i32 @llvm.amdgcn.readlane.i32(i32 %bitcast, i32 %lane.index) [ "convergencectrl"(token %t) ]
+  ret i32 %result
 }
