@@ -9,13 +9,12 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <deque>
 #include <iterator>
-#include <limits>
 #include <list>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <benchmark/benchmark.h>
@@ -30,15 +29,11 @@ int main(int argc, char** argv) {
           [fold](auto& st) {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
-            ValueType const limit  = 1000; // ensure we never overflow in the addition
-            assert(static_cast<ValueType>(size) <= std::numeric_limits<ValueType>::max());
-            assert(std::numeric_limits<ValueType>::max() > static_cast<ValueType>(size) * limit);
-            assert(std::numeric_limits<ValueType>::min() < static_cast<ValueType>(size) * limit * -1);
+            static_assert(std::is_unsigned_v<ValueType>,
+                          "We could encounter UB if signed arithmetic overflows in this benchmark");
 
             Container c;
-            std::generate_n(std::back_inserter(c), size, [&] {
-              return std::clamp(Generate<ValueType>::random(), -1 * limit, limit);
-            });
+            std::generate_n(std::back_inserter(c), size, [&] { return Generate<ValueType>::random(); });
             ValueType init = c.back();
             c.pop_back();
 
@@ -61,14 +56,14 @@ int main(int argc, char** argv) {
           ->Arg(8192)
           ->Arg(1 << 20);
     };
-    bm.operator()<std::vector<int>>("rng::fold_left(vector<int>)", std::ranges::fold_left);
-    bm.operator()<std::deque<int>>("rng::fold_left(deque<int>)", std::ranges::fold_left);
-    bm.operator()<std::list<int>>("rng::fold_left(list<int>)", std::ranges::fold_left);
+    bm.operator()<std::vector<unsigned int>>("rng::fold_left(vector<int>)", std::ranges::fold_left);
+    bm.operator()<std::deque<unsigned int>>("rng::fold_left(deque<int>)", std::ranges::fold_left);
+    bm.operator()<std::list<unsigned int>>("rng::fold_left(list<int>)", std::ranges::fold_left);
 
     // TODO: fold_right not implemented yet
-    // bm.operator()<std::vector<int>>("rng::fold_right(vector<int>)", std::ranges::fold_right);
-    // bm.operator()<std::deque<int>>("rng::fold_right(deque<int>)", std::ranges::fold_right);
-    // bm.operator()<std::list<int>>("rng::fold_right(list<int>)", std::ranges::fold_right);
+    // bm.operator()<std::vector<unsigned int>>("rng::fold_right(vector<int>)", std::ranges::fold_right);
+    // bm.operator()<std::deque<unsigned int>>("rng::fold_right(deque<int>)", std::ranges::fold_right);
+    // bm.operator()<std::list<unsigned int>>("rng::fold_right(list<int>)", std::ranges::fold_right);
   }
 
   benchmark::Initialize(&argc, argv);
