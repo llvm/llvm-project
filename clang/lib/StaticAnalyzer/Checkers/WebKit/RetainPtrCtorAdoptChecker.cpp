@@ -301,8 +301,8 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "Incorrect use of " << Name <<
-      ". The argument is +0 and results in an use-after-free";
+    Os << "Incorrect use of " << Name
+       << ". The argument is +0 and results in an use-after-free";
     if (condition)
       Os << " " << condition;
     Os << ".";
