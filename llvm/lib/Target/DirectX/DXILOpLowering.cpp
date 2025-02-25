@@ -364,25 +364,6 @@ public:
     return lowerToBindAndAnnotateHandle(F);
   }
 
-  Error replaceAggregateTypeOfCallUsages(CallInst *Intrin, CallInst *Op) {
-    for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
-        EVI->setOperand(0, Op);
-      } else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser())) {
-        IVI->setOperand(0, Op);
-      } else {
-        return make_error<StringError>(
-            (Intrin->getCalledFunction()->getName() +
-             " use is not a ExtractValueInst or InsertValueInst"),
-            inconvertibleErrorCode());
-      }
-    }
-
-    Intrin->eraseFromParent();
-
-    return Error::success();
-  }
-
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
   /// Since we expect to be post-scalarization, make an effort to avoid vectors.
   Error replaceResRetUses(CallInst *Intrin, CallInst *Op, bool HasCheckBit) {
