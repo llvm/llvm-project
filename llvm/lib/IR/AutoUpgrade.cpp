@@ -48,8 +48,12 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 #include <numeric>
+#include <unordered_map>
 
 using namespace llvm;
+
+// Type Alias for UpgradeFunctions
+typedef Value *(*UpgradeFunc)(StringRef, CallBase *, Function *, IRBuilder<> &);
 
 static cl::opt<bool>
     DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
@@ -4348,41 +4352,51 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     assert(Name.starts_with("llvm.") && "Intrinsic doesn't start with 'llvm.'");
     Name = Name.substr(5);
 
-    bool IsX86 = Name.consume_front("x86.");
-    bool IsNVVM = Name.consume_front("nvvm.");
-    bool IsAArch64 = Name.consume_front("aarch64.");
-    bool IsARM = Name.consume_front("arm.");
-    bool IsAMDGCN = Name.consume_front("amdgcn.");
-    bool IsDbg = Name.consume_front("dbg.");
-    Value *Rep = nullptr;
+    const std::string prefix_x86 = "x86.";
+    const std::string prefix_nvvm = "nvvm.";
+    const std::string prefix_aarch64 = "aarch64.";
+    const std::string prefix_arm = "arm.";
+    const std::string prefix_amdgcn = "amdgcn.";
+    const std::string prefix_dbg = "dbg.";
 
-    if (!IsX86 && Name == "stackprotectorcheck") {
-      Rep = nullptr;
-    } else if (IsNVVM) {
-      Rep = upgradeNVVMIntrinsicCall(Name, CI, F, Builder);
-    } else if (IsX86) {
-      Rep = upgradeX86IntrinsicCall(Name, CI, F, Builder);
-    } else if (IsAArch64) {
-      Rep = upgradeAArch64IntrinsicCall(Name, CI, F, Builder);
-    } else if (IsARM) {
-      Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
-    } else if (IsAMDGCN) {
-      Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
-    } else if (IsDbg) {
-      // We might have decided we don't want the new format after all between
-      // first requesting the upgrade and now; skip the conversion if that is
-      // the case, and check here to see if the intrinsic needs to be upgraded
-      // normally.
-      if (!CI->getModule()->IsNewDbgInfoFormat) {
-        bool NeedsUpgrade =
-            upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
-        if (!NeedsUpgrade)
-          return;
-        FallthroughToDefaultUpgrade = true;
-      } else {
-        upgradeDbgIntrinsicToDbgRecord(Name, CI);
+    std::unordered_map<StringRef, UpgradeFunc> lookupTable;
+    lookupTable[prefix_x86] = upgradeX86IntrinsicCall;
+    lookupTable[prefix_nvvm] = upgradeNVVMIntrinsicCall;
+    lookupTable[prefix_aarch64] = upgradeAArch64IntrinsicCall;
+    lookupTable[prefix_arm] = upgradeARMIntrinsicCall;
+    lookupTable[prefix_amdgcn] = upgradeAMDGCNIntrinsicCall;
+    lookupTable[prefix_dbg] = upgradeIntrinsicFunction1;
+
+    Value *Rep = nullptr;
+    bool not_consumed = true;
+
+    for (auto &entry : lookupTable) {
+      if (Name.consume_front(entry.first)) {
+        not_consumed = false;
+        if (entry.first == prefix_x86 || Name != "stackprotectorcheck") {
+          if (entry.first == prefix_dbg) {
+            // We might have decided we don't want the new format after all between
+            // first requesting the upgrade and now; skip the conversion if that is
+            // the case, and check here to see if the intrinsic needs to be upgraded
+            // normally.
+            if (!CI->getModule()->IsNewDbgInfoFormat) {
+              bool NeedsUpgrade =
+                  upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
+              if (!NeedsUpgrade)
+                return;
+              FallthroughToDefaultUpgrade = true;
+            } else {
+              upgradeDbgIntrinsicToDbgRecord(Name, CI);
+            }
+          } else {
+            Rep = entry.second(Name, CI, F, Builder);
+          }
+        }
+        break;
       }
-    } else {
+    }
+
+    if (not_consumed) {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
