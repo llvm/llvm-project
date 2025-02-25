@@ -2121,14 +2121,14 @@ bool Parser::TryAnnotateTypeOrScopeToken(
 /// Try to annotate a type or scope token, having already parsed an
 /// optional scope specifier. \p IsNewScope should be \c true unless the scope
 /// specifier was extracted from an existing tok::annot_cxxscope annotation.
-bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
-    CXXScopeSpec &SS, bool IsNewScope,
-    ImplicitTypenameContext AllowImplicitTypename) {
+bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS, bool IsNewScope,ImplicitTypenameContext AllowImplicitTypename) {
+  if (!SS.isValid()) {
+    return false; // handle the error appropriately
+  }
   if (Tok.is(tok::identifier)) {
     // Determine whether the identifier is a type name.
     if (ParsedType Ty = Actions.getTypeName(
-            *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), &SS,
-            false, NextToken().is(tok::period), nullptr,
+            *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), &SS,/*WantNontrivialTypeSourceInfo=*/false, NextToken().is(tok::period), nullptr,
             /*IsCtorOrDtorName=*/false,
             /*NonTrivialTypeSourceInfo=*/true,
             /*IsClassTemplateDeductionContext=*/true, AllowImplicitTypename)) {
