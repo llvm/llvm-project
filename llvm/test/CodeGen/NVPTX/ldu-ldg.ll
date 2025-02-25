@@ -148,3 +148,19 @@ define <2 x half> @test_ldg_v2f16(ptr addrspace(1) %ptr) {
   %val = tail call <2 x half> @llvm.nvvm.ldg.global.f.v2f16.p1(ptr addrspace(1) %ptr, i32 4)
   ret <2 x half> %val
 }
+
+@g = addrspace(1) global i32 0
+
+; CHECK-LABEL: test_ldg_asi
+define i32 @test_ldg_asi() {
+  ; CHECK: ld.global.nc.u32 %r{{.*}}, [g+4]
+  %val = tail call i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g, i32 4), i32 4)
+  ret i32 %val
+}
+
+; CHECK-LABEL: test_lug_asi
+define i32 @test_lug_asi() {
+  ; CHECK: ldu.global.u32 %r{{.*}}, [g+4]
+  %val = tail call i32 @llvm.nvvm.ldu.global.i.i32.p1(ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g, i32 4), i32 4)
+  ret i32 %val
+}
