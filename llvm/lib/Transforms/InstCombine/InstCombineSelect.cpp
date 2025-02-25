@@ -120,7 +120,8 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 /// With some variations depending if FC is larger than TC, or the shift
 /// isn't needed, or the bit widths don't match.
 static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
-                                InstCombiner::BuilderTy &Builder) {
+                                InstCombiner::BuilderTy &Builder,
+                                SimplifyQuery &SQ) {
   const APInt *SelTC, *SelFC;
   if (!match(Sel.getTrueValue(), m_APInt(SelTC)) ||
       !match(Sel.getFalseValue(), m_APInt(SelFC)))
@@ -148,11 +149,13 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
   } else if (auto Res = decomposeBitTestICmp(Cmp->getOperand(0),
                                              Cmp->getOperand(1), Pred)) {
     assert(ICmpInst::isEquality(Res->Pred) && "Not equality test?");
-    if (!Res->Mask.isPowerOf2())
+    AndMask = Res->Mask;
+    V = Res->X;
+    KnownBits Known = computeKnownBits(V, 0, SQ.getWithInstruction(Cmp));
+    AndMask &= Known.getMaxValue();
+    if (!AndMask.isPowerOf2())
       return nullptr;
 
-    V = Res->X;
-    AndMask = Res->Mask;
     Pred = Res->Pred;
     CreateAnd = true;
   } else {
@@ -1957,7 +1960,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
           tryToReuseConstantFromSelectInComparison(SI, *ICI, *this))
     return NewSel;
 
-  if (Value *V = foldSelectICmpAnd(SI, ICI, Builder))
+  if (Value *V = foldSelectICmpAnd(SI, ICI, Builder, SQ))
     return replaceInstUsesWith(SI, V);
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX
