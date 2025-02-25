@@ -83,13 +83,12 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
     ParamsOffset.push_back(Offset);
   }
 
-  size_t It = 0;
-  for (const auto &P : Parameters) {
-
-    auto Offset = ParamsOffset[It];
-    if (Error Err = rewriteOffset(Writer, Offset))
+  assert(NumParameters == ParamsOffset.size());
+  for (size_t I = 0; I < NumParameters; ++I) {
+    if (Error Err = rewriteOffset(Writer, ParamsOffset[I]))
       return Err;
-    It++;
+
+    const auto &P = Parameters[I];
 
     switch (P.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit: {
@@ -104,8 +103,6 @@ Error RootSignatureDesc::write(raw_ostream &OS) const {
       llvm_unreachable("Invalid RootParameterType");
     }
   }
-
-  assert(It == NumParameters);
 
   llvm::ArrayRef<char> BufferRef(reinterpret_cast<char *>(Buffer.data()),
                                  Buffer.size());
