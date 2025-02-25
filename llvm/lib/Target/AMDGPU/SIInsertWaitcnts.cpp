@@ -870,7 +870,7 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
 #endif
 
   Result.first = IsLaneShared ? 0 : Encoding.LaneSharedSize;
-  auto MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
+  int MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
   if (GprIdxImmedVals[Idx].has_value()) {
     auto OffsetSrcIdx =
         AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::offset);
