@@ -189,40 +189,6 @@ DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
   return SPClonedWithinModule;
 }
 
-MetadataSetTy
-llvm::FindDebugInfoToIdentityMap(CloneFunctionChangeType Changes,
-                                 DebugInfoFinder &DIFinder,
-                                 DISubprogram *SPClonedWithinModule) {
-  if (Changes >= CloneFunctionChangeType::DifferentModule)
-    return {};
-
-  if (DIFinder.subprogram_count() == 0)
-    assert(!SPClonedWithinModule &&
-           "Subprogram should be in DIFinder->subprogram_count()...");
-
-  MetadataSetTy MD;
-
-  // Avoid cloning types, compile units, and (other) subprograms.
-  for (DISubprogram *ISP : DIFinder.subprograms())
-    if (ISP != SPClonedWithinModule)
-      MD.insert(ISP);
-
-  // If a subprogram isn't going to be cloned skip its lexical blocks as well.
-  for (DIScope *S : DIFinder.scopes()) {
-    auto *LScope = dyn_cast<DILocalScope>(S);
-    if (LScope && LScope->getSubprogram() != SPClonedWithinModule)
-      MD.insert(S);
-  }
-
-    for (DICompileUnit *CU : DIFinder.compile_units())
-      MD.insert(CU);
-
-    for (DIType *Type : DIFinder.types())
-      MD.insert(Type);
-
-  return MD;
-}
-
 void llvm::CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                      ValueToValueMapTy &VMap,
                                      RemapFlags RemapFlag,
