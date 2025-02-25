@@ -382,7 +382,15 @@ ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
 
 uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
   assert(isCBuffer() && "Not a CBuffer");
-  return cast<CBufferExtType>(HandleTy)->getCBufferSize();
+
+  Type *ElTy = cast<CBufferExtType>(HandleTy)->getResourceType();
+
+  if (auto *LayoutTy = dyn_cast<LayoutExtType>(ElTy)) {
+    return LayoutTy->getSize();
+  }
+
+  // TODO: What should we do with unannotated arrays?
+  return DL.getTypeAllocSize(ElTy);
 }
 
 dxil::SamplerType ResourceTypeInfo::getSamplerType() const {

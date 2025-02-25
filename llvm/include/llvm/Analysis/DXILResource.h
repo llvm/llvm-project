@@ -166,7 +166,6 @@ public:
   CBufferExtType &operator=(const CBufferExtType &) = delete;
 
   Type *getResourceType() const { return getTypeParameter(0); }
-  uint32_t getCBufferSize() const { return getIntParameter(0); }
 
   static bool classof(const TargetExtType *T) {
     return T->getName() == "dx.CBuffer";
@@ -196,6 +195,29 @@ public:
     return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
   }
 };
+
+/// The dx.Layout target extension type
+///
+/// `target("dx.Layout", <Type>, <size>, [offsets...])`
+class LayoutExtType : public TargetExtType {
+public:
+  LayoutExtType() = delete;
+  LayoutExtType(const LayoutExtType &) = delete;
+  LayoutExtType &operator=(const LayoutExtType &) = delete;
+
+  Type *getWrappedType() const { return getTypeParameter(0); }
+  uint32_t getSize() const { return getIntParameter(0); }
+  uint32_t getIndexOfElement(int I) const { return getIntParameter(I + 1); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Layout";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+
 
 //===----------------------------------------------------------------------===//
 
