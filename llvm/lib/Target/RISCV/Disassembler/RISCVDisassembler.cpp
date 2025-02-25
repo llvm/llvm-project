@@ -623,7 +623,8 @@ void RISCVDisassembler::addSPOperands(MCInst &MI) const {
   TRY_TO_DECODE((STI.getFeatureBits() & (FEATURES)).any(), DECODER_TABLE, DESC)
 
 static constexpr FeatureBitset XRivosFeatureGroup = {
-    RISCV::FeatureVendorXRivosVisni, RISCV::FeatureVendorXRivosVizip,
+    RISCV::FeatureVendorXRivosVisni,
+    RISCV::FeatureVendorXRivosVizip,
 };
 
 static constexpr FeatureBitset XqciFeatureGroup = {
@@ -724,8 +725,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci32,
                             "Qualcomm uC Extensions");
 
-  TRY_TO_DECODE_FEATURE_ANY(XRivosFeatureGroup, DecoderTableXRivos32,
-                            "Rivos");
+  TRY_TO_DECODE_FEATURE_ANY(XRivosFeatureGroup, DecoderTableXRivos32, "Rivos");
 
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32");
 
