@@ -609,6 +609,15 @@ void RISCVDisassembler::addSPOperands(MCInst &MI) const {
 #define TRY_TO_DECODE_FEATURE_ANY(FEATURES, DECODER_TABLE, DESC)               \
   TRY_TO_DECODE((STI.getFeatureBits() & (FEATURES)).any(), DECODER_TABLE, DESC)
 
+static constexpr FeatureBitset XqciFeatureGroup = {
+    RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
+    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqcilia,
+    RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
+    RISCV::FeatureVendorXqcisls,
+};
+
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
@@ -696,14 +705,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
                         "CORE-V Immediate Branching");
 
-  FeatureBitset XqciFeaturesWith32BitInsts = {
-      RISCV::FeatureVendorXqcicsr, RISCV::FeatureVendorXqcisls,
-      RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqcics,
-      RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqciac,
-      RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
-      RISCV::FeatureVendorXqciint
-      };
-  TRY_TO_DECODE_FEATURE_ANY(XqciFeaturesWith32BitInsts, DecoderTableXqci32,
+  TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci32,
                             "Qualcomm uC Extensions");
 
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXRivosVizip, DecoderTableXRivos32,
@@ -735,10 +737,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
                         "Zcmp (16-bit Push/Pop & Double Move Instructions)");
 
-  FeatureBitset XqciFeaturesWith16BitInsts = {RISCV::FeatureVendorXqciac,
-                                              RISCV::FeatureVendorXqcicm,
-                                              RISCV::FeatureVendorXqciint};
-  TRY_TO_DECODE_FEATURE_ANY(XqciFeaturesWith16BitInsts, DecoderTableXqci16,
+  TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci16,
                             "Qualcomm uC 16bit");
 
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
@@ -763,10 +762,7 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
   for (size_t i = Size; i-- != 0;) {
     Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
   }
-
-  FeatureBitset XqciFeaturesWith48BitInsts = {RISCV::FeatureVendorXqcilia,
-                                              RISCV::FeatureVendorXqcilo};
-  TRY_TO_DECODE_FEATURE_ANY(XqciFeaturesWith48BitInsts, DecoderTableXqci48,
+  TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci48,
                             "Qualcomm uC 48bit");
 
   return MCDisassembler::Fail;
