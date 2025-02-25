@@ -7492,7 +7492,7 @@ hasSuitableMoveAssignmentOperatorForRelocation(Sema &SemaRef, CXXRecordDecl *D,
 // type C selects an assignment operator function that is a direct member of C
 // and is neither user-provided nor deleted, and C has a destructor that is
 // neither user-provided nor deleted.
-static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D) {
+static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D, CXXDestructorDecl* Dtr) {
   if (!hasSuitableConstructorForRelocation(SemaRef, D,
                                            /*AllowUserDefined=*/false))
     return false;
@@ -7501,7 +7501,6 @@ static bool isDefaultMovable(Sema &SemaRef, CXXRecordDecl *D) {
           SemaRef, D, /*AllowUserDefined=*/false))
     return false;
 
-  const auto *Dtr = D->getDestructor();
   if (!Dtr)
     return true;
 
@@ -7537,9 +7536,7 @@ static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
             SemaRef.getASTContext()))
       return false;
   }
-
-  // ...has a deleted destructor
-  return !D->hasDeletedDestructor();
+  return true;
 }
 
 // [C++26][class.prop]
@@ -7563,9 +7560,7 @@ static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
     if (!Field->getType().isReplaceableType(SemaRef.getASTContext()))
       return false;
   }
-
-  // it has a deleted destructor.
-  return !D->hasDeletedDestructor();
+  return true;
 }
 
 void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
@@ -7576,6 +7571,7 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
 
   bool MarkedCXX2CReplaceable = D->hasAttr<ReplaceableAttr>();
   bool MarkedTriviallyRelocatable = D->hasAttr<TriviallyRelocatableAttr>();
+
 
   // This is part of "eligible for replacement", however we defer it
   // to avoid extraneous computations.
@@ -7595,9 +7591,15 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
     return *Is;
   };
 
+  auto GetDestructor = [&, Dtr = static_cast<CXXDestructorDecl*>(nullptr)]() mutable {
+      if(!Dtr)
+          Dtr = D->getDestructor();
+      return Dtr;
+  };
+
   auto IsDefaultMovable = [&, Is = std::optional<bool>{}]() mutable {
     if (!Is.has_value())
-      Is = isDefaultMovable(*this, D);
+      Is = isDefaultMovable(*this, D, GetDestructor());
     return *Is;
   };
 
@@ -7608,6 +7610,9 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
     // if it is eligible for trivial relocation
     if (!isEligibleForTrivialRelocation(*this, D))
       return false;
+
+    if(auto* Dtr = GetDestructor(); Dtr && Dtr->isDeleted())
+        return false;
 
     // has the trivially_relocatable_if_eligible class-property-specifier,
     if (MarkedTriviallyRelocatable)
@@ -7630,6 +7635,9 @@ void Sema::CheckCXX2CRelocatableAndReplaceable(CXXRecordDecl *D) {
     // A class C is a replaceable class if it is eligible for replacement
     if (!isEligibleForReplacement(*this, D))
       return false;
+
+    if(auto* Dtr = GetDestructor(); Dtr && Dtr->isDeleted())
+        return false;
 
     // has the replaceable_if_eligible class-property-specifier
     if (MarkedCXX2CReplaceable)
