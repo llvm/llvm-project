@@ -4248,6 +4248,24 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
   return std::make_optional<int64_t>(FD1Offset - FD2Offset);
 }
 
+namespace {
+
+/// FindLValueToRValueExpr - Find the first LValueToRValue ImplicitCastExpr.
+struct FindLValueToRValueExpr
+    : public ConstStmtVisitor<FindLValueToRValueExpr, const Expr *> {
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
+    return Visit(E->getSubExpr());
+  }
+
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
 /// EmitCountedByBoundsChecking - If the array being accessed has a "counted_by"
 /// attribute, generate bounds checking code. The "count" field is at the top
 /// level of the struct or in an anonymous struct, that's also at the top level.
@@ -4270,8 +4288,48 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
   const FieldDecl *FD = cast<FieldDecl>(ME->getMemberDecl());
   const FieldDecl *CountFD = FD->findCountedByField();
-  if (!CountFD)
+  if (!CountFD) {
+    if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+      if (auto *CountDRE = dyn_cast<DeclRefExpr>(CAT->getCountExpr())) {
+        if (auto *FuncDecl = dyn_cast<FunctionDecl>(CountDRE->getDecl())) {
+          const Expr *Base = ME->getBase();
+
+          FindLValueToRValueExpr Visitor;
+          Base = Visitor.Visit(Base);
+          if (!Base)
+            goto out;
+
+          const auto *FnTy = FuncDecl->getType()->castAs<FunctionProtoType>();
+          llvm::Type *ParamTy = ConvertType(FnTy->getParamType(0));
+
+          llvm::FunctionCallee Callee = CGM.getModule().getOrInsertFunction(
+              FuncDecl->getDeclName().getAsString(),
+              llvm::FunctionType::get(ConvertType(FnTy->getReturnType()),
+                                      ParamTy, false));
+
+          llvm::Value *Res = nullptr;
+          if (Base->getType()->isPointerType()) {
+            LValueBaseInfo EltBaseInfo;
+            TBAAAccessInfo EltTBAAInfo;
+            Address Addr = EmitPointerWithAlignment(Base, &EltBaseInfo,
+                                                    &EltTBAAInfo);
+            Res = Addr.getBasePointer();
+          } else {
+            Res = EmitLValue(Base).getPointer(*this);
+          }
+
+          Res = Builder.CreatePointerCast(Res, ParamTy);
+          Res = Builder.CreateCall(Callee, Res);
+
+          // Now emit the bounds checking.
+          EmitBoundsCheckImpl(E, Res, Idx, IdxTy, ArrayTy, Accessed);
+        }
+      }
+    }
+out:
+
     return;
+  }
 
   if (std::optional<int64_t> Diff =
           getOffsetDifferenceInBits(*this, CountFD, FD)) {

@@ -133,21 +133,50 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
 
   // Check the expression
 
-  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
-    Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
-        << Kind << E->getSourceRange();
+  auto *DRE = dyn_cast<DeclRefExpr>(E);
+  if (!DRE) {
+    if (auto *CE = dyn_cast<CallExpr>(E)) {
+      Diag(E->getBeginLoc(), diag::err_count_attr_func_cannot_be_a_call)
+          << E->getSourceRange();
+    } else {
+      Diag(E->getBeginLoc(),
+           diag::err_count_attr_only_support_simple_decl_reference)
+          << Kind << E->getSourceRange();
+    }
     return true;
   }
 
-  auto *DRE = dyn_cast<DeclRefExpr>(E);
-  if (!DRE) {
-    Diag(E->getBeginLoc(),
-         diag::err_count_attr_only_support_simple_decl_reference)
-        << Kind << E->getSourceRange();
+  QualType Ty = DRE->getType();
+  if (const auto *FuncTy = Ty->getAs<FunctionType>())
+    Ty = FuncTy->getReturnType();
+
+  if (!Ty->isIntegerType() || Ty->isBooleanType()) {
+    Diag(DRE->getBeginLoc(), diag::err_count_attr_argument_not_integer)
+        << Kind << DRE->getSourceRange();
     return true;
   }
 
   auto *CountDecl = DRE->getDecl();
+
+  if (auto *CountFD = dyn_cast<FunctionDecl>(CountDecl)) {
+    // Check a function argument.
+    bool Ret = false;
+
+    if (!CountFD->hasAttr<PureAttr>() && !CountFD->hasAttr<ConstAttr>()) {
+      Diag(E->getBeginLoc(), diag::err_count_attr_func_must_be_pure_or_const)
+          << CountDecl << E->getSourceRange();
+      Ret = true;
+    }
+
+    if (CountFD->getNumParams() != 1) {
+      Diag(E->getBeginLoc(), diag::err_count_attr_func_must_have_one_param)
+          << CountDecl << E->getSourceRange();
+      Ret = true;
+    }
+
+    return Ret;
+  }
+
   FieldDecl *CountFD = dyn_cast<FieldDecl>(CountDecl);
   if (auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl)) {
     CountFD = IFD->getAnonField();
