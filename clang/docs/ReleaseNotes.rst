@@ -124,6 +124,8 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+Adding [[clang::unsafe_buffer_usage]] attribute to a method definition now turns off all -Wunsafe-buffer-usage
+related warnings within the method body.
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
 - Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
