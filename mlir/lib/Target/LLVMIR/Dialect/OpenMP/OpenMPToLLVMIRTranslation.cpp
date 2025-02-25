@@ -4337,7 +4337,6 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
 
     if (!wsloopIP)
       return wsloopIP.takeError();
-
     return llvm::Error::success();
   };
 
@@ -4794,7 +4793,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp,
       reductionDataSize = getReductionDataSize(teamsOp);
   }
 
-  // Update kernel attrs structure for the `OpenMPIRBuilder` to use.
+  // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
   attrs.ExecFlags = targetOp.getKernelExecFlags();
   attrs.MinTeams = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
