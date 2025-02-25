@@ -377,7 +377,7 @@ void Thread::wait() {
   // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
   // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
   while (clear_tid->load() != 0)
-    clear_tid->wait(CLEAR_TID_VALUE, cpp::nullopt, true);
+    clear_tid->wait(CLEAR_TID_VALUE, /*is_shared=*/true);
 }
 
 bool Thread::operator==(const Thread &thread) const {
