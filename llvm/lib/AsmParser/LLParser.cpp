@@ -1040,9 +1040,10 @@ bool LLParser::parseStandaloneMetadata() {
 
     assert(NumberedMetadata[MetadataID] == Init && "Tracking VH didn't work");
   } else {
-    if (NumberedMetadata.count(MetadataID))
+    auto [It, Inserted] = NumberedMetadata.try_emplace(MetadataID);
+    if (!Inserted)
       return tokError("Metadata id is already used");
-    NumberedMetadata[MetadataID].reset(Init);
+    It->second.reset(Init);
   }
 
   return false;
