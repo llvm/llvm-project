@@ -29,6 +29,13 @@ endfunction()
 # cache file to CMake via -C. e.g.
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
+
+set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+# bolt only supports ELF, so only enable it for Linux.
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  list(APPEND DEFAULT_PROJECTS "bolt")
+endif()
+
 set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
 if (NOT WIN32)
   list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")
@@ -36,7 +43,7 @@ endif()
 set(LLVM_RELEASE_ENABLE_LTO THIN CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PGO ON CACHE BOOL "")
 set(LLVM_RELEASE_ENABLE_RUNTIMES ${DEFAULT_RUNTIMES} CACHE STRING "")
-set(LLVM_RELEASE_ENABLE_PROJECTS "clang;lld;lldb;clang-tools-extra;bolt;polly;mlir;flang" CACHE STRING "")
+set(LLVM_RELEASE_ENABLE_PROJECTS ${DEFAULT_PROJECTS} CACHE STRING "")
 # Note we don't need to add install here, since it is one of the pre-defined
 # steps.
 set(LLVM_RELEASE_FINAL_STAGE_TARGETS "clang;package;check-all;check-llvm;check-clang" CACHE STRING "")
@@ -118,6 +125,11 @@ if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
   set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -static-libgcc")
 endif()
 
+# Set flags for bolt
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -Wl,--emit-relocs,-znow")
+endif()
+
 set_instrument_and_final_stage_var(CMAKE_EXE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
 set_instrument_and_final_stage_var(CMAKE_SHARED_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
 set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
@@ -125,6 +137,9 @@ set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FL
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
+endif()
 set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
