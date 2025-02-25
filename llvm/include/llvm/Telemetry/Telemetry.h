@@ -76,7 +76,7 @@ struct Config {
 
   // Telemetry can only be enabled if both the runtime and buildtime flag
   // are set.
-  Config(bool E) : EnableTelemetry(E && BuildTimeEnableTelemetry) {}
+  explicit Config(bool E) : EnableTelemetry(E && BuildTimeEnableTelemetry) {}
 
   virtual std::optional<std::string> makeSessionId() { return std::nullopt; }
 };
