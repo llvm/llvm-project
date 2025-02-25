@@ -121,7 +121,7 @@ bit_and(T x, T y) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
   BitType y_bit = cpp::bit_cast<BitType>(y);
-  // For some reason, bit_cast cannot deduce BitType T the input.
+  // For some reason, bit_cast cannot deduce BitType from the input.
   return cpp::bit_cast<T, BitType>(x_bit & y_bit);
 }
 
@@ -131,7 +131,7 @@ bit_or(T x, T y) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
   BitType y_bit = cpp::bit_cast<BitType>(y);
-  // For some reason, bit_cast cannot deduce BitType T the input.
+  // For some reason, bit_cast cannot deduce BitType from the input.
   return cpp::bit_cast<T, BitType>(x_bit | y_bit);
 }
 
@@ -140,7 +140,7 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, T>
 bit_not(T x) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
-  // For some reason, bit_cast cannot deduce BitType T the input.
+  // For some reason, bit_cast cannot deduce BitType from the input.
   return cpp::bit_cast<T, BitType>(static_cast<BitType>(~x_bit));
 }
 
