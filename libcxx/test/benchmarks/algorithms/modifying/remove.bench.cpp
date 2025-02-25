@@ -48,12 +48,15 @@ int main(int argc, char** argv) {
             constexpr std::size_t BatchSize = 10;
             using ValueType                 = typename Container::value_type;
             Container c[BatchSize];
-            ValueType x = Generate<ValueType>::random();
-            ValueType y = random_different_from({x});
+            ValueType x   = Generate<ValueType>::random();
+            ValueType y   = random_different_from({x});
+            auto populate = [&](Container& cont) {
+              auto half = cont.size() / 2;
+              std::fill_n(std::fill_n(cont.begin(), half, x), half, y);
+            };
             for (std::size_t i = 0; i != BatchSize; ++i) {
-              c[i]      = Container(size);
-              auto half = size / 2;
-              std::fill_n(std::fill_n(c[i].begin(), half, x), half, y);
+              c[i] = Container(size);
+              populate(c[i]);
             }
 
             while (st.KeepRunningBatch(BatchSize)) {
@@ -66,8 +69,7 @@ int main(int argc, char** argv) {
 
               st.PauseTiming();
               for (std::size_t i = 0; i != BatchSize; ++i) {
-                auto half = size / 2;
-                std::fill_n(std::fill_n(c[i].begin(), half, x), half, y);
+                populate(c[i]);
               }
               st.ResumeTiming();
             }
@@ -107,16 +109,17 @@ int main(int argc, char** argv) {
             constexpr std::size_t BatchSize = 10;
             using ValueType                 = typename Container::value_type;
             Container c[BatchSize];
-            ValueType x    = Generate<ValueType>::random();
-            ValueType y    = random_different_from({x});
-            auto alternate = [&](auto out, auto n) {
-              for (std::size_t i = 0; i != n; ++i) {
+            ValueType x   = Generate<ValueType>::random();
+            ValueType y   = random_different_from({x});
+            auto populate = [&](Container& cont) {
+              auto out = cont.begin();
+              for (std::size_t i = 0; i != cont.size(); ++i) {
                 *out++ = (i % 2 == 0 ? x : y);
               }
             };
             for (std::size_t i = 0; i != BatchSize; ++i) {
               c[i] = Container(size);
-              alternate(c[i].begin(), size);
+              populate(c[i]);
             }
 
             while (st.KeepRunningBatch(BatchSize)) {
@@ -129,7 +132,7 @@ int main(int argc, char** argv) {
 
               st.PauseTiming();
               for (std::size_t i = 0; i != BatchSize; ++i) {
-                alternate(c[i].begin(), size);
+                populate(c[i]);
               }
               st.ResumeTiming();
             }

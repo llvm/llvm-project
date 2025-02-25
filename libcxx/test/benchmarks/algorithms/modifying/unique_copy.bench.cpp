@@ -91,15 +91,19 @@ int main(int argc, char** argv) {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c(size);
-            ValueType x    = Generate<ValueType>::random();
-            ValueType y    = random_different_from({x});
-            auto alternate = [&](auto out, auto n) {
-              for (std::size_t i = 0; i != n; i += 2) {
-                *out++ = (i % 4 == 0 ? x : y);
-                *out++ = (i % 4 == 0 ? x : y);
+            ValueType x   = Generate<ValueType>::random();
+            ValueType y   = random_different_from({x});
+            auto populate = [&](Container& cont) {
+              assert(cont.size() % 4 == 0);
+              auto out = cont.begin();
+              for (std::size_t i = 0; i != cont.size(); i += 4) {
+                *out++ = x;
+                *out++ = x;
+                *out++ = y;
+                *out++ = y;
               }
             };
-            alternate(c.begin(), size);
+            populate(c);
 
             std::vector<ValueType> out(size);
 
