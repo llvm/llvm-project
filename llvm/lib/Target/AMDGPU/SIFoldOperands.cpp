@@ -114,7 +114,7 @@ public:
   bool
   getRegSeqInit(SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs,
                 Register UseReg, uint8_t OpTy) const;
-  bool tryToFoldACImm(const MachineOperand &OpToFold, MachineInstr *UseMI,
+  bool tryToFoldACImm(MachineOperand &OpToFold, MachineInstr *UseMI,
                       unsigned UseOpIdx,
                       SmallVectorImpl<FoldCandidate> &FoldList) const;
   void foldOperand(MachineOperand &OpToFold,
@@ -575,11 +575,6 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   return true;
 }
 
-static bool isUseMIInFoldList(ArrayRef<FoldCandidate> FoldList,
-                              const MachineInstr *MI) {
-  return any_of(FoldList, [&](const auto &C) { return C.UseMI == MI; });
-}
-
 static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
                                 MachineInstr *MI, unsigned OpNo,
                                 MachineOperand *FoldOp, bool Commuted = false,
@@ -679,12 +674,6 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
         return true;
       }
     }
-
-    // If we are already folding into another operand of MI, then
-    // we can't commute the instruction, otherwise we risk making the
-    // other fold illegal.
-    if (isUseMIInFoldList(FoldList, MI))
-      return false;
 
     // Operand is not legal, so try to commute the instruction to
     // see if this makes it possible to fold.
@@ -816,7 +805,7 @@ bool SIFoldOperandsImpl::getRegSeqInit(
 }
 
 bool SIFoldOperandsImpl::tryToFoldACImm(
-    const MachineOperand &OpToFold, MachineInstr *UseMI, unsigned UseOpIdx,
+    MachineOperand &OpToFold, MachineInstr *UseMI, unsigned UseOpIdx,
     SmallVectorImpl<FoldCandidate> &FoldList) const {
   const MCInstrDesc &Desc = UseMI->getDesc();
   if (UseOpIdx >= Desc.getNumOperands())
@@ -827,7 +816,7 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
 
   uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
   if (OpToFold.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &OpToFold)) {
-    UseMI->getOperand(UseOpIdx).ChangeToImmediate(OpToFold.getImm());
+    appendFoldCandidate(FoldList, UseMI, UseOpIdx, &OpToFold);
     return true;
   }
 
@@ -838,16 +827,13 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (!UseReg.isVirtual())
     return false;
 
-  if (isUseMIInFoldList(FoldList, UseMI))
-    return false;
-
   // Maybe it is just a COPY of an immediate itself.
   MachineInstr *Def = MRI->getVRegDef(UseReg);
   MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
   if (!UseOp.getSubReg() && Def && TII->isFoldableCopy(*Def)) {
     MachineOperand &DefOp = Def->getOperand(1);
     if (DefOp.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &DefOp)) {
-      UseMI->getOperand(UseOpIdx).ChangeToImmediate(DefOp.getImm());
+      appendFoldCandidate(FoldList, UseMI, UseOpIdx, &DefOp);
       return true;
     }
   }
