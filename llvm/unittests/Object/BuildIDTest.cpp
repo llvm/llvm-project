@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/BuildID.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -31,15 +30,19 @@ static Expected<ELFObjectFile<ELFT>> toBinary(SmallVectorImpl<char> &Storage,
   return ELFObjectFile<ELFT>::create(MemoryBufferRef(OS.str(), "dummyELF"));
 }
 
-TEST(BuildIDTest, InvalidNoteFileSizeTest) {
-  SmallString<0> Storage;
-  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
+static StringRef optionalSectionHeaderELF(bool WithSec) {
+  static std::string WithSection(R"(
 --- !ELF
 FileHeader:
   Class:          ELFCLASS64
   Data:           ELFDATA2LSB
   Type:           ET_EXEC
   Machine:        EM_X86_64
+ProgramHeaders:
+  - Type:         PT_NOTE
+    FileSize:     0xffffffffffffffff
+    FirstSec:     .note.gnu.build-id
+    LastSec:      .note.gnu.build-id
 Sections:
   - Name:         .note.gnu.build-id
     Type:         SHT_NOTE
@@ -48,10 +51,61 @@ Sections:
       - Name:     "GNU"
         Desc:     "abb50d82b6bdc861"
         Type:     3
+)");
+  static std::string WithoutSection(WithSection + R"(
+  - Type:         SectionHeaderTable
+    NoHeaders:    true
+)");
+  if (WithSec)
+    return WithSection;
+  else
+    return WithoutSection;
+}
+
+TEST(BuildIDTest, InvalidNoteFileSizeTest) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
+      toBinary<ELF64LE>(Storage, optionalSectionHeaderELF(true));
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  BuildIDRef BuildID = getBuildID(&ElfOrErr.get());
+  EXPECT_EQ(
+      StringRef(reinterpret_cast<const char *>(BuildID.data()), BuildID.size()),
+      "\xAB\xB5\x0D\x82\xB6\xBD\xC8\x61");
+}
+
+TEST(BuildIDTest, OnlyInvalidProgramHeader) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
+      toBinary<ELF64LE>(Storage, optionalSectionHeaderELF(false));
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  BuildIDRef BuildID = getBuildID(&ElfOrErr.get());
+  EXPECT_EQ(
+      StringRef(reinterpret_cast<const char *>(BuildID.data()), BuildID.size()),
+      "\xAB\xB5\x0D\x82\xB6\xBD\xC8\x61");
+}
+
+TEST(BuildIDTest, InvalidSectionHeader) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class:          ELFCLASS64
+  Data:           ELFDATA2LSB
+  Type:           ET_EXEC
+  Machine:        EM_X86_64
 ProgramHeaders:
   - Type:         PT_NOTE
-    FileSize:     0xffffffffffffffff
-    Offset:       0x100
+    FirstSec:     .note.gnu.build-id
+    LastSec:      .note.gnu.build-id
+Sections:
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    AddressAlign: 0x04
+    Offset:       0x8000
+    Notes:
+      - Name:     "GNU"
+        Desc:     "abb50d82b6bdc861"
+        Type:     3
 )");
   ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
   BuildIDRef BuildID = getBuildID(&ElfOrErr.get());
