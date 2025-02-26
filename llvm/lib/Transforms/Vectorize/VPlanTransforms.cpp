@@ -851,20 +851,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       return;
     }
 
-    if (Blend->isNormalized()) {
-      /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
-      VPValue *NewMask;
-      if (Blend->getNumOperands() == 3 &&
-          match(Blend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-        VPValue *Inc0 = Blend->getIncomingValue(0);
-        VPValue *Inc1 = Blend->getIncomingValue(1);
-        Blend->setOperand(0, Inc1);
-        Blend->setOperand(1, Inc0);
-        Blend->setOperand(2, NewMask);
-      }
-
+    if (Blend->isNormalized())
       return;
-    }
 
     // Normalize the blend so its first incoming value is used as the initial
     // value with the others blended into it.
@@ -899,6 +887,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Blend->replaceAllUsesWith(NewBlend);
     Blend->eraseFromParent();
     recursivelyDeleteDeadRecipes(DeadMask);
+
+    /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
+    VPValue *NewMask;
+    if (NewBlend->getNumOperands() == 3 &&
+        match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
+      VPValue *Inc0 = NewBlend->getIncomingValue(0);
+      VPValue *Inc1 = NewBlend->getIncomingValue(1);
+      NewBlend->setOperand(0, Inc1);
+      NewBlend->setOperand(1, Inc0);
+      NewBlend->setOperand(2, NewMask);
+    }
     return;
   }
 
