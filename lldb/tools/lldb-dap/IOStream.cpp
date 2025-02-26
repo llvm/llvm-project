@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IOStream.h"
-#include "lldb/Utility/IOObject.h" // IWYU pragma: keep
+#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include <fstream>
 #include <string>
