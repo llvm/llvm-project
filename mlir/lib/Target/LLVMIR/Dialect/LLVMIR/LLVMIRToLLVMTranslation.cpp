@@ -409,14 +409,11 @@ static LogicalResult setIntelReqdSubGroupSizeAttr(Builder &builder,
   return success();
 }
 
-namespace mlir {
-// Generate llvm.call_intrinsic when no supporting dialect available.
-LogicalResult LLVMImportInterface::convertUnregisteredIntrinsic(
+LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
     OpBuilder &builder, llvm::CallInst *inst,
     LLVM::ModuleImport &moduleImport) const {
   return convertUnregisteredIntrinsicImpl(builder, inst, moduleImport);
 }
-} // namespace mlir
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
