@@ -53739,36 +53739,47 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
 // cases.
 static SDValue combinei64TruncSrlBinop(SDValue N, EVT VT, SelectionDAG &DAG,
                                        const SDLoc &DL) {
-  using namespace llvm::SDPatternMatch;
 
-  SDValue BinopLhs;
-  APInt BinopConst, SrlConst;
-  if (VT != MVT::i32 ||
-      !sd_match(
-          N,
-          m_AllOf(m_SpecificVT(MVT::i64),
-                  m_Srl(m_OneUse(m_AnyOf(
-                            m_Add(m_Value(BinopLhs), m_ConstInt(BinopConst)),
-                            m_Or(m_Value(BinopLhs), m_ConstInt(BinopConst)),
-                            m_Xor(m_Value(BinopLhs), m_ConstInt(BinopConst)))),
-                        m_ConstInt(SrlConst)))))
-    return SDValue();
+  SDValue Binop = N.getOperand(0);
+  APInt BinopConst = Binop.getConstantOperandAPInt(1);
+  APInt SrlConst = N.getConstantOperandAPInt(1);
+  unsigned Opcode = Binop.getOpcode();
 
-  if (SrlConst.ule(32) || BinopConst.countr_zero() < SrlConst.getZExtValue())
+  auto CleanUpFn = +[](SDValue Op, EVT CleanUpVT, EVT VT, SelectionDAG &DAG,
+                       const SDLoc &DL) {
+    SDValue CleanUp = DAG.getAnyExtOrTrunc(Op, DL, CleanUpVT);
+    return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
+  };
+  auto ZeroExtCleanUp = +[](SDValue Op, EVT CleanUpVT, EVT VT,
+                            SelectionDAG &DAG, const SDLoc &DL) {
+    return DAG.getZeroExtendInReg(Op, DL, CleanUpVT);
+  };
+
+  switch (Opcode) {
+  default:
     return SDValue();
+  case ISD::ADD:
+    if (BinopConst.countr_zero() < SrlConst.getZExtValue())
+      return SDValue();
+    CleanUpFn = ZeroExtCleanUp;
+    [[fallthrough]];
+  case ISD::OR:
+  case ISD::XOR:
+    if (SrlConst.ule(32))
+      return SDValue();
+    break;
+  }
 
   SDValue BinopLHSSrl =
-      DAG.getNode(ISD::SRL, DL, MVT::i64, BinopLhs, N.getOperand(1));
+      DAG.getNode(ISD::SRL, DL, MVT::i64, Binop.getOperand(0), N.getOperand(1));
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, BinopLHSSrl);
 
   APInt NewBinopConstVal = BinopConst.lshr(SrlConst).trunc(VT.getSizeInBits());
   SDValue NewBinopConst = DAG.getConstant(NewBinopConstVal, DL, VT);
-  SDValue NewBinopNode =
-      DAG.getNode(N.getOperand(0).getOpcode(), DL, VT, Trunc, NewBinopConst);
-
+  SDValue NewBinopNode = DAG.getNode(Opcode, DL, VT, Trunc, NewBinopConst);
   EVT CleanUpVT =
       EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
-  return DAG.getZeroExtendInReg(NewBinopNode, DL, CleanUpVT);
+  return CleanUpFn(NewBinopNode, CleanUpVT, VT, DAG, DL);
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
@@ -53816,8 +53827,14 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   if (!Src.hasOneUse())
     return SDValue();
 
-  if (SDValue R = combinei64TruncSrlBinop(Src, VT, DAG, DL))
-    return R;
+  if (VT == MVT::i32 && SrcVT == MVT::i64 && SrcOpcode == ISD::SRL &&
+      Src.getOperand(0).getNumOperands() == 2 &&
+      isa<ConstantSDNode>(Src.getOperand(1)) &&
+      isa<ConstantSDNode>(Src.getOperand(0).getOperand(1))) {
+    if (SDValue R = combinei64TruncSrlBinop(Src, VT, DAG, DL))
+      return R;
+    return SDValue();
+  }
 
   if (!VT.isVector())
     return SDValue();
