@@ -2938,7 +2938,7 @@ SDValue SelectionDAGLegalize::PromoteReduction(SDNode *Node) {
       Operands[j] =
           DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
     } else if (Node->getOperand(j).getValueType().isFloatingPoint()) {
-      // prmote the initial value.
+      // promote the initial value.
       Operands[j] =
           DAG.getNode(ISD::FP_EXTEND, DL, NewScalarVT, Node->getOperand(j));
     } else {
