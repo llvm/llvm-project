@@ -168,3 +168,84 @@ for.body:
 exit:
   ret void
 }
+
+; CHECK-COST-LABEL: predicated_sincos
+; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincos.f32(float %in_val)
+; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST: Cost of 58 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+
+; CHECK-COST-ARMPL-LABEL: predicated_sincos
+; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincos.f32(float %in_val)
+; CHECK-COST-ARMPL: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of 12 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+
+define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
+; CHECK-LABEL: define void @predicated_sincos(
+; CHECK-SAME: float [[X:%.*]], ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
+; CHECK:  [[ENTRY:.*:]]
+; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:  [[IF_THEN:.*:]]
+; CHECK:    [[CALL:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[IN_VAL:%.*]])
+; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
+; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
+; CHECK:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
+; CHECK:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
+; CHECK:  [[IF_MERGE:.*:]]
+; CHECK:  [[FOR_END:.*:]]
+;
+; CHECK-ARMPL-LABEL: define void @predicated_sincos(
+; CHECK-ARMPL-SAME: float [[X:%.*]], ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
+; CHECK-ARMPL:  [[ENTRY:.*:]]
+; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
+; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
+; CHECK-ARMPL:    [[TMP15:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP15]], 0
+; CHECK-ARMPL:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP15]], 1
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP16]], ptr [[TMP19:%.*]], i32 4, <vscale x 4 x i1> [[TMP14:%.*]])
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP17]], ptr [[TMP21:%.*]], i32 4, <vscale x 4 x i1> [[TMP14]])
+; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
+; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
+; CHECK-ARMPL:  [[FOR_BODY:.*:]]
+; CHECK-ARMPL:  [[IF_THEN:.*:]]
+; CHECK-ARMPL:    [[CALL:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[IN_VAL:%.*]])
+; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
+; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
+; CHECK-ARMPL:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
+; CHECK-ARMPL:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
+; CHECK-ARMPL:  [[IF_MERGE:.*:]]
+; CHECK-ARMPL:  [[FOR_END:.*:]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %if.merge ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
+  %in_val = load float, ptr %arrayidx, align 4
+  %if_cond = fcmp olt float %in_val, %x
+  br i1 %if_cond, label %if.then, label %if.merge
+
+if.then:
+  %call = tail call { float, float } @llvm.sincos.f32(float %in_val)
+  %extract_a = extractvalue { float, float } %call, 0
+  %extract_b = extractvalue { float, float } %call, 1
+  %arrayidx2 = getelementptr inbounds float, ptr %out_a, i64 %iv
+  store float %extract_a, ptr %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %out_b, i64 %iv
+  store float %extract_b, ptr %arrayidx4, align 4
+  br label %if.merge
+
+if.merge:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv.next, 1024
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
