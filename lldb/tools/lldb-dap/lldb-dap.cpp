@@ -161,7 +161,7 @@ static void printHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
 
-  std::string examples = R"___(
+  llvm::outs() << R"___(
 EXAMPLES:
   The debug adapter can be started in two modes.
 
@@ -176,7 +176,6 @@ EXAMPLES:
 
     lldb-dap -g
 )___";
-  llvm::outs() << examples;
 }
 
 // If --launch-target is provided, this instance of lldb-dap becomes a
