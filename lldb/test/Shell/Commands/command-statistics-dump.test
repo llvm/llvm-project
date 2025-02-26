@@ -1,0 +1,31 @@
+# RUN: %clang_host -g %S/Inputs/main.c -o %t-main.exe
+
+# When we enable symbol preload and dump stats there should be a non-zero
+# time for parsing symbol tables for the main module.
+# RUN: %lldb %t-main.exe \
+# RUN:       -O "settings set plugin.jit-loader.gdb.enable off" \
+# RUN:       -O "settings set target.preload-symbols true" \
+# RUN:       -o "statistics dump" \
+# RUN:       -o "q" \
+# RUN:       | FileCheck %s -check-prefixes=CHECK,PRELOAD_TRUE
+
+# Find the module stats for the main executable and make sure
+# we are looking at the symbol parse time for that module.
+# CHECK: "modules": [
+# CHECK: {
+# CHECK: "path": {{.*}}-main.exe
+# CHECK-NOT: }
+
+# PRELOAD_TRUE: "symbolTableParseTime":
+# PRELOAD_TRUE-SAME: {{[1-9]+}}
+
+# When we disable symbol preload and dump stats the symbol table
+# for main should not be parsed and have a time of 0.
+# RUN: %lldb %t-main.exe \
+# RUN:       -O "settings set plugin.jit-loader.gdb.enable off" \
+# RUN:       -O "settings set target.preload-symbols false" \
+# RUN:       -o "statistics dump" \
+# RUN:       -o "q" \
+# RUN:       | FileCheck %s -check-prefixes=CHECK,PRELOAD_FALSE
+
+# PRELOAD_FALSE: "symbolTableParseTime": 0,
