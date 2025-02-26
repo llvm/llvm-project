@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-class RVInstVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
+class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
                 string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> imm;
   bits<5> rs1;
   bits<5> vd;
-  bit vm;
+  bit vm = 0;
 
   let Inst{31-26} = funct6;
   let Inst{25} = vm;
@@ -24,19 +24,20 @@ class RVInstVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{19-15} = rs1;
   let Inst{14-12} = opv.Value;
   let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_OP_V.Value;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VTYPE, VL];
-  let RVVConstraint = VMConstraint;
+  let RVVConstraint = NoConstraint;
+  let Constraints = "$vd = $vd_wb";
 }
 
-class RVInstXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
+class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
                 string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> imm;
   bits<5> vs2;
   bits<5> rd;
-  bit vm;
+  bit vm = 1;
 
   let Inst{31-26} = funct6;
   let Inst{25} = vm;
@@ -44,10 +45,10 @@ class RVInstXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{19-15} = imm;
   let Inst{14-12} = opv.Value;
   let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_V.Value;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VTYPE, VL];
-  let RVVConstraint = VMConstraint;
+  let RVVConstraint = NoConstraint;
 }
 
 //===----------------------------------------------------------------------===//
@@ -71,21 +72,18 @@ defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
-  Inst<6-0> = OPC_CUSTOM_2.Value, mayLoad = false, mayStore = false,
-  hasSideEffects = false in {
+  mayLoad = false, mayStore = false, hasSideEffects = false in {
 
-let isReMaterializable = 1, isAsCheapAsAMove = 1, vm = 0, vs2=0 in
+let vm = 0, vs2=0, Inst<6-0> = OPC_CUSTOM_2.Value,
+    isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def RI_VZERO : RVInstV<0b000000, 0b00000, OPCFG, (outs VR:$vd),
                      (ins), "ri.vzero.v", "$vd">;
 
-let vm = 0, Constraints = "$vd = $vd_wb", RVVConstraint = NoConstraint in
-def RI_VINSERT : RVInstVXI<0b010000, OPMVX, (outs VR:$vd_wb),
-                           (ins VR:$vd, GPR:$rs1, uimm5:$imm),
-                           "ri.vinsert.v.x", "$vd, $rs1, $imm">;
+def RI_VINSERT : CustomRivosVXI<0b010000, OPMVX, (outs VR:$vd_wb),
+                                (ins VR:$vd, GPR:$rs1, uimm5:$imm),
+                                "ri.vinsert.v.x", "$vd, $rs1, $imm">;
 
-let vm = 1, RVVConstraint = NoConstraint in
-def RI_VEXTRACT : RVInstXVI<0b010111, OPMVV, (outs GPR:$rd),
-                            (ins VR:$vs2, uimm5:$imm),
-                            "ri.vextract.x.v", "$rd, $vs2, $imm">;
-
+def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
+                                (ins VR:$vs2, uimm5:$imm),
+                                "ri.vextract.x.v", "$rd, $vs2, $imm">;
 }
