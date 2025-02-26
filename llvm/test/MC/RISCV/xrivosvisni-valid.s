@@ -9,15 +9,15 @@
 # RUN:     | llvm-objdump --mattr=+experimental-xrivosvisni -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: ri.vzero v1
+# CHECK-ASM-AND-OBJ: ri.vzero.v v1
 # CHECK-ASM: encoding: [0xdb,0x70,0x00,0x00]
-ri.vzero v1
-# CHECK-ASM-AND-OBJ: vzero v2
+ri.vzero.v v1
+# CHECK-ASM-AND-OBJ: ri.vzero.v v2
 # CHECK-ASM: encoding: [0x5b,0x71,0x00,0x00]
-ri.vzero v2
-# CHECK-ASM-AND-OBJ: vzero v3
+ri.vzero.v v2
+# CHECK-ASM-AND-OBJ: ri.vzero.v v3
 # CHECK-ASM: encoding: [0xdb,0x71,0x00,0x00]
-ri.vzero v3
+ri.vzero.v v3
 
 # CHECK-ASM-AND-OBJ: ri.vinsert.v.x v0, zero, 0
 # CHECK-ASM: encoding: [0x5b,0x60,0x00,0x40]

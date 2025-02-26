@@ -204,7 +204,7 @@
 // CHECK-NEXT:     xqcilo               0.2       'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 // CHECK-NEXT:     xqcilsm              0.2       'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 // CHECK-NEXT:     xqcisls              0.2       'Xqcisls' (Qualcomm uC Scaled Load Store Extension)
-// CHECK-NEXT:     xrivosvisni          0.1       'XRivosVisni' (Rivos Vector Small Integer New)
+// CHECK-NEXT:     xrivosvisni          0.1       'XRivosVisni' (Rivos Vector Integer Small New)
 // CHECK-NEXT:     xrivosvizip          0.1       'XRivosVizip' (Rivos Vector Register Zips)
 // CHECK-EMPTY:
 // CHECK-NEXT: Supported Profiles

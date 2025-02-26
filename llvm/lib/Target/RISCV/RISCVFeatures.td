@@ -1377,11 +1377,11 @@ def HasVendorXqcilo
 // Rivos Extension(s)
 
 def FeatureVendorXRivosVisni
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Small Integer New">;
+    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Integer Small New">;
 def HasVendorXRivosVisni
     : Predicate<"Subtarget->hasVendorXRivosVisni()">,
       AssemblerPredicate<(all_of FeatureVendorXRivosVisni),
-                         "'XRivosVizisni' (Rivos Vector Small Integer New)">;
+                         "'XRivosVisni' (Rivos Vector Integer Small New)">;
 
 def FeatureVendorXRivosVizip
     :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;

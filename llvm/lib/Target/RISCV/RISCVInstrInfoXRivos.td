@@ -76,7 +76,7 @@ let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1, vm = 0, vs2=0 in
 def RI_VZERO : RVInstV<0b000000, 0b00000, OPCFG, (outs VR:$vd),
-                     (ins), "ri.vzero", "$vd">;
+                     (ins), "ri.vzero.v", "$vd">;
 
 let vm = 0, Constraints = "$vd = $vd_wb", RVVConstraint = NoConstraint in
 def RI_VINSERT : RVInstVXI<0b010000, OPMVX, (outs VR:$vd_wb),
