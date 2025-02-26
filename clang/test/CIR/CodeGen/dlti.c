@@ -5,6 +5,12 @@ void foo() {}
 
 //      CHECK: module @"{{.*}}dlti.c" attributes {
 //  CHECK-DAG: cir.sob = #cir.signed_overflow_behavior<undefined>,
+//  CHECK-DAG: cir.type_size_info =
+//  CHECK-DAG:   #cir.type_size_info<
+//  CHECK-DAG:     char = 8,
+//  CHECK-DAG:     int = {{16|32}},
+//  CHECK-DAG:     size_t = {{32|64}}
+//  CHECK-DAG: >
 //  CHECK-DAG: dlti.dl_spec =
 //  CHECK-DAG:   #dlti.dl_spec<
 //  CHECK-DAG:     i16 = dense<16> : vector<2xi64>,

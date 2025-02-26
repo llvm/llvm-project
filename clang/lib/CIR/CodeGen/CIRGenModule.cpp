@@ -112,6 +112,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       openMPRuntime(new CIRGenOpenMPRuntime(*this)),
       cudaRuntime(new CIRGenCUDARuntime(*this)) {
 
+  unsigned charSize = astContext.getTargetInfo().getCharWidth();
+  unsigned intSize = astContext.getTargetInfo().getIntWidth();
+  unsigned sizeTSize = astContext.getTargetInfo().getMaxPointerWidth();
+
+  auto typeSizeInfo =
+      cir::TypeSizeInfoAttr::get(&mlirContext, charSize, intSize, sizeTSize);
+  theModule->setAttr(cir::CIRDialect::getTypeSizeInfoAttrName(), typeSizeInfo);
+
   // Initialize CIR signed integer types cache.
   SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
   SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
@@ -146,19 +154,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
   SizeSizeInBytes =
-      astContext
-          .toCharUnitsFromBits(astContext.getTargetInfo().getMaxPointerWidth())
-          .getQuantity();
+      astContext.toCharUnitsFromBits(typeSizeInfo.getSizeTSize()).getQuantity();
   // TODO: IntAlignInBytes
-  UCharTy = cir::IntType::get(&getMLIRContext(),
-                              astContext.getTargetInfo().getCharWidth(),
-                              /*isSigned=*/false);
-  UIntTy = cir::IntType::get(&getMLIRContext(),
-                             astContext.getTargetInfo().getIntWidth(),
-                             /*isSigned=*/false);
-  UIntPtrTy = cir::IntType::get(&getMLIRContext(),
-                                astContext.getTargetInfo().getMaxPointerWidth(),
-                                /*isSigned=*/false);
+  UCharTy = typeSizeInfo.getUCharType(&getMLIRContext());
+  UIntTy = typeSizeInfo.getUIntType(&getMLIRContext());
+  // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
+  UIntPtrTy = typeSizeInfo.getSizeType(&getMLIRContext());
   UInt8PtrTy = builder.getPointerTo(UInt8Ty);
   UInt8PtrPtrTy = builder.getPointerTo(UInt8PtrTy);
   AllocaInt8PtrTy = UInt8PtrTy;
@@ -167,9 +168,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // TODO: ConstGlobalsPtrTy
   CIRAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
 
-  PtrDiffTy = cir::IntType::get(&getMLIRContext(),
-                                astContext.getTargetInfo().getMaxPointerWidth(),
-                                /*isSigned=*/true);
+  PtrDiffTy = typeSizeInfo.getPtrDiffType(&getMLIRContext());
 
   if (langOpts.OpenCL) {
     createOpenCLRuntime();
@@ -197,6 +196,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                      cir::LangAttr::get(&mlirContext, lang));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+
   if (CGO.OptimizationLevel > 0 || CGO.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
                        cir::OptInfoAttr::get(&mlirContext,

@@ -16,7 +16,7 @@ void foo(int i) __attribute__((annotate("withargfunc", "os", 23 )));
 void bar() __attribute__((annotate("withargfunc", "os", 22))) {
 }
 
-// BEFORE: module @{{.*}}attribute-annotate-multiple.cpp" attributes {cir.lang =
+// BEFORE: module @{{.*}}attribute-annotate-multiple.cpp" attributes {{{.*}}cir.lang =
 
 // BEFORE: cir.global external @a = #cir.ptr<null> : !cir.ptr<!cir.double>
 // BEFORE-SAME: [#cir.annotation<name = "withargs", args = ["21", 12 : i32]>]

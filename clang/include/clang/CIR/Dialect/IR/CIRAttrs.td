@@ -123,6 +123,79 @@ def CIR_OptInfoAttr : CIR_Attr<"OptInfo", "opt_info"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TypeSizeInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_TypeSizeInfoAttr : CIR_Attr<"TypeSizeInfo", "type_size_info"> {
+  let summary = "the size of types in bits";
+  let description = [{
+    The `cir.type_size` attribute is attached to a module, recording lengths
+    of various types if their names don't include it.
+
+    It is worth noticing that size_t and pointers are considered to have the
+    same length in Clang IR.
+
+    Float and double types are represented by cir::SingleType and cir::
+    DoubleType respectively, whose constructos don't need the type size as an
+    argument. So their lengths are not stored here.
+
+    Examples:
+
+    ```mlir
+    // sizeof(int) == 4, sizeof(size_t) == 8
+    module attributes {
+      cir.type_size = #cir.type_size<
+        char = 8,
+        int = 32,
+        size_t = 64
+      >
+    } {}
+    ```
+  }];
+
+  let parameters = (ins "unsigned":$char_size,
+                        "unsigned":$int_size,
+                        "unsigned":$size_t_size);
+
+  let assemblyFormat = [{
+    `<`
+      `char` `=` $char_size `,`
+      `int` `=` $int_size `,`
+      `size_t` `=` $size_t_size
+    `>`
+  }];
+
+  let extraClassDeclaration = [{
+    unsigned getPointerSize() const { return getSizeTSize(); }
+
+    mlir::Type getCharType(mlir::MLIRContext *ctx) const {
+      return cir::IntType::get(ctx, getCharSize(), /*signed=*/true);
+    }
+
+    mlir::Type getUCharType(mlir::MLIRContext *ctx) const {
+      return cir::IntType::get(ctx, getCharSize(), /*signed=*/false);
+    }
+
+    mlir::Type getIntType(mlir::MLIRContext *ctx) const {
+      return cir::IntType::get(ctx, getIntSize(), /*signed=*/true);
+    }
+
+    mlir::Type getUIntType(mlir::MLIRContext *ctx) const {
+      return cir::IntType::get(ctx, getIntSize(), /*signed=*/false);
+    }
+
+    mlir::Type getSizeType(mlir::MLIRContext *ctx) const {
+      return cir::IntType::get(ctx, getSizeTSize(), /*signed=*/false);
+    }
+
+    mlir::Type getPtrDiffType(mlir::MLIRContext *ctx) const {
+      return cir::IntType::get(ctx, getSizeTSize(), /*signed=*/true);
+    }
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // BoolAttr
 //===----------------------------------------------------------------------===//
 
