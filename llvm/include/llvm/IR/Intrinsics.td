@@ -1449,8 +1449,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
 // given function it is 'const' and may be CSE'd etc.
 def int_eh_typeid_for : Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty], [IntrNoMem]>;
 
-def int_eh_return_i32 : Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty]>;
-def int_eh_return_i64 : Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty]>;
+def int_eh_return_i32 : Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty], [IntrNoReturn]>;
+def int_eh_return_i64 : Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty], [IntrNoReturn]>;
 
 // eh.exceptionpointer returns the pointer to the exception caught by
 // the given `catchpad`.

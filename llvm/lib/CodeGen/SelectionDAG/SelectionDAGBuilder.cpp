@@ -3563,6 +3563,14 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
     // Do not emit an additional trap instruction.
     if (Call->isNonContinuableTrap())
       return;
+    // Do not emit trap instructions after EH_RETURN intrinsics.
+    // This can cause problems later down the line when other machine passes
+    // attempt to use the last instruction in a BB to determine terminator behavior.
+    if (const auto *II = dyn_cast<IntrinsicInst>(Call)) {
+      const auto IID = II->getIntrinsicID();
+      if (IID == Intrinsic::eh_return_i32 || IID == Intrinsic::eh_return_i64)
+        return;
+    }
   }
 
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
