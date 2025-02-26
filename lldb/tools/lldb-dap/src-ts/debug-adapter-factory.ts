@@ -183,7 +183,8 @@ export class LLDBDapDescriptorFactory
   static async showLLDBDapNotFoundMessage(path?: string) {
     const openSettingsAction = "Open Settings";
     const callbackValue = await vscode.window.showErrorMessage(
-      `Debug adapter path: ${path} is not a valid file`,
+      path ? `Debug adapter path: ${path} is not a valid file` :
+        `Debug adapter executable not found`,
       openSettingsAction,
     );
 
