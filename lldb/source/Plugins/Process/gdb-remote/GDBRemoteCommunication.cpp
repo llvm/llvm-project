@@ -1162,9 +1162,9 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
           char buf[10];
           if (llvm::Expected<size_t> num_bytes = socket_pipe.Read(
                   buf, std::size(buf), std::chrono::seconds(10))) {
-            port_str.append(buf, *num_bytes);
             if (*num_bytes == 0)
               break;
+            port_str.append(buf, *num_bytes);
           } else {
             error = Status::FromError(num_bytes.takeError());
           }

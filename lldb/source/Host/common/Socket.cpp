@@ -99,7 +99,8 @@ Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
     return Status::FromError(num_bytes.takeError());
   if (*num_bytes != sizeof(protocol_info))
     return Status::FromErrorStringWithFormatv(
-        "Write(WSAPROTOCOL_INFO) failed: {0} bytes", *num_bytes);
+        "Write(WSAPROTOCOL_INFO) failed: wrote {0}/{1} bytes", *num_bytes,
+        sizeof(protocol_info));
 #endif
   return Status();
 }
@@ -117,7 +118,8 @@ Status SharedSocket::GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
       return Status::FromError(num_bytes.takeError());
     if (*num_bytes != sizeof(protocol_info)) {
       return Status::FromErrorStringWithFormatv(
-          "socket_pipe.Read(WSAPROTOCOL_INFO) failed: {0} bytes", *num_bytes);
+          "Read(WSAPROTOCOL_INFO) failed: read {0}/{1} bytes", *num_bytes,
+          sizeof(protocol_info));
     }
   }
   socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,

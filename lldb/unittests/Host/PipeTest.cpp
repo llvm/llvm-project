@@ -10,10 +10,14 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <chrono>
 #include <fcntl.h>
 #include <numeric>
+#include <thread>
 #include <vector>
+#include <future>
 
 using namespace lldb_private;
 
@@ -143,4 +147,53 @@ TEST_F(PipeTest, WriteWithTimeout) {
   ASSERT_THAT_EXPECTED(
       pipe.Write(write_ptr, write_chunk_size, std::chrono::milliseconds(10)),
       llvm::Succeeded());
+}
+
+TEST_F(PipeTest, ReadWithTimeout) {
+  Pipe pipe;
+  ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
+
+  char buf[100];
+  // The pipe is initially empty. A polling read returns immediately.
+  ASSERT_THAT_EXPECTED(pipe.Read(buf, sizeof(buf), std::chrono::seconds(0)),
+                       llvm::Failed());
+
+  // With a timeout, we should wait for at least this amount of time (but not
+  // too much).
+  auto start = std::chrono::steady_clock::now();
+  ASSERT_THAT_EXPECTED(
+      pipe.Read(buf, sizeof(buf), std::chrono::milliseconds(200)),
+      llvm::Failed());
+  auto dur = std::chrono::steady_clock::now() - start;
+  EXPECT_GT(dur, std::chrono::milliseconds(200));
+  EXPECT_LT(dur, std::chrono::seconds(2));
+
+  // Write something into the pipe, and read it back. The blocking read call
+  // should return even though it hasn't filled the buffer.
+  llvm::StringRef hello_world("Hello world!");
+  ASSERT_THAT_EXPECTED(pipe.Write(hello_world.data(), hello_world.size()),
+                       llvm::HasValue(hello_world.size()));
+  ASSERT_THAT_EXPECTED(pipe.Read(buf, sizeof(buf)),
+                       llvm::HasValue(hello_world.size()));
+  EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
+
+  // Now write something and try to read it in chunks.
+  memset(buf, 0, sizeof(buf));
+  ASSERT_THAT_EXPECTED(pipe.Write(hello_world.data(), hello_world.size()),
+                       llvm::HasValue(hello_world.size()));
+  ASSERT_THAT_EXPECTED(pipe.Read(buf, 4), llvm::HasValue(4));
+  ASSERT_THAT_EXPECTED(pipe.Read(buf + 4, sizeof(buf) - 4),
+                       llvm::HasValue(hello_world.size() - 4));
+  EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
+
+  // A blocking read should wait until the data arrives.
+  memset(buf, 0, sizeof(buf));
+  std::future<llvm::Expected<size_t>> future_num_bytes = std::async(
+      std::launch::async, [&] { return pipe.Read(buf, sizeof(buf)); });
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  ASSERT_THAT_EXPECTED(pipe.Write(hello_world.data(), hello_world.size()),
+                       llvm::HasValue(hello_world.size()));
+  ASSERT_THAT_EXPECTED(future_num_bytes.get(),
+                       llvm::HasValue(hello_world.size()));
+  EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
 }
