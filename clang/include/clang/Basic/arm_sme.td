@@ -378,6 +378,7 @@ let SMETargetGuard = "sme2" in {
 
 multiclass MOP4<string name, string n, string t, string i, string wide, list<ImmCheck> checks> {
   def NAME # "_1x1" : Inst<"svmop4" # name # "_1x1_" # n # "[_{d}_{d}]", "vidd", t, MergeNone, i # wide # "_1x1", [IsInOutZA, IsStreaming], checks>;
+  def NAME # "_1x2" : Inst<"svmop4" # name # "_1x2_" # n # "[_{d}_{d}]", "vid2", t, MergeNone, i # wide # "_1x2", [IsInOutZA, IsStreaming], checks>;
 }
 
 multiclass SUMOP4<string s, string za, string t, string i, list<ImmCheck> checks> {
@@ -385,11 +386,19 @@ multiclass SUMOP4<string s, string za, string t, string i, list<ImmCheck> checks
                               "vidu", t, MergeNone, "aarch64_sme_sumop4" # s # i # "_wide_1x1",
                               [IsStreaming, IsInOutZA],
                               checks>;
+  def _1x2 : SInst<"svmop4" # s # "[_1x2_]" # za # "[_{d}_{3}]",
+                              "vid2.u", t, MergeNone, "aarch64_sme_sumop4" # s # i # "_wide_1x2",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
 }
 
 multiclass USMOP4<string s, string za, string t, string i, list<ImmCheck> checks> {
   def _1x1 : SInst<"svmop4" # s # "[_1x1_]" # za # "[_{d}_{3}]",
                               "vidx", t, MergeNone, "aarch64_sme_usmop4" # s # i # "_wide_1x1",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+  def _1x2 : SInst<"svmop4" # s # "[_1x2_]" # za # "[_{d}_{3}]",
+                              "vid2.x", t, MergeNone, "aarch64_sme_usmop4" # s # i # "_wide_1x2",
                               [IsStreaming, IsInOutZA],
                               checks>;
 }
