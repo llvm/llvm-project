@@ -7,7 +7,8 @@ This script generates Lit regression test files that validate that options are o
 The options and driver modes are parsed from Options.td, whose path should be provided on the command line.
 See clang/include/clang/Driver/Options.td
 
-The path to the TableGen executable can optionally be provided. Otherwise, the script will search for it.
+The LLVM TableGen executable can optionally be provided along with the path to the LLVM build tree bin directory.
+Otherwise, the script will search for it.
 
 The primary maintenance task for this script would be updating the expected return message for a driver mode if
 there are changes over time. See the instantiations of DriverData, specifically the check_str.
