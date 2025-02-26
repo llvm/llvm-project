@@ -5047,6 +5047,8 @@ static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
   assert(Dim >= 0 && Dim < 3 && "Unexpected dim char");
 
   const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
+
+  // local variable required for StringRef in Vect3 to point to.
   const std::string VStr = llvm::utostr(VInt);
   Vect3[Dim] = VStr;
   Length = std::max(Length, Dim + 1);
