@@ -13,6 +13,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "Handler/RequestHandler.h"
+#include "Handler/ResponseHandler.h"
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
@@ -67,8 +68,6 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopEventThread = 1u << 0,
   eBroadcastBitStopProgressThread = 1u << 1
 };
-
-typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
   Success = 0,
@@ -197,7 +196,7 @@ struct DAP {
   llvm::DenseSet<lldb::tid_t> thread_ids;
   uint32_t reverse_request_seq;
   std::mutex call_mutex;
-  std::map<int /* request_seq */, ResponseCallback /* reply handler */>
+  llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
   std::string command_escape_prefix = "`";
@@ -327,12 +326,24 @@ struct DAP {
   ///   The reverse request command.
   ///
   /// \param[in] arguments
-  ///   The reverse request arguements.
-  ///
-  /// \param[in] callback
-  ///   A callback to execute when the response arrives.
-  void SendReverseRequest(llvm::StringRef command, llvm::json::Value arguments,
-                          ResponseCallback callback);
+  ///   The reverse request arguments.
+  template <typename Handler>
+  void SendReverseRequest(llvm::StringRef command,
+                          llvm::json::Value arguments) {
+    int64_t id;
+    {
+      std::lock_guard<std::mutex> locker(call_mutex);
+      id = ++reverse_request_seq;
+      inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
+    }
+
+    SendJSON(llvm::json::Object{
+        {"type", "request"},
+        {"seq", id},
+        {"command", command},
+        {"arguments", std::move(arguments)},
+    });
+  }
 
   /// Registers a request handler.
   template <typename Handler> void RegisterRequest() {
