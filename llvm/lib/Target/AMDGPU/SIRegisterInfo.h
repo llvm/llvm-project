@@ -295,8 +295,21 @@ public:
   getRegClassForOperandReg(const MachineRegisterInfo &MRI,
                            const MachineOperand &MO) const;
 
+  bool isVGPR(MCRegister Reg) const {
+    const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
+    // Registers without classes are unaddressable, SGPR-like registers.
+    return RC && isVGPRClass(RC);
+  }
   bool isVGPR(const MachineRegisterInfo &MRI, Register Reg) const;
+  bool isAGPR(MCRegister Reg) const {
+    const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
+    // Registers without classes are unaddressable, SGPR-like registers.
+    return RC && isAGPRClass(RC);
+  }
   bool isAGPR(const MachineRegisterInfo &MRI, Register Reg) const;
+  bool isVectorRegister(MCRegister Reg) const {
+    return isVGPR(Reg) || isAGPR(Reg);
+  }
   bool isVectorRegister(const MachineRegisterInfo &MRI, Register Reg) const {
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
