@@ -167,8 +167,7 @@ public:
     // Lookup the dialect interface for the given intrinsic.
     // Verify the intrinsic identifier maps to an actual intrinsic.
     llvm::Intrinsic::ID intrinId = inst->getIntrinsicID();
-    if (intrinId == llvm::Intrinsic::not_intrinsic)
-      return failure();
+    assert(intrinId != llvm::Intrinsic::not_intrinsic);
 
     // First lookup intrinsic across different dialects for known
     // supported converstions, examples include arm-neon, nvm-sve, etc

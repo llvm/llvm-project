@@ -63,7 +63,6 @@ convertUnregisteredIntrinsicImpl(OpBuilder &odsBuilder, llvm::CallInst *inst,
                                  LLVM::ModuleImport &moduleImport) {
   StringRef intrinName = inst->getCalledFunction()->getName();
 
-  // Sanity check the intrinsic ID.
   SmallVector<llvm::Value *> args(inst->args());
   ArrayRef<llvm::Value *> llvmOperands(args);
 
