@@ -14,9 +14,9 @@
 # CHECK:            ^
 
 	.text
-	loop BYTE PTR [SYM+4]
+	loop WORD PTR [SYM+4]
 # CHECK: error: invalid operand for instruction
-# CHECK:	loop BYTE PTR [SYM+4]
+# CHECK:	loop WORD PTR [SYM+4]
 # CHECK:        ^
 
 	.text

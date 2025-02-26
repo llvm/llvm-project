@@ -2,6 +2,9 @@
 // RUN: FileCheck < %t %s
 // RUN: FileCheck --check-prefix=CHECK-STDERR < %t.err %s
 
+_nop_label:
+	nop
+
 _test:
 	xor	EAX, EAX
 	ret
@@ -824,6 +827,9 @@ fcomip st, st(2)
 fucomip st, st(2)
 // CHECK: fcompi  %st(2)
 // CHECK: fucompi  %st(2)
+
+jrcxz _nop_label
+jecxz _nop_label + 1
 
 loopz _foo
 loopnz _foo

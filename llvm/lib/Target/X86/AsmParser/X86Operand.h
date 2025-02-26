@@ -421,12 +421,11 @@ struct X86Operand final : public MCParsedAsmOperand {
   bool isDispImm8() const {
     if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getMemDisp()))
       return isImmSExti64i8Value(CE->getValue());
-    return false;
+    return true;
   }
 
   bool isAbsMem8() const {
-    return isAbsMem() && isMem8() &&
-           (isa<MCSymbolRefExpr>(getMemDisp()) || isDispImm8());
+    return isAbsMem() && isMem8() && isDispImm8();
   }
 
   bool isMemUseUpRegs() const override { return UseUpRegs; }
