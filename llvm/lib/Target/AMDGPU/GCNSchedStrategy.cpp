@@ -1130,6 +1130,32 @@ void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   GCNSchedStage::finalizeGCNSchedStage();
 }
 
+bool ILPInitialScheduleStage::initGCNSchedStage() {
+  if (!GCNSchedStage::initGCNSchedStage())
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  OriginalLoadLatencyScaleFactor = TII->getLoadLatencyScaleFactor();
+  const unsigned ILPLoadLatencyScaleFactorDefault = 300;
+  if (ILPLoadLatencyScaleFactorDefault > TII->getLoadLatencyScaleFactor())
+    TII->setLoadLatencyScaleFactor(ILPLoadLatencyScaleFactorDefault);
+
+  LLVM_DEBUG(dbgs() << "ILP Initial Schedule: Set load latency scale factor to "
+                    << TII->getLoadLatencyScaleFactor() << '\n');
+  return true;
+}
+
+void ILPInitialScheduleStage::finalizeGCNSchedStage() {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  TII->setLoadLatencyScaleFactor(OriginalLoadLatencyScaleFactor);
+
+  LLVM_DEBUG(
+      dbgs() << "ILP Initial Schedule: Restored load latency scale factor to "
+             << OriginalLoadLatencyScaleFactor << "\n");
+
+  GCNSchedStage::finalizeGCNSchedStage();
+}
+
 bool GCNSchedStage::initGCNRegion() {
   // Check whether this new region is also a new block.
   if (DAG.RegionBegin->getParent() != CurrentMBB)

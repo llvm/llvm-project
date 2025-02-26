@@ -88,6 +88,9 @@ private:
   const GCNSubtarget &ST;
   TargetSchedModel SchedModel;
   mutable std::unique_ptr<AMDGPUMIRFormatter> Formatter;
+  // Final load latency in the machine model is scalled by
+  // `Factor / 100 * Latency`
+  mutable unsigned LoadLatencyScaleFactor = 100;
 
   // The inverse predicate should have the negative value.
   enum BranchPredicate {
@@ -106,6 +109,12 @@ private:
   static BranchPredicate getBranchPredicate(unsigned Opcode);
 
 public:
+  void setLoadLatencyScaleFactor(unsigned Factor) const {
+    LoadLatencyScaleFactor = Factor;
+  }
+
+  unsigned getLoadLatencyScaleFactor() const { return LoadLatencyScaleFactor; }
+
   unsigned buildExtractSubReg(MachineBasicBlock::iterator MI,
                               MachineRegisterInfo &MRI,
                               const MachineOperand &SuperReg,
@@ -1461,6 +1470,9 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                           const MachineInstr &MI) const override;
 
   InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const override final;

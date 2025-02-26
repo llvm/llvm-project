@@ -474,8 +474,13 @@ public:
 };
 
 class ILPInitialScheduleStage : public GCNSchedStage {
+private:
+  unsigned OriginalLoadLatencyScaleFactor = 0;
+
 public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
+  bool initGCNSchedStage() override;
+  void finalizeGCNSchedStage() override;
 
   ILPInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}

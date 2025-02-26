@@ -60,9 +60,15 @@ static cl::opt<bool> Fix16BitCopies(
   cl::init(true),
   cl::ReallyHidden);
 
+static cl::opt<unsigned> AMDGPULoadLatencyScaleFactor(
+    "amdgpu-load-latency-scale-factor",
+    cl::desc("Scale factor for load instruction latency. Final latency is "
+             "scalled by `Factor / 100 * Latency`."),
+    cl::init(100), cl::ReallyHidden);
+
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
-  : AMDGPUGenInstrInfo(AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
-    RI(ST), ST(ST) {
+    : AMDGPUGenInstrInfo(AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
+      RI(ST), ST(ST), LoadLatencyScaleFactor(AMDGPULoadLatencyScaleFactor) {
   SchedModel.init(&ST);
 }
 
@@ -9790,6 +9796,15 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+unsigned SIInstrInfo::getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                                      const MachineInstr &MI) const {
+  unsigned Latency = TargetInstrInfo::getInstrLatency(TargetSchedModel, MI);
+  if (MI.mayLoad())
+    Latency *= LoadLatencyScaleFactor / 100;
+
+  return Latency;
 }
 
 InstructionUniformity
