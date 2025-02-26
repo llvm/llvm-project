@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -asm-verbose=false 2>&1 | FileCheck %s
+; RUN: not llc < %s -asm-verbose=false 2>&1 | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

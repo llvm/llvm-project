@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple aarch64-linux-gnu -mattr=+sve <%s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple aarch64-linux-gnu -mattr=+sve <%s 2>&1 | FileCheck %s
 
 declare i32 @sve_printf(ptr, <vscale x 4 x i32>, ...)
 

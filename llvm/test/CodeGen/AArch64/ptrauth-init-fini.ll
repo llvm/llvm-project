@@ -78,7 +78,7 @@ define void @bar() {
 
 ;--- err1.ll
 
-; RUN: not --crash llc -mtriple aarch64-elf -mattr=+pauth -filetype=asm -o - err1.ll 2>&1 | \
+; RUN: not llc -mtriple aarch64-elf -mattr=+pauth -filetype=asm -o - err1.ll 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=ERR1
 
 ; ERR1: LLVM ERROR: unexpected address discrimination value for ctors/dtors entry, only 'ptr inttoptr (i64 1 to ptr)' is allowed
@@ -91,7 +91,7 @@ define void @foo() {
 
 ;--- err2.ll
 
-; RUN: not --crash llc -mtriple aarch64-elf -mattr=+pauth -filetype=asm -o - err2.ll 2>&1 | \
+; RUN: not llc -mtriple aarch64-elf -mattr=+pauth -filetype=asm -o - err2.ll 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=ERR2
 
 ; ERR2: LLVM ERROR: unexpected address discrimination value for ctors/dtors entry, only 'ptr inttoptr (i64 1 to ptr)' is allowed

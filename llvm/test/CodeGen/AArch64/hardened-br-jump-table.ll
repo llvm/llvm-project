@@ -2,12 +2,12 @@
 
 ;--- err1.ll
 
-; RUN: not --crash llc %t/err1.ll -mtriple=aarch64-elf \
+; RUN: not llc %t/err1.ll -mtriple=aarch64-elf \
 ; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -code-model=large \
 ; RUN:   -o - -verify-machineinstrs 2>&1 | FileCheck %s --check-prefix=ERR1
 
-; RUN: not --crash llc %t/err1.ll -mtriple=aarch64-elf \
+; RUN: not llc %t/err1.ll -mtriple=aarch64-elf \
 ; RUN:   -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 \
 ; RUN:   -global-isel -global-isel-abort=1 \
 ; RUN:   -code-model=large \

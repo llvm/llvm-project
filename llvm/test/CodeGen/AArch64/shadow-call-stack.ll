@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-linux-gnu -mattr=+reserve-x18 | FileCheck %s
-; RUN: not --crash llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-darwin 2>&1 | FileCheck %s --check-prefix=DARWIN
+; RUN: not llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-darwin 2>&1 | FileCheck %s --check-prefix=DARWIN
 
 ; DARWIN: ShadowCallStack attribute not supported on Darwin.
 

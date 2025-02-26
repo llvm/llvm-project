@@ -2,9 +2,9 @@
 
 ;--- err1.ll
 
-; RUN: not --crash llc < err1.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err1.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR1 %s
-; RUN: not --crash llc < err1.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err1.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR1 %s
 
 @g = external global i32
@@ -16,9 +16,9 @@ define ptr @foo() {
 
 ;--- err2.ll
 
-; RUN: not --crash llc < err2.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err2.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR2 %s
-; RUN: not --crash llc < err2.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err2.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR2 %s
 
 @g = external global i32
@@ -30,9 +30,9 @@ define ptr @foo() {
 
 ;--- err3.ll
 
-; RUN: not --crash llc < err3.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err3.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR3 %s
-; RUN: not --crash llc < err3.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err3.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR3 %s
 
 @g_weak = extern_weak global i32
@@ -44,9 +44,9 @@ define ptr @foo() {
 
 ;--- err4.ll
 
-; RUN: not --crash llc < err4.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err4.ll -mtriple aarch64-elf -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR4 %s
-; RUN: not --crash llc < err4.ll -mtriple arm64-apple-ios -mattr=+pauth \
+; RUN: not llc < err4.ll -mtriple arm64-apple-ios -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR4 %s
 
 @g_weak = extern_weak global i32
@@ -59,7 +59,7 @@ define ptr @foo() {
 
 ;--- err5.ll
 
-; RUN: not --crash llc < err5.ll -mtriple aarch64-windows -mattr=+pauth \
+; RUN: not llc < err5.ll -mtriple aarch64-windows -mattr=+pauth \
 ; RUN:   -global-isel=0 -verify-machineinstrs 2>&1 | FileCheck --check-prefix=ERR5 %s
 
 @g = external global i32

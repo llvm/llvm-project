@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn -run-pass=verify -o - %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgcn -run-pass=verify -o - %s 2>&1 | FileCheck %s
 
 # Make sure that mismatched successors are caught when a _term
 # instruction is used

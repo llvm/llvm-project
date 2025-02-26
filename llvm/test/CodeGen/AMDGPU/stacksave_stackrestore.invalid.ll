@@ -1,9 +1,9 @@
 ; RUN: split-file %s %t
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stacksave-error.ll 2>&1 | FileCheck -check-prefix=ERR-SAVE-SDAG %s
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stackrestore-error.ll 2>&1 | FileCheck -check-prefix=ERR-RESTORE-SDAG %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stacksave-error.ll 2>&1 | FileCheck -check-prefix=ERR-SAVE-SDAG %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stackrestore-error.ll 2>&1 | FileCheck -check-prefix=ERR-RESTORE-SDAG %s
 
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stacksave-error.ll 2>&1 | FileCheck -check-prefix=ERR-SAVE-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stackrestore-error.ll 2>&1 | FileCheck -check-prefix=ERR-RESTORE-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stacksave-error.ll 2>&1 | FileCheck -check-prefix=ERR-SAVE-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 -filetype=null %t/stackrestore-error.ll 2>&1 | FileCheck -check-prefix=ERR-RESTORE-GISEL %s
 
 ; Test that an error is produced if stacksave/stackrestore are used
 ; with the wrong (default) address space.

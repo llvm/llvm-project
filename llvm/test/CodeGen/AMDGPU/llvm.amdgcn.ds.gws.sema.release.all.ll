@@ -1,5 +1,5 @@
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-SDAG %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-GISEL %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-SDAG %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s

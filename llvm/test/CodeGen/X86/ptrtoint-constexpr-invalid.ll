@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -mtriple=i386-linux 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=i386-linux 2>&1 | FileCheck %s
 
 ; ptrtoint expressions that cast to a wider integer type are not supported.
 ; A frontend can achieve a similar result by casting to the correct integer

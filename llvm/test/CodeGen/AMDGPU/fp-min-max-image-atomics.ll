@@ -3,13 +3,13 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs | FileCheck %s  -check-prefix=GFX7
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefix=GFX10
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s -check-prefix=GFX1030
-; RUN: not --crash llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX11-ERR
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX11-ERR
 
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=G_SI
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs | FileCheck %s  -check-prefix=G_GFX7
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefix=G_GFX10
 ; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s -check-prefix=G_GFX1030
-; RUN: not --crash llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=G_GFX11-ERR
+; RUN: not llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=G_GFX11-ERR
 
 ; GFX11-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.image.atomic.f
 ; G_GFX11-ERR: LLVM ERROR: cannot select: {{.*}} = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.f
