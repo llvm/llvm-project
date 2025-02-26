@@ -51,7 +51,13 @@ static std::string getFullPrefix(ArrayRef<UseRangesCheck::Indexes> Signature) {
 namespace {
 
 AST_MATCHER(Expr, hasSideEffects) {
-  return Node.HasSideEffects(Finder->getASTContext());
+  bool CheckArg = true;
+  if (const CXXMemberCallExpr *Call = dyn_cast<CXXMemberCallExpr>(&Node)) {
+    if (Call->isLValue() && Call->getMethodDecl()->isConst()) {
+      CheckArg = false;
+    }
+  }
+  return Node.HasSideEffects(Finder->getASTContext(), CheckArg);
 }
 } // namespace
 

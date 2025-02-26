@@ -7,7 +7,15 @@
 
 #include "fake_std.h"
 
-void Positives() {
+struct S {
+  std::vector<int> v;
+
+  const std::vector<int>& get() const { return v; }
+  std::vector<int>& getMutable() { return v; } 
+  std::vector<int> getVal() const { return v; } 
+};
+
+void Positives(S& s) {
   std::vector<int> I, J;
   std::find(I.begin(), I.end(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
@@ -72,9 +80,19 @@ void Positives() {
   my_std::find(I.begin(), I.end(), 6);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 6);
+
+  std::find(s.get().begin(), s.get().end(), 0); 
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(s.get(), 0);
+
+  // Return non-const function, should not generate message
+  std::find(s.getMutable().begin(), s.getMutable().end(), 0);
+
+  // Return value, should not generate message
+  std::find(s.getVal().begin(), s.getVal().end(), 0); 
 }
 
-void Reverse(){
+void Reverse(S& s){
   std::vector<int> I, J;
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
@@ -87,6 +105,16 @@ void Reverse(){
   std::equal(I.begin(), I.end(), std::crbegin(J), std::crend(J));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::equal(I, std::ranges::reverse_view(J));
+
+  std::find(s.get().rbegin(), s.get().rend(), 0); 
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(s.get()), 0);
+
+  // Return non-const function, should not generate message
+  std::find(s.getMutable().rbegin(), s.getMutable().rend(), 0);
+
+  // Return value, should not generate message
+  std::find(s.getVal().rbegin(), s.getVal().rend(), 0); 
 }
 
 void Negatives() {
