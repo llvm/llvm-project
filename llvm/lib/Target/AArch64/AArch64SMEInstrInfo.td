@@ -164,14 +164,14 @@ let Predicates = [HasSME_MOP4] in {
 }
 
 let Predicates = [HasSME_MOP4, HasSMEI16I64] in {
-  defm SMOP4A : sme_quarter_outer_product_i64<0b0, 0b0, 0b0, "smop4a", "int_aarch64_sme_smop4a_wide">;
-  defm SMOP4S : sme_quarter_outer_product_i64<0b0, 0b0, 0b1, "smop4s", "int_aarch64_sme_smop4s_wide">;
-  defm SUMOP4A : sme_quarter_outer_product_i64<0b0, 0b1, 0b0, "sumop4a", "int_aarch64_sme_sumop4a_wide">;
-  defm SUMOP4S : sme_quarter_outer_product_i64<0b0, 0b1, 0b1, "sumop4s", "int_aarch64_sme_sumop4s_wide">;
-  defm UMOP4A : sme_quarter_outer_product_i64<0b1, 0b1, 0b0, "umop4a", "int_aarch64_sme_umop4a_wide">;
-  defm UMOP4S : sme_quarter_outer_product_i64<0b1, 0b1, 0b1, "umop4s", "int_aarch64_sme_umop4s_wide">;
-  defm USMOP4A : sme_quarter_outer_product_i64<0b1, 0b0, 0b0, "usmop4a", "int_aarch64_sme_usmop4a_wide">;
-  defm USMOP4S : sme_quarter_outer_product_i64<0b1, 0b0, 0b1, "usmop4s", "int_aarch64_sme_usmop4s_wide">;
+  defm SMOP4A : sme_quarter_outer_product_i64<0b0, 0b0, 0b0, "smop4a", "int_aarch64_sme_smop4a_za64_wide">;
+  defm SMOP4S : sme_quarter_outer_product_i64<0b0, 0b0, 0b1, "smop4s", "int_aarch64_sme_smop4s_za64_wide">;
+  defm SUMOP4A : sme_quarter_outer_product_i64<0b0, 0b1, 0b0, "sumop4a", "int_aarch64_sme_sumop4a_za64_wide">;
+  defm SUMOP4S : sme_quarter_outer_product_i64<0b0, 0b1, 0b1, "sumop4s", "int_aarch64_sme_sumop4s_za64_wide">;
+  defm UMOP4A : sme_quarter_outer_product_i64<0b1, 0b1, 0b0, "umop4a", "int_aarch64_sme_umop4a_za64_wide">;
+  defm UMOP4S : sme_quarter_outer_product_i64<0b1, 0b1, 0b1, "umop4s", "int_aarch64_sme_umop4s_za64_wide">;
+  defm USMOP4A : sme_quarter_outer_product_i64<0b1, 0b0, 0b0, "usmop4a", "int_aarch64_sme_usmop4a_za64_wide">;
+  defm USMOP4S : sme_quarter_outer_product_i64<0b1, 0b0, 0b1, "usmop4s", "int_aarch64_sme_usmop4s_za64_wide">;
 }
 
 let Predicates = [HasSME_TMOP] in {

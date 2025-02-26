@@ -3090,6 +3090,14 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_usmop4s_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
   def int_aarch64_sme_usmop4a_1x1 : SME_OuterProduct_QuaterTile_Single;
   def int_aarch64_sme_usmop4s_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_smop4a_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_smop4s_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_umop4a_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_umop4s_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_sumop4a_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_sumop4s_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_usmop4a_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
+  def int_aarch64_sme_usmop4s_za64_wide_1x1 : SME_OuterProduct_QuaterTile_Single;
 
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
