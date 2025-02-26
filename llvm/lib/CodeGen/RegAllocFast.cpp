@@ -206,6 +206,7 @@ private:
     bool Error = false;              ///< Could not allocate.
 
     explicit LiveReg(Register VirtReg) : VirtReg(VirtReg) {}
+    explicit LiveReg() {}
 
     unsigned getSparseSetIndex() const { return VirtReg.virtRegIndex(); }
   };
@@ -216,7 +217,7 @@ private:
   LiveRegMap LiveVirtRegs;
 
   /// Stores assigned virtual registers present in the bundle MI.
-  DenseMap<Register, MCPhysReg> BundleVirtRegsMap;
+  DenseMap<Register, LiveReg> BundleVirtRegsMap;
 
   DenseMap<unsigned, SmallVector<MachineOperand *, 2>> LiveDbgValueMap;
   /// List of DBG_VALUE that we encountered without the vreg being assigned
@@ -374,7 +375,8 @@ private:
                             SmallSet<Register, 2> &PrologLiveIns) const;
 
   void reloadAtBegin(MachineBasicBlock &MBB);
-  bool setPhysReg(MachineInstr &MI, MachineOperand &MO, MCPhysReg PhysReg);
+  bool setPhysReg(MachineInstr &MI, MachineOperand &MO,
+                  const LiveReg &Assignment);
 
   Register traceCopies(Register VirtReg) const;
   Register traceCopyChain(Register Reg) const;
@@ -708,7 +710,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
 /// not used by a virtreg. Kill the physreg, marking it free. This may add
 /// implicit kills to MO->getParent() and invalidate MO.
 bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCPhysReg Reg) {
-  assert(Register(Reg).isPhysical() && "expected physreg");
+  assert(Register::isPhysicalRegister(Reg) && "expected physreg");
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
   markRegUsedInInstr(Reg);
@@ -1005,7 +1007,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
     MO.setSubReg(0);
   }
   MO.setReg(PhysReg);
-  MO.setIsRenamable(true);
+  MO.setIsRenamable(!LRI->Error);
 }
 
 /// Variation of defineVirtReg() with special handling for livethrough regs
@@ -1109,10 +1111,10 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
     LRI->Reloaded = false;
   }
   if (MI.getOpcode() == TargetOpcode::BUNDLE) {
-    BundleVirtRegsMap[VirtReg] = PhysReg;
+    BundleVirtRegsMap[VirtReg] = *LRI;
   }
   markRegUsedInInstr(PhysReg);
-  return setPhysReg(MI, MO, PhysReg);
+  return setPhysReg(MI, MO, *LRI);
 }
 
 /// Allocates a register for a VirtReg use.
@@ -1158,10 +1160,10 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
   LRI->LastUse = &MI;
 
   if (MI.getOpcode() == TargetOpcode::BUNDLE) {
-    BundleVirtRegsMap[VirtReg] = LRI->PhysReg;
+    BundleVirtRegsMap[VirtReg] = *LRI;
   }
   markRegUsedInInstr(LRI->PhysReg);
-  return setPhysReg(MI, MO, LRI->PhysReg);
+  return setPhysReg(MI, MO, *LRI);
 }
 
 /// Query a physical register to use as a filler in contexts where the
@@ -1215,16 +1217,27 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
 /// Changes operand OpNum in MI the refer the PhysReg, considering subregs.
 /// \return true if MI's MachineOperands were re-arranged/invalidated.
 bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
-                                  MCPhysReg PhysReg) {
+                                  const LiveReg &Assignment) {
+  MCPhysReg PhysReg = Assignment.PhysReg;
+  assert(PhysReg && "assignments should always be to a valid physreg");
+
+  if (LLVM_UNLIKELY(Assignment.Error)) {
+    // Make sure we don't set renamable in error scenarios, as we may have
+    // assigned to a reserved register.
+    if (MO.isUse())
+      MO.setIsUndef(true);
+  }
+
   if (!MO.getSubReg()) {
     MO.setReg(PhysReg);
-    MO.setIsRenamable(true);
+    MO.setIsRenamable(!Assignment.Error);
     return false;
   }
 
   // Handle subregister index.
-  MO.setReg(PhysReg ? TRI->getSubReg(PhysReg, MO.getSubReg()) : MCRegister());
-  MO.setIsRenamable(true);
+  MO.setReg(TRI->getSubReg(PhysReg, MO.getSubReg()));
+  MO.setIsRenamable(!Assignment.Error);
+
   // Note: We leave the subreg number around a little longer in case of defs.
   // This is so that the register freeing logic in allocateInstruction can still
   // recognize this as subregister defs. The code there will clear the number.
@@ -1289,7 +1302,7 @@ void RegAllocFastImpl::dumpState() const {
     assert(VirtReg.isVirtual() && "Bad map key");
     MCPhysReg PhysReg = LR.PhysReg;
     if (PhysReg != 0) {
-      assert(Register(PhysReg).isPhysical() && "mapped to physreg");
+      assert(Register::isPhysicalRegister(PhysReg) && "mapped to physreg");
       for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
         assert(RegUnitStates[Unit] == VirtReg && "inverse map valid");
       }
@@ -1706,7 +1719,7 @@ void RegAllocFastImpl::handleDebugValue(MachineInstr &MI) {
     if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
       // Update every use of Reg within MI.
       for (auto &RegMO : DbgOps)
-        setPhysReg(MI, *RegMO, LRI->PhysReg);
+        setPhysReg(MI, *RegMO, *LRI);
     } else {
       DanglingDbgValues[Reg].push_back(&MI);
     }
@@ -1729,8 +1742,7 @@ void RegAllocFastImpl::handleBundle(MachineInstr &MI) {
       if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
         continue;
 
-      DenseMap<Register, MCPhysReg>::iterator DI;
-      DI = BundleVirtRegsMap.find(Reg);
+      DenseMap<Register, LiveReg>::iterator DI = BundleVirtRegsMap.find(Reg);
       assert(DI != BundleVirtRegsMap.end() && "Unassigned virtual register");
 
       setPhysReg(MI, MO, DI->second);

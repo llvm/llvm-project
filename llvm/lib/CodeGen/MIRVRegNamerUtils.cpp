@@ -137,7 +137,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
 }
 
 unsigned VRegRenamer::createVirtualRegister(unsigned VReg) {
-  assert(Register(VReg).isVirtual() && "Expected Virtual Registers");
+  assert(Register::isVirtualRegister(VReg) && "Expected Virtual Registers");
   std::string Name = getInstructionOpcodeHash(*MRI.getVRegDef(VReg));
   return createVirtualRegisterWithLowerName(VReg, Name);
 }

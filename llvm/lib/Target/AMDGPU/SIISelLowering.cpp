@@ -887,8 +887,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (Subtarget->hasMinimum3Maximum3F32())
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
 
-    if (Subtarget->hasMinimum3Maximum3PKF16())
+    if (Subtarget->hasMinimum3Maximum3PKF16()) {
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
+
+      // If only the vector form is available, we need to widen to a vector.
+      if (!Subtarget->hasMinimum3Maximum3F16())
+        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
+    }
   }
 
   if (Subtarget->hasIntMinMax64())
@@ -9176,27 +9181,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                                     SI::KernelInputOffsets::NGROUPS_Z, Align(4),
                                     false);
-  case Intrinsic::r600_read_global_size_x:
-    if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, DL, VT);
-
-    return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                                    SI::KernelInputOffsets::GLOBAL_SIZE_X,
-                                    Align(4), false);
-  case Intrinsic::r600_read_global_size_y:
-    if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, DL, VT);
-
-    return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                                    SI::KernelInputOffsets::GLOBAL_SIZE_Y,
-                                    Align(4), false);
-  case Intrinsic::r600_read_global_size_z:
-    if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, DL, VT);
-
-    return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                                    SI::KernelInputOffsets::GLOBAL_SIZE_Z,
-                                    Align(4), false);
   case Intrinsic::r600_read_local_size_x:
     if (Subtarget->isAmdHsaOS())
       return emitNonHSAIntrinsicError(DAG, DL, VT);

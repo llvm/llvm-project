@@ -908,7 +908,8 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       // If the source register was virtual and if we know something about it,
       // add an assert node.
-      if (!Regs[Part + i].isVirtual() || !RegisterVT.isInteger())
+      if (!Register::isVirtualRegister(Regs[Part + i]) ||
+          !RegisterVT.isInteger())
         continue;
 
       const FunctionLoweringInfo::LiveOutInfo *LOI =
@@ -1022,7 +1023,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
   InlineAsm::Flag Flag(Code, Regs.size());
   if (HasMatching)
     Flag.setMatchingOp(MatchingIdx);
-  else if (!Regs.empty() && Regs.front().isVirtual()) {
+  else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
     // assembly as well as normal instructions.
@@ -3359,16 +3360,28 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
-    case Intrinsic::wasm_rethrow: {
-      // This is usually done in visitTargetIntrinsic, but this intrinsic is
-      // special because it can be invoked, so we manually lower it to a DAG
-      // node here.
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
+    // wasm_throw, wasm_rethrow: This is usually done in visitTargetIntrinsic,
+    // but these intrinsics are special because they can be invoked, so we
+    // manually lower it to a DAG node here.
+    case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      std::array<SDValue, 4> Ops = {
+          getControlRoot(), // inchain for the terminator node
+          DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout())),
+          getValue(I.getArgOperand(0)), // tag
+          getValue(I.getArgOperand(1))  // thrown value
+      };
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    case Intrinsic::wasm_rethrow: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
+                                TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
@@ -10130,8 +10143,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     auto DetectWriteToReservedRegister = [&]() {
       const MachineFunction &MF = DAG.getMachineFunction();
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      for (Register Reg : OpInfo.AssignedRegs.Regs) {
-        if (Reg.isPhysical() && TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
+      for (unsigned Reg : OpInfo.AssignedRegs.Regs) {
+        if (Register::isPhysicalRegister(Reg) &&
+            TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
           const char *RegName = TRI.getName(Reg);
           emitInlineAsmError(Call, "write to reserved register '" +
                                        Twine(RegName) + "'");
@@ -11393,7 +11407,7 @@ void SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V,
   assert((Op.getOpcode() != ISD::CopyFromReg ||
           cast<RegisterSDNode>(Op.getOperand(1))->getReg() != Reg) &&
          "Copy from a reg to the same reg!");
-  assert(!Register(Reg).isPhysical() && "Is a physreg");
+  assert(!Register::isPhysicalRegister(Reg) && "Is a physreg");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the

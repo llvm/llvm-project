@@ -1867,11 +1867,12 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
     NumModifiedRegs++;
 
   for (auto &CS : CSI) {
-    if (CS.getReg() == FramePtrReg && SGPRForFPSaveRestoreCopy) {
+    if (CS.getReg() == FramePtrReg.asMCReg() && SGPRForFPSaveRestoreCopy) {
       CS.setDstReg(SGPRForFPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;
-    } else if (CS.getReg() == BasePtrReg && SGPRForBPSaveRestoreCopy) {
+    } else if (CS.getReg() == BasePtrReg.asMCReg() &&
+               SGPRForBPSaveRestoreCopy) {
       CS.setDstReg(SGPRForBPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;

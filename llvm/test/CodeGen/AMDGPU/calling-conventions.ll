@@ -1293,18 +1293,17 @@ entry:
 define amdgpu_kernel void @amd_kernel_v2i8(<2 x i8> %arg0) {
 ; SI-LABEL: amd_kernel_v2i8:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s1, s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_load_dword s2, s[4:5], 0x9
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_bfe_u32 s2, s1, 0x80008
-; SI-NEXT:    s_add_i32 s1, s1, s1
-; SI-NEXT:    s_and_b32 s1, s1, 0xff
+; SI-NEXT:    s_bfe_u32 s4, s2, 0x80008
 ; SI-NEXT:    s_add_i32 s2, s2, s2
-; SI-NEXT:    s_lshl_b32 s2, s2, 8
-; SI-NEXT:    s_or_b32 s4, s1, s2
+; SI-NEXT:    s_and_b32 s2, s2, 0xff
+; SI-NEXT:    s_add_i32 s4, s4, s4
+; SI-NEXT:    s_lshl_b32 s4, s4, 8
+; SI-NEXT:    s_or_b32 s4, s2, s4
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s1, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1365,28 +1364,27 @@ entry:
 define amdgpu_kernel void @amd_kernel_v4i8(<4 x i8> %arg0) {
 ; SI-LABEL: amd_kernel_v4i8:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s1, s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_load_dword s2, s[4:5], 0x9
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshr_b32 s2, s1, 16
-; SI-NEXT:    s_lshr_b32 s4, s1, 24
-; SI-NEXT:    s_bfe_u32 s5, s1, 0x80008
-; SI-NEXT:    s_add_i32 s1, s1, s1
-; SI-NEXT:    s_add_i32 s4, s4, s4
+; SI-NEXT:    s_lshr_b32 s4, s2, 16
+; SI-NEXT:    s_lshr_b32 s5, s2, 24
+; SI-NEXT:    s_bfe_u32 s6, s2, 0x80008
 ; SI-NEXT:    s_add_i32 s2, s2, s2
-; SI-NEXT:    s_and_b32 s1, s1, 0xff
 ; SI-NEXT:    s_add_i32 s5, s5, s5
-; SI-NEXT:    s_lshl_b32 s4, s4, 24
+; SI-NEXT:    s_add_i32 s4, s4, s4
 ; SI-NEXT:    s_and_b32 s2, s2, 0xff
-; SI-NEXT:    s_lshl_b32 s5, s5, 8
-; SI-NEXT:    s_lshl_b32 s2, s2, 16
-; SI-NEXT:    s_or_b32 s1, s1, s5
-; SI-NEXT:    s_or_b32 s2, s4, s2
-; SI-NEXT:    s_and_b32 s1, s1, 0xffff
-; SI-NEXT:    s_or_b32 s4, s1, s2
+; SI-NEXT:    s_add_i32 s6, s6, s6
+; SI-NEXT:    s_lshl_b32 s5, s5, 24
+; SI-NEXT:    s_and_b32 s4, s4, 0xff
+; SI-NEXT:    s_lshl_b32 s6, s6, 8
+; SI-NEXT:    s_lshl_b32 s4, s4, 16
+; SI-NEXT:    s_or_b32 s2, s2, s6
+; SI-NEXT:    s_or_b32 s4, s5, s4
+; SI-NEXT:    s_and_b32 s2, s2, 0xffff
+; SI-NEXT:    s_or_b32 s4, s2, s4
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s1, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1478,8 +1476,7 @@ define amdgpu_kernel void @amd_kernel_v3i8(<3 x i8> %arg0) {
 ; SI-LABEL: amd_kernel_v3i8:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dword s4, s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s1, 0
-; SI-NEXT:    s_mov_b32 s0, 2
+; SI-NEXT:    s_mov_b64 s[0:1], 2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1491,9 +1488,9 @@ define amdgpu_kernel void @amd_kernel_v3i8(<3 x i8> %arg0) {
 ; SI-NEXT:    s_add_i32 s5, s5, s5
 ; SI-NEXT:    s_lshl_b32 s6, s6, 8
 ; SI-NEXT:    v_mov_b32_e32 v0, s5
-; SI-NEXT:    s_or_b32 s4, s4, s6
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
-; SI-NEXT:    s_mov_b32 s0, s1
+; SI-NEXT:    s_or_b32 s4, s4, s6
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
@@ -1572,8 +1569,7 @@ define amdgpu_kernel void @amd_kernel_v5i8(<5 x i8> %arg0) {
 ; SI-LABEL: amd_kernel_v5i8:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s1, 0
-; SI-NEXT:    s_mov_b32 s0, 4
+; SI-NEXT:    s_mov_b64 s[0:1], 4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1587,16 +1583,16 @@ define amdgpu_kernel void @amd_kernel_v5i8(<5 x i8> %arg0) {
 ; SI-NEXT:    s_and_b32 s4, s4, 0xff
 ; SI-NEXT:    s_add_i32 s8, s8, s8
 ; SI-NEXT:    v_mov_b32_e32 v0, s5
-; SI-NEXT:    s_lshl_b32 s5, s7, 24
-; SI-NEXT:    s_and_b32 s6, s6, 0xff
-; SI-NEXT:    s_lshl_b32 s7, s8, 8
-; SI-NEXT:    s_lshl_b32 s6, s6, 16
-; SI-NEXT:    s_or_b32 s4, s4, s7
-; SI-NEXT:    s_or_b32 s5, s5, s6
-; SI-NEXT:    s_and_b32 s4, s4, 0xffff
-; SI-NEXT:    s_or_b32 s4, s4, s5
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
-; SI-NEXT:    s_mov_b32 s0, s1
+; SI-NEXT:    s_lshl_b32 s0, s7, 24
+; SI-NEXT:    s_and_b32 s1, s6, 0xff
+; SI-NEXT:    s_lshl_b32 s5, s8, 8
+; SI-NEXT:    s_lshl_b32 s1, s1, 16
+; SI-NEXT:    s_or_b32 s4, s4, s5
+; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_and_b32 s1, s4, 0xffff
+; SI-NEXT:    s_or_b32 s4, s1, s0
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -1703,45 +1699,44 @@ define amdgpu_kernel void @amd_kernel_v8i8(<8 x i8> %arg0) {
 ; SI-LABEL: amd_kernel_v8i8:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshr_b32 s1, s4, 16
-; SI-NEXT:    s_lshr_b32 s2, s4, 24
-; SI-NEXT:    s_lshr_b32 s6, s5, 16
-; SI-NEXT:    s_lshr_b32 s7, s5, 24
-; SI-NEXT:    s_bfe_u32 s8, s4, 0x80008
-; SI-NEXT:    s_bfe_u32 s9, s5, 0x80008
+; SI-NEXT:    s_lshr_b32 s2, s4, 16
+; SI-NEXT:    s_lshr_b32 s6, s4, 24
+; SI-NEXT:    s_lshr_b32 s7, s5, 16
+; SI-NEXT:    s_lshr_b32 s8, s5, 24
+; SI-NEXT:    s_bfe_u32 s9, s4, 0x80008
+; SI-NEXT:    s_bfe_u32 s10, s5, 0x80008
 ; SI-NEXT:    s_add_i32 s5, s5, s5
 ; SI-NEXT:    s_add_i32 s4, s4, s4
-; SI-NEXT:    s_add_i32 s7, s7, s7
-; SI-NEXT:    s_add_i32 s6, s6, s6
-; SI-NEXT:    s_and_b32 s5, s5, 0xff
-; SI-NEXT:    s_add_i32 s9, s9, s9
-; SI-NEXT:    s_add_i32 s2, s2, s2
-; SI-NEXT:    s_add_i32 s1, s1, s1
-; SI-NEXT:    s_and_b32 s4, s4, 0xff
 ; SI-NEXT:    s_add_i32 s8, s8, s8
-; SI-NEXT:    s_lshl_b32 s7, s7, 24
-; SI-NEXT:    s_and_b32 s6, s6, 0xff
+; SI-NEXT:    s_add_i32 s7, s7, s7
+; SI-NEXT:    s_and_b32 s5, s5, 0xff
+; SI-NEXT:    s_add_i32 s10, s10, s10
+; SI-NEXT:    s_add_i32 s6, s6, s6
+; SI-NEXT:    s_add_i32 s2, s2, s2
+; SI-NEXT:    s_and_b32 s4, s4, 0xff
+; SI-NEXT:    s_add_i32 s9, s9, s9
+; SI-NEXT:    s_lshl_b32 s8, s8, 24
+; SI-NEXT:    s_and_b32 s7, s7, 0xff
+; SI-NEXT:    s_lshl_b32 s10, s10, 8
+; SI-NEXT:    s_lshl_b32 s6, s6, 24
+; SI-NEXT:    s_and_b32 s2, s2, 0xff
 ; SI-NEXT:    s_lshl_b32 s9, s9, 8
-; SI-NEXT:    s_lshl_b32 s2, s2, 24
-; SI-NEXT:    s_and_b32 s1, s1, 0xff
-; SI-NEXT:    s_lshl_b32 s8, s8, 8
-; SI-NEXT:    s_lshl_b32 s6, s6, 16
-; SI-NEXT:    s_or_b32 s5, s5, s9
-; SI-NEXT:    s_lshl_b32 s1, s1, 16
-; SI-NEXT:    s_or_b32 s4, s4, s8
-; SI-NEXT:    s_or_b32 s6, s7, s6
+; SI-NEXT:    s_lshl_b32 s7, s7, 16
+; SI-NEXT:    s_or_b32 s5, s5, s10
+; SI-NEXT:    s_lshl_b32 s2, s2, 16
+; SI-NEXT:    s_or_b32 s4, s4, s9
+; SI-NEXT:    s_or_b32 s7, s8, s7
 ; SI-NEXT:    s_and_b32 s5, s5, 0xffff
-; SI-NEXT:    s_or_b32 s1, s2, s1
-; SI-NEXT:    s_and_b32 s2, s4, 0xffff
-; SI-NEXT:    s_or_b32 s4, s5, s6
-; SI-NEXT:    s_or_b32 s5, s2, s1
+; SI-NEXT:    s_or_b32 s2, s6, s2
+; SI-NEXT:    s_and_b32 s4, s4, 0xffff
+; SI-NEXT:    s_or_b32 s5, s5, s7
+; SI-NEXT:    s_or_b32 s4, s4, s2
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s1, s0
-; SI-NEXT:    v_mov_b32_e32 v0, s5
-; SI-NEXT:    v_mov_b32_e32 v1, s4
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1881,75 +1876,74 @@ define amdgpu_kernel void @amd_kernel_v16i8(<16 x i8> %arg0) {
 ; SI-LABEL: amd_kernel_v16i8:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s4, 0
+; SI-NEXT:    s_mov_b64 s[4:5], 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshr_b32 s5, s0, 16
-; SI-NEXT:    s_lshr_b32 s6, s0, 24
-; SI-NEXT:    s_lshr_b32 s8, s1, 16
-; SI-NEXT:    s_lshr_b32 s9, s1, 24
-; SI-NEXT:    s_lshr_b32 s10, s2, 16
-; SI-NEXT:    s_lshr_b32 s11, s2, 24
-; SI-NEXT:    s_lshr_b32 s12, s3, 16
-; SI-NEXT:    s_lshr_b32 s13, s3, 24
-; SI-NEXT:    s_bfe_u32 s14, s0, 0x80008
-; SI-NEXT:    s_bfe_u32 s15, s1, 0x80008
-; SI-NEXT:    s_bfe_u32 s16, s2, 0x80008
-; SI-NEXT:    s_bfe_u32 s17, s3, 0x80008
+; SI-NEXT:    s_lshr_b32 s6, s0, 16
+; SI-NEXT:    s_lshr_b32 s8, s0, 24
+; SI-NEXT:    s_lshr_b32 s9, s1, 16
+; SI-NEXT:    s_lshr_b32 s10, s1, 24
+; SI-NEXT:    s_lshr_b32 s11, s2, 16
+; SI-NEXT:    s_lshr_b32 s12, s2, 24
+; SI-NEXT:    s_lshr_b32 s13, s3, 16
+; SI-NEXT:    s_lshr_b32 s14, s3, 24
+; SI-NEXT:    s_bfe_u32 s15, s0, 0x80008
+; SI-NEXT:    s_bfe_u32 s16, s1, 0x80008
+; SI-NEXT:    s_bfe_u32 s17, s2, 0x80008
+; SI-NEXT:    s_bfe_u32 s18, s3, 0x80008
 ; SI-NEXT:    s_add_i32 s3, s3, s3
 ; SI-NEXT:    s_add_i32 s2, s2, s2
 ; SI-NEXT:    s_add_i32 s1, s1, s1
 ; SI-NEXT:    s_add_i32 s0, s0, s0
-; SI-NEXT:    s_add_i32 s13, s13, s13
-; SI-NEXT:    s_add_i32 s12, s12, s12
-; SI-NEXT:    s_and_b32 s3, s3, 0xff
-; SI-NEXT:    s_add_i32 s17, s17, s17
-; SI-NEXT:    s_add_i32 s11, s11, s11
-; SI-NEXT:    s_add_i32 s10, s10, s10
-; SI-NEXT:    s_and_b32 s2, s2, 0xff
-; SI-NEXT:    s_add_i32 s16, s16, s16
-; SI-NEXT:    s_add_i32 s9, s9, s9
-; SI-NEXT:    s_add_i32 s8, s8, s8
-; SI-NEXT:    s_and_b32 s1, s1, 0xff
-; SI-NEXT:    s_add_i32 s15, s15, s15
-; SI-NEXT:    s_add_i32 s6, s6, s6
-; SI-NEXT:    s_add_i32 s5, s5, s5
-; SI-NEXT:    s_and_b32 s0, s0, 0xff
 ; SI-NEXT:    s_add_i32 s14, s14, s14
-; SI-NEXT:    s_lshl_b32 s13, s13, 24
-; SI-NEXT:    s_and_b32 s12, s12, 0xff
+; SI-NEXT:    s_add_i32 s13, s13, s13
+; SI-NEXT:    s_and_b32 s3, s3, 0xff
+; SI-NEXT:    s_add_i32 s18, s18, s18
+; SI-NEXT:    s_add_i32 s12, s12, s12
+; SI-NEXT:    s_add_i32 s11, s11, s11
+; SI-NEXT:    s_and_b32 s2, s2, 0xff
+; SI-NEXT:    s_add_i32 s17, s17, s17
+; SI-NEXT:    s_add_i32 s10, s10, s10
+; SI-NEXT:    s_add_i32 s9, s9, s9
+; SI-NEXT:    s_and_b32 s1, s1, 0xff
+; SI-NEXT:    s_add_i32 s16, s16, s16
+; SI-NEXT:    s_add_i32 s8, s8, s8
+; SI-NEXT:    s_add_i32 s6, s6, s6
+; SI-NEXT:    s_and_b32 s0, s0, 0xff
+; SI-NEXT:    s_add_i32 s15, s15, s15
+; SI-NEXT:    s_lshl_b32 s14, s14, 24
+; SI-NEXT:    s_and_b32 s13, s13, 0xff
+; SI-NEXT:    s_lshl_b32 s18, s18, 8
+; SI-NEXT:    s_lshl_b32 s12, s12, 24
+; SI-NEXT:    s_and_b32 s11, s11, 0xff
 ; SI-NEXT:    s_lshl_b32 s17, s17, 8
-; SI-NEXT:    s_lshl_b32 s11, s11, 24
-; SI-NEXT:    s_and_b32 s10, s10, 0xff
+; SI-NEXT:    s_lshl_b32 s10, s10, 24
+; SI-NEXT:    s_and_b32 s9, s9, 0xff
 ; SI-NEXT:    s_lshl_b32 s16, s16, 8
-; SI-NEXT:    s_lshl_b32 s9, s9, 24
-; SI-NEXT:    s_and_b32 s8, s8, 0xff
+; SI-NEXT:    s_lshl_b32 s8, s8, 24
+; SI-NEXT:    s_and_b32 s6, s6, 0xff
 ; SI-NEXT:    s_lshl_b32 s15, s15, 8
-; SI-NEXT:    s_lshl_b32 s6, s6, 24
-; SI-NEXT:    s_and_b32 s5, s5, 0xff
-; SI-NEXT:    s_lshl_b32 s14, s14, 8
-; SI-NEXT:    s_lshl_b32 s12, s12, 16
-; SI-NEXT:    s_or_b32 s3, s3, s17
-; SI-NEXT:    s_lshl_b32 s10, s10, 16
-; SI-NEXT:    s_or_b32 s2, s2, s16
-; SI-NEXT:    s_lshl_b32 s8, s8, 16
-; SI-NEXT:    s_or_b32 s1, s1, s15
-; SI-NEXT:    s_lshl_b32 s5, s5, 16
-; SI-NEXT:    s_or_b32 s0, s0, s14
-; SI-NEXT:    s_or_b32 s12, s13, s12
+; SI-NEXT:    s_lshl_b32 s13, s13, 16
+; SI-NEXT:    s_or_b32 s3, s3, s18
+; SI-NEXT:    s_lshl_b32 s11, s11, 16
+; SI-NEXT:    s_or_b32 s2, s2, s17
+; SI-NEXT:    s_lshl_b32 s9, s9, 16
+; SI-NEXT:    s_or_b32 s1, s1, s16
+; SI-NEXT:    s_lshl_b32 s6, s6, 16
+; SI-NEXT:    s_or_b32 s0, s0, s15
+; SI-NEXT:    s_or_b32 s13, s14, s13
 ; SI-NEXT:    s_and_b32 s3, s3, 0xffff
-; SI-NEXT:    s_or_b32 s10, s11, s10
+; SI-NEXT:    s_or_b32 s11, s12, s11
 ; SI-NEXT:    s_and_b32 s2, s2, 0xffff
-; SI-NEXT:    s_or_b32 s8, s9, s8
+; SI-NEXT:    s_or_b32 s9, s10, s9
 ; SI-NEXT:    s_and_b32 s1, s1, 0xffff
-; SI-NEXT:    s_or_b32 s5, s6, s5
+; SI-NEXT:    s_or_b32 s6, s8, s6
 ; SI-NEXT:    s_and_b32 s0, s0, 0xffff
-; SI-NEXT:    s_or_b32 s3, s3, s12
-; SI-NEXT:    s_or_b32 s2, s2, s10
-; SI-NEXT:    s_or_b32 s1, s1, s8
-; SI-NEXT:    s_or_b32 s0, s0, s5
+; SI-NEXT:    s_or_b32 s3, s3, s13
+; SI-NEXT:    s_or_b32 s2, s2, s11
+; SI-NEXT:    s_or_b32 s1, s1, s9
+; SI-NEXT:    s_or_b32 s0, s0, s6
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s5, s4
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    v_mov_b32_e32 v2, s2
@@ -2192,8 +2186,7 @@ define amdgpu_kernel void @amd_kernel_v32i8(<32 x i8> %arg0) {
 ; SI-LABEL: amd_kernel_v32i8:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s9, 0
-; SI-NEXT:    s_mov_b32 s8, 16
+; SI-NEXT:    s_mov_b64 s[8:9], 16
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2335,7 +2328,7 @@ define amdgpu_kernel void @amd_kernel_v32i8(<32 x i8> %arg0) {
 ; SI-NEXT:    v_mov_b32_e32 v1, s1
 ; SI-NEXT:    v_mov_b32_e32 v2, s2
 ; SI-NEXT:    v_mov_b32_e32 v3, s3
-; SI-NEXT:    s_mov_b32 s8, s9
+; SI-NEXT:    s_mov_b64 s[8:9], 0
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
 ; SI-NEXT:    s_endpgm
 ;

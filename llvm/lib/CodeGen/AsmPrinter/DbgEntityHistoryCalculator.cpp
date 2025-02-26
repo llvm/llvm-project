@@ -525,7 +525,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
           // Don't consider SP to be clobbered by register masks.
           for (auto It : RegVars) {
             unsigned int Reg = It.first;
-            if (Reg != SP && Register(Reg).isPhysical() &&
+            if (Reg != SP && Register::isPhysicalRegister(Reg) &&
                 MO.clobbersPhysReg(Reg))
               RegsToClobber.push_back(Reg);
           }

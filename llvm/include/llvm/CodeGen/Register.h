@@ -35,47 +35,59 @@ public:
   // DenseMapInfo<unsigned> uses -1u and -2u.
   static_assert(std::numeric_limits<decltype(Reg)>::max() >= 0xFFFFFFFF,
                 "Reg isn't large enough to hold full range.");
+  static constexpr unsigned FirstStackSlot = 1u << 30;
+  static_assert(FirstStackSlot >= MCRegister::LastPhysicalReg);
+  static constexpr unsigned VirtualRegFlag = 1u << 31;
 
   /// Return true if this is a stack slot.
   constexpr bool isStack() const {
-    return MCRegister::FirstStackSlot <= Reg &&
-           Reg < MCRegister::VirtualRegFlag;
+    return Register::FirstStackSlot <= Reg && Reg < Register::VirtualRegFlag;
   }
 
   /// Convert a non-negative frame index to a stack slot register value.
   static Register index2StackSlot(int FI) {
     assert(FI >= 0 && "Cannot hold a negative frame index.");
-    return Register(FI + MCRegister::FirstStackSlot);
+    return Register(FI + Register::FirstStackSlot);
+  }
+
+  /// Return true if the specified register number is in
+  /// the physical register namespace.
+  static constexpr bool isPhysicalRegister(unsigned Reg) {
+    return MCRegister::isPhysicalRegister(Reg);
+  }
+
+  /// Return true if the specified register number is in
+  /// the virtual register namespace.
+  static constexpr bool isVirtualRegister(unsigned Reg) {
+    return Reg & Register::VirtualRegFlag;
   }
 
   /// Convert a 0-based index to a virtual register number.
   /// This is the inverse operation of VirtReg2IndexFunctor below.
   static Register index2VirtReg(unsigned Index) {
     assert(Index < (1u << 31) && "Index too large for virtual register range.");
-    return Index | MCRegister::VirtualRegFlag;
+    return Index | Register::VirtualRegFlag;
   }
 
   /// Return true if the specified register number is in the virtual register
   /// namespace.
-  constexpr bool isVirtual() const { return Reg & MCRegister::VirtualRegFlag; }
+  constexpr bool isVirtual() const { return isVirtualRegister(Reg); }
 
   /// Return true if the specified register number is in the physical register
   /// namespace.
-  constexpr bool isPhysical() const {
-    return MCRegister::isPhysicalRegister(Reg);
-  }
+  constexpr bool isPhysical() const { return isPhysicalRegister(Reg); }
 
   /// Convert a virtual register number to a 0-based index. The first virtual
   /// register in a function will get the index 0.
   unsigned virtRegIndex() const {
     assert(isVirtual() && "Not a virtual register");
-    return Reg & ~MCRegister::VirtualRegFlag;
+    return Reg & ~Register::VirtualRegFlag;
   }
 
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
     assert(isStack() && "Not a stack slot");
-    return static_cast<int>(Reg - MCRegister::FirstStackSlot);
+    return static_cast<int>(Reg - Register::FirstStackSlot);
   }
 
   constexpr operator unsigned() const { return Reg; }
@@ -146,14 +158,14 @@ class VirtRegOrUnit {
 
 public:
   constexpr explicit VirtRegOrUnit(MCRegUnit Unit) : VRegOrUnit(Unit) {
-    assert(!Register(VRegOrUnit).isVirtual());
+    assert(!Register::isVirtualRegister(VRegOrUnit));
   }
   constexpr explicit VirtRegOrUnit(Register Reg) : VRegOrUnit(Reg.id()) {
     assert(Reg.isVirtual());
   }
 
   constexpr bool isVirtualReg() const {
-    return Register(VRegOrUnit).isVirtual();
+    return Register::isVirtualRegister(VRegOrUnit);
   }
 
   constexpr MCRegUnit asMCRegUnit() const {

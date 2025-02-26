@@ -83,7 +83,8 @@ M68kRegisterInfo::getMatchingMegaReg(unsigned Reg,
 
 const TargetRegisterClass *
 M68kRegisterInfo::getMaximalPhysRegClass(unsigned reg, MVT VT) const {
-  assert(Register(reg).isPhysical() && "reg must be a physical register");
+  assert(Register::isPhysicalRegister(reg) &&
+         "reg must be a physical register");
 
   // Pick the most sub register class of the right type that contains
   // this physreg.

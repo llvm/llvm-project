@@ -116,11 +116,11 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
-  Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+  unsigned Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
   if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, TII, PhysReg, Cost))
     return;
 
-  if (Reg.isVirtual())
+  if (Register::isVirtualRegister(Reg))
     return;
 
   unsigned ResNo = User->getOperand(2).getResNo();
@@ -664,8 +664,8 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
       TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
   if (Latency > 1U && Use->getOpcode() == ISD::CopyToReg &&
       !BB->succ_empty()) {
-    Register Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
-    if (Reg.isVirtual())
+    unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
+    if (Register::isVirtualRegister(Reg))
       // This copy is a liveout value. It is likely coalesced, so reduce the
       // latency so not to penalize the def.
       // FIXME: need target specific adjustment here?
