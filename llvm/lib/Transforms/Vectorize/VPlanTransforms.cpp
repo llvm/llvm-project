@@ -978,6 +978,21 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       TypeInfo.inferScalarType(R.getOperand(1)) ==
           TypeInfo.inferScalarType(R.getVPSingleValue()))
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+
+  if (match(&R, m_Not(m_VPValue(A))) && isa<VPWidenRecipe>(A) &&
+      A->getNumUsers() == 1) {
+    auto *WideCmp = cast<VPWidenRecipe>(A);
+    if (WideCmp->getOpcode() == Instruction::ICmp ||
+        WideCmp->getOpcode() == Instruction::FCmp) {
+      WideCmp->setPredicate(
+          CmpInst::getInversePredicate(WideCmp->getPredicate()));
+      R.getVPSingleValue()->replaceAllUsesWith(WideCmp);
+      // If WideCmp doesn't have a debug location, use the one from the
+      // negation, to preserve the location.
+      if (!WideCmp->getDebugLoc())
+        WideCmp->setDebugLoc(R.getDebugLoc());
+    }
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
