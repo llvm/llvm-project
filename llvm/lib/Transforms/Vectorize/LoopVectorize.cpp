@@ -2516,7 +2516,8 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
     auto *ResumePhi = dyn_cast<VPInstruction>(&R);
     if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
       continue;
-    ResumePhi->addOperand(ResumePhi->getOperand(1));
+    ResumePhi->addOperand(
+        ResumePhi->getOperand(ScalarPH->getNumPredecessors() == 1 ? 0 : 1));
   }
 }
 
@@ -2686,7 +2687,6 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, Twine(Prefix) + "scalar.ph");
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -2819,6 +2819,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton(
   // faster.
   emitMemRuntimeChecks(LoopScalarPreHeader);
 
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -7573,10 +7574,11 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // Set PlanForEarlyExitLoop to true if the BestPlan has been built from a
   // loop with an uncountable early exit. The legacy cost model doesn't
   // properly model costs for such loops.
+  auto ExitBlocks = BestPlan.getExitBlocks();
   bool PlanForEarlyExitLoop =
-      BestPlan.getVectorLoopRegion() &&
-      BestPlan.getVectorLoopRegion()->getSingleSuccessor() !=
-          BestPlan.getMiddleBlock();
+      std::distance(ExitBlocks.begin(), ExitBlocks.end()) > 2 ||
+      (std::distance(ExitBlocks.begin(), ExitBlocks.end()) == 1 &&
+       (*ExitBlocks.begin())->getNumPredecessors() > 1);
   assert((BestFactor.Width == LegacyVF.Width || PlanForEarlyExitLoop ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||
@@ -7889,6 +7891,7 @@ BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
   // Generate the induction variable.
   EPI.VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
 
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -8043,6 +8046,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
   // resume value for the induction variable comes from the trip count of the
   // main vector loop, passed as the second argument.
   createInductionAdditionalBypassValues(ExpandedSCEVs, EPI.VectorTripCount);
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
