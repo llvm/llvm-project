@@ -579,13 +579,7 @@ struct RootParameter {
   };
   dxbc::ShaderVisibility ShaderVisibility;
 
-  RootParameter() {
-    ParameterType = dxbc::RootParameterType::Empty;
-    ShaderVisibility = dxbc::ShaderVisibility::Empty;
-  }
-
   void swapBytes() {
-    sys::swapByteOrder(ParameterType);
     sys::swapByteOrder(ShaderVisibility);
     switch (ParameterType) {
     case RootParameterType::Constants32Bit:
@@ -595,6 +589,7 @@ struct RootParameter {
       llvm_unreachable("invalid value for ParameterType");
       break;
     }
+    sys::swapByteOrder(ParameterType);
   }
 };
 
