@@ -106,6 +106,20 @@ using namespace llvm::omp::xteam_red;
   } while (0)
 #endif
 
+double setTicksToTime() {
+  uint64_t TicksFrequency = 1;
+  double TicksToTime = 1.0;
+
+  hsa_status_t Status =
+      hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &TicksFrequency);
+  if (Status == HSA_STATUS_SUCCESS)
+    TicksToTime = (double)1e9 / (double)TicksFrequency;
+  else
+    DP("Error calling hsa_system_get_info for timestamp frequency\n");
+
+  return TicksToTime;
+}
+
 #ifdef OMPT_SUPPORT
 #include "OmptDeviceTracing.h"
 #include <omp-tools.h>
@@ -193,15 +207,7 @@ void setOmptAsyncCopyProfile(bool Enable) {
 }
 
 /// Compute system timestamp conversion factor, modeled after ROCclr.
-void setOmptTicksToTime() {
-  uint64_t TicksFrequency = 1;
-  hsa_status_t Status =
-      hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &TicksFrequency);
-  if (Status == HSA_STATUS_SUCCESS)
-    TicksToTime = (double)1e9 / (double)TicksFrequency;
-  else
-    DP("Error calling hsa_system_get_info for timestamp frequency\n");
-}
+void setOmptTicksToTime() { TicksToTime = setTicksToTime(); }
 
 /// Get the current HSA-based device timestamp.
 uint64_t getSystemTimestampInNs() {
@@ -1669,6 +1675,10 @@ private:
     uint32_t NumTeams;
     uint32_t NumThreads;
     KernelRunRecordTy *KernelRunRecords;
+
+    PostKernelRunProcessingArgsTy()
+        : Agent{0}, Signal(nullptr), TicksToTime(setTicksToTime()), NumTeams(0),
+          NumThreads(0), KernelRunRecords(nullptr) {}
   };
 
   using AMDGPUStreamCallbackTy = Error(void *Data);
@@ -2151,7 +2161,6 @@ public:
       if (!KernelRecords->reachedRunLimitForKernel(KernelName)) {
         PostKernelRunProcessingArgs.Agent = Agent;
         PostKernelRunProcessingArgs.Signal = OutputSignal;
-        PostKernelRunProcessingArgs.TicksToTime = 1.0;
         PostKernelRunProcessingArgs.KernelName = KernelName;
         PostKernelRunProcessingArgs.NumTeams = NumBlocks[0];
         PostKernelRunProcessingArgs.NumThreads = NumThreads[0];
