@@ -441,6 +441,9 @@ public:
   swift::Mangle::ManglingFlavor
   GetManglingFlavor(ExecutionContext *exe_ctx = nullptr);
 
+  /// Returns true if this type contains an error node anywhere.
+  bool ContainsError(lldb::opaque_compiler_type_t type);
+
 protected:
   /// Determine whether the fallback is enabled via setting.
   bool UseSwiftASTContextFallback(const char *func_name,
