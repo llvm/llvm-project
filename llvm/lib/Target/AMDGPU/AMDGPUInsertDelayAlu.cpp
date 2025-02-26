@@ -23,21 +23,12 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUInsertDelayAlu : public MachineFunctionPass {
+class AMDGPUInsertDelayAlu {
 public:
-  static char ID;
-
   const SIInstrInfo *SII;
   const TargetRegisterInfo *TRI;
 
   const TargetSchedModel *SchedModel;
-
-  AMDGPUInsertDelayAlu() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
 
   // Return true if MI waits for all outstanding VALU instructions to complete.
   static bool instructionWaitsForVALU(const MachineInstr &MI) {
@@ -420,10 +411,7 @@ public:
     return Changed;
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
+  bool run(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "AMDGPUInsertDelayAlu running on " << MF.getName()
                       << "\n");
 
@@ -458,11 +446,39 @@ public:
   }
 };
 
+class AMDGPUInsertDelayAluLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUInsertDelayAluLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    AMDGPUInsertDelayAlu Impl;
+    return Impl.run(MF);
+  }
+};
 } // namespace
 
-char AMDGPUInsertDelayAlu::ID = 0;
+PreservedAnalyses
+AMDGPUInsertDelayAluPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  if (!AMDGPUInsertDelayAlu().run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+} // end namespace llvm
 
-char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAlu::ID;
+char AMDGPUInsertDelayAluLegacy::ID = 0;
 
-INITIALIZE_PASS(AMDGPUInsertDelayAlu, DEBUG_TYPE, "AMDGPU Insert Delay ALU",
-                false, false)
+char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAluLegacy::ID;
+
+INITIALIZE_PASS(AMDGPUInsertDelayAluLegacy, DEBUG_TYPE,
+                "AMDGPU Insert Delay ALU", false, false)

@@ -904,8 +904,15 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
     // We need to broadcast the value who was the lowest active lane (the first
     // lane) to all other lanes in the wavefront.
-    Value *BroadcastI = nullptr;
-    BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
+
+    Value *ReadlaneVal = PHI;
+    if (TyBitWidth < 32)
+      ReadlaneVal = B.CreateZExt(PHI, B.getInt32Ty());
+
+    Value *BroadcastI = B.CreateIntrinsic(
+        ReadlaneVal->getType(), Intrinsic::amdgcn_readfirstlane, ReadlaneVal);
+    if (TyBitWidth < 32)
+      BroadcastI = B.CreateTrunc(BroadcastI, Ty);
 
     // Now that we have the result of our single atomic operation, we need to
     // get our individual lane's slice into the result. We use the lane offset

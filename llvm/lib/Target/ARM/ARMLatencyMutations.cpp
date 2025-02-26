@@ -756,7 +756,7 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
       !II->producesQP(SrcMI->getOpcode()))
     return 0;
 
-  if (Register(RegID).isVirtual()) {
+  if (Register::isVirtualRegister(RegID)) {
     if (II->producesSP(SrcMI->getOpcode()) &&
         II->consumesDP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
@@ -802,7 +802,7 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
             OP.getSubReg() == ARM::ssub_1)
           return 1;
     }
-  } else if (Register(RegID).isPhysical()) {
+  } else if (Register::isPhysicalRegister(RegID)) {
     // Note that when the producer is narrower, not all of the producers
     // may be present in the scheduling graph; somewhere earlier in the
     // compiler, an implicit def/use of the aliased full register gets

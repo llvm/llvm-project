@@ -3267,6 +3267,7 @@ const char *GenericSchedulerBase::getReasonStr(
   case BotHeightReduce:return "BOT-HEIGHT";
   case BotPathReduce:  return "BOT-PATH  ";
   case NodeOrder:      return "ORDER     ";
+  case FirstValid:     return "FIRST     ";
   };
   // clang-format on
   llvm_unreachable("Unknown reason!");
@@ -3688,7 +3689,7 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
                                     SchedBoundary *Zone) const {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
-    TryCand.Reason = NodeOrder;
+    TryCand.Reason = FirstValid;
     return true;
   }
 
@@ -3966,7 +3967,8 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
   // Find already scheduled copies with a single physreg dependence and move
   // them just above the scheduled instruction.
   for (SDep &Dep : Deps) {
-    if (Dep.getKind() != SDep::Data || !Register(Dep.getReg()).isPhysical())
+    if (Dep.getKind() != SDep::Data ||
+        !Register::isPhysicalRegister(Dep.getReg()))
       continue;
     SUnit *DepSU = Dep.getSUnit();
     if (isTop ? DepSU->Succs.size() > 1 : DepSU->Preds.size() > 1)
@@ -4102,7 +4104,7 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
                                         SchedCandidate &TryCand) {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
-    TryCand.Reason = NodeOrder;
+    TryCand.Reason = FirstValid;
     return true;
   }
 

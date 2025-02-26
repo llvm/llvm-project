@@ -1800,7 +1800,7 @@ bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
   MachineInstr &TexHandleDef = *MRI.getVRegDef(Op.getReg());
 
   switch (TexHandleDef.getOpcode()) {
-  case NVPTX::LD_i64_avar: {
+  case NVPTX::LD_i64_asi: {
     // The handle is a parameter value being loaded, replace with the
     // parameter symbol
     const auto &TM = static_cast<const NVPTXTargetMachine &>(MF.getTarget());

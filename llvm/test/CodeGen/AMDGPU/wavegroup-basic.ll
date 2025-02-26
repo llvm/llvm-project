@@ -19,31 +19,33 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wave
 ; CHECK-NEXT:    s_getreg_b32 s5, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x20019
 ; CHECK-NEXT:    v_lshl_or_b32 v1, s0, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, v1
+; CHECK-NEXT:    v_mul_f32_e32 v3, 0x3d042108, v2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_trunc_f32_e32 v3, v3
+; CHECK-NEXT:    v_fmamk_f32 v2, v3, 0xc1f80000, v2
+; CHECK-NEXT:    v_cvt_u32_f32_e32 v3, v3
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cmp_le_f32_e64 s0, 0x41f80000, |v2|
+; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    s_add_co_i32 s7, s0, 1
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
-; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, v1
+; CHECK-NEXT:    v_add_nc_u32_e32 v2, v3, v2
 ; CHECK-NEXT:    s_mul_i32 s2, ttmp9, s7
 ; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
 ; CHECK-NEXT:    s_add_co_i32 s6, s6, s2
 ; CHECK-NEXT:    s_cmp_eq_u32 s3, 0
-; CHECK-NEXT:    v_mul_f32_e32 v3, 0x3d042108, v2
+; CHECK-NEXT:    v_mul_lo_u32 v2, v2, 31
 ; CHECK-NEXT:    s_cselect_b32 s2, ttmp9, s6
 ; CHECK-NEXT:    s_lshl_b32 s3, s4, 6
 ; CHECK-NEXT:    s_lshl_b32 s2, s2, 8
 ; CHECK-NEXT:    s_lshl_b32 s4, s5, 5
-; CHECK-NEXT:    v_trunc_f32_e32 v3, v3
 ; CHECK-NEXT:    s_or_b32 s2, s2, s3
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    s_or_b32 s2, s2, s4
-; CHECK-NEXT:    v_fmamk_f32 v2, v3, 0xc1f80000, v2
-; CHECK-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_cmp_le_f32_e64 vcc_lo, 0x41f80000, |v2|
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, 0, v3, vcc_lo
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_mul_lo_u32 v2, v2, 31
 ; CHECK-NEXT:    v_sub_nc_u32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0x7ff, v1
@@ -95,7 +97,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; KERNEL-NEXT:         .amdhsa_next_free_vgpr 8
 ; KERNEL-NEXT:         .amdhsa_next_free_sgpr 34
 ; KERNEL-NEXT:         .amdhsa_named_barrier_count 0
-; KERNEL-NEXT:         .amdhsa_reserve_vcc 1
+; KERNEL-NEXT:         .amdhsa_reserve_vcc 0
 ; KERNEL-NEXT:         .amdhsa_float_round_mode_32 0
 ; KERNEL-NEXT:         .amdhsa_float_round_mode_16_64 0
 ; KERNEL-NEXT:         .amdhsa_float_denorm_mode_32 3
@@ -126,7 +128,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; KERNEL-NEXT:      - 32
 ; KERNEL-NEXT:      - 8
 ; KERNEL-NEXT:      - 1
-; KERNEL-NEXT:    .sgpr_count:     36
+; KERNEL-NEXT:    .sgpr_count:     34
 ; KERNEL-NEXT:    .sgpr_spill_count: 0
 ; KERNEL-NEXT:    .symbol:         wavegroup_kernel.kd
 ; KERNEL-NEXT:    .uses_dynamic_stack: false

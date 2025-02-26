@@ -24,6 +24,7 @@
 #include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
@@ -283,26 +284,29 @@ _CLC_DEF _CLC_OVERLOAD double __clc_pow(double x, double y) {
     double log_t = tv.s1;
     double f_inv = (log_h + log_t) * f;
     double r1 = __clc_as_double(__clc_as_long(f_inv) & 0xfffffffff8000000L);
-    double r2 = fma(-F, r1, f) * (log_h + log_t);
+    double r2 = __clc_fma(-F, r1, f) * (log_h + log_t);
     double r = r1 + r2;
 
-    double poly = fma(
-        r, fma(r, fma(r, fma(r, 1.0 / 7.0, 1.0 / 6.0), 1.0 / 5.0), 1.0 / 4.0),
+    double poly = __clc_fma(
+        r,
+        __clc_fma(r,
+                  __clc_fma(r, __clc_fma(r, 1.0 / 7.0, 1.0 / 6.0), 1.0 / 5.0),
+                  1.0 / 4.0),
         1.0 / 3.0);
     poly = poly * r * r * r;
 
     double hr1r1 = 0.5 * r1 * r1;
     double poly0h = r1 + hr1r1;
     double poly0t = r1 - poly0h + hr1r1;
-    poly = fma(r1, r2, fma(0.5 * r2, r2, poly)) + r2 + poly0t;
+    poly = __clc_fma(r1, r2, __clc_fma(0.5 * r2, r2, poly)) + r2 + poly0t;
 
     tv = USE_TABLE(powlog_tbl, index);
     log_h = tv.s0;
     log_t = tv.s1;
 
-    double resT_t = fma(xexp, real_log2_tail, +log_t) - poly;
+    double resT_t = __clc_fma(xexp, real_log2_tail, +log_t) - poly;
     double resT = resT_t - poly0h;
-    double resH = fma(xexp, real_log2_lead, log_h);
+    double resH = __clc_fma(xexp, real_log2_lead, log_h);
     double resT_h = poly0h;
 
     double H = resT + resH;
@@ -313,9 +317,9 @@ _CLC_DEF _CLC_OVERLOAD double __clc_pow(double x, double y) {
     double y_head = __clc_as_double(uy & 0xfffffffff8000000L);
     double y_tail = y - y_head;
 
-    double temp = fma(y_tail, H, fma(y_head, T, y_tail * T));
-    v = fma(y_head, H, temp);
-    vt = fma(y_head, H, -v) + temp;
+    double temp = __clc_fma(y_tail, H, __clc_fma(y_head, T, y_tail * T));
+    v = __clc_fma(y_head, H, temp);
+    vt = __clc_fma(y_head, H, -v) + temp;
   }
 
   // Now calculate exp of (v,vt)
@@ -339,21 +343,22 @@ _CLC_DEF _CLC_OVERLOAD double __clc_pow(double x, double y) {
     double f2 = tv.s1;
     double f = f1 + f2;
 
-    double r1 = fma(dn, -lnof2_by_64_head, v);
+    double r1 = __clc_fma(dn, -lnof2_by_64_head, v);
     double r2 = dn * lnof2_by_64_tail;
     double r = (r1 + r2) + vt;
 
-    double q = fma(
-        r,
-        fma(r,
-            fma(r,
-                fma(r, 1.38889490863777199667e-03, 8.33336798434219616221e-03),
-                4.16666666662260795726e-02),
-            1.66666666665260878863e-01),
-        5.00000000000000008883e-01);
-    q = fma(r * r, q, r);
+    double q =
+        __clc_fma(r,
+                  __clc_fma(r,
+                            __clc_fma(r,
+                                      __clc_fma(r, 1.38889490863777199667e-03,
+                                                8.33336798434219616221e-03),
+                                      4.16666666662260795726e-02),
+                            1.66666666665260878863e-01),
+                  5.00000000000000008883e-01);
+    q = __clc_fma(r * r, q, r);
 
-    expv = fma(f, q, f2) + f1;
+    expv = __clc_fma(f, q, f2) + f1;
     expv = ldexp(expv, m);
 
     expv = v > max_exp_arg ? __clc_as_double(0x7FF0000000000000L) : expv;

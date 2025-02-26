@@ -718,6 +718,8 @@ private:
   void ExpandFloatRes_LOAD      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FMODF(SDNode *N);
+  void ExpandFloatRes_FSINCOS(SDNode* N);
+  void ExpandFloatRes_FSINCOSPI(SDNode* N);
   // clang-format on
 
   // Float Operand Expansion.

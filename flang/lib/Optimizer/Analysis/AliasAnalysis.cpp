@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
-#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -62,17 +61,13 @@ getOriginalDef(mlir::Value v,
     mlir::Type ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp, fir::cg::XDeclareOp>(
-            [&](auto op) {
-              v = op.getMemref();
-              auto varIf =
-                  llvm::dyn_cast<fir::FortranVariableOpInterface>(defOp);
-              if (varIf) {
-                attributes |= getAttrsFromVariable(varIf);
-                isCapturedInInternalProcedure |=
-                    varIf.isCapturedInInternalProcedure();
-              }
-            })
+        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
+          v = op.getMemref();
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= getAttrsFromVariable(varIf);
+          isCapturedInInternalProcedure |=
+              varIf.isCapturedInInternalProcedure();
+        })
         .Case<fir::CoordinateOp>([&](auto op) {
           if (fir::AliasAnalysis::isPointerReference(ty))
             attributes.set(fir::AliasAnalysis::Attribute::Pointer);
@@ -596,21 +591,19 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             followBoxData = true;
           approximateSource = true;
         })
-        .Case<fir::EmboxOp, fir::ReboxOp, fir::cg::XEmboxOp, fir::cg::XReboxOp>(
-            [&](auto op) {
-              if (followBoxData) {
-                v = op->getOperand(0);
-                defOp = v.getDefiningOp();
-              } else
-                breakFromLoop = true;
-            })
+        .Case<fir::EmboxOp, fir::ReboxOp>([&](auto op) {
+          if (followBoxData) {
+            v = op->getOperand(0);
+            defOp = v.getDefiningOp();
+          } else
+            breakFromLoop = true;
+        })
         .Case<fir::LoadOp>([&](auto op) {
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
           bool isDeclareOp =
               llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
-              llvm::isa_and_present<fir::cg::XDeclareOp>(loadMemrefOp) ||
               llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
@@ -648,14 +641,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else if (isDummyArgument(def)) {
               defOp = nullptr;
               v = def;
+            } else {
+              type = SourceKind::Indirect;
             }
-
+            // TODO: This assignment is redundant but somehow works around an
+            // apparent MSVC bug reporting "undeclared identifier" at the next
+            // "breakFromLoop = true;".  See
+            // <https://github.com/llvm/llvm-project/pull/127845#issuecomment-2669829610>.
             breakFromLoop = true;
-            return;
+          } else {
+            // No further tracking for addresses loaded from memory for now.
+            type = SourceKind::Indirect;
           }
-
-          // No further tracking for addresses loaded from memory for now.
-          type = SourceKind::Indirect;
           breakFromLoop = true;
         })
         .Case<fir::AddrOfOp>([&](auto op) {
@@ -673,8 +670,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
-        .Case<hlfir::DeclareOp, fir::DeclareOp,
-              fir::cg::XDeclareOp>([&](auto op) {
+        .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
           bool isPrivateItem = false;
           if (omp::BlockArgOpenMPOpInterface argIface =
                   dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
@@ -708,33 +704,30 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
               return;
             }
           }
-          auto varIf = llvm::dyn_cast<fir::FortranVariableOpInterface>(defOp);
-          if (varIf) {
-            // While going through a declare operation collect
-            // the variable attributes from it. Right now, some
-            // of the attributes are duplicated, e.g. a TARGET dummy
-            // argument has the target attribute both on its declare
-            // operation and on the entry block argument.
-            // In case of host associated use, the declare operation
-            // is the only carrier of the variable attributes,
-            // so we have to collect them here.
-            attributes |= getAttrsFromVariable(varIf);
-            isCapturedInInternalProcedure |=
-                varIf.isCapturedInInternalProcedure();
-            if (varIf.isHostAssoc()) {
-              // Do not track past such DeclareOp, because it does not
-              // currently provide any useful information. The host associated
-              // access will end up dereferencing the host association tuple,
-              // so we may as well stop right now.
-              v = defOp->getResult(0);
-              // TODO: if the host associated variable is a dummy argument
-              // of the host, I think, we can treat it as SourceKind::Argument
-              // for the purpose of alias analysis inside the internal
-              // procedure.
-              type = SourceKind::HostAssoc;
-              breakFromLoop = true;
-              return;
-            }
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          // While going through a declare operation collect
+          // the variable attributes from it. Right now, some
+          // of the attributes are duplicated, e.g. a TARGET dummy
+          // argument has the target attribute both on its declare
+          // operation and on the entry block argument.
+          // In case of host associated use, the declare operation
+          // is the only carrier of the variable attributes,
+          // so we have to collect them here.
+          attributes |= getAttrsFromVariable(varIf);
+          isCapturedInInternalProcedure |=
+              varIf.isCapturedInInternalProcedure();
+          if (varIf.isHostAssoc()) {
+            // Do not track past such DeclareOp, because it does not
+            // currently provide any useful information. The host associated
+            // access will end up dereferencing the host association tuple,
+            // so we may as well stop right now.
+            v = defOp->getResult(0);
+            // TODO: if the host associated variable is a dummy argument
+            // of the host, I think, we can treat it as SourceKind::Argument
+            // for the purpose of alias analysis inside the internal procedure.
+            type = SourceKind::HostAssoc;
+            breakFromLoop = true;
+            return;
           }
           if (getLastInstantiationPoint) {
             // Fetch only the innermost instantiation point.

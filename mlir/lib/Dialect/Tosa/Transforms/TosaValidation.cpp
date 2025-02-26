@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TargetEnv.h"
+#include "mlir/Dialect/Tosa/IR/TosaProfileCompliance.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc"
 
@@ -25,6 +27,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/StringExtras.h"
 
 namespace mlir {
 namespace tosa {
@@ -53,15 +56,6 @@ static LogicalResult checkConstantOperandPad(Operation *op) {
   return success();
 }
 
-static LogicalResult checkConstantOperandTranspose(Operation *op) {
-  if (auto transposeOp = dyn_cast<tosa::TransposeOp>(op)) {
-    DenseElementsAttr perms;
-    if (!matchPattern(transposeOp.getPerms(), m_Constant(&perms)))
-      return op->emitOpError("perms of transpose is not constant");
-  }
-  return success();
-}
-
 struct TosaLevel {
   int32_t MAX_RANK = 0;
   int32_t MAX_KERNEL = 0;
@@ -86,10 +80,12 @@ static constexpr TosaLevel TOSA_LEVEL_NONE = {0, 0, 0, 0};
 struct TosaValidation : public tosa::impl::TosaValidationBase<TosaValidation> {
 public:
   explicit TosaValidation() { populateConstantOperandChecks(); }
+
   explicit TosaValidation(const TosaValidationOptions &options)
       : TosaValidation() {
     this->profile = options.profile;
-    this->StrictOperationSpecAlignment = options.StrictOperationSpecAlignment;
+    this->extension = options.extension;
+    this->strictOpSpecAlignment = options.strictOpSpecAlignment;
     this->level = options.level;
   }
   void runOnOperation() final;
@@ -113,7 +109,6 @@ public:
 private:
   void populateConstantOperandChecks() {
     constCheckers.emplace_back(checkConstantOperandPad);
-    constCheckers.emplace_back(checkConstantOperandTranspose);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v,
@@ -401,9 +396,27 @@ private:
 
     if (!profile.empty()) {
       for (std::string &prof : profile) {
-        auto profSymbol = symbolizeTosaProfileEnum(prof);
+        auto profSymbol = symbolizeProfile(prof);
         if (profSymbol) {
-          enabled_profiles.push_back(profSymbol.value());
+          targetEnv.addProfile(profSymbol.value());
+        } else {
+          llvm::errs() << "unknown TOSA profile name passed in: " << prof
+                       << ", supported profiles are `pro_int` and `pro_fp`\n";
+          return signalPassFailure();
+        }
+      }
+    }
+
+    if (!extension.empty()) {
+      for (std::string &ext : extension) {
+        auto extSymbol = symbolizeExtension(ext);
+        if (extSymbol) {
+          targetEnv.addExtension(extSymbol.value());
+        } else {
+          llvm::errs() << "unknown TOSA extension name passed in: " << ext
+                       << ", supported extension are int16, int4, bf16, "
+                       << "fp8e4m3, fp8e5m2, fft, variable and controlflow\n";
+          return signalPassFailure();
         }
       }
     }
@@ -411,17 +424,13 @@ private:
 
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
-
   bool isValidElementType(Type type);
-  bool isEnabledProfile(TosaProfileEnum prof) {
-    return std::find(enabled_profiles.begin(), enabled_profiles.end(), prof) !=
-           std::end(enabled_profiles);
-  }
 
   SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
-  SmallVector<TosaProfileEnum, 3> enabled_profiles;
   TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
+  TosaProfileCompliance profileComp;
+  tosa::TargetEnv targetEnv;
 };
 
 LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
@@ -677,8 +686,6 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
 
 bool TosaValidation::isValidElementType(Type type) {
   if (isa<FloatType>(type)) {
-    if (!isEnabledProfile(TosaProfileEnum::MainInference))
-      return false;
     return type.isF32() || type.isF16() || type.isBF16();
   } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
@@ -709,6 +716,15 @@ void TosaValidation::runOnOperation() {
     if (op->getDialect() != tosaDialect)
       return;
 
+    // Profile-Extension based validation should be performed at the beginning.
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkProfile(op, targetEnv)))
+      return signalPassFailure();
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkExtension(op, targetEnv)))
+      return signalPassFailure();
+
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {
@@ -728,7 +744,7 @@ void TosaValidation::runOnOperation() {
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
-    if (StrictOperationSpecAlignment && failed(applyConstantOperandCheck(op)))
+    if (strictOpSpecAlignment && failed(applyConstantOperandCheck(op)))
       signalPassFailure();
 
     // do level checks
@@ -740,7 +756,7 @@ void TosaValidation::runOnOperation() {
       signalPassFailure();
 
     // do error if checks
-    if (StrictOperationSpecAlignment && failed(applyErrorIfCheck(op)))
+    if (strictOpSpecAlignment && failed(applyErrorIfCheck(op)))
       signalPassFailure();
   });
 }

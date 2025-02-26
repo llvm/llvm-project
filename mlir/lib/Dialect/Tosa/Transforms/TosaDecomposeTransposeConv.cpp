@@ -166,13 +166,9 @@ public:
         getTosaConstShape(rewriter, loc, weightReshapeDims0));
 
     // Transpose the factored-out stride to the output channels.
-    Value transposeWeightVal = rewriter.create<tosa::ConstOp>(
-        loc, RankedTensorType::get({6}, rewriter.getI32Type()),
-        rewriter.getI32TensorAttr({2, 4, 0, 1, 3, 5}));
-
     weight = CreateOpAndInferShape<tosa::TransposeOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-        transposeWeightVal);
+        rewriter.getDenseI32ArrayAttr({2, 4, 0, 1, 3, 5}));
 
     // Collapse the strides and output channels into a single dimension.
     llvm::SmallVector<int64_t, 4> weightReshapeDims1 = {
@@ -269,13 +265,9 @@ public:
         convReshapeDims0Value);
 
     // Transpose the factored-out stride to the output channels.
-    Value transposeConvVal = rewriter.create<tosa::ConstOp>(
-        loc, RankedTensorType::get({6}, rewriter.getI32Type()),
-        rewriter.getI32TensorAttr({0, 1, 3, 2, 4, 5}));
-
     conv2d = CreateOpAndInferShape<tosa::TransposeOp>(
         rewriter, loc, UnrankedTensorType::get(convETy), conv2d,
-        transposeConvVal);
+        rewriter.getDenseI32ArrayAttr({0, 1, 3, 2, 4, 5}));
 
     // Fuse striding behavior back into width / height.
     llvm::SmallVector<int64_t, 6> convReshapeDims1 = {

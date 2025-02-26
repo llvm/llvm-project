@@ -4,8 +4,7 @@
 // validation flow.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=bi,mi,mt strict-op-spec-alignment"
-
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=pro_int,pro_fp extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow strict-op-spec-alignment"
 
 func.func @test_const() -> tensor<1xf32> {
   // expected-error@+1{{'tosa.const' op expected same attr/result element types}}
@@ -236,97 +235,74 @@ func.func @test_pad_padding_shape_mismatch(%arg0: tensor<13x21x3xf32>) -> tensor
 
 // -----
 
-func.func @test_transpose_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21xf32> {
-  // expected-error@+1 {{'tosa.transpose' op perms of transpose is not constant}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21xf32>
-  return %0 : tensor<3x13x21xf32>
-}
-
-// -----
-
 func.func @test_transpose_io_rank_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21x1xf32> {
   // expected-error@+1 {{'tosa.transpose' op expected input tensor rank to equal result tensor rank}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21x1xf32>
+  %0 = tosa.transpose %arg0 {perms = array<i32: 2, 1, 0>}: (tensor<13x21x3xf32>) -> tensor<3x13x21x1xf32>
   return %0 : tensor<3x13x21x1xf32>
-}
-
-// -----
-
-func.func @test_transpose_invalid_perms_rank(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3x2xi32>) -> tensor<3x13x21xf32> {
-  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor to be rank 1 but got rank 2}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3x2xi32>) -> tensor<3x13x21xf32>
-  return %0 : tensor<3x13x21xf32>
 }
 
 // -----
 
 func.func @test_transpose_rank0_perms() {
   %14 = tensor.empty() : tensor<5x27xi64>
-  %cst = tensor.empty() : tensor<i32>
-  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor to be rank 1 but got rank 0}}
-  %72 = tosa.transpose %14, %cst : (tensor<5x27xi64>, tensor<i32>) -> tensor<?x?xi64>
+  // expected-error@+1 {{'tosa.transpose' op expected perms attribute to have size 2 (input rank) but got size 0}}
+  %72 = tosa.transpose %14 {perms = array<i32> }: (tensor<5x27xi64>) -> tensor<?x?xi64>
   return
 }
 
 // -----
 
-func.func @test_transpose_invalid_perms_size(%arg0: tensor<13x21x3xf32>, %arg1: tensor<7xi32>) -> tensor<3x13x21xf32> {
-  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor dim 0 to have size 3 (input rank) but got size 7}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<7xi32>) -> tensor<3x13x21xf32>
+func.func @test_transpose_invalid_perms_size(%arg0: tensor<13x21x3xf32>) -> tensor<3x13x21xf32> {
+  // expected-error@+1 {{'tosa.transpose' op expected perms attribute to have size 3 (input rank) but got size 7}}
+  %0 = tosa.transpose %arg0 {perms = array<i32: 6, 5, 4, 3, 2, 1, 0> }: (tensor<13x21x3xf32>) -> tensor<3x13x21xf32>
   return %0 : tensor<3x13x21xf32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_tensor(%arg0: tensor<13x21x3xf32>) -> tensor<?x?x?xf32> {
-  %perms = arith.constant dense<[2, 0, 0]> : tensor<3xi32>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation tensor}}
-  %0 = tosa.transpose %arg0, %perms : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<?x?x?xf32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %0 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 0> }: (tensor<13x21x3xf32>) -> tensor<?x?x?xf32>
   return %0 : tensor<?x?x?xf32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_negative(%arg0: tensor<3x2xi32>) -> tensor<*xi32> {
-  %perms = "tosa.const"() {value = dense<[-1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation tensor}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<3x2xi32>, tensor<2xi32>) -> tensor<*xi32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %1 = tosa.transpose %arg0 {perms = array<i32: -1, 0> }: (tensor<3x2xi32>) -> tensor<*xi32>
   return %1 : tensor<*xi32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_tensor_above_range(%arg0: tensor<3x2xi32>) -> tensor<*xi32> {
-  %perms = "tosa.const"() {value = dense<[2, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation tensor}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<3x2xi32>, tensor<2xi32>) -> tensor<*xi32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0> }: (tensor<3x2xi32>) -> tensor<*xi32>
   return %1 : tensor<*xi32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_types(%arg0: tensor<3x2xi32>) -> tensor<3x4xi32> {
-  %perms = "tosa.const"() {value = dense<[1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
   // expected-error@+1 {{'tosa.transpose' op expected output tensor dim 0 to match input dim 1 with value of 2}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<3x2xi32>, tensor<2xi32>) -> tensor<3x4xi32>
+  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0> }: (tensor<3x2xi32>) -> tensor<3x4xi32>
   return %1 : tensor<3x4xi32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_types_dynamic_dim_ok(%arg0: tensor<2x?xi32>) -> tensor<3x4xi32> {
-  %perms = "tosa.const"() {value = dense<[1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
   // expected-error@+1 {{'tosa.transpose' op expected output tensor dim 1 to match input dim 0 with value of 2}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<2x?xi32>, tensor<2xi32>) -> tensor<3x4xi32>
+  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0> }: (tensor<2x?xi32>) -> tensor<3x4xi32>
   return %1 : tensor<3x4xi32>
 }
 
 // -----
 
 func.func @test_transpose_element_type_mismatch(%arg0: tensor<2x3xi32>) -> tensor<3x2xf32> {
-  %perms = "tosa.const"() {value = dense<[1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
   // expected-error@+1 {{'tosa.transpose' op failed to verify that all of {input1, output} have same element type}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<2x3xi32>, tensor<2xi32>) -> tensor<3x2xf32>
+  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0>} : (tensor<2x3xi32>) -> tensor<3x2xf32>
   return %1 : tensor<3x2xf32>
 }
 
@@ -675,10 +651,9 @@ func.func @test_tile_io_rank_mismatch() {
 
 // CHECK-LABEL: @test_invalid_constant_permutation
 func.func @test_invalid_constant_permutation() {
-  // expected-error@+3 {{'tosa.transpose' op expected valid permutation tensor}}
   %0 = tensor.empty() : tensor<3x4x5xi32>
-  %1 = arith.constant dense<[3, 0, 1]> : tensor<3xi32>
-  %2 = tosa.transpose %0, %1 : (tensor<3x4x5xi32>, tensor<3xi32>) -> tensor<3x4x5xi32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %2 = tosa.transpose %0 {perms = array<i32: 3, 0, 1>}: (tensor<3x4x5xi32>) -> tensor<3x4x5xi32>
   return
 }
 
@@ -686,11 +661,10 @@ func.func @test_invalid_constant_permutation() {
 
 // CHECK-LABEL: test_rank_size_constant_permutation
 func.func @test_rank_size_constant_permutation() {
-  // expected-error@+4 {{'tosa.transpose' op expected valid permutation tensor}}
   %0 = arith.constant 6 : index
-  %1 = arith.constant dense<[0, 2]> : tensor<2xi32>
   %2 = tensor.empty(%0) : tensor<?x27xi64>
-  %3 = tosa.transpose %2, %1 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %3 = tosa.transpose %2 {perms = array<i32: 0, 2>}: (tensor<?x27xi64>) -> tensor<?x27xi64>
   return
 }
 
@@ -698,11 +672,10 @@ func.func @test_rank_size_constant_permutation() {
 
 // CHECK-LABEL: test_large_constant_permutation
 func.func @test_large_constant_permutation() {
-  // expected-error@+4 {{'tosa.transpose' op expected valid permutation tensor}}
   %0 = arith.constant 6 : index
-  %1 = arith.constant dense<[1185677355, 332462212]> : tensor<2xi32>
   %2 = tensor.empty(%0) : tensor<?x27xi64>
-  %3 = tosa.transpose %2, %1 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %3 = tosa.transpose %2 {perms = array<i32: 1185677355, 332462212>}: (tensor<?x27xi64>) -> tensor<?x27xi64>
   return
 }
 

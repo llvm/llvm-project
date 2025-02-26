@@ -832,11 +832,6 @@ let Features = "rdseed", Attributes = [NoThrow] in {
   def rdseed32_step : X86Builtin<"unsigned int(unsigned int *)">;
 }
 
-let Features = "lzcnt", Attributes = [NoThrow, Const, Constexpr] in {
-  def lzcnt_u16 : X86Builtin<"unsigned short(unsigned short)">;
-  def lzcnt_u32 : X86Builtin<"unsigned int(unsigned int)">;
-}
-
 let Features = "bmi", Attributes = [NoThrow, Const, Constexpr] in {
   def bextr_u32 : X86Builtin<"unsigned int(unsigned int, unsigned int)">;
 }
@@ -844,6 +839,8 @@ let Features = "bmi", Attributes = [NoThrow, Const, Constexpr] in {
 let Attributes = [NoThrow, Const, Constexpr] in {
   def tzcnt_u16 : X86Builtin<"unsigned short(unsigned short)">;
   def tzcnt_u32 : X86Builtin<"unsigned int(unsigned int)">;
+  def lzcnt_u16 : X86Builtin<"unsigned short(unsigned short)">;
+  def lzcnt_u32 : X86Builtin<"unsigned int(unsigned int)">;
 }
 
 let Features = "bmi2", Attributes = [NoThrow, Const, Constexpr] in {

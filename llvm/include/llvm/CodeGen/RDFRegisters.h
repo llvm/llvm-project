@@ -111,22 +111,22 @@ struct RegisterRef {
   }
 
   static constexpr bool isRegId(unsigned Id) {
-    return Register(Id).isPhysical();
+    return Register::isPhysicalRegister(Id);
   }
   static constexpr bool isUnitId(unsigned Id) {
-    return Register(Id).isVirtual();
+    return Register::isVirtualRegister(Id);
   }
   static constexpr bool isMaskId(unsigned Id) { return Register(Id).isStack(); }
 
   static constexpr RegisterId toUnitId(unsigned Idx) {
-    return Idx | MCRegister::VirtualRegFlag;
+    return Idx | Register::VirtualRegFlag;
   }
 
   static constexpr unsigned toIdx(RegisterId Id) {
     // Not using virtReg2Index or stackSlot2Index, because they are
     // not constexpr.
     if (isUnitId(Id))
-      return Id & ~MCRegister::VirtualRegFlag;
+      return Id & ~Register::VirtualRegFlag;
     // RegId and MaskId are unchanged.
     return Id;
   }

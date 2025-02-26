@@ -223,8 +223,8 @@ static bool areCombinableOperations(const TargetRegisterInfo *TRI,
   return true;
 }
 
-static bool isEvenReg(Register Reg) {
-  assert(Reg.isPhysical());
+static bool isEvenReg(unsigned Reg) {
+  assert(Register::isPhysicalRegister(Reg));
   if (Hexagon::IntRegsRegClass.contains(Reg))
     return (Reg - Hexagon::R0) % 2 == 0;
   if (Hexagon::HvxVRRegClass.contains(Reg))
@@ -546,7 +546,7 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr &I1,
     // is even.
     bool IsI1LowReg = (I2DestReg - I1DestReg) == 1;
     bool IsI2LowReg = (I1DestReg - I2DestReg) == 1;
-    Register FirstRegIndex = IsI1LowReg ? I1DestReg : I2DestReg;
+    unsigned FirstRegIndex = IsI1LowReg ? I1DestReg : I2DestReg;
     if ((!IsI1LowReg && !IsI2LowReg) || !isEvenReg(FirstRegIndex))
       continue;
 

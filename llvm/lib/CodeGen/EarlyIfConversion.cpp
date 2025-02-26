@@ -522,8 +522,8 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
       if (PI.PHI->getOperand(i+1).getMBB() == FPred)
         PI.FReg = PI.PHI->getOperand(i).getReg();
     }
-    assert(Register(PI.TReg).isVirtual() && "Bad PHI");
-    assert(Register(PI.FReg).isVirtual() && "Bad PHI");
+    assert(Register::isVirtualRegister(PI.TReg) && "Bad PHI");
+    assert(Register::isVirtualRegister(PI.FReg) && "Bad PHI");
 
     // Get target information.
     if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),

@@ -94,7 +94,6 @@ set(SOURCES
     internal_ftm_use.cpp
     nodebug_on_aliases.cpp
     proper_version_checks.cpp
-    qualify_declval.cpp
     robust_against_adl.cpp
     uglify_attributes.cpp
 
