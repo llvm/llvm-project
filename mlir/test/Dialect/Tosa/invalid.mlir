@@ -365,8 +365,8 @@ func.func @test_reduce_min_type_mismatch(%arg0 : tensor<2x3x4x5xf32>) -> () {
 // -----
 
 func.func @test_reduce_prod_type_mismatch(%arg0 : tensor<2x3x4x5xf32>) -> () {
-  // expected-error@+1 {{'tosa.reduce_prod' op expect reduced dimension size to be 1, got 3}}
-  %0 = tosa.reduce_prod %arg0 {axis = 1 : i32} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
+  // expected-error@+1 {{'tosa.reduce_product' op expect reduced dimension size to be 1, got 3}}
+  %0 = tosa.reduce_product %arg0 {axis = 1 : i32} : (tensor<2x3x4x5xf32>) -> tensor<2x3x4x5xf32>
   return
 }
 
@@ -405,8 +405,8 @@ func.func @test_reduce_min_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
 // -----
 
 func.func @test_reduce_prod_invalid_axis(%arg0 : tensor<2x3x4xf32>) -> () {
-  // expected-error@+1 {{'tosa.reduce_prod' op expect input tensor rank (3) to be larger than reduce axis (3)}}
-  %0 = tosa.reduce_prod %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
+  // expected-error@+1 {{'tosa.reduce_product' op expect input tensor rank (3) to be larger than reduce axis (3)}}
+  %0 = tosa.reduce_product %arg0 {axis = 3 : i32} : (tensor<2x3x4xf32>) -> tensor<2x3x1xf32>
   return
 }
 
