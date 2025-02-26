@@ -77,7 +77,20 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// with `inner_dims_pos` rather than the packed tensor.
     SmallVector<int64_t> getTiledOuterDims();
   }];
-
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    ShapedType getInputType() {
+        return cast<ShapedType>(getInput().getType());
+      }
+      ShapedType getOutputType() {
+        return cast<ShapedType>(getOutput().getType());
+      }
+      int64_t getInputRank() {
+        return getInputType().getRank();
+      }
+      int64_t getOutputRank() {
+        return getOutputType().getRank();
+      }
+    }];
   let hasVerifier = 1;
 }
 
@@ -179,6 +192,28 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
   ];
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
+    Value getOutput() {
+      return getDpsInitOperand(0)->get();
+    }
+
+    // Return the input operand.
+    Value getInput() {
+      return getDpsInputOperand(0)->get();
+    }
+    ShapedType getInputType() {
+      return cast<ShapedType>(getInput().getType());
+    }
+    ShapedType getOutputType() {
+      return cast<ShapedType>(getDest().getType()); // getDest() 사용
+    }
+    int64_t getInputRank() {
+      return getInputType().getRank();
+    }
+    int64_t getOutputRank() {
+      return getOutputType().getRank();
+    }
+
+    LogicalResult generateScalarImplementation(OpBuilder &builder, Location loc, ValueRange ivs);
     // Method to get the shape of the result as `SmallVector<OpFoldResult>`.
     // This is a static method to allow getting the shape of the destination
     // expected while creating a `pack` op.
@@ -229,6 +264,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     /// 2. pads the other ones, and
     /// 3. doesn't shuffle the dimensions
     bool isLikePad();
+
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -303,6 +339,28 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
   ];
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
+    Value getOutput() {
+      return getDpsInitOperand(0)->get();
+    }
+
+    // Return the input operand.
+    Value getInput() {
+      return getDpsInputOperand(0)->get();
+    }
+    ShapedType getInputType() {
+      return cast<ShapedType>(getInput().getType());
+    }
+    ShapedType getOutputType() {
+      return cast<ShapedType>(getDest().getType()); // getDest() 사용
+    }
+    int64_t getInputRank() {
+      return getInputType().getRank();
+    }
+    int64_t getOutputRank() {
+      return getOutputType().getRank();
+    }
+    LogicalResult generateScalarImplementation(OpBuilder &builder, Location loc, ValueRange ivs);
+
     static Value createDestinationTensor(OpBuilder &b, Location loc,
         Value source, ArrayRef<OpFoldResult> innerTileSizes,
         ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm);

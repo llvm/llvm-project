@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 
 #include "mlir/AsmParser/AsmParser.h"
@@ -54,6 +55,45 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+
+SmallVector<int64_t> computeInterchangeFromDimPos(ArrayRef<int64_t> dimsPos,
+  int64_t rank) {
+  SmallVector<int64_t> interchangeVector;
+  interchangeVector.reserve(dimsPos.size());
+  // First map dims and their position. For example, dims_pos = [2, 0] will map
+  // to:
+  // [
+  //  [ key: 2, value: 0]
+  //  [ key: 0, value: 1]
+  // ]
+  // where key is the idx in dims_pos while value its position in dims_pos.
+  DenseMap<int64_t, int64_t> dimsAndPosMapping;
+  for (int64_t dimsIdx = 0, end = dimsPos.size(); dimsIdx < end; dimsIdx++) {
+    dimsAndPosMapping[dimsPos[dimsIdx]] = dimsIdx;
+  }
+
+  // Scan the position in order and insert the value in the map
+  // to compute the interchange vector.
+  for (int64_t dimsIdx = 0; dimsIdx < rank; dimsIdx++) {
+    if (dimsAndPosMapping.count(dimsIdx)) {
+      interchangeVector.push_back(dimsAndPosMapping[dimsIdx]);
+    }
+  }
+  return interchangeVector;
+}
+
+template <typename T>
+SmallVector<T> interchange(ArrayRef<T> elements,
+                           ArrayRef<int64_t> interchangeVector,
+                           int offset = 0) {
+  SmallVector<T> vec = llvm::to_vector(elements);
+  for (auto [idx, val] : llvm::enumerate(interchangeVector)) {
+    vec[idx + offset] = elements[val + offset];
+  }
+  return vec;
+}
+
 
 /// Return a `memref.dim` or `tensor.dim` for the shape of `v` at `dim`.
 static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
@@ -4756,6 +4796,140 @@ RankedTensorType PackOp::inferPackedType(RankedTensorType sourceType,
   return RankedTensorType::get(resultShape, sourceType.getElementType());
 }
 
+/// Generate the body of the innermost loop of the scalar implementation
+/// of `pack` operation.
+static void generatePackOpScalarImplementationBody(PackOp packOp,
+                                                   OpBuilder &builder,
+                                                   Location loc,
+                                                   ValueRange ivs) {
+  // Note: `ivs` are already in the correct order, possibly interchanged based
+  // on `dims_pos`. However, connecting the loops with the access patterns is
+  // difficult - What is the relation between the position of the tile loop and
+  // the point loop? However, if we interchange `ivs` once more to go to the
+  // canonical blocking format: ABCabc, this connection becomes trivial: Each
+  // point loop is pointLoopsOffset + inputRank away from the tiled loop.
+  ArrayRef<int64_t> dimsToInnerBlock = packOp.getInnerDimsPos();
+  ArrayRef<int64_t> dimsToOuterBlock = packOp.getOuterDimsPerm();
+
+  SmallVector<Value> interchangedIvs = ivs;
+  SmallVector<int64_t> interchangeVector =
+      computeInterchangeFromDimPos(dimsToInnerBlock, packOp.getInputRank());
+  interchangedIvs = interchange<Value>(interchangedIvs, interchangeVector,
+                                       /*offset=*/packOp.getInputRank());
+  if (!dimsToOuterBlock.empty()) {
+    interchangeVector =
+        computeInterchangeFromDimPos(dimsToOuterBlock, packOp.getInputRank());
+    interchangedIvs =
+        interchange<Value>(interchangedIvs, interchangeVector, /*offset=*/0);
+  }
+
+  SmallVector<OpFoldResult> tiles = packOp.getMixedTiles();
+  DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
+      packOp.getDimAndTileMapping();
+  SmallVector<OpFoldResult> sourceIndices;
+  size_t pointLoopsOffset = 0;
+  int64_t inputRank = packOp.getInputRank();
+  for (auto dim : llvm::seq<int64_t>(0, inputRank)) {
+    if (dimAndTileMapping.count(dim)) {
+      AffineExpr i, j, tile;
+      bindDims(builder.getContext(), i, j);
+      bindSymbols(builder.getContext(), tile);
+      OpFoldResult sourceIndex = affine::makeComposedFoldedAffineApply(
+          builder, loc, i * tile + j,
+          ArrayRef<OpFoldResult>{
+              interchangedIvs[dim],
+              interchangedIvs[pointLoopsOffset + packOp.getInputRank()],
+              dimAndTileMapping[dim]});
+      sourceIndices.push_back(sourceIndex);
+      ++pointLoopsOffset;
+    } else {
+      sourceIndices.push_back(interchangedIvs[dim]);
+    }
+  }
+
+  auto createLoad = [&]() -> Value {
+    return builder.create<memref::LoadOp>(
+        loc, packOp.getInput(),
+        getValueOrCreateConstantIndexOp(builder, loc, sourceIndices));
+  };
+  Value scalar;
+  if (auto paddingValue = packOp.getPaddingValue()) {
+    ArithBuilder arithBuilder(builder, loc);
+    Value isInBounds;
+    for (auto dim : llvm::seq<int64_t>(0, inputRank)) {
+      Value idx =
+          getValueOrCreateConstantIndexOp(builder, loc, sourceIndices[dim]);
+      Value dimValue = getValueOrCreateConstantIndexOp(
+        builder, loc, getDimValue(builder, loc, packOp.getInput(), dim));
+      Value cond = arithBuilder.slt(
+          idx, dimValue);
+      isInBounds = dim == 0 ? cond : arithBuilder._and(isInBounds, cond);
+    }
+    scalar = builder
+                 .create<scf::IfOp>(
+                     loc, isInBounds, /*thenBuilder=*/
+                     [&](OpBuilder &b, Location l) {
+                       b.create<scf::YieldOp>(l, createLoad());
+                     },
+                     /*elseBuilder=*/
+                     [&](OpBuilder &b, Location l) {
+                       b.create<scf::YieldOp>(l, paddingValue);
+                     })
+                 .getResult(0);
+  } else {
+    scalar = createLoad();
+  }
+
+  builder.create<memref::StoreOp>(loc, scalar, packOp.getOutput(), ivs);
+}
+
+LogicalResult PackOp::generateScalarImplementation(OpBuilder &builder,
+                                                   Location loc,
+                                                   ValueRange ivs) {
+  OpBuilder::InsertionGuard g(builder);
+  // The `ivs` already represent the position into the output tensor for the
+  // non data-tile dimensions.
+  SmallVector<Value> ivVec = llvm::to_vector(ivs);
+  ReifiedRankedShapedTypeDims outputShape;
+  if (failed(reifyResultShapes(builder, outputShape))) {
+    return getOperation()->emitOpError("failed to reify result shape");
+  }
+  if (outputShape.size() != 1 || outputShape[0].size() != getOutputRank()) {
+    return getOperation()->emitOpError(
+               "expected shape of one result value of rank")
+           << getOutputRank();
+  }
+
+  // Generate the loops that iterate over the data tile.
+  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+
+  // All loops except the innermost are simple loops that just iterate
+  // over the tile dimensions.
+  for (auto dataTileDim :
+       llvm::seq<unsigned>(getInputRank(), getOutputRank() - 1)) {
+    Value ub = getValueOrCreateConstantIndexOp(builder, loc,
+                                               outputShape[0][dataTileDim]);
+    scf::ForOp loop = builder.create<scf::ForOp>(loc, zero, ub, one);
+    builder.setInsertionPointToStart(loop.getBody());
+    ivVec.push_back(loop.getInductionVar());
+  }
+  // The body of the innermost loops does the actual data movement.
+  builder.create<scf::ForOp>(
+      loc, zero,
+      getValueOrCreateConstantIndexOp(builder, loc, outputShape[0].back()), one,
+      ValueRange{},
+      [&](OpBuilder &bodyBuilder, Location bodyLoc, Value iv,
+          ValueRange regionIterArgs) {
+        ivVec.push_back(iv);
+        generatePackOpScalarImplementationBody(*this, bodyBuilder, bodyLoc,
+                                               ivVec);
+        bodyBuilder.create<scf::YieldOp>(bodyLoc);
+      });
+  return success();
+}
+
+
 Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
                                       ArrayRef<OpFoldResult> innerTileSizes,
                                       ArrayRef<int64_t> innerDimsPos,
@@ -5079,6 +5253,65 @@ void UnPackOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "unpack");
 }
+
+LogicalResult UnPackOp::generateScalarImplementation(OpBuilder &builder,
+                                                     Location loc,
+                                                     ValueRange ivs) {
+  return llvm::success();
+  OpBuilder::InsertionGuard g(builder);
+  ReifiedRankedShapedTypeDims outputShape;
+
+  if (failed(reifyResultShapes(builder, outputShape))) {
+    return getOperation()->emitError("failed to reify result shapes");
+  }
+  if (outputShape.size() != 1 || outputShape[0].size() != getOutputRank()) {
+    return getOperation()->emitError(
+      "expected shape of one result value of rank")
+      << getOutputRank();
+  }
+
+  DenseMap<int64_t, OpFoldResult> dimAndTileMapping = getDimAndTileMapping();
+  // untiled loops and tile loops induction variables.
+  SmallVector<Value> inputIvs;
+  SmallVector<Value> inputIvsPointLoops;
+  inputIvs.reserve(getOutputRank());
+  inputIvsPointLoops.reserve(dimAndTileMapping.size());
+  for (auto dim : llvm::seq<int64_t>(0, getOutputRank())) {
+    if (dimAndTileMapping.count(dim)) {
+      affine::DivModValue divMod =
+          affine::getDivMod(builder, loc, ivs[dim],
+                            getValueOrCreateConstantIndexOp(
+                                    builder, loc, dimAndTileMapping[dim]));
+      inputIvsPointLoops.push_back(divMod.remainder);
+      inputIvs.push_back(divMod.quotient);
+    } else {
+      inputIvs.push_back(ivs[dim]);
+    }
+  }
+
+  // TODO: (lorenzo) simplify the logic a bit. There is `ivs`,
+  // `inputIvsPointLoops` and `inputIvs`.
+  assert(inputIvsPointLoops.size() + inputIvs.size() == getInputRank() &&
+         "expect same number of iduction variables equals to input rank");
+  // interchange the point loops induction variables based on `inner_dim_pos`.
+  ArrayRef<int64_t> innerDims = getInnerDimsPos();
+  SmallVector<int64_t> interchangeVector =
+      computeInterchangeFromDimPos(innerDims, getOutputRank());
+  SmallVector<Value> interchangedInputIvsPointLoops = inputIvsPointLoops;
+  interchangedInputIvsPointLoops = interchange<Value>(
+      interchangedInputIvsPointLoops, interchangeVector, /*offset=*/0);
+  // interchange the tiled loops induction variables based on `outer_dims_perm`.
+  ArrayRef<int64_t> outerDims = getOuterDimsPerm();
+  if (!outerDims.empty()) {
+    inputIvs = interchange<Value>(inputIvs, outerDims, /*offset=*/0);
+  }
+
+  llvm::append_range(inputIvs, interchangedInputIvsPointLoops);
+  Value scalar = builder.create<memref::LoadOp>(loc, getInput(), inputIvs);
+  builder.create<memref::StoreOp>(loc, scalar, getOutput(), ivs);
+  return success();
+}
+
 
 LogicalResult
 UnPackOp::reifyResultShapes(OpBuilder &builder,
