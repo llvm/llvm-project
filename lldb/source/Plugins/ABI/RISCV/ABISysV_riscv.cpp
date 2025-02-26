@@ -718,10 +718,7 @@ ValueObjectSP ABISysV_riscv::GetReturnValueObjectImpl(
   return GetReturnValueObjectSimple(thread, return_compiler_type);
 }
 
-bool ABISysV_riscv::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_riscv::CreateFunctionEntryUnwindPlan() {
   uint32_t pc_reg_num = riscv_dwarf::dwarf_gpr_pc;
   uint32_t sp_reg_num = riscv_dwarf::dwarf_gpr_sp;
   uint32_t ra_reg_num = riscv_dwarf::dwarf_gpr_ra;
@@ -732,19 +729,16 @@ bool ABISysV_riscv::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // Previous frame's pc is in ra
-
   row->SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("riscv function-entry unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
 
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("riscv function-entry unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_riscv::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindGeneric);
-
+UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
   uint32_t fp_reg_num = LLDB_REGNUM_GENERIC_FP;
 
@@ -763,11 +757,12 @@ bool ABISysV_riscv::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("riscv default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("riscv default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_riscv::RegisterIsVolatile(const RegisterInfo *reg_info) {
