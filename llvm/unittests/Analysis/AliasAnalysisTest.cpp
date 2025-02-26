@@ -186,6 +186,14 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
       AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1), Alignment,
       AtomicOrdering::Monotonic, SyncScope::System, BB);
 
+  FunctionType *FooBarTy = FunctionType::get(Type::getVoidTy(C), {}, false);
+  Function::Create(FooBarTy, Function::ExternalLinkage, "foo", &M);
+  auto *BarF = Function::Create(FooBarTy, Function::ExternalLinkage, "bar", &M);
+  BarF->setDoesNotAccessMemory();
+
+  const Instruction *Foo = CallInst::Create(M.getFunction("foo"), {}, BB);
+  const Instruction *Bar = CallInst::Create(M.getFunction("bar"), {}, BB);
+
   ReturnInst::Create(C, nullptr, BB);
 
   auto &AA = getAAResults(*F);
@@ -203,6 +211,13 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   EXPECT_EQ(AA.getModRefInfo(CmpXChg1, std::nullopt), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, MemoryLocation()), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, std::nullopt), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Load1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Store1), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Add1), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Foo), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, Bar), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Foo, Bar), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Foo, Foo), ModRefInfo::ModRef);
 }
 
 static Instruction *getInstructionByName(Function &F, StringRef Name) {
@@ -364,47 +379,6 @@ TEST_F(AliasAnalysisTest, PartialAliasOffsetSign) {
   EXPECT_EQ(AR, AliasResult::PartialAlias);
   EXPECT_EQ(-1, AR.getOffset());
 }
-
-TEST_F(AliasAnalysisTest, IsNoAliasForInstructions) {
-  // Create global variable
-  auto *GlobalVar = new GlobalVariable(
-      M, Type::getInt32Ty(C), false, GlobalValue::ExternalLinkage,
-      ConstantInt::get(Type::getInt32Ty(C), 0), "g");
-  GlobalVar->setAlignment(Align(4));
-
-  // Create function declarations
-  FunctionType *VoidFnTy = FunctionType::get(Type::getVoidTy(C), false);
-  Function::Create(VoidFnTy, Function::ExternalLinkage, "foo", M);
-  Function::Create(VoidFnTy, Function::ExternalLinkage, "bar", M);
-
-  // Create test function
-  FunctionType *TestFnTy = FunctionType::get(Type::getInt32Ty(C), false);
-  Function *TestFn =
-      Function::Create(TestFnTy, Function::ExternalLinkage, "test", M);
-
-  // Create basic block
-  BasicBlock *BB = BasicBlock::Create(C, "entry", TestFn);
-
-  // Create instructions
-  auto *Alloca = new AllocaInst(Type::getInt32Ty(C), 0, "p", BB);
-  auto *Store1 =
-      new StoreInst(ConstantInt::get(Type::getInt32Ty(C), 42), Alloca, BB);
-  auto *Store2 =
-      new StoreInst(ConstantInt::get(Type::getInt32Ty(C), 100), GlobalVar, BB);
-  auto *Call1 = CallInst::Create(M.getFunction("foo"), {}, BB);
-  auto *Call2 = CallInst::Create(M.getFunction("bar"), {}, BB);
-  auto *Load = new LoadInst(Type::getInt32Ty(C), Alloca, "val", BB);
-  ReturnInst::Create(C, Load, BB);
-
-  auto &AA = getAAResults(*TestFn);
-  EXPECT_EQ(true, AA.isNoAlias(Store1, Store2));
-  EXPECT_EQ(false, AA.isNoAlias(Store1, Call1));
-  EXPECT_EQ(false, AA.isNoAlias(Store1, Load));
-  EXPECT_EQ(false, AA.isNoAlias(Store2, Call1));
-  EXPECT_EQ(false, AA.isNoAlias(Call1, Call2));
-  EXPECT_EQ(true, AA.isNoAlias(Store2, Load));
-}
-
 class AAPassInfraTest : public testing::Test {
 protected:
   LLVMContext C;
