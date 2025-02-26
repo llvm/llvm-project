@@ -685,6 +685,7 @@ cc_library(
         "include/clang/Basic/AttrHasAttributeImpl.inc",
         "include/clang/Basic/AttrList.inc",
         "include/clang/Basic/AttrSubMatchRulesList.inc",
+        "include/clang/Basic/BuiltinTemplates.inc",
         "include/clang/Basic/DiagnosticASTKinds.inc",
         "include/clang/Basic/DiagnosticAnalysisKinds.inc",
         "include/clang/Basic/DiagnosticCommentKinds.inc",
