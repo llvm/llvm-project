@@ -1794,11 +1794,24 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
     }
   }
 
-  // Pass by reference warnings are under a different flag.
+  // Pass by reference/pointer warnings are under a different flag.
   ProtectedOperationKind PtPOK = POK_VarDereference;
-  if (POK == POK_PassByRef) PtPOK = POK_PtPassByRef;
-  if (POK == POK_ReturnByRef)
+  switch (POK) {
+  case POK_PassByRef:
+    PtPOK = POK_PtPassByRef;
+    break;
+  case POK_ReturnByRef:
     PtPOK = POK_PtReturnByRef;
+    break;
+  case POK_PassPointer:
+    PtPOK = POK_PtPassPointer;
+    break;
+  case POK_ReturnPointer:
+    PtPOK = POK_PtReturnPointer;
+    break;
+  default:
+    break;
+  }
 
   const ValueDecl *D = getValueDecl(Exp);
   if (!D || !D->hasAttrs())
@@ -2145,6 +2158,8 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
     QualType Qt = (*Param)->getType();
     if (Qt->isReferenceType())
       checkAccess(*Arg, AK_Read, POK_PassByRef);
+    else if (Qt->isPointerType())
+      checkPtAccess(*Arg, AK_Read, POK_PassPointer);
   }
 }
 
@@ -2286,8 +2301,8 @@ void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
   if (!RetVal)
     return;
 
-  // If returning by reference, check that the function requires the appropriate
-  // capabilities.
+  // If returning by reference or pointer, check that the function requires the
+  // appropriate capabilities.
   const QualType ReturnType =
       Analyzer->CurrentFunction->getReturnType().getCanonicalType();
   if (ReturnType->isLValueReferenceType()) {
@@ -2295,6 +2310,11 @@ void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
         FunctionExitFSet, RetVal,
         ReturnType->getPointeeType().isConstQualified() ? AK_Read : AK_Written,
         POK_ReturnByRef);
+  } else if (ReturnType->isPointerType()) {
+    Analyzer->checkPtAccess(
+        FunctionExitFSet, RetVal,
+        ReturnType->getPointeeType().isConstQualified() ? AK_Read : AK_Written,
+        POK_ReturnPointer);
   }
 }
 
