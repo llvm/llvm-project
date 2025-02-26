@@ -57,8 +57,8 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[4:5]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    buffer_store_b32 v0, v0, s[4:7], 0 offen
 ; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
