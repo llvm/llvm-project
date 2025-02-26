@@ -2117,9 +2117,18 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM,
 Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
                                     const PipelineElement &E) {
   StringRef Name = E.Name;
-  if (!E.InnerPipeline.empty())
+  // Handle any nested pass managers.
+  if (!E.InnerPipeline.empty()) {
+    if (E.Name == "machine-function") {
+      MachineFunctionPassManager NestedPM;
+      if (auto Err = parseMachinePassPipeline(NestedPM, E.InnerPipeline))
+        return Err;
+      MFPM.addPass(std::move(NestedPM));
+      return Error::success();
+    }
     return make_error<StringError>("invalid pipeline",
                                    inconvertibleErrorCode());
+  }
 
 #define MACHINE_MODULE_PASS(NAME, CREATE_PASS)                                 \
   if (Name == NAME) {                                                          \
