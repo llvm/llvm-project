@@ -177,6 +177,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_trailing_zeros_us
 
     # stdlib.h entrypoints
+    libc.src.stdlib.a64l
     libc.src.stdlib.abs
     libc.src.stdlib.atof
     libc.src.stdlib.atoi
