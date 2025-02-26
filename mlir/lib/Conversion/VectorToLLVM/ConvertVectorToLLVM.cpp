@@ -1229,38 +1229,48 @@ public:
     // its explanatory comment about how N-D vectors are converted as nested
     // aggregates (llvm.array's) of 1D vectors.
     //
-    // There are 3 steps here, vs 2 in VectorExtractOpConversion:
-    // - Extraction of a 1D vector from the nested aggregate: llvm.extractvalue.
-    // - Insertion into the 1D vector: llvm.insertelement.
-    // - Insertion of the 1D vector into the nested aggregate: llvm.insertvalue.
+    // The innermost dimension of the destination vector, when converted to a
+    // nested aggregate form, will always be a 1D vector.
+    //
+    // * If the insertion is happening into the innermost dimension of the
+    //   destination vector:
+    //   - If the destination is a nested aggregate, extract a 1D vector out of
+    //     the aggregate. This can be done using llvm.extractvalue. The
+    //     destination is now guaranteed to be a 1D vector, to which we are
+    //     inserting.
+    //   - Do the insertion into the 1D destination vector, and make the result
+    //     the new source nested aggregate. This can be done using
+    //     llvm.insertelement.
+    // * Insert the source nested aggregate into the destination nested
+    //   aggregate.
 
     // Determine if we need to extract/insert a 1D vector out of the aggregate.
-    bool is1DVectorWithinAggregate = isa<LLVM::LLVMArrayType>(llvmResultType);
+    bool isNestedAggregate = isa<LLVM::LLVMArrayType>(llvmResultType);
     // Determine if we need to insert a scalar into the 1D vector.
-    bool isScalarWithin1DVector =
+    bool insertIntoInnermostDim =
         static_cast<int64_t>(positionVec.size()) == destVectorType.getRank();
 
     ArrayRef<OpFoldResult> positionOf1DVectorWithinAggregate(
         positionVec.begin(),
-        isScalarWithin1DVector ? positionVec.size() - 1 : positionVec.size());
+        insertIntoInnermostDim ? positionVec.size() - 1 : positionVec.size());
     OpFoldResult positionOfScalarWithin1DVector;
     if (destVectorType.getRank() == 0) {
       // Since the LLVM type converter converts 0D vectors to 1D vectors, we
       // need to create a 0 here as the position into the 1D vector.
       Type idxType = typeConverter->convertType(rewriter.getIndexType());
       positionOfScalarWithin1DVector = rewriter.getZeroAttr(idxType);
-    } else if (isScalarWithin1DVector) {
+    } else if (insertIntoInnermostDim) {
       positionOfScalarWithin1DVector = positionVec.back();
     }
 
     // We are going to mutate this 1D vector until it is either the final
     // result (in the non-aggregate case) or the value that needs to be
     // inserted into the aggregate result.
-    Value vector1d;
-    if (isScalarWithin1DVector) {
+    Value sourceAggregate = adaptor.getSource();
+    if (insertIntoInnermostDim) {
       // Scalar-into-1D-vector case, so we know we will have to create a
       // InsertElementOp. The question is into what destination.
-      if (is1DVectorWithinAggregate) {
+      if (isNestedAggregate) {
         // Aggregate case: the destination for the InsertElementOp needs to be
         // extracted from the aggregate.
         if (!llvm::all_of(positionOf1DVectorWithinAggregate,
@@ -1268,27 +1278,24 @@ public:
           // llvm.extractvalue does not support dynamic dimensions.
           return failure();
         }
-        vector1d = rewriter.create<LLVM::ExtractValueOp>(
+        sourceAggregate = rewriter.create<LLVM::ExtractValueOp>(
             loc, adaptor.getDest(),
             getAsIntegers(positionOf1DVectorWithinAggregate));
       } else {
         // No-aggregate case. The destination for the InsertElementOp is just
         // the insertOp's destination.
-        vector1d = adaptor.getDest();
+        sourceAggregate = adaptor.getDest();
       }
       // Insert the scalar into the 1D vector.
-      vector1d = rewriter.create<LLVM::InsertElementOp>(
-          loc, vector1d.getType(), vector1d, adaptor.getSource(),
+      sourceAggregate = rewriter.create<LLVM::InsertElementOp>(
+          loc, sourceAggregate.getType(), sourceAggregate, adaptor.getSource(),
           getAsLLVMValue(rewriter, loc, positionOfScalarWithin1DVector));
-    } else {
-      // No scalar insertion. The 1D vector is just the source.
-      vector1d = adaptor.getSource();
     }
 
-    Value result = vector1d;
-    if (is1DVectorWithinAggregate) {
+    Value result = sourceAggregate;
+    if (isNestedAggregate) {
       result = rewriter.create<LLVM::InsertValueOp>(
-          loc, adaptor.getDest(), vector1d,
+          loc, adaptor.getDest(), sourceAggregate,
           getAsIntegers(positionOf1DVectorWithinAggregate));
     }
 
