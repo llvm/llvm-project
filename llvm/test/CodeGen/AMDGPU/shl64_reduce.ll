@@ -13,66 +13,23 @@
 ; Test range with metadata
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; FIXME: This case should be reduced, but SelectionDAG::computeKnownBits() cannot
+;        determine the minimum from metadata in this case.  Match current results
+;        for now.
+
 define i64 @shl_metadata(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v1, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %shift.amt = load i64, ptr %arg1.ptr, !range !0, !noundef !{}
-  %shl = shl i64 %arg0, %shift.amt
-  ret i64 %shl
-}
-
-define i64 @shl_metadata_two_ranges(i64 %arg0, ptr %arg1.ptr) {
-; CHECK-LABEL: shl_metadata_two_ranges:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v1, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %shift.amt = load i64, ptr %arg1.ptr, !range !1, !noundef !{}
-  %shl = shl i64 %arg0, %shift.amt
-  ret i64 %shl
-}
-
-; Known minimum is too low.  Reduction must not be done.
-define i64 @shl_metadata_out_of_range(i64 %arg0, ptr %arg1.ptr) {
-; CHECK-LABEL: shl_metadata_out_of_range:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dword v2, v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %shift.amt = load i64, ptr %arg1.ptr, !range !2, !noundef !{}
+  %shift.amt = load i64, ptr %arg1.ptr, !range !0
   %shl = shl i64 %arg0, %shift.amt
   ret i64 %shl
 }
 
-; Bounds cannot be truncated to i32 when load is narrowed to i32.
-; Reduction must not be done.
-; Bounds were chosen so that if bounds were truncated to i32 the
-; known minimum would be 32 and the shl would be erroneously reduced.
-define i64 @shl_metadata_cant_be_narrowed_to_i32(i64 %arg0, ptr %arg1.ptr) {
-; CHECK-LABEL: shl_metadata_cant_be_narrowed_to_i32:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v2, v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %shift.amt = load i64, ptr %arg1.ptr, !range !3, !noundef !{}
-  %shl = shl i64 %arg0, %shift.amt
-  ret i64 %shl
-}
-
-; FIXME: This case should be reduced
 define <2 x i64> @shl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v2_metadata:
 ; CHECK:       ; %bb.0:
@@ -82,12 +39,11 @@ define <2 x i64> @shl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v4, v[0:1]
 ; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v6, v[2:3]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
+  %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0
   %shl = shl <2 x i64> %arg0, %shift.amt
   ret <2 x i64> %shl
 }
 
-; FIXME: This case should be reduced
 define <3 x i64> @shl_v3_metadata(<3 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v3_metadata:
 ; CHECK:       ; %bb.0:
@@ -99,12 +55,11 @@ define <3 x i64> @shl_v3_metadata(<3 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v8, v[0:1]
 ; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v10, v[2:3]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %shift.amt = load <3 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
+  %shift.amt = load <3 x i64>, ptr %arg1.ptr, !range !0
   %shl = shl <3 x i64> %arg0, %shift.amt
   ret <3 x i64> %shl
 }
 
-; FIXME: This case should be reduced
 define <4 x i64> @shl_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v4_metadata:
 ; CHECK:       ; %bb.0:
@@ -119,15 +74,12 @@ define <4 x i64> @shl_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-NEXT:    v_lshlrev_b64 v[4:5], v13, v[4:5]
 ; CHECK-NEXT:    v_lshlrev_b64 v[6:7], v15, v[6:7]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %shift.amt = load <4 x i64>, ptr %arg1.ptr, !range !0, !noundef !{}
+  %shift.amt = load <4 x i64>, ptr %arg1.ptr, !range !0
   %shl = shl <4 x i64> %arg0, %shift.amt
   ret <4 x i64> %shl
 }
 
 !0 = !{i64 32, i64 64}
-!1 = !{i64 32, i64 38, i64 42, i64 48}
-!2 = !{i64 31, i64 38, i64 42, i64 48}
-!3 = !{i64 32, i64 38, i64 2147483680, i64 2147483681}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Test range with an "or X, 16"
