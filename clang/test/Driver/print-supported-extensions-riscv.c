@@ -203,6 +203,7 @@
 // CHECK-NEXT:     xqcilia              0.2       'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)
 // CHECK-NEXT:     xqcilo               0.2       'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 // CHECK-NEXT:     xqcilsm              0.2       'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
+// CHECK-NEXT:     xqcisim              0.2       'Xqcisim' (Qualcomm uC Simulation Hint Extension)
 // CHECK-NEXT:     xqcisls              0.2       'Xqcisls' (Qualcomm uC Scaled Load Store Extension)
 // CHECK-NEXT:     xrivosvizip          0.1       'XRivosVizip' (Rivos Vector Register Zips)
 // CHECK-EMPTY:

@@ -744,7 +744,7 @@ Error RISCVISAInfo::checkDependency() {
   static constexpr StringLiteral XqciExts[] = {
       {"xqcia"},  {"xqciac"},  {"xqcicli"}, {"xqcicm"},
       {"xqcics"}, {"xqcicsr"}, {"xqciint"}, {"xqcilia"},
-      {"xqcilo"}, {"xqcilsm"}, {"xqcisls"}};
+      {"xqcilo"}, {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");

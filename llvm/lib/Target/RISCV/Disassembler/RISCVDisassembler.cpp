@@ -628,7 +628,7 @@ static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
     RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqcilia,
     RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcisim, RISCV::FeatureVendorXqcisls,
 };
 
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,

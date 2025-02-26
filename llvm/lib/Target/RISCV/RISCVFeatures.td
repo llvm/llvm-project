@@ -1374,6 +1374,14 @@ def HasVendorXqcilo
       AssemblerPredicate<(all_of FeatureVendorXqcilo),
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
+def FeatureVendorXqcisim
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Simulation Hint Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcisim
+    : Predicate<"Subtarget->hasVendorXqcisim()">,
+                AssemblerPredicate<(all_of FeatureVendorXqcisim),
+                "'Xqcisim' (Qualcomm uC Simulation Hint Extension)">;
+
 // Rivos Extension(s)
 
 def FeatureVendorXRivosVizip
