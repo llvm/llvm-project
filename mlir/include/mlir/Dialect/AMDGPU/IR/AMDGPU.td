@@ -186,7 +186,7 @@ def AMDGPU_FatRawBufferCastOp :
     If `validBytes` is given, it is the number of bytes that will be valid as
     an offset to `out`. If it is not provided, this will be inferred from
     the size of the memref during lowering. This size is
-    max_d (sizes[d] * strides[d]) * sizeof(element type)..
+    max_{d = 0 upto rank(source)} (sizes[d] * strides[d]) * sizeof(element type).
 
     The flags of the buffer descriptor will be set up to enable raw usage -
     for example, stride = 0, add_tid = 0, and so on. The `boundsCheck`

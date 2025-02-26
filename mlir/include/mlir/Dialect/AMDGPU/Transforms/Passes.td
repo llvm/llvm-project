@@ -37,9 +37,13 @@ def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {
     This pass rrewrites `memref.extract_strided_metadata` operations
     targeting the AMDGPU dialect casts.
 
-    It's mainly meant for testing - please incorporate the patterns into your
-    own extract-strided-metadata passes (or run memref's expand-strided-metadata
-    again after this).
+    The patterns in this pass should normally be run alongside those in
+    -expand-strided-metadata, and creating a pass that combines those two
+    sets of patterns is the recommended way to use this functionality.
+    However, this pass (which will likely need a second -expand-strided-metadata
+    after it) is provided so that simple usecases do not need to create custom passes.
+    These patterns have not been added to -expnad-strided-metadata to
+    prevent the memref dialect from depending on platform-specific code.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
