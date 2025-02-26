@@ -12,10 +12,11 @@
 #include <bitset>
 #include <cmath>
 #include <cstddef>
+#include <random>
 
 template <std::size_t N>
 struct GenerateBitset {
-  // Construct a bitset with p*N true bits
+  // Construct a bitset with N bits, where each bit is set with probability p.
   static std::bitset<N> generate(double p) {
     std::bitset<N> b;
     if (p <= 0.0)
@@ -23,22 +24,12 @@ struct GenerateBitset {
     if (p >= 1.0)
       return ~b;
 
-    std::size_t num_ones = std::round(N * p);
-    if (num_ones == 0)
-      return b;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::bernoulli_distribution d(p);
+    for (std::size_t i = 0; i < N; ++i)
+      b[i] = d(gen);
 
-    double step  = static_cast<double>(N) / num_ones;
-    double error = 0.0;
-
-    std::size_t pos = 0;
-    for (std::size_t i = 0; i < num_ones; ++i) {
-      if (pos >= N)
-        break;
-      b.set(pos);
-      error += step;
-      pos += std::floor(error);
-      error -= std::floor(error);
-    }
     return b;
   }
 
