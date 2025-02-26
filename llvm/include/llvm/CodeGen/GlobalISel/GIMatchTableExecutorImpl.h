@@ -175,6 +175,10 @@ bool GIMatchTableExecutor::executeMatchTable(
         break;
       }
 
+      // TODO(max): null deref further down but on exactly the call
+      // TODO(max): comment out to see where the actual fail is
+      auto *DefMI = MRI.getVRegDef(MO.getReg());
+      assert(DefMI);
       MachineInstr *NewMI;
       if (MatcherOpcode == GIM_RecordInsnIgnoreCopies)
         NewMI = getDefIgnoringCopies(MO.getReg(), MRI);

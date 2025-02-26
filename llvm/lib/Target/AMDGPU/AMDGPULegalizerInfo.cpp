@@ -2131,6 +2131,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return legalizeInsertVectorElt(MI, MRI, B);
+  case TargetOpcode::G_INSERT_SUBVECTOR:
+    return legalizeInsertSubVector(MI, MRI, B);
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
     return legalizeSinCos(MI, MRI, B);
@@ -2822,6 +2824,64 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
     B.buildMergeLikeInstr(Dst, SrcRegs);
   } else {
     B.buildUndef(Dst);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// This lowers an G_INSERT_SUBVECTOR by extracting the individual elements from
+// the small vector and inserting them into the big vector. That is better than
+// the default expansion of doing it via a stack slot. Even though the use of
+// the stack slot would be optimized away afterwards, the stack slot itself
+// remains.
+bool AMDGPULegalizerInfo::legalizeInsertSubVector(MachineInstr &MI,
+                                                  MachineRegisterInfo &MRI,
+                                                  MachineIRBuilder &B) const {
+
+  GInsertSubvector *ES = cast<GInsertSubvector>(&MI);
+  Register Vec = ES->getBigVec();
+  Register Ins = ES->getSubVec();
+  uint64_t IdxVal = ES->getIndexImm();
+
+  LLT VecVT = MRI.getType(Vec);
+  LLT InsVT = MRI.getType(Ins);
+  LLT EltVT = VecVT.getElementType();
+  assert(VecVT.getElementType() == InsVT.getElementType());
+
+  ElementCount InsVTEC = InsVT.getElementCount();
+  auto InsNumElts = InsVTEC.getKnownMinValue();
+
+  if (EltVT.getScalarSizeInBits() == 16 && IdxVal % 2 == 0) {
+    // Insert 32-bit registers at a time.
+    assert(InsNumElts % 2 == 0 && "expect legal vector types");
+
+    ElementCount VecVTEC = VecVT.getElementCount();
+    LLT NewVecVT = LLT::vector(VecVTEC.divideCoefficientBy(2), S32);
+    LLT NewInsVT = InsNumElts == 2
+                       ? S32
+                       : LLT::vector(InsVTEC.divideCoefficientBy(2), S32);
+
+    auto VecB = B.buildBitcast(NewVecVT, Vec);
+    auto InsB = B.buildBitcast(NewInsVT, Ins);
+
+    for (unsigned I = 0; I != InsNumElts / 2; ++I) {
+      MachineInstrBuilder Elt;
+      if (InsNumElts == 2) {
+        Elt = InsB;
+      } else {
+        Elt = B.buildExtractVectorElementConstant(S32, InsB, I);
+      }
+      VecB = B.buildInsertVectorElementConstant(NewVecVT, VecB, Elt, IdxVal / 2 + I);
+    }
+    auto R = B.buildBitcast(VecVT, VecB);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  for (unsigned I = 0; I != InsNumElts; ++I) {
+    auto Elt = B.buildExtractVectorElementConstant(EltVT, Ins, I);
+    Vec = B.buildInsertVectorElementConstant(VecVT, Vec, Elt, IdxVal + I).getReg(0);
   }
 
   MI.eraseFromParent();
