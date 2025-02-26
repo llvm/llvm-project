@@ -396,6 +396,7 @@ define i8 @trunc_rmw8(ptr %p, i32 %val) {
 ; ATOMIC32-NEXT:    .save {r7, lr}
 ; ATOMIC32-NEXT:    push {r7, lr}
 ; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    uxtb r1, r1
 ; ATOMIC32-NEXT:    bl __sync_fetch_and_add_1
 ; ATOMIC32-NEXT:    dmb sy
 ; ATOMIC32-NEXT:    pop {r7, pc}
@@ -447,6 +448,7 @@ define i8 @trunc_rmw8_signed(ptr %p, i32 %val) {
 ; ATOMIC32-NEXT:    .save {r7, lr}
 ; ATOMIC32-NEXT:    push {r7, lr}
 ; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    sxtb r1, r1
 ; ATOMIC32-NEXT:    bl __sync_fetch_and_max_1
 ; ATOMIC32-NEXT:    dmb sy
 ; ATOMIC32-NEXT:    pop {r7, pc}
@@ -478,6 +480,8 @@ define i8 @trunc_cmpxchg8(ptr %p, i32 %cmp, i32 %new) {
 ; ATOMIC32-NEXT:    .save {r7, lr}
 ; ATOMIC32-NEXT:    push {r7, lr}
 ; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    uxtb r1, r1
+; ATOMIC32-NEXT:    uxtb r2, r2
 ; ATOMIC32-NEXT:    bl __sync_val_compare_and_swap_1
 ; ATOMIC32-NEXT:    dmb sy
 ; ATOMIC32-NEXT:    pop {r7, pc}
@@ -524,6 +528,7 @@ define i16 @trunc_rmw16(ptr %p, i32 %val) {
 ; ATOMIC32-NEXT:    .save {r7, lr}
 ; ATOMIC32-NEXT:    push {r7, lr}
 ; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    uxth r1, r1
 ; ATOMIC32-NEXT:    bl __sync_fetch_and_add_2
 ; ATOMIC32-NEXT:    dmb sy
 ; ATOMIC32-NEXT:    pop {r7, pc}
@@ -575,6 +580,7 @@ define i16 @trunc_rmw16_signed(ptr %p, i32 %val) {
 ; ATOMIC32-NEXT:    .save {r7, lr}
 ; ATOMIC32-NEXT:    push {r7, lr}
 ; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    sxth r1, r1
 ; ATOMIC32-NEXT:    bl __sync_fetch_and_max_2
 ; ATOMIC32-NEXT:    dmb sy
 ; ATOMIC32-NEXT:    pop {r7, pc}
@@ -606,6 +612,8 @@ define i16 @trunc_cmpxchg16(ptr %p, i32 %cmp, i32 %new) {
 ; ATOMIC32-NEXT:    .save {r7, lr}
 ; ATOMIC32-NEXT:    push {r7, lr}
 ; ATOMIC32-NEXT:    dmb sy
+; ATOMIC32-NEXT:    uxth r1, r1
+; ATOMIC32-NEXT:    uxth r2, r2
 ; ATOMIC32-NEXT:    bl __sync_val_compare_and_swap_2
 ; ATOMIC32-NEXT:    dmb sy
 ; ATOMIC32-NEXT:    pop {r7, pc}

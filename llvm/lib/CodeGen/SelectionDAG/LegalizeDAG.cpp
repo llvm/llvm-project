@@ -4386,23 +4386,46 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     AtomicOrdering Order = cast<AtomicSDNode>(Node)->getMergedOrdering();
     RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, Order, VT);
     EVT RetVT = Node->getValueType(0);
+    SDValue ChainIn = Node->getOperand(0);
+    SDValue Pointer = Node->getOperand(1);
+    SDLoc dl(Node);
     SmallVector<SDValue, 4> Ops;
+
+    // Zero/sign extend small operands if required by the target's ABI.
+    SmallVector<SDValue, 4> ExtendedOps;
+    for (auto Op = Node->op_begin() + 2, E = Node->op_end(); Op != E; ++Op) {
+      if (TLI.shouldExtendTypeInLibCall(VT)) {
+        bool IsSigned =
+            Opc == ISD::ATOMIC_LOAD_MIN || Opc == ISD::ATOMIC_LOAD_MAX;
+        if (TLI.shouldSignExtendTypeInLibCall(
+                EVT(VT).getTypeForEVT(*DAG.getContext()), IsSigned))
+          ExtendedOps.push_back(DAG.getNode(ISD::SIGN_EXTEND_INREG, dl,
+                                            Op->getValueType(), *Op,
+                                            DAG.getValueType(VT)));
+        else
+          ExtendedOps.push_back(DAG.getZeroExtendInReg(*Op, dl, VT));
+
+      } else {
+        ExtendedOps.push_back(*Op);
+      }
+    }
+
     if (TLI.getLibcallName(LC)) {
       // If outline atomic available, prepare its arguments and expand.
-      Ops.append(Node->op_begin() + 2, Node->op_end());
-      Ops.push_back(Node->getOperand(1));
+      Ops.append(ExtendedOps.begin(), ExtendedOps.end());
+      Ops.push_back(Pointer);
 
     } else {
       LC = RTLIB::getSYNC(Opc, VT);
       assert(LC != RTLIB::UNKNOWN_LIBCALL &&
              "Unexpected atomic op or value type!");
       // Arguments for expansion to sync libcall
-      Ops.append(Node->op_begin() + 1, Node->op_end());
+      Ops.push_back(Pointer);
+      Ops.append(ExtendedOps.begin(), ExtendedOps.end());
     }
-    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
-                                                      Ops, CallOptions,
-                                                      SDLoc(Node),
-                                                      Node->getOperand(0));
+
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC, RetVT, Ops, CallOptions, dl, ChainIn);
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
     break;

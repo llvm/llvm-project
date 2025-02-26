@@ -203,7 +203,7 @@ define void @test4(ptr %ptr1, ptr %ptr2) {
 ; THUMBONE-NEXT:    movs r1, #0
 ; THUMBONE-NEXT:    mov r2, r1
 ; THUMBONE-NEXT:    bl __sync_val_compare_and_swap_1
-; THUMBONE-NEXT:    mov r1, r0
+; THUMBONE-NEXT:    uxtb r1, r0
 ; THUMBONE-NEXT:    mov r0, r4
 ; THUMBONE-NEXT:    bl __sync_lock_test_and_set_1
 ; THUMBONE-NEXT:    pop {r4, pc}
@@ -692,6 +692,7 @@ define void @store_atomic_f16__seq_cst(ptr %ptr, half %val1) {
 ; THUMBONE-LABEL: store_atomic_f16__seq_cst:
 ; THUMBONE:       @ %bb.0:
 ; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    uxth r1, r1
 ; THUMBONE-NEXT:    bl __sync_lock_test_and_set_2
 ; THUMBONE-NEXT:    pop {r7, pc}
 ;
@@ -756,6 +757,7 @@ define void @store_atomic_bf16__seq_cst(ptr %ptr, bfloat %val1) {
 ; THUMBONE-LABEL: store_atomic_bf16__seq_cst:
 ; THUMBONE:       @ %bb.0:
 ; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    uxth r1, r1
 ; THUMBONE-NEXT:    bl __sync_lock_test_and_set_2
 ; THUMBONE-NEXT:    pop {r7, pc}
 ;
