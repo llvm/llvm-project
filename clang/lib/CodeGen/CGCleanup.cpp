@@ -152,6 +152,19 @@ EHScopeStack::getInnermostActiveNormalCleanup() const {
   return stable_end();
 }
 
+static bool FunctionCanThrow(const FunctionDecl *D) {
+  if (!D) {
+    return true;
+  }
+
+  const auto *Proto = D->getType()->getAs<FunctionProtoType>();
+  if (!Proto) {
+    // Function proto is not found, we conservatively assume throwing.
+    return true;
+  }
+  return !isNoexceptExceptionSpec(Proto->getExceptionSpecType()) ||
+         Proto->canThrow() != CT_Cannot;
+}
 
 void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   char *Buffer = allocate(EHCleanupScope::getSizeForCleanupSize(Size));
@@ -191,7 +204,9 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   // consistent with MSVC's behavior, except in the presence of -EHa.
   // Check getInvokeDest() to generate llvm.seh.scope.begin() as needed.
   if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
-      CGF->getTarget().getCXXABI().isMicrosoft() && CGF->getInvokeDest())
+      CGF->getTarget().getCXXABI().isMicrosoft() &&
+      FunctionCanThrow(dyn_cast<FunctionDecl>(CGF->CurFuncDecl)) &&
+      CGF->getInvokeDest())
     CGF->EmitSehCppScopeBegin();
 
   return Scope->getCleanupBuffer();
@@ -784,7 +799,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
     cleanupFlags.setIsEHCleanupKind();
 
   // Under -EHa, invoke seh.scope.end() to mark scope end before dtor
-  bool IsEHa = getLangOpts().EHAsynch && !Scope.isLifetimeMarker();
+  bool IsEHa = getLangOpts().EHAsynch && !Scope.isLifetimeMarker() &&
+               FunctionCanThrow(dyn_cast<FunctionDecl>(CurFuncDecl));
   const EHPersonality &Personality = EHPersonality::get(*this);
   if (!RequiresNormalCleanup) {
     // Mark CPP scope end for passed-by-value Arg temp
