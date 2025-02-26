@@ -185,13 +185,11 @@ public:
                                        StringRef OptionName,
                                        StringRef ExpectedValueDesc) const;
 
-  using CheckerRef = CheckerBase *;
   using CheckerTag = const void *;
-  using CheckerDtor = CheckerFn<void ()>;
 
-//===----------------------------------------------------------------------===//
-// Checker registration.
-//===----------------------------------------------------------------------===//
+  //===----------------------------------------------------------------------===//
+  // Checker registration.
+  //===----------------------------------------------------------------------===//
 
   /// Used to register checkers.
   /// All arguments are automatically passed through to the checker
@@ -201,24 +199,24 @@ public:
   template <typename CHECKER, typename... AT>
   CHECKER *registerChecker(AT &&... Args) {
     CheckerTag tag = getTag<CHECKER>();
-    CheckerRef &ref = CheckerTags[tag];
-    assert(!ref && "Checker already registered, use getChecker!");
+    std::unique_ptr<CheckerBase> &Ref = CheckerTags[tag];
+    assert(!Ref && "Checker already registered, use getChecker!");
 
-    CHECKER *checker = new CHECKER(std::forward<AT>(Args)...);
-    checker->Name = CurrentCheckerName;
-    CheckerDtors.push_back(CheckerDtor(checker, destruct<CHECKER>));
-    CHECKER::_register(checker, *this);
-    ref = checker;
-    return checker;
+    std::unique_ptr<CHECKER> Checker =
+        std::make_unique<CHECKER>(std::forward<AT>(Args)...);
+    Checker->Name = CurrentCheckerName;
+    CHECKER::_register(Checker.get(), *this);
+    Ref = std::move(Checker);
+    return static_cast<CHECKER *>(Ref.get());
   }
 
   template <typename CHECKER>
   CHECKER *getChecker() {
-    CheckerTag tag = getTag<CHECKER>();
-    assert(CheckerTags.count(tag) != 0 &&
-           "Requested checker is not registered! Maybe you should add it as a "
-           "dependency in Checkers.td?");
-    return static_cast<CHECKER *>(CheckerTags[tag]);
+    CheckerTag Tag = getTag<CHECKER>();
+    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
+    assert(Ref && "Requested checker is not registered! Maybe you should add it"
+                  " as a dependency in Checkers.td?");
+    return static_cast<CHECKER *>(Ref.get());
   }
 
   template <typename CHECKER> bool isRegisteredChecker() {
@@ -622,9 +620,7 @@ private:
   template <typename T>
   static void *getTag() { static int tag; return &tag; }
 
-  llvm::DenseMap<CheckerTag, CheckerRef> CheckerTags;
-
-  std::vector<CheckerDtor> CheckerDtors;
+  llvm::DenseMap<CheckerTag, std::unique_ptr<CheckerBase>> CheckerTags;
 
   struct DeclCheckerInfo {
     CheckDeclFunc CheckFn;

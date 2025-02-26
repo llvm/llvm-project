@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include <memory>
@@ -41,8 +42,8 @@ CheckerManager::CheckerManager(AnalyzerOptions &AOptions,
 }
 
 CheckerManager::~CheckerManager() {
-  for (const auto &CheckerDtor : CheckerDtors)
-    CheckerDtor();
+  // This is declared here to ensure that the destructors of `CheckerBase` and
+  // `CheckerRegistryData` are available.
 }
 
 } // namespace ento
