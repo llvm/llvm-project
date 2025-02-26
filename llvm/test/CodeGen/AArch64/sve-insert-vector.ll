@@ -152,7 +152,7 @@ define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64>
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
+  %v0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> poison, <vscale x 8 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %v0, <vscale x 8 x i64> %sv1, i64 8)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
@@ -167,7 +167,7 @@ define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> poison, <vscale x 8 x i64> %sv0, i64 0)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
@@ -181,7 +181,7 @@ define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #5, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #4, mul vl]
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 8)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> poison, <vscale x 8 x i64> %sv0, i64 8)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
@@ -212,7 +212,7 @@ define void @insert_v2i64_nxv16i64(<2 x i64> %sv0, <2 x i64> %sv1, ptr %out) uwt
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv0, i64 0)
+  %v0 = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> poison, <2 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> %v0, <2 x i64> %sv1, i64 4)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
@@ -226,7 +226,7 @@ define void @insert_v2i64_nxv16i64_lo0(ptr %psv, ptr %out) {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
-  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 0)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> poison, <2 x i64> %sv, i64 0)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
@@ -253,7 +253,7 @@ define void @insert_v2i64_nxv16i64_lo2(ptr %psv, ptr %out) uwtable {
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
-  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 2)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> poison, <2 x i64> %sv, i64 2)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
@@ -267,7 +267,7 @@ define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_undef() nounwind {
 ; CHECK-NEXT:    mov z0.s, #1 // =0x1
 ; CHECK-NEXT:    ret
 entry:
-  %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> undef, <vscale x 1 x i32> splat(i32 1), i64 0)
+  %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> splat(i32 1), i64 0)
   ret <vscale x 4 x i32> %retval
 }
 
@@ -277,7 +277,7 @@ define <vscale x 6 x i16> @insert_nxv1i16_nxv6i16_undef() nounwind {
 ; CHECK-NEXT:    mov z0.h, #1 // =0x1
 ; CHECK-NEXT:    ret
 entry:
-  %retval = call <vscale x 6 x i16> @llvm.vector.insert.nxv6i16.nxv1i16(<vscale x 6 x i16> undef, <vscale x 1 x i16> splat(i16 1), i64 0)
+  %retval = call <vscale x 6 x i16> @llvm.vector.insert.nxv6i16.nxv1i16(<vscale x 6 x i16> poison, <vscale x 1 x i16> splat(i16 1), i64 0)
   ret <vscale x 6 x i16> %retval
 }
 
@@ -287,7 +287,7 @@ define <vscale x 4 x float> @insert_nxv1f32_nxv4f32_undef(<vscale x 1 x float> %
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
 entry:
-  %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> undef, <vscale x 1 x float> %subvec, i64 0)
+  %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> poison, <vscale x 1 x float> %subvec, i64 0)
   ret <vscale x 4 x float> %retval
 }
 
@@ -408,7 +408,7 @@ define <vscale x 3 x i32> @insert_nxv3i32_nxv2i32(<vscale x 2 x i32> %sv0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 3 x i32> @llvm.vector.insert.nxv3i32.nxv2i32(<vscale x 3 x i32> undef, <vscale x 2 x i32> %sv0, i64 0)
+  %v0 = call <vscale x 3 x i32> @llvm.vector.insert.nxv3i32.nxv2i32(<vscale x 3 x i32> poison, <vscale x 2 x i32> %sv0, i64 0)
  ret <vscale x 3 x i32> %v0
 }
 
@@ -428,7 +428,7 @@ define <vscale x 3 x float> @insert_nxv3f32_nxv2f32(<vscale x 2 x float> %sv0) n
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 3 x float> @llvm.vector.insert.nxv3f32.nxv2f32(<vscale x 3 x float> undef, <vscale x 2 x float> %sv0, i64 0)
+  %v0 = call <vscale x 3 x float> @llvm.vector.insert.nxv3f32.nxv2f32(<vscale x 3 x float> poison, <vscale x 2 x float> %sv0, i64 0)
  ret <vscale x 3 x float> %v0
 }
 
@@ -464,7 +464,7 @@ define <vscale x 6 x i32>  @insert_nxv6i32_nxv2i32(<vscale x 2 x i32> %sv0, <vsc
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 6 x i32> @llvm.vector.insert.nxv6i32.nxv2i32(<vscale x 6 x i32> undef, <vscale x 2 x i32> %sv0, i64 0)
+  %v0 = call <vscale x 6 x i32> @llvm.vector.insert.nxv6i32.nxv2i32(<vscale x 6 x i32> poison, <vscale x 2 x i32> %sv0, i64 0)
   %v1 = call <vscale x 6 x i32> @llvm.vector.insert.nxv6i32.nxv2i32(<vscale x 6 x i32> %v0, <vscale x 2 x i32> %sv1, i64 2)
   ret <vscale x 6 x i32> %v1
 }
@@ -474,7 +474,7 @@ define  <vscale x 6 x i32> @insert_nxv6i32_nxv3i32(<vscale x 3 x i32> %sv0) {
 ; CHECK-LABEL: insert_nxv6i32_nxv3i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 6 x i32> @llvm.vector.insert.nxv6i32.nxv3i32(<vscale x 6 x i32> undef, <vscale x 3 x i32> %sv0, i64 0)
+  %v0 = call <vscale x 6 x i32> @llvm.vector.insert.nxv6i32.nxv3i32(<vscale x 6 x i32> poison, <vscale x 3 x i32> %sv0, i64 0)
   ret <vscale x 6 x i32> %v0
 }
 
@@ -482,7 +482,7 @@ define <vscale x 12 x i32> @insert_nxv12i32_nxv4i32(<vscale x 4 x i32> %sv0, <vs
 ; CHECK-LABEL: insert_nxv12i32_nxv4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 12 x i32> @llvm.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32> undef, <vscale x 4 x i32> %sv0, i64 0)
+  %v0 = call <vscale x 12 x i32> @llvm.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32> poison, <vscale x 4 x i32> %sv0, i64 0)
   %v1 = call <vscale x 12 x i32> @llvm.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32> %v0, <vscale x 4 x i32> %sv1, i64 4)
   %v2 = call <vscale x 12 x i32> @llvm.vector.insert.nxv4i32.nxv12i32(<vscale x 12 x i32> %v1, <vscale x 4 x i32> %sv2, i64 8)
   ret <vscale x 12 x i32> %v2
@@ -659,7 +659,7 @@ define <vscale x 2 x i1> @insert_nxv2i1_v8i1_const_true_into_undef() vscale_rang
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.v8i1 (<vscale x 2 x i1> undef, <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  %v0 = call <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.v8i1 (<vscale x 2 x i1> poison, <8 x i1> splat (i1 true), i64 0)
   ret <vscale x 2 x i1> %v0
 }
 
@@ -668,7 +668,7 @@ define <vscale x 4 x i1> @insert_nxv4i1_v16i1_const_true_into_undef() vscale_ran
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.v16i1 (<vscale x 4 x i1> undef, <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  %v0 = call <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.v16i1 (<vscale x 4 x i1> poison, <16 x i1> splat (i1 true), i64 0)
   ret <vscale x 4 x i1> %v0
 }
 
@@ -677,7 +677,7 @@ define <vscale x 8 x i1> @insert_nxv8i1_v32i1_const_true_into_undef() vscale_ran
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.v32i1 (<vscale x 8 x i1> undef, <32 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  %v0 = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.v32i1 (<vscale x 8 x i1> poison, <32 x i1> splat (i1 true), i64 0)
   ret <vscale x 8 x i1> %v0
 }
 
@@ -686,7 +686,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_v64i1_const_true_into_undef() vscale_r
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
-  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.v64i1 (<vscale x 16 x i1> undef, <64 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i64 0)
+  %v0 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.v64i1 (<vscale x 16 x i1> poison, <64 x i1> splat (i1 true), i64 0)
   ret <vscale x 16 x i1> %v0
 }
 
