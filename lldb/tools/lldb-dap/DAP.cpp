@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
@@ -34,6 +35,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -769,10 +771,8 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
 
   if (packet_type == "response") {
     auto id = GetSigned(object, "request_seq", 0);
-    ResponseCallback response_handler = [](llvm::Expected<llvm::json::Value>) {
-      llvm::errs() << "Unhandled response\n";
-    };
 
+    std::unique_ptr<ResponseHandler> response_handler;
     {
       std::lock_guard<std::mutex> locker(call_mutex);
       auto inflight = inflight_reverse_requests.find(id);
@@ -782,19 +782,22 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       }
     }
 
+    if (!response_handler)
+      response_handler = std::make_unique<UnknownResponseHandler>("", id);
+
     // Result should be given, use null if not.
     if (GetBoolean(object, "success", false)) {
       llvm::json::Value Result = nullptr;
       if (auto *B = object.get("body")) {
         Result = std::move(*B);
       }
-      response_handler(Result);
+      (*response_handler)(Result);
     } else {
       llvm::StringRef message = GetString(object, "message");
       if (message.empty()) {
         message = "Unknown error, response failed";
       }
-      response_handler(llvm::createStringError(
+      (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
     }
 
@@ -873,24 +876,6 @@ llvm::Error DAP::Loop() {
   }
 
   return llvm::Error::success();
-}
-
-void DAP::SendReverseRequest(llvm::StringRef command,
-                             llvm::json::Value arguments,
-                             ResponseCallback callback) {
-  int64_t id;
-  {
-    std::lock_guard<std::mutex> locker(call_mutex);
-    id = ++reverse_request_seq;
-    inflight_reverse_requests.emplace(id, std::move(callback));
-  }
-
-  SendJSON(llvm::json::Object{
-      {"type", "request"},
-      {"seq", id},
-      {"command", command},
-      {"arguments", std::move(arguments)},
-  });
 }
 
 lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
@@ -1007,17 +992,10 @@ bool StartDebuggingRequestHandler::DoExecute(
     return false;
   }
 
-  dap.SendReverseRequest(
+  dap.SendReverseRequest<LogFailureResponseHandler>(
       "startDebugging",
       llvm::json::Object{{"request", request},
-                         {"configuration", std::move(*configuration)}},
-      [](llvm::Expected<llvm::json::Value> value) {
-        if (!value) {
-          llvm::Error err = value.takeError();
-          llvm::errs() << "reverse start debugging request failed: "
-                       << llvm::toString(std::move(err)) << "\n";
-        }
-      });
+                         {"configuration", std::move(*configuration)}});
 
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
 
