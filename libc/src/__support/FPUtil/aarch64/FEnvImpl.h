@@ -125,7 +125,7 @@ LIBC_INLINE int disable_except(int excepts) {
 
 LIBC_INLINE int get_except() {
   uint32_t controlWord = FEnv::getControlWord();
-  int enabledExcepts =
+  uint32_t enabledExcepts =
       (controlWord >> FEnv::ExceptionControlFlagsBitPosition) & 0x1F;
   return FEnv::exceptionStatusToMacro(enabledExcepts);
 }
