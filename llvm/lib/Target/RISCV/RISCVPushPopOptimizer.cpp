@@ -13,6 +13,7 @@
 
 #include "RISCVInstrInfo.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 
 using namespace llvm;
 
@@ -72,7 +73,7 @@ static unsigned getPopRetOpcode(unsigned PopOpcode, bool IsReturnZero) {
 static MachineBasicBlock::iterator containsPop(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBB.end();
        MBBI = next_nodbg(MBBI, MBB.end()))
-    if (isPop(MBBI->getOpcode()))
+    if (MBBI->getFlag(MachineInstr::FrameDestroy) && isPop(MBBI->getOpcode()))
       return MBBI;
 
   return MBB.end();
@@ -85,11 +86,11 @@ bool RISCVPushPopOpt::usePopRet(MachineBasicBlock::iterator &MBBI,
   // this will detect all ret instruction.
   DebugLoc DL = NextI->getDebugLoc();
   unsigned Opc = getPopRetOpcode(MBBI->getOpcode(), IsReturnZero);
-  // unsigned Opc = IsReturnZero ? RISCV::CM_POPRETZ : RISCV::CM_POPRET;
   MachineInstrBuilder PopRetBuilder =
       BuildMI(*NextI->getParent(), NextI, DL, TII->get(Opc))
           .add(MBBI->getOperand(0))
-          .add(MBBI->getOperand(1));
+          .add(MBBI->getOperand(1))
+          .setMIFlag(MachineInstr::FrameDestroy);
 
   // Copy over the variable implicit uses and defs from the CM_POP. They depend
   // on what register list has been picked during frame lowering.

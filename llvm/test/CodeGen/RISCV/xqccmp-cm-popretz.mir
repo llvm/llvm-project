@@ -17,7 +17,7 @@ body:                   |
     ; CHECK-XQCCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -8
     ; CHECK-XQCCMP32-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-XQCCMP32-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-XQCCMP32-NEXT: QC_CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-XQCCMP32-NEXT: frame-destroy QC_CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-XQCCMP64-LABEL: name: popret_rvlist5
     ; CHECK-XQCCMP64: liveins: $x1, $x8
@@ -28,7 +28,7 @@ body:                   |
     ; CHECK-XQCCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -16
     ; CHECK-XQCCMP64-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-XQCCMP64-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-XQCCMP64-NEXT: QC_CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-XQCCMP64-NEXT: frame-destroy QC_CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
     $x1 = IMPLICIT_DEF
     $x8 = IMPLICIT_DEF
     PseudoRET
@@ -47,7 +47,7 @@ body:                   |
     ; CHECK-XQCCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -8
     ; CHECK-XQCCMP32-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-XQCCMP32-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-XQCCMP32-NEXT: QC_CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-XQCCMP32-NEXT: frame-destroy QC_CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-XQCCMP64-LABEL: name: popretz_rvlist5
     ; CHECK-XQCCMP64: liveins: $x1, $x8
@@ -58,7 +58,7 @@ body:                   |
     ; CHECK-XQCCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -16
     ; CHECK-XQCCMP64-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-XQCCMP64-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-XQCCMP64-NEXT: QC_CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-XQCCMP64-NEXT: frame-destroy QC_CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
     $x1 = IMPLICIT_DEF
     $x8 = IMPLICIT_DEF
     $x10 = COPY $x0
