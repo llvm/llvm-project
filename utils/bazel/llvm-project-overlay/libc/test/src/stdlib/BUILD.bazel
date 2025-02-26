@@ -150,7 +150,7 @@ libc_test(
 )
 
 libc_support_library(
-    name = "strfrom_test_support",
+    name = "strfrom_test_helper",
     hdrs = ["StrfromTest.h"],
     deps = [
         "//libc:__support_cpp_type_traits",
@@ -163,21 +163,21 @@ libc_test(
     name = "strfromf_test",
     srcs = ["strfromf_test.cpp"],
     libc_function_deps = ["//libc:strfromf"],
-    deps = [":strfrom_test_support"],
+    deps = [":strfrom_test_helper"],
 )
 
 libc_test(
     name = "strfromd_test",
     srcs = ["strfromd_test.cpp"],
     libc_function_deps = ["//libc:strfromd"],
-    deps = [":strfrom_test_support"],
+    deps = [":strfrom_test_helper"],
 )
 
 libc_test(
     name = "strfroml_test",
     srcs = ["strfroml_test.cpp"],
     libc_function_deps = ["//libc:strfroml"],
-    deps = [":strfrom_test_support"],
+    deps = [":strfrom_test_helper"],
 )
 
 libc_support_library(
