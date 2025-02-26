@@ -129,7 +129,7 @@ public:
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         IsCpp(Style.isCpp()), LangOpts(getFormattingLangOpts(Style)),
         Keywords(Keywords), Scopes(Scopes), TemplateDeclarationDepth(0) {
-    assert(IsCpp == LangOpts.CXXOperatorNames);
+    assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
   }
@@ -1313,7 +1313,7 @@ private:
     switch (bool IsIf = false; Tok->Tok.getKind()) {
     case tok::plus:
     case tok::minus:
-      if (!Tok->Previous && Line.MustBeDeclaration)
+      if (!Tok->getPreviousNonComment() && Line.MustBeDeclaration)
         Tok->setType(TT_ObjCMethodSpecifier);
       break;
     case tok::colon:
@@ -2596,7 +2596,7 @@ private:
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->is(tok::string_literal) ||
+          NextNonComment->isOneOf(TT_ClassHeadName, tok::string_literal) ||
           (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
     }
@@ -3821,7 +3821,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   };
 
   const auto *Next = Current.Next;
-  const bool IsCpp = LangOpts.CXXOperatorNames;
+  const bool IsCpp = LangOpts.CXXOperatorNames || LangOpts.C17;
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
@@ -6198,10 +6198,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                 FormatStyle::PAS_Right &&
             (!Right.Next || Right.Next->isNot(TT_FunctionDeclarationName)));
   }
-  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
-      Right.is(tok::kw_operator)) {
+  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
+                    TT_ClassHeadName, tok::kw_operator)) {
     return true;
   }
+  if (Right.isAttribute())
+    return true;
   if (Left.is(TT_PointerOrReference))
     return false;
   if (Right.isTrailingComment()) {
@@ -6345,9 +6347,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return !Right.isOneOf(tok::l_brace, tok::semi, tok::equal, tok::l_paren,
                           tok::less, tok::coloncolon);
   }
-
-  if (Right.isAttribute())
-    return true;
 
   if (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))
     return Left.isNot(TT_AttributeSquare);

@@ -17,6 +17,7 @@
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
@@ -316,6 +317,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddrSpaceCastOp>(
           alloc, ::getLlvmPtrType(alloc.getContext(), programAs), llvmAlloc);
     }
+
     return mlir::success();
   }
 };
@@ -584,6 +586,11 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
   matchAndRewrite(fir::CallOp call, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     llvm::SmallVector<mlir::Type> resultTys;
+    mlir::Attribute memAttr =
+        call->getAttr(fir::FIROpsDialect::getFirCallMemoryAttrName());
+    if (memAttr)
+      call->removeAttr(fir::FIROpsDialect::getFirCallMemoryAttrName());
+
     for (auto r : call.getResults())
       resultTys.push_back(convertType(r.getType()));
     // Convert arith::FastMathFlagsAttr to LLVM::FastMathFlagsAttr.
@@ -625,6 +632,10 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     }
     if (mlir::ArrayAttr resAttrs = call.getResAttrsAttr())
       llvmCall.setResAttrsAttr(resAttrs);
+
+    if (memAttr)
+      llvmCall.setMemoryEffectsAttr(
+          mlir::cast<mlir::LLVM::MemoryEffectsAttr>(memAttr));
     return mlir::success();
   }
 };
@@ -3568,6 +3579,14 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::UndefOp undef, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    if (mlir::isa<fir::DummyScopeType>(undef.getType())) {
+      // Dummy scoping is used for Fortran analyses like AA. Once it gets to
+      // pre-codegen rewrite it is erased and a fir.undef is created to
+      // feed to the fir declare operation. Thus, during codegen, we can
+      // simply erase is as it is no longer used.
+      rewriter.eraseOp(undef);
+      return mlir::success();
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
         undef, convertType(undef.getType()));
     return mlir::success();

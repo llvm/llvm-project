@@ -126,6 +126,9 @@ FailureOr<UnrolledLoopInfo> loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
 
+/// Unrolls this loop completely.
+LogicalResult loopUnrollFull(scf::ForOp forOp);
+
 /// Unrolls and jams this `scf.for` operation by the specified unroll factor.
 /// Returns failure if the loop cannot be unrolled either due to restrictions or
 /// due to invalid unroll factors. In case of unroll factor of 1, the function

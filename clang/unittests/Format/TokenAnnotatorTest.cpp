@@ -1849,6 +1849,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
   EXPECT_TOKEN(Tokens[15], tok::greater, TT_BinaryOperator);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodDecl) {
+  auto Tokens = annotate("/**/ - (void)foo;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_ObjCMethodSpecifier);
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_SelectorName);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   auto Tokens = annotate("[]() constexpr {}");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
@@ -3243,6 +3250,10 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   EXPECT_TOKEN(Tokens[0], tok::at, TT_ObjCDecl);
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_StartOfName);
 
+  Tokens = annotate("class FOO BAR C {};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown); // Not StartOfName
+
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");
   Tokens = annotate("emit foo = 0;", Style);
@@ -3511,6 +3522,19 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
   EXPECT_BRACE_KIND(Tokens[11], BK_Block);
   EXPECT_BRACE_KIND(Tokens[12], BK_Block);
+
+  Tokens = annotate("class foo {\n"
+                    "  foo() {}\n"
+                    "#if defined(_MSC_VER__clang____GNUC__FOO_) || \\\n"
+                    "    (defined(__GNUC__) && defined(FOO))\n"
+                    "  foo() {}\n"
+                    "#endif\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_TOKEN(Tokens[26], tok::identifier, TT_CtorDtorDeclName);
+  EXPECT_TOKEN(Tokens[27], tok::l_paren, TT_FunctionDeclarationLParen);
 
   Tokens = annotate("a = class extends goog.a {};",
                     getGoogleStyle(FormatStyle::LK_JavaScript));

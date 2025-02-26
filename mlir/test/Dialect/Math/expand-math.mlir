@@ -285,6 +285,17 @@ func.func @powf_func_negtwo(%a: f64) -> f64{
   return %ret : f64
 }
 
+// CHECK-LABEL:   func @powf_func_three
+// CHECK-SAME:    (%[[ARG0:.+]]: f64) -> f64
+func.func @powf_func_three(%a: f64) -> f64{
+  // CHECK: %[[MUL:.+]] = arith.mulf %[[ARG0]], %[[ARG0]] : f64
+  // CHECK: %[[MUL2:.+]] = arith.mulf %[[MUL]], %[[ARG0]] : f64
+  // CHECK: return %[[MUL2]] : f64
+  %b = arith.constant 3.0 : f64
+  %ret = math.powf %a, %b : f64
+  return %ret : f64
+}
+
 // -----
 
 // CHECK-LABEL:   func.func @roundeven64
@@ -749,4 +760,30 @@ func.func @rsqrt_vec(%float: vector<5xf32>) -> (vector<5xf32>)  {
 func.func @rsqrt_tns(%float: tensor<5x8xf32>) -> (tensor<5x8xf32>)  {
   %float_result = math.rsqrt %float : tensor<5x8xf32>
   return %float_result : tensor<5x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_ceil_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[CEIL:.*]] = math.ceil %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[CEIL]] : tensor<?xf32>
+
+func.func @non_static_shape_ceil_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.ceil %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_ceil_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[CEIL:.*]] = math.ceil %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[CEIL]] : tensor<*xf32>
+
+func.func @unranked_ceil_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.ceil %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
 }

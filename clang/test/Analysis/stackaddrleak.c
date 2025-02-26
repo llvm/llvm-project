@@ -68,3 +68,25 @@ int *g_no_lifetime_bound() {
   int i = 0;
   return f_no_lifetime_bound(&i); // no-warning
 }
+
+struct child_stack_context_s {
+  int *p;
+};
+
+struct child_stack_context_s return_child_stack_context() {
+  struct child_stack_context_s s;
+  {
+    int a = 1;
+    s = (struct child_stack_context_s){ &a };
+  }
+  return s; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+struct child_stack_context_s return_child_stack_context_field() {
+  struct child_stack_context_s s;
+  {
+    int a = 1;
+    s.p = &a;
+  }
+  return s; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}

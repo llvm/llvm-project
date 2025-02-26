@@ -680,8 +680,6 @@ static bool combine(const CodeGenSubRegIndex *Idx,
 void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
                                                    StringRef ClassName) {
   const auto &SubRegIndices = RegBank.getSubRegIndices();
-  OS << "unsigned " << ClassName
-     << "::composeSubRegIndicesImpl(unsigned IdxA, unsigned IdxB) const {\n";
 
   // Many sub-register indexes are composition-compatible, meaning that
   //
@@ -713,7 +711,10 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
     RowMap.push_back(Found);
   }
 
-  // Output the row map if there is multiple rows.
+  OS << "unsigned " << ClassName
+     << "::composeSubRegIndicesImpl(unsigned IdxA, unsigned IdxB) const {\n";
+
+  // Output the row map if there are multiple rows.
   if (Rows.size() > 1) {
     OS << "  static const " << getMinimalTypeForRange(Rows.size(), 32)
        << " RowMap[" << SubRegIndicesSize << "] = {\n    ";
@@ -743,6 +744,51 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   else
     OS << "  return Rows[0][IdxB];\n";
   OS << "}\n\n";
+
+  // Generate the reverse case.
+  //
+  // FIXME: This is the brute force approach. Compress the table similar to the
+  // forward case.
+  OS << "unsigned " << ClassName
+     << "::reverseComposeSubRegIndicesImpl(unsigned IdxA, unsigned IdxB) const "
+        "{\n";
+  OS << "  static const " << getMinimalTypeForRange(SubRegIndicesSize + 1, 32)
+     << " Table[" << SubRegIndicesSize << "][" << SubRegIndicesSize
+     << "] = {\n";
+
+  // Find values where composeSubReg(A, X) == B;
+  for (const auto &IdxA : SubRegIndices) {
+    OS << "    { ";
+
+    SmallVectorImpl<const CodeGenSubRegIndex *> &Row =
+        Rows[RowMap[IdxA.EnumValue - 1]];
+    for (const auto &IdxB : SubRegIndices) {
+      const CodeGenSubRegIndex *FoundReverse = nullptr;
+
+      for (unsigned i = 0, e = SubRegIndicesSize; i != e; ++i) {
+        const CodeGenSubRegIndex *This = &SubRegIndices[i];
+        const CodeGenSubRegIndex *Composed = Row[i];
+        if (Composed == &IdxB) {
+          if (FoundReverse && FoundReverse != This) // Not unique
+            break;
+          FoundReverse = This;
+        }
+      }
+
+      if (FoundReverse) {
+        OS << FoundReverse->getQualifiedName() << ", ";
+      } else {
+        OS << "0, ";
+      }
+    }
+    OS << "},\n";
+  }
+
+  OS << "  };\n\n";
+  OS << "  --IdxA; assert(IdxA < " << SubRegIndicesSize << ");\n"
+     << "  --IdxB; assert(IdxB < " << SubRegIndicesSize << ");\n";
+  OS << "  return Table[IdxA][IdxB];\n";
+  OS << "  }\n\n";
 }
 
 void RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
@@ -1113,6 +1159,8 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
      << "      unsigned PC = 0, unsigned HwMode = 0);\n";
   if (!RegBank.getSubRegIndices().empty()) {
     OS << "  unsigned composeSubRegIndicesImpl"
+       << "(unsigned, unsigned) const override;\n"
+       << "  unsigned reverseComposeSubRegIndicesImpl"
        << "(unsigned, unsigned) const override;\n"
        << "  LaneBitmask composeSubRegIndexLaneMaskImpl"
        << "(unsigned, LaneBitmask) const override;\n"

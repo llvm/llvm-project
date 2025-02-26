@@ -1308,9 +1308,26 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
     return false;
   }
 
+  // Don't touch instructions that have non-trivial invariants.  For example,
+  // terminators have to be at the end of a basic block.
   if (isPosition() || isDebugInstr() || isTerminator() ||
-      mayRaiseFPException() || hasUnmodeledSideEffects() ||
       isJumpTableDebugInfo())
+    return false;
+
+  // Don't touch instructions which can have non-load/store effects.
+  //
+  // Inline asm has a "sideeffect" marker to indicate whether the asm has
+  // intentional side-effects. Even if an inline asm is not "sideeffect",
+  // though, it still can't be speculatively executed: the operation might
+  // not be valid on the current target, or for some combinations of operands.
+  // (Some transforms that move an instruction don't speculatively execute it;
+  // we currently don't try to handle that distinction here.)
+  //
+  // Other instructions handled here include those that can raise FP
+  // exceptions, x86 "DIV" instructions which trap on divide by zero, and
+  // stack adjustments.
+  if (mayRaiseFPException() || hasProperty(MCID::UnmodeledSideEffects) ||
+      isInlineAsm())
     return false;
 
   // See if this instruction does a load.  If so, we have to guarantee that the

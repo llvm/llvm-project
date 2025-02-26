@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -285,6 +286,64 @@ private:
     return false;
   }
 
+  /// Several intrinsics that return structs (including llvm.sincos[pi] and
+  /// llvm.modf) can be lowered to a vector library call (for certain VFs). The
+  /// vector library functions correspond to the scalar calls (e.g. sincos or
+  /// modf), which unlike the intrinsic return values via output pointers. This
+  /// helper checks if a vector call exists for the given intrinsic, and returns
+  /// the cost, which includes the cost of the mask (if required), and the loads
+  /// for values returned via output pointers. \p LC is the scalar libcall and
+  /// \p CallRetElementIndex (optional) is the struct element which is mapped to
+  /// the call return value. If std::nullopt is returned, then no vector library
+  /// call is available, so the intrinsic should be assigned the default cost
+  /// (e.g. scalarization).
+  std::optional<InstructionCost> getMultipleResultIntrinsicVectorLibCallCost(
+      const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind,
+      RTLIB::Libcall LC, std::optional<unsigned> CallRetElementIndex = {}) {
+    Type *RetTy = ICA.getReturnType();
+    // Vector variants of the intrinsic can be mapped to a vector library call.
+    auto const *LibInfo = ICA.getLibInfo();
+    if (!LibInfo || !isa<StructType>(RetTy) ||
+        !isVectorizedStructTy(cast<StructType>(RetTy)))
+      return std::nullopt;
+
+    // Find associated libcall.
+    const char *LCName = getTLI()->getLibcallName(LC);
+    if (!LCName)
+      return std::nullopt;
+
+    // Search for a corresponding vector variant.
+    LLVMContext &Ctx = RetTy->getContext();
+    ElementCount VF = getVectorizedTypeVF(RetTy);
+    VecDesc const *VD = nullptr;
+    for (bool Masked : {false, true}) {
+      if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
+        break;
+    }
+    if (!VD)
+      return std::nullopt;
+
+    // Cost the call + mask.
+    auto Cost =
+        thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
+    if (VD->isMasked())
+      Cost += thisT()->getShuffleCost(
+          TargetTransformInfo::SK_Broadcast,
+          VectorType::get(IntegerType::getInt1Ty(Ctx), VF), {}, CostKind, 0,
+          nullptr, {});
+
+    // Lowering to a library call (with output pointers) may require us to emit
+    // reloads for the results.
+    for (auto [Idx, VectorTy] : enumerate(getContainedTypes(RetTy))) {
+      if (Idx == CallRetElementIndex)
+        continue;
+      Cost += thisT()->getMemoryOpCost(
+          Instruction::Load, VectorTy,
+          thisT()->getDataLayout().getABITypeAlign(VectorTy), 0, CostKind);
+    }
+    return Cost;
+  }
+
 protected:
   explicit BasicTTIImplBase(const TargetMachine *TM, const DataLayout &DL)
       : BaseT(DL) {}
@@ -465,12 +524,12 @@ public:
 
   bool useAA() const { return getST()->useAA(); }
 
-  bool isTypeLegal(Type *Ty) {
+  bool isTypeLegal(Type *Ty) const {
     EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isTypeLegal(VT);
   }
 
-  unsigned getRegUsageForType(Type *Ty) {
+  unsigned getRegUsageForType(Type *Ty) const {
     EVT ETy = getTLI()->getValueType(DL, Ty);
     return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
@@ -1675,7 +1734,8 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
+            ICA.getID() == Intrinsic::vp_fneg) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
         }
@@ -1725,9 +1785,9 @@ public:
 
     Type *RetTy = ICA.getReturnType();
 
-    ElementCount RetVF =
-        (RetTy->isVectorTy() ? cast<VectorType>(RetTy)->getElementCount()
-                             : ElementCount::getFixed(1));
+    ElementCount RetVF = isVectorizedTy(RetTy) ? getVectorizedTypeVF(RetTy)
+                                               : ElementCount::getFixed(1);
+
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
@@ -1996,6 +2056,16 @@ public:
     }
     case Intrinsic::experimental_vector_match:
       return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
+    case Intrinsic::sincos: {
+      Type *Ty = getContainedTypes(RetTy).front();
+      EVT VT = getTLI()->getValueType(DL, Ty);
+      RTLIB::Libcall LC = RTLIB::getSINCOS(VT.getScalarType());
+      if (auto Cost =
+              getMultipleResultIntrinsicVectorLibCallCost(ICA, CostKind, LC))
+        return *Cost;
+      // Otherwise, fallback to default scalarization cost.
+      break;
+    }
     }
 
     // Assume that we need to scalarize this intrinsic.)
@@ -2004,10 +2074,13 @@ public:
     InstructionCost ScalarizationCost = InstructionCost::getInvalid();
     if (RetVF.isVector() && !RetVF.isScalable()) {
       ScalarizationCost = 0;
-      if (!RetTy->isVoidTy())
-        ScalarizationCost += getScalarizationOverhead(
-            cast<VectorType>(RetTy),
-            /*Insert*/ true, /*Extract*/ false, CostKind);
+      if (!RetTy->isVoidTy()) {
+        for (Type *VectorTy : getContainedTypes(RetTy)) {
+          ScalarizationCost += getScalarizationOverhead(
+              cast<VectorType>(VectorTy),
+              /*Insert=*/true, /*Extract=*/false, CostKind);
+        }
+      }
       ScalarizationCost +=
           getOperandsScalarizationOverhead(Args, ICA.getArgTypes(), CostKind);
     }
@@ -2688,27 +2761,32 @@ public:
     // Else, assume that we need to scalarize this intrinsic. For math builtins
     // this will emit a costly libcall, adding call overhead and spills. Make it
     // very expensive.
-    if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
+    if (isVectorizedTy(RetTy)) {
+      ArrayRef<Type *> RetVTys = getContainedTypes(RetTy);
+
       // Scalable vectors cannot be scalarized, so return Invalid.
-      if (isa<ScalableVectorType>(RetTy) || any_of(Tys, [](const Type *Ty) {
-            return isa<ScalableVectorType>(Ty);
-          }))
+      if (any_of(concat<Type *const>(RetVTys, Tys),
+                 [](Type *Ty) { return isa<ScalableVectorType>(Ty); }))
         return InstructionCost::getInvalid();
 
-      InstructionCost ScalarizationCost =
-          SkipScalarizationCost
-              ? ScalarizationCostPassed
-              : getScalarizationOverhead(RetVTy, /*Insert*/ true,
-                                         /*Extract*/ false, CostKind);
+      InstructionCost ScalarizationCost = ScalarizationCostPassed;
+      if (!SkipScalarizationCost) {
+        ScalarizationCost = 0;
+        for (Type *RetVTy : RetVTys) {
+          ScalarizationCost += getScalarizationOverhead(
+              cast<VectorType>(RetVTy), /*Insert=*/true,
+              /*Extract=*/false, CostKind);
+        }
+      }
 
-      unsigned ScalarCalls = cast<FixedVectorType>(RetVTy)->getNumElements();
+      unsigned ScalarCalls = getVectorizedTypeVF(RetTy).getFixedValue();
       SmallVector<Type *, 4> ScalarTys;
       for (Type *Ty : Tys) {
         if (Ty->isVectorTy())
           Ty = Ty->getScalarType();
         ScalarTys.push_back(Ty);
       }
-      IntrinsicCostAttributes Attrs(IID, RetTy->getScalarType(), ScalarTys, FMF);
+      IntrinsicCostAttributes Attrs(IID, toScalarizedTy(RetTy), ScalarTys, FMF);
       InstructionCost ScalarCost =
           thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       for (Type *Ty : Tys) {
