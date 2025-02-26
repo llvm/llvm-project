@@ -96,7 +96,7 @@ void TelemetryManager::AtDebuggerStartup(DebuggerInfo *entry) {
   }
 }
 
-void TelemetryManager::AtDebuggerExit(DebuggerInfo * entry) {
+void TelemetryManager::AtDebuggerExit(DebuggerInfo *entry) {
   // There must be a reference to the debugger at this point.
   assert(entry->debugger != nullptr);
 
@@ -118,7 +118,6 @@ TelemetryManager *TelemetryManager::GetInstance() {
 void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
   g_instance = std::move(manager);
 }
-
 
 } // namespace telemetry
 } // namespace lldb_private

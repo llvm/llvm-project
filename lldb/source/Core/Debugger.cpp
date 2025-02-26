@@ -17,6 +17,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Host/File.h"
@@ -52,7 +53,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/Core/Telemetry.h"
 #include "lldb/lldb-enumerations.h"
 
 #if defined(_WIN32)
@@ -70,7 +70,6 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
-
 
 #include <chrono>
 #include <cstdio>
@@ -769,15 +768,15 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
 
   if (helper.TelemetryEnabled()) {
-    helper.RunAtScopeExit([&](){
-      lldb_private::telemetry::TelemetryManager * manager = lldb_private::telemetry::TelemetryManager::GetInstance();
+    helper.RunAtScopeExit([&]() {
+      lldb_private::telemetry::TelemetryManager *manager =
+          lldb_private::telemetry::TelemetryManager::GetInstance();
       lldb_private::telemetry::DebuggerInfo entry;
       entry.debugger = debugger_sp.get();
       entry.start_time = helper.GetStartTime();
       entry.end_time = helper.GetCurrentTime();
       manager->AtDebuggerStartup(&entry);
     });
-
   }
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
@@ -1009,9 +1008,9 @@ void Debugger::Clear() {
     lldb_private::telemetry::ScopeTelemetryCollector helper;
     if (helper.TelemetryEnabled()) {
       // TBD: We *may* have to send off the log BEFORE the ClearIOHanders()?
-      helper.RunAtScopeExit([&helper, this](){
-        lldb_private::telemetry::TelemetryManager* manager
-            = lldb_private::telemetry::TelemetryManager::GetInstance();
+      helper.RunAtScopeExit([&helper, this]() {
+        lldb_private::telemetry::TelemetryManager *manager =
+            lldb_private::telemetry::TelemetryManager::GetInstance();
         lldb_private::telemetry::DebuggerInfo entry;
         entry.debugger = this;
         entry.exit_desc = {0, ""}; // If we are here, there was no error.

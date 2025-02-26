@@ -22,8 +22,8 @@
 #include <ctime>
 #include <memory>
 #include <optional>
-#include <string>
 #include <stack>
+#include <string>
 
 namespace lldb_private {
 namespace telemetry {
@@ -91,7 +91,6 @@ class TelemetryManager : public llvm::telemetry::Manager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
-
   virtual void AtDebuggerStartup(DebuggerInfo *entry);
   virtual void AtDebuggerExit(DebuggerInfo *entry);
 
@@ -115,38 +114,36 @@ private:
 
 /// Helper RAII class for collecting telemetry.
 class ScopeTelemetryCollector {
- public:
-  ScopeTelemetryCollector ()  {
+public:
+  ScopeTelemetryCollector() {
     if (TelemetryEnabled())
       m_start = std::chrono::steady_clock::now();
   }
 
   ~ScopeTelemetryCollector() {
-    while(! m_exit_funcs.empty()) {
+    while (!m_exit_funcs.empty()) {
       (m_exit_funcs.top())();
       m_exit_funcs.pop();
     }
   }
 
   bool TelemetryEnabled() {
-    TelemetryManager* instance = TelemetryManager::GetInstance();
-  return instance != nullptr && instance->GetConfig()->EnableTelemetry;
+    TelemetryManager *instance = TelemetryManager::GetInstance();
+    return instance != nullptr && instance->GetConfig()->EnableTelemetry;
   }
 
+  SteadyTimePoint GetStartTime() { return m_start; }
+  SteadyTimePoint GetCurrentTime() { return std::chrono::steady_clock::now(); }
 
-  SteadyTimePoint GetStartTime() {return m_start;}
-  SteadyTimePoint GetCurrentTime()  { return std::chrono::steady_clock::now(); }
+  template <typename Fp> void RunAtScopeExit(Fp &&F) {
+    assert(llvm::telemetry::Config::BuildTimeEnableTelemetry &&
+           "Telemetry should have been enabled");
+    m_exit_funcs.push(std::forward<Fp>(F));
+  }
 
- template <typename Fp>
- void RunAtScopeExit(Fp&& F){
-   assert(llvm::telemetry::Config::BuildTimeEnableTelemetry && "Telemetry should have been enabled");
-   m_exit_funcs.push(std::forward<Fp>(F));
- }
-
- private:
+private:
   SteadyTimePoint m_start;
   std::stack<std::function<void()>> m_exit_funcs;
-
 };
 
 } // namespace telemetry
