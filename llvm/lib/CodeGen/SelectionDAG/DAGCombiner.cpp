@@ -27487,7 +27487,6 @@ SDValue DAGCombiner::visitVPSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
     SDValue Zero = DAG.getConstant(0, DL, VT);
     SDValue Sub = DAG.getNode(ISD::VP_SUB, DL, VT, Zero, Sra, Mask, VL);
 
-    // FIXME: Use SELECT_CC once we improve SELECT_CC constant-folding.
     SDValue IsNeg = DAG.getSetCCVP(DL, CCVT, N1, Zero, ISD::SETLT, Mask, VL);
     SDValue Res = DAG.getNode(ISD::VP_SELECT, DL, VT, IsNeg, Sub, Sra, VL);
     return Res;

@@ -6575,12 +6575,6 @@ SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
     Factor = DAG.getSplatVector(VT, DL, Factors[0]);
     Shift = DAG.getSplatVector(ShVT, DL, Shifts[0]);
     ShiftMask = DAG.getSplatVector(VT, DL, ShiftMasks[0]);
-  } else {
-    assert(isa<ConstantSDNode>(N1) && "Expected a constant");
-    MagicFactor = MagicFactors[0];
-    Factor = Factors[0];
-    Shift = Shifts[0];
-    ShiftMask = ShiftMasks[0];
   }
 
   // Multiply the numerator (operand 0) by the magic value.
@@ -6911,11 +6905,6 @@ SDValue TargetLowering::BuildVPUDIV(SDNode *N, SelectionDAG &DAG,
     MagicFactor = DAG.getSplatVector(VT, DL, MagicFactors[0]);
     NPQFactor = DAG.getSplatVector(VT, DL, NPQFactors[0]);
     PostShift = DAG.getSplatVector(ShVT, DL, PostShifts[0]);
-  } else {
-    assert(isa<ConstantSDNode>(N1) && "Expected a constant");
-    PreShift = PreShifts[0];
-    MagicFactor = MagicFactors[0];
-    PostShift = PostShifts[0];
   }
 
   SDValue Q = N0;
