@@ -157,7 +157,8 @@ static void lowerAwaitSuspends(Function &F, coro::Shape &Shape) {
 static void maybeFreeRetconStorage(IRBuilder<> &Builder,
                                    const coro::Shape &Shape, Value *FramePtr,
                                    CallGraph *CG) {
-  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce);
+  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
+         Shape.ABI == coro::ABI::RetconOnceDynamic);
   if (Shape.RetconLowering.IsFrameInlineInStorage)
     return;
 
@@ -239,7 +240,8 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
 
   // In unique continuation lowering, the continuations always return void.
   // But we may have implicitly allocated storage.
-  case coro::ABI::RetconOnce: {
+  case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic: {
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
     auto *CoroEnd = cast<CoroEndInst>(End);
     auto *RetTy = Shape.getResumeFunctionType()->getReturnType();
@@ -368,6 +370,7 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
   // In continuation-lowering, this frees the continuation storage.
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic:
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
     break;
   }
@@ -469,6 +472,7 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
 /// This assumes that the builder has a meaningful insertion point.
 void coro::BaseCloner::replaceRetconOrAsyncSuspendUses() {
   assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
+         Shape.ABI == coro::ABI::RetconOnceDynamic ||
          Shape.ABI == coro::ABI::Async);
 
   auto NewS = VMap[ActiveSuspend];
@@ -538,6 +542,7 @@ void coro::BaseCloner::replaceCoroSuspends() {
   // spilled.
   case coro::ABI::RetconOnce:
   case coro::ABI::Retcon:
+  case coro::ABI::RetconOnceDynamic:
     return;
   }
 
@@ -707,14 +712,16 @@ void coro::BaseCloner::replaceEntryBlock() {
   }
   case coro::ABI::Async:
   case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce: {
+  case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic: {
     // In continuation ABIs, we want to branch to immediately after the
     // active suspend point.  Earlier phases will have put the suspend in its
     // own basic block, so just thread our jump directly to its successor.
     assert((Shape.ABI == coro::ABI::Async &&
             isa<CoroSuspendAsyncInst>(ActiveSuspend)) ||
            ((Shape.ABI == coro::ABI::Retcon ||
-             Shape.ABI == coro::ABI::RetconOnce) &&
+             Shape.ABI == coro::ABI::RetconOnce ||
+             Shape.ABI == coro::ABI::RetconOnceDynamic) &&
             isa<CoroSuspendRetconInst>(ActiveSuspend)));
     auto *MappedCS = cast<AnyCoroSuspendInst>(VMap[ActiveSuspend]);
     auto Branch = cast<BranchInst>(MappedCS->getNextNode());
@@ -779,7 +786,8 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
   }
   // In continuation-lowering, the argument is the opaque storage.
   case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce: {
+  case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic: {
     Argument *NewStorage = &*NewF->arg_begin();
     auto FramePtrTy = PointerType::getUnqual(Shape.FrameTy->getContext());
 
@@ -997,6 +1005,11 @@ void coro::BaseCloner::create() {
                          /*NoAlias=*/true);
 
     break;
+  case coro::ABI::RetconOnceDynamic:
+    // If we have a continuation prototype, just use its attributes,
+    // full-stop.
+    NewAttrs = Shape.RetconLowering.ResumePrototype->getAttributes();
+    break;
   }
 
   switch (Shape.ABI) {
@@ -1006,6 +1019,7 @@ void coro::BaseCloner::create() {
   // this is fine because we can't suspend twice.
   case coro::ABI::Switch:
   case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic:
     // Remove old returns.
     for (ReturnInst *Return : Returns)
       changeToUnreachable(Return);
@@ -1063,6 +1077,13 @@ void coro::BaseCloner::create() {
   if (OldVFrame != NewVFrame)
     OldVFrame->replaceAllUsesWith(NewVFrame);
 
+  // Remap allocator pointer.
+  if (Shape.ABI == coro::ABI::RetconOnceDynamic) {
+    Value *OldAllocatorPointer = VMap[Shape.RetconLowering.Allocator];
+    Argument *NewAllocatorPointer = &*NewF->getArg(1);
+    OldAllocatorPointer->replaceAllUsesWith(NewAllocatorPointer);
+  }
+
   // All uses of the arguments should have been resolved by this point,
   // so we can safely remove the dummy values.
   for (Instruction *DummyArg : DummyArgs) {
@@ -1081,6 +1102,7 @@ void coro::BaseCloner::create() {
   case coro::ABI::Async:
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic:
     // Replace uses of the active suspend with the corresponding
     // continuation-function arguments.
     assert(ActiveSuspend != nullptr &&
@@ -1139,9 +1161,26 @@ static TypeSize getFrameSizeForShape(coro::Shape &Shape) {
   return DL.getTypeAllocSize(Shape.FrameTy);
 }
 
+static void updateCoroFuncPointerContextSize(coro::Shape &Shape) {
+  assert(Shape.ABI == coro::ABI::RetconOnceDynamic);
+
+  auto *FuncPtrStruct = cast<ConstantStruct>(
+      Shape.RetconLowering.CoroFuncPointer->getInitializer());
+  auto *OrigRelativeFunOffset = FuncPtrStruct->getOperand(0);
+  auto *OrigContextSize = FuncPtrStruct->getOperand(1);
+  auto *NewContextSize = ConstantInt::get(OrigContextSize->getType(),
+                                          Shape.RetconLowering.ContextSize);
+  auto *NewFuncPtrStruct = ConstantStruct::get(
+      FuncPtrStruct->getType(), OrigRelativeFunOffset, NewContextSize);
+
+  Shape.RetconLowering.CoroFuncPointer->setInitializer(NewFuncPtrStruct);
+}
+
 static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Async)
     updateAsyncFuncPointerContextSize(Shape);
+  if (Shape.ABI == coro::ABI::RetconOnceDynamic)
+    updateCoroFuncPointerContextSize(Shape);
 
   for (CoroAlignInst *CA : Shape.CoroAligns) {
     CA->replaceAllUsesWith(
@@ -1200,6 +1239,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   case coro::ABI::Async:
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic:
     CoroBegin->replaceAllUsesWith(PoisonValue::get(CoroBegin->getType()));
     break;
   }
@@ -1795,7 +1835,8 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
                                         SmallVectorImpl<Function *> &Clones,
                                         TargetTransformInfo &TTI) {
-  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce);
+  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
+         Shape.ABI == coro::ABI::RetconOnceDynamic);
   assert(Clones.empty());
 
   // Reset various things that the optimizer might have decided it
@@ -1805,10 +1846,10 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
   F.removeRetAttr(Attribute::NonNull);
 
   // Allocate the frame.
-  auto *Id = Shape.getRetconCoroId();
+  auto *Id = Shape.CoroBegin->getId();
   Value *RawFramePtr;
   if (Shape.RetconLowering.IsFrameInlineInStorage) {
-    RawFramePtr = Id->getStorage();
+    RawFramePtr = Shape.RetconLowering.Storage;
   } else {
     IRBuilder<> Builder(Id);
 
@@ -1824,7 +1865,7 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
         Builder.CreateBitCast(RawFramePtr, Shape.CoroBegin->getType());
 
     // Stash the allocated frame pointer in the continuation storage.
-    Builder.CreateStore(RawFramePtr, Id->getStorage());
+    Builder.CreateStore(RawFramePtr, Shape.RetconLowering.Storage);
   }
 
   // Map all uses of llvm.coro.begin to the allocated frame pointer.
@@ -2039,6 +2080,7 @@ static LazyCallGraph::SCC &updateCallGraphAfterCoroutineSplit(
     case coro::ABI::Async:
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
+    case coro::ABI::RetconOnceDynamic:
       // Each clone in the Async/Retcon lowering references of the other clones.
       // Let the LazyCallGraph know about all of them at once.
       if (!Clones.empty())
@@ -2136,6 +2178,8 @@ CreateNewABI(Function &F, coro::Shape &S,
   case coro::ABI::Retcon:
     return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   case coro::ABI::RetconOnce:
+    return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
+  case coro::ABI::RetconOnceDynamic:
     return std::make_unique<coro::AnyRetconABI>(F, S, IsMatCallback);
   }
   llvm_unreachable("Unknown ABI");

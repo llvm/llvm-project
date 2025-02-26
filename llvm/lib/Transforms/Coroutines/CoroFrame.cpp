@@ -962,6 +962,19 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
          B.getStructAlign() <= Id->getStorageAlignment());
     break;
   }
+  case coro::ABI::RetconOnceDynamic: {
+    // In the dynamic retcon.once ABI, the frame is always inline in the
+    // storage.
+    Shape.RetconLowering.IsFrameInlineInStorage = true;
+    Shape.RetconLowering.ContextSize =
+        alignTo(Shape.FrameSize, Shape.RetconLowering.StorageAlignment);
+    if (Shape.RetconLowering.StorageAlignment < Shape.FrameAlign) {
+      report_fatal_error(
+          "The alignment requirment of frame variables cannot be higher than "
+          "the alignment of the coro function context");
+    }
+    break;
+  }
   case coro::ABI::Async: {
     Shape.AsyncLowering.FrameOffset =
         alignTo(Shape.AsyncLowering.ContextHeaderSize, Shape.FrameAlign);
@@ -1188,7 +1201,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
   // retcon and retcon.once lowering assumes all uses have been sunk.
   if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
-      Shape.ABI == coro::ABI::Async) {
+      Shape.ABI == coro::ABI::Async ||
+      Shape.ABI == coro::ABI::RetconOnceDynamic) {
     // If we found any allocas, replace all of their remaining uses with Geps.
     Builder.SetInsertPoint(SpillBlock, SpillBlock->begin());
     for (const auto &P : FrameData.Allocas) {
@@ -2078,7 +2092,8 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
 
   const DominatorTree DT(F);
   if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
-      Shape.ABI != coro::ABI::RetconOnce)
+      Shape.ABI != coro::ABI::RetconOnce &&
+      Shape.ABI != coro::ABI::RetconOnceDynamic)
     sinkLifetimeStartMarkers(F, Shape, Checker, DT);
 
   // All values (that are not allocas) that needs to be spilled to the frame.
@@ -2098,7 +2113,8 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
   LLVM_DEBUG(dumpSpills("Spills", Spills));
 
   if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
-      Shape.ABI == coro::ABI::Async)
+      Shape.ABI == coro::ABI::Async ||
+      Shape.ABI == coro::ABI::RetconOnceDynamic)
     sinkSpillUsesAfterCoroBegin(DT, Shape.CoroBegin, Spills, Allocas);
 
   // Build frame

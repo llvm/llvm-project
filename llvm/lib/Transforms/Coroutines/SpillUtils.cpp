@@ -435,7 +435,8 @@ static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
   // code.
   bool ShouldUseLifetimeStartInfo =
       (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
-       Shape.ABI != coro::ABI::RetconOnce);
+       Shape.ABI != coro::ABI::RetconOnce &&
+       Shape.ABI != coro::ABI::RetconOnceDynamic);
   AllocaUseVisitor Visitor{AI->getDataLayout(), DT, Shape, Checker,
                            ShouldUseLifetimeStartInfo};
   Visitor.visitPtr(*AI);

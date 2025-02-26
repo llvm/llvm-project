@@ -325,6 +325,23 @@ void coro::Shape::analyze(Function &F,
     AsyncLowering.AsyncCC = F.getCallingConv();
     break;
   }
+  case Intrinsic::coro_id_retcon_once_dynamic: {
+    auto ContinuationId = cast<CoroIdRetconOnceDynamicInst>(Id);
+    ABI = coro::ABI::RetconOnceDynamic;
+    auto Prototype = ContinuationId->getPrototype();
+    RetconLowering.ResumePrototype = Prototype;
+    RetconLowering.Alloc = ContinuationId->getAllocFunction();
+    RetconLowering.Dealloc = ContinuationId->getDeallocFunction();
+    RetconLowering.Storage = ContinuationId->getStorage();
+    RetconLowering.Allocator = ContinuationId->getAllocator();
+    RetconLowering.ReturnBlock = nullptr;
+    RetconLowering.IsFrameInlineInStorage = false;
+    RetconLowering.ContextSize = 0;
+    RetconLowering.StorageSize = ContinuationId->getStorageSize();
+    RetconLowering.StorageAlignment = ContinuationId->getStorageAlignment();
+    RetconLowering.CoroFuncPointer = ContinuationId->getCoroFunctionPointer();
+    break;
+  }
   case Intrinsic::coro_id_retcon:
   case Intrinsic::coro_id_retcon_once: {
     ABI = IntrID == Intrinsic::coro_id_retcon ? coro::ABI::Retcon
@@ -335,6 +352,7 @@ void coro::Shape::analyze(Function &F,
     RetconLowering.ResumePrototype = Prototype;
     RetconLowering.Alloc = ContinuationId->getAllocFunction();
     RetconLowering.Dealloc = ContinuationId->getDeallocFunction();
+    RetconLowering.Storage = ContinuationId->getStorage();
     RetconLowering.ReturnBlock = nullptr;
     RetconLowering.IsFrameInlineInStorage = false;
     RetconLowering.TypeId = ContinuationId->getTypeId();
@@ -396,7 +414,8 @@ void coro::SwitchABI::init() {
 void coro::AsyncABI::init() { assert(Shape.ABI == coro::ABI::Async); }
 
 void coro::AnyRetconABI::init() {
-  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce);
+  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
+         Shape.ABI == coro::ABI::RetconOnceDynamic);
   {
     // Determine the result value types, and make sure they match up with
     // the values passed to the suspends.
@@ -504,30 +523,39 @@ static void addCallToCallGraph(CallGraph *CG, CallInst *Call, Function *Callee){
 
 Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
                               CallGraph *CG) const {
+  unsigned sizeParamIndex = UINT_MAX;
   switch (ABI) {
   case coro::ABI::Switch:
     llvm_unreachable("can't allocate memory in coro switch-lowering");
 
   case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce: {
-    auto Alloc = RetconLowering.Alloc;
-    Size = Builder.CreateIntCast(Size,
-                                 Alloc->getFunctionType()->getParamType(0),
-                                 /*is signed*/ false);
-    ConstantInt* TypeId = RetconLowering.TypeId;
-    CallInst *Call;
-    if (TypeId == nullptr)
-      Call = Builder.CreateCall(Alloc, Size);
-    else
-      Call = Builder.CreateCall(Alloc, {Size, TypeId});
-    propagateCallAttrsFromCallee(Call, Alloc);
-    addCallToCallGraph(CG, Call, Alloc);
-    return Call;
-  }
+  case coro::ABI::RetconOnce:
+    sizeParamIndex = 0;
+    break;
+  case coro::ABI::RetconOnceDynamic:
+    sizeParamIndex = 1;
+    break;
   case coro::ABI::Async:
     llvm_unreachable("can't allocate memory in coro async-lowering");
   }
-  llvm_unreachable("Unknown coro::ABI enum");
+  auto Alloc = RetconLowering.Alloc;
+  Size = Builder.CreateIntCast(
+      Size, Alloc->getFunctionType()->getParamType(sizeParamIndex),
+      /*is signed*/ false);
+  SmallVector<Value *, 2> Args;
+  if (ABI == coro::ABI::RetconOnceDynamic) {
+    Args.push_back(RetconLowering.Allocator);
+  }
+  Args.push_back(Size);
+  if (ABI == coro::ABI::RetconOnce) {
+    ConstantInt *TypeId = RetconLowering.TypeId;
+    if (TypeId != nullptr)
+      Args.push_back(TypeId);
+  }
+  auto *Call = Builder.CreateCall(Alloc, Args);
+  propagateCallAttrsFromCallee(Call, Alloc);
+  addCallToCallGraph(CG, Call, Alloc);
+  return Call;
 }
 
 void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
@@ -537,11 +565,19 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
     llvm_unreachable("can't allocate memory in coro switch-lowering");
 
   case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce: {
+  case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnceDynamic: {
     auto Dealloc = RetconLowering.Dealloc;
-    Ptr = Builder.CreateBitCast(Ptr,
-                                Dealloc->getFunctionType()->getParamType(0));
-    auto *Call = Builder.CreateCall(Dealloc, Ptr);
+    SmallVector<Value *, 2> Args;
+    unsigned sizeParamIndex = 0;
+    if (ABI == coro::ABI::RetconOnceDynamic) {
+      sizeParamIndex = 1;
+      Args.push_back(RetconLowering.Allocator);
+    }
+    Ptr = Builder.CreateBitCast(
+        Ptr, Dealloc->getFunctionType()->getParamType(sizeParamIndex));
+    Args.push_back(Ptr);
+    auto *Call = Builder.CreateCall(Dealloc, Args);
     propagateCallAttrsFromCallee(Call, Dealloc);
     addCallToCallGraph(CG, Call, Dealloc);
     return;
@@ -567,7 +603,7 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
 
 /// Check that the given value is a well-formed prototype for the
 /// llvm.coro.id.retcon.* intrinsics.
-static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
+static void checkWFRetconPrototype(const AnyCoroIdInst *I, Value *V) {
   auto F = dyn_cast<Function>(V->stripPointerCasts());
   if (!F)
     fail(I, "llvm.coro.id.retcon.* prototype not a Function", V);
@@ -594,7 +630,7 @@ static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
       fail(I, "llvm.coro.id.retcon prototype return type must be same as"
               "current function return type", F);
   } else {
-    // No meaningful validation to do here for llvm.coro.id.unique.once.
+    // No meaningful validation to do here for llvm.coro.id.retcon.once.
   }
 
   if (FT->getNumParams() == 0 || !FT->getParamType(0)->isPointerTy())
@@ -649,6 +685,29 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
                    "size argument to coro.id.retcon.* must be constant");
   checkConstantInt(this, getArgOperand(AlignArg),
                    "alignment argument to coro.id.retcon.* must be constant");
+  checkWFRetconPrototype(this, getArgOperand(PrototypeArg));
+  checkWFAlloc(this, getArgOperand(AllocArg));
+  checkWFDealloc(this, getArgOperand(DeallocArg));
+}
+
+static void checkCoroFuncPointer(const Instruction *I, Value *V) {
+  auto *CoroFuncPtrAddr = dyn_cast<GlobalVariable>(V->stripPointerCasts());
+  if (!CoroFuncPtrAddr)
+    fail(I, "coro.id.retcon.once.dynamic coro function pointer not a global",
+         V);
+}
+
+void CoroIdRetconOnceDynamicInst::checkWellFormed() const {
+  checkConstantInt(
+      this, getArgOperand(SizeArg),
+      "size argument to coro.id.retcon.once.dynamic must be constant");
+  checkConstantInt(
+      this, getArgOperand(AlignArg),
+      "alignment argument to coro.id.retcon.once.dynamic must be constant");
+  checkConstantInt(this, getArgOperand(StorageArg),
+                   "storage argument offset to coro.id.retcon.once.dynamic "
+                   "must be constant");
+  checkCoroFuncPointer(this, getArgOperand(CoroFuncPtrArg));
   checkWFRetconPrototype(this, getArgOperand(PrototypeArg));
   checkWFAlloc(this, getArgOperand(AllocArg));
   checkWFDealloc(this, getArgOperand(DeallocArg));

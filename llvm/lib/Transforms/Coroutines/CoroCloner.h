@@ -67,6 +67,7 @@ protected:
         Builder(OrigF.getContext()), TTI(TTI), NewF(NewF),
         ActiveSuspend(ActiveSuspend) {
     assert(Shape.ABI == ABI::Retcon || Shape.ABI == ABI::RetconOnce ||
+           Shape.ABI == coro::ABI::RetconOnceDynamic ||
            Shape.ABI == ABI::Async);
     assert(NewF && "need existing function for continuation");
     assert(ActiveSuspend && "need active suspend point for continuation");
@@ -86,6 +87,7 @@ public:
                                AnyCoroSuspendInst *ActiveSuspend,
                                TargetTransformInfo &TTI) {
     assert(Shape.ABI == ABI::Retcon || Shape.ABI == ABI::RetconOnce ||
+           Shape.ABI == coro::ABI::RetconOnceDynamic ||
            Shape.ABI == ABI::Async);
     TimeTraceScope FunctionScope("BaseCloner");
 
