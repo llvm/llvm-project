@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++11
 
 // Check that user-specializations are diagnosed
-// See [variant.variant.general]/4
+// See [tuple.tuple.general]/1
 
-#include <variant>
+#include <tuple>
 
 #if !__has_warning("-Winvalid-specialization")
 // expected-no-diagnostics
@@ -19,5 +19,5 @@
 struct S {};
 
 template <>
-class std::variant<S>; // expected-error {{cannot be specialized}}
+class std::tuple<S>; // expected-error {{cannot be specialized}}
 #endif

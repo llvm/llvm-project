@@ -535,7 +535,7 @@ __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up
 }
 
 template <class... _Tp>
-class _LIBCPP_TEMPLATE_VIS tuple {
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS tuple {
   typedef __tuple_impl<typename __make_tuple_indices<sizeof...(_Tp)>::type, _Tp...> _BaseT;
 
   _BaseT __base_;
@@ -1005,6 +1005,10 @@ public:
 #    endif // _LIBCPP_STD_VER >= 23
 };
 
+_LIBCPP_DIAGNOSTIC_PUSH
+#    if __has_warning("-Winvalid-specialization")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
+#    endif
 template <>
 class _LIBCPP_TEMPLATE_VIS tuple<> {
 public:
@@ -1022,6 +1026,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void swap(const tuple&) const noexcept {}
 #    endif
 };
+_LIBCPP_DIAGNOSTIC_POP
 
 #    if _LIBCPP_STD_VER >= 23
 template <class... _TTypes, class... _UTypes, template <class> class _TQual, template <class> class _UQual>
