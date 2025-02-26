@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // \file
-// Currently there is only one post-processing we need to do for exegesis:
-// Assign a physical register to VSETVL's rd if it's not X0 (i.e. VLMAX).
+// This Pass converts some of the virtual register operands in VSETVLI and FRM
+// pseudos into physical registers.
 //
 //===----------------------------------------------------------------------===//
 
