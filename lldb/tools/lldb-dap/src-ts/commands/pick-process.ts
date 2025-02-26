@@ -32,6 +32,7 @@ export async function pickProcess(): Promise<string | undefined> {
     }),
     {
       placeHolder: "Select a process to attach the debugger to",
+      matchOnDetail: true,
     },
   );
   if (!selectedProcess) {
