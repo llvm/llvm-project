@@ -32,22 +32,24 @@ public:
 template class B<float>;
 }
 
-// The implicit host/device attrs of virtual dtor B<float>::~B() is inferred to
-// have implicit device attr since dtors of its members and parent classes can
-// be executed on device. This causes a diagnostic since B<float>::~B() must
-// be emitted, and it eventually causes host_fun() called on device side.
+// The implicit host/device attrs of virtual dtor ~B() should be
+// conservatively inferred, where constexpr member dtor's should
+// not be considered device since they may call host functions.
+// Therefore B<float>::~B() should not have implicit device attr.
+// However C<float>::~C() should have implicit device attr since
+// it is trivial.
 namespace ExplicitInstantiationDtorNoAttr {
-void host_fun() // dev-note {{'host_fun' declared here}}
+void host_fun()
 {}
 
 template <unsigned>
 constexpr void hd_fun() {
-  host_fun(); // dev-error{{reference to __host__ function 'host_fun' in __host__ __device__ function}}
+  host_fun();
 }
 
 struct A {
-  constexpr ~A() { // dev-note {{called by '~B'}}
-     hd_fun<8>(); // dev-note {{called by '~A'}}
+  constexpr ~A() {
+     hd_fun<8>();
   }
 };
 
