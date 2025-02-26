@@ -80,48 +80,6 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
-/// Converts the LLVM intrinsic to a generic LLVM intrinsic call using
-/// llvm.intrinsic_call. Returns failure otherwise.
-static LogicalResult
-convertUnregisteredIntrinsicImpl(OpBuilder &odsBuilder, llvm::CallInst *inst,
-                                 LLVM::ModuleImport &moduleImport) {
-  StringRef intrinName = inst->getCalledFunction()->getName();
-
-  SmallVector<llvm::Value *> args(inst->args());
-  ArrayRef<llvm::Value *> llvmOperands(args);
-
-  SmallVector<llvm::OperandBundleUse> llvmOpBundles;
-  llvmOpBundles.reserve(inst->getNumOperandBundles());
-  for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
-    llvmOpBundles.push_back(inst->getOperandBundleAt(i));
-
-  SmallVector<Value> mlirOperands;
-  SmallVector<NamedAttribute> mlirAttrs;
-  if (failed(moduleImport.convertIntrinsicArguments(
-          llvmOperands, llvmOpBundles, false, {}, {}, mlirOperands, mlirAttrs)))
-    return failure();
-
-  Type results = moduleImport.convertType(inst->getType());
-  auto op = odsBuilder.create<::mlir::LLVM::CallIntrinsicOp>(
-      moduleImport.translateLoc(inst->getDebugLoc()), results,
-      StringAttr::get(odsBuilder.getContext(), intrinName),
-      ValueRange{mlirOperands}, FastmathFlagsAttr{});
-
-  moduleImport.setFastmathFlagsAttr(inst, op);
-
-  // Update importer tracking of results.
-  unsigned numRes = op.getNumResults();
-  if (numRes == 1)
-    moduleImport.mapValue(inst) = op.getResult(0);
-  else if (numRes == 0)
-    moduleImport.mapNoResultOp(inst);
-  else
-    return op.emitError(
-        "expected at most one result from target intrinsic call");
-
-  return success();
-}
-
 /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR LLVM
 /// dialect attributes.
 static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
@@ -411,8 +369,42 @@ static LogicalResult setIntelReqdSubGroupSizeAttr(Builder &builder,
 
 LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
     OpBuilder &builder, llvm::CallInst *inst,
-    LLVM::ModuleImport &moduleImport) const {
-  return convertUnregisteredIntrinsicImpl(builder, inst, moduleImport);
+    LLVM::ModuleImport &moduleImport) {
+  StringRef intrinName = inst->getCalledFunction()->getName();
+
+  SmallVector<llvm::Value *> args(inst->args());
+  ArrayRef<llvm::Value *> llvmOperands(args);
+
+  SmallVector<llvm::OperandBundleUse> llvmOpBundles;
+  llvmOpBundles.reserve(inst->getNumOperandBundles());
+  for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
+    llvmOpBundles.push_back(inst->getOperandBundleAt(i));
+
+  SmallVector<Value> mlirOperands;
+  SmallVector<NamedAttribute> mlirAttrs;
+  if (failed(moduleImport.convertIntrinsicArguments(
+          llvmOperands, llvmOpBundles, false, {}, {}, mlirOperands, mlirAttrs)))
+    return failure();
+
+  Type results = moduleImport.convertType(inst->getType());
+  auto op = builder.create<::mlir::LLVM::CallIntrinsicOp>(
+      moduleImport.translateLoc(inst->getDebugLoc()), results,
+      StringAttr::get(builder.getContext(), intrinName),
+      ValueRange{mlirOperands}, FastmathFlagsAttr{});
+
+  moduleImport.setFastmathFlagsAttr(inst, op);
+
+  // Update importer tracking of results.
+  unsigned numRes = op.getNumResults();
+  if (numRes == 1)
+    moduleImport.mapValue(inst) = op.getResult(0);
+  else if (numRes == 0)
+    moduleImport.mapNoResultOp(inst);
+  else
+    return op.emitError(
+        "expected at most one result from target intrinsic call");
+
+  return success();
 }
 namespace {
 

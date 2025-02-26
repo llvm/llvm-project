@@ -98,12 +98,6 @@ public:
 /// efficient dispatch.
 class LLVMImportInterface
     : public DialectInterfaceCollection<LLVMImportDialectInterface> {
-private:
-  /// Generate llvm.call_intrinsic when no supporting dialect available.
-  LogicalResult
-  convertUnregisteredIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
-                               LLVM::ModuleImport &moduleImport) const;
-
 public:
   using Base::Base;
 
@@ -239,6 +233,11 @@ public:
   }
 
 private:
+  /// Generate llvm.call_intrinsic when no supporting dialect available.
+  static LogicalResult
+  convertUnregisteredIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
+                               LLVM::ModuleImport &moduleImport);
+
   DenseMap<unsigned, Dialect *> intrinsicToDialect;
   DenseMap<unsigned, const LLVMImportDialectInterface *> instructionToDialect;
   DenseMap<unsigned, SmallVector<Dialect *, 1>> metadataToDialect;

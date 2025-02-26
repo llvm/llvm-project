@@ -13,7 +13,7 @@ define dso_local void @t0(ptr %a) {
 ; CHECK:   llvm.return
 ; CHECK: }
 
-; -----
+; // -----
 
 declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)
 
@@ -27,7 +27,7 @@ define dso_local <8 x i8> @t1(<8 x i8> %lhs, <8 x i8> %rhs) {
 ; CHECK:   llvm.return %[[R]] : vector<8xi8>
 ; CHECK: }
 
-; -----
+; // -----
 
 declare void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8>, <8 x i8>, ptr)
 
@@ -41,7 +41,7 @@ define dso_local void @t2(<8 x i8> %lhs, <8 x i8> %rhs, ptr %a) {
 ; CHECK:   llvm.return
 ; CHECK: }
 
-; -----
+; // -----
 
 declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
 define void @gctest() gc "example" {
@@ -53,7 +53,7 @@ define void @gctest() gc "example" {
 ; CHECK-LABEL: @gctest
 ; CHECK: llvm.call_intrinsic "llvm.gcroot"({{.*}}, {{.*}}) : (!llvm.ptr, !llvm.ptr) -> !llvm.void
 
-; -----
+; // -----
 
 ; Test we get the supported version, not the unregistered one.
 
