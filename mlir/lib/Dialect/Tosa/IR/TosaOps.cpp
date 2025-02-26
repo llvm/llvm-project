@@ -215,6 +215,16 @@ void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
 }
 
 //===----------------------------------------------------------------------===//
+// Tosa utilities.
+//===----------------------------------------------------------------------===//
+
+std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
+  if (lhs % rhs != 0)
+    return std::nullopt;
+  return lhs / rhs;
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
@@ -1621,13 +1631,6 @@ LogicalResult tosa::ResizeOp::verify() {
   const int64_t borderY = borderValues[0];
   const int64_t borderX = borderValues[1];
 
-  auto idivCheck = [](const int64_t lhs,
-                      const int64_t rhs) -> std::optional<int64_t> {
-    if (lhs % rhs != 0)
-      return std::nullopt;
-    return lhs / rhs;
-  };
-
   // Don't check with input height that could be broadcast (ih != 1)
   // since Linalg, a consumer of TOSA, expects broadcasting support
   // in resize to be available. Taking the cautious approach for now,
@@ -1967,6 +1970,97 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
 LogicalResult Conv2DOp::verify() {
   if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
     return failure();
+
+  llvm::ArrayRef<int64_t> padding = getPad();
+  if (llvm::any_of(padding, [](int64_t p) { return p < 0; }))
+    return emitOpError("expect all padding values to be >= 0, got ") << padding;
+
+  llvm::ArrayRef<int64_t> strides = getStride();
+  if (llvm::any_of(strides, [](int64_t s) { return s < 1; }))
+    return emitOpError("expect all stride values to be >= 1, got ") << strides;
+
+  llvm::ArrayRef<int64_t> dilations = getDilation();
+  if (llvm::any_of(dilations, [](int64_t d) { return d < 1; }))
+    return emitOpError("expect all dilation values to be >= 1, got ")
+           << dilations;
+
+  const RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
+  if (!outputType)
+    // Skip following checks if output is not ranked
+    return success();
+
+  const RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  const RankedTensorType weightType =
+      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
+
+  if (inputType && weightType) {
+    const auto verifyOutputSize =
+        [this](const int64_t inputSize, const int64_t kernelSize,
+               const int64_t outputSize, const int64_t padBefore,
+               const int64_t padAfter, const int64_t stride,
+               const int64_t dilation, const llvm::StringRef dimName,
+               const llvm::StringRef dimAxis,
+               const llvm::StringRef padBeforeName,
+               const llvm::StringRef padAfterName) -> LogicalResult {
+      if (inputSize == ShapedType::kDynamic ||
+          kernelSize == ShapedType::kDynamic)
+        return success();
+
+      const std::optional<int64_t> calculatedOutSizeMinusOne = idivCheck(
+          inputSize - 1 + padBefore + padAfter - (kernelSize - 1) * dilation,
+          stride);
+      if (!calculatedOutSizeMinusOne.has_value())
+        return emitOpError("expected input_")
+               << dimName << " - 1 + pad_" << padBeforeName << " + pad_"
+               << padAfterName << " - (kernel_" << dimName
+               << " - 1) * dilation_" << dimAxis
+               << " to be wholly divisible by stride_" << dimAxis << ", got ("
+               << inputSize << " - 1 + " << padBefore << " + " << padAfter
+               << " - (" << kernelSize << " - 1) * " << dilation << ") / "
+               << stride;
+
+      const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
+      if (outputSize != ShapedType::kDynamic && calculatedOutSize != outputSize)
+        return emitOpError("calculated output ")
+               << dimName << " did not match expected: "
+               << "calculated=" << calculatedOutSize
+               << ", expected=" << outputSize;
+
+      return success();
+    };
+
+    if (failed(verifyOutputSize(
+            inputType.getDimSize(1), weightType.getDimSize(1),
+            outputType.getDimSize(1), padding[0], padding[1], strides[0],
+            dilations[0], "height", "y", "top", "bottom")))
+      return failure();
+
+    if (failed(verifyOutputSize(
+            inputType.getDimSize(2), weightType.getDimSize(2),
+            outputType.getDimSize(2), padding[2], padding[3], strides[1],
+            dilations[1], "width", "x", "left", "right")))
+      return failure();
+  }
+
+  const RankedTensorType biasType =
+      llvm::dyn_cast<RankedTensorType>(getBias().getType());
+  if (!biasType)
+    // Skip following checks if bias is not ranked
+    return success();
+
+  const int64_t biasChannels = biasType.getDimSize(0);
+  const int64_t outputChannels = outputType.getDimSize(3);
+  if (biasChannels == ShapedType::kDynamic ||
+      outputChannels == ShapedType::kDynamic)
+    // Skip following checks if biasChannels or outputChannels is dynamic dim
+    return success();
+
+  if (biasChannels != outputChannels && biasChannels != 1)
+    return emitOpError(
+               "bias channels expected to be equal to output channels (")
+           << outputChannels << ") or 1, got " << biasChannels;
   return success();
 }
 
