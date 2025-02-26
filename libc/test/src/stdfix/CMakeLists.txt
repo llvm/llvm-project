@@ -75,22 +75,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
   )
 
   add_libc_test(
-    countls${suffix}_test
-    SUITE
-      libc-stdfix-tests
-    HDRS
-      CountlsTest.h
-    SRCS
-      countls${suffix}_test.cpp
-    DEPENDS
-      libc.src.stdfix.countls${suffix}
-      libc.src.__support.fixed_point.fx_rep
-      libc.src.__support.fixed_point.fx_bits
-  )
-endforeach()
-
-foreach(suffix IN ITEMS r lr hk k lk uhr ur ulr uhk uk ulk)
-  add_libc_test(
     bits${suffix}_test
     SUITE
       libc-stdfix-tests
@@ -100,6 +84,21 @@ foreach(suffix IN ITEMS r lr hk k lk uhr ur ulr uhk uk ulk)
       bits${suffix}_test.cpp
     DEPENDS
       libc.src.stdfix.bits${suffix}
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.fixed_point.fx_bits
+      libc.include.llvm-libc-macros.stdfix_macros
+  )
+
+  add_libc_test(
+    countls${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      CountlsTest.h
+    SRCS
+      countls${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.countls${suffix}
       libc.src.__support.fixed_point.fx_rep
       libc.src.__support.fixed_point.fx_bits
   )
