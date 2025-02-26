@@ -2296,10 +2296,16 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
 
     switch (TA.getKind()) {
     case TemplateArgument::Type: {
-      llvm::DIType *TTy = getOrCreateType(TA.getAsType(), Unit);
+      if (CGM.getCodeGenOpts().DebugTemplateParameterAsType) 
+      {
+      llvm::DIType *debugType = getOrCreateType(TA.getAsType(), Unit);
+      llvm::DIType *TemplateType = DBuilder.createTemplateTypeParameterAsType(Unit, Name, debugType);
+      TemplateParams.push_back(TemplateType);
+      }
+      else {llvm::DIType *TTy = getOrCreateType(TA.getAsType(), Unit);
       TemplateParams.push_back(DBuilder.createTemplateTypeParameter(
           TheCU, Name, TTy, defaultParameter));
-
+      }
     } break;
     case TemplateArgument::Integral: {
       llvm::DIType *TTy = getOrCreateType(TA.getIntegralType(), Unit);
