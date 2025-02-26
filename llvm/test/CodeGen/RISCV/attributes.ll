@@ -402,7 +402,7 @@
 ; RV32XTHEADSYNC: .attribute 5, "rv32i2p1_xtheadsync1p0"
 ; RV32XWCHC: .attribute 5, "rv32i2p1_xwchc2p2"
 ; RV32XQCCMP: .attribute 5, "rv32i2p1_zca1p0_xqccmp0p1"
-; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p2"
+; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p4"
 ; RV32XQCIAC: .attribute 5, "rv32i2p1_zca1p0_xqciac0p3"
 ; RV32XQCICLI: .attribute 5, "rv32i2p1_xqcicli0p2"
 ; RV32XQCICM: .attribute 5, "rv32i2p1_zca1p0_xqcicm0p2"

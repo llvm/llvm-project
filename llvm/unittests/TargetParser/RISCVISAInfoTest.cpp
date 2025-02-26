@@ -654,7 +654,7 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input :
-       {"rv64i_xqcisls0p2", "rv64i_xqcia0p2", "rv64i_xqciac0p3",
+       {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
         "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
         "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p2",
         "rv64i_xqcilo0p2", "rv64i_xqcilia0p2"}) {
@@ -1125,7 +1125,7 @@ Experimental extensions
     ssctr                1.0
     svukte               0.3
     xqccmp               0.1
-    xqcia                0.2
+    xqcia                0.4
     xqciac               0.3
     xqcicli              0.2
     xqcicm               0.2
@@ -1136,6 +1136,7 @@ Experimental extensions
     xqcilo               0.2
     xqcilsm              0.2
     xqcisls              0.2
+    xrivosvisni          0.1
     xrivosvizip          0.1
 
 Supported Profiles
