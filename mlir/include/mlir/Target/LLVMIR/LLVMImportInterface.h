@@ -74,10 +74,6 @@ public:
   /// returns the list of supported intrinsic identifiers.
   virtual ArrayRef<unsigned> getSupportedIntrinsics() const { return {}; }
 
-  /// Whether dialect have a generic way to represent unsupported intrinsics
-  /// (i.e. as oposed to supported ones aboves).
-  virtual bool getUnregisteredIntrinsics() const { return false; }
-
   /// Hook for derived dialect interfaces to publish the supported instructions.
   /// As every LLVM IR instruction has a unique integer identifier, the function
   /// returns the list of supported instruction identifiers. These identifiers
@@ -102,6 +98,12 @@ public:
 /// efficient dispatch.
 class LLVMImportInterface
     : public DialectInterfaceCollection<LLVMImportDialectInterface> {
+private:
+  // Generate llvm.call_intrinsic when no supporting dialect available.
+  LogicalResult
+  convertUnregisteredIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
+                               LLVM::ModuleImport &moduleImport) const;
+
 public:
   using Base::Base;
 
@@ -149,12 +151,6 @@ public:
       // Add a mapping for all supported metadata kinds.
       for (unsigned kind : iface.getSupportedMetadata(llvmContext))
         metadataToDialect[kind].push_back(iface.getDialect());
-
-      // There can be only one dialect dealing with unregistered
-      // intrinsics, the last one to support the interface is the
-      // one to be used.
-      if (iface.getUnregisteredIntrinsics())
-        unregisteredIntrinscToDialect = iface.getDialect();
     }
 
     return success();
@@ -176,10 +172,7 @@ public:
     // No specialized (supported) intrinsics, attempt to generate a generic
     // version via llvm.call_intrinsic (if available).
     if (!dialect)
-      dialect = unregisteredIntrinscToDialect;
-
-    if (!dialect)
-      return failure();
+      return convertUnregisteredIntrinsic(builder, inst, moduleImport);
 
     // Dispatch the conversion to the dialect interface.
     const LLVMImportDialectInterface *iface = getInterfaceFor(dialect);
@@ -249,9 +242,6 @@ private:
   DenseMap<unsigned, Dialect *> intrinsicToDialect;
   DenseMap<unsigned, const LLVMImportDialectInterface *> instructionToDialect;
   DenseMap<unsigned, SmallVector<Dialect *, 1>> metadataToDialect;
-
-  /// Unregistered generic and target independent intrinsics.
-  Dialect *unregisteredIntrinscToDialect = nullptr;
 };
 
 } // namespace mlir

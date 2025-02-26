@@ -56,6 +56,30 @@ static ArrayRef<unsigned> getSupportedIntrinsicsImpl() {
   return convertibleIntrinsics;
 }
 
+/// Converts the LLVM intrinsic to an MLIR LLVM dialect operation if a
+/// conversion exits. Returns failure otherwise.
+static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
+                                          llvm::CallInst *inst,
+                                          LLVM::ModuleImport &moduleImport) {
+  llvm::Intrinsic::ID intrinsicID = inst->getIntrinsicID();
+
+  // Check if the intrinsic is convertible to an MLIR dialect counterpart and
+  // copy the arguments to an an LLVM operands array reference for conversion.
+  if (isConvertibleIntrinsic(intrinsicID)) {
+    SmallVector<llvm::Value *> args(inst->args());
+    ArrayRef<llvm::Value *> llvmOperands(args);
+
+    SmallVector<llvm::OperandBundleUse> llvmOpBundles;
+    llvmOpBundles.reserve(inst->getNumOperandBundles());
+    for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
+      llvmOpBundles.push_back(inst->getOperandBundleAt(i));
+
+#include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
+  }
+
+  return failure();
+}
+
 /// Converts the LLVM intrinsic to a generic LLVM intrinsic call using
 /// llvm.intrinsic_call. Returns failure otherwise.
 static LogicalResult
@@ -96,32 +120,6 @@ convertUnregisteredIntrinsicImpl(OpBuilder &odsBuilder, llvm::CallInst *inst,
         "expected at most one result from target intrinsic call");
 
   return success();
-}
-
-/// Converts the LLVM intrinsic to an MLIR LLVM dialect operation if a
-/// conversion exits. Returns failure otherwise.
-static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
-                                          llvm::CallInst *inst,
-                                          LLVM::ModuleImport &moduleImport) {
-  llvm::Intrinsic::ID intrinsicID = inst->getIntrinsicID();
-
-  // Check if the intrinsic is convertible to an MLIR dialect counterpart and
-  // copy the arguments to an an LLVM operands array reference for conversion.
-  if (isConvertibleIntrinsic(intrinsicID)) {
-    SmallVector<llvm::Value *> args(inst->args());
-    ArrayRef<llvm::Value *> llvmOperands(args);
-
-    SmallVector<llvm::OperandBundleUse> llvmOpBundles;
-    llvmOpBundles.reserve(inst->getNumOperandBundles());
-    for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
-      llvmOpBundles.push_back(inst->getOperandBundleAt(i));
-
-#include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
-  } else if (intrinsicID != llvm::Intrinsic::not_intrinsic) {
-    return convertUnregisteredIntrinsicImpl(odsBuilder, inst, moduleImport);
-  }
-
-  return failure();
 }
 
 /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR LLVM
@@ -411,6 +409,14 @@ static LogicalResult setIntelReqdSubGroupSizeAttr(Builder &builder,
   return success();
 }
 
+namespace mlir {
+// Generate llvm.call_intrinsic when no supporting dialect available.
+LogicalResult LLVMImportInterface::convertUnregisteredIntrinsic(
+    OpBuilder &builder, llvm::CallInst *inst,
+    LLVM::ModuleImport &moduleImport) const {
+  return convertUnregisteredIntrinsicImpl(builder, inst, moduleImport);
+}
+} // namespace mlir
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -465,9 +471,6 @@ public:
   ArrayRef<unsigned> getSupportedIntrinsics() const final {
     return getSupportedIntrinsicsImpl();
   }
-
-  /// Cnvertible to generic llvm.call_intrinsic.
-  bool getUnregisteredIntrinsics() const final { return true; }
 
   /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR
   /// LLVM dialect attributes.
