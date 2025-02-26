@@ -3571,6 +3571,49 @@ libc_function(
     ],
 )
 
+libc_support_library(
+    name = "str_from_util",
+    hdrs = ["src/stdlib/str_from_util.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_str_to_integer",
+        ":printf_converter",
+        ":printf_core_structs",
+        ":printf_writer",
+    ],
+)
+
+libc_function(
+    name = "strfromf",
+    srcs = ["src/stdlib/strfromf.cpp"],
+    hdrs = ["src/stdlib/strfromf.h"],
+    deps = [
+        ":__support_common",
+        ":str_from_util",
+    ],
+)
+
+libc_function(
+    name = "strfromd",
+    srcs = ["src/stdlib/strfromd.cpp"],
+    hdrs = ["src/stdlib/strfromd.h"],
+    deps = [
+        ":__support_common",
+        ":str_from_util",
+    ],
+)
+
+libc_function(
+    name = "strfroml",
+    srcs = ["src/stdlib/strfroml.cpp"],
+    hdrs = ["src/stdlib/strfroml.h"],
+    deps = [
+        ":__support_common",
+        ":str_from_util",
+    ],
+)
+
 libc_function(
     name = "strtol",
     srcs = ["src/stdlib/strtol.cpp"],
