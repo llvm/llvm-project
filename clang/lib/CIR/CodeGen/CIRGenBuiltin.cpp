@@ -1352,13 +1352,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     mlir::Type cirTy = convertType(E->getArg(0)->getType());
     bool isIntTy = cir::isIntOrIntVectorTy(cirTy);
     if (!isIntTy) {
-      mlir::Type eltTy = cirTy;
-      if (mlir::isa<cir::VectorType>(cirTy))
-        eltTy = mlir::cast<cir::VectorType>(cirTy).getEltType();
-      if (mlir::isa<cir::SingleType, cir::DoubleType>(eltTy)) {
-        return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *E);
-      }
-      llvm_unreachable("unsupported type for BI__builtin_elementwise_abs");
+      return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *E);
     }
     mlir::Value arg = emitScalarExpr(E->getArg(0));
     auto call = getBuilder().create<cir::AbsOp>(getLoc(E->getExprLoc()),
