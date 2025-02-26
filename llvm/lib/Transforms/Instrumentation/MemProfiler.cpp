@@ -929,7 +929,8 @@ memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
     longestCommonSequence<LineLocation, GlobalValue::GUID>(
         ProfileAnchors, IRAnchors, std::equal_to<GlobalValue::GUID>(),
         [&](LineLocation A, LineLocation B) { Matchings.try_emplace(A, B); });
-    bool Inserted = UndriftMaps.try_emplace(CallerGUID, Matchings).second;
+    bool Inserted =
+        UndriftMaps.try_emplace(CallerGUID, std::move(Matchings)).second;
 
     // The insertion must succeed because we visit each GUID exactly once.
     assert(Inserted);
