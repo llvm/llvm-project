@@ -108,9 +108,9 @@ export namespace std {
 
 #if _LIBCPP_STD_VER >= 23
   using std::reference_constructs_from_temporary;
-#  if __has_builtin(__reference_converts_from_temporary) ||                                                          \
-  (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1) &&                     \
-   (__clang_patchlevel__ >= 2))
+#  if __has_builtin(__reference_converts_from_temporary) ||                                                            \
+      (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1) &&                   \
+       (__clang_patchlevel__ >= 2))
   using std::reference_converts_from_temporary;
 #  endif
 #endif
@@ -292,9 +292,9 @@ export namespace std {
   using std::is_volatile_v;
 #if _LIBCPP_STD_VER >= 23
   using std::reference_constructs_from_temporary_v;
-#  if __has_builtin(__reference_converts_from_temporary) ||                                                          \
-  (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1) &&                     \
-   (__clang_patchlevel__ >= 2))
+#  if __has_builtin(__reference_converts_from_temporary) ||                                                            \
+      (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1) &&                   \
+       (__clang_patchlevel__ >= 2))
   using std::reference_converts_from_temporary_v;
 #  endif
 #endif
