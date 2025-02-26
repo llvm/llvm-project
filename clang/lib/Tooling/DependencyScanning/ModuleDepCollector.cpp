@@ -129,6 +129,34 @@ static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
   Opts.Remarks.clear();
 }
 
+static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
+  BuildInvocation.getMutFileSystemOpts().WorkingDir.clear();
+  if (BuildInvocation.getCodeGenOpts().DwarfVersion) {
+    // It is necessary to explicitly set the DebugCompilationDir
+    // to a common directory (e.g. root) if IgnoreCWD is true.
+    // When IgnoreCWD is true, the module's content should not
+    // depend on the current working directory. However, if dwarf
+    // information is needed (when CGOpts.DwarfVersion is
+    // non-zero), then CGOpts.DebugCompilationDir must be
+    // populated, because otherwise the current working directory
+    // will be automatically embedded in the dwarf information in
+    // the pcm, contradicting the assumption that it is safe to
+    // ignore the CWD. Thus in such cases,
+    // CGOpts.DebugCompilationDir is explicitly set to a common
+    // directory.
+    // FIXME: It is still excessive to create a copy of
+    // CodeGenOpts for each module. Since we do not modify the
+    // CodeGenOpts otherwise per module, the following code
+    // ends up generating identical CodeGenOpts for each module
+    // with DebugCompilationDir pointing to the root directory.
+    // We can optimize this away by creating a _single_ copy of
+    // CodeGenOpts whose DebugCompilationDir points to the root
+    // directory and reuse it across modules.
+    BuildInvocation.getMutCodeGenOpts().DebugCompilationDir =
+        llvm::sys::path::root_path(CWD);
+  }
+}
+
 static std::vector<std::string> splitString(std::string S, char Separator) {
   SmallVector<StringRef> Segments;
   StringRef(S).split(Segments, Separator, /*MaxSplit=*/-1, /*KeepEmpty=*/false);
@@ -489,11 +517,8 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
-  auto &FSOpts = const_cast<FileSystemOptions &>(CI.getFileSystemOpts());
   if (CWD && !IgnoreCWD)
     HashBuilder.add(*CWD);
-  else
-    FSOpts.WorkingDir.clear();
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
@@ -524,9 +549,7 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 }
 
 void ModuleDepCollector::associateWithContextHash(
-    const CowCompilerInvocation &CI, ModuleDeps &Deps) {
-  bool IgnoreCWD = any(OptimizeArgs & ScanningOptimizations::IgnoreCWD) &&
-                   isSafeToIgnoreCWD(CI);
+    const CowCompilerInvocation &CI, bool IgnoreCWD, ModuleDeps &Deps) {
   Deps.ID.ContextHash =
       getModuleContextHash(Deps, CI, EagerLoadModules, IgnoreCWD,
                            ScanInstance.getVirtualFileSystem());
@@ -726,6 +749,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MD.ModuleMapFileDeps.emplace_back(*ResolvedFilenameAsRequested);
       });
 
+  bool IgnoreCWD = false;
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
@@ -735,13 +759,25 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                        *MDC.ScanInstance.getASTReader(), *MF,
                                        MDC.PrebuiltModuleVFSMap,
                                        MDC.OptimizeArgs);
+
             if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
                   BuildInvocation.getMutDiagnosticOpts(),
                   BuildInvocation.getFrontendOpts().IsSystemModule);
+
+            IgnoreCWD =
+                any(MDC.OptimizeArgs & ScanningOptimizations::IgnoreCWD) &&
+                isSafeToIgnoreCWD(BuildInvocation);
+            if (IgnoreCWD) {
+              llvm::ErrorOr<std::string> CWD =
+                  MDC.ScanInstance.getVirtualFileSystem()
+                      .getCurrentWorkingDirectory();
+              if (CWD)
+                optimizeCWD(BuildInvocation, *CWD);
+            }
           });
 
-  MDC.associateWithContextHash(CI, MD);
+  MDC.associateWithContextHash(CI, IgnoreCWD, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
