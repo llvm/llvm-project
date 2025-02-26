@@ -1787,3 +1787,32 @@ func.func @step() -> vector<4xindex> {
   %0 = vector.step : vector<4xindex>
   return %0 : vector<4xindex>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// vector.insert
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @insert_0d
+// CHECK: llvm.insertelement {{.*}} : vector<1xf32>
+func.func @insert_0d(%src: f32, %dst: vector<f32>) -> vector<f32> {
+  %0 = vector.insert %src, %dst[] : f32 into vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: @insert_1d
+// CHECK: llvm.insertelement {{.*}} : vector<2xf32>
+func.func @insert_1d(%src: f32, %dst: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.insert %src, %dst[1] : f32 into vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// CHECK-LABEL: @insert_2d
+// CHECK: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf32>>
+// CHECK: llvm.insertelement {{.*}} : vector<2xf32>
+// CHECK: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf32>>
+func.func @insert_2d(%src: f32, %dst: vector<2x2xf32>) -> vector<2x2xf32> {
+  %0 = vector.insert %src, %dst[1, 0] : f32 into vector<2x2xf32>
+  return %0 : vector<2x2xf32>
+}

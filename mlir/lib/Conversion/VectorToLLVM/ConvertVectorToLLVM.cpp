@@ -1233,11 +1233,15 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
-    // Overwrite entire vector with value. Should be handled by folder, but
-    // just to be safe.
     ArrayRef<OpFoldResult> position(positionVec);
+    // Case of empty position, used with 0-D destination vector. In that case,
+    // the converted destination type is a LLVM vector of size 1, and we need
+    // a 0 as the position.
     if (position.empty()) {
-      rewriter.replaceOp(insertOp, adaptor.getSource());
+      rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
+          insertOp, llvmResultType, adaptor.getDest(), adaptor.getSource(),
+          rewriter.create<LLVM::ConstantOp>(loc,
+                                            rewriter.getI64IntegerAttr(0)));
       return success();
     }
 
