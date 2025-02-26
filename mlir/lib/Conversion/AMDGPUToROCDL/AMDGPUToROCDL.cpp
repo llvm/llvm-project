@@ -167,6 +167,12 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
         }
       }
     }
+    if (auto vecType = dyn_cast<VectorType>(llvmBufferValType)) {
+      // Buffer intrinsics doesn't support 1-element vectors, cast them to
+      // scalars.
+      if (vecType.getNumElements() == 1)
+        llvmBufferValType = vecType.getElementType();
+    }
 
     SmallVector<Value, 6> args;
     if (storeData) {

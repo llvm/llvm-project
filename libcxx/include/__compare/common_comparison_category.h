@@ -55,7 +55,7 @@ __compute_comp_type(const _ClassifyCompCategory (&__types)[_Size]) {
 template <class... _Ts, bool _False = false>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __get_comp_type() {
   using _CCC                    = _ClassifyCompCategory;
-  constexpr _CCC __type_kinds[] = {_StrongOrd, __type_to_enum<_Ts>()...};
+  constexpr _CCC __type_kinds[] = {_StrongOrd, __comp_detail::__type_to_enum<_Ts>()...};
   constexpr _CCC __cat          = __comp_detail::__compute_comp_type(__type_kinds);
   if constexpr (__cat == _None)
     return void();

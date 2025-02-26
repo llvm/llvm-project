@@ -14903,12 +14903,29 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;
-  if (ExtType == ISD::NON_EXTLOAD)
-    Load = DAG.getLoad(VT, DL, LN0->getChain(), NewPtr,
-                       LN0->getPointerInfo().getWithOffset(PtrOff),
-                       LN0->getOriginalAlign(),
-                       LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
-  else
+  if (ExtType == ISD::NON_EXTLOAD) {
+    const MDNode *OldRanges = LN0->getRanges();
+    const MDNode *NewRanges = nullptr;
+    // If LSBs are loaded and the truncated ConstantRange for the OldRanges
+    // metadata is not the full-set for the NewWidth then create a NewRanges
+    // metadata for the truncated load
+    if (ShAmt == 0 && OldRanges) {
+      ConstantRange CR = getConstantRangeFromMetadata(*OldRanges);
+      ConstantRange TruncatedCR = CR.truncate(VT.getScalarSizeInBits());
+
+      if (!TruncatedCR.isFullSet()) {
+        Metadata *Bounds[2] = {ConstantAsMetadata::get(ConstantInt::get(
+                                   *DAG.getContext(), TruncatedCR.getLower())),
+                               ConstantAsMetadata::get(ConstantInt::get(
+                                   *DAG.getContext(), TruncatedCR.getUpper()))};
+        NewRanges = MDNode::get(*DAG.getContext(), Bounds);
+      }
+    }
+    Load = DAG.getLoad(
+        VT, DL, LN0->getChain(), NewPtr,
+        LN0->getPointerInfo().getWithOffset(PtrOff), LN0->getOriginalAlign(),
+        LN0->getMemOperand()->getFlags(), LN0->getAAInfo(), NewRanges);
+  } else
     Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
                           LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
                           LN0->getOriginalAlign(),
@@ -16158,11 +16175,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
                              MaybePoisonOperand);
     }
+
+    // This node has been merged with another.
+    if (N->getOpcode() == ISD::DELETED_NODE)
+      return SDValue(N, 0);
   }
 
-  // This node has been merged with another.
-  if (N->getOpcode() == ISD::DELETED_NODE)
-    return SDValue(N, 0);
+  assert(N->getOpcode() != ISD::DELETED_NODE && "Node was deleted!");
 
   // The whole node may have been updated, so the value we were holding
   // may no longer be valid. Re-fetch the operand we're `freeze`ing.
@@ -17269,6 +17288,9 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 // prefer it.
 SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
   EVT VT = N->getValueType(0);
+  if (!APFloat::isIEEELikeFP(VT.getFltSemantics()))
+    return SDValue();
+
   SDValue ConstOp, Pow2Op;
 
   std::optional<int> Mantissa;
@@ -17295,8 +17317,8 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
       const APFloat &APF = CFP->getValueAPF();
 
-      // Make sure we have normal/ieee constant.
-      if (!APF.isNormal() || !APF.isIEEE())
+      // Make sure we have normal constant.
+      if (!APF.isNormal())
         return false;
 
       // Make sure the floats exponent is within the bounds that this transform
@@ -28189,7 +28211,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   if ((Fold || Swap) &&
       TLI.getBooleanContents(CmpOpVT) ==
           TargetLowering::ZeroOrOneBooleanContent &&
-      (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, CmpOpVT))) {
+      (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, CmpOpVT)) &&
+      TLI.convertSelectOfConstantsToMath(VT)) {
 
     if (Swap) {
       CC = ISD::getSetCCInverse(CC, CmpOpVT);

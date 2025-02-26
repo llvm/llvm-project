@@ -4242,9 +4242,9 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   ArityGroupAndKind groupAndKind = getArityGroupAndKind(elemwiseKind);
   auto arityGroup = groupAndKind.arityGroup;
   auto kind = groupAndKind.kind;
-  unsigned numBlockArgs = getArityGroupAsUInt(arityGroup) + 1 /*output*/;
-  assert(block.getNumArguments() == numBlockArgs &&
-         "Elementwise regionBuilder number of block args mismatch");
+  assert(block.getNumArguments() ==
+             getArityGroupAsUInt(arityGroup) + 1 /*output*/
+         && "Elementwise regionBuilder number of block args mismatch");
 
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
