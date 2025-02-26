@@ -1960,8 +1960,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   for (auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs,
                        taskStructMgr.getLLVMPrivateVarGEPs())) {
+    // To be handled inside the task.
     if (!privDecl.readsFromMold())
-      // to be handled inside the task
       continue;
     assert(llvmPrivateVarAlloc &&
            "reads from mold so shouldn't have been skipped");
@@ -1969,8 +1969,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     llvm::Expected<llvm::Value *> privateVarOrErr =
         initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
                        blockArg, llvmPrivateVarAlloc, initBlock);
-    if (auto err = privateVarOrErr.takeError())
-      return handleError(std::move(err), *taskOp.getOperation());
+    if (!privateVarOrErr)
+      return handleError(privateVarOrErr, *taskOp.getOperation());
 
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
@@ -2034,8 +2034,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       llvm::Expected<llvm::Value *> privateVarOrError =
           initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
                          blockArg, llvmPrivateVar, privInitBlock);
-      if (auto err = privateVarOrError.takeError())
-        return err;
+      if (!privateVarOrError)
+        return privateVarOrError.takeError();
       moduleTranslation.mapValue(blockArg, privateVarOrError.get());
       llvmPrivateVars[i] = privateVarOrError.get();
     }
