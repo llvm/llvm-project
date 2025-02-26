@@ -9486,16 +9486,19 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
   unsigned NonZeros = 0;
+  SmallSet<SDValue, 4> Undefs;
   for (unsigned i = 0; i != NumOperands; ++i) {
     SDValue SubVec = Op.getOperand(i);
     if (SubVec.isUndef())
       continue;
     if (ISD::isFreezeUndef(SubVec.getNode())) {
         // If the freeze(undef) has multiple uses then we must fold to zero.
-        if (SubVec.hasOneUse())
+        if (SubVec.hasOneUse()) {
           ++NumFreezeUndef;
-        else
+        } else {
           ++NumZero;
+          Undefs.insert(SubVec);
+        }
     }
     else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
       ++NumZero;
@@ -9521,6 +9524,11 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
   SDValue Vec = NumZero ? getZeroVector(ResVT, Subtarget, DAG, dl)
                         : (NumFreezeUndef ? DAG.getFreeze(DAG.getUNDEF(ResVT))
                                           : DAG.getUNDEF(ResVT));
+
+  // Replace Undef operands with ZeroVector.
+  for (SDValue U : Undefs)
+    DAG.ReplaceAllUsesWith(
+        U, getZeroVector(U.getSimpleValueType(), Subtarget, DAG, dl));
 
   MVT SubVT = Op.getOperand(0).getSimpleValueType();
   unsigned NumSubElems = SubVT.getVectorNumElements();
@@ -51064,6 +51072,31 @@ static SDValue combineBMILogicOp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// Fold AND(Y, XOR(X, NEG(X))) -> ANDN(Y, BLSMSK(X)) if BMI is available.
+static SDValue combineAndXorSubWithBMI(SDNode *And, const SDLoc &DL,
+                                       SelectionDAG &DAG,
+                                       const X86Subtarget &Subtarget) {
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = And->getValueType(0);
+  // Make sure this node is a candidate for BMI instructions.
+  if (!Subtarget.hasBMI() || (VT != MVT::i32 && VT != MVT::i64))
+    return SDValue();
+
+  SDValue X;
+  SDValue Y;
+  if (!sd_match(And, m_And(m_OneUse(m_Xor(m_Value(X),
+                                          m_OneUse(m_Neg(m_Deferred(X))))),
+                           m_Value(Y))))
+    return SDValue();
+
+  SDValue BLSMSK =
+      DAG.getNode(ISD::XOR, DL, VT, X,
+                  DAG.getNode(ISD::SUB, DL, VT, X, DAG.getConstant(1, DL, VT)));
+  SDValue AndN = DAG.getNode(ISD::AND, DL, VT, Y, DAG.getNOT(DL, BLSMSK, VT));
+  return AndN;
+}
+
 static SDValue combineX86SubCmpForFlags(SDNode *N, SDValue Flag,
                                         SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
@@ -51470,6 +51503,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue R = combineBMILogicOp(N, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineAndXorSubWithBMI(N, dl, DAG, Subtarget))
     return R;
 
   return SDValue();
