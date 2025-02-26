@@ -122,6 +122,8 @@ public:
   ConstString &GetObjectName() { return m_object_name; }
 
   ConstString GetObjectName() const { return m_object_name; }
+  
+  void SetObjectName(ConstString objName) { m_object_name = objName; }
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
