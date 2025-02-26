@@ -1355,18 +1355,17 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v256i1, Custom);
   }
   if (Subtarget.hasMMA()) {
-    if (Subtarget.isISAFuture())
+    if (Subtarget.isISAFuture()) {
       addRegisterClass(MVT::v512i1, &PPC::WACCRCRegClass);
-    else
+      addRegisterClass(MVT::v1024i1, &PPC::DMRRCRegClass);
+      setOperationAction(ISD::LOAD, MVT::v1024i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v1024i1, Custom);
+    } else {
       addRegisterClass(MVT::v512i1, &PPC::UACCRCRegClass);
+    }
     setOperationAction(ISD::LOAD, MVT::v512i1, Custom);
     setOperationAction(ISD::STORE, MVT::v512i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v512i1, Custom);
-  }
-  if (Subtarget.isISAFuture()) {
-    setOperationAction(ISD::LOAD, MVT::v1024i1, Custom);
-    setOperationAction(ISD::STORE, MVT::v1024i1, Custom);
-    addRegisterClass(MVT::v1024i1, &PPC::DMRRCRegClass);
   }
 
   if (Subtarget.has64BitSupport())
