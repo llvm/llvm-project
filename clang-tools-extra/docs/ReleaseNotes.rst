@@ -156,6 +156,11 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding the
+  option `WarnOnNonTrailingVoid` that applies the check to ``void``-returning
+  functions that by default are excluded from this check.
+
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
@@ -189,6 +194,11 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
+
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
+  tolerating fix-it breaking compilation when functions is used as pointers 
+  to avoid matching usage of functions within the current compilation unit.
 
 Removed checks
 ^^^^^^^^^^^^^^
