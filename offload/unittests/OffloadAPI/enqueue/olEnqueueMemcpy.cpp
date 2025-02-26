@@ -12,7 +12,7 @@
 
 using olEnqueueMemcpyTest = offloadQueueTest;
 
-TEST_F(olEnqueueMemcpyTest, SuccessH2D) {
+TEST_F(olEnqueueMemcpyTest, SuccessHtoD) {
   constexpr size_t Size = 1024;
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));

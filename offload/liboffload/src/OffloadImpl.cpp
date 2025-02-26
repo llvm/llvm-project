@@ -431,57 +431,6 @@ ol_impl_result_t olEnqueueMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olEnqueueMemcpyHtoD_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                          void *SrcPtr, size_t Size,
-                                          ol_event_handle_t *EventOut) {
-  auto *DeviceImpl = Queue->Device->Device;
-
-  auto Res = DeviceImpl->dataSubmit(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
-
-  if (Res)
-    return {OL_ERRC_UNKNOWN, "The data submit operation failed"};
-
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
-
-  return OL_SUCCESS;
-}
-
-ol_impl_result_t olEnqueueMemcpyDtoH_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                          void *SrcPtr, size_t Size,
-                                          ol_event_handle_t *EventOut) {
-  auto *DeviceImpl = Queue->Device->Device;
-
-  auto Res = DeviceImpl->dataRetrieve(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
-
-  if (Res)
-    return {OL_ERRC_UNKNOWN, "The data retrieve operation failed"};
-
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
-
-  return OL_SUCCESS;
-}
-
-ol_impl_result_t olEnqueueMemcpyDtoD_impl(ol_queue_handle_t Queue,
-                                          ol_device_handle_t DstDevice,
-                                          void *DstPtr, void *SrcPtr,
-                                          size_t Size,
-                                          ol_event_handle_t *EventOut) {
-  auto *DeviceImpl = Queue->Device->Device;
-
-  auto Res = DeviceImpl->dataExchange(SrcPtr, *DstDevice->Device, DstPtr, Size,
-                                      Queue->AsyncInfo);
-
-  if (Res)
-    return {OL_ERRC_UNKNOWN, "The data exchange operation failed"};
-
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
-
-  return OL_SUCCESS;
-}
-
 ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
                                       size_t ProgDataSize,
                                       ol_program_handle_t *Program) {

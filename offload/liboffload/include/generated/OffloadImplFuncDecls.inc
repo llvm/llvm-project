@@ -67,20 +67,6 @@ ol_impl_result_t olEnqueueMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                                       ol_device_handle_t SrcDevice, size_t Size,
                                       ol_event_handle_t *EventOut);
 
-ol_impl_result_t olEnqueueMemcpyHtoD_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                          void *SrcPtr, size_t Size,
-                                          ol_event_handle_t *EventOut);
-
-ol_impl_result_t olEnqueueMemcpyDtoH_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                          void *SrcPtr, size_t Size,
-                                          ol_event_handle_t *EventOut);
-
-ol_impl_result_t olEnqueueMemcpyDtoD_impl(ol_queue_handle_t Queue,
-                                          ol_device_handle_t DstDevice,
-                                          void *DstPtr, void *SrcPtr,
-                                          size_t Size,
-                                          ol_event_handle_t *EventOut);
-
 ol_impl_result_t
 olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
                            const void *ArgumentsData, size_t ArgumentsSize,

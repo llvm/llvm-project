@@ -590,69 +590,6 @@ operator<<(std::ostream &os, const struct ol_enqueue_memcpy_params_t *params) {
 
 inline std::ostream &
 operator<<(std::ostream &os,
-           const struct ol_enqueue_memcpy_hto_d_params_t *params) {
-  os << ".Queue = ";
-  printPtr(os, *params->pQueue);
-  os << ", ";
-  os << ".DstPtr = ";
-  printPtr(os, *params->pDstPtr);
-  os << ", ";
-  os << ".SrcPtr = ";
-  printPtr(os, *params->pSrcPtr);
-  os << ", ";
-  os << ".Size = ";
-  os << *params->pSize;
-  os << ", ";
-  os << ".EventOut = ";
-  printPtr(os, *params->pEventOut);
-  return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os,
-           const struct ol_enqueue_memcpy_dto_h_params_t *params) {
-  os << ".Queue = ";
-  printPtr(os, *params->pQueue);
-  os << ", ";
-  os << ".DstPtr = ";
-  printPtr(os, *params->pDstPtr);
-  os << ", ";
-  os << ".SrcPtr = ";
-  printPtr(os, *params->pSrcPtr);
-  os << ", ";
-  os << ".Size = ";
-  os << *params->pSize;
-  os << ", ";
-  os << ".EventOut = ";
-  printPtr(os, *params->pEventOut);
-  return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os,
-           const struct ol_enqueue_memcpy_dto_d_params_t *params) {
-  os << ".Queue = ";
-  printPtr(os, *params->pQueue);
-  os << ", ";
-  os << ".DstDevice = ";
-  printPtr(os, *params->pDstDevice);
-  os << ", ";
-  os << ".DstPtr = ";
-  printPtr(os, *params->pDstPtr);
-  os << ", ";
-  os << ".SrcPtr = ";
-  printPtr(os, *params->pSrcPtr);
-  os << ", ";
-  os << ".Size = ";
-  os << *params->pSize;
-  os << ", ";
-  os << ".EventOut = ";
-  printPtr(os, *params->pEventOut);
-  return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os,
            const struct ol_enqueue_kernel_launch_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
