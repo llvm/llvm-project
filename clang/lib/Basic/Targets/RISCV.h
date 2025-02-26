@@ -68,7 +68,11 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  std::string_view getClobbers() const override { return "~{vl},~{vtype}"; }
+  std::string_view getClobbers() const override {
+    if (ISAInfo->hasExtension("zve32x"))
+      return "~{vl},~{vtype}";
+    return "";
+  }
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {

@@ -10,7 +10,7 @@
 // CHECK-LABEL: define dso_local void @test_fflags(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{fflags},~{vl},~{vtype}"() #[[ATTR1:[0-9]+]], !srcloc [[META6:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{fflags}"() #[[ATTR1:[0-9]+]], !srcloc [[META6:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_fflags(void) {
@@ -20,7 +20,7 @@ void test_fflags(void) {
 // CHECK-LABEL: define dso_local void @test_frm(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{frm},~{vl},~{vtype}"() #[[ATTR1]], !srcloc [[META7:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{frm}"() #[[ATTR1]], !srcloc [[META7:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_frm(void) {
@@ -30,7 +30,7 @@ void test_frm(void) {
 // CHECK-LABEL: define dso_local void @test_vtype(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{vtype},~{vl},~{vtype}"() #[[ATTR1]], !srcloc [[META8:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{vtype}"() #[[ATTR1]], !srcloc [[META8:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_vtype(void) {
@@ -40,7 +40,7 @@ void test_vtype(void) {
 // CHECK-LABEL: define dso_local void @test_vl(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{vl},~{vl},~{vtype}"() #[[ATTR1]], !srcloc [[META9:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{vl}"() #[[ATTR1]], !srcloc [[META9:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_vl(void) {
@@ -50,7 +50,7 @@ void test_vl(void) {
 // CHECK-LABEL: define dso_local void @test_vxsat(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{vxsat},~{vl},~{vtype}"() #[[ATTR1]], !srcloc [[META10:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{vxsat}"() #[[ATTR1]], !srcloc [[META10:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_vxsat(void) {
@@ -60,7 +60,7 @@ void test_vxsat(void) {
 // CHECK-LABEL: define dso_local void @test_vxrm(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{vxrm},~{vl},~{vtype}"() #[[ATTR1]], !srcloc [[META11:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{vxrm}"() #[[ATTR1]], !srcloc [[META11:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_vxrm(void) {
