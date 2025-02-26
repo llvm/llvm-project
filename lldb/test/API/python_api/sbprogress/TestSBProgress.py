@@ -33,3 +33,15 @@ class SBProgressTestCase(TestBase):
         expected_string = "Test progress first increment"
         progress.Increment(1, expected_string)
         self.assertFalse(listener.PeekAtNextEvent(event))
+
+    def test_with_external_bit_set(self):
+        """Test SBProgress can handle null events."""
+
+        progress = lldb.SBProgress("Test SBProgress", "Test progress", self.dbg)
+        listener = lldb.SBListener("Test listener")
+        broadcaster = self.dbg.GetBroadcaster()
+        broadcaster.AddListener(listener, lldb.eBroadcastBitExternalProgress)
+        event = lldb.SBEvent()
+
+        progress.Increment(1, None)
+        self.assertTrue(listener.PeekAtNextEvent(event))
