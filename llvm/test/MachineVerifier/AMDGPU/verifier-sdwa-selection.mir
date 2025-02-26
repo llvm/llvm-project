@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1030 --verify-machineinstrs -o - %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=none -o - %s 2>&1 | FileCheck %s
 
 # CHECK-COUNT-6: *** Bad machine code: Invalid SDWA selection ***
 # CHECK-NOT: *** Bad machine code
