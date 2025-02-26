@@ -1740,8 +1740,8 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 //===----------------------------------------------------------------------===//
 // Operator: reduce_prod
 //===----------------------------------------------------------------------===//
-def Tosa_ReduceProdOp : Tosa_InferTensorTypeOp<"reduce_prod"> {
-  let summary = "Reduce Prod operator";
+def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product"> {
+  let summary = "Reduce Product operator";
 
   let description = [{
     Reduce a tensor along the given axis by computing the product of the axis.
