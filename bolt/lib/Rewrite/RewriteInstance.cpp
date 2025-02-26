@@ -2461,7 +2461,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
         }
       }
     } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
-      BC->errs() << "BOLT-ERROR: SymbolAddress non zero for RELATIVE "
+      BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
                     "relocation type.\n";
       exit(1);
     }
