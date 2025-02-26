@@ -145,6 +145,11 @@ jobs:
             target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
+
+          # For pull requests we use the github-hosted runners, which aren't
+          # powerful enough to do a full build, so build less projects so that
+          # the build has a chance to succeed.
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld'"
         fi
 
         build_flang="true"
