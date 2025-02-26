@@ -155,9 +155,18 @@ public:
   LogicalResult convertIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
                                  LLVM::ModuleImport &moduleImport) const {
     // Lookup the dialect interface for the given intrinsic.
-    Dialect *dialect = intrinsicToDialect.lookup(inst->getIntrinsicID());
+    // Verify the intrinsic identifier maps to an actual intrinsic.
+    llvm::Intrinsic::ID intrinId = inst->getIntrinsicID();
+    assert(intrinId != llvm::Intrinsic::not_intrinsic);
+
+    // First lookup the intrinsic across different dialects for known
+    // supported conversions, examples include arm-neon, nvm-sve, etc.
+    Dialect *dialect = intrinsicToDialect.lookup(intrinId);
+
+    // No specialized (supported) intrinsics, attempt to generate a generic
+    // version via llvm.call_intrinsic (if available).
     if (!dialect)
-      return failure();
+      return convertUnregisteredIntrinsic(builder, inst, moduleImport);
 
     // Dispatch the conversion to the dialect interface.
     const LLVMImportDialectInterface *iface = getInterfaceFor(dialect);
@@ -224,6 +233,11 @@ public:
   }
 
 private:
+  /// Generate llvm.call_intrinsic when no supporting dialect available.
+  static LogicalResult
+  convertUnregisteredIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
+                               LLVM::ModuleImport &moduleImport);
+
   DenseMap<unsigned, Dialect *> intrinsicToDialect;
   DenseMap<unsigned, const LLVMImportDialectInterface *> instructionToDialect;
   DenseMap<unsigned, SmallVector<Dialect *, 1>> metadataToDialect;
