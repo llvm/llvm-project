@@ -5,11 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/Config/llvm-config.h"
-
-#ifdef LLVM_BUILD_TELEMETRY
-
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Host/FileSystem.h"
@@ -96,8 +92,6 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return llvm::Error::success();
 }
 
-const Config *getConfig() { return m_config.get(); }
-
 void TelemetryManager::AtDebuggerStartup(DebuggerInfo *entry) {
   if (llvm::Error er = dispatch(entry)) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
@@ -138,7 +132,19 @@ void TelemetryManager::AtDebuggerStartup(DebuggerInfo *entry) {
       g_instance = std::move(manager);
     }
 
-  } // namespace telemetry
-} // namespace lldb_private
+    
+const Config *getConfig() { return m_config.get(); }
+    
+std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
+TelemetryManager *TelemetryManager::GetInstance() {
+  if (!Config::BuildTimeEnableTelemetry)
+    return nullptr;
+  return g_instance.get();
+}
 
-#endif // LLVM_BUILD_TELEMETRY
+void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
+  g_instance = std::move(manager);
+}
+
+} // namespace telemetry
+} // namespace lldb_private

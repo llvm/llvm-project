@@ -700,7 +700,7 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
 // CHECK-LABEL: @simd_simple_multiple
 llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd {
-    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) inclusive step (%step1, %step2) {
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right metadata is added and collapsed
@@ -3270,3 +3270,91 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 // -----
 
 module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}
+
+// -----
+
+llvm.func @distribute() {
+  %0 = llvm.mlir.constant(42 : index) : i64
+  %1 = llvm.mlir.constant(10 : index) : i64
+  %2 = llvm.mlir.constant(1 : index) : i64
+  omp.distribute {
+    omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @distribute
+// CHECK:         call void @[[OUTLINED:.*]]({{.*}})
+// CHECK-NEXT:    br label %[[EXIT:.*]]
+// CHECK:       [[EXIT]]:
+// CHECK:         ret void
+
+// CHECK:       define internal void @[[OUTLINED]]({{.*}})
+// CHECK:         %[[LASTITER:.*]] = alloca i32
+// CHECK:         %[[LB:.*]] = alloca i64
+// CHECK:         %[[UB:.*]] = alloca i64
+// CHECK:         %[[STRIDE:.*]] = alloca i64
+// CHECK:         br label %[[BODY:.*]]
+// CHECK:       [[BODY]]:
+// CHECK-NEXT:    br label %[[REGION:.*]]
+// CHECK:       [[REGION]]:
+// CHECK-NEXT:    br label %[[PREHEADER:.*]]
+// CHECK:       [[PREHEADER]]:
+// CHECK:         store i64 0, ptr %[[LB]]
+// CHECK:         store i64 31, ptr %[[UB]]
+// CHECK:         store i64 1, ptr %[[STRIDE]]
+// CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK:         call void @__kmpc_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 92, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[STRIDE]], i64 1, i64 0)
+
+// -----
+
+llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
+  omp.parallel {
+    omp.distribute {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      } {omp.composite}
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+  llvm.return
+}
+
+// CHECK-LABEL: define void @distribute_wsloop
+// CHECK:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[OUTLINED_PARALLEL:.*]],
+
+// CHECK:       define internal void @[[OUTLINED_PARALLEL]]
+// CHECK:         call void @[[OUTLINED_DISTRIBUTE:.*]]({{.*}})
+
+// CHECK:       define internal void @[[OUTLINED_DISTRIBUTE]]
+// CHECK:         %[[LASTITER:.*]] = alloca i32
+// CHECK:         %[[LB:.*]] = alloca i32
+// CHECK:         %[[UB:.*]] = alloca i32
+// CHECK:         %[[STRIDE:.*]] = alloca i32
+// CHECK:         br label %[[AFTER_ALLOCA:.*]]
+
+// CHECK:       [[AFTER_ALLOCA]]:
+// CHECK:         br label %[[DISTRIBUTE_BODY:.*]]
+
+// CHECK:       [[DISTRIBUTE_BODY]]:
+// CHECK-NEXT:    br label %[[DISTRIBUTE_REGION:.*]]
+
+// CHECK:       [[DISTRIBUTE_REGION]]:
+// CHECK-NEXT:    br label %[[WSLOOP_REGION:.*]]
+
+// CHECK:       [[WSLOOP_REGION]]:
+// CHECK:         %omp_loop.tripcount = select {{.*}}
+// CHECK-NEXT:    br label %[[PREHEADER:.*]]
+
+// CHECK:       [[PREHEADER]]:
+// CHECK:         store i32 0, ptr %[[LB]]
+// CHECK:         %[[TRIPCOUNT:.*]] = sub i32 %omp_loop.tripcount, 1
+// CHECK:         store i32 %[[TRIPCOUNT]], ptr %[[UB]]
+// CHECK:         store i32 1, ptr %[[STRIDE]]
+// CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK:         %[[DIST_UB:.*]] = alloca i32
+// CHECK:         call void @__kmpc_dist_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 34, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[DIST_UB]], ptr %[[STRIDE]], i32 1, i32 0)
