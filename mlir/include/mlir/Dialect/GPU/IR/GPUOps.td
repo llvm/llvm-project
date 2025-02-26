@@ -1035,12 +1035,6 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     static StringRef getNumWorkgroupAttributionsAttrName() {
       return "workgroup_attributions";
     }
-
-    /// Find BlockSize via the BlockArgument of gpu.launch.
-    Value getBlockSizeOnAxis(Value threadId);
-
-    /// Find BlockSize via the Dimension Information.
-    Value getBlockSizeOnAxis(Dimension dimension);
   }];
 
   let hasCanonicalizer = 1;

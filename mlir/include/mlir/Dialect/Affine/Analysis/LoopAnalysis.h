@@ -43,9 +43,10 @@ void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
 /// constant trip count in non-trivial cases.
 std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 
-/// In some scenarios, such as GPU, the number of trip of each thread in the
-/// loop is inconsistent. This function returns the maximum number of trip.
-std::optional<uint64_t> getMaxConstantTripCount(AffineForOp forOp);
+/// Returns the maximum trip count when the operand of forOp has a range. If the
+/// operand of forOp is a constant, the return value is the same as
+/// `getConstantTripCount`.
+std::optional<uint64_t> getUpperBoundOnTripCount(AffineForOp forOp);
 
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and

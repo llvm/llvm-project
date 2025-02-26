@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
@@ -118,7 +117,7 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 /// was known to have a single iteration.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  std::optional<uint64_t> maxTripCount = getMaxConstantTripCount(forOp);
+  std::optional<uint64_t> maxTripCount = getUpperBoundOnTripCount(forOp);
   if (!tripCount || *tripCount != 1 || !maxTripCount || *maxTripCount != 1)
     return failure();
 
@@ -888,7 +887,7 @@ void mlir::affine::getTileableBands(
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   std::optional<uint64_t> maxMayBeConstantTripCount =
-      getMaxConstantTripCount(forOp);
+      getUpperBoundOnTripCount(forOp);
 
   if (!mayBeConstantTripCount.has_value() &&
       !maxMayBeConstantTripCount.has_value())
@@ -1025,7 +1024,7 @@ LogicalResult mlir::affine::loopUnrollByFactor(
 
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   std::optional<uint64_t> maxMayBeConstantTripCount =
-      getMaxConstantTripCount(forOp);
+      getUpperBoundOnTripCount(forOp);
   if (unrollFactor == 1) {
     if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
         maxMayBeConstantTripCount && *maxMayBeConstantTripCount == 1 &&

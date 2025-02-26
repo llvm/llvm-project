@@ -799,26 +799,6 @@ std::optional<KernelDim3> LaunchOp::getClusterSizeOperandValues() {
   return KernelDim3{operands[6], operands[7], operands[8]};
 }
 
-Value LaunchOp::getBlockSizeOnAxis(Dimension dimension) {
-  if (dimension == Dimension::x)
-    return getBlockSizeX();
-  else if (dimension == Dimension::y)
-    return getBlockSizeY();
-  else
-    return getBlockSizeZ();
-}
-
-Value LaunchOp::getBlockSizeOnAxis(Value threadId) {
-  KernelDim3 threadIds = getThreadIds();
-  if (threadIds.x == threadId)
-    return getBlockSizeX();
-  else if (threadIds.y == threadId)
-    return getBlockSizeY();
-  else if (threadIds.z == threadId)
-    return getBlockSizeZ();
-  return {};
-}
-
 LogicalResult LaunchOp::verify() {
   if (!(hasClusterSize()) &&
       (getClusterSizeX() || getClusterSizeY() || getClusterSizeZ()))

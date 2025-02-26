@@ -12,13 +12,15 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -31,6 +33,7 @@
 
 using namespace mlir;
 using namespace mlir::affine;
+using namespace mlir::dataflow;
 
 #define DEBUG_TYPE "affine-loop-analysis"
 
@@ -85,48 +88,54 @@ void mlir::affine::getTripCountMapAndOperands(
                             tripCountValueMap.getOperands().end());
 }
 
-/// Replace thread_id with its maximum value, if `replaceWithZero` is true,
-/// thread_id will be replaced by its minimum value 0.
-static void replaceGPUOperands(AffineForOp forOp,
-                               SmallVectorImpl<Value> &operands,
-                               SmallVectorImpl<AffineExpr> &symReplacements,
-                               unsigned numDim, bool replaceWithZero = false) {
-  auto launchOp = forOp->getParentOfType<gpu::LaunchOp>();
-  if (!launchOp)
+/// By running `IntegerRangeAnalysis` to get the ranges of operand, then fill
+/// the `symReplacements` with range. If `replaceByMin` is set to true,
+/// construct `replacement` using the smallest value.By default, the largest
+/// value will be used for constructing `replacement`.
+static void replaceOperandByRange(AffineForOp forOp,
+                                  SmallVectorImpl<Value> &operands,
+                                  SmallVectorImpl<AffineExpr> &symReplacements,
+                                  unsigned numDim, bool replaceByMin = false) {
+  DataFlowSolver solver;
+  solver.load<DeadCodeAnalysis>();
+  solver.load<IntegerRangeAnalysis>();
+  if (failed(solver.initializeAndRun(
+          forOp->getParentOfType<FunctionOpInterface>())))
     return;
 
-  // `b` is only used to create `AffineExpr`.
+  // `b` is used to create affineExpr
   Builder b(forOp.getContext());
-  unsigned idx = 0;
-
   for (unsigned i = numDim, e = operands.size(); i < e; ++i) {
     Value operand = operands[i];
-    if (Value blockSize = launchOp.getBlockSizeOnAxis(operand)) {
-      operands[i] = blockSize;
-      if (!replaceWithZero)
-        symReplacements.push_back(b.getAffineSymbolExpr(idx++) - 1);
-      else
-        symReplacements.push_back(b.getAffineConstantExpr(0));
+    auto lattice =
+        solver.lookupState<dataflow::IntegerValueRangeLattice>(operand);
+    if (!lattice) {
+      symReplacements.push_back(b.getAffineSymbolExpr(i - numDim));
       continue;
     }
 
-    Operation *defOp = operand.getDefiningOp();
-    if (!defOp) {
-      ++idx;
+    if (lattice->getValue().isUninitialized()) {
+      symReplacements.push_back(b.getAffineSymbolExpr(i - numDim));
       continue;
     }
 
-    if (auto threadIdOp = mlir::dyn_cast<gpu::ThreadIdOp>(defOp)) {
-      gpu::Dimension dimension = threadIdOp.getDimension();
-      operands[i] = launchOp.getBlockSizeOnAxis(dimension);
-      if (!replaceWithZero)
-        symReplacements.push_back(b.getAffineSymbolExpr(idx++) - 1);
-      else
-        symReplacements.push_back(b.getAffineConstantExpr(0));
+    ConstantIntRanges range = lattice->getValue().getValue();
+    APInt max = range.smax();
+    APInt min = range.smin();
+    unsigned bitNums = max.getBitWidth();
+
+    if (APInt::getSignedMaxValue(bitNums) == max &&
+        APInt::getSignedMinValue(bitNums) == min) {
+      symReplacements.push_back(b.getAffineSymbolExpr(i - numDim));
       continue;
     }
-    ++idx;
+
+    if (!replaceByMin)
+      symReplacements.push_back(b.getAffineConstantExpr(max.getZExtValue()));
+    else
+      symReplacements.push_back(b.getAffineConstantExpr(min.getZExtValue()));
   }
+  return;
 }
 
 /// Take the min if all trip counts are constant.
@@ -158,19 +167,17 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
   if (!map)
     return std::nullopt;
   SmallVector<AffineExpr, 4> symReplacements;
-  replaceGPUOperands(forOp, operands, symReplacements, map.getNumDims());
+  replaceOperandByRange(forOp, operands, symReplacements, map.getNumDims());
   map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
                                   map.getNumSymbols());
-  affine::AffineValueMap valueMap(map, operands);
-  (void)valueMap.canonicalize();
-  map = valueMap.getAffineMap();
   return getConstantTripCountFromAffineMap(map);
 }
 
-/// In some scenarios, such as GPU, the number of trip of each thread in the
-/// loop is inconsistent. This function returns the maximum number of trip.
+/// Returns the maximum trip count when the operand of forOp has a range. If the
+/// operand of forOp is a constant, the return value is the same as
+/// `getConstantTripCount`.
 std::optional<uint64_t>
-mlir::affine::getMaxConstantTripCount(AffineForOp forOp) {
+mlir::affine::getUpperBoundOnTripCount(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
   AffineMap map;
   getTripCountMapAndOperands(forOp, &map, &operands);
@@ -178,12 +185,10 @@ mlir::affine::getMaxConstantTripCount(AffineForOp forOp) {
   if (!map)
     return std::nullopt;
   SmallVector<AffineExpr, 4> symReplacements;
-  replaceGPUOperands(forOp, operands, symReplacements, map.getNumDims(), true);
+  replaceOperandByRange(forOp, operands, symReplacements, map.getNumDims(),
+                        true);
   map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
                                   map.getNumSymbols());
-  affine::AffineValueMap valueMap(map, operands);
-  (void)valueMap.canonicalize();
-  map = valueMap.getAffineMap();
   return getConstantTripCountFromAffineMap(map);
 }
 
@@ -198,12 +203,9 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   if (!map)
     return 1;
   SmallVector<AffineExpr, 4> symReplacements;
-  replaceGPUOperands(forOp, operands, symReplacements, map.getNumDims());
+  replaceOperandByRange(forOp, operands, symReplacements, map.getNumDims());
   map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
                                   map.getNumSymbols());
-  affine::AffineValueMap valueMap(map, operands);
-  (void)valueMap.canonicalize();
-  map = valueMap.getAffineMap();
   // The largest divisor of the trip count is the GCD of the individual largest
   // divisors.
   assert(map.getNumResults() >= 1 && "expected one or more results");
