@@ -1130,6 +1130,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
 
   LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
   MCPhysReg PhysReg;
+  bool IsRenamable = true;
   if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
     PhysReg = LRI->PhysReg;
   } else {
@@ -1143,6 +1144,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
       // basic.
       PhysReg = getErrorAssignment(*LRI, *MO.getParent(), RC);
       LRI->Error = true;
+      IsRenamable = false;
     } else
       PhysReg = AllocationOrder.front();
   }
@@ -1153,7 +1155,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
     MO.setSubReg(0);
   }
   MO.setReg(PhysReg);
-  MO.setIsRenamable(!LRI->Error);
+  MO.setIsRenamable(IsRenamable);
 }
 
 /// Variation of defineVirtReg() with special handling for livethrough regs
