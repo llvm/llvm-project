@@ -1427,7 +1427,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
 }
 
 static bool checkAndReplaceCondition(
-    CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
+    ICmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
     Instruction *ContextInst, Module *ReproducerModule,
     ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
     SmallVectorImpl<Instruction *> &ToRemove) {
@@ -1435,8 +1435,9 @@ static bool checkAndReplaceCondition(
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut,
-                                       ContextInst](Use &U) {
+    bool Changed = false;
+    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut, ContextInst,
+                                       &Changed](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
       if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
@@ -1448,18 +1449,29 @@ static bool checkAndReplaceCondition(
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      return !II || II->getIntrinsicID() != Intrinsic::assume;
+      bool ShouldReplace = !II || II->getIntrinsicID() != Intrinsic::assume;
+      Changed |= ShouldReplace;
+      return ShouldReplace;
     });
     NumCondsRemoved++;
     if (Cmp->use_empty())
       ToRemove.push_back(Cmp);
-    return true;
+    return Changed;
   };
 
   if (auto ImpliedCondition =
           checkCondition(Cmp->getPredicate(), Cmp->getOperand(0),
                          Cmp->getOperand(1), Cmp, Info))
     return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
+
+  // When the predicate is samesign and unsigned, we can also make use of the
+  // signed predicate information.
+  if (Cmp->hasSameSign() && Cmp->isUnsigned())
+    if (auto ImpliedCondition =
+            checkCondition(Cmp->getSignedPredicate(), Cmp->getOperand(0),
+                           Cmp->getOperand(1), Cmp, Info))
+      return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
+
   return false;
 }
 

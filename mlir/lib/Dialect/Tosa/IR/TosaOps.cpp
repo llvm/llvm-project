@@ -42,7 +42,10 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc"
+#include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
+#include "mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc"
 
 namespace {
 #include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
@@ -288,12 +291,10 @@ static LogicalResult verifyConvOp(T op) {
   ElementsAttr weightZpAttr;
   if (!matchPattern(op.getInputZp(), m_Constant(&inputZpAttr)) ||
       !matchPattern(op.getWeightZp(), m_Constant(&weightZpAttr))) {
-    op.emitOpError(
-        "bail out if the actual value of zero points cannot be determined");
-    return failure();
+    return success();
   }
 
-  // Get and verify explicit zero points.
+  // Get and verify explicit constant zero points.
   int64_t inputZpVal;
   int64_t weightZpVal;
 
@@ -566,26 +567,9 @@ static void buildTransConvOpWithQuantInfo(
   result.addTypes(finalOutputType);
 }
 
-/// The tosa.fully_connected op has its own builder as it does not have
-/// strides/dilation/padding.
-static void buildFCOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                                   Type outputType, Value input, Value weight,
-                                   Value bias) {
-
-  result.addOperands({input, weight, bias});
-  auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
-  if (quantAttr) {
-    result.addAttribute("quantization_info", quantAttr);
-    result.addTypes(
-        buildConvOpResultTypeInfo(builder, outputType, input, weight));
-  } else {
-    result.addTypes(outputType);
-  }
-}
-
-/// The tosa.matmul op is also intended to be generated where a
-/// fully_connected op must be constructed where the weight is not a constant.
-/// In this case, the fully_connected op must be expressed using matmul.
+/// The tosa.matmul op is also intended to be generated where a fully_connected
+/// op must be constructed where the weight is not a constant. In this case,
+/// the fully_connected op must be expressed using matmul.
 /// TODO: Add link to the leglization document explaining this.
 static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
                                        OperationState &result, Type outputType,
@@ -887,76 +871,6 @@ bool tosa::EqualOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   if (l.size() != r.size() || l.size() != 1)
     return false;
   return succeeded(verifyCompatibleShape(l[0], r[0]));
-}
-
-LogicalResult tosa::FullyConnectedOp::inferReturnTypeComponents(
-    MLIRContext *context, ::std::optional<Location> location,
-    FullyConnectedOp::Adaptor adaptor,
-    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ShapeAdaptor inputShape(adaptor.getInput().getType());
-  ShapeAdaptor weightShape(adaptor.getWeight().getType());
-  ShapeAdaptor biasShape(adaptor.getBias().getType());
-
-  // All shapes are dynamic.
-  SmallVector<int64_t> outShape;
-  outShape.resize(2, ShapedType::kDynamic);
-
-  if (inputShape.hasRank()) {
-    outShape[0] = inputShape.getDimSize(0);
-  }
-
-  if (weightShape.hasRank()) {
-    outShape[1] = weightShape.getDimSize(0);
-  }
-
-  if (biasShape.hasRank()) {
-    outShape[1] = outShape[1] == ShapedType::kDynamic ? biasShape.getDimSize(0)
-                                                      : outShape[1];
-  }
-
-  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
-  return success();
-}
-
-LogicalResult FullyConnectedOp::verify() {
-  // All TOSA conv ops have an input() and weight().
-  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
-
-  RankedTensorType weightType =
-      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
-
-  // Must be ranked tensor types
-  if (!inputType) {
-    emitOpError("expect a ranked tensor for input, got ") << getInput();
-    return failure();
-  }
-  if (!weightType) {
-    emitOpError("expect a ranked tensor for weight, got ") << getWeight();
-    return failure();
-  }
-
-  auto inputEType = inputType.getElementType();
-  auto weightEType = weightType.getElementType();
-
-  bool inputIsQuant = !llvm::isa<FloatType>(inputEType);
-  bool weightIsQuant = !llvm::isa<FloatType>(weightEType);
-
-  // Either both must be quantized or both unquantized.
-  if (inputIsQuant != weightIsQuant) {
-    emitOpError(
-        "expect both input and weight to be float or not together, got ")
-        << inputEType << " and " << weightEType;
-    return failure();
-  }
-
-  // Quantized type must have constructed the quantizationattr, and unquantized
-  // types should not have a quantizationattr.
-  if ((inputIsQuant && !getInputZp()) || (!inputIsQuant && getInputZp())) {
-    emitOpError("input zero point is required for quantized type, and not "
-                "allowed for float type");
-    return failure();
-  }
-  return success();
 }
 
 LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
@@ -1458,54 +1372,37 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
   return mlir::success();
 }
 
-LogicalResult tosa::TransposeOp::getConstantPerms(SmallVector<int32_t> &perms) {
-  // Perms must be constants.
-  DenseIntElementsAttr permsAttr;
-  if (!matchPattern(getPerms(), m_Constant(&permsAttr)))
-    return failure();
-
-  perms.clear();
-  for (auto v : permsAttr.getValues<APInt>())
-    perms.push_back(v.getSExtValue());
-
-  return success();
-}
-
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TransposeOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
-  ShapeAdaptor permsShape(adaptor.getPerms().getType());
-
-  // We cannot infer anything from a rank-0 "permutation" tensor.
-  if (permsShape.hasRank() && permsShape.getRank() == 0)
-    return failure();
 
   // If input rank and permutation length is unknown, the output rank is
   // unknown.
-  if (!inputShape.hasRank() || !permsShape.hasRank() ||
-      permsShape.isDynamicDim(0)) {
+  if (!inputShape.hasRank()) {
     inferredReturnShapes.push_back(ShapedTypeComponents());
     return success();
   }
 
+  const auto inputRank = inputShape.getRank();
+
   // This would imply the number of permutations does not match the rank of
   // the input which is illegal.
-  if (permsShape.getDimSize(0) != inputShape.getRank()) {
+  if (adaptor.getPerms().size() != static_cast<size_t>(inputRank)) {
     return failure();
   }
 
   SmallVector<int64_t> outputShape;
   // Rank-0 means no permutations matter.
-  if (inputShape.getRank() == 0) {
+  if (inputRank == 0) {
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
 
   // Check whether the input dimensions are all the same.
   bool allTheSame = true;
-  for (int i = 1, s = inputShape.getRank(); i < s; i++) {
+  for (int i = 1, s = inputRank; i < s; i++) {
     if (inputShape.getDimSize(0) != inputShape.getDimSize(i)) {
       allTheSame = false;
       break;
@@ -1515,34 +1412,21 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
   // If all of the input dimensions are the same we don't care about the
   // permutation.
   if (allTheSame) {
-    outputShape.resize(inputShape.getRank(), inputShape.getDimSize(0));
+    outputShape.resize(inputRank, inputShape.getDimSize(0));
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
 
-  outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
-  // If the permuations are a constant we can directly determine the output
-  // shape.
-  DenseIntElementsAttr attr;
-  if (matchPattern(adaptor.getPerms(), m_Constant(&attr)) &&
-      attr.getType().getRank() == 1) {
-    ShapeAdaptor permShape = attr;
-    // Constant permutation must be the same length as the input rank.
-    if (inputShape.getRank() != permShape.getRank())
-      return emitOptionalError(location,
-                               "constant permutation must be the same length"
-                               " as the input rank");
+  outputShape.resize(inputRank, ShapedType::kDynamic);
 
-    // Constant permutation values must be within the input rank.
-    for (int i = 0, e = inputShape.getRank(); i < e; i++) {
-      if (inputShape.getRank() <= permShape.getDimSize(i))
-        return failure();
-    }
+  // Constant permutation values must be within the input rank.
+  if (llvm::any_of(adaptor.getPerms(),
+                   [inputRank](const auto i) { return i >= inputRank; }))
+    return failure();
 
-    outputShape.reserve(inputShape.getRank());
-    for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-      outputShape[i] = inputShape.getDimSize(permShape.getDimSize(i));
-    }
+  outputShape.reserve(inputRank);
+  for (int i = 0, s = inputRank; i < s; i++) {
+    outputShape[i] = inputShape.getDimSize(adaptor.getPerms()[i]);
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
@@ -1551,75 +1435,60 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
 
 LogicalResult tosa::TransposeOp::verify() {
   TensorType inputType = getInput1().getType();
-  TensorType permType = getPerms().getType();
   TensorType outputType = getOutput().getType();
+  const llvm::ArrayRef<int32_t> constantPerms = getPerms();
 
-  if (permType.hasRank() && permType.getRank() != 1)
-    return emitOpError()
-           << "expected permutation tensor to be rank 1 but got rank "
-           << permType.getRank();
-  if (inputType.hasRank() && permType.hasRank())
-    if (!permType.isDynamicDim(0) &&
-        permType.getDimSize(0) != inputType.getRank())
-      return emitOpError() << "expected permutation tensor dim 0 to have size "
-                           << inputType.getRank()
-                           << " (input rank) but got size "
-                           << permType.getDimSize(0);
+  if (inputType.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(inputType.getRank()))
+    return emitOpError() << "expected perms attribute to have size "
+                         << inputType.getRank() << " (input rank) but got size "
+                         << constantPerms.size();
   if (inputType.hasRank() && outputType.hasRank() &&
       inputType.getRank() != outputType.getRank())
     return emitOpError()
            << "expected input tensor rank to equal result tensor rank";
-  if (outputType.hasRank() && permType.hasRank())
-    if (!permType.isDynamicDim(0) &&
-        permType.getDimSize(0) != outputType.getRank())
-      return emitOpError() << "expected permutation tensor dim 0 to have size "
-                           << outputType.getRank()
-                           << " (output rank) but got size "
-                           << permType.getDimSize(0);
+  if (outputType.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(outputType.getRank()))
+    return emitOpError() << "expected perms attribute to have size "
+                         << outputType.getRank()
+                         << " (output rank) but got size "
+                         << constantPerms.size();
 
-  SmallVector<int32_t> constantPerms;
-  if (succeeded(getConstantPerms(constantPerms))) {
-    // Assert that the permutation tensor has a rank, which means that the
-    // rank has been verified above.
-    assert(permType.hasRank() &&
-           "Unexpectedly found permutation tensor without rank");
-    if (!llvm::all_of(constantPerms,
-                      [&constantPerms](int32_t s) {
-                        return s >= 0 &&
-                               static_cast<size_t>(s) < constantPerms.size();
-                      }) ||
-        !isPermutationVector(llvm::to_vector(llvm::map_range(
-            constantPerms, [](int32_t v) -> int64_t { return v; }))))
-      return emitOpError() << "expected valid permutation tensor";
+  if (!llvm::all_of(constantPerms,
+                    [&constantPerms](int32_t s) {
+                      return s >= 0 &&
+                             static_cast<size_t>(s) < constantPerms.size();
+                    }) ||
+      !isPermutationVector(llvm::to_vector(llvm::map_range(
+          constantPerms, [](int32_t v) -> int64_t { return v; }))))
+    return emitOpError() << "expected valid permutation indices";
 
-    // Verify that the types of the input and output tensors are properly
-    // permuted.
-    if (inputType.hasRank() && outputType.hasRank()) {
-      assert(constantPerms.size() == static_cast<size_t>(inputType.getRank()) &&
-             inputType.getRank() == outputType.getRank());
+  // Verify that the types of the input and output tensors are properly
+  // permuted.
+  if (inputType.hasRank() && outputType.hasRank()) {
+    assert(constantPerms.size() == static_cast<size_t>(inputType.getRank()) &&
+           inputType.getRank() == outputType.getRank());
 
-      for (auto i = 0; i < outputType.getRank(); i++) {
-        if (inputType.isDynamicDim(constantPerms[i]) ||
-            outputType.isDynamicDim(i))
-          continue;
+    for (auto i = 0; i < outputType.getRank(); i++) {
+      if (inputType.isDynamicDim(constantPerms[i]) ||
+          outputType.isDynamicDim(i))
+        continue;
 
-        if (inputType.getDimSize(constantPerms[i]) != outputType.getDimSize(i))
-          return emitOpError()
-                 << "expected output tensor dim " << i << " to match "
-                 << "input dim " << constantPerms[i] << " with value of "
-                 << inputType.getDimSize(constantPerms[i]);
-      }
+      if (inputType.getDimSize(constantPerms[i]) != outputType.getDimSize(i))
+        return emitOpError()
+               << "expected output tensor dim " << i << " to match "
+               << "input dim " << constantPerms[i] << " with value of "
+               << inputType.getDimSize(constantPerms[i]);
     }
   }
+
   return success();
 }
 
 LogicalResult TransposeOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
 
-  SmallVector<int32_t> transposePerms;
-  if (getConstantPerms(transposePerms).failed())
-    return failure();
+  const llvm::ArrayRef<int32_t> transposePerms = getPerms();
 
   Value input = getInput1();
   auto inputType = cast<TensorType>(input.getType());
@@ -1685,9 +1554,14 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
       (inputWidth == ShapedType::kDynamic))
     return failure();
 
-  llvm::ArrayRef<int64_t> scaleInt = adaptor.getScale();
-  llvm::ArrayRef<int64_t> offsetInt = adaptor.getOffset();
-  llvm::ArrayRef<int64_t> borderInt = adaptor.getBorder();
+  SmallVector<int64_t> scaleInt, offsetInt, borderInt;
+  if (!tosa::getConstShapeValue(adaptor.getScale().getDefiningOp(), scaleInt) ||
+      !tosa::getConstShapeValue(adaptor.getOffset().getDefiningOp(),
+                                offsetInt) ||
+      !tosa::getConstShapeValue(adaptor.getBorder().getDefiningOp(),
+                                borderInt)) {
+    return failure();
+  }
 
   // Compute the output shape based on attributes: scale, offset, and border.
   outputShape[1] =
@@ -1701,6 +1575,98 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
       1;
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult tosa::ResizeOp::verify() {
+  const Value input = getInput();
+  const Value output = getOutput();
+  const RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(input.getType());
+  const RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(output.getType());
+
+  if (!inputType)
+    return emitOpError("expect a ranked input tensor");
+  if (!outputType)
+    return emitOpError("expect a ranked output tensor");
+
+  const int64_t oh = outputType.getDimSize(1);
+  const int64_t ow = outputType.getDimSize(2);
+  const int64_t ih = inputType.getDimSize(1);
+  const int64_t iw = inputType.getDimSize(2);
+
+  SmallVector<int64_t> scaleValues;
+  SmallVector<int64_t> offsetValues;
+  SmallVector<int64_t> borderValues;
+  if (!tosa::getConstShapeValue(getScale().getDefiningOp(), scaleValues) ||
+      !tosa::getConstShapeValue(getOffset().getDefiningOp(), offsetValues) ||
+      !tosa::getConstShapeValue(getBorder().getDefiningOp(), borderValues)) {
+    // Skip following checks if shape is not constant
+    return success();
+  }
+
+  if (llvm::any_of(scaleValues, [](int64_t s) { return s <= 0; }))
+    return emitOpError("expect all scale values to be > 0, got ")
+           << scaleValues;
+
+  const int64_t scaleYN = scaleValues[0];
+  const int64_t scaleYD = scaleValues[1];
+  const int64_t scaleXN = scaleValues[2];
+  const int64_t scaleXD = scaleValues[3];
+
+  const int64_t offsetY = offsetValues[0];
+  const int64_t offsetX = offsetValues[1];
+
+  const int64_t borderY = borderValues[0];
+  const int64_t borderX = borderValues[1];
+
+  auto idivCheck = [](const int64_t lhs,
+                      const int64_t rhs) -> std::optional<int64_t> {
+    if (lhs % rhs != 0)
+      return std::nullopt;
+    return lhs / rhs;
+  };
+
+  // Don't check with input height that could be broadcast (ih != 1)
+  // since Linalg, a consumer of TOSA, expects broadcasting support
+  // in resize to be available. Taking the cautious approach for now,
+  // we can consider removing support for broadcasting later.
+  if (ih != ShapedType::kDynamic && ih != 1) {
+    const std::optional<int64_t> calculatedOutHeightMinusOne =
+        idivCheck((ih - 1) * scaleYN - offsetY + borderY, scaleYD);
+    if (!calculatedOutHeightMinusOne.has_value())
+      return emitOpError("expected (input_height - 1) * scale_y_n - offset_y + "
+                         "border_y ")
+             << "to be wholly divisible by scale_y_d, got ((" << ih
+             << " - 1) * " << scaleYN << " - " << offsetY << " + " << borderY
+             << ") / " << scaleYD;
+    const int64_t calculatedOutHeight = calculatedOutHeightMinusOne.value() + 1;
+    if (oh != ShapedType::kDynamic && calculatedOutHeight != oh)
+      return emitOpError("calculated output height did not match expected: ")
+             << "calculated=" << calculatedOutHeight << ", expected=" << oh;
+  }
+
+  // Don't check with input width that could be broadcast (iw != 1)
+  // since Linalg, a consumer of TOSA, expects broadcasting support
+  // in resize to be available. Taking the cautious approach for now,
+  // we can consider removing support for broadcasting later.
+  if (iw != ShapedType::kDynamic && iw != 1) {
+    const int64_t scaledInWidth = (iw - 1) * scaleXN - offsetX + borderX;
+    const std::optional<int64_t> calculatedOutWidthMinusOne =
+        idivCheck(scaledInWidth, scaleXD);
+    if (!calculatedOutWidthMinusOne.has_value())
+      return emitOpError("expected (input_width - 1) * scale_x_n - offset_x + "
+                         "border_x ")
+             << "to be wholly divisible by scale_x_d, got ((" << iw
+             << " - 1) * " << scaleXN << " - " << offsetX << " + " << borderX
+             << ") / " << scaleXD;
+    const int64_t calculatedOutWidth = calculatedOutWidthMinusOne.value() + 1;
+    if (ow != ShapedType::kDynamic && calculatedOutWidth != ow)
+      return emitOpError("calculated output width did not match expected: ")
+             << "calculated=" << calculatedOutWidth << ", expected=" << ow;
+  }
+
   return success();
 }
 
@@ -2618,6 +2584,10 @@ OpTrait::tosa::verifyTosaShapeOperatorWithSameRanks(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult tosa::ConstShapeOp::verify() {
+  // check one dimensional rank
+  auto valuesRank = getValue().getType().getRank();
+  if (valuesRank != 1)
+    return emitOpError("expect elements in attribute value with rank 1");
   // check that number of elements in value attr equal to rank of result shape
   auto count = getValue().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();

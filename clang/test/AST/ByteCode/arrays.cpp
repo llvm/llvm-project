@@ -654,3 +654,24 @@ namespace ZeroSizeTypes {
                               // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
   }
 }
+
+namespace InvalidIndex {
+  constexpr int foo(int i) { // both-error {{no return statement in constexpr function}}
+    int a[] = {1,2,3};
+    return a[_z]; // both-error {{use of undeclared identifier}}
+  }
+  static_assert(foo(0) == 1, "");
+}
+
+namespace PointerSubscript {
+  template<typename T>
+  constexpr T foo() {
+    T ss[] = {{}, {}, {}};
+    T *s = &ss[0];
+
+    return s[2];
+  }
+  static_assert(foo<int>() == 0);
+  struct S{};
+  static_assert((foo<S>(), true));
+}

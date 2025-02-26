@@ -1310,7 +1310,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   if (!SIInstrInfo::isVALU(*MI))
     return false;
 
-  unsigned SDSTName;
+  AMDGPU::OpName SDSTName;
   switch (MI->getOpcode()) {
   case AMDGPU::V_READLANE_B32:
   case AMDGPU::V_READFIRSTLANE_B32:
@@ -2292,7 +2292,7 @@ GFX940_SMFMA_N_PassWritesVGPROverlappedSrcABWaitStates(int NumPasses) {
 
 static int GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(int NumPasses,
                                                                 bool IsGFX950) {
-  // xdl def cycles | gfx940 | gfx950
+  // xdl def cycles | gfx942 | gfx950
   // 2 pass         |  5        5
   // 4 pass         |  7        8
   // 8 pass         |  11       12
@@ -2600,7 +2600,7 @@ static int GFX940_SMFMA_N_PassWriteVgprVALUWawWaitStates(int NumPasses) {
 
 static int GFX940_XDL_N_PassWriteVgprVALUWawWaitStates(int NumPasses,
                                                        bool IsGFX950) {
-  // xdl def cycles | gfx940 | gfx950
+  // xdl def cycles | gfx942 | gfx950
   // 2 pass         |  5        5
   // 4 pass         |  7        8
   // 8 pass         |  11       12
@@ -2610,7 +2610,7 @@ static int GFX940_XDL_N_PassWriteVgprVALUWawWaitStates(int NumPasses,
 
 static int GFX940_XDL_N_PassWriteVgprVALUMemExpReadWaitStates(int NumPasses,
                                                               bool IsGFX950) {
-  // xdl def cycles | gfx940 | gfx950
+  // xdl def cycles | gfx942 | gfx950
   // 2 pass         |  5        5
   // 4 pass         |  7        8
   // 8 pass         |  11       12

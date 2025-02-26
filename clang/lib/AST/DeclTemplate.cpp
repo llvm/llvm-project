@@ -786,12 +786,16 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     QualType T, bool ParameterPack, TypeSourceInfo *TInfo) {
   AutoType *AT =
       C.getLangOpts().CPlusPlus20 ? T->getContainedAutoType() : nullptr;
-  return new (C, DC,
-              additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                    Expr *>(0,
-                                            AT && AT->isConstrained() ? 1 : 0))
-      NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, ParameterPack,
-                              TInfo);
+  const bool HasConstraint = AT && AT->isConstrained();
+  auto *NTTP =
+      new (C, DC,
+           additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
+               0, HasConstraint ? 1 : 0))
+          NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T,
+                                  ParameterPack, TInfo);
+  if (HasConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
+  return NTTP;
 }
 
 NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
@@ -800,23 +804,30 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
     ArrayRef<TypeSourceInfo *> ExpandedTInfos) {
   AutoType *AT = TInfo->getType()->getContainedAutoType();
-  return new (C, DC,
-              additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                    Expr *>(
-                  ExpandedTypes.size(), AT && AT->isConstrained() ? 1 : 0))
-      NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, TInfo,
-                              ExpandedTypes, ExpandedTInfos);
+  const bool HasConstraint = AT && AT->isConstrained();
+  auto *NTTP =
+      new (C, DC,
+           additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
+               ExpandedTypes.size(), HasConstraint ? 1 : 0))
+          NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, TInfo,
+                                  ExpandedTypes, ExpandedTInfos);
+  if (HasConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
+  return NTTP;
 }
 
 NonTypeTemplateParmDecl *
 NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                             bool HasTypeConstraint) {
-  return new (C, ID, additionalSizeToAlloc<std::pair<QualType,
-                                                     TypeSourceInfo *>,
-                                           Expr *>(0,
-                                                   HasTypeConstraint ? 1 : 0))
+  auto *NTTP =
+      new (C, ID,
+           additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
+               0, HasTypeConstraint ? 1 : 0))
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
                                   0, 0, nullptr, QualType(), false, nullptr);
+  if (HasTypeConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
+  return NTTP;
 }
 
 NonTypeTemplateParmDecl *
@@ -830,6 +841,8 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
                                   0, 0, nullptr, QualType(), nullptr, {}, {});
   NTTP->NumExpandedTypes = NumExpandedTypes;
+  if (HasTypeConstraint)
+    NTTP->setPlaceholderTypeConstraint(nullptr);
   return NTTP;
 }
 

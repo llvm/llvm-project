@@ -421,12 +421,6 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    // Do not introduce new subregister uses in a reg_sequence. Until composing
-    // subregister indices is supported while folding, we're just blocking
-    // folding of subregister copies later in the function.
-    if (NewSubReg)
-      return false;
-
     MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
     MO.setReg(NewReg);
     MO.setSubReg(NewSubReg);
@@ -1984,10 +1978,48 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 
   // We are looking at:
   // Def = REG_SEQUENCE v0, sub0, v1, sub1, ...
-  // Check if one of the operand defines the subreg we are interested in.
+  //
+  // Check if one of the operands exactly defines the subreg we are interested
+  // in.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
     if (RegSeqInput.SubIdx == DefSubReg)
       return ValueTrackerResult(RegSeqInput.Reg, RegSeqInput.SubReg);
+  }
+
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+
+  // If we did not find an exact match, see if we can do a composition to
+  // extract a sub-subregister.
+  for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
+    LaneBitmask DefMask = TRI->getSubRegIndexLaneMask(DefSubReg);
+    LaneBitmask ThisOpRegMask = TRI->getSubRegIndexLaneMask(RegSeqInput.SubIdx);
+
+    // Check that this extract reads a subset of this single reg_sequence input.
+    //
+    // FIXME: We should be able to filter this in terms of the indexes directly
+    // without checking the lanemasks.
+    if ((DefMask & ThisOpRegMask) != DefMask)
+      continue;
+
+    unsigned ReverseDefCompose =
+        TRI->reverseComposeSubRegIndices(RegSeqInput.SubIdx, DefSubReg);
+    if (!ReverseDefCompose)
+      continue;
+
+    unsigned ComposedDefInSrcReg1 =
+        TRI->composeSubRegIndices(RegSeqInput.SubReg, ReverseDefCompose);
+
+    // TODO: We should be able to defer checking if the result register class
+    // supports the index to continue looking for a rewritable source.
+    //
+    // TODO: Should we modify the register class to support the index?
+    const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
+    const TargetRegisterClass *SrcWithSubRC =
+        TRI->getSubClassWithSubReg(SrcRC, ComposedDefInSrcReg1);
+    if (SrcRC != SrcWithSubRC)
+      return ValueTrackerResult();
+
+    return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
   }
 
   // If the subreg we are tracking is super-defined by another subreg,

@@ -133,7 +133,7 @@ bb:
   auto *Sel0 = cast<sandboxir::SelectInst>(&*It++);
   auto *Sel1 = cast<sandboxir::SelectInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps(Ctx);
+  llvm::sandboxir::InstrMaps IMaps;
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
@@ -285,7 +285,7 @@ define void @foo(ptr %ptr) {
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps(Ctx);
+  llvm::sandboxir::InstrMaps IMaps;
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   {
     // Can vectorize St0,St1.
@@ -321,7 +321,7 @@ define void @foo() {
   };
 
   sandboxir::Context Ctx(C);
-  llvm::sandboxir::InstrMaps IMaps(Ctx);
+  llvm::sandboxir::InstrMaps IMaps;
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
@@ -368,32 +368,34 @@ define void @foo(ptr %ptr) {
 
   sandboxir::CollectDescr::DescrVecT Descrs;
   using EEDescr = sandboxir::CollectDescr::ExtractElementDescr;
-
+  SmallVector<sandboxir::Value *> Bndl({VLd});
+  SmallVector<sandboxir::Value *> UB;
+  sandboxir::Action VLdA(nullptr, Bndl, UB, 0);
   {
     // Check single input, no shuffle.
-    Descrs.push_back(EEDescr(VLd, 0));
-    Descrs.push_back(EEDescr(VLd, 1));
+    Descrs.push_back(EEDescr(&VLdA, 0));
+    Descrs.push_back(EEDescr(&VLdA, 1));
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_TRUE(CD.getSingleInput());
-    EXPECT_EQ(CD.getSingleInput()->first, VLd);
+    EXPECT_EQ(CD.getSingleInput()->first, &VLdA);
     EXPECT_THAT(CD.getSingleInput()->second, testing::ElementsAre(0, 1));
     EXPECT_TRUE(CD.hasVectorInputs());
   }
   {
     // Check single input, shuffle.
-    Descrs.push_back(EEDescr(VLd, 1));
-    Descrs.push_back(EEDescr(VLd, 0));
+    Descrs.push_back(EEDescr(&VLdA, 1));
+    Descrs.push_back(EEDescr(&VLdA, 0));
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_TRUE(CD.getSingleInput());
-    EXPECT_EQ(CD.getSingleInput()->first, VLd);
+    EXPECT_EQ(CD.getSingleInput()->first, &VLdA);
     EXPECT_THAT(CD.getSingleInput()->second, testing::ElementsAre(1, 0));
     EXPECT_TRUE(CD.hasVectorInputs());
   }
   {
     // Check multiple inputs.
     Descrs.push_back(EEDescr(Ld0));
-    Descrs.push_back(EEDescr(VLd, 0));
-    Descrs.push_back(EEDescr(VLd, 1));
+    Descrs.push_back(EEDescr(&VLdA, 0));
+    Descrs.push_back(EEDescr(&VLdA, 1));
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_FALSE(CD.getSingleInput());
     EXPECT_TRUE(CD.hasVectorInputs());

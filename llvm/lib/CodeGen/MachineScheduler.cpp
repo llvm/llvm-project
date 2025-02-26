@@ -3249,6 +3249,7 @@ void GenericSchedulerBase::setPolicy(CandPolicy &Policy, bool IsPostRA,
 #ifndef NDEBUG
 const char *GenericSchedulerBase::getReasonStr(
   GenericSchedulerBase::CandReason Reason) {
+  // clang-format off
   switch (Reason) {
   case NoCand:         return "NOCAND    ";
   case Only1:          return "ONLY1     ";
@@ -3265,9 +3266,10 @@ const char *GenericSchedulerBase::getReasonStr(
   case TopPathReduce:  return "TOP-PATH  ";
   case BotHeightReduce:return "BOT-HEIGHT";
   case BotPathReduce:  return "BOT-PATH  ";
-  case NextDefUse:     return "DEF-USE   ";
   case NodeOrder:      return "ORDER     ";
+  case FirstValid:     return "FIRST     ";
   };
+  // clang-format on
   llvm_unreachable("Unknown reason!");
 }
 
@@ -3687,7 +3689,7 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
                                     SchedBoundary *Zone) const {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
-    TryCand.Reason = NodeOrder;
+    TryCand.Reason = FirstValid;
     return true;
   }
 
@@ -4102,7 +4104,7 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
                                         SchedCandidate &TryCand) {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
-    TryCand.Reason = NodeOrder;
+    TryCand.Reason = FirstValid;
     return true;
   }
 

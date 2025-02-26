@@ -29,10 +29,7 @@
 namespace lldb_private {
 namespace telemetry {
 
-using ::llvm::Error;
-using ::llvm::telemetry::Destination;
-using ::llvm::telemetry::Serializer;
-using ::llvm::telemetry::TelemetryInfo;
+using namespace llvm::telemetry;
 
 static uint64_t ToNanosec(const SteadyTimePoint Point) {
   return std::chrono::nanoseconds(Point.time_since_epoch()).count();
@@ -46,28 +43,34 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
 
-[[maybe_unused]] static std::string MakeUUID(lldb_private::Debugger *debugger) {
+[[maybe_unused]] static std::string MakeUUID(Debugger *debugger) {
   uint8_t random_bytes[16];
   if (auto ec = llvm::getRandomBytes(random_bytes, 16)) {
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Failed to generate random bytes for UUID: {0}", ec.message());
-    // fallback to using timestamp + debugger ID.
+    // Fallback to using timestamp + debugger ID.
     return llvm::formatv(
         "{0}_{1}", std::chrono::steady_clock::now().time_since_epoch().count(),
         debugger->GetID());
   }
-  return lldb_private::UUID(random_bytes).GetAsString();
+  return UUID(random_bytes).GetAsString();
 }
 
-TelemetryManager::TelemetryManager(
-    std::unique_ptr<llvm::telemetry::Config> config)
+TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
     : m_config(std::move(config)) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // Do nothing for now.
   // In up-coming patch, this would be where the manager
   // attach the session_uuid to the entry.
-  return Error::success();
+  return llvm::Error::success();
+}
+
+std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
+TelemetryManager *TelemetryManager::GetInstance() { return g_instance.get(); }
+
+void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
+  g_instance = std::move(manager);
 }
 
 } // namespace telemetry

@@ -65,12 +65,12 @@ void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
-  auto notOp = op.getPred().getDefiningOp<tosa::LogicalNotOp>();
+  auto notOp = op.getInput1().getDefiningOp<tosa::LogicalNotOp>();
   if (!notOp)
     return failure();
   rewriter.modifyOpInPlace(op, [&]() {
     op.getOperation()->setOperands(
-        {notOp.getInput1(), op.getOnFalse(), op.getOnTrue()});
+        {notOp.getInput1(), op.getInput3(), op.getInput2()});
   });
   return success();
 }
@@ -88,13 +88,10 @@ struct ConsolidateTransposeOptimization
       return rewriter.notifyMatchFailure(transposeOp,
                                          "input must be transpose operation");
 
-    SmallVector<int32_t> transposePerms, innerTransposePerms;
-    if (transposeOp.getConstantPerms(transposePerms).failed())
-      return rewriter.notifyMatchFailure(transposeOp,
-                                         "transpose perms must be constant");
-    if (innerTranspose.getConstantPerms(innerTransposePerms).failed())
-      return rewriter.notifyMatchFailure(
-          transposeOp, "inner transpose perms must be constant");
+    const llvm::ArrayRef<int32_t> transposePerms = transposeOp.getPerms();
+    const llvm::ArrayRef<int32_t> innerTransposePerms =
+        innerTranspose.getPerms();
+
     if (transposePerms.size() != innerTransposePerms.size())
       return rewriter.notifyMatchFailure(
           transposeOp,
@@ -108,15 +105,9 @@ struct ConsolidateTransposeOptimization
     for (int i = 0, s = transposePerms.size(); i < s; ++i)
       perms[i] = innerTransposePerms[transposePerms[i]];
 
-    auto permsTy =
-        RankedTensorType::get(transposePerms.size(), rewriter.getI32Type());
-    auto permsAttr = DenseIntElementsAttr::get(permsTy, perms);
-    Value permsValue = rewriter.create<tosa::ConstOp>(transposeOp.getLoc(),
-                                                      permsTy, permsAttr);
-
     rewriter.replaceOpWithNewOp<tosa::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
-        innerTranspose.getInput1(), permsValue);
+        innerTranspose.getInput1(), rewriter.getDenseI32ArrayAttr(perms));
 
     return success();
   }
@@ -128,10 +119,6 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
-      return rewriter.notifyMatchFailure(op, "Non-constant permutation");
-
     if (op.getInput1().getDefiningOp<tosa::TransposeOp>())
       return rewriter.notifyMatchFailure(
           op, "Src is from transpose, can compose transposes");
@@ -156,9 +143,7 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
     if (numDynDims > 1)
       return rewriter.notifyMatchFailure(op, "Has more than one dynamic dim.");
 
-    SmallVector<int64_t> permValues = llvm::to_vector<6>(
-        llvm::map_range(permAttr.getValues<APInt>(),
-                        [](const APInt &val) { return val.getSExtValue(); }));
+    const llvm::ArrayRef<int32_t> permValues = op.getPerms();
 
     SmallVector<int64_t> nonZeroPerms;
     nonZeroPerms.reserve(permValues.size());
@@ -680,10 +665,11 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
       return getInput1();
   }
 
-  if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat()) {
-    if (llvm::isa<IntegerType>(resultETy)) {
-      APInt l = lhsAttr.getSplatValue<APInt>();
-      APInt r = rhsAttr.getSplatValue<APInt>();
+  if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat() &&
+      llvm::isa<IntegerType>(resultETy)) {
+    APInt l = lhsAttr.getSplatValue<APInt>();
+    APInt r = rhsAttr.getSplatValue<APInt>();
+    if (!r.isZero()) {
       APInt result = l.sdiv(r);
       return DenseElementsAttr::get(resultTy, result);
     }
@@ -1034,9 +1020,22 @@ OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
 // Fold away cases where a tosa.resize operation returns a copy
 // of the input image.
 OpFoldResult ResizeOp::fold(FoldAdaptor adaptor) {
-  ArrayRef<int64_t> offset = getOffset();
-  ArrayRef<int64_t> border = getBorder();
-  ArrayRef<int64_t> scale = getScale();
+  auto scaleAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getScale());
+  auto offsetAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getOffset());
+  auto borderAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getBorder());
+  if (!scaleAttr || !offsetAttr || !borderAttr) {
+    return {};
+  }
+
+  auto scale = tosa::convertFromIntAttr(scaleAttr, /* rank = */ 4);
+  auto offset = tosa::convertFromIntAttr(offsetAttr, /* rank = */ 2);
+  auto border = tosa::convertFromIntAttr(borderAttr, /* rank = */ 2);
+  if (scale.size() != 4 || offset.size() != 2 || border.size() != 2) {
+    return {};
+  }
 
   // Check unit scaling.
   if (scale[0] != scale[1] || scale[2] != scale[3]) {
@@ -1118,18 +1117,18 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
-  if (getOnTrue() == getOnFalse())
-    return getOnTrue();
+  if (getInput2() == getInput3())
+    return getInput2();
 
   auto predicate =
-      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getPred());
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput1());
   if (!predicate)
     return {};
 
   if (!predicate.isSplat())
     return {};
-  return predicate.getSplatValue<APInt>().getBoolValue() ? getOnTrue()
-                                                         : getOnFalse();
+  return predicate.getSplatValue<APInt>().getBoolValue() ? getInput2()
+                                                         : getInput3();
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {
@@ -1162,9 +1161,7 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
   }
 
   // Transpose is not the identity transpose.
-  SmallVector<int32_t> perms;
-  if (getConstantPerms(perms).failed())
-    return {};
+  const llvm::ArrayRef<int32_t> perms = getPerms();
 
   if (!llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))
     return {};

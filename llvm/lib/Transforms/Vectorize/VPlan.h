@@ -523,7 +523,6 @@ public:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
-    case VPRecipeBase::VPWidenEVLSC:
     case VPRecipeBase::VPWidenSelectSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
@@ -710,7 +709,6 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
@@ -1113,8 +1111,7 @@ public:
   }
 
   static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenEVLSC;
+    return R->getVPDefID() == VPRecipeBase::VPWidenSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -1136,54 +1133,6 @@ public:
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-/// A recipe for widening operations with vector-predication intrinsics with
-/// explicit vector length (EVL).
-class VPWidenEVLRecipe : public VPWidenRecipe {
-  using VPRecipeWithIRFlags::transferFlags;
-
-public:
-  template <typename IterT>
-  VPWidenEVLRecipe(Instruction &I, iterator_range<IterT> Operands, VPValue &EVL)
-      : VPWidenRecipe(VPDef::VPWidenEVLSC, I, Operands) {
-    addOperand(&EVL);
-  }
-  VPWidenEVLRecipe(VPWidenRecipe &W, VPValue &EVL)
-      : VPWidenEVLRecipe(*W.getUnderlyingInstr(), W.operands(), EVL) {
-    transferFlags(W);
-  }
-
-  ~VPWidenEVLRecipe() override = default;
-
-  VPWidenRecipe *clone() override final {
-    llvm_unreachable("VPWidenEVLRecipe cannot be cloned");
-    return nullptr;
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenEVLSC);
-
-  VPValue *getEVL() { return getOperand(getNumOperands() - 1); }
-  const VPValue *getEVL() const { return getOperand(getNumOperands() - 1); }
-
-  /// Produce a vp-intrinsic using the opcode and operands of the recipe,
-  /// processing EVL elements.
-  void execute(VPTransformState &State) override final;
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // EVL in that recipe is always the last operand, thus any use before means
-    // the VPValue should be vectorized.
-    return getEVL() == Op;
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override final;
 #endif
 };
 
@@ -1958,13 +1907,12 @@ public:
 #endif
 };
 
-/// A recipe for handling phis that are widened in the vector loop.
-/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
-/// managed in the recipe directly.
+/// A recipe for widened phis. Incoming values are operands of the recipe and
+/// their operand index corresponds to the incoming predecessor block. If the
+/// recipe is placed in an entry block to a (non-replicate) region, it must have
+/// exactly 2 incoming values, the first from the predecessor of the region and
+/// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
-  /// List of incoming blocks. Only used in the VPlan native path.
-  SmallVector<VPBasicBlock *, 2> IncomingBlocks;
-
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
@@ -1991,19 +1939,8 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
-  void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
-    addOperand(IncomingV);
-    IncomingBlocks.push_back(IncomingBlock);
-  }
-
   /// Returns the \p I th incoming VPBasicBlock.
-  VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
-
-  /// Set the \p I th incoming VPBasicBlock to \p IncomingBlock.
-  void setIncomingBlock(unsigned I, VPBasicBlock *IncomingBlock) {
-    IncomingBlocks[I] = IncomingBlock;
-  }
+  VPBasicBlock *getIncomingBlock(unsigned I);
 
   /// Returns the \p I th incoming VPValue.
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
@@ -3489,6 +3426,11 @@ class VPlan {
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
   VPIRBasicBlock *ScalarHeader;
 
+  /// Immutable list of VPIRBasicBlocks wrapping the exit blocks of the original
+  /// scalar loop. Note that some exit blocks may be unreachable at the moment,
+  /// e.g. if the scalar epilogue always executes.
+  SmallVector<VPIRBasicBlock *, 2> ExitBlocks;
+
   /// Holds the VFs applicable to this VPlan.
   SmallSetVector<ElementCount, 2> VFs;
 
@@ -3622,11 +3564,13 @@ public:
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
   VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
 
-  /// Return an iterator range over the VPIRBasicBlock wrapping the exit blocks
-  /// of the VPlan, that is leaf nodes except the scalar header. Defined in
-  /// VPlanHCFG, as the definition of the type needs access to the definitions
-  /// of VPBlockShallowTraversalWrapper.
-  auto getExitBlocks();
+  /// Return an ArrayRef containing VPIRBasicBlocks wrapping the exit blocks of
+  /// the original scalar loop.
+  ArrayRef<VPIRBasicBlock *> getExitBlocks() const { return ExitBlocks; }
+
+  /// Return the VPIRBasicBlock corresponding to \p IRBB. \p IRBB must be an
+  /// exit block.
+  VPIRBasicBlock *getExitBlock(BasicBlock *IRBB) const;
 
   /// Returns true if \p VPBB is an exit block.
   bool isExitBlock(VPBlockBase *VPBB);
