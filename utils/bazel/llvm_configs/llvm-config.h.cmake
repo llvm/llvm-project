@@ -202,6 +202,6 @@
 #cmakedefine LLVM_HAS_LOGF128
 
 /* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
-#cmakedefine LLVM_ENABLE_TELEMETRY ${LLVM_ENABLE_TELEMETRY}
+#cmakedefine01 LLVM_ENABLE_TELEMETRY
 
 #endif
