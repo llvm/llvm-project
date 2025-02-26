@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/formatting.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
@@ -16,6 +15,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::evaluate {

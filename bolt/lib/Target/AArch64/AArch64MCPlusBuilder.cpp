@@ -23,6 +23,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
@@ -133,6 +134,41 @@ class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  MCPhysReg getStackPointer() const override { return AArch64::SP; }
+  MCPhysReg getFramePointer() const override { return AArch64::FP; }
+
+  bool isPush(const MCInst &Inst) const override {
+    return isStoreToStack(Inst);
+  };
+
+  bool isPop(const MCInst &Inst) const override {
+    return isLoadFromStack(Inst);
+  };
+
+  void createCall(MCInst &Inst, const MCSymbol *Target,
+                  MCContext *Ctx) override {
+    createDirectCall(Inst, Target, Ctx, false);
+  }
+
+  bool convertTailCallToCall(MCInst &Inst) override {
+    int NewOpcode;
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case AArch64::B:
+      NewOpcode = AArch64::BL;
+      break;
+    case AArch64::BR:
+      NewOpcode = AArch64::BLR;
+      break;
+    }
+
+    Inst.setOpcode(NewOpcode);
+    removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
+    clearOffset(Inst);
+    return true;
+  }
+
   bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
               CompFuncTy Comp) const override {
     const auto &AArch64ExprA = cast<AArch64MCExpr>(A);
@@ -146,6 +182,88 @@ public:
 
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
     return false;
+  }
+
+  ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::AUTIAZ:
+    case AArch64::AUTIBZ:
+    case AArch64::AUTIASP:
+    case AArch64::AUTIBSP:
+    case AArch64::AUTIASPPCi:
+    case AArch64::AUTIBSPPCi:
+    case AArch64::AUTIASPPCr:
+    case AArch64::AUTIBSPPCr:
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
+      return AArch64::LR;
+
+    case AArch64::AUTIA1716:
+    case AArch64::AUTIB1716:
+    case AArch64::AUTIA171615:
+    case AArch64::AUTIB171615:
+      return AArch64::X17;
+
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+      // The ERETA{A,B} instructions use either register ELR_EL1, ELR_EL2 or
+      // ELR_EL3, depending on the current Exception Level at run-time.
+      //
+      // Furthermore, these registers are not modelled by LLVM as a regular
+      // MCPhysReg.... So there is no way to indicate that through the current
+      // API.
+      //
+      // Therefore, return an error to indicate that LLVM/BOLT cannot model
+      // this.
+      return make_error_code(std::errc::result_out_of_range);
+
+    case AArch64::AUTIA:
+    case AArch64::AUTIB:
+    case AArch64::AUTDA:
+    case AArch64::AUTDB:
+    case AArch64::AUTIZA:
+    case AArch64::AUTIZB:
+    case AArch64::AUTDZA:
+    case AArch64::AUTDZB:
+      return Inst.getOperand(0).getReg();
+
+      // FIXME: BL?RA(A|B)Z? and LDRA(A|B) should probably be handled here too.
+
+    default:
+      return getNoRegister();
+    }
+  }
+
+  bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
+    if (Reg == getNoRegister())
+      return false;
+    ErrorOr<MCPhysReg> AuthenticatedReg = getAuthenticatedReg(Inst);
+    return AuthenticatedReg.getError() ? false : *AuthenticatedReg == Reg;
+  }
+
+  ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const override {
+    assert(isReturn(Inst));
+    switch (Inst.getOpcode()) {
+    case AArch64::RET:
+      return Inst.getOperand(0).getReg();
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
+      return AArch64::LR;
+    case AArch64::ERET:
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+      return make_error_code(std::errc::result_out_of_range);
+    default:
+      llvm_unreachable("Unhandled return instruction");
+    }
   }
 
   bool isADRP(const MCInst &Inst) const override {
@@ -214,59 +332,207 @@ public:
   }
 
   bool isLDRB(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRBBpost ||
-            Inst.getOpcode() == AArch64::LDRBBpre ||
-            Inst.getOpcode() == AArch64::LDRBBroW ||
-            Inst.getOpcode() == AArch64::LDRBBroX ||
-            Inst.getOpcode() == AArch64::LDRBBui ||
-            Inst.getOpcode() == AArch64::LDRSBWpost ||
-            Inst.getOpcode() == AArch64::LDRSBWpre ||
-            Inst.getOpcode() == AArch64::LDRSBWroW ||
-            Inst.getOpcode() == AArch64::LDRSBWroX ||
-            Inst.getOpcode() == AArch64::LDRSBWui ||
-            Inst.getOpcode() == AArch64::LDRSBXpost ||
-            Inst.getOpcode() == AArch64::LDRSBXpre ||
-            Inst.getOpcode() == AArch64::LDRSBXroW ||
-            Inst.getOpcode() == AArch64::LDRSBXroX ||
-            Inst.getOpcode() == AArch64::LDRSBXui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRBpost:
+    case AArch64::LDRBBpost:
+    case AArch64::LDRBBpre:
+    case AArch64::LDRBBroW:
+    case AArch64::LDRBroW:
+    case AArch64::LDRBroX:
+    case AArch64::LDRBBroX:
+    case AArch64::LDRBBui:
+    case AArch64::LDRBui:
+    case AArch64::LDRBpre:
+    case AArch64::LDRSBWpost:
+    case AArch64::LDRSBWpre:
+    case AArch64::LDRSBWroW:
+    case AArch64::LDRSBWroX:
+    case AArch64::LDRSBWui:
+    case AArch64::LDRSBXpost:
+    case AArch64::LDRSBXpre:
+    case AArch64::LDRSBXroW:
+    case AArch64::LDRSBXroX:
+    case AArch64::LDRSBXui:
+    case AArch64::LDURBi:
+    case AArch64::LDURBBi:
+    case AArch64::LDURSBWi:
+    case AArch64::LDURSBXi:
+    case AArch64::LDTRBi:
+    case AArch64::LDTRSBWi:
+    case AArch64::LDTRSBXi:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool isLDRH(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRHHpost ||
-            Inst.getOpcode() == AArch64::LDRHHpre ||
-            Inst.getOpcode() == AArch64::LDRHHroW ||
-            Inst.getOpcode() == AArch64::LDRHHroX ||
-            Inst.getOpcode() == AArch64::LDRHHui ||
-            Inst.getOpcode() == AArch64::LDRSHWpost ||
-            Inst.getOpcode() == AArch64::LDRSHWpre ||
-            Inst.getOpcode() == AArch64::LDRSHWroW ||
-            Inst.getOpcode() == AArch64::LDRSHWroX ||
-            Inst.getOpcode() == AArch64::LDRSHWui ||
-            Inst.getOpcode() == AArch64::LDRSHXpost ||
-            Inst.getOpcode() == AArch64::LDRSHXpre ||
-            Inst.getOpcode() == AArch64::LDRSHXroW ||
-            Inst.getOpcode() == AArch64::LDRSHXroX ||
-            Inst.getOpcode() == AArch64::LDRSHXui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRHpost:
+    case AArch64::LDRHHpost:
+    case AArch64::LDRHHpre:
+    case AArch64::LDRHroW:
+    case AArch64::LDRHHroW:
+    case AArch64::LDRHroX:
+    case AArch64::LDRHHroX:
+    case AArch64::LDRHHui:
+    case AArch64::LDRHui:
+    case AArch64::LDRHpre:
+    case AArch64::LDRSHWpost:
+    case AArch64::LDRSHWpre:
+    case AArch64::LDRSHWroW:
+    case AArch64::LDRSHWroX:
+    case AArch64::LDRSHWui:
+    case AArch64::LDRSHXpost:
+    case AArch64::LDRSHXpre:
+    case AArch64::LDRSHXroW:
+    case AArch64::LDRSHXroX:
+    case AArch64::LDRSHXui:
+    case AArch64::LDURHi:
+    case AArch64::LDURHHi:
+    case AArch64::LDURSHWi:
+    case AArch64::LDURSHXi:
+    case AArch64::LDTRHi:
+    case AArch64::LDTRSHWi:
+    case AArch64::LDTRSHXi:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool isLDRW(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRWpost ||
-            Inst.getOpcode() == AArch64::LDRWpre ||
-            Inst.getOpcode() == AArch64::LDRWroW ||
-            Inst.getOpcode() == AArch64::LDRWroX ||
-            Inst.getOpcode() == AArch64::LDRWui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRWpost:
+    case AArch64::LDRWpre:
+    case AArch64::LDRWroW:
+    case AArch64::LDRWroX:
+    case AArch64::LDRWui:
+    case AArch64::LDRWl:
+    case AArch64::LDRSWl:
+    case AArch64::LDURWi:
+    case AArch64::LDRSWpost:
+    case AArch64::LDRSWpre:
+    case AArch64::LDRSWroW:
+    case AArch64::LDRSWroX:
+    case AArch64::LDRSWui:
+    case AArch64::LDURSWi:
+    case AArch64::LDTRWi:
+    case AArch64::LDTRSWi:
+    case AArch64::LDPWi:
+    case AArch64::LDPWpost:
+    case AArch64::LDPWpre:
+    case AArch64::LDPSWi:
+    case AArch64::LDPSWpost:
+    case AArch64::LDPSWpre:
+    case AArch64::LDNPWi:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool isLDRX(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::LDRXpost ||
-            Inst.getOpcode() == AArch64::LDRXpre ||
-            Inst.getOpcode() == AArch64::LDRXroW ||
-            Inst.getOpcode() == AArch64::LDRXroX ||
-            Inst.getOpcode() == AArch64::LDRXui);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRXpost:
+    case AArch64::LDRXpre:
+    case AArch64::LDRXroW:
+    case AArch64::LDRXroX:
+    case AArch64::LDRXui:
+    case AArch64::LDRXl:
+    case AArch64::LDURXi:
+    case AArch64::LDTRXi:
+    case AArch64::LDNPXi:
+    case AArch64::LDPXi:
+    case AArch64::LDPXpost:
+    case AArch64::LDPXpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
+  }
+
+  bool isLDRS(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRSl:
+    case AArch64::LDRSui:
+    case AArch64::LDRSroW:
+    case AArch64::LDRSroX:
+    case AArch64::LDURSi:
+    case AArch64::LDPSi:
+    case AArch64::LDNPSi:
+    case AArch64::LDRSpre:
+    case AArch64::LDRSpost:
+    case AArch64::LDPSpost:
+    case AArch64::LDPSpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
+  }
+
+  bool isLDRD(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRDl:
+    case AArch64::LDRDui:
+    case AArch64::LDRDpre:
+    case AArch64::LDRDpost:
+    case AArch64::LDRDroW:
+    case AArch64::LDRDroX:
+    case AArch64::LDURDi:
+    case AArch64::LDPDi:
+    case AArch64::LDNPDi:
+    case AArch64::LDPDpost:
+    case AArch64::LDPDpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
+  }
+
+  bool isLDRQ(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDRQui:
+    case AArch64::LDRQl:
+    case AArch64::LDRQpre:
+    case AArch64::LDRQpost:
+    case AArch64::LDRQroW:
+    case AArch64::LDRQroX:
+    case AArch64::LDURQi:
+    case AArch64::LDPQi:
+    case AArch64::LDNPQi:
+    case AArch64::LDPQpost:
+    case AArch64::LDPQpre:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
   }
 
   bool mayLoad(const MCInst &Inst) const override {
-    return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst);
+    return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst) ||
+           isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
   }
 
   bool isAArch64ExclusiveLoad(const MCInst &Inst) const override {
@@ -310,8 +576,7 @@ public:
       if (!Operand.isReg())
         continue;
       unsigned Reg = Operand.getReg();
-      if (Reg == AArch64::SP || Reg == AArch64::WSP || Reg == AArch64::FP ||
-          Reg == AArch64::W29)
+      if (Reg == AArch64::SP || Reg == AArch64::WSP)
         return true;
     }
     return false;
@@ -652,6 +917,8 @@ public:
   ///                                   #  of this BB)
   ///   br      x0                      # Indirect jump instruction
   ///
+  /// Return true on successful jump table instruction sequence match, false
+  /// otherwise.
   bool analyzeIndirectBranchFragment(
       const MCInst &Inst,
       DenseMap<const MCInst *, SmallVector<MCInst *, 4>> &UDChain,
@@ -659,6 +926,8 @@ public:
       MCInst *&PCRelBase) const {
     // Expect AArch64 BR
     assert(Inst.getOpcode() == AArch64::BR && "Unexpected opcode");
+
+    JumpTable = nullptr;
 
     // Match the indirect branch pattern for aarch64
     SmallVector<MCInst *, 4> &UsesRoot = UDChain[&Inst];
@@ -697,8 +966,8 @@ public:
       // Parsed as ADDXrs reg:x8 reg:x8 reg:x12 imm:0
       return false;
     }
-    assert(DefAdd->getOpcode() == AArch64::ADDXrx &&
-           "Failed to match indirect branch!");
+    if (DefAdd->getOpcode() != AArch64::ADDXrx)
+      return false;
 
     // Validate ADD operands
     int64_t OperandExtension = DefAdd->getOperand(3).getImm();
@@ -715,8 +984,8 @@ public:
       //   ldr     w7, [x6]
       //   add     x6, x6, w7, sxtw => no shift amount
       //   br      x6
-      errs() << "BOLT-WARNING: "
-                "Failed to match indirect branch: ShiftVAL != 2 \n";
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: "
+                           "failed to match indirect branch: ShiftVAL != 2\n");
       return false;
     }
 
@@ -727,7 +996,7 @@ public:
     else if (ExtendType == AArch64_AM::SXTW)
       ScaleValue = 4LL;
     else
-      llvm_unreachable("Failed to match indirect branch! (fragment 3)");
+      return false;
 
     // Match an ADR to load base address to be used when addressing JT targets
     SmallVector<MCInst *, 4> &UsesAdd = UDChain[DefAdd];
@@ -738,18 +1007,15 @@ public:
       return false;
     }
     MCInst *DefBaseAddr = UsesAdd[1];
-    assert(DefBaseAddr->getOpcode() == AArch64::ADR &&
-           "Failed to match indirect branch pattern! (fragment 3)");
+    if (DefBaseAddr->getOpcode() != AArch64::ADR)
+      return false;
 
     PCRelBase = DefBaseAddr;
     // Match LOAD to load the jump table (relative) target
     const MCInst *DefLoad = UsesAdd[2];
-    assert(mayLoad(*DefLoad) &&
-           "Failed to match indirect branch load pattern! (1)");
-    assert((ScaleValue != 1LL || isLDRB(*DefLoad)) &&
-           "Failed to match indirect branch load pattern! (2)");
-    assert((ScaleValue != 2LL || isLDRH(*DefLoad)) &&
-           "Failed to match indirect branch load pattern! (3)");
+    if (!mayLoad(*DefLoad) || (ScaleValue == 1LL && !isLDRB(*DefLoad)) ||
+        (ScaleValue == 2LL && !isLDRH(*DefLoad)))
+      return false;
 
     // Match ADD that calculates the JumpTable Base Address (not the offset)
     SmallVector<MCInst *, 4> &UsesLoad = UDChain[DefLoad];
@@ -759,7 +1025,6 @@ public:
         isRegToRegMove(*DefJTBaseAdd, From, To)) {
       // Sometimes base address may have been defined in another basic block
       // (hoisted). Return with no jump table info.
-      JumpTable = nullptr;
       return true;
     }
 
@@ -771,24 +1036,27 @@ public:
       //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
       //  add     x13, x12, w13, sxth #2
       //  br      x13
-      errs() << "BOLT-WARNING: Failed to match indirect branch: "
-                "nop/adr instead of adrp/add \n";
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: failed to match indirect branch: "
+                           "nop/adr instead of adrp/add\n");
       return false;
     }
 
-    assert(DefJTBaseAdd->getOpcode() == AArch64::ADDXri &&
-           "Failed to match jump table base address pattern! (1)");
+    if (DefJTBaseAdd->getOpcode() != AArch64::ADDXri) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: failed to match jump table base "
+                           "address pattern! (1)\n");
+      return false;
+    }
 
     if (DefJTBaseAdd->getOperand(2).isImm())
       Offset = DefJTBaseAdd->getOperand(2).getImm();
     SmallVector<MCInst *, 4> &UsesJTBaseAdd = UDChain[DefJTBaseAdd];
     const MCInst *DefJTBasePage = UsesJTBaseAdd[1];
     if (DefJTBasePage == nullptr || isLoadFromStack(*DefJTBasePage)) {
-      JumpTable = nullptr;
       return true;
     }
-    assert(DefJTBasePage->getOpcode() == AArch64::ADRP &&
-           "Failed to match jump table base page pattern! (2)");
+    if (DefJTBasePage->getOpcode() != AArch64::ADRP)
+      return false;
+
     if (DefJTBasePage->getOperand(1).isExpr())
       JumpTable = DefJTBasePage->getOperand(1).getExpr();
     return true;
@@ -1081,7 +1349,7 @@ public:
     return true;
   }
 
-  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
                                             const MCSymbol *TargetLocation,
                                             MCContext *Ctx) override {
     const bool IsTailCall = isTailCall(DirectCall);
@@ -1115,8 +1383,7 @@ public:
     MCInst InstCall;
     InstCall.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
     InstCall.addOperand(MCOperand::createReg(AArch64::X17));
-    if (IsTailCall)
-      setTailCall(InstCall);
+    moveAnnotations(std::move(DirectCall), InstCall);
     Code.emplace_back(InstCall);
 
     return Code;
@@ -1140,7 +1407,209 @@ public:
     Inst.addOperand(MCOperand::createImm(0));
   }
 
-  bool mayStore(const MCInst &Inst) const override { return false; }
+  bool isStorePair(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+
+    auto isStorePairImmOffset = [&]() {
+      switch (opcode) {
+      case AArch64::STPWi:
+      case AArch64::STPXi:
+      case AArch64::STPSi:
+      case AArch64::STPDi:
+      case AArch64::STPQi:
+      case AArch64::STNPWi:
+      case AArch64::STNPXi:
+      case AArch64::STNPSi:
+      case AArch64::STNPDi:
+      case AArch64::STNPQi:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStorePairPostIndex = [&]() {
+      switch (opcode) {
+      case AArch64::STPWpost:
+      case AArch64::STPXpost:
+      case AArch64::STPSpost:
+      case AArch64::STPDpost:
+      case AArch64::STPQpost:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStorePairPreIndex = [&]() {
+      switch (opcode) {
+      case AArch64::STPWpre:
+      case AArch64::STPXpre:
+      case AArch64::STPSpre:
+      case AArch64::STPDpre:
+      case AArch64::STPQpre:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    return isStorePairImmOffset() || isStorePairPostIndex() ||
+           isStorePairPreIndex();
+  }
+
+  bool isStoreReg(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+
+    auto isStoreRegUnscaleImm = [&]() {
+      switch (opcode) {
+      case AArch64::STURBi:
+      case AArch64::STURBBi:
+      case AArch64::STURHi:
+      case AArch64::STURHHi:
+      case AArch64::STURWi:
+      case AArch64::STURXi:
+      case AArch64::STURSi:
+      case AArch64::STURDi:
+      case AArch64::STURQi:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegScaledImm = [&]() {
+      switch (opcode) {
+      case AArch64::STRBui:
+      case AArch64::STRBBui:
+      case AArch64::STRHui:
+      case AArch64::STRHHui:
+      case AArch64::STRWui:
+      case AArch64::STRXui:
+      case AArch64::STRSui:
+      case AArch64::STRDui:
+      case AArch64::STRQui:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegImmPostIndexed = [&]() {
+      switch (opcode) {
+      case AArch64::STRBpost:
+      case AArch64::STRBBpost:
+      case AArch64::STRHpost:
+      case AArch64::STRHHpost:
+      case AArch64::STRWpost:
+      case AArch64::STRXpost:
+      case AArch64::STRSpost:
+      case AArch64::STRDpost:
+      case AArch64::STRQpost:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegImmPreIndexed = [&]() {
+      switch (opcode) {
+      case AArch64::STRBpre:
+      case AArch64::STRBBpre:
+      case AArch64::STRHpre:
+      case AArch64::STRHHpre:
+      case AArch64::STRWpre:
+      case AArch64::STRXpre:
+      case AArch64::STRSpre:
+      case AArch64::STRDpre:
+      case AArch64::STRQpre:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegUnscaleUnpriv = [&]() {
+      switch (opcode) {
+      case AArch64::STTRBi:
+      case AArch64::STTRHi:
+      case AArch64::STTRWi:
+      case AArch64::STTRXi:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    auto isStoreRegTrunc = [&]() {
+      switch (opcode) {
+      case AArch64::STRBBroW:
+      case AArch64::STRBBroX:
+      case AArch64::STRBroW:
+      case AArch64::STRBroX:
+      case AArch64::STRDroW:
+      case AArch64::STRDroX:
+      case AArch64::STRHHroW:
+      case AArch64::STRHHroX:
+      case AArch64::STRHroW:
+      case AArch64::STRHroX:
+      case AArch64::STRQroW:
+      case AArch64::STRQroX:
+      case AArch64::STRSroW:
+      case AArch64::STRSroX:
+      case AArch64::STRWroW:
+      case AArch64::STRWroX:
+      case AArch64::STRXroW:
+      case AArch64::STRXroX:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
+    return isStoreRegUnscaleImm() || isStoreRegScaledImm() ||
+           isStoreRegImmPreIndexed() || isStoreRegImmPostIndexed() ||
+           isStoreRegUnscaleUnpriv() || isStoreRegTrunc();
+  }
+
+  bool mayStore(const MCInst &Inst) const override {
+    return isStorePair(Inst) || isStoreReg(Inst) ||
+           isAArch64ExclusiveStore(Inst);
+  }
+
+  bool isStoreToStack(const MCInst &Inst) const {
+    if (!mayStore(Inst))
+      return false;
+
+    for (const MCOperand &Operand : useOperands(Inst)) {
+      if (!Operand.isReg())
+        continue;
+
+      unsigned Reg = Operand.getReg();
+      if (Reg == AArch64::SP || Reg == AArch64::WSP)
+        return true;
+    }
+
+    return false;
+  }
 
   void createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
                         bool IsTailCall) override {
@@ -1792,6 +2261,11 @@ public:
   }
 
   uint16_t getMinFunctionAlignment() const override { return 4; }
+
+  std::optional<uint32_t>
+  getInstructionSize(const MCInst &Inst) const override {
+    return 4;
+  }
 };
 
 } // end anonymous namespace

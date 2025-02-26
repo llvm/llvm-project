@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -enable-machine-outliner -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -enable-machine-outliner -verify-machineinstrs < %s | FileCheck %s -check-prefix=OUTLINER
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -enable-machine-outliner -aarch64-streaming-hazard-size=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -enable-machine-outliner -aarch64-streaming-hazard-size=0 -verify-machineinstrs < %s | FileCheck %s -check-prefix=OUTLINER
 
 declare void @callee();
 

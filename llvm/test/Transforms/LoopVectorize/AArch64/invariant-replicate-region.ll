@@ -16,32 +16,28 @@ define i32 @test_invariant_replicate_region(i32 %x, i1 %c) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UREM_CONTINUE6:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i32 0
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF:.*]], label %[[PRED_UREM_CONTINUE:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF:.*]], label %[[PRED_UREM_CONTINUE:.*]]
 ; CHECK:       [[PRED_UREM_IF]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 10, [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE]]
 ; CHECK:       [[PRED_UREM_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP2]], %[[PRED_UREM_IF]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i32 1
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_UREM_IF1:.*]], label %[[PRED_UREM_CONTINUE2:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF1:.*]], label %[[PRED_UREM_CONTINUE2:.*]]
 ; CHECK:       [[PRED_UREM_IF1]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = urem i32 10, [[X]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[TMP5]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE2]]
 ; CHECK:       [[PRED_UREM_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ [[TMP3]], %[[PRED_UREM_CONTINUE]] ], [ [[TMP6]], %[[PRED_UREM_IF1]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i32 2
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_UREM_IF3:.*]], label %[[PRED_UREM_CONTINUE4:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF3:.*]], label %[[PRED_UREM_CONTINUE4:.*]]
 ; CHECK:       [[PRED_UREM_IF3]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = urem i32 10, [[X]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP9]], i32 2
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE4]]
 ; CHECK:       [[PRED_UREM_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i32> [ [[TMP7]], %[[PRED_UREM_CONTINUE2]] ], [ [[TMP10]], %[[PRED_UREM_IF3]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i32 3
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_UREM_IF5:.*]], label %[[PRED_UREM_CONTINUE6]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF5:.*]], label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_IF5]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = urem i32 10, [[X]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP13]], i32 3

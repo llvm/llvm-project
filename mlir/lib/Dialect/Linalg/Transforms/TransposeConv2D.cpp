@@ -52,7 +52,7 @@ FailureOr<Operation *> transposeConv2DHelper(RewriterBase &rewriter,
                                              FHWCConvOp op) {
   // Construct a permutation of the filter tensor dimensions. For a 2D
   // convolution this will be known statically as [1, 2, 3, 0].
-  SmallVector<int64_t> filterPerm({1, 2, 3, 0});
+  SmallVector<int64_t> filterPerm = {1, 2, 3, 0};
 
   // Create the type for the transposed filter tensor.
   auto filter = op->getOperand(1);
@@ -138,7 +138,7 @@ FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
                                linalg::Conv2DNhwcHwcfQOp>(rewriter, op);
 }
 
-void populateTranposeConv2DPatterns(RewritePatternSet &patterns) {
+void populateTransposeConv2DPatterns(RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.insert<
       ConvConverter<linalg::Conv2DNhwcFhwcOp, linalg::Conv2DNhwcHwcfOp>,

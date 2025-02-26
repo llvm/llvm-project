@@ -368,7 +368,7 @@ void SjLjEHPrepareImpl::lowerAcrossUnwindEdges(Function &F,
       DemotePHIToStack(PN);
 
     // Move the landingpad instruction back to the top of the landing pad block.
-    LPI->moveBefore(&UnwindBlock->front());
+    LPI->moveBefore(UnwindBlock->begin());
   }
 }
 
@@ -478,7 +478,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
         continue;
       }
       Instruction *StackAddr = CallInst::Create(StackAddrFn, "sp");
-      StackAddr->insertAfter(&I);
+      StackAddr->insertAfter(I.getIterator());
       new StoreInst(StackAddr, StackPtr, true,
                     std::next(StackAddr->getIterator()));
     }
@@ -500,10 +500,10 @@ bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
   Module &M = *F.getParent();
   RegisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy));
+      PointerType::getUnqual(FunctionContextTy->getContext()));
   UnregisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Unregister", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy));
+      PointerType::getUnqual(FunctionContextTy->getContext()));
 
   PointerType *AllocaPtrTy = M.getDataLayout().getAllocaPtrType(M.getContext());
 

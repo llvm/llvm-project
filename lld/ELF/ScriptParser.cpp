@@ -289,7 +289,7 @@ void ScriptParser::readLinkerScript() {
 void ScriptParser::readDefsym() {
   if (errCount(ctx))
     return;
-  inExpr = true;
+  SaveAndRestore saved(lexState, State::Expr);
   StringRef name = readName();
   expect("=");
   Expr e = readExpr();
@@ -954,8 +954,8 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
 // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
 void ScriptParser::readSectionAddressType(OutputSection *cmd) {
   if (consume("(")) {
-    // Temporarily set inExpr to support TYPE=<value> without spaces.
-    SaveAndRestore saved(inExpr, true);
+    // Temporarily set lexState to support TYPE=<value> without spaces.
+    SaveAndRestore saved(lexState, State::Expr);
     if (readSectionDirective(cmd, peek()))
       return;
     cmd->addrExpr = readExpr();
@@ -965,7 +965,7 @@ void ScriptParser::readSectionAddressType(OutputSection *cmd) {
   }
 
   if (consume("(")) {
-    SaveAndRestore saved(inExpr, true);
+    SaveAndRestore saved(lexState, State::Expr);
     StringRef tok = peek();
     if (!readSectionDirective(cmd, tok))
       setError("unknown section directive: " + tok);
@@ -1087,10 +1087,10 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   osec->phdrs = readOutputSectionPhdrs();
 
   if (peek() == "=" || peek().starts_with("=")) {
-    inExpr = true;
+    lexState = State::Expr;
     consume("=");
     osec->filler = readFill();
-    inExpr = false;
+    lexState = State::Script;
   }
 
   // Consume optional comma following output section command.
@@ -1162,7 +1162,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   bool savedSeenRelroEnd = ctx.script->seenRelroEnd;
   const StringRef op = peek();
   {
-    SaveAndRestore saved(inExpr, true);
+    SaveAndRestore saved(lexState, State::Expr);
     if (op.starts_with("=")) {
       // Support = followed by an expression without whitespace.
       cmd = readSymbolAssignment(unquote(tok));
@@ -1235,7 +1235,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 Expr ScriptParser::readExpr() {
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
-  SaveAndRestore saved(inExpr, true);
+  SaveAndRestore saved(lexState, State::Expr);
   Expr e = readExpr1(readPrimary(), 0);
   return e;
 }
@@ -1411,6 +1411,7 @@ static std::optional<uint64_t> parseFlag(StringRef tok) {
       .Case(CASE_ENT(SHF_COMPRESSED))
       .Case(CASE_ENT(SHF_EXCLUDE))
       .Case(CASE_ENT(SHF_ARM_PURECODE))
+      .Case(CASE_ENT(SHF_AARCH64_PURECODE))
       .Default(std::nullopt);
 #undef CASE_ENT
 }
@@ -1452,12 +1453,11 @@ std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
 
 StringRef ScriptParser::readParenName() {
   expect("(");
-  bool orig = inExpr;
-  inExpr = false;
-  StringRef tok = readName();
-  inExpr = orig;
+  auto saved = std::exchange(lexState, State::Script);
+  StringRef name = readName();
+  lexState = saved;
   expect(")");
-  return tok;
+  return name;
 }
 
 static void checkIfExists(LinkerScript &script, const OutputSection &osec,
@@ -1489,6 +1489,8 @@ Expr ScriptParser::readPrimary() {
     Expr e = readPrimary();
     return [=] { return -e().getValue(); };
   }
+  if (consume("+"))
+    return readPrimary();
 
   StringRef tok = next();
   std::string location = getCurrentLocation();

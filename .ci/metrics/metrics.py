@@ -24,6 +24,7 @@ class JobMetrics:
     status: int
     created_at_ns: int
     workflow_id: int
+    workflow_name: str
 
 
 @dataclass
@@ -43,40 +44,60 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
       Returns a list of GaugeMetric objects, containing the relevant metrics about
       the workflow
     """
+    queued_job_counts = {}
+    running_job_counts = {}
 
     # Other states are available (pending, waiting, etc), but the meaning
     # is not documented (See #70540).
     # "queued" seems to be the info we want.
-    queued_workflow_count = len(
-        [
-            x
-            for x in github_repo.get_workflow_runs(status="queued")
-            if x.name in WORKFLOWS_TO_TRACK
-        ]
-    )
-    running_workflow_count = len(
-        [
-            x
-            for x in github_repo.get_workflow_runs(status="in_progress")
-            if x.name in WORKFLOWS_TO_TRACK
-        ]
-    )
+    for queued_workflow in github_repo.get_workflow_runs(status="queued"):
+        if queued_workflow.name not in WORKFLOWS_TO_TRACK:
+            continue
+        for queued_workflow_job in queued_workflow.jobs():
+            job_name = queued_workflow_job.name
+            # Workflows marked as queued can potentially only have some jobs
+            # queued, so make sure to also count jobs currently in progress.
+            if queued_workflow_job.status == "queued":
+                if job_name not in queued_job_counts:
+                    queued_job_counts[job_name] = 1
+                else:
+                    queued_job_counts[job_name] += 1
+            elif queued_workflow_job.status == "in_progress":
+                if job_name not in running_job_counts:
+                    running_job_counts[job_name] = 1
+                else:
+                    running_job_counts[job_name] += 1
+
+    for running_workflow in github_repo.get_workflow_runs(status="in_progress"):
+        if running_workflow.name not in WORKFLOWS_TO_TRACK:
+            continue
+        for running_workflow_job in running_workflow.jobs():
+            job_name = running_workflow_job.name
+            if running_workflow_job.status != "in_progress":
+                continue
+
+            if job_name not in running_job_counts:
+                running_job_counts[job_name] = 1
+            else:
+                running_job_counts[job_name] += 1
 
     workflow_metrics = []
-    workflow_metrics.append(
-        GaugeMetric(
-            "workflow_queue_size",
-            queued_workflow_count,
-            time.time_ns(),
+    for queued_job in queued_job_counts:
+        workflow_metrics.append(
+            GaugeMetric(
+                f"workflow_queue_size_{queued_job}",
+                queued_job_counts[queued_job],
+                time.time_ns(),
+            )
         )
-    )
-    workflow_metrics.append(
-        GaugeMetric(
-            "running_workflow_count",
-            running_workflow_count,
-            time.time_ns(),
+    for running_job in running_job_counts:
+        workflow_metrics.append(
+            GaugeMetric(
+                f"running_workflow_count_{running_job}",
+                running_job_counts[running_job],
+                time.time_ns(),
+            )
         )
-    )
     # Always send a hearbeat metric so we can monitor is this container is still able to log to Grafana.
     workflow_metrics.append(
         GaugeMetric("metrics_container_heartbeat", 1, time.time_ns())
@@ -130,34 +151,6 @@ def get_per_workflow_metrics(
         workflow_jobs = workflow_run.jobs()
         if workflow_jobs.totalCount == 0:
             continue
-        if workflow_jobs.totalCount > 1:
-            raise ValueError(
-                f"Encountered an unexpected number of jobs: {workflow_jobs.totalCount}"
-            )
-
-        created_at = workflow_jobs[0].created_at
-        started_at = workflow_jobs[0].started_at
-        completed_at = workflow_jobs[0].completed_at
-
-        job_result = int(workflow_jobs[0].conclusion == "success")
-        if job_result:
-            # We still might want to mark the job as a failure if one of the steps
-            # failed. This is required due to use setting continue-on-error in
-            # the premerge pipeline to prevent sending emails while we are
-            # testing the infrastructure.
-            # TODO(boomanaiden154): Remove this once the premerge pipeline is no
-            # longer in a testing state and we can directly assert the workflow
-            # result.
-            for step in workflow_jobs[0].steps:
-                if step.conclusion != "success":
-                    job_result = 0
-                    break
-
-        queue_time = started_at - created_at
-        run_time = completed_at - started_at
-
-        if run_time.seconds == 0:
-            continue
 
         if (
             workflows_to_track[workflow_run.name] is None
@@ -170,20 +163,46 @@ def get_per_workflow_metrics(
         ):
             break
 
-        # The timestamp associated with the event is expected by Grafana to be
-        # in nanoseconds.
-        created_at_ns = int(created_at.timestamp()) * 10**9
+        for workflow_job in workflow_jobs:
+            created_at = workflow_job.created_at
+            started_at = workflow_job.started_at
+            completed_at = workflow_job.completed_at
 
-        workflow_metrics.append(
-            JobMetrics(
-                workflow_run.name,
-                queue_time.seconds,
-                run_time.seconds,
-                job_result,
-                created_at_ns,
-                workflow_run.id,
+            job_result = int(workflow_job.conclusion == "success")
+            if job_result:
+                # We still might want to mark the job as a failure if one of the steps
+                # failed. This is required due to use setting continue-on-error in
+                # the premerge pipeline to prevent sending emails while we are
+                # testing the infrastructure.
+                # TODO(boomanaiden154): Remove this once the premerge pipeline is no
+                # longer in a testing state and we can directly assert the workflow
+                # result.
+                for step in workflow_job.steps:
+                    if step.conclusion != "success" and step.conclusion != "skipped":
+                        job_result = 0
+                        break
+
+            queue_time = started_at - created_at
+            run_time = completed_at - started_at
+
+            if run_time.seconds == 0:
+                continue
+
+            # The timestamp associated with the event is expected by Grafana to be
+            # in nanoseconds.
+            created_at_ns = int(created_at.timestamp()) * 10**9
+
+            workflow_metrics.append(
+                JobMetrics(
+                    workflow_run.name + "-" + workflow_job.name,
+                    queue_time.seconds,
+                    run_time.seconds,
+                    job_result,
+                    created_at_ns,
+                    workflow_run.id,
+                    workflow_run.name,
+                )
             )
-        )
 
     return workflow_metrics
 
@@ -238,8 +257,6 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
 def main():
     # Authenticate with Github
     auth = Auth.Token(os.environ["GITHUB_TOKEN"])
-    github_object = Github(auth=auth)
-    github_repo = github_object.get_repo("llvm/llvm-project")
 
     grafana_api_key = os.environ["GRAFANA_API_KEY"]
     grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
@@ -251,12 +268,11 @@ def main():
     # Enter the main loop. Every five minutes we wake up and dump metrics for
     # the relevant jobs.
     while True:
+        github_object = Github(auth=auth)
+        github_repo = github_object.get_repo("llvm/llvm-project")
+
         current_metrics = get_per_workflow_metrics(github_repo, workflows_to_track)
         current_metrics += get_sampled_workflow_metrics(github_repo)
-        # Always send a hearbeat metric so we can monitor is this container is still able to log to Grafana.
-        current_metrics.append(
-            GaugeMetric("metrics_container_heartbeat", 1, time.time_ns())
-        )
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
         print(f"Uploaded {len(current_metrics)} metrics", file=sys.stderr)
@@ -264,7 +280,7 @@ def main():
         for workflow_metric in reversed(current_metrics):
             if isinstance(workflow_metric, JobMetrics):
                 workflows_to_track[
-                    workflow_metric.job_name
+                    workflow_metric.workflow_name
                 ] = workflow_metric.workflow_id
 
         time.sleep(SCRAPE_INTERVAL_SECONDS)

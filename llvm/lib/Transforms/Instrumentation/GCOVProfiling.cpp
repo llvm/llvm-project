@@ -1012,7 +1012,7 @@ void GCOVProfiler::emitGlobalConstructor(
   IRBuilder<> Builder(BB);
 
   FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  auto *PFTy = PointerType::get(FTy, 0);
+  auto *PFTy = PointerType::get(*Ctx, 0);
   FTy = FunctionType::get(Builder.getVoidTy(), {PFTy, PFTy}, false);
 
   // Initialize the environment and register the local writeout, flush and

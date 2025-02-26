@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 define i64 @lshl_add_u64_v1v(i64 %v, i64 %a) {
 ; GCN-LABEL: lshl_add_u64_v1v:

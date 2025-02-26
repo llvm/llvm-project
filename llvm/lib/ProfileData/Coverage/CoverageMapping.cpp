@@ -618,7 +618,7 @@ unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
 void FunctionRecordIterator::skipOtherFiles() {
   while (Current != Records.end() && !Filename.empty() &&
          Filename != Current->Filenames[0])
-    ++Current;
+    advanceOne();
   if (Current == Records.end())
     *this = FunctionRecordIterator();
 }

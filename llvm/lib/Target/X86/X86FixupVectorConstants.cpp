@@ -360,8 +360,8 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
     if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
-      RegBitWidth =
-          RegBitWidth ? RegBitWidth : C->getType()->getPrimitiveSizeInBits();
+      unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
+      RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
         if (Fixup.Op) {
           // Construct a suitable constant and adjust the MI to use the new
@@ -649,33 +649,17 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   }
   }
 
-  auto ConvertToBroadcastAVX512 = [&](unsigned OpSrc32, unsigned OpSrc64) {
-    unsigned OpBcst32 = 0, OpBcst64 = 0;
-    unsigned OpNoBcst32 = 0, OpNoBcst64 = 0;
-    if (OpSrc32) {
+  auto ConvertToBroadcast = [&](unsigned OpSrc, int BW) {
+    if (OpSrc) {
       if (const X86FoldTableEntry *Mem2Bcst =
-              llvm::lookupBroadcastFoldTableBySize(OpSrc32, 32)) {
-        OpBcst32 = Mem2Bcst->DstOp;
-        OpNoBcst32 = Mem2Bcst->Flags & TB_INDEX_MASK;
+              llvm::lookupBroadcastFoldTableBySize(OpSrc, BW)) {
+        unsigned OpBcst = Mem2Bcst->DstOp;
+        unsigned OpNoBcst = Mem2Bcst->Flags & TB_INDEX_MASK;
+        FixupEntry Fixups[] = {{(int)OpBcst, 1, BW, rebuildSplatCst}};
+        // TODO: Add support for RegBitWidth, but currently rebuildSplatCst
+        // doesn't require it (defaults to Constant::getPrimitiveSizeInBits).
+        return FixupConstant(Fixups, 0, OpNoBcst);
       }
-    }
-    if (OpSrc64) {
-      if (const X86FoldTableEntry *Mem2Bcst =
-              llvm::lookupBroadcastFoldTableBySize(OpSrc64, 64)) {
-        OpBcst64 = Mem2Bcst->DstOp;
-        OpNoBcst64 = Mem2Bcst->Flags & TB_INDEX_MASK;
-      }
-    }
-    assert(((OpBcst32 == 0) || (OpBcst64 == 0) || (OpNoBcst32 == OpNoBcst64)) &&
-           "OperandNo mismatch");
-
-    if (OpBcst32 || OpBcst64) {
-      unsigned OpNo = OpBcst32 == 0 ? OpNoBcst64 : OpNoBcst32;
-      FixupEntry Fixups[] = {{(int)OpBcst32, 32, 32, rebuildSplatCst},
-                             {(int)OpBcst64, 64, 64, rebuildSplatCst}};
-      // TODO: Add support for RegBitWidth, but currently rebuildSplatCst
-      // doesn't require it (defaults to Constant::getPrimitiveSizeInBits).
-      return FixupConstant(Fixups, 0, OpNo);
     }
     return false;
   };
@@ -683,7 +667,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   // Attempt to find a AVX512 mapping from a full width memory-fold instruction
   // to a broadcast-fold instruction variant.
   if ((MI.getDesc().TSFlags & X86II::EncodingMask) == X86II::EVEX)
-    return ConvertToBroadcastAVX512(Opc, Opc);
+    return ConvertToBroadcast(Opc, 32) || ConvertToBroadcast(Opc, 64);
 
   // Reverse the X86InstrInfo::setExecutionDomainCustom EVEX->VEX logic
   // conversion to see if we can convert to a broadcasted (integer) logic op.
@@ -740,7 +724,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       break;
     }
     if (OpSrc32 || OpSrc64)
-      return ConvertToBroadcastAVX512(OpSrc32, OpSrc64);
+      return ConvertToBroadcast(OpSrc32, 32) || ConvertToBroadcast(OpSrc64, 64);
   }
 
   return false;

@@ -4402,7 +4402,7 @@ define void @bcast_unfold_vpternlog_v16i32(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:    vmovdqu64 4096(%rdi,%rax), %zmm1
 ; CHECK-NEXT:    vmovdqu64 4096(%rsi,%rax), %zmm2
 ; CHECK-NEXT:    vpmulld %zmm2, %zmm1, %zmm3
-; CHECK-NEXT:    vpternlogd $216, %zmm0, %zmm1, %zmm2
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 = zmm2 ^ (zmm0 & (zmm2 ^ zmm1))
 ; CHECK-NEXT:    vpmulld %zmm3, %zmm2, %zmm1
 ; CHECK-NEXT:    vmovdqu64 %zmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax

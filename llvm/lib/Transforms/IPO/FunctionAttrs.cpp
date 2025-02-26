@@ -132,6 +132,7 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
   // If it's not an identified object, it might be an argument.
   if (!isIdentifiedObject(UO))
     ME |= MemoryEffects::argMemOnly(MR);
+  ME |= MemoryEffects(IRMemLocation::ErrnoMem, MR);
   ME |= MemoryEffects(IRMemLocation::Other, MR);
 }
 
@@ -210,6 +211,9 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
+      // Merge callee's memory effects into caller's ones, including
+      // inaccessible and errno memory, but excluding argument memory, which is
+      // handled separately.
       ME |= CallME.getWithoutLoc(IRMemLocation::ArgMem);
 
       // If the call accesses captured memory (currently part of "other") and
@@ -615,9 +619,9 @@ struct ArgumentUsesSummary {
   SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> UsesPerBlock;
 };
 
-ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
-                                        const ArgumentUse &ArgUse,
-                                        const DataLayout &DL) {
+ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
+                                         const ArgumentUse &ArgUse,
+                                         const DataLayout &DL) {
   auto GetTypeAccessRange =
       [&DL](Type *Ty,
             std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
@@ -633,10 +637,12 @@ ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
       [](Value *Length,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
-    if (ConstantLength && Offset && !ConstantLength->isNegative())
+    if (ConstantLength && Offset &&
+        ConstantLength->getValue().isStrictlyPositive()) {
       return ConstantRange(
           APInt(64, *Offset, true),
           APInt(64, *Offset + ConstantLength->getSExtValue(), true));
+    }
     return std::nullopt;
   };
   if (auto *SI = dyn_cast<StoreInst>(I)) {
@@ -767,7 +773,7 @@ ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
     }
 
     auto *I = cast<Instruction>(U);
-    bool HasWrite = UpdateUseInfo(I, getArgmentAccessInfo(I, ArgUse, DL));
+    bool HasWrite = UpdateUseInfo(I, getArgumentAccessInfo(I, ArgUse, DL));
 
     Result.HasAnyWrite |= HasWrite;
 
@@ -1206,7 +1212,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         F->getReturnType()->isVoidTy()) {
       for (Argument &A : F->args()) {
         if (A.getType()->isPointerTy() && !A.hasNoCaptureAttr()) {
-          A.addAttr(Attribute::NoCapture);
+          A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
+                                                  CaptureInfo::none()));
           ++NumNoCapture;
           Changed.insert(F);
         }
@@ -1224,7 +1231,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         if (!Tracker.Captured) {
           if (Tracker.Uses.empty()) {
             // If it's trivially not captured, mark it nocapture now.
-            A.addAttr(Attribute::NoCapture);
+            A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
+                                                    CaptureInfo::none()));
             ++NumNoCapture;
             Changed.insert(F);
           } else {
@@ -1277,7 +1285,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       if (ArgumentSCC[0]->Uses.size() == 1 &&
           ArgumentSCC[0]->Uses[0] == ArgumentSCC[0]) {
         Argument *A = ArgumentSCC[0]->Definition;
-        A->addAttr(Attribute::NoCapture);
+        A->addAttr(Attribute::getWithCaptureInfo(A->getContext(),
+                                                 CaptureInfo::none()));
         ++NumNoCapture;
         Changed.insert(A->getParent());
 
@@ -1291,16 +1300,6 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       continue;
     }
 
-    bool SCCCaptured = false;
-    for (ArgumentGraphNode *Node : ArgumentSCC) {
-      if (Node->Uses.empty() && !Node->Definition->hasNoCaptureAttr()) {
-        SCCCaptured = true;
-        break;
-      }
-    }
-    if (SCCCaptured)
-      continue;
-
     SmallPtrSet<Argument *, 8> ArgumentSCCNodes;
     // Fill ArgumentSCCNodes with the elements of the ArgumentSCC.  Used for
     // quickly looking up whether a given Argument is in this ArgumentSCC.
@@ -1308,6 +1307,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       ArgumentSCCNodes.insert(I->Definition);
     }
 
+    bool SCCCaptured = false;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       for (ArgumentGraphNode *Use : N->Uses) {
         Argument *A = Use->Definition;
@@ -1324,7 +1324,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
 
     for (ArgumentGraphNode *N : ArgumentSCC) {
       Argument *A = N->Definition;
-      A->addAttr(Attribute::NoCapture);
+      A->addAttr(
+          Attribute::getWithCaptureInfo(A->getContext(), CaptureInfo::none()));
       ++NumNoCapture;
       Changed.insert(A->getParent());
     }
@@ -1429,7 +1430,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
         return false; // Did not come from an allocation.
       }
 
-    if (PointerMayBeCaptured(RetVal, false, /*StoreCaptures=*/false))
+    if (PointerMayBeCaptured(RetVal, /*ReturnCaptures=*/false))
       return false;
   }
 

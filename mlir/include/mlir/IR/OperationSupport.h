@@ -819,7 +819,9 @@ public:
   }
 
   /// Add an attribute with the specified name.
-  void append(StringRef name, Attribute attr);
+  void append(StringRef name, Attribute attr) {
+    append(NamedAttribute(name, attr));
+  }
 
   /// Add an attribute with the specified name.
   void append(StringAttr name, Attribute attr) {
@@ -995,13 +997,25 @@ public:
     if (!properties) {
       T *p = new T{};
       properties = p;
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
       propertiesDeleter = [](OpaqueProperties prop) {
         delete prop.as<const T *>();
       };
-      propertiesSetter = [](OpaqueProperties new_prop,
+      propertiesSetter = [](OpaqueProperties newProp,
                             const OpaqueProperties prop) {
-        *new_prop.as<T *>() = *prop.as<const T *>();
+        *newProp.as<T *>() = *prop.as<const T *>();
       };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
       propertiesId = TypeID::get<T>();
     }
     assert(propertiesId == TypeID::get<T>() && "Inconsistent properties");

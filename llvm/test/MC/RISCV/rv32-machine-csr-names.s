@@ -22,6 +22,20 @@ csrrs t1, mstatush, zero
 # uimm12
 csrrs t2, 0x310, zero
 
+# medelegh
+# name
+# CHECK-INST: csrrs t1, medelegh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x31]
+# CHECK-INST-ALIAS: csrr t1, medelegh
+# uimm12
+# CHECK-INST: csrrs t2, medelegh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x31]
+# CHECK-INST-ALIAS: csrr t2, medelegh
+# name
+csrrs t1, medelegh, zero
+# uimm12
+csrrs t2, 0x312, zero
+
 #########################
 # Machine Configuration
 #########################

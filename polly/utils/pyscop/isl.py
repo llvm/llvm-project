@@ -72,7 +72,7 @@ class IslObject:
         if hasattr(self.__class__, "initialized"):
             return
 
-        self.__class__.initalized = True
+        self.__class__.initialized = True
         self.get_isl_method("read_from_str").argtypes = [Context, c_char_p, c_int]
         self.get_isl_method("copy").argtypes = [self.__class__]
         self.get_isl_method("copy").restype = c_int
@@ -204,7 +204,7 @@ class Dim(IslObject):
         if hasattr(self.__class__, "initialized"):
             return
 
-        self.__class__.initalized = True
+        self.__class__.initialized = True
         self.get_isl_method("copy").argtypes = [self.__class__]
         self.get_isl_method("copy").restype = c_int
         self.get_isl_method("free").argtypes = [self.__class__]

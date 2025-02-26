@@ -84,6 +84,7 @@ private:
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
   bool tryBFE(SDNode *N);
+  bool tryBF16ArithToFMA(SDNode *N);
   bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);
   bool SelectSETP_BF16X2(SDNode *N);
@@ -92,6 +93,7 @@ private:
   void SelectI128toV2I64(SDNode *N);
   void SelectCpAsyncBulkG2S(SDNode *N);
   void SelectCpAsyncBulkS2G(SDNode *N);
+  void SelectCpAsyncBulkPrefetchL2(SDNode *N);
   void SelectCpAsyncBulkTensorG2SCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorS2GCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);
@@ -105,18 +107,14 @@ private:
   // Match direct address complex pattern.
   bool SelectDirectAddr(SDValue N, SDValue &Address);
 
-  bool SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
+  void SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
                         SDValue &Offset, MVT VT);
   bool SelectADDRri(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
   bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
-  bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT VT);
   bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
-  bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

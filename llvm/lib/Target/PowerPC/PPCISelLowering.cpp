@@ -7868,7 +7868,8 @@ bool
 PPCTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                   MachineFunction &MF, bool isVarArg,
                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                  LLVMContext &Context) const {
+                                  LLVMContext &Context,
+                                  const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(
@@ -8592,7 +8593,7 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
 // to insert our load, L, into the chain as a peer of O. To do this, we give L
 // the same chain operand as O, we create a token factor from the chain results
 // of O and L, and we replace all uses of O's chain result with that token
-// factor (see spliceIntoChain below for this last part).
+// factor (this last part is handled by makeEquivalentMemoryOrdering).
 bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
                                             ReuseLoadInfo &RLI,
                                             SelectionDAG &DAG,
@@ -8645,27 +8646,6 @@ bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
 
   RLI.ResChain = SDValue(LD, LD->isIndexed() ? 2 : 1);
   return true;
-}
-
-// Given the head of the old chain, ResChain, insert a token factor containing
-// it and NewResChain, and make users of ResChain now be users of that token
-// factor.
-// TODO: Remove and use DAG::makeEquivalentMemoryOrdering() instead.
-void PPCTargetLowering::spliceIntoChain(SDValue ResChain,
-                                        SDValue NewResChain,
-                                        SelectionDAG &DAG) const {
-  if (!ResChain)
-    return;
-
-  SDLoc dl(NewResChain);
-
-  SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                           NewResChain, DAG.getUNDEF(MVT::Other));
-  assert(TF.getNode() != NewResChain.getNode() &&
-         "A new TF really is required here");
-
-  DAG.ReplaceAllUsesOfValueWith(ResChain, TF);
-  DAG.UpdateNodeOperands(TF.getNode(), ResChain, NewResChain);
 }
 
 /// Analyze profitability of direct move
@@ -8899,8 +8879,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       Round = DAG.getNode(ISD::ADD, dl, MVT::i64,
                           Round, DAG.getConstant(2047, dl, MVT::i64));
       Round = DAG.getNode(ISD::OR, dl, MVT::i64, Round, SINT);
-      Round = DAG.getNode(ISD::AND, dl, MVT::i64,
-                          Round, DAG.getConstant(-2048, dl, MVT::i64));
+      Round = DAG.getNode(ISD::AND, dl, MVT::i64, Round,
+                          DAG.getSignedConstant(-2048, dl, MVT::i64));
 
       // However, we cannot use that value unconditionally: if the magnitude
       // of the input value is small, the bit-twiddling we did above might
@@ -8929,7 +8909,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     if (canReuseLoadAddress(SINT, MVT::i64, RLI, DAG)) {
       Bits = DAG.getLoad(MVT::f64, dl, RLI.Chain, RLI.Ptr, RLI.MPI,
                          RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, RLI.Ranges);
-      spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+      if (RLI.ResChain)
+        DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasLFIWAX() &&
                canReuseLoadAddress(SINT, MVT::i32, RLI, DAG, ISD::SEXTLOAD)) {
       MachineMemOperand *MMO =
@@ -8939,7 +8920,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       Bits = DAG.getMemIntrinsicNode(PPCISD::LFIWAX, dl,
                                      DAG.getVTList(MVT::f64, MVT::Other),
                                      Ops, MVT::i32, MMO);
-      spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+      if (RLI.ResChain)
+        DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasFPCVT() &&
                canReuseLoadAddress(SINT, MVT::i32, RLI, DAG, ISD::ZEXTLOAD)) {
       MachineMemOperand *MMO =
@@ -8949,7 +8931,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       Bits = DAG.getMemIntrinsicNode(PPCISD::LFIWZX, dl,
                                      DAG.getVTList(MVT::f64, MVT::Other),
                                      Ops, MVT::i32, MMO);
-      spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+      if (RLI.ResChain)
+        DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (((Subtarget.hasLFIWAX() &&
                  SINT.getOpcode() == ISD::SIGN_EXTEND) ||
                 (Subtarget.hasFPCVT() &&
@@ -9045,8 +9028,9 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                  DAG.getVTList(MVT::f64, MVT::Other), Ops,
                                  MVT::i32, MMO);
     Chain = Ld.getValue(1);
-    if (ReusingLoad)
-      spliceIntoChain(RLI.ResChain, Ld.getValue(1), DAG);
+    if (ReusingLoad && RLI.ResChain) {
+      DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Ld.getValue(1));
+    }
   } else {
     assert(Subtarget.isPPC64() &&
            "i32->FP without LFIWAX supported only on PPC64");
@@ -9256,7 +9240,7 @@ SDValue PPCTargetLowering::LowerGET_ROUNDING(SDValue Op,
 
 SDValue PPCTargetLowering::LowerSHL_PARTS(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  unsigned BitWidth = VT.getSizeInBits();
+  uint64_t BitWidth = VT.getSizeInBits();
   SDLoc dl(Op);
   assert(Op.getNumOperands() == 3 &&
          VT == Op.getOperand(1).getValueType() &&
@@ -9275,7 +9259,7 @@ SDValue PPCTargetLowering::LowerSHL_PARTS(SDValue Op, SelectionDAG &DAG) const {
   SDValue Tmp3 = DAG.getNode(PPCISD::SRL, dl, VT, Lo, Tmp1);
   SDValue Tmp4 = DAG.getNode(ISD::OR , dl, VT, Tmp2, Tmp3);
   SDValue Tmp5 = DAG.getNode(ISD::ADD, dl, AmtVT, Amt,
-                             DAG.getConstant(-BitWidth, dl, AmtVT));
+                             DAG.getSignedConstant(-BitWidth, dl, AmtVT));
   SDValue Tmp6 = DAG.getNode(PPCISD::SHL, dl, VT, Lo, Tmp5);
   SDValue OutHi = DAG.getNode(ISD::OR, dl, VT, Tmp4, Tmp6);
   SDValue OutLo = DAG.getNode(PPCISD::SHL, dl, VT, Lo, Amt);
@@ -9286,7 +9270,7 @@ SDValue PPCTargetLowering::LowerSHL_PARTS(SDValue Op, SelectionDAG &DAG) const {
 SDValue PPCTargetLowering::LowerSRL_PARTS(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned BitWidth = VT.getSizeInBits();
+  uint64_t BitWidth = VT.getSizeInBits();
   assert(Op.getNumOperands() == 3 &&
          VT == Op.getOperand(1).getValueType() &&
          "Unexpected SRL!");
@@ -9304,7 +9288,7 @@ SDValue PPCTargetLowering::LowerSRL_PARTS(SDValue Op, SelectionDAG &DAG) const {
   SDValue Tmp3 = DAG.getNode(PPCISD::SHL, dl, VT, Hi, Tmp1);
   SDValue Tmp4 = DAG.getNode(ISD::OR, dl, VT, Tmp2, Tmp3);
   SDValue Tmp5 = DAG.getNode(ISD::ADD, dl, AmtVT, Amt,
-                             DAG.getConstant(-BitWidth, dl, AmtVT));
+                             DAG.getSignedConstant(-BitWidth, dl, AmtVT));
   SDValue Tmp6 = DAG.getNode(PPCISD::SRL, dl, VT, Hi, Tmp5);
   SDValue OutLo = DAG.getNode(ISD::OR, dl, VT, Tmp4, Tmp6);
   SDValue OutHi = DAG.getNode(PPCISD::SRL, dl, VT, Hi, Amt);
@@ -9315,7 +9299,7 @@ SDValue PPCTargetLowering::LowerSRL_PARTS(SDValue Op, SelectionDAG &DAG) const {
 SDValue PPCTargetLowering::LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
-  unsigned BitWidth = VT.getSizeInBits();
+  uint64_t BitWidth = VT.getSizeInBits();
   assert(Op.getNumOperands() == 3 &&
          VT == Op.getOperand(1).getValueType() &&
          "Unexpected SRA!");
@@ -9332,7 +9316,7 @@ SDValue PPCTargetLowering::LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const {
   SDValue Tmp3 = DAG.getNode(PPCISD::SHL, dl, VT, Hi, Tmp1);
   SDValue Tmp4 = DAG.getNode(ISD::OR, dl, VT, Tmp2, Tmp3);
   SDValue Tmp5 = DAG.getNode(ISD::ADD, dl, AmtVT, Amt,
-                             DAG.getConstant(-BitWidth, dl, AmtVT));
+                             DAG.getSignedConstant(-BitWidth, dl, AmtVT));
   SDValue Tmp6 = DAG.getNode(PPCISD::SRA, dl, VT, Hi, Tmp5);
   SDValue OutHi = DAG.getNode(PPCISD::SRA, dl, VT, Hi, Amt);
   SDValue OutLo = DAG.getSelectCC(dl, Tmp5, DAG.getConstant(0, dl, AmtVT),
@@ -11668,7 +11652,8 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
     SDValue Bits = DAG.getMemIntrinsicNode(
         PPCISD::LD_SPLAT, dl, DAG.getVTList(MVT::v4i32, MVT::Other), Ops,
         MVT::i32, MMO);
-    spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+    if (RLI.ResChain)
+      DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     return Bits.getValue(0);
   }
 
@@ -18253,7 +18238,7 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
                               DAG.getConstant(NegConstant, DL, MVT::i64));
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
     SDValue Addc = DAG.getNode(ISD::ADDC, DL, DAG.getVTList(MVT::i64, MVT::Glue),
-                               AddOrZ, DAG.getConstant(-1ULL, DL, MVT::i64));
+                               AddOrZ, DAG.getAllOnesConstant(DL, MVT::i64));
     return DAG.getNode(ISD::ADDE, DL, VTs, LHS, DAG.getConstant(0, DL, MVT::i64),
                        SDValue(Addc.getNode(), 1));
     }
@@ -19049,8 +19034,8 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
         int32_t Addr = (int32_t)CNImm;
         // Otherwise, break this down into LIS + Disp.
         Disp = DAG.getSignedTargetConstant((int16_t)Addr, DL, MVT::i32);
-        Base =
-            DAG.getTargetConstant((Addr - (int16_t)Addr) >> 16, DL, MVT::i32);
+        Base = DAG.getSignedTargetConstant((Addr - (int16_t)Addr) >> 16, DL,
+                                           MVT::i32);
         uint32_t LIS = CNType == MVT::i32 ? PPC::LIS : PPC::LIS8;
         Base = SDValue(DAG.getMachineNode(LIS, DL, CNType, Base), 0);
         break;

@@ -521,12 +521,12 @@ namespace example1 {
   namespace A {
     int i;
   }
-  
+
   namespace A1 {
     using A::i;
     using A::i;
   }
-  
+
   void f()
   {
     using A::i;
@@ -1041,12 +1041,15 @@ namespace cwg62 { // cwg62: 2.9
   NoNameForLinkagePtr p1 = get<NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
   NoNameForLinkagePtr p2 = get<const NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
   int n1 = take(noNameForLinkagePtr);
   // cxx98-error@-1 {{template argument uses unnamed type}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
+  //   cxx98-note@-3 {{while substituting deduced template arguments}}
 
   X<Danger> x4;
 
@@ -1058,8 +1061,10 @@ namespace cwg62 { // cwg62: 2.9
     // cxx98-error@-1 {{template argument uses local type }}
     get<NoLinkage>();
     // cxx98-error@-1 {{template argument uses local type }}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
     get<const NoLinkage>();
     // cxx98-error@-1 {{template argument uses local type }}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
     X<void (*)(NoLinkage A::*)> c;
     // cxx98-error@-1 {{template argument uses local type }}
     X<int NoLinkage::*> d;
@@ -1371,7 +1376,7 @@ namespace cwg92 { // cwg92: 4 c++17
   // considered in this context. In C++17, we *do* perform an implicit
   // conversion (which performs initialization), and the exception specification
   // is part of the type of the parameter, so this is invalid.
-  template<void() throw()> struct X {};
+  template<void() throw()> struct X {}; // since-cxx17-note {{template parameter is declared here}}
   X<&f> xp;
   // since-cxx17-error@-1 {{value of type 'void (*)() throw(int, float)' is not implicitly convertible to 'void (*)() throw()'}}
 

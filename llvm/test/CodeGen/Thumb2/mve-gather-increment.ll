@@ -1376,8 +1376,8 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_simple(ptr noalias nocapture reado
 ; CHECK-NEXT:    bne .LBB16_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB16_2 Depth=1
-; CHECK-NEXT:    ldr r1, [sp, #60] @ 4-byte Reload
 ; CHECK-NEXT:    ldr.w r9, [sp, #52] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #60] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r9, r1
 ; CHECK-NEXT:    bne .LBB16_2
 ; CHECK-NEXT:  .LBB16_5: @ %for.cond.cleanup

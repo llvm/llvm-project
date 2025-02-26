@@ -71,6 +71,10 @@ namespace llvm {
   /// using profile information.
   MachineFunctionPass *createMachineFunctionSplitterPass();
 
+  /// createStaticDataSplitterPass - This pass partitions a static data section
+  /// into a hot and cold section using profile information.
+  MachineFunctionPass *createStaticDataSplitterPass();
+
   /// MachineFunctionPrinter pass - This pass prints out the machine function to
   /// the given stream as a debugging tool.
   MachineFunctionPass *
@@ -167,7 +171,7 @@ namespace llvm {
   extern char &LiveRangeShrinkID;
 
   /// Greedy register allocator.
-  extern char &RAGreedyID;
+  extern char &RAGreedyLegacyID;
 
   /// Basic register allocator.
   extern char &RABasicID;

@@ -21,6 +21,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"
@@ -38,7 +39,11 @@ enum NVVMMemorySpace {
   /// Shared memory space identifier.
   kSharedMemorySpace = 3,
   /// Constant memory space identifier.
-  kConstantMemorySpace = 4
+  kConstantMemorySpace = 4,
+  /// Tensor memory space identifier.
+  /// Tensor memory is available only in arch-accelerated
+  /// variants from sm100 onwards.
+  kTensorMemorySpace = 6
 };
 
 /// Return the element type and number of elements associated with a wmma matrix

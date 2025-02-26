@@ -566,13 +566,15 @@ def testBF16Memref():
         execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
 
         # test to-numpy utility
-        # CHECK: [0.5]
-        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
-        log(npout)
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
 
 
 if HAS_ML_DTYPES:
     run(testBF16Memref)
+else:
+    log("TEST: testBF16Memref")
 
 
 # Test f8E5M2 memrefs
@@ -606,13 +608,15 @@ def testF8E5M2Memref():
         execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
 
         # test to-numpy utility
-        # CHECK: [0.5]
-        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
-        log(npout)
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
 
 
 if HAS_ML_DTYPES:
     run(testF8E5M2Memref)
+else:
+    log("TEST: testF8E5M2Memref")
 
 
 #  Test addition of two 2d_memref

@@ -2518,6 +2518,7 @@ public:
   bool isFloat32Type() const;
   bool isDoubleType() const;
   bool isBFloat16Type() const;
+  bool isMFloat8Type() const;
   bool isFloat128Type() const;
   bool isIbm128Type() const;
   bool isRealType() const;         // C99 6.2.5p17 (real floating + integer)
@@ -6265,8 +6266,8 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t RawBuffer : 1;
 
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
-               bool RawBuffer)
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
+               bool RawBuffer = false)
         : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
 
     Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
@@ -8537,6 +8538,10 @@ inline bool Type::isBFloat16Type() const {
   return isSpecificBuiltinType(BuiltinType::BFloat16);
 }
 
+inline bool Type::isMFloat8Type() const {
+  return isSpecificBuiltinType(BuiltinType::MFloat8);
+}
+
 inline bool Type::isFloat128Type() const {
   return isSpecificBuiltinType(BuiltinType::Float128);
 }
@@ -8841,13 +8846,16 @@ void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
                              unsigned Scale);
 
 inline FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
+  const Type *TypePtr = QT.getTypePtr();
   while (true) {
-    QualType Pointee = QT->getPointeeType();
-    if (Pointee.isNull())
+    if (QualType Pointee = TypePtr->getPointeeType(); !Pointee.isNull())
+      TypePtr = Pointee.getTypePtr();
+    else if (TypePtr->isArrayType())
+      TypePtr = TypePtr->getBaseElementTypeUnsafe();
+    else
       break;
-    QT = Pointee;
   }
-  if (const auto *FPT = QT->getAs<FunctionProtoType>())
+  if (const auto *FPT = TypePtr->getAs<FunctionProtoType>())
     return FPT->getFunctionEffects();
   return {};
 }

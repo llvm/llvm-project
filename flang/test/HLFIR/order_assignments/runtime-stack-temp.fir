@@ -89,7 +89,7 @@ func.func @test_runtime_stack(%arg0: !fir.box<!fir.array<?xi32>>, %n: !fir.ref<i
 // CHECK:             %[[VAL_36:.*]] = fir.shape %[[VAL_35]] : (index) -> !fir.shape<1>
 // CHECK:             %[[VAL_37:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_29]]:%[[VAL_30]]:%[[VAL_6]])  shape %[[VAL_36]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-// CHECK:             %[[VAL_39:.*]] = fir.call @_FortranAPushValue(%[[VAL_22]], %[[VAL_38]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+// CHECK:             fir.call @_FortranAPushValue(%[[VAL_22]], %[[VAL_38]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:           }
 // CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 // CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_8]] : (i32) -> index
@@ -101,7 +101,7 @@ func.func @test_runtime_stack(%arg0: !fir.box<!fir.array<?xi32>>, %n: !fir.ref<i
 // CHECK:             %[[VAL_46:.*]] = arith.addi %[[VAL_45]], %[[VAL_17]] : i64
 // CHECK:             fir.store %[[VAL_46]] to %[[VAL_3]] : !fir.ref<i64>
 // CHECK:             %[[VAL_47:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:             %[[VAL_48:.*]] = fir.call @_FortranAValueAt(%[[VAL_22]], %[[VAL_45]], %[[VAL_47]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> none
+// CHECK:             fir.call @_FortranAValueAt(%[[VAL_22]], %[[VAL_45]], %[[VAL_47]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> ()
 // CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK:             %[[VAL_50:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<i32>
 // CHECK:             %[[VAL_51:.*]] = arith.addi %[[VAL_44]], %[[VAL_50]] : i32
@@ -116,7 +116,7 @@ func.func @test_runtime_stack(%arg0: !fir.box<!fir.array<?xi32>>, %n: !fir.ref<i
 // CHECK:             %[[VAL_60:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_53]]:%[[VAL_54]]:%[[VAL_4]])  shape %[[VAL_59]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:             hlfir.assign %[[VAL_49]] to %[[VAL_60]] : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>
 // CHECK:           }
-// CHECK:           %[[VAL_61:.*]] = fir.call @_FortranADestroyValueStack(%[[VAL_22]]) : (!fir.llvm_ptr<i8>) -> none
+// CHECK:           fir.call @_FortranADestroyValueStack(%[[VAL_22]]) : (!fir.llvm_ptr<i8>) -> ()
 // CHECK:           return
 // CHECK:         }
 
@@ -164,13 +164,13 @@ func.func @_QPdealing_with_i1(%x: !fir.ref<!fir.array<10x20xi32>>) {
 // CHECK:               fir.store %[[VAL_27]] to %[[VAL_1]] : !fir.ref<!fir.logical<1>>
 // CHECK:               %[[VAL_28:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<!fir.logical<1>>) -> !fir.box<!fir.logical<1>>
 // CHECK:               %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.box<!fir.logical<1>>) -> !fir.box<none>
-// CHECK:               %[[VAL_30:.*]] = fir.call @_FortranAPushValue(%{{.*}}, %[[VAL_29]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+// CHECK:               fir.call @_FortranAPushValue(%{{.*}}, %[[VAL_29]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           fir.do_loop
 // CHECK:             fir.do_loop
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.logical<1>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:               %[[VAL_44:.*]] = fir.call @_FortranAValueAt(%{{.*}}, %{{.*}}, %[[VAL_43]])
+// CHECK:               fir.call @_FortranAValueAt(%{{.*}}, %{{.*}}, %[[VAL_43]])
 // CHECK:               %[[VAL_45:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<1>>>>
 // CHECK:               %[[VAL_46:.*]] = fir.box_addr %[[VAL_45]] : (!fir.box<!fir.heap<!fir.logical<1>>>) -> !fir.heap<!fir.logical<1>>
 // CHECK:               %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.heap<!fir.logical<1>>

@@ -257,6 +257,7 @@ template <class... Types>
 #  include <__type_traits/maybe_const.h>
 #  include <__type_traits/nat.h>
 #  include <__type_traits/negation.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
 #  include <__type_traits/unwrap_ref.h>
@@ -390,7 +391,7 @@ public:
 };
 
 template <size_t _Ip, class _Hp>
-class __tuple_leaf<_Ip, _Hp, true> : private _Hp {
+class __tuple_leaf<_Ip, _Hp, true> : private __remove_cv_t<_Hp> {
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 

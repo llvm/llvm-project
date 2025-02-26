@@ -236,7 +236,7 @@ void WatchpointList::RemoveAll(bool notify) {
       wp_collection::iterator pos, end = m_watchpoints.end();
       for (pos = m_watchpoints.begin(); pos != end; ++pos) {
         if ((*pos)->GetTarget().EventTypeHasListeners(
-                Target::eBroadcastBitBreakpointChanged)) {
+                Target::eBroadcastBitWatchpointChanged)) {
           auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
               eWatchpointEventTypeRemoved, *pos);
           (*pos)->GetTarget().BroadcastEvent(

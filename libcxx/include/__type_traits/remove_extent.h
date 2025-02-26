@@ -20,7 +20,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if __has_builtin(__remove_extent)
 template <class _Tp>
-struct remove_extent {
+struct _LIBCPP_NO_SPECIALIZATIONS remove_extent {
   using type _LIBCPP_NODEBUG = __remove_extent(_Tp);
 };
 
