@@ -1688,10 +1688,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (getSTI().hasFeature(RISCV::FeatureVendorXqccmp))
       SpecName = "Xqccmp";
 
-    return Error(
-        ErrorLoc,
-        "stack adjustment is invalid for this instruction and register list; "
-        "refer to " + SpecName + " spec for a detailed range of stack adjustment");
+    return Error(ErrorLoc,
+                 Twine("stack adjustment is invalid for this instruction") +
+                     " and register list; refer to " + SpecName +
+                     " spec for a detailed range of stack adjustment");
   }
   }
 
