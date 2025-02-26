@@ -1059,6 +1059,10 @@ private:
   /// Warning information for macro annotations.
   llvm::DenseMap<const IdentifierInfo *, MacroAnnotations> AnnotationInfos;
 
+  using MacroScopeVec = llvm::SmallVector<std::pair<IdentifierInfo *, MacroDirective *> >;
+  MacroScopeVec *CurScope = nullptr;
+  llvm::SmallVector<MacroScopeVec> MacroScopeStack;
+
   /// A "freelist" of MacroArg objects that can be
   /// reused for quick allocation.
   MacroArgs *MacroArgCache = nullptr;
@@ -2896,6 +2900,9 @@ public:
   void addFinalLoc(const IdentifierInfo *II, SourceLocation AnnotationLoc) {
     AnnotationInfos[II].FinalAnnotationLoc = AnnotationLoc;
   }
+
+  void pushMacroScope();
+  void popMacroScope(SourceLocation Loc);
 
   const MacroAnnotations &getMacroAnnotations(const IdentifierInfo *II) const {
     return AnnotationInfos.find(II)->second;

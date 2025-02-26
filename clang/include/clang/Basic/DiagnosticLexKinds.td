@@ -696,8 +696,8 @@ def warn_pragma_diagnostic_invalid :
    ExtWarn<"pragma diagnostic expected 'error', 'warning', 'ignored', 'fatal',"
             " 'push', or 'pop'">,
    InGroup<UnknownPragmas>;
-def warn_pragma_diagnostic_cannot_pop :
-   ExtWarn<"pragma diagnostic pop could not pop, no matching push">,
+def warn_pragma_cannot_pop :
+   ExtWarn<"pragma %select{diagnostic|scope}0 pop could not pop, no matching push">,
    InGroup<UnknownPragmas>;
 def warn_pragma_diagnostic_invalid_option :
    ExtWarn<"pragma diagnostic expected option name (e.g. \"-Wundef\")">,

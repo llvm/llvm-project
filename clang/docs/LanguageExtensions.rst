@@ -5885,6 +5885,40 @@ in user headers or code. This is controlled by ``-Wpedantic-macros``. Final
 macros will always warn on redefinition, including situations with identical
 bodies and in system headers.
 
+Macro Scope
+===========
+
+Clang supports the pragma ``#pragma clang scope`` which is provided with an
+argument ``push`` or ``pop`` to denote entering and leaving macro scopes. On
+entering a macro scope all macro definitions and undefinitions are recorded so
+that they can be reverted on leaving the scope.
+
+.. code-block:: c
+
+   #define NUM_DOGGOS 2
+
+   #pragma clang scope push
+   #define NUM_DOGGOS 3
+   #pragma clang scope pop // NUM_DOGGOS is restored to 2
+
+   #pragma clang scope push
+   #undef NUM_DOGGOS
+   #pragma clang scope pop // NUM_DOGGOS is restored to 2
+
+   #undef NUM_DOGGOS
+   #pragma clang scope push
+   #define NUM_DOGGOS 1
+   #pragma clang scope pop // NUM_DOGGOS is restored to undefined
+
+A macro scope can be used to wrap header includes to isolate headers from
+leaking macros to the outer source file.
+
+.. code-block:: c
+
+   #pragma clang scope push
+   #include <SomeSystemHeader.h>
+   #pragma clang scope pop // None of the defines from the included header persist.
+
 Line Control
 ============
 
