@@ -122,9 +122,9 @@ namespace CaseStatements {
 }
 
 extern int &Recurse1;
-int &Recurse2 = Recurse1; // pre-cxx23-note {{declared here}}
+int &Recurse2 = Recurse1; // expected-note {{declared here}}
 int &Recurse1 = Recurse2;
-constexpr int &Recurse3 = Recurse2; // expected-error {{must be initialized by a constant expression}} pre-cxx23-note {{initializer of 'Recurse2' is not a constant expression}}
+constexpr int &Recurse3 = Recurse2; // expected-error {{must be initialized by a constant expression}} expected-note {{initializer of 'Recurse2' is not a constant expression}}
 
 extern const int RecurseA;
 const int RecurseB = RecurseA; // expected-note {{declared here}}
