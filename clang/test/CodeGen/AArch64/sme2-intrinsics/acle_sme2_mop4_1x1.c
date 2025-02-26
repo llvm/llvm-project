@@ -18,448 +18,448 @@
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_s8_s8u10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_s8_s8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_s8_s8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_s8_s8u10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_s8_s8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_s8_s8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_u8_u8u11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_u8_u8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_u8_u8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_u8_u8u11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_u8_u8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_u8_u8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_s8_u8u10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_s8_u8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_s8_u8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_s8_u8u10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_s8_u8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_s8_u8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_u8_s8u11__SVUint8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_u8_s8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_u8_s8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_u8_s8u11__SVUint8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_u8_s8,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_u8_s8,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za32_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_s16_s16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_s16_s16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za32_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_s16_s16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_s16_s16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za32_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_u16_u16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_u16_u16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za32_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_u16_u16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_u16_u16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_f16_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za32_f16_f16u13__SVFloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_f16_f16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_f16_f16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_f16_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za32_f16_f16u13__SVFloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_f16_f16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_f16_f16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_bf16_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svmop4a_1x1_za32_bf16_bf16u14__SVBfloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_bf16_bf16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_bf16_bf16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_bf16_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svmop4s_1x1_za32_bf16_bf16u14__SVBfloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_bf16_bf16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_bf16_bf16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_s16_s16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za64,_s16_s16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_s16_s16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za64,_s16_s16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_u16_u16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za64,_u16_u16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_u16_u16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za64,_u16_u16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_s16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_s16_u16u11__SVInt16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_s16_u16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za64,_s16_u16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_s16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_s16_u16u11__SVInt16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_s16_u16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za64,_s16_u16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_u16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_u16_s16u12__SVUint16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_u16_s16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za64,_u16_s16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_u16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_u16_s16u12__SVUint16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.za64.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.za64.wide.1x1.nxv8i16(i32 1, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_u16_s16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za64,_u16_s16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za16_f16_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za16_f16_f16u13__SVFloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za16_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za16,_f16_f16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za16,_f16_f16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za16_f16_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za16_f16_f16u13__SVFloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8f16(i32 3, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8f16(i32 1, <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za16_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za16,_f16_f16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za16,_f16_f16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_f32_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv4f32(i32 3, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv4f32(i32 1, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za32_f32_f32u13__SVFloat32_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv4f32(i32 3, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv4f32(i32 1, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_f32_f32(svfloat32_t zn, svfloat32_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_f32_f32,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za32,_f32_f32,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_f32_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv4f32(i32 3, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv4f32(i32 1, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za32_f32_f32u13__SVFloat32_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv4f32(i32 3, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv4f32(i32 1, <vscale x 4 x float> [[ZN:%.*]], <vscale x 4 x float> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_f32_f32(svfloat32_t zn, svfloat32_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_f32_f32,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za32,_f32_f32,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_f64_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv2f64(i32 3, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv2f64(i32 1, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_f64_f64u13__SVFloat64_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv2f64(i32 3, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv2f64(i32 1, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_f64_f64(svfloat64_t zn, svfloat64_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_f64_f64,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za64,_f64_f64,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_f64_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv2f64(i32 3, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv2f64(i32 1, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_f64_f64u13__SVFloat64_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv2f64(i32 3, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv2f64(i32 1, <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_f64_f64(svfloat64_t zn, svfloat64_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_f64_f64,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za64,_f64_f64,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za16_bf16_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svmop4a_1x1_za16_bf16_bf16u14__SVBfloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za16_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za16,_bf16_bf16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4a_1x1_za16,_bf16_bf16,)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za16_bf16_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svmop4s_1x1_za16_bf16_bf16u14__SVBfloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8bf16(i32 3, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.1x1.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za16_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za16,_bf16_bf16,)(3, zn, zm);
+  SME_ACLE_FUNC(svmop4s_1x1_za16,_bf16_bf16,)(1, zn, zm);
 }

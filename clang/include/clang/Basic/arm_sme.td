@@ -376,22 +376,22 @@ let SMETargetGuard = "sme2" in {
 // Outer product and accumulate/subtract
 //
 
-multiclass MOP4<string name, string n, string t, string i, string wide> {
-  def NAME # "_1x1" : Inst<"svmop4" # name # "_1x1_" # n # "[_{d}_{d}]", "vidd", t, MergeNone, i # wide # "_1x1", [IsInOutZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+multiclass MOP4<string name, string n, string t, string i, string wide, list<ImmCheck> checks> {
+  def NAME # "_1x1" : Inst<"svmop4" # name # "_1x1_" # n # "[_{d}_{d}]", "vidd", t, MergeNone, i # wide # "_1x1", [IsInOutZA, IsStreaming], checks>;
 }
 
-multiclass SUMOP4<string s, string za, string t, string i> {
-  def _1x1 : SInst<"svmop4" # s # "[_1x1_]" # za # "[_{2}_{3}]",
+multiclass SUMOP4<string s, string za, string t, string i, list<ImmCheck> checks> {
+  def _1x1 : SInst<"svmop4" # s # "[_1x1_]" # za # "[_{d}_{3}]",
                               "vidu", t, MergeNone, "aarch64_sme_sumop4" # s # i # "_wide_1x1",
                               [IsStreaming, IsInOutZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
+                              checks>;
 }
 
-multiclass USMOP4<string s, string za, string t, string i> {
-  def _1x1 : SInst<"svmop4" # s # "[_1x1_]" # za # "[_{2}_{3}]",
+multiclass USMOP4<string s, string za, string t, string i, list<ImmCheck> checks> {
+  def _1x1 : SInst<"svmop4" # s # "[_1x1_]" # za # "[_{d}_{3}]",
                               "vidx", t, MergeNone, "aarch64_sme_usmop4" # s # i # "_wide_1x1",
                               [IsStreaming, IsInOutZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
+                              checks>;
 }
 
 let SMETargetGuard = "sme2" in {
@@ -405,24 +405,24 @@ let SMETargetGuard = "sme2" in {
 
   def SVBMOPS : Inst<"svbmops_za32[_{d}]_m", "viPPdd", "iUi", MergeNone, "aarch64_sme_bmops_za32", [IsInOutZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
 
-  defm SVSMOP4A_H  : MOP4<"a", "za32", "cs", "aarch64_sme_smop4a", "_wide">;
-  defm SVSMOP4S_H  : MOP4<"s", "za32", "cs", "aarch64_sme_smop4s", "_wide">;
+  defm SVSMOP4A_H  : MOP4<"a", "za32", "cs", "aarch64_sme_smop4a", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVSMOP4S_H  : MOP4<"s", "za32", "cs", "aarch64_sme_smop4s", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
 
-  defm SVUMOP4A_H  : MOP4<"a", "za32", "UcUs", "aarch64_sme_umop4a", "_wide">;
-  defm SVUMOP4S_H  : MOP4<"s", "za32", "UcUs", "aarch64_sme_umop4s", "_wide">;
+  defm SVUMOP4A_H  : MOP4<"a", "za32", "UcUs", "aarch64_sme_umop4a", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVUMOP4S_H  : MOP4<"s", "za32", "UcUs", "aarch64_sme_umop4s", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
 
-  defm SVFMOP4A_HtoS  : MOP4<"a", "za32", "h", "aarch64_sme_mop4a", "_wide">;
-  defm SVFMOP4S_HtoS  : MOP4<"s", "za32", "h", "aarch64_sme_mop4s", "_wide">;
-  defm SVFMOP4A_S     : MOP4<"a", "za32", "f", "aarch64_sme_mop4a", "">;
-  defm SVFMOP4S_S     : MOP4<"s", "za32", "f", "aarch64_sme_mop4s", "">;
+  defm SVFMOP4A_HtoS  : MOP4<"a", "za32", "h", "aarch64_sme_mop4a", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVFMOP4S_HtoS  : MOP4<"s", "za32", "h", "aarch64_sme_mop4s", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVFMOP4A_S     : MOP4<"a", "za32", "f", "aarch64_sme_mop4a", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVFMOP4S_S     : MOP4<"s", "za32", "f", "aarch64_sme_mop4s", "", [ImmCheck<0, ImmCheck0_3>]>;
 
-  defm SVBMOP4A_S     : MOP4<"a", "za32", "b", "aarch64_sme_mop4a", "_wide">;
-  defm SVBMOP4S_S     : MOP4<"s", "za32", "b", "aarch64_sme_mop4s", "_wide">;
+  defm SVBMOP4A_S     : MOP4<"a", "za32", "b", "aarch64_sme_mop4a", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVBMOP4S_S     : MOP4<"s", "za32", "b", "aarch64_sme_mop4s", "_wide", [ImmCheck<0, ImmCheck0_3>]>;
 
-  defm SVSUMOP4A_S : SUMOP4<"a", "za32", "cs", "">;
-  defm SVSUMOP4S_S : SUMOP4<"s", "za32", "cs", "">;
-  defm SVUSMOP4A_S : USMOP4<"a", "za32", "UcUs", "">;
-  defm SVUSMOP4S_S : USMOP4<"s", "za32", "UcUs", "">;
+  defm SVSUMOP4A_S : SUMOP4<"a", "za32", "cs", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVSUMOP4S_S : SUMOP4<"s", "za32", "cs", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVUSMOP4A_S : USMOP4<"a", "za32", "UcUs", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVUSMOP4S_S : USMOP4<"s", "za32", "UcUs", "", [ImmCheck<0, ImmCheck0_3>]>;
 
   // VERTICAL DOT-PRODUCT
   def SVVDOT_LANE_ZA32_VG1x2_S : Inst<"svvdot_lane_za32[_{d}]_vg1x2", "vm2di", "s", MergeNone, "aarch64_sme_svdot_lane_za32_vg1x2", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_3>]>;
@@ -474,14 +474,14 @@ let SMETargetGuard = "sme2" in {
 }
 
 let SMETargetGuard = "sme2,sme-i16i64" in {
-  defm SVSMOP4A_HtoD  : MOP4<"a", "za64", "s", "aarch64_sme_smop4a_za64", "_wide">;
-  defm SVSMOP4S_HtoD  : MOP4<"s", "za64", "s", "aarch64_sme_smop4s_za64", "_wide">;
-  defm SVUMOP4A_HtoD  : MOP4<"a", "za64", "Us", "aarch64_sme_umop4a_za64", "_wide">;
-  defm SVUMOP4S_HtoD  : MOP4<"s", "za64", "Us", "aarch64_sme_umop4s_za64", "_wide">;
-  defm SVSUMOP4A_D : SUMOP4<"a", "za64", "s", "_za64">;
-  defm SVSUMOP4S_D : SUMOP4<"s", "za64", "s", "_za64">;
-  defm SVUSMOP4A_D : USMOP4<"a", "za64", "Us", "_za64">;
-  defm SVUSMOP4S_D : USMOP4<"s", "za64", "Us", "_za64">;
+  defm SVSMOP4A_HtoD  : MOP4<"a", "za64", "s", "aarch64_sme_smop4a_za64", "_wide", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVSMOP4S_HtoD  : MOP4<"s", "za64", "s", "aarch64_sme_smop4s_za64", "_wide", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUMOP4A_HtoD  : MOP4<"a", "za64", "Us", "aarch64_sme_umop4a_za64", "_wide", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUMOP4S_HtoD  : MOP4<"s", "za64", "Us", "aarch64_sme_umop4s_za64", "_wide", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVSUMOP4A_D : SUMOP4<"a", "za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVSUMOP4S_D : SUMOP4<"s", "za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUSMOP4A_D : USMOP4<"a", "za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUSMOP4S_D : USMOP4<"s", "za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
 
   def SVVDOT_LANE_ZA64_VG1x4_S : Inst<"svvdot_lane_za64[_{d}]_vg1x4", "vm4di", "s", MergeNone, "aarch64_sme_svdot_lane_za64_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_1>]>;
   def SVVDOT_LANE_ZA64_VG1x4_U : Inst<"svvdot_lane_za64[_{d}]_vg1x4", "vm4di", "Us", MergeNone, "aarch64_sme_uvdot_lane_za64_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_1>]>;
@@ -519,8 +519,8 @@ let SMETargetGuard = "sme2" in {
 }
 
 let SMETargetGuard = "sme2,sme-f64f64" in {
-  defm SVFMOP4A_D : MOP4<"a", "za64", "d", "aarch64_sme_mop4a", "">;
-  defm SVFMOP4S_D : MOP4<"s", "za64", "d", "aarch64_sme_mop4s", "">;
+  defm SVFMOP4A_D : MOP4<"a", "za64", "d", "aarch64_sme_mop4a", "", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVFMOP4S_D : MOP4<"s", "za64", "d", "aarch64_sme_mop4s", "", [ImmCheck<0, ImmCheck0_7>]>;
 
   def SVMLA_MULTI_VG1x2_F64 : Inst<"svmla_za64[_{d}]_vg1x2", "vm22", "d", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsInOutZA], []>;
   def SVMLA_MULTI_VG1x4_F64 : Inst<"svmla_za64[_{d}]_vg1x4", "vm44", "d", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsInOutZA], []>;
@@ -539,8 +539,8 @@ let SMETargetGuard = "sme2,sme-f64f64" in {
 }
 
 let SMETargetGuard = "sme-f16f16" in {
-  defm SVFMOP4A_H : MOP4<"a", "za16", "h", "aarch64_sme_mop4a", "">;
-  defm SVFMOP4S_H : MOP4<"s", "za16", "h", "aarch64_sme_mop4s", "">;
+  defm SVFMOP4A_H : MOP4<"a", "za16", "h", "aarch64_sme_mop4a", "", [ImmCheck<0, ImmCheck0_1>]>;
+  defm SVFMOP4S_H : MOP4<"s", "za16", "h", "aarch64_sme_mop4s", "", [ImmCheck<0, ImmCheck0_1>]>;
 
   def SVMLA_MULTI_VG1x2_F16 : Inst<"svmla_za16[_f16]_vg1x2", "vm22", "h", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsInOutZA], []>;
   def SVMLA_MULTI_VG1x4_F16 : Inst<"svmla_za16[_f16]_vg1x4", "vm44", "h", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsInOutZA], []>;
@@ -559,8 +559,8 @@ let SMETargetGuard = "sme-f16f16" in {
 }
 
 let SMETargetGuard = "sme-b16b16" in {
-  defm SVBMOP4A_H : MOP4<"a", "za16", "bf", "aarch64_sme_mop4a", "">;
-  defm SVBMOP4S_H : MOP4<"s", "za16", "bf", "aarch64_sme_mop4s", "">;
+  defm SVBMOP4A_H : MOP4<"a", "za16", "bf", "aarch64_sme_mop4a", "", [ImmCheck<0, ImmCheck0_1>]>;
+  defm SVBMOP4S_H : MOP4<"s", "za16", "bf", "aarch64_sme_mop4s", "", [ImmCheck<0, ImmCheck0_1>]>;
 
   def SVMLA_MULTI_VG1x2_BF16 : Inst<"svmla_za16[_bf16]_vg1x2", "vm22", "b", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsInOutZA], []>;
   def SVMLA_MULTI_VG1x4_BF16 : Inst<"svmla_za16[_bf16]_vg1x4", "vm44", "b", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsInOutZA], []>;
