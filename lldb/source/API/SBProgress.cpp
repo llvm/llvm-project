@@ -40,10 +40,20 @@ SBProgress::~SBProgress() = default;
 void SBProgress::Increment(uint64_t amount, const char *description) {
   LLDB_INSTRUMENT_VA(amount, description);
 
+  if (!m_opaque_up)
+    return;
+
   std::optional<std::string> description_opt;
   if (description && description[0])
     description_opt = description;
   m_opaque_up->Increment(amount, std::move(description_opt));
+}
+
+void SBProgress::Finalize() {
+  if (!m_opaque_up)
+    return;
+
+  m_opaque_up.reset();
 }
 
 lldb_private::Progress &SBProgress::ref() const { return *m_opaque_up; }

@@ -59,6 +59,11 @@ public:
 
   void Increment(uint64_t amount, const char *description = nullptr);
 
+  /// Explicitly finalize an SBProgress, this can be used to terminate a
+  /// progress on command instead of waiting for a garbage collection or other
+  /// finalizer.
+  void Finalize();
+
 protected:
   lldb_private::Progress &ref() const;
 
