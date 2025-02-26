@@ -124,6 +124,13 @@ mul    w0, w0, w0
 crc32cb w0, w0, w1
 crc32cb w0, w0, w1
 crc32cb w0, w0, w0
+crc32b w27, w12, w15
+crc32h w3, w15, w21
+crc32w w9, w18, w24
+crc32x w19, w6, x25
+crc32ch w25, w26, w16
+crc32cw w27, w12, w23
+crc32cx w21, w28, x5
 # LLVM-MCA-END
 
 # LLVM-MCA-BEGIN Z sdot.s
@@ -853,27 +860,41 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK:      [16] Code Region - crc32cb
 
 # CHECK:      Iterations:        100
-# CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      703
-# CHECK-NEXT: Total uOps:        400
+# CHECK-NEXT: Instructions:      1100
+# CHECK-NEXT: Total Cycles:      1004
+# CHECK-NEXT: Total uOps:        1100
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.57
-# CHECK-NEXT: Block RThroughput: 3.0
+# CHECK-NEXT: uOps Per Cycle:    1.10
+# CHECK-NEXT: IPC:               1.10
+# CHECK-NEXT: Block RThroughput: 10.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          0123
 
-# CHECK:      [0,0]     DeeER.    .    ..   mul	w0, w0, w0
-# CHECK-NEXT: [0,1]     D==eeER   .    ..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [0,2]     D===eeER  .    ..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [0,3]     D=====eeER.    ..   crc32cb	w0, w0, w0
-# CHECK-NEXT: [1,0]     D=======eeER   ..   mul	w0, w0, w0
-# CHECK-NEXT: [1,1]     D=========eeER ..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [1,2]     D==========eeER..   crc32cb	w0, w0, w1
-# CHECK-NEXT: [1,3]     D============eeER   crc32cb	w0, w0, w0
+# CHECK:      [0,0]     DeeER.    .    .    .  .   mul	w0, w0, w0
+# CHECK-NEXT: [0,1]     D==eeER   .    .    .  .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [0,2]     D===eeER  .    .    .  .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [0,3]     D=====eeER.    .    .  .   crc32cb	w0, w0, w0
+# CHECK-NEXT: [0,4]     DeeE-----R.    .    .  .   crc32b	w27, w12, w15
+# CHECK-NEXT: [0,5]     D=eeE----R.    .    .  .   crc32h	w3, w15, w21
+# CHECK-NEXT: [0,6]     D====eeE-R.    .    .  .   crc32w	w9, w18, w24
+# CHECK-NEXT: [0,7]     D======eeER    .    .  .   crc32x	w19, w6, x25
+# CHECK-NEXT: [0,8]     D=======eeER   .    .  .   crc32ch	w25, w26, w16
+# CHECK-NEXT: [0,9]     D========eeER  .    .  .   crc32cw	w27, w12, w23
+# CHECK-NEXT: [0,10]    D=========eeER .    .  .   crc32cx	w21, w28, x5
+# CHECK-NEXT: [1,0]     D=======eeE--R .    .  .   mul	w0, w0, w0
+# CHECK-NEXT: [1,1]     D==========eeER.    .  .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [1,2]     D===========eeER    .  .   crc32cb	w0, w0, w1
+# CHECK-NEXT: [1,3]     D=============eeER  .  .   crc32cb	w0, w0, w0
+# CHECK-NEXT: [1,4]     .D===========eeE-R  .  .   crc32b	w27, w12, w15
+# CHECK-NEXT: [1,5]     .D=============eeER .  .   crc32h	w3, w15, w21
+# CHECK-NEXT: [1,6]     .D==============eeER.  .   crc32w	w9, w18, w24
+# CHECK-NEXT: [1,7]     .D===============eeER  .   crc32x	w19, w6, x25
+# CHECK-NEXT: [1,8]     .D================eeER .   crc32ch	w25, w26, w16
+# CHECK-NEXT: [1,9]     .D=================eeER.   crc32cw	w27, w12, w23
+# CHECK-NEXT: [1,10]    .D==================eeER   crc32cx	w21, w28, x5
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -882,11 +903,18 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     4.5    0.5    0.0       mul	w0, w0, w0
-# CHECK-NEXT: 1.     2     6.5    0.0    0.0       crc32cb	w0, w0, w1
-# CHECK-NEXT: 2.     2     7.5    0.0    0.0       crc32cb	w0, w0, w1
-# CHECK-NEXT: 3.     2     9.5    0.0    0.0       crc32cb	w0, w0, w0
-# CHECK-NEXT:        2     7.0    0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     4.5    0.5    1.0       mul	w0, w0, w0
+# CHECK-NEXT: 1.     2     7.0    0.5    0.0       crc32cb	w0, w0, w1
+# CHECK-NEXT: 2.     2     8.0    0.0    0.0       crc32cb	w0, w0, w1
+# CHECK-NEXT: 3.     2     10.0   0.0    0.0       crc32cb	w0, w0, w0
+# CHECK-NEXT: 4.     2     6.5    6.5    3.0       crc32b	w27, w12, w15
+# CHECK-NEXT: 5.     2     8.0    2.5    2.0       crc32h	w3, w15, w21
+# CHECK-NEXT: 6.     2     10.0   10.0   0.5       crc32w	w9, w18, w24
+# CHECK-NEXT: 7.     2     11.5   7.0    0.0       crc32x	w19, w6, x25
+# CHECK-NEXT: 8.     2     12.5   12.5   0.0       crc32ch	w25, w26, w16
+# CHECK-NEXT: 9.     2     13.5   13.5   0.0       crc32cw	w27, w12, w23
+# CHECK-NEXT: 10.    2     14.5   14.5   0.0       crc32cx	w21, w28, x5
+# CHECK-NEXT:        2     9.6    6.1    0.6       <total>
 
 # CHECK:      [17] Code Region - Z sdot.s
 
