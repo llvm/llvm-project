@@ -1330,3 +1330,14 @@ void localConstexpr() {
   static_assert(a == 0, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{initializer of 'a' is not a constant expression}}
 }
+
+namespace Foo {
+  namespace Bar {
+    constexpr int FB = 10;
+  }
+}
+constexpr int usingDirectiveDecl() {
+  using namespace Foo::Bar;
+  return FB;
+}
+static_assert(usingDirectiveDecl() == 10, "");

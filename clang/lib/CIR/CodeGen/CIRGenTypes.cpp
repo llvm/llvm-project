@@ -108,6 +108,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.VoidTy;
       break;
 
+    // bool
+    case BuiltinType::Bool:
+      resultType = cir::BoolType::get(&getMLIRContext());
+      break;
+
     // Signed integral types.
     case BuiltinType::Char_S:
     case BuiltinType::Int:
