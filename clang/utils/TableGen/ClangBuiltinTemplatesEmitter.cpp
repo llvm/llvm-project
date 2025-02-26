@@ -31,8 +31,8 @@ struct ParserState {
 std::pair<std::string, std::string>
 ParseTemplateParameterList(ParserState &PS,
                            ArrayRef<const Record *> TemplateArgs) {
-  std::vector<std::string> Params;
-  std::unordered_map<std::string, std::string> TemplateNameToParmName;
+  llvm::SmallVector<std::string, 4> Params;
+  llvm::StringMap<std::string> TemplateNameToParmName;
 
   std::ostringstream Code;
   Code << std::boolalpha;
