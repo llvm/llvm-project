@@ -38,8 +38,8 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
 
-  mlir::Value loadOp = builder.CIRBaseBuilderTy::createLoad(getLoc(loc), ptr,
-                                                     false /*isVolatile*/);
+  mlir::Value loadOp = builder.CIRBaseBuilderTy::createLoad(
+      getLoc(loc), ptr, false /*isVolatile*/);
 
   return loadOp;
 }
@@ -98,7 +98,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 }
 
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
-                                       mlir::Location loc, CharUnits alignment) {
+                                       mlir::Location loc,
+                                       CharUnits alignment) {
   mlir::Block *entryBlock = getCurFunctionEntryBlock();
 
   // CIR uses its own alloca address space rather than follow the target data
@@ -122,7 +123,8 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
 /// This creates an alloca and inserts it  at the current insertion point of the
 /// builder.
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
-                                         mlir::Location loc, const Twine &name) {
+                                         mlir::Location loc,
+                                         const Twine &name) {
   mlir::Value alloca = emitAlloca(name.str(), ty, loc, align);
   return Address(alloca, ty, align);
 }

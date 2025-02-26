@@ -45,7 +45,7 @@ void CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   // Create the temp alloca and declare variable using it.
   address = createTempAlloca(allocaTy, alignment, loc, d.getName());
   declare(address, &d, ty, getLoc(d.getSourceRange()), alignment);
-    
+
   setAddrOfLocalVar(&d, address);
 }
 
@@ -71,7 +71,6 @@ void CIRGenFunction::emitAutoVarCleanups(const clang::VarDecl &d) {
   if (d.hasAttr<CleanupAttr>())
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: CleanupAttr");
 }
-
 
 /// Emit code and set up symbol table for a variable declaration with auto,
 /// register, or no storage class specifier. These turn into simple stack
