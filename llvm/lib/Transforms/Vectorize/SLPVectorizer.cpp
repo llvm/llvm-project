@@ -3835,16 +3835,16 @@ private:
           continue;
         auto It = ScalarToTreeEntries.find(V);
         Instruction *I = dyn_cast<Instruction>(V);
-        bool IsAltInst = (I) ? I->getOpcode() != Opcode : false;
-        if (S.isAltOpCopy() && IsAltInst) {
-          CopyableAltOp.insert(V);
-          continue;
-        }
         assert(
             (It == ScalarToTreeEntries.end() ||
              (It->getSecond().size() == 1 && It->getSecond().front() == Last) ||
              doesNotNeedToBeScheduled(V)) &&
             "Scalar already in tree!");
+        bool IsAltInst = (I) ? I->getOpcode() != Opcode : false;
+        if (S.isAltOpCopy() && IsAltInst) {
+          CopyableAltOp[V] = Last;
+          continue;
+        }
         if (It == ScalarToTreeEntries.end()) {
           ScalarToTreeEntries.try_emplace(V).first->getSecond().push_back(Last);
           (void)Processed.insert(V);
@@ -3954,8 +3954,8 @@ private:
   /// A list of scalars that we found that we need to keep as scalars.
   ValueSet MustGather;
 
-  /// A set op scalars that we are considoring as copyable operations.
-  ValueSet CopyableAltOp;
+  /// Maps a scalar copies to the its tree entry(ies).
+  SmallDenseMap<Value *, TreeEntry *> CopyableAltOp;
 
   /// A set of first non-schedulable values.
   ValueSet NonScheduledFirst;
@@ -4264,6 +4264,9 @@ private:
 
     /// True if this instruction is a copy.
     bool IsCopy = false;
+
+    /// Points to where copyable instruction was introduced.
+    ScheduleData *CopyInst = nullptr;
   };
 
 #ifndef NDEBUG
@@ -4413,6 +4416,23 @@ private:
           for (Use &U : BundleMember->Inst->operands())
             if (auto *I = dyn_cast<Instruction>(U.get()))
               DecrUnsched(I);
+          // Handle a copy instruction dependencies.
+          if (TE && TE->isAltOpCopy() && BundleMember->IsCopy) {
+            doForAllOpcodes(BundleMember->Inst, [BundleMember, &ReadyList](
+                                                    ScheduleData *CopyUse) {
+              if (BundleMember != CopyUse && CopyUse->hasValidDependencies() &&
+                  CopyUse->incrementUnscheduledDeps(-1) == 0) {
+                ScheduleData *DepBundle = CopyUse->FirstInBundle;
+                assert(!DepBundle->IsScheduled &&
+                       "already scheduled bundle gets ready");
+                if (DepBundle->isReady()) {
+                  ReadyList.insert(DepBundle);
+                  LLVM_DEBUG(dbgs() << "SLP:    gets ready (copyable): "
+                                    << *DepBundle << "\n");
+                }
+              }
+            });
+          }
         }
         // Handle the memory dependencies.
         for (ScheduleData *MemoryDepSD : BundleMember->MemoryDependencies) {
@@ -4498,8 +4518,8 @@ private:
 
     /// Build a bundle from the ScheduleData nodes corresponding to the
     /// scalar instruction for each lane.
-    ScheduleData *buildBundle(ArrayRef<Value *> VL, const InstructionsState &S,
-                              bool &ReSchedule);
+    ScheduleData *buildBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
+                              const InstructionsState &S, bool &ReSchedule);
 
     /// Checks if a bundle of instructions can be scheduled, i.e. has no
     /// cyclic dependencies. This is only a dry-run, no instructions are
@@ -17606,8 +17626,10 @@ void BoUpSLP::optimizeGatherSequence() {
   GatherShuffleExtractSeq.clear();
 }
 
-BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::buildBundle(
-    ArrayRef<Value *> VL, const InstructionsState &S, bool &ReSchedule) {
+BoUpSLP::ScheduleData *
+BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
+                                      const InstructionsState &S,
+                                      bool &ReSchedule) {
   ScheduleData *Bundle = nullptr;
   ScheduleData *PrevInBundle = nullptr;
   unsigned Opcode = S.getOpcode();
@@ -17675,6 +17697,13 @@ BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::buildBundle(
     if (S.isAltOpCopy() && IsAltInst)
       BundleMember->IsCopy = true;
     PrevInBundle = BundleMember;
+    if (SLP->CopyableAltOp.contains(I)) {
+      TreeEntry *TE = SLP->CopyableAltOp[I];
+      assert(TE && "Incorrect state");
+      ScheduleData *SD = getScheduleData(I, TE);
+      assert(SD && SD->IsCopy && "ScheduleData incorrect state");
+      BundleMember->CopyInst = SD;
+    }
   }
   assert(Bundle && "Failed to find schedule bundle");
   return Bundle;
@@ -17772,7 +17801,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ReSchedule = true;
   }
 
-  auto *Bundle = buildBundle(VL, S, ReSchedule);
+  auto *Bundle = buildBundle(VL, SLP, S, ReSchedule);
   if (!Bundle)
     return std::nullopt;
   TryScheduleBundleImpl(ReSchedule, Bundle);
@@ -17820,6 +17849,7 @@ void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
     BundleMember->NextInBundle = nullptr;
     BundleMember->TE = nullptr;
     BundleMember->IsCopy = false;
+    BundleMember->CopyInst = nullptr;
     if (BundleMember->unscheduledDepsInBundle() == 0) {
       ReadyInsts.insert(BundleMember);
     }
@@ -18009,6 +18039,12 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
                  << "\n");
       BundleMember->Dependencies = 0;
       BundleMember->resetUnscheduledDeps();
+
+      // Handle copy instruction dependencies.
+      if (BundleMember->CopyInst) {
+        BundleMember->Dependencies++;
+        BundleMember->incrementUnscheduledDeps(1);
+      }
 
       // Handle def-use chain dependencies.
       for (User *U : BundleMember->Inst->users()) {
@@ -18240,7 +18276,6 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->initialFillReadyList(ReadyInsts);
 
   Instruction *LastScheduledInst = BS->ScheduleEnd;
-  DenseMap<ScheduleData *, ScheduleData *> ReschedMap;
 
   auto ReorderBundle = [this](ScheduleData *SD) {
     SmallVector<Instruction *, 2> Insts;
@@ -18273,16 +18308,6 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     ScheduleData *Picked = *ReadyInsts.begin();
     ReadyInsts.erase(ReadyInsts.begin());
 
-    // Reorder copyable elements to emit after main operations.
-    for (ScheduleData *BundleMember = Picked; BundleMember;
-         BundleMember = BundleMember->NextInBundle) {
-      if (CopyableAltOp.contains(BundleMember->Inst)) {
-        ScheduleData *SD = CopyElementsMap[BundleMember->Inst];
-        if (SD && SD->FirstInBundle != Picked)
-          ReschedMap[SD] = Picked;
-      }
-    }
-
     // Move the scheduled instruction(s) to their dedicated places, if not
     // there yet.
     for (Instruction *PickedInst : ReorderBundle(Picked)) {
@@ -18290,15 +18315,6 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
           LastScheduledInst->getPrevNode())
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
-    }
-    if (ReschedMap.contains(Picked)) {
-      ScheduleData *Resched = ReschedMap[Picked];
-      for (Instruction *PickedInst : ReorderBundle(Resched)) {
-        if (PickedInst->getNextNonDebugInstruction() != LastScheduledInst &&
-            LastScheduledInst->getPrevNode())
-          PickedInst->moveAfter(LastScheduledInst->getPrevNode());
-        LastScheduledInst = PickedInst;
-      }
     }
     BS->schedule(Picked, ReadyInsts);
   }
