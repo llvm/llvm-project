@@ -1977,6 +1977,18 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
         case POK_PtReturnByRef:
           DiagID = diag::warn_pt_guarded_return_by_reference;
           break;
+        case POK_PassPointer:
+          DiagID = diag::warn_guarded_pass_pointer;
+          break;
+        case POK_PtPassPointer:
+          DiagID = diag::warn_pt_guarded_pass_pointer;
+          break;
+        case POK_ReturnPointer:
+          DiagID = diag::warn_guarded_return_pointer;
+          break;
+        case POK_PtReturnPointer:
+          DiagID = diag::warn_pt_guarded_return_pointer;
+          break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
                                                        << D
@@ -2012,6 +2024,18 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
         case POK_PtReturnByRef:
           DiagID = diag::warn_pt_guarded_return_by_reference;
+          break;
+        case POK_PassPointer:
+          DiagID = diag::warn_guarded_pass_pointer;
+          break;
+        case POK_PtPassPointer:
+          DiagID = diag::warn_pt_guarded_pass_pointer;
+          break;
+        case POK_ReturnPointer:
+          DiagID = diag::warn_guarded_return_pointer;
+          break;
+        case POK_PtReturnPointer:
+          DiagID = diag::warn_pt_guarded_return_pointer;
           break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
