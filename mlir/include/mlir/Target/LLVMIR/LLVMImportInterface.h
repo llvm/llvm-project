@@ -99,7 +99,7 @@ public:
 class LLVMImportInterface
     : public DialectInterfaceCollection<LLVMImportDialectInterface> {
 private:
-  // Generate llvm.call_intrinsic when no supporting dialect available.
+  /// Generate llvm.call_intrinsic when no supporting dialect available.
   LogicalResult
   convertUnregisteredIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
                                LLVM::ModuleImport &moduleImport) const;
