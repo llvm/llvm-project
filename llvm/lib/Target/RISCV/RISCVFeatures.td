@@ -1305,7 +1305,7 @@ def HasVendorXqcisls
                          "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
 
 def FeatureVendorXqcia
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Arithmetic Extension">;
+    : RISCVExperimentalExtension<0, 4, "Qualcomm uC Arithmetic Extension">;
 def HasVendorXqcia
     : Predicate<"Subtarget->hasVendorXqcia()">,
       AssemblerPredicate<(all_of FeatureVendorXqcia),
