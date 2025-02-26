@@ -1,4 +1,5 @@
 # RUN: llc %s -o - -run-pass=removeredundantdebugvalues | FileCheck --implicit-check-not=DBG_VALUE %s
+# RUN: llc %s -o - -passes=removeredundantdebugvalues | FileCheck --implicit-check-not=DBG_VALUE %s
 
 ## This checks that the RemoveRedundantDebugValues removes redundant
 ## DBG_VALUEs. The MIR was hand-written, and foo{[2-6]}() are just
