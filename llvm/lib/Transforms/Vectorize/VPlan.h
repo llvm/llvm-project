@@ -1599,12 +1599,15 @@ class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
                               public VPUnrollPartAccessor<1> {
   Type *IndexedTy;
 
+  /// Indicate whether to compute the pointer for strided memory accesses.
+  bool Strided;
+
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, GEPNoWrapFlags GEPFlags,
-                        DebugLoc DL)
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool Strided,
+                        GEPNoWrapFlags GEPFlags, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
                             GEPFlags, DL),
-        IndexedTy(IndexedTy) {}
+        IndexedTy(IndexedTy), Strided(Strided) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
@@ -1625,7 +1628,7 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy,
+    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, Strided,
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
