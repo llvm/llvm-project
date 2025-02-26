@@ -2104,7 +2104,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme" in {
 def SVSCLAMP : SInst<"svclamp[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sclamp", [VerifyRuntimeMode], []>;
 def SVUCLAMP : SInst<"svclamp[_{d}]", "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uclamp", [VerifyRuntimeMode], []>;
 
-defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUlbhfd", "aarch64_sve_revd">;
+defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUlmbhfd", "aarch64_sve_revd">;
 }
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
@@ -2223,8 +2223,8 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
   def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
 
   // 2-way and 4-way selects
-  def SVSEL_X2  : SInst<"svsel[_{d}_x2]", "2}22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x2", [IsStreaming], []>;
-  def SVSEL_X4  : SInst<"svsel[_{d}_x4]", "4}44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x4", [IsStreaming], []>;
+  def SVSEL_X2  : SInst<"svsel[_{d}_x2]", "2}22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_sel_x2", [IsStreaming], []>;
+  def SVSEL_X4  : SInst<"svsel[_{d}_x4]", "4}44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_sel_x4", [IsStreaming], []>;
 
   // SRSHL / URSHL
   def SVSRSHL_SINGLE_X2 : SInst<"svrshl[_single_{d}_x2]", "22d", "csil",     MergeNone, "aarch64_sve_srshl_single_x2", [IsStreaming], []>;
@@ -2402,15 +2402,15 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
 //
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
-  def SVZIP_X2  : SInst<"svzip[_{d}_x2]",  "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zip_x2",  [IsStreaming], []>;
-  def SVZIPQ_X2 : SInst<"svzipq[_{d}_x2]", "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq_x2", [IsStreaming], []>;
-  def SVZIP_X4  : SInst<"svzip[_{d}_x4]",  "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zip_x4",  [IsStreaming], []>;
-  def SVZIPQ_X4 : SInst<"svzipq[_{d}_x4]", "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq_x4", [IsStreaming], []>;
+  def SVZIP_X2  : SInst<"svzip[_{d}_x2]",  "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zip_x2",  [IsStreaming], []>;
+  def SVZIPQ_X2 : SInst<"svzipq[_{d}_x2]", "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zipq_x2", [IsStreaming], []>;
+  def SVZIP_X4  : SInst<"svzip[_{d}_x4]",  "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zip_x4",  [IsStreaming], []>;
+  def SVZIPQ_X4 : SInst<"svzipq[_{d}_x4]", "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zipq_x4", [IsStreaming], []>;
 
-  def SVUZP_X2  : SInst<"svuzp[_{d}_x2]",  "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzp_x2",  [IsStreaming], []>;
-  def SVUZPQ_X2 : SInst<"svuzpq[_{d}_x2]", "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq_x2", [IsStreaming], []>;
-  def SVUZP_X4  : SInst<"svuzp[_{d}_x4]",  "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzp_x4",  [IsStreaming], []>;
-  def SVUZPQ_X4 : SInst<"svuzpq[_{d}_x4]", "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq_x4", [IsStreaming], []>;
+  def SVUZP_X2  : SInst<"svuzp[_{d}_x2]",  "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzp_x2",  [IsStreaming], []>;
+  def SVUZPQ_X2 : SInst<"svuzpq[_{d}_x2]", "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzpq_x2", [IsStreaming], []>;
+  def SVUZP_X4  : SInst<"svuzp[_{d}_x4]",  "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzp_x4",  [IsStreaming], []>;
+  def SVUZPQ_X4 : SInst<"svuzpq[_{d}_x4]", "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzpq_x4", [IsStreaming], []>;
 }
 
 //

@@ -1644,6 +1644,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Object",
+        ":ObjectYAML",
         ":Support",
         ":TargetParser",
         ":TransformUtils",

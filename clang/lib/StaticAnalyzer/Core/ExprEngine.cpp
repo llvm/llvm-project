@@ -74,6 +74,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -1031,6 +1032,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
                             const LocationContext *LC,
                             const Stmt *DiagnosticStmt,
                             ProgramPoint::Kind K) {
+  llvm::TimeTraceScope TimeScope("ExprEngine::removeDead");
   assert((K == ProgramPoint::PreStmtPurgeDeadSymbolsKind ||
           ReferenceStmt == nullptr || isa<ReturnStmt>(ReferenceStmt))
           && "PostStmt is not generally supported by the SymbolReaper yet");
@@ -1743,7 +1745,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::DependentCoawaitExprClass:
     case Stmt::CoreturnStmtClass:
     case Stmt::CoyieldExprClass:
-    case Stmt::ResolvedUnexpandedPackExprClass:
     case Stmt::SEHTryStmtClass:
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
@@ -1812,6 +1813,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
     case Stmt::OMPReverseDirectiveClass:
+    case Stmt::OMPStripeDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
     case Stmt::OMPInterchangeDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
@@ -2811,13 +2813,24 @@ void ExprEngine::processBranch(
     if (StTrue && StFalse)
       assert(!isa<ObjCForCollectionStmt>(Condition));
 
+    // We want to ensure consistent behavior between `eagerly-assume=false`,
+    // when the state split is always performed by the `assumeCondition()`
+    // call within this function and `eagerly-assume=true` (the default), when
+    // some conditions (comparison operators, unary negation) can trigger a
+    // state split before this callback. There are some contrived corner cases
+    // that behave differently with and without `eagerly-assume`, but I don't
+    // know about an example that could plausibly appear in "real" code.
+    bool BothFeasible =
+        (StTrue && StFalse) ||
+        didEagerlyAssumeBifurcateAt(PrevState, dyn_cast<Expr>(Condition));
+
     if (StTrue) {
-      // If we are processing a loop condition where two iterations have
-      // already been completed and the false branch is also feasible, then
-      // don't assume a third iteration because it is a redundant execution
-      // path (unlikely to be different from earlier loop exits) and can cause
-      // false positives if e.g. the loop iterates over a two-element structure
-      // with an opaque condition.
+      // In a loop, if both branches are feasible (i.e. the analyzer doesn't
+      // understand the loop condition) and two iterations have already been
+      // completed, then don't assume a third iteration because it is a
+      // redundant execution path (unlikely to be different from earlier loop
+      // exits) and can cause false positives if e.g. the loop iterates over a
+      // two-element structure with an opaque condition.
       //
       // The iteration count "2" is hardcoded because it's the natural limit:
       // * the fact that the programmer wrote a loop (and not just an `if`)
@@ -2828,10 +2841,7 @@ void ExprEngine::processBranch(
       //   two iterations". (This pattern is common in FFMPEG and appears in
       //   many other projects as well.)
       bool CompletedTwoIterations = IterationsCompletedInLoop.value_or(0) >= 2;
-      bool FalseAlsoFeasible =
-          StFalse ||
-          didEagerlyAssumeBifurcateAt(PrevState, dyn_cast<Expr>(Condition));
-      bool SkipTrueBranch = CompletedTwoIterations && FalseAlsoFeasible;
+      bool SkipTrueBranch = BothFeasible && CompletedTwoIterations;
 
       // FIXME: This "don't assume third iteration" heuristic partially
       // conflicts with the widen-loop analysis option (which is off by
@@ -2841,8 +2851,25 @@ void ExprEngine::processBranch(
         Builder.generateNode(StTrue, true, PredN);
     }
 
-    if (StFalse)
-      Builder.generateNode(StFalse, false, PredN);
+    if (StFalse) {
+      // In a loop, if both branches are feasible (i.e. the analyzer doesn't
+      // understand the loop condition), we are before the first iteration and
+      // the analyzer option `assume-at-least-one-iteration` is set to `true`,
+      // then avoid creating the execution path where the loop is skipped.
+      //
+      // In some situations this "loop is skipped" execution path is an
+      // important corner case that may evade the notice of the developer and
+      // hide significant bugs -- however, there are also many situations where
+      // it's guaranteed that at least one iteration will happen (e.g. some
+      // data structure is always nonempty), but the analyzer cannot realize
+      // this and will produce false positives when it assumes that the loop is
+      // skipped.
+      bool BeforeFirstIteration = IterationsCompletedInLoop == std::optional{0};
+      bool SkipFalseBranch = BothFeasible && BeforeFirstIteration &&
+                             AMgr.options.ShouldAssumeAtLeastOneIteration;
+      if (!SkipFalseBranch)
+        Builder.generateNode(StFalse, false, PredN);
+    }
   }
   currBldrCtx = nullptr;
 }
@@ -3514,15 +3541,16 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
   for (const std::pair<SVal, SVal> &LocAndVal : LocAndVals) {
     // Cases (1) and (2).
     const MemRegion *MR = LocAndVal.first.getAsRegion();
-    if (!MR ||
-        !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(MR->getMemorySpace())) {
+    const MemSpaceRegion *Space = MR ? MR->getMemorySpace(State) : nullptr;
+    if (!MR || !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(Space)) {
       Escaped.push_back(LocAndVal.second);
       continue;
     }
 
     // Case (3).
     if (const auto *VR = dyn_cast<VarRegion>(MR->getBaseRegion()))
-      if (VR->hasStackParametersStorage() && VR->getStackFrame()->inTopFrame())
+      if (isa<StackArgumentsSpaceRegion>(Space) &&
+          VR->getStackFrame()->inTopFrame())
         if (const auto *RD = VR->getValueType()->getAsCXXRecordDecl())
           if (!RD->hasTrivialDestructor()) {
             Escaped.push_back(LocAndVal.second);

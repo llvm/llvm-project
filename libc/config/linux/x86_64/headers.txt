@@ -6,6 +6,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.dirent
     libc.include.dlfcn
     libc.include.elf
+    libc.include.endian
     libc.include.errno
     libc.include.fcntl
     libc.include.features

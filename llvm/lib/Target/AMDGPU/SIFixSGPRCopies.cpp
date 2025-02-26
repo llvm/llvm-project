@@ -1069,6 +1069,8 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
                       << " is being turned to v_readfirstlane_b32"
                       << " Score: " << C.second.Score << "\n");
     Register DstReg = MI->getOperand(0).getReg();
+    MRI->constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
+
     Register SrcReg = MI->getOperand(1).getReg();
     unsigned SubReg = MI->getOperand(1).getSubReg();
     const TargetRegisterClass *SrcRC =
@@ -1092,7 +1094,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
             Result, *MRI, MI->getOperand(1), SrcRC,
             TRI->getSubRegFromChannel(i), &AMDGPU::VGPR_32RegClass);
         Register PartialDst =
-            MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+            MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         BuildMI(*MBB, *Result, Result->getDebugLoc(),
                 TII->get(AMDGPU::V_READFIRSTLANE_B32), PartialDst)
             .addReg(PartialSrc);

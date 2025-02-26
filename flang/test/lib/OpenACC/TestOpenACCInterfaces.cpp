@@ -32,15 +32,43 @@ struct TestFIROpenACCInterfaces
     mlir::OpBuilder builder(mod);
     getOperation().walk([&](Operation *op) {
       if (isa<ACC_DATA_ENTRY_OPS>(op)) {
-        Type typeOfVar = acc::getVar(op).getType();
-        llvm::errs() << "Visiting: " << *op << "\n";
+        Value var = acc::getVar(op);
+        Type typeOfVar = var.getType();
+
+        // Attempt to determine if the variable is mappable-like or if
+        // the pointee itself is mappable-like. For example, if the variable is
+        // of type !fir.ref<!fir.box<>>, we want to print both the details about
+        // the !fir.ref since it is pointer-like, and about !fir.box since it
+        // is mappable.
         auto mappableTy = dyn_cast_if_present<acc::MappableType>(typeOfVar);
         if (!mappableTy) {
           mappableTy =
               dyn_cast_if_present<acc::MappableType>(acc::getVarType(op));
         }
+
+        llvm::errs() << "Visiting: " << *op << "\n";
+        llvm::errs() << "\tVar: " << var << "\n";
+
+        if (auto ptrTy = dyn_cast_if_present<acc::PointerLikeType>(typeOfVar)) {
+          llvm::errs() << "\tPointer-like: " << typeOfVar << "\n";
+          // If the pointee is not mappable, print details about it. Otherwise,
+          // we defer to the mappable printing below to print those details.
+          if (!mappableTy) {
+            acc::VariableTypeCategory typeCategory =
+                ptrTy.getPointeeTypeCategory(
+                    cast<TypedValue<acc::PointerLikeType>>(var),
+                    acc::getVarType(op));
+            llvm::errs() << "\t\tType category: " << typeCategory << "\n";
+          }
+        }
+
         if (mappableTy) {
           llvm::errs() << "\tMappable: " << mappableTy << "\n";
+
+          acc::VariableTypeCategory typeCategory =
+              mappableTy.getTypeCategory(var);
+          llvm::errs() << "\t\tType category: " << typeCategory << "\n";
+
           if (datalayout.has_value()) {
             auto size = mappableTy.getSizeInBytes(
                 acc::getVar(op), acc::getBounds(op), datalayout.value());
@@ -61,10 +89,6 @@ struct TestFIROpenACCInterfaces
               llvm::errs() << "\t\tBound[" << idx << "]: " << bound << "\n";
             }
           }
-        } else {
-          assert(acc::isPointerLikeType(typeOfVar) &&
-              "expected to be pointer-like");
-          llvm::errs() << "\tPointer-like: " << typeOfVar << "\n";
         }
       }
     });

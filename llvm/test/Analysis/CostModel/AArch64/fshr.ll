@@ -15,7 +15,7 @@ entry:
 
 define i8 @fshr_i8_3rd_arg_var(i8 %a, i8 %b, i8 %c) {
 ; CHECK-LABEL: 'fshr_i8_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %fshr = tail call i8 @llvm.fshr.i8(i8 %a, i8 %b, i8 %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %fshr = tail call i8 @llvm.fshr.i8(i8 %a, i8 %b, i8 %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %fshr
 ;
 entry:
@@ -49,7 +49,7 @@ entry:
 
 define i32 @fshr_i32_3rd_arg_var(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: 'fshr_i32_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %fshr = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %fshr = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %fshr
 ;
 entry:
@@ -71,7 +71,7 @@ entry:
 
 define i64 @fshr_i64_3rd_arg_var(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: 'fshr_i64_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %fshr = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %fshr = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %fshr
 ;
 entry:
@@ -116,7 +116,7 @@ entry:
 
 define <16 x i8> @fshr_v16i8_3rd_arg_var(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: 'fshr_v16i8_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 118 for instruction: %fshr = tail call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %fshr = tail call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %fshr
 ;
 entry:
@@ -148,7 +148,7 @@ entry:
 
 define <8 x i16> @fshr_v8i16_3rd_arg_var(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: 'fshr_v8i16_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %fshr = tail call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %fshr = tail call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %fshr
 ;
 entry:
@@ -180,7 +180,7 @@ entry:
 
 define <4 x i32> @fshr_v4i32_3rd_arg_var(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: 'fshr_v4i32_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %fshr = tail call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %fshr = tail call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %fshr
 ;
 entry:
@@ -212,7 +212,7 @@ entry:
 
 define <2 x i64> @fshr_v2i64_3rd_arg_var(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
 ; CHECK-LABEL: 'fshr_v2i64_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fshr = tail call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %fshr = tail call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %fshr
 ;
 entry:
@@ -224,7 +224,7 @@ declare <2 x i64> @llvm.fshr.v4i64(<2 x i64>, <2 x i64>, <2 x i64>)
 
 define <4 x i30> @fshr_v4i30_3rd_arg_var(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c) {
 ; CHECK-LABEL: 'fshr_v4i30_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %fshr = tail call <4 x i30> @llvm.fshr.v4i30(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %fshr = tail call <4 x i30> @llvm.fshr.v4i30(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i30> %fshr
 ;
 entry:

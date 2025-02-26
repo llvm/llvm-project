@@ -57,6 +57,17 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  static constexpr unsigned MaxRecursionDepth = 6;
+
+  bool hasAllNBitUsers(const MachineInstr &MI, unsigned Bits,
+                       const unsigned Depth = 0) const;
+  bool hasAllHUsers(const MachineInstr &MI) const {
+    return hasAllNBitUsers(MI, 16);
+  }
+  bool hasAllWUsers(const MachineInstr &MI) const {
+    return hasAllNBitUsers(MI, 32);
+  }
+
   bool isRegInGprb(Register Reg) const;
   bool isRegInFprb(Register Reg) const;
 
@@ -182,6 +193,79 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 #include "RISCVGenGlobalISel.inc"
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
 {
+}
+
+// Mimics optimizations in ISel and RISCVOptWInst Pass
+bool RISCVInstructionSelector::hasAllNBitUsers(const MachineInstr &MI,
+                                               unsigned Bits,
+                                               const unsigned Depth) const {
+
+  assert((MI.getOpcode() == TargetOpcode::G_ADD ||
+          MI.getOpcode() == TargetOpcode::G_SUB ||
+          MI.getOpcode() == TargetOpcode::G_MUL ||
+          MI.getOpcode() == TargetOpcode::G_SHL ||
+          MI.getOpcode() == TargetOpcode::G_LSHR ||
+          MI.getOpcode() == TargetOpcode::G_AND ||
+          MI.getOpcode() == TargetOpcode::G_OR ||
+          MI.getOpcode() == TargetOpcode::G_XOR ||
+          MI.getOpcode() == TargetOpcode::G_SEXT_INREG || Depth != 0) &&
+         "Unexpected opcode");
+
+  if (Depth >= RISCVInstructionSelector::MaxRecursionDepth)
+    return false;
+
+  auto DestReg = MI.getOperand(0).getReg();
+  for (auto &UserOp : MRI->use_nodbg_operands(DestReg)) {
+    assert(UserOp.getParent() && "UserOp must have a parent");
+    const MachineInstr &UserMI = *UserOp.getParent();
+    unsigned OpIdx = UserOp.getOperandNo();
+
+    switch (UserMI.getOpcode()) {
+    default:
+      return false;
+    case RISCV::ADDW:
+    case RISCV::ADDIW:
+    case RISCV::SUBW:
+      if (Bits >= 32)
+        break;
+      return false;
+    case RISCV::SLL:
+    case RISCV::SRA:
+    case RISCV::SRL:
+      // Shift amount operands only use log2(Xlen) bits.
+      if (OpIdx == 2 && Bits >= Log2_32(Subtarget->getXLen()))
+        break;
+      return false;
+    case RISCV::SLLI:
+      // SLLI only uses the lower (XLen - ShAmt) bits.
+      if (Bits >= Subtarget->getXLen() - UserMI.getOperand(2).getImm())
+        break;
+      return false;
+    case RISCV::ANDI:
+      if (Bits >= (unsigned)llvm::bit_width<uint64_t>(
+                      (uint64_t)UserMI.getOperand(2).getImm()))
+        break;
+      goto RecCheck;
+    case RISCV::AND:
+    case RISCV::OR:
+    case RISCV::XOR:
+    RecCheck:
+      if (hasAllNBitUsers(UserMI, Bits, Depth + 1))
+        break;
+      return false;
+    case RISCV::SRLI: {
+      unsigned ShAmt = UserMI.getOperand(2).getImm();
+      // If we are shifting right by less than Bits, and users don't demand any
+      // bits that were shifted into [Bits-1:0], then we can consider this as an
+      // N-Bit user.
+      if (Bits > ShAmt && hasAllNBitUsers(UserMI, Bits - ShAmt, Depth + 1))
+        break;
+      return false;
+    }
+    }
+  }
+
+  return true;
 }
 
 InstructionSelector::ComplexRendererFns
@@ -537,7 +621,7 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
     return;
   }
 
-  // We found an ICmp, do some canonicalizations.
+  // We found an ICmp, do some canonicalization.
 
   // Adjust comparisons to use comparison with 0 if possible.
   if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
@@ -651,7 +735,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
   }
   case TargetOpcode::G_FCONSTANT: {
-    // TODO: Use constant pool for complext constants.
+    // TODO: Use constant pool for complex constants.
     // TODO: Optimize +0.0 to use fcvt.d.w for s64 on rv32.
     Register DstReg = MI.getOperand(0).getReg();
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
