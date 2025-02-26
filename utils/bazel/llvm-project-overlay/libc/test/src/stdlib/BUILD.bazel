@@ -150,6 +150,37 @@ libc_test(
 )
 
 libc_support_library(
+    name = "strfrom_test_support",
+    hdrs = ["StrfromTest.h"],
+    deps = [
+        "//libc:__support_cpp_type_traits",
+        "//libc:__support_fputil_fp_bits",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
+libc_test(
+    name = "strfromf_test",
+    srcs = ["strfromf_test.cpp"],
+    libc_function_deps = ["//libc:strfromf"],
+    deps = [":strfrom_test_support"],
+)
+
+libc_test(
+    name = "strfromd_test",
+    srcs = ["strfromd_test.cpp"],
+    libc_function_deps = ["//libc:strfromd"],
+    deps = [":strfrom_test_support"],
+)
+
+libc_test(
+    name = "strfroml_test",
+    srcs = ["strfroml_test.cpp"],
+    libc_function_deps = ["//libc:strfroml"],
+    deps = [":strfrom_test_support"],
+)
+
+libc_support_library(
     name = "strtol_test_helper",
     hdrs = ["StrtolTest.h"],
     deps = [
