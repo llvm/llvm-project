@@ -924,6 +924,8 @@ def warn_mmap_redundant_export_as : Warning<
   InGroup<PrivateModule>;
 def err_mmap_submodule_export_as : Error<
   "only top-level modules can be re-exported as public">;
+def err_mmap_qualified_export_as : Error<
+  "a module can only be re-exported as another top-level module">;
 
 def warn_quoted_include_in_framework_header : Warning<
   "double-quoted include \"%0\" in framework header, "
