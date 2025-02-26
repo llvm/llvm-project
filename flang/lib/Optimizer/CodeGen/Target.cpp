@@ -1058,7 +1058,7 @@ struct TargetPPC64 : public GenericTarget<TargetPPC64> {
     unsigned short align{
         std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
     marshal.emplace_back(fir::ReferenceType::get(ty),
-                         AT{align, /*byvale*/ !isResult, /*sret*/ isResult});
+                         AT{align, /*byval*/ !isResult, /*sret*/ isResult});
     return marshal;
   }
 

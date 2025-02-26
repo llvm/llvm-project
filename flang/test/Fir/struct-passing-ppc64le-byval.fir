@@ -1,7 +1,8 @@
 // Test ppc64le rewrite of struct passed by value (BIND(C), VALUE derived types).
 //
-// RUN: fir-opt --target-rewrite="target=ppc64le-unknown-linux" %s | FileCheck %s
-// REQUIRES: powerpc-registered-target
+// RUN: fir-opt --target-rewrite="target=ppc64le-ibm-linux" %s | FileCheck %s
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512", llvm.target_triple = "powerpc64le-unknown-linux-gnu"} {
 
 // character type
 func.func @csubch(%arg0: !fir.type<_QFcsubchTdt{c:!fir.char<1>}> {fir.bindc_name = "arg"}) attributes {fir.bindc_name = "csubch"} { return }
@@ -77,3 +78,5 @@ func.func @csub5(%arg0: !fir.type<_QFcsub5Tdt1{xdt0:!fir.type<_QFcsub5Tdt0{f1:co
 
 func.func @csub6(%arg0: !fir.type<_QFcsub6Tdt1{xdt0:!fir.type<_QFcsub6Tdt0{f1:complex<f32>}>,x1:f64}> {fir.bindc_name = "arg"}) attributes {fir.bindc_name = "csub6"} { return }
 //CHECK-LABEL: func.func @csub6(%arg0: !fir.array<2xi64> {fir.bindc_name = "arg"}) attributes {fir.bindc_name = "csub6"}
+
+}
