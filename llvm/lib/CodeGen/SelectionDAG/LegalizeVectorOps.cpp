@@ -515,7 +515,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
                                     Node->getOperand(0).getValueType());
     // Defer non-vector results to LegalizeDAG.
     if (Action == TargetLowering::Promote)
-       Action = TargetLowering::Legal;
+      Action = TargetLowering::Legal;
     break;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
