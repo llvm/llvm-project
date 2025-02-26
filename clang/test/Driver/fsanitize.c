@@ -1166,7 +1166,7 @@
 
 // -fsanitize-skip-hot-cutoff=undefined=0.5
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-skip-hot-cutoff=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF1
-// CHECK-SKIP-HOT-CUTOFF1: "-fsanitize-skip-hot-cutoff={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.5(0*),?){19}"}}
+// CHECK-SKIP-HOT-CUTOFF1: "-fsanitize-skip-hot-cutoff={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function)=0.5(0*),?){19}"}}
 
 // No-op: no sanitizers are specified
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF2
