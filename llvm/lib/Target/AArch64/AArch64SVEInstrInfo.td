@@ -2994,7 +2994,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm : unpred_loadstore_bitcast<nxv2f64>;
 
   // Allow using LDR/STR to avoid the predicate dependence.
-  let Predicates = [IsLE, AllowMisalignedMemAccesses] in
+  let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses] in
     foreach Ty = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in {
       let AddedComplexity = 2 in {
         def : Pat<(Ty (load (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset))),
