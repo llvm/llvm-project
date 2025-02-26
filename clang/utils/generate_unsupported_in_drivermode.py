@@ -81,57 +81,60 @@ class DriverData:
     visibility_str: The corresponding visibility string from OptionVisibility in Options.td
     lit_cmd_end: String at the end of the Lit command
     check_str: The string or regex to be sent to FileCheck
-    supported_sequence: List of UnsupportedDriverOption objects for supported options
-                        that are Kind *JOINED*, as defined in Options.td
+    supported_joined_option_sequence: List of UnsupportedDriverOption objects for supported options
+                                      that are Kind *JOINED*, as defined in Options.td
+    supported_non_joined_option_sequence: List of UnsupportedDriverOption objects for supported options
+                                          that are not Kind *JOINED*, as defined in Options.td
     test_option_sequence: A list of all the prefix-option pairs that will be tested for this driver
     """
 
     lit_cmd_prefix: str
     lit_cmd_options: str
     visibility_str: str
-    lit_cmd_end: str = " - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK-COUNT-"
-    check_str: str = "{{(unknown argument|n?N?o such file or directory)}}"
-    supported_sequence: list[UnsupportedDriverOption] = dataclasses.field(
+    lit_cmd_end: str
+    check_str: str
+    supported_joined_option_sequence: list[UnsupportedDriverOption] = dataclasses.field(
         default_factory=list
+    )
+    supported_non_joined_option_sequence: list[UnsupportedDriverOption] = (
+        dataclasses.field(default_factory=list)
     )
     test_option_sequence: list[str] = dataclasses.field(default_factory=list)
 
 
-def find_groups(options_dictionary, option):
-    """Find the groups for a given option
+def collect_transitive_groups(member, options_dictionary):
+    """Find the groups for a given member, where a member can be an option or a group.
     Note that groups can themselves be part of groups, hence the recursion
 
-    For example, considering option "C", it has the following 'Group' list as defined by Options.td:
-      "Group": {
-        "def": "Preprocessor_Group",
-        "kind": "def",
-        "printable": "Preprocessor_Group"
+    For example, considering option 'C', it has the following 'Group' field as defined by Options.td:
+      "C": {
+        "Group": {
+          "def": "Preprocessor_Group",
+          // ...
+        },
+        // ...
       },
-    Preprocessor_Group is itself part of CompileOnly_Group, so option C would be part of both groups
-      "Group": {
-        "def": "CompileOnly_Group",
-        "kind": "def",
-        "printable": "CompileOnly_Group"
+    'Preprocessor_Group' is itself part of 'CompileOnly_Group', so option 'C' would be part of both groups
+      "Preprocessor_Group": {
+        // ...
+        "Group": {
+          "def": "CompileOnly_Group",
+          // ...
+        },
+        // ...
       },
 
+    member: An option object or group object from Options.td.
     options_dictionary: The converted Python dictionary from the Options.td json string
-    option: The option object from Options.td
 
-    Return: A set including the group found for the option
+    Return: A set including the group(s) found for the member. If no groups found, returns an empty set
     """
-    group_list = options_dictionary[option]["Group"]
+    parent_field = options_dictionary[member]["Group"]
+    if parent_field is None:
+        return set()
 
-    if group_list is None:
-        return None
-    found_group = group_list["def"]
-    group_set = {found_group}
-
-    sub_group_set = find_groups(options_dictionary, found_group)
-    if sub_group_set is None:
-        return group_set
-    else:
-        group_set.update(sub_group_set)
-        return group_set
+    parent_name = parent_field["def"]
+    return {parent_name} | collect_transitive_groups(parent_name, options_dictionary)
 
 
 def get_visibility(option):
@@ -139,15 +142,15 @@ def get_visibility(option):
     option: The option object from Options.td
     Return: Set that contains the visibilities of the given option
     """
-    visibility_set = set(())
+    visibility_set = set()
     # Check for the option's explicit visibility
     for visibility in options_dictionary[option]["Visibility"]:
         if visibility is not None:
             visibility_set.add(visibility["def"])
 
     # Check for the option's group's visibility
-    group_set = find_groups(options_dictionary, option)
-    if group_set is not None:
+    group_set = collect_transitive_groups(option, options_dictionary)
+    if group_set:
         for group_name in group_set:
             for visibility in options_dictionary[group_name]["Visibility"]:
                 visibility_set.add(visibility["def"])
@@ -157,10 +160,10 @@ def get_visibility(option):
 
 def get_lit_test_note(test_visibility):
     """Return the note to be included at the start of the Lit test file
-    test_visibility: Any VISIBILITY_* variable. VISIBILITY_FLANG will return the .f90 formatted test note.
-    All other will return the .c formatted test note
+    test_visibility: Any VISIBILITY_* variable. VISIBILITY_DEFAULT will return the .c formatted test note.
+    All other will return the .f90 formatted test note
     """
-    test_prefix = EXCLAMATION if test_visibility == VISIBILITY_FLANG else SLASH_SLASH
+    test_prefix = SLASH_SLASH if test_visibility == VISIBILITY_DEFAULT else EXCLAMATION
 
     return (
         f"{test_prefix}NOTE: This lit test was automatically generated to validate "
@@ -173,14 +176,12 @@ def get_lit_test_note(test_visibility):
     )
 
 
-def write_lit_test(test_path, test_visibility, unsupported_list):
+def write_lit_test(test_path, test_visibility):
     """Write the Lit tests to file
     test_path: File write path
-    test_visibility: VISIBILITY_DEFAULT or VISIBILITY_FLANG, which indicates whether to write
-    to the main Lit test file or flang Lit test file respectively
-    unsupported_list: List of UnsupportedDriverOption objects
+    test_visibility: VISIBILITY_DEFAULT, VISIBILITY_FLANG, or VISIBILITY_FC1 which indicates whether to write
+    to the main Lit test file, the flang test file, or the flang -fc1 test file
     """
-    # If each option is tested with its own run line, the Lit tests become quite large. Instead, test options in batches
     try:
         with open(test_path, "w") as lit_file:
             lit_file.write(get_lit_test_note(test_visibility))
@@ -191,54 +192,57 @@ def write_lit_test(test_path, test_visibility, unsupported_list):
                     visibility == VISIBILITY_FLANG or visibility == VISIBILITY_FC1
                 )
 
-                if (test_visibility == VISIBILITY_FLANG and not is_flang_pair) or (
-                    test_visibility == VISIBILITY_DEFAULT and is_flang_pair
+                if (
+                    (
+                        test_visibility == VISIBILITY_FLANG
+                        and visibility != VISIBILITY_FLANG
+                    )
+                    or (
+                        test_visibility == VISIBILITY_FC1
+                        and visibility != VISIBILITY_FC1
+                    )
+                    or (test_visibility == VISIBILITY_DEFAULT and is_flang_pair)
                 ):
                     continue
 
                 comment_str = EXCLAMATION if is_flang_pair else SLASH_SLASH
-                last_batch_size = 0
 
                 unflattened_option_data = list(
                     batched(driver_data.test_option_sequence, batch_size)
                 )
 
-                for batch in unflattened_option_data:
-                    # Example run line: // RUN: not --crash %clang -cc1 -A -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1Option %s
+                for i, batch in enumerate(unflattened_option_data):
+                    # Example run line: "// RUN: not %clang -cc1 -A ...  -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK0 %s"
                     run_cmd = (
                         f"{comment_str}RUN: not " + driver_data.lit_cmd_prefix
-                    )  # "// RUN: not --crash %clang -cc1 "
+                    )  # "// RUN: not %clang -cc1 "
 
                     for option_str in batch:
                         run_cmd += option_str + " "  # "-A"
 
                     run_cmd += (
                         driver_data.lit_cmd_options  # "-x c++"
-                        + driver_data.lit_cmd_end  # " - < /dev/null 2>&1 | FileCheck  -check-prefix=CC1OptionCHECK-COUNT-"
-                        + str(len(batch))  # 100
+                        + driver_data.lit_cmd_end  # " - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK"
+                        + str(i)  # "0"
                         + " %s\n\n"  # " %s"
                     )
 
                     lit_file.write(run_cmd)
 
-                    last_batch_size = len(batch)
-
-                # CHECK statements. Instead of writing custom CHECK statements for each RUN line, create two statements
-                # per driver. One statement for a full batch, and a second for a partial batch.
-                check_cmd_start = (
-                    comment_str + visibility + "CHECK-COUNT-"
-                )  # //CC1OptionCHECK-COUNT-
-                check_cmd_end = (
-                    ": " + driver_data.check_str + "\n"
-                )  # ": {{(unknown argument|n?N?o such file or directory)}}"
-                check_cmd_full_batch = (
-                    check_cmd_start + str(batch_size) + check_cmd_end
-                )  # "//CC1OptionCHECK-COUNT-100: {{(unknown argument|n?N?o such file or directory)}}"
-                check_cmd_partial_batch = (
-                    check_cmd_start + str(last_batch_size) + check_cmd_end + "\n"
-                )  # "//CC1OptionCHECK-COUNT-22: {{(unknown argument|n?N?o such file or directory)}}"
-
-                lit_file.write(check_cmd_full_batch + check_cmd_partial_batch)
+                    for option_str in batch:
+                        # Example check line: "// CC1OptionCHECK0: {{(unknown argument).*-A}}"
+                        check_cmd = (
+                            comment_str  # "//
+                            + visibility  # "CC1Option"
+                            + "CHECK"
+                            + str(i)  # "0"
+                            + ": {{("
+                            + driver_data.check_str  # "unknown argument"
+                            + ").*"
+                            + option_str.replace("+", "\\+")  # "-A"
+                            + "}}\n"
+                        )
+                        lit_file.write(check_cmd)
 
     except (FileNotFoundError, PermissionError, OSError):
         raise IOError(f"Error opening {test_path}. Exiting")
@@ -309,48 +313,50 @@ driver_cc1as = DriverData(
     "%clang -cc1as ",
     "",
     VISIBILITY_CC1AS,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_CC1AS}CHECK-COUNT-",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_CC1AS}CHECK",
+    "unknown argument",
 )
 driver_cc1 = DriverData(
     "%clang -cc1 ",
     " -x c++",
     VISIBILITY_CC1,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_CC1}CHECK-COUNT-",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_CC1}CHECK",
+    "unknown argument",
 )
 driver_cl = DriverData(
     "%clang_cl ",
     " -### /c /WX -Werror",
     VISIBILITY_CL,
-    f" 2>&1 | FileCheck -check-prefix={VISIBILITY_CL}CHECK-COUNT-",
-    "{{(unknown argument ignored in|no such file or directory|argument unused during compilation)}}",
+    f" 2>&1 | FileCheck -check-prefix={VISIBILITY_CL}CHECK",
+    "unknown argument ignored in clang-cl",
 )
 driver_dxc = DriverData(
     "%clang_dxc ",
     " -### /T lib_6_7",
     VISIBILITY_DXC,
-    f" 2>&1 | FileCheck -check-prefix={VISIBILITY_DXC}CHECK-COUNT-",
-    "{{(unknown argument|no such file or directory|argument unused during compilation)}}",
+    f" 2>&1 | FileCheck -check-prefix={VISIBILITY_DXC}CHECK",
+    "unknown argument",
 )
 driver_default = DriverData(
     "%clang ",
     " -### -x c++ -c",
     VISIBILITY_DEFAULT,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_DEFAULT}CHECK-COUNT-",
-    "{{(unknown argument|unsupported option|argument unused|no such file or directory)}}",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_DEFAULT}CHECK",
+    "unknown argument",
 )
 driver_fc1 = DriverData(
-    "%clang --driver-mode=flang -fc1 ",
+    "%flang_fc1 ",
     "",
     VISIBILITY_FC1,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_FC1}CHECK-COUNT-",
-    "{{(unknown argument|no such file or directory|does not exist)}}",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_FC1}CHECK",
+    "unknown argument",
 )
 driver_flang = DriverData(
     "%clang --driver-mode=flang ",
     " -### -x c++ -c",
     VISIBILITY_FLANG,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_FLANG}CHECK-COUNT-",
-    "{{unknown argument|unsupported option|argument unused during compilation|invalid argument|no such file or directory}}",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_FLANG}CHECK",
+    "unknown argument",
 )
 
 driver_data_dict = {
@@ -390,6 +396,15 @@ for option in options_dictionary["!instanceof"]["Option"]:
     if prefixes is not None and len(prefixes) > 0:
         # Assuming the first prefix is the preferred prefix
         prefix = prefixes[0]
+        # When the "/" prefix is used incorrectly, misleading output is returned that also makes parsing more
+        # complicated. Instead, given all "/" prefix options accept prefix "-" as well, use "-", which returns the
+        # typical error.
+        # Example:
+        #   clang -cc1 /AI -x c++
+        #     error: error reading '/AI': No such file or directory
+        #   clang -cc1 -AI -x c++
+        #     error: unknown argument: '-AI'
+        prefix = "-" if prefix == "/" else prefix
 
     tmp_visibility_set.update(get_visibility(option))
 
@@ -422,13 +437,18 @@ for option in options_dictionary["!instanceof"]["Option"]:
                 UnsupportedDriverOption(driver, option, option_name, prefix)
             )
         elif is_option_kind_joined:
-            driver_data_dict[driver].supported_sequence.append(
+            driver_data_dict[driver].supported_joined_option_sequence.append(
+                UnsupportedDriverOption(driver, option, option_name, prefix)
+            )
+        else:
+            driver_data_dict[driver].supported_non_joined_option_sequence.append(
                 UnsupportedDriverOption(driver, option, option_name, prefix)
             )
 
 # Sort the supported lists for the next block
-for visibility, driver_data in driver_data_dict.items():
-    driver_data.supported_sequence.sort(key=len, reverse=True)
+for driver_data in driver_data_dict.values():
+    driver_data.supported_joined_option_sequence.sort(key=len, reverse=True)
+    driver_data.supported_non_joined_option_sequence.sort(key=len, reverse=True)
 
 # For a given driver, this script cannot generate tests for unsupported options whose option "Name" have a prefix that
 # corresponds to a supported/visible option of Kind *JOINED*. These driver-option pairs are removed here.
@@ -439,23 +459,48 @@ for visibility, driver_data in driver_data_dict.items():
 #            clang --driver-mode=flang -O_flag -### -x c++ -c - < /dev/null 2>&1
 #          Will be interpreted as this:
 #            clang --driver-mode=flang -O _flag -### -x c++ -c - < /dev/null 2>&1
+#
+# Additionally, there are certain distinct options with matching option names, which would otherwise be distinguished by
+# the prefix used. Unfortunately, as documented earlier, this script replaces prefix "/" with "-". As a result, the
+# visibility of corresponding options must be considered.
+# Example: Option "_SLASH_H" is not visible to CC1Option, but option "H" is visible to CC1Option.
 for unsupported_pair in unsupported_sequence:
-    supported_seq = driver_data_dict[unsupported_pair.driver].supported_sequence
+    supported_joined_seq = driver_data_dict[
+        unsupported_pair.driver
+    ].supported_joined_option_sequence
+    supported_non_joined_seq = driver_data_dict[
+        unsupported_pair.driver
+    ].supported_non_joined_option_sequence
 
-    start_index = bisect_left(supported_seq, unsupported_pair)
+    # Check for matching kind *JOINED* option name prefixes
+    start_index = bisect_left(supported_joined_seq, unsupported_pair)
 
-    for supported_pair in supported_seq[start_index:]:
+    for supported_pair in supported_joined_seq[start_index:]:
         if (
             unsupported_pair.option_name.startswith(supported_pair.option_name)
             and unsupported_pair not in skipped_sequence
         ):
             skipped_sequence.append(unsupported_pair)
 
+    # Check for matching option names
+    start_index = bisect_left(supported_non_joined_seq, unsupported_pair)
+
+    for supported_pair in supported_non_joined_seq[start_index:]:
+        if (
+            unsupported_pair.option_name == supported_pair.option_name
+            and unsupported_pair.driver == supported_pair.driver
+            and unsupported_pair not in skipped_sequence
+        ):
+            skipped_sequence.append(unsupported_pair)
+            break
+        if len(supported_pair.option_name) > len(unsupported_pair.option_name):
+            break
+
 for skip_pair in skipped_sequence:
     unsupported_sequence.remove(skip_pair)
 
 # Add the final list of option data to each driver's test list
-for index, unsupported_pair in enumerate(unsupported_sequence):
+for unsupported_pair in unsupported_sequence:
     driver_data_dict[unsupported_pair.driver].test_option_sequence.append(
         unsupported_pair.prefix + unsupported_pair.option_name
     )
@@ -463,10 +508,12 @@ for index, unsupported_pair in enumerate(unsupported_sequence):
 write_lit_test(
     "../test/Driver/unsupported_in_drivermode.c",
     VISIBILITY_DEFAULT,
-    unsupported_sequence,
 )
 write_lit_test(
     "../test/Driver/flang/unsupported_in_flang.f90",
     VISIBILITY_FLANG,
-    unsupported_sequence,
+)
+write_lit_test(
+    "../../flang/test/Driver/unsupported_in_flang_fc1.f90",
+    VISIBILITY_FC1,
 )
