@@ -218,7 +218,6 @@ std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
 #define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
 #endif
 
-
 TELEMETRY_TEST(TelemetryTest, TelemetryDisabled) {
   TestContext Context;
   Context.HasVendorPlugin = false;

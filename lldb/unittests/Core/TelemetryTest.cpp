@@ -72,7 +72,6 @@ public:
 #define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
 #endif
 
-
 TELEMETRY_TEST(TelemetryTest, PluginTest) {
   // This would have been called by the plugin reg in a "real" plugin
   // For tests, we just call it directly.
