@@ -43,10 +43,6 @@
 ; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on test_mul_const_nuw_unsigned_14
 ; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on test_mul_const_nuw_unsigned_14
 ; CHECK-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on test_mul_const_nuw_unsigned_14
-; CHECK-NEXT: Invalidating analysis: DemandedBitsAnalysis on test_mul_const_nuw_unsigned_14
-; CHECK-NEXT: Running pass: RequireAnalysisPass
-; CHECK-NEXT: Running analysis: DemandedBitsAnalysis on test_mul_const_nuw_unsigned_14
-
 
 declare { i8, i1 } @llvm.ssub.with.overflow.i8(i8, i8)
 
