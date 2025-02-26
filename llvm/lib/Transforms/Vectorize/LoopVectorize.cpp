@@ -8623,7 +8623,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       // to replace operands with constants.
       auto GetConstantViaSCEV = [this](VPValue *Op) {
         ScalarEvolution &SE = *PSE.getSE();
-        Value *V = dyn_cast_if_present<Value>(Op->getUnderlyingValue());
+        Value *V = Op->getUnderlyingValue();
         if (!V || !SE.isSCEVable(V->getType()))
           return Op;
         if (auto *C = dyn_cast<SCEVConstant>(SE.getSCEV(V)))
