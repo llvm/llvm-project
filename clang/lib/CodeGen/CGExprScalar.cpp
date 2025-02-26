@@ -2363,8 +2363,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // manufactured and them residing in the IndirectAS is a target specific
     // detail, and doing an AS cast here still retains the semantics the user
     // expects. It is desirable to remove this iff a better solution is found.
-    if (SrcTy != DstTy && isa<llvm::Argument>(Src) &&
-        cast<llvm::Argument>(Src)->hasStructRetAttr())
+    if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
       return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(
           CGF, Src, E->getType().getAddressSpace(), DestTy.getAddressSpace(),
           DstTy);
