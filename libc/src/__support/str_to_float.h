@@ -225,7 +225,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero(mantissa) -
+  int32_t clz = static_cast<int32_t>(cpp::countl_zero(mantissa)) -
                  ((sizeof(UInt128) - sizeof(StorageType)) * CHAR_BIT);
   mantissa <<= clz;
 
