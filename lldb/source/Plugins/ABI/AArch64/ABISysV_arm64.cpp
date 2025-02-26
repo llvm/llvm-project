@@ -102,12 +102,7 @@ static Status PushToLinuxGuardedControlStack(addr_t return_addr,
   size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
                                                   sizeof(return_addr), error);
   if ((wrote != sizeof(return_addr) || error.Fail())) {
-    // When PrepareTrivialCall fails, the register context is not restored,
-    // unlike when an expression fails to execute. This is arguably a bug,
-    // see https://github.com/llvm/llvm-project/issues/124269.
-    // For now we are handling this here specifically. We can assume this
-    // write will work as the one to decrement the register did.
-    reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0 + 8);
+    // gcspr_el0 will be restored by the ThreadPlan's DoTakedown.
     return Status("Failed to write new Guarded Control Stack entry.");
   }
 
