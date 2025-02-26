@@ -31,3 +31,7 @@ Ron and Saiyed
 build/run issues: Scott Linder
 1083ec647f16 [reland][DebugInfo] Update DIBuilder insertion to take 
 ---
+revert : breaks build of 5 spec-accel codes
+25f29ee377b1 - [flang][OpenMP] Update all `lastprivate` symbols, not just in clauses (#125628)
+Kareem, Ron
+---
