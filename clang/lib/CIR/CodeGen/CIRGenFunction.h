@@ -849,8 +849,8 @@ public:
   /// in non-variably-sized elements, of a variable length array type,
   /// plus that largest non-variably-sized element type.  Assumes that
   /// the type has already been emitted with emitVariablyModifiedType.
-  VlaSizePair getVLASize(const VariableArrayType *vla);
-  VlaSizePair getVLASize(QualType vla);
+  VlaSizePair getVLASize(const VariableArrayType *type);
+  VlaSizePair getVLASize(QualType type);
 
   mlir::Value emitBuiltinObjectSize(const Expr *E, unsigned Type,
                                     cir::IntType ResType, mlir::Value EmittedE,
