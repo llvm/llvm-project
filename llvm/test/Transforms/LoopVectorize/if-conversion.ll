@@ -237,9 +237,6 @@ for.end:                                          ; preds = %for.inc, %entry
 ; Handle PHI with single incoming value having a full mask.
 ; PR34523
 
-; CHECK-LABEL: PR34523
-; CHECK: vector.body
-
 define void @PR34523() {
 ; CHECK-LABEL: define void @PR34523() {
 ; CHECK-NEXT:  [[BB1:.*:]]
