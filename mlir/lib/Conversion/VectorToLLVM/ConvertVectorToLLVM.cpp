@@ -35,13 +35,6 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-// Helper to reduce vector type by *all* but one rank at back.
-static VectorType reducedVectorTypeBack(VectorType tp) {
-  assert((tp.getRank() > 1) && "unlowerable vector type");
-  return VectorType::get(tp.getShape().take_back(), tp.getElementType(),
-                         tp.getScalableDims().take_back());
-}
-
 // Helper that picks the proper sequence for inserting.
 static Value insertOne(ConversionPatternRewriter &rewriter,
                        const LLVMTypeConverter &typeConverter, Location loc,
@@ -1223,7 +1216,6 @@ public:
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = insertOp->getLoc();
-    auto sourceType = insertOp.getSourceType();
     auto destVectorType = insertOp.getDestVectorType();
     auto llvmResultType = typeConverter->convertType(destVectorType);
     // Bail if result type cannot be lowered.
@@ -1233,53 +1225,74 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
-    // Overwrite entire vector with value. Should be handled by folder, but
-    // just to be safe.
-    ArrayRef<OpFoldResult> position(positionVec);
-    if (position.empty()) {
-      rewriter.replaceOp(insertOp, adaptor.getSource());
-      return success();
+    // The logic in this pattern mirrors VectorExtractOpConversion. Refer to
+    // its explanatory comment about how N-D vectors are converted as nested
+    // aggregates (llvm.array's) of 1D vectors.
+    //
+    // There are 3 steps here, vs 2 in VectorExtractOpConversion:
+    // - Extraction of a 1D vector from the nested aggregate: llvm.extractvalue.
+    // - Insertion into the 1D vector: llvm.insertelement.
+    // - Insertion of the 1D vector into the nested aggregate: llvm.insertvalue.
+
+    // Determine if we need to extract/insert a 1D vector out of the aggregate.
+    bool is1DVectorWithinAggregate = isa<LLVM::LLVMArrayType>(llvmResultType);
+    // Determine if we need to insert a scalar into the 1D vector.
+    bool isScalarWithin1DVector =
+        static_cast<int64_t>(positionVec.size()) == destVectorType.getRank();
+
+    ArrayRef<OpFoldResult> positionOf1DVectorWithinAggregate(
+        positionVec.begin(),
+        isScalarWithin1DVector ? positionVec.size() - 1 : positionVec.size());
+    OpFoldResult positionOfScalarWithin1DVector;
+    if (destVectorType.getRank() == 0) {
+      // Since the LLVM type converter converts 0D vectors to 1D vectors, we
+      // need to create a 0 here as the position into the 1D vector.
+      Type idxType = typeConverter->convertType(rewriter.getIndexType());
+      positionOfScalarWithin1DVector = rewriter.getZeroAttr(idxType);
+    } else if (isScalarWithin1DVector) {
+      positionOfScalarWithin1DVector = positionVec.back();
     }
 
-    // One-shot insertion of a vector into an array (only requires insertvalue).
-    if (isa<VectorType>(sourceType)) {
-      if (insertOp.hasDynamicPosition())
-        return failure();
-
-      Value inserted = rewriter.create<LLVM::InsertValueOp>(
-          loc, adaptor.getDest(), adaptor.getSource(), getAsIntegers(position));
-      rewriter.replaceOp(insertOp, inserted);
-      return success();
+    // We are going to mutate this 1D vector until it is either the final
+    // result (in the non-aggregate case) or the value that needs to be
+    // inserted into the aggregate result.
+    Value vector1d;
+    if (isScalarWithin1DVector) {
+      // Scalar-into-1D-vector case, so we know we will have to create a
+      // InsertElementOp. The question is into what destination.
+      if (is1DVectorWithinAggregate) {
+        // Aggregate case: the destination for the InsertElementOp needs to be
+        // extracted from the aggregate.
+        if (!llvm::all_of(positionOf1DVectorWithinAggregate,
+                          llvm::IsaPred<Attribute>)) {
+          // llvm.extractvalue does not support dynamic dimensions.
+          return failure();
+        }
+        vector1d = rewriter.create<LLVM::ExtractValueOp>(
+            loc, adaptor.getDest(),
+            getAsIntegers(positionOf1DVectorWithinAggregate));
+      } else {
+        // No-aggregate case. The destination for the InsertElementOp is just
+        // the insertOp's destination.
+        vector1d = adaptor.getDest();
+      }
+      // Insert the scalar into the 1D vector.
+      vector1d = rewriter.create<LLVM::InsertElementOp>(
+          loc, vector1d.getType(), vector1d, adaptor.getSource(),
+          getAsLLVMValue(rewriter, loc, positionOfScalarWithin1DVector));
+    } else {
+      // No scalar insertion. The 1D vector is just the source.
+      vector1d = adaptor.getSource();
     }
 
-    // Potential extraction of 1-D vector from array.
-    Value extracted = adaptor.getDest();
-    auto oneDVectorType = destVectorType;
-    if (position.size() > 1) {
-      if (insertOp.hasDynamicPosition())
-        return failure();
-
-      oneDVectorType = reducedVectorTypeBack(destVectorType);
-      extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, extracted, getAsIntegers(position.drop_back()));
+    Value result = vector1d;
+    if (is1DVectorWithinAggregate) {
+      result = rewriter.create<LLVM::InsertValueOp>(
+          loc, adaptor.getDest(), vector1d,
+          getAsIntegers(positionOf1DVectorWithinAggregate));
     }
 
-    // Insertion of an element into a 1-D LLVM vector.
-    Value inserted = rewriter.create<LLVM::InsertElementOp>(
-        loc, typeConverter->convertType(oneDVectorType), extracted,
-        adaptor.getSource(), getAsLLVMValue(rewriter, loc, position.back()));
-
-    // Potential insertion of resulting 1-D vector into array.
-    if (position.size() > 1) {
-      if (insertOp.hasDynamicPosition())
-        return failure();
-
-      inserted = rewriter.create<LLVM::InsertValueOp>(
-          loc, adaptor.getDest(), inserted,
-          getAsIntegers(position.drop_back()));
-    }
-
-    rewriter.replaceOp(insertOp, inserted);
+    rewriter.replaceOp(insertOp, result);
     return success();
   }
 };
