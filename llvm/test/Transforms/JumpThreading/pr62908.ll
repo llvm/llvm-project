@@ -5,6 +5,17 @@
 
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
+; CHECK-NEXT:  join.thread:
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       unreachable:
+; CHECK-NEXT:    [[SH_PROM:%.*]] = zext i32 -1 to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 -1, [[SH_PROM]]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[SHL]] to i32
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[CONV]], [[UNREACHABLE:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[END]], label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i32 0
 ;
