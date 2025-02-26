@@ -887,6 +887,23 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
         NewMI.setDebugLoc(EmptyDL);
 
         NewMI.getOperand(0).setReg(NewReg);
+        for (MachineOperand &MO :
+             llvm::make_early_inc_range(MRI->use_nodbg_operands(VReg))) {
+          if (MO.isUse()) {
+            MO.setReg(NewReg);
+          }
+        }
+        auto *SiblingBBMI = PREMap.try_emplace(&MI).first->getFirst();
+        for (MachineOperand &MO :
+             llvm::make_early_inc_range(MRI->use_nodbg_operands(
+                 SiblingBBMI->getOperand(0).getReg()))) {
+          if (MO.isUse()) {
+            MachineInstr *UseMI = MO.getParent();
+            PREMap.erase(UseMI);
+            MO.setReg(NewReg);
+            PREMap[UseMI] = UseMI->getParent();
+          }
+        }
 
         PREMap[&MI] = CMBB;
         ++NumPREs;
