@@ -740,7 +740,7 @@ def UMin : DXILOp<40, binary> {
 }
 
 def UAddc : DXILOp<44, binaryWithCarryOrBorrow > {
-  let Doc = "Unsigned 32-bit integer arithmetic add with carry. uaddc(a,b) = (a+b, a+b overflowed ? 1 : 0)";
+  let Doc = "unsigned add of 32-bit operand with the carry";
   let intrinsics = [IntrinSelect<int_uadd_with_overflow>];
   let arguments = [OverloadTy, OverloadTy];
   let result = BinaryWithCarryTy;
