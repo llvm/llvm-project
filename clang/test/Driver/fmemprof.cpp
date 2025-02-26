@@ -17,3 +17,11 @@
 
 // RUN: not %clangxx --target=x86_64-linux-gnu -fprofile-generate -fmemory-profile-use=foo %s -### 2>&1 | FileCheck %s --check-prefix=CONFLICTWITHPGOINSTR
 // CONFLICTWITHPGOINSTR: error: invalid argument '-fmemory-profile-use=foo' not allowed with '-fprofile-generate'
+
+// Test that we export the __memprof_default_options_str on Darwin because it has WeakAnyLinkage
+// RUN: %clangxx --target=arm64-apple-ios -fmemory-profile %s -### 2>&1 | FileCheck %s -check-prefix=EXPORT-BASE --implicit-check-not=exported_symbol
+// RUN: %clangxx --target=x86_64-linux-gnu -fmemory-profile %s -### 2>&1 | FileCheck %s -check-prefix=EXPORT-BASE --implicit-check-not=exported_symbol
+// RUN: %clangxx --target=arm64-apple-ios -fmemory-profile -exported_symbols_list /dev/null %s -### 2>&1 | FileCheck %s --check-prefixes=EXPORT-BASE,EXPORT
+// FIXME: Darwin needs to link in the runtime, then we can use the regular CHECK prefix
+// EXPORT-BASE: "-cc1" {{.*}} "-fmemory-profile"
+// EXPORT: "-exported_symbol" "___memprof_default_options_str"

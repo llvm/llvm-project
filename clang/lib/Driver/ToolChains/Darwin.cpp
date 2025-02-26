@@ -1617,6 +1617,10 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     }
   }
 
+  if (Sanitize.needsMemProfRt())
+    if (hasExportSymbolDirective(Args))
+      addExportedSymbol(CmdArgs, "___memprof_default_options_str");
+
   const XRayArgs &XRay = getXRayArgs();
   if (XRay.needsXRayRt()) {
     AddLinkRuntimeLib(Args, CmdArgs, "xray");
