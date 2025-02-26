@@ -711,7 +711,6 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
 private:
   /// The executable loaded on the agent.
   hsa_executable_t Executable;
-  hsa_code_object_t CodeObject;
 #if SANITIZER_AMDGPU
   hsa_code_object_reader_t CodeObjectReader;
 #endif
@@ -1709,8 +1708,8 @@ private:
 
     /// Create an empty slot.
     StreamSlotTy()
-        : Signal(nullptr), Callbacks({}), ActionArgs({}),
-          OmptActionFunction(nullptr) {}
+        : Signal(nullptr), Callbacks({}), OmptActionFunction(nullptr),
+          ActionArgs({}) {}
 
     /// Schedule a host memory copy action on the slot.
     Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size) {
@@ -2025,8 +2024,8 @@ private:
     assert(Args->Signal &&
            "Invalid AMDGPUSignal Pointer in post kernel run processing");
     hsa_amd_profiling_dispatch_time_t TimeRec;
-    hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
-        Args->Agent, Args->Signal->get(), &TimeRec);
+    hsa_amd_profiling_get_dispatch_time(Args->Agent, Args->Signal->get(),
+                                        &TimeRec);
 
     uint64_t StartTime = TimeRec.start * Args->TicksToTime;
     uint64_t EndTime = TimeRec.end * Args->TicksToTime;
@@ -2913,7 +2912,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             "OMPX_ENABLE_GFX90A_COARSE_GRAIN_SHARED_ALLOC", false),
         OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
         OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
-        OMPX_APUPrefaultMemcopy("LIBOMPTARGET_APU_PREFAULT_MEMCOPY", "true"),
+        OMPX_APUPrefaultMemcopy("LIBOMPTARGET_APU_PREFAULT_MEMCOPY", true),
         OMPX_APUPrefaultMemcopySize("LIBOMPTARGET_APU_PREFAULT_MEMCOPY_SIZE",
                                     1 * 1024 * 1024), // 1MB
         OMPX_DGPUMaps("OMPX_DGPU_MAPS", false),
@@ -3885,6 +3884,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         break;
       case HSA_DEVICE_TYPE_DSP:
         TmpCharPtr = "DSP";
+        break;
+      case HSA_DEVICE_TYPE_AIE:
+        TmpCharPtr = "AIE";
         break;
       }
       Info.add("Device Type", TmpCharPtr);
@@ -5060,7 +5062,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (LaunchParams.Size)
     std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
 
-  uint64_t Buffer = 0;
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
   AMDGPUStreamTy *Stream = nullptr;
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
@@ -5111,7 +5112,7 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
   // This line should print exactly as the one in the old plugin.
   fprintf(
       stderr,
-      "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4luX%4d) "
+      "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4uX%4d) "
       "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u agpr_count:%u "
       "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
       "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
@@ -5304,8 +5305,8 @@ static std::pair<uint64_t, uint64_t>
 getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
   hsa_amd_profiling_dispatch_time_t TimeRec;
-  hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
-      Args->Agent, Args->Signal->get(), &TimeRec);
+  hsa_amd_profiling_get_dispatch_time(Args->Agent, Args->Signal->get(),
+                                      &TimeRec);
 
   uint64_t StartTime = TimeRec.start * Args->TicksToTime;
   uint64_t EndTime = TimeRec.end * Args->TicksToTime;
@@ -5317,8 +5318,7 @@ static std::pair<uint64_t, uint64_t>
 getCopyStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
   hsa_amd_profiling_async_copy_time_t TimeRec;
-  hsa_status_t Status =
-      hsa_amd_profiling_get_async_copy_time(Args->Signal->get(), &TimeRec);
+  hsa_amd_profiling_get_async_copy_time(Args->Signal->get(), &TimeRec);
   uint64_t StartTime = TimeRec.start * Args->TicksToTime;
   uint64_t EndTime = TimeRec.end * Args->TicksToTime;
 
