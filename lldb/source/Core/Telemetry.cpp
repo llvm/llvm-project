@@ -68,10 +68,7 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
 void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
-  serializer.write("username", username);
-  serializer.write("lldb_git_sha", lldb_git_sha);
-  serializer.write("lldb_path", lldb_path);
-  serializer.write("cwd", cwd);
+  serializer.write("lldb_version", lldb_version);
   if (exit_desc.has_value()) {
     serializer.write("exit_code", exit_desc->exit_code);
     serializer.write("exit_desc", exit_desc->description);
@@ -79,7 +76,7 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
 }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
-    : m_config(std::move(config)), m_id(MakeUUID) {}
+    : m_config(std::move(config)), m_id(MakeUUID()) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // Assign the manager_id, and debugger_id, if available, to this entry.
@@ -97,44 +94,20 @@ void TelemetryManager::AtDebuggerStartup(DebuggerInfo *entry) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
                    "Failed to dispatch entry at debugger startup: {0}");
   }
+}
 
-  void TelemetryManager::AtDebuggerExit(DebuggerInfo * entry) {
-    // There must be a reference to the debugger at this point.
-    assert(entry->debugger != nullptr);
+void TelemetryManager::AtDebuggerExit(DebuggerInfo * entry) {
+  // There must be a reference to the debugger at this point.
+  assert(entry->debugger != nullptr);
 
-    if (auto *selected_target =
-            entry->debugger->GetSelectedExecutionContext().GetTargetPtr()) {
-      if (!selected_target->IsDummyTarget()) {
-        const lldb::ProcessSP proc = selected_target->GetProcessSP();
-        if (proc == nullptr) {
-          // no process has been launched yet.
-          entry->exit_desc = {-1, "no process launched."};
-        } else {
-          entry->exit_desc = {proc->GetExitStatus(), ""};
-          if (const char *description = proc->GetExitDescription())
-            entry->exit_desc->description = std::string(description);
-        }
-      }
-    }
+  if (llvm::Error er = dispatch(entry)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                   "Failed to dispatch entry at debugger exit: {0}");
+  }
+}
 
-    if (llvm::Error er = dispatch(entry)) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                     "Failed to dispatch entry at debugger exit: {0}");
-    }
+const Config *TelemetryManager::GetConfig() { return m_config.get(); }
 
-    std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
-    TelemetryManager *TelemetryManager::getInstance() {
-      return g_instance.get();
-    }
-
-    void TelemetryManager::setInstance(
-        std::unique_ptr<TelemetryManager> manager) {
-      g_instance = std::move(manager);
-    }
-
-    
-const Config *getConfig() { return m_config.get(); }
-    
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
 TelemetryManager *TelemetryManager::GetInstance() {
   if (!Config::BuildTimeEnableTelemetry)
@@ -145,6 +118,7 @@ TelemetryManager *TelemetryManager::GetInstance() {
 void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
   g_instance = std::move(manager);
 }
+
 
 } // namespace telemetry
 } // namespace lldb_private

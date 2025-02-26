@@ -52,6 +52,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/lldb-enumerations.h"
 
 #if defined(_WIN32)
@@ -70,11 +71,8 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
-#ifdef LLVM_BUILD_TELEMETRY
-#include "lldb/Core/Telemetry.h"
-#include <chrono>
-#endif
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -767,28 +765,26 @@ void Debugger::InstanceInitialize() {
 
 DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
                                     void *baton) {
-#ifdef LLVM_BUILD_TELEMETRY
-  lldb_private::telemetry::SteadyTimePoint start_time =
-      std::chrono::steady_clock::now();
-#endif
+  lldb_private::telemetry::ScopeTelemetryCollector helper;
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
+
+  if (helper.TelemetryEnabled()) {
+    helper.RunAtScopeExit([&](){
+      lldb_private::telemetry::TelemetryManager * manager = lldb_private::telemetry::TelemetryManager::GetInstance();
+      lldb_private::telemetry::DebuggerInfo entry;
+      entry.debugger = debugger_sp.get();
+      entry.start_time = helper.GetStartTime();
+      entry.end_time = helper.GetCurrentTime();
+      manager->AtDebuggerStartup(&entry);
+    });
+
+  }
+
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     g_debugger_list_ptr->push_back(debugger_sp);
   }
   debugger_sp->InstanceInitialize();
-
-#ifdef LLVM_BUILD_TELEMETRY
-  if (auto *telemetry_manager = telemetry::TelemetryManager::getInstance()) {
-    if (telemetry_manager->getConfig()->EnableTelemetry) {
-      lldb_private::telemetry::DebuggerTelemetryInfo entry;
-      entry.start_time = start_time;
-      entry.end_time = std::chrono::steady_clock::now();
-      entry.debugger = debugger_sp.get();
-      telemetry_manager->atDebuggerStartup(&entry);
-    }
-  }
-#endif
 
   return debugger_sp;
 }
@@ -1010,10 +1006,20 @@ void Debugger::Clear() {
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
   llvm::call_once(m_clear_once, [this]() {
-#ifdef LLVM_BUILD_TELEMETRY
-    lldb_private::telemetry::SteadyTimePoint quit_start_time =
-        std::chrono::steady_clock::now();
-#endif
+    lldb_private::telemetry::ScopeTelemetryCollector helper;
+    if (helper.TelemetryEnabled()) {
+      // TBD: We *may* have to send off the log BEFORE the ClearIOHanders()?
+      helper.RunAtScopeExit([&helper, this](){
+        lldb_private::telemetry::TelemetryManager* manager
+            = lldb_private::telemetry::TelemetryManager::GetInstance();
+        lldb_private::telemetry::DebuggerInfo entry;
+        entry.debugger = this;
+        entry.exit_desc = {0, ""}; // If we are here, there was no error.
+        entry.start_time = helper.GetStartTime();
+        entry.end_time = helper.GetCurrentTime();
+        manager->AtDebuggerExit(&entry);
+      });
+    }
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
@@ -1036,19 +1042,6 @@ void Debugger::Clear() {
 
     if (Diagnostics::Enabled())
       Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
-
-#ifdef LLVM_BUILD_TELEMETRY
-    if (auto telemetry_manager = telemetry::TelemetryManager::getInstance()) {
-      if (telemetry_manager->getConfig()->EnableTelemetry) {
-        // TBD: We *may* have to send off the log BEFORE the ClearIOHanders()?
-        lldb_private::telemetry::DebuggerTelemetryInfo entry;
-        entry.start_time = quit_start_time;
-        entry.end_time = std::chrono::steady_clock::now();
-        entry.debugger = this;
-        telemetry_manager->atDebuggerExit(&entry);
-      }
-    }
-#endif
   });
 }
 
