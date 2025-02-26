@@ -9,5 +9,5 @@ int f1() {
 // CHECK: module
 // CHECK: cir.func @f1() -> !cir.int<s, 32>
 // CHECK:    %[[I_PTR:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i"] {alignment = 4 : i64}
-// CIR-NEXT: %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CIR-NEXT: cir.return %[[I]] : !cir.int<s, 32>
+// CHECK:    %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
+// CHECK:    cir.return %[[I]] : !cir.int<s, 32>
