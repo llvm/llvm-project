@@ -45,6 +45,12 @@ template <typename T> struct is_arithmetic {
   static const bool Value = __is_arithmetic(T);
 };
 
+template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+fmod_impl(T X, T Y) {
+  return __builtin_elementwise_fmod(X, Y);
+}
+
 template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
@@ -52,10 +58,10 @@ fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
   return __builtin_elementwise_fmod(X, Y);
 #else 
   vector<T, N> div = X / Y;
-  vector<T, N> result = __builtin_hlsl_elementwise_frac(__builtin_elementwise_abs(div)) * Y; 
-  vector<bool, N> condition = (div >= -div);
-  vector<T, N> realResult = __builtin_hlsl_select(condition, result, -result);
-  return realResult;
+  vector<bool, N> ge = div >= -div;
+  vector<T, N> frc = __builtin_hlsl_elementwise_frac(__builtin_elementwise_abs(div)); 
+  vector<T, N> realFrc = __builtin_hlsl_select(ge, frc, -frc);
+  return realFrc * Y;
 #endif
 }
 
