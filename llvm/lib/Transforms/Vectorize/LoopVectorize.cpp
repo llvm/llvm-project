@@ -3556,9 +3556,9 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (IsUniformMemOpUse(I))
       return true;
 
-    return (WideningDecision == CM_Widen ||
-            WideningDecision == CM_Widen_Reverse ||
-            WideningDecision == CM_Interleave);
+    return (
+        WideningDecision == CM_Widen || WideningDecision == CM_Widen_Reverse ||
+        WideningDecision == CM_Strided || WideningDecision == CM_Interleave);
   };
 
   // Returns true if Ptr is the pointer operand of a memory access instruction
@@ -8366,17 +8366,27 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
+
+  auto SameWiden = [&](ElementCount VF) -> bool {
+    return Decision == CM.getWideningDecision(I, VF);
+  };
+  bool ContainsWidenVF =
+      LoopVectorizationPlanner::getDecisionAndClampRange(SameWiden, Range);
+  assert(ContainsWidenVF &&
+         "At least widen the memory accesses by the Start VF.");
+
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
   bool Strided = Decision == LoopVectorizationCostModel::CM_Strided;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
-  if (Consecutive) {
+  if (Consecutive || Strided) {
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
+      assert(!Strided && "Reverse and Strided are mutually exclusive.");
       // When folding the tail, we may compute an address that we don't in the
       // original scalar loop and it may not be inbounds. Drop Inbounds in that
       // case.
@@ -8387,7 +8397,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
       VectorPtr = new VPVectorEndPointerRecipe(
           Ptr, &Plan.getVF(), getLoadStoreType(I), Flags, I->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), Strided,
                                             GEP ? GEP->getNoWrapFlags()
                                                 : GEPNoWrapFlags::none(),
                                             I->getDebugLoc());
