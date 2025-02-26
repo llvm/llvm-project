@@ -14,10 +14,10 @@
 #include "gtest/gtest.h"
 #include <chrono>
 #include <fcntl.h>
+#include <future>
 #include <numeric>
 #include <thread>
 #include <vector>
-#include <future>
 
 using namespace lldb_private;
 
