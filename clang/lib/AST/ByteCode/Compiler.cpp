@@ -3277,6 +3277,8 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
   return this->emitCall(F, 0, E);
 }
 
+// FIXME: This function has become rather unwieldy, especially
+// the part where we initialize an array allocation of dynamic size.
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
   assert(classifyPrim(E->getType()) == PT_Ptr);
@@ -3457,7 +3459,16 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (!this->emitArrayElemPtr(SizeT, E))
           return false;
 
-        if (DynamicInit) {
+        if (isa_and_nonnull<ImplicitValueInitExpr>(DynamicInit) &&
+            DynamicInit->getType()->isArrayType()) {
+          QualType ElemType =
+              DynamicInit->getType()->getAsArrayTypeUnsafe()->getElementType();
+          PrimType InitT = classifyPrim(ElemType);
+          if (!this->visitZeroInitializer(InitT, ElemType, E))
+            return false;
+          if (!this->emitStorePop(InitT, E))
+            return false;
+        } else if (DynamicInit) {
           if (std::optional<PrimType> InitT = classify(DynamicInit)) {
             if (!this->visit(DynamicInit))
               return false;
