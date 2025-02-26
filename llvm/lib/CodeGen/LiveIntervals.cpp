@@ -144,8 +144,7 @@ void LiveIntervals::clear() {
   RegMaskBits.clear();
   RegMaskBlocks.clear();
 
-  for (LiveRange *LR : RegUnitRanges)
-    Allocator.Deallocate(LR);
+  LRAllocator.DestroyAll();
   RegUnitRanges.clear();
 
   // Free the live intervals themselves.

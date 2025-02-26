@@ -65,11 +65,14 @@ class LiveIntervals {
   MachineDominatorTree *DomTree = nullptr;
   std::unique_ptr<LiveIntervalCalc> LICalc;
 
-  // Allocator for RegUnitRanges and SubRanges.
+  // Allocator for SubRanges.
   BumpPtrAllocator Allocator;
 
   // Allocator for VirtRegIntervals
   SpecificBumpPtrAllocator<LiveInterval> LIAllocator;
+
+  // Allocator for RegUnitRanges
+  SpecificBumpPtrAllocator<LiveRange> LRAllocator;
 
   /// Special pool allocator for VNInfo's (LiveInterval val#).
   VNInfo::Allocator VNInfoAllocator;
@@ -425,8 +428,7 @@ public:
       // Compute missing ranges on demand.
       // Use segment set to speed-up initial computation of the live range.
       RegUnitRanges[static_cast<unsigned>(Unit)] = LR =
-          new (Allocator.Allocate<LiveRange>())
-              LiveRange(UseSegmentSetForPhysRegs);
+          new (LRAllocator.Allocate()) LiveRange(UseSegmentSetForPhysRegs);
       computeRegUnitRange(*LR, Unit);
     }
     return *LR;
