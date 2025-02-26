@@ -343,9 +343,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
       const auto *Dest = cast<const BasicBlock *>(KV.first);
       MachineBasicBlock *DestMBB = getMBB(Dest);
-      UnwindDestToSrcs[DestMBB] = SmallPtrSet<BBOrMBB, 4>();
+      auto &Srcs = UnwindDestToSrcs[DestMBB];
+      Srcs = SmallPtrSet<BBOrMBB, 4>();
       for (const auto P : KV.second)
-        UnwindDestToSrcs[DestMBB].insert(getMBB(cast<const BasicBlock *>(P)));
+        Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
