@@ -1007,8 +1007,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
     MO.setSubReg(0);
   }
   MO.setReg(PhysReg);
-  if (!LRI->Error)
-    MO.setIsRenamable(true);
+  MO.setIsRenamable(!LRI->Error);
 }
 
 /// Variation of defineVirtReg() with special handling for livethrough regs
