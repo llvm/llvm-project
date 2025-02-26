@@ -21,6 +21,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -132,8 +133,10 @@ bool CodeGenTargetMachineImpl::addAsmPrinter(PassManagerBase &PM,
                                              MCContext &Context) {
   Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
       createMCStreamer(Out, DwoOut, FileType, Context);
-  if (auto Err = MCStreamerOrErr.takeError())
+  if (auto Err = MCStreamerOrErr.takeError()) {
+    Context.reportError(SMLoc(), toString(std::move(Err)));
     return true;
+  }
 
   // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
   FunctionPass *Printer =
@@ -163,6 +166,10 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
         getTargetTriple(),
         Options.MCOptions.OutputAsmVariant.value_or(MAI.getAssemblerDialect()),
         MAI, MII, MRI);
+    for (StringRef Opt : Options.MCOptions.InstPrinterOptions)
+      if (!InstPrinter->applyTargetSpecificCLOption(Opt))
+        return createStringError(inconvertibleErrorCode(),
+                                 "invalid InstPrinter option '" + Opt + "'");
 
     // Create a code emitter if asked to show the encoding.
     std::unique_ptr<MCCodeEmitter> MCE;
