@@ -108,6 +108,12 @@ class QCIRVInstI<bits<4> funct4, string opcodestr>
   let imm12 = {0b000, funct4, 0b00000};
 }
 
+class QCIRVInstR<bits<4> funct4, string opcodestr>
+    : RVInstR<{0b000, funct4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+              (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1"> {
+  let rs2 = 0;
+}
+
 class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
               (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
