@@ -468,17 +468,10 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
 
   m_tried_unwind_arch_default = true;
 
-  Address current_pc;
   ProcessSP process_sp(thread.CalculateProcess());
   if (process_sp) {
-    ABI *abi = process_sp->GetABI().get();
-    if (abi) {
-      m_unwind_plan_arch_default_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (!abi->CreateDefaultUnwindPlan(*m_unwind_plan_arch_default_sp)) {
-        m_unwind_plan_arch_default_sp.reset();
-      }
-    }
+    if (ABI *abi = process_sp->GetABI().get())
+      m_unwind_plan_arch_default_sp = abi->CreateDefaultUnwindPlan();
   }
 
   return m_unwind_plan_arch_default_sp;
@@ -496,14 +489,9 @@ FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
   Address current_pc;
   ProcessSP process_sp(thread.CalculateProcess());
   if (process_sp) {
-    ABI *abi = process_sp->GetABI().get();
-    if (abi) {
+    if (ABI *abi = process_sp->GetABI().get()) {
       m_unwind_plan_arch_default_at_func_entry_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (!abi->CreateFunctionEntryUnwindPlan(
-              *m_unwind_plan_arch_default_at_func_entry_sp)) {
-        m_unwind_plan_arch_default_at_func_entry_sp.reset();
-      }
+          abi->CreateFunctionEntryUnwindPlan();
     }
   }
 

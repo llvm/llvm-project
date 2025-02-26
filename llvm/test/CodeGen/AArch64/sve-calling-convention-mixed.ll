@@ -44,7 +44,7 @@ entry:
   %14 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  1
   %15 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  2
   %16 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  3
-  %17 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> undef, <vscale x 2 x double> %13, i64 0)
+  %17 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> poison, <vscale x 2 x double> %13, i64 0)
   %18 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %17, <vscale x 2 x double> %14, i64 2)
   %19 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %18, <vscale x 2 x double> %15, i64 4)
   %20 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %19, <vscale x 2 x double> %16, i64 6)

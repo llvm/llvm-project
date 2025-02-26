@@ -375,7 +375,7 @@ td_library(
     srcs = ["include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.td"],
     includes = ["include"],
     deps = [
-        ":DestinationStyleOpInterfaceTdFiles"
+        ":DestinationStyleOpInterfaceTdFiles",
     ],
 )
 
@@ -401,7 +401,10 @@ gentbl_cc_library(
 cc_library(
     name = "RelayoutOpInterface",
     hdrs = ["include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.h"],
-    deps = [":RelayoutOpInterfaceIncGen"],
+    deps = [
+        ":IR",
+        ":RelayoutOpInterfaceIncGen",
+    ],
 )
 
 cc_library(
@@ -11185,10 +11188,10 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":RelayoutOpInterfaceIncGen",
         ":SideEffectInterfacesTdFiles",
         ":TilingInterfaceTdFiles",
         ":ViewLikeInterfaceTdFiles",
-        ":RelayoutOpInterfaceIncGen",
     ],
 )
 
@@ -11641,12 +11644,12 @@ cc_library(
         ":LinalgNamedStructuredOpsYamlIncGen",
         ":LinalgOpsIncGen",
         ":LinalgRelayoutOpsIncGen",
-        ":RelayoutOpInterfaceIncGen",
         ":LinalgStructuredOpsIncGen",
         ":MathDialect",
         ":MemRefDialect",
         ":MeshShardingInterface",
         ":Parser",
+        ":RelayoutOpInterfaceIncGen",
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":SparseTensorDialect",
