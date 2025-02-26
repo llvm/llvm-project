@@ -19,11 +19,17 @@ class ELFAttributeParser {
 public:
   virtual ~ELFAttributeParser() {}
 
-  virtual Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian);
+  virtual Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) {
+    return llvm::Error::success();
+  }
   virtual std::optional<unsigned>
-  getAttributeValue(StringRef BuildAttrSubsectionName, unsigned Tag) const;
+  getAttributeValue(StringRef BuildAttrSubsectionName, unsigned Tag) const {
+    return std::nullopt;
+  }
   virtual std::optional<StringRef>
-  getAttributeString(StringRef BuildAttrSubsectionName, unsigned Tag) const;
+  getAttributeString(StringRef BuildAttrSubsectionName, unsigned Tag) const {
+    return std::nullopt;
+  }
 };
 
 } // namespace llvm
