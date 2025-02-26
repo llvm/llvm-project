@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_SEMANTICS_DUMPEVALUATEEXPR_H
-#define FORTRAN_SEMANTICS_DUMPEVALUATEEXPR_H
+#ifndef FORTRAN_SEMANTICS_DUMPEXPR_H
+#define FORTRAN_SEMANTICS_DUMPEXPR_H
 
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/symbol.h"
@@ -190,4 +190,4 @@ LLVM_DUMP_METHOD void dumpEvExpr(
 
 } // namespace Fortran::semantics
 
-#endif // FORTRAN_SEMANTICS_DUMPEVALUATEEXPR_H
+#endif // FORTRAN_SEMANTICS_DUMPEXPR_H
