@@ -200,7 +200,8 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
-                               const Twine &RemappingPath) {
+                               const Twine &RemappingPath,
+                               bool IgnoreEmptyHashMismatches) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
@@ -217,12 +218,14 @@ IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
   }
 
   return IndexedInstrProfReader::create(std::move(BufferOrError.get()),
-                                        std::move(RemappingBuffer));
+                                        std::move(RemappingBuffer),
+                                        IgnoreEmptyHashMismatches);
 }
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
-                               std::unique_ptr<MemoryBuffer> RemappingBuffer) {
+                               std::unique_ptr<MemoryBuffer> RemappingBuffer,
+                               bool IgnoreEmptyHashMismatches) {
   // Create the reader.
   if (!IndexedInstrProfReader::hasFormat(*Buffer))
     return make_error<InstrProfError>(instrprof_error::bad_magic);
@@ -232,6 +235,8 @@ IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   // Initialize the reader and return the result.
   if (Error E = initializeReader(*Result))
     return std::move(E);
+
+  Result->IgnoreEmptyHashMismatches = IgnoreEmptyHashMismatches;
 
   return std::move(Result);
 }
@@ -1512,6 +1517,11 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
       return std::move(Err2);
   }
   // Found it. Look for counters with the right hash.
+
+  // Ignore possible hash mismatch if hash is 0.
+  if (IgnoreEmptyHashMismatches && FuncHash == 0x0 && Data.size() == 1) {
+    return std::move(Data.front());
+  }
 
   // A flag to indicate if the records are from the same type
   // of profile (i.e cs vs nocs).
