@@ -4,7 +4,7 @@
 
 define dso_local zeroext i1 @is_all_ones_many(ptr nocapture noundef nonnull dereferenceable(24) %p) local_unnamed_addr {
 ; CHECK-LABEL: @is_all_ones_many(
-; CHECK-NEXT:  "entry+entry+entry+land.lhs.true11":
+; CHECK-NEXT:  "entry+land.lhs.true11":
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    store [4 x i8] c"\FF\C8\BE\01", ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P:%.*]], ptr [[TMP0]], i64 4)

@@ -43,6 +43,7 @@
 
 #include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/UniqueVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
@@ -358,15 +359,16 @@ private:
 // (see canSplit()).
 class SingleBCECmpBlock {
  public:
-  SingleBCECmpBlock(MultBCECmpBlock M, unsigned i) {
-    BB = M.BB;
-    Cmp = M.getCmps()[i];
-    OrigOrder = M.OrigOrder;
-  }
+  SingleBCECmpBlock(MultBCECmpBlock M, unsigned I)
+      : BB(M.BB), OrigOrder(M.OrigOrder), Cmp(M.getCmps()[I]) {}
 
   const BCEAtom* Lhs() const { return Cmp->getLoads().first; }
   const Comparison* getCmp() const {
     return Cmp;
+  }
+
+  bool operator<(const SingleBCECmpBlock &O) const {
+    return *Cmp < *O.Cmp;
   }
 
   // We can separate the BCE-cmp-block instructions and the non-BCE-cmp-block
@@ -638,7 +640,7 @@ mergeBlocks(std::vector<SingleBCECmpBlock> &&Blocks) {
   // Sort to detect continuous offsets.
   llvm::sort(Blocks,
              [](const SingleBCECmpBlock &LhsBlock, const SingleBCECmpBlock &RhsBlock) {
-              return *LhsBlock.getCmp() < *RhsBlock.getCmp();
+              return LhsBlock < RhsBlock;
              });
 
   BCECmpChain::ContiguousBlocks *LastMergedBlock = nullptr;
@@ -744,9 +746,6 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
 
   EntryBlock_ = Comparisons[0].BB;
 
-  // TODO: check for contiguous comparisons across all blocks and if all cmps in a
-  // bb are part of contiguous then split that block inato multiple
-
   std::vector<SingleBCECmpBlock> ConstComparisons, BceComparisons;
   auto isConstCmp = [](SingleBCECmpBlock& C) { return isa<BCEConstCmp>(C.getCmp()); };
   // TODO: too many copies here
@@ -781,9 +780,14 @@ private:
     // Fast path: only one block, or no names at all.
     if (Comparisons.size() == 1)
       return Comparisons[0].BB->getName();
-    const int size = std::accumulate(Comparisons.begin(), Comparisons.end(), 0,
-                                     [](int i, const SingleBCECmpBlock &Cmp) {
-                                       return i + Cmp.BB->getName().size();
+    // Since multiple comparisons can come from the same basic block
+    // (when using select inst) don't want to repeat same name twice
+    UniqueVector<StringRef> UniqueNames;
+    for (const auto& B : Comparisons)
+      UniqueNames.insert(B.BB->getName());
+    const int size = std::accumulate(UniqueNames.begin(), UniqueNames.end(), 0,
+                                     [](int i, const StringRef &Name) {
+                                       return i + Name.size();
                                      });
     if (size == 0)
       return StringRef("", 0);
@@ -792,16 +796,17 @@ private:
     Scratch.clear();
     // We'll have `size` bytes for name and `Comparisons.size() - 1` bytes for
     // separators.
-    Scratch.reserve(size + Comparisons.size() - 1);
+    Scratch.reserve(size + UniqueNames.size() - 1);
     const auto append = [this](StringRef str) {
       Scratch.append(str.begin(), str.end());
     };
-    append(Comparisons[0].BB->getName());
-    for (int I = 1, E = Comparisons.size(); I < E; ++I) {
-      const BasicBlock *const BB = Comparisons[I].BB;
-      if (!BB->getName().empty()) {
+    // UniqueVector's index starts at 1
+    append(UniqueNames[1]);
+    for (int I = 2, E = UniqueNames.size(); I <= E; ++I) {
+      StringRef BBName = UniqueNames[I];
+      if (!BBName.empty()) {
         append("+");
-        append(BB->getName());
+        append(BBName);
       }
     }
     return Scratch.str();
