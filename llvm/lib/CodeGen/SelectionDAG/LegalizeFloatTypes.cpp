@@ -811,7 +811,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   SmallVector<EVT, 3> OpsVT = {VT};
 
   std::array<SDValue, 2> StackSlots;
-  for (auto [ResNum, _] : enumerate(N->values())) {
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ++ResNum) {
     if (ResNum == CallRetResNo)
       continue;
     SDValue StackSlot = DAG.CreateStackTemporary(NVT);
