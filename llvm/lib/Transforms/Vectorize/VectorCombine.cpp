@@ -1957,6 +1957,9 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   if (isa<FPMathOperator>(NewSel))
     cast<Instruction>(NewSel)->setFastMathFlags(Select0->getFastMathFlags());
 
+  Worklist.pushValue(ShuffleCmp);
+  Worklist.pushValue(ShuffleTrue);
+  Worklist.pushValue(ShuffleFalse);
   Worklist.pushValue(NewSel);
   replaceValue(I, *NewSel);
   return true;
