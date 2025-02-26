@@ -73,11 +73,14 @@ class VPRecipeBuilder {
   /// if-conversion currently takes place during VPlan-construction, so these
   /// caches are only used at that stage.
   using EdgeMaskCacheTy =
-      DenseMap<std::pair<BasicBlock *, BasicBlock *>, VPValue *>;
-  using BlockMaskCacheTy = DenseMap<BasicBlock *, VPValue *>;
+      DenseMap<std::pair<VPBasicBlock *, VPBasicBlock *>, VPValue *>;
+  using BlockMaskCacheTy = DenseMap<VPBasicBlock *, VPValue *>;
   EdgeMaskCacheTy EdgeMaskCache;
+
+public:
   BlockMaskCacheTy BlockMaskCache;
 
+private:
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
@@ -113,11 +116,6 @@ class VPRecipeBuilder {
   VPWidenIntOrFpInductionRecipe *
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range);
-
-  /// Handle non-loop phi nodes. Return a new VPBlendRecipe otherwise. Currently
-  /// all such phi nodes are turned into a sequence of select instructions as
-  /// the vectorizer currently performs full if-conversion.
-  VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
@@ -187,27 +185,20 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
-  /// Create the mask for the vector loop header block.
-  void createHeaderMask();
-
-  /// A helper function that computes the predicate of the block BB, assuming
-  /// that the header block of the loop is set to True or the loop mask when
-  /// tail folding.
-  void createBlockInMask(BasicBlock *BB);
-
+  void setBlockInMask(VPBasicBlock *BB, VPValue *Mask) {
+    assert(!BlockMaskCache.contains(BB) && "Mask already set");
+    BlockMaskCache[BB] = Mask;
+  }
   /// Returns the *entry* mask for the block \p BB.
-  VPValue *getBlockInMask(BasicBlock *BB) const;
-
-  /// Create an edge mask for every destination of cases and/or default.
-  void createSwitchEdgeMasks(SwitchInst *SI);
-
-  /// A helper function that computes the predicate of the edge between SRC
-  /// and DST.
-  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst);
-
-  /// A helper that returns the previously computed predicate of the edge
-  /// between SRC and DST.
-  VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
+  VPValue *getBlockInMask(VPBasicBlock *BB) const {
+    return BlockMaskCache.lookup(BB);
+  }
+  void setEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst, VPValue *Mask) {
+    EdgeMaskCache[{Src, Dst}] = Mask;
+  }
+  VPValue *getEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) const {
+    return EdgeMaskCache.lookup({Src, Dst});
+  }
 
   /// Return the recipe created for given ingredient.
   VPRecipeBase *getRecipe(Instruction *I) {

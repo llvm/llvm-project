@@ -173,6 +173,9 @@ struct VPlanTransforms {
   static void
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
+
+  static void predicateAndLinearize(VPlan &Plan, bool FoldTail,
+                                    VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm
