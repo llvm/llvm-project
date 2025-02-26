@@ -3356,6 +3356,64 @@ libc_function(
     ],
 )
 
+############################### stdbit targets ###############################
+
+bit_suffix_list = [
+    "uc",
+    "us",
+    "ui",
+    "ul",
+    "ull",
+]
+
+bit_prefix_list = [
+    "stdc_leading_zeros_",
+    "stdc_leading_ones_",
+    "stdc_trailing_zeros_",
+    "stdc_trailing_ones_",
+    "stdc_count_ones_",
+    "stdc_has_single_bit_",
+    "stdc_bit_width_",
+    "stdc_bit_floor_",
+    "stdc_bit_ceil_",
+]
+
+bit_prefix_needs_math_list = [
+    "stdc_first_leading_zero_",
+    "stdc_first_leading_one_",
+    "stdc_first_trailing_zero_",
+    "stdc_first_trailing_one_",
+    "stdc_count_zeros_",
+]
+
+[
+    libc_function(
+        name = bit_prefix + bit_suffix,
+        srcs = ["src/stdbit/" + bit_prefix + bit_suffix + ".cpp"],
+        hdrs = ["src/stdbit/" + bit_prefix + bit_suffix + ".h"],
+        deps = [
+            ":__support_common",
+            ":__support_cpp_bit",
+        ],
+    )
+    for bit_prefix in bit_prefix_list
+    for bit_suffix in bit_suffix_list
+]
+
+[
+    libc_function(
+        name = bit_prefix + bit_suffix,
+        srcs = ["src/stdbit/" + bit_prefix + bit_suffix + ".cpp"],
+        hdrs = ["src/stdbit/" + bit_prefix + bit_suffix + ".h"],
+        deps = [
+            ":__support_common",
+            ":__support_math_extras",
+        ],
+    )
+    for bit_prefix in bit_prefix_needs_math_list
+    for bit_suffix in bit_suffix_list
+]
+
 ############################### stdlib targets ###############################
 
 libc_function(
