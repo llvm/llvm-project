@@ -165,8 +165,8 @@ public:
     llvm::Intrinsic::ID intrinId = inst->getIntrinsicID();
     assert(intrinId != llvm::Intrinsic::not_intrinsic);
 
-    // First lookup intrinsic across different dialects for known
-    // supported converstions, examples include arm-neon, nvm-sve, etc
+    // First lookup the intrinsic across different dialects for known
+    // supported conversions, examples include arm-neon, nvm-sve, etc.
     Dialect *dialect = intrinsicToDialect.lookup(intrinId);
 
     // No specialized (supported) intrinsics, attempt to generate a generic
