@@ -612,13 +612,29 @@ struct RootSignatureValidations {
   }
 
   static bool isValidParameterType(dxbc::RootParameterType Type) {
-    // RootParameterType::Empty is the higest value in the enum.
-    return Type < dxbc::RootParameterType::Empty;
+    switch (Type) {
+    case dxbc::RootParameterType::Constants32Bit:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool isValidShaderVisibility(dxbc::ShaderVisibility Visibility) {
-    // ShaderVisibilityFlag::Empty is the higest value in the enum.
-    return Visibility < dxbc::ShaderVisibility::Empty;
+    switch (Visibility) {
+
+    case ShaderVisibility::All:
+    case ShaderVisibility::Vertex:
+    case ShaderVisibility::Hull:
+    case ShaderVisibility::Domain:
+    case ShaderVisibility::Geometry:
+    case ShaderVisibility::Pixel:
+    case ShaderVisibility::Amplification:
+    case ShaderVisibility::Mesh:
+      return true;
+    case ShaderVisibility::Empty:
+      return false;
+    }
   }
 };
 
