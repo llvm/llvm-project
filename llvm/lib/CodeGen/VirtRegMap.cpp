@@ -88,9 +88,7 @@ void VirtRegMap::assignVirt2Phys(Register virtReg, MCRegister physReg) {
   assert(!Virt2PhysMap[virtReg] &&
          "attempt to assign physical register to already mapped "
          "virtual register");
-  assert((!getRegInfo().isReserved(physReg) ||
-          MF->getProperties().hasProperty(
-              MachineFunctionProperties::Property::FailedRegAlloc)) &&
+  assert(!getRegInfo().isReserved(physReg) &&
          "Attempt to map virtReg to a reserved physReg");
   Virt2PhysMap[virtReg] = physReg;
 }
@@ -598,9 +596,6 @@ void VirtRegRewriter::rewrite() {
   SmallVector<Register, 8> SuperDefs;
   SmallVector<Register, 8> SuperKills;
 
-  const bool IsValidAlloc = !MF->getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedRegAlloc);
-
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
     LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
@@ -620,8 +615,7 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert((!MRI->isReserved(PhysReg) || !IsValidAlloc) &&
-               "Reserved register assignment");
+        assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();
@@ -696,14 +690,7 @@ void VirtRegRewriter::rewrite() {
         // Rewrite. Note we could have used MachineOperand::substPhysReg(), but
         // we need the inlining here.
         MO.setReg(PhysReg);
-
-        // Defend against generating invalid flags in allocation failure
-        // scenarios. We have have assigned a register which was undefined, or a
-        // reserved register which cannot be renamable.
-        if (LLVM_LIKELY(IsValidAlloc))
-          MO.setIsRenamable(true);
-        else if (MO.isUse())
-          MO.setIsUndef(true);
+        MO.setIsRenamable(true);
       }
 
       // Add any missing super-register kills after rewriting the whole
