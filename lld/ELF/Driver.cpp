@@ -231,16 +231,15 @@ static bool isBitcode(MemoryBufferRef mb) {
 }
 
 bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
-                                    uint64_t offsetInArchive,
-                                    bool isThinArchive, bool lazy) {
+                                    uint64_t offsetInArchive, bool lazy) {
   if (!ctx.arg.fatLTOObjects)
     return false;
   Expected<MemoryBufferRef> fatLTOData =
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(std::make_unique<BitcodeFile>(
-      ctx, *fatLTOData, archiveName, offsetInArchive, isThinArchive, lazy));
+  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                                offsetInArchive, lazy));
   return true;
 }
 
@@ -263,15 +262,13 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     readLinkerScript(ctx, mbref);
     return;
   case file_magic::archive: {
-    bool isThinArchive = mbref.getBuffer().starts_with(ThinArchiveMagic);
     auto members = getArchiveMembers(ctx, mbref);
     if (inWholeArchive) {
       for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
-          files.push_back(std::make_unique<BitcodeFile>(
-              ctx, p.first, path, p.second, isThinArchive, false));
-        else if (!tryAddFatLTOFile(p.first, path, p.second, isThinArchive,
-                                   false))
+          files.push_back(std::make_unique<BitcodeFile>(ctx, p.first, path,
+                                                        p.second, false));
+        else if (!tryAddFatLTOFile(p.first, path, p.second, false))
           files.push_back(createObjFile(ctx, p.first, path));
       }
       return;
@@ -295,11 +292,11 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
       auto magic = identify_magic(p.first.getBuffer());
       if (magic == file_magic::elf_relocatable) {
-        if (!tryAddFatLTOFile(p.first, path, p.second, isThinArchive, true))
+        if (!tryAddFatLTOFile(p.first, path, p.second, true))
           files.push_back(createObjFile(ctx, p.first, path, true));
       } else if (magic == file_magic::bitcode)
-        files.push_back(std::make_unique<BitcodeFile>(
-            ctx, p.first, path, p.second, isThinArchive, true));
+        files.push_back(
+            std::make_unique<BitcodeFile>(ctx, p.first, path, p.second, true));
       else
         Warn(ctx) << path << ": archive member '"
                   << p.first.getBufferIdentifier()
@@ -327,11 +324,10 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   }
   case file_magic::bitcode:
-    files.push_back(
-        std::make_unique<BitcodeFile>(ctx, mbref, "", 0, false, inLib));
+    files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
     break;
   case file_magic::elf_relocatable:
-    if (!tryAddFatLTOFile(mbref, "", 0, false, inLib))
+    if (!tryAddFatLTOFile(mbref, "", 0, inLib))
       files.push_back(createObjFile(ctx, mbref, "", inLib));
     break;
   default:
