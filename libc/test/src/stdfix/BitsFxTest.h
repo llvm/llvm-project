@@ -50,38 +50,25 @@ public:
                 func(negative_zero_point_six_eight_seven_five_t));
 
     if constexpr (FXRep::INTEGRAL_LEN > 0) {
-      if (static_cast<int>(max) >= 11)
-        switch (FXRep::FRACTION_LEN) {
-        case 7:
-          EXPECT_EQ(static_cast<XType>(1372), func(special_num_t));
-          break;
-        case 15:
-          EXPECT_EQ(static_cast<XType>(351232), func(special_num_t));
-          break;
-        case 23:
-          EXPECT_EQ(static_cast<XType>(89915392), func(special_num_t));
-          break;
-        default:
-          break;
-        }
-    }
+      constexpr size_t kMinFbits = 7;
 
-    if constexpr (FXRep::SIGN_LEN > 0 && FXRep::INTEGRAL_LEN > 0) {
-      if (static_cast<int>(min) <= -11)
-        switch (FXRep::FRACTION_LEN) {
-        case 7:
-          EXPECT_EQ(static_cast<XType>(-1372), func(negative_special_num_t));
-          break;
-        case 15:
-          EXPECT_EQ(static_cast<XType>(-351232), func(negative_special_num_t));
-          break;
-        case 23:
-          EXPECT_EQ(static_cast<XType>(-89915392),
+      if (max >= 11 && FXRep::FRACTION_LEN >= kMinFbits) {
+        // (10.71875)_10 = (1010.1011100)_2
+        constexpr long long kExpected = 1372;
+        EXPECT_EQ(
+            static_cast<XType>(kExpected << (FXRep::FRACTION_LEN - kMinFbits)),
+            func(special_num_t));
+      }
+
+      if constexpr (FXRep::SIGN_LEN > 0) {
+        if (min <= -11 && FXRep::FRACTION_LEN >= kMinFbits) {
+          // (-10.71875)_10 = (-1010.1011100)_2
+          constexpr long long kExpected = -1372;
+          EXPECT_EQ(static_cast<XType>(kExpected
+                                       << (FXRep::FRACTION_LEN - kMinFbits)),
                     func(negative_special_num_t));
-          break;
-        default:
-          break;
         }
+      }
     }
   }
 };
