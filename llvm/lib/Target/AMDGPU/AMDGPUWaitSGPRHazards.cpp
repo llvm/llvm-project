@@ -164,6 +164,21 @@ public:
       BuildMI(MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::DS_NOP));
   }
 
+  unsigned mergeMasks(unsigned Mask1, unsigned Mask2) {
+    unsigned Mask = Mask1 & Mask2;
+
+    Mask = AMDGPU::DepCtr::encodeFieldVmVsrc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVmVsrc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVmVsrc(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaSdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaSdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaVdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaVdst(Mask2)));
+    return Mask;
+  }
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
     enum { WA_VALU = 0x1, WA_SALU = 0x2, WA_VCC = 0x4 };
 
@@ -362,6 +377,13 @@ public:
           Mask = AMDGPU::DepCtr::encodeFieldVaSdst(Mask, 0);
         }
         if (Emit) {
+          if (MI != MI->getParent()->begin()) {
+            MachineInstr &PrevMI = *std::prev(MI);
+            if (PrevMI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
+              Mask = mergeMasks(Mask, PrevMI.getOperand(0).getImm());
+              PrevMI.eraseFromParent();
+            }
+          }
           auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
                                TII->get(AMDGPU::S_WAITCNT_DEPCTR))
                            .addImm(Mask);
