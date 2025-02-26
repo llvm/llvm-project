@@ -1945,6 +1945,9 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, DstVecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
+  LLVM_DEBUG(dbgs() << "Found a shuffle feeding two selects: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
   if (NewCost > OldCost)
     return false;
 
