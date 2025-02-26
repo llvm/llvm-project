@@ -55,9 +55,10 @@ static cl::opt<IntrinsicCostStrategy> IntrinsicCost(
                    "Use TargetTransformInfo::getInstructionCost"),
         clEnumValN(IntrinsicCostStrategy::IntrinsicCost, "intrinsic-cost",
                    "Use TargetTransformInfo::getIntrinsicInstrCost"),
-        clEnumValN(IntrinsicCostStrategy::TypeBasedIntrinsicCost,
-                   "type-based-intrinsic-cost",
-                   "Calculate intrinsics cost based only on argument types")));
+        clEnumValN(
+            IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+            "type-based-intrinsic-cost",
+            "Calculate the intrinsic cost based only on argument types")));
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
