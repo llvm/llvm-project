@@ -137,8 +137,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(noexcept(std::swap(ma, ma)), "");
   }
 
-  // `unique_ptr` is constexpr only since C++23, so we can't inline `test_unique_ptr()` into `test()`
-  // because `test()` is constexpr since C++20.
   if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
     test_unique_ptr();
 #endif
