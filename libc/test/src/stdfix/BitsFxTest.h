@@ -21,11 +21,14 @@ class BitsFxTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
   static constexpr T eps = FXRep::EPS();
 
-  // (0.42)_10 =
-  // (0.0110101110000101000111101011100001010001111010111000010100011110)_2 =
-  // (0.0x6b851eb851eb851e)_16
-  static constexpr unsigned long long zero_point_forty_two =
-      0x6b851eb851eb851eULL;
+  static constexpr T zero_point_six_eight_seven_five_t = 0.6875;
+
+  static constexpr T negative_zero_point_six_eight_seven_five_t = -0.6875;
+
+  // an arbitrarily chosen special number
+  static constexpr T special_num_t = 10.71875;
+
+  static constexpr T negative_special_num_t = -10.71875;
 
 public:
   typedef XType (*BitsFxFunc)(T);
@@ -40,11 +43,46 @@ public:
 
     // (0.6875)_10 = (0.1011)_2
     EXPECT_EQ(static_cast<XType>(11ULL << (FXRep::FRACTION_LEN - 4)),
-              func(0.6875));
+              func(zero_point_six_eight_seven_five_t));
 
-    EXPECT_EQ(
-        static_cast<XType>(zero_point_forty_two >> (64 - FXRep::FRACTION_LEN)),
-        func(0.42));
+    if constexpr (FXRep::SIGN_LEN > 0)
+      EXPECT_EQ(static_cast<XType>(-(11ULL << (FXRep::FRACTION_LEN - 4))),
+                func(negative_zero_point_six_eight_seven_five_t));
+
+    if constexpr (FXRep::INTEGRAL_LEN > 0) {
+      if (static_cast<int>(max) >= 11)
+        switch (FXRep::FRACTION_LEN) {
+        case 7:
+          EXPECT_EQ(static_cast<XType>(1372), func(special_num_t));
+          break;
+        case 15:
+          EXPECT_EQ(static_cast<XType>(351232), func(special_num_t));
+          break;
+        case 23:
+          EXPECT_EQ(static_cast<XType>(89915392), func(special_num_t));
+          break;
+        default:
+          break;
+        }
+    }
+
+    if constexpr (FXRep::SIGN_LEN > 0 && FXRep::INTEGRAL_LEN > 0) {
+      if (static_cast<int>(min) <= -11)
+        switch (FXRep::FRACTION_LEN) {
+        case 7:
+          EXPECT_EQ(static_cast<XType>(-1372), func(negative_special_num_t));
+          break;
+        case 15:
+          EXPECT_EQ(static_cast<XType>(-351232), func(negative_special_num_t));
+          break;
+        case 23:
+          EXPECT_EQ(static_cast<XType>(-89915392),
+                    func(negative_special_num_t));
+          break;
+        default:
+          break;
+        }
+    }
   }
 };
 
