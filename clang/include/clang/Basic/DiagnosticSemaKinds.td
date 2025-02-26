@@ -10638,7 +10638,8 @@ def err_sizeless_nonlocal : Error<
 def err_vector_index_out_of_range : Error<
   "vector element index %0 is out of bounds">;
 def warn_vector_index_out_of_range : Warning<
-  "vector element index %0 is out of bounds">;
+  "vector element index %0 is out of bounds">,
+  InGroup<VectorOutOfRange>, DefaultIgnore;
 
 def err_vec_builtin_non_vector : Error<
  "%select{first two|all}1 arguments to %0 must be vectors">;
