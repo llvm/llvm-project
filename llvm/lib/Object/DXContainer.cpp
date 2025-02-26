@@ -319,10 +319,10 @@ Error DirectX::RootSignature::parse(StringRef Data) {
 
     switch (NewParam.ParameterType) {
 
-    case dxbc::RootParameterType::Constants32Bit: {
+    case dxbc::RootParameterType::Constants32Bit:
       if (Error Err = readStruct(Data, Begin + Offset, NewParam.Constants))
         return Err;
-    } break;
+      break;
     case dxbc::RootParameterType::Empty:
       // unreachable  because it was validated and assigned before this point.
       llvm_unreachable("Invalid value for RootParameterType");

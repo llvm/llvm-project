@@ -137,7 +137,9 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  SmallVector<dxbc::RootParameter> getParameters() const { return Parameters; }
+  const SmallVector<dxbc::RootParameter> &getParameters() const {
+    return Parameters;
+  }
   uint32_t getFlags() const { return Flags; }
 };
 
