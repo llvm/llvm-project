@@ -3731,7 +3731,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
     }
   }
 
-  // establish loop nesting levels
   establishNestingLevels(Src, Dst);
   LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
   LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
