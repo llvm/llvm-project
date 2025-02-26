@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 
 #include "src/__support/macros/config.h"
+#include "src/__support/CPP/limits.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,7 +26,7 @@ struct ProcessStatus {
   int platform_defined;
   const char *failure = nullptr;
 
-  static constexpr int TIMEOUT = ~0U;
+  static constexpr int TIMEOUT = cpp::numeric_limits<int>::max();
 
   static ProcessStatus error(const char *error) { return {0, error}; }
   static ProcessStatus timed_out_ps() {
