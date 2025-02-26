@@ -40,14 +40,24 @@ static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
                clEnumValN(TargetTransformInfo::TCK_SizeAndLatency,
                           "size-latency", "Code size and latency")));
 
-static cl::opt<bool> TypeBasedIntrinsicCost("type-based-intrinsic-cost",
-    cl::desc("Calculate intrinsics cost based only on argument types"),
-    cl::init(false));
+enum class IntrinsicCostStrategy {
+  InstructionCost,
+  IntrinsicCost,
+  TypeBasedIntrinsicCost,
+};
 
-static cl::opt<bool> PreferIntrinsicCost(
-    "prefer-intrinsic-cost",
-    cl::desc("Prefer using getIntrinsicInstrCost over getInstructionCost"),
-    cl::init(false));
+static cl::opt<IntrinsicCostStrategy> IntrinsicCost(
+    "intrinsic-cost-strategy",
+    cl::desc("Costing strategy for intrinsic instructions"),
+    cl::init(IntrinsicCostStrategy::InstructionCost),
+    cl::values(
+        clEnumValN(IntrinsicCostStrategy::InstructionCost, "instruction-cost",
+                   "Use TargetTransformInfo::getInstructionCost"),
+        clEnumValN(IntrinsicCostStrategy::IntrinsicCost, "intrinsic-cost",
+                   "Use TargetTransformInfo::getIntrinsicInstrCost"),
+        clEnumValN(IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+                   "type-based-intrinsic-cost",
+                   "Calculate intrinsics cost based only on argument types")));
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
@@ -63,10 +73,12 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
       // which cost kind to print.
       InstructionCost Cost;
       auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (II && (PreferIntrinsicCost || TypeBasedIntrinsicCost)) {
+      if (II && IntrinsicCost != IntrinsicCostStrategy::InstructionCost) {
         IntrinsicCostAttributes ICA(
             II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
-            /*TypeBasedOnly=*/TypeBasedIntrinsicCost, &TLI);
+            /*TypeBasedOnly=*/IntrinsicCost ==
+                IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+            &TLI);
         Cost = TTI.getIntrinsicInstrCost(ICA, CostKind);
       } else {
         Cost = TTI.getInstructionCost(&Inst, CostKind);
