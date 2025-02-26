@@ -1832,7 +1832,7 @@ REDUCE_SHAPE_INFER(tosa::ReduceAllOp)
 REDUCE_SHAPE_INFER(tosa::ReduceAnyOp)
 REDUCE_SHAPE_INFER(tosa::ReduceMaxOp)
 REDUCE_SHAPE_INFER(tosa::ReduceMinOp)
-REDUCE_SHAPE_INFER(tosa::ReduceProdOp)
+REDUCE_SHAPE_INFER(tosa::ReduceProductOp)
 REDUCE_SHAPE_INFER(tosa::ReduceSumOp)
 #undef REDUCE_SHAPE_INFER
 COMPATIBLE_RETURN_TYPES(tosa::ConcatOp)
@@ -1892,7 +1892,7 @@ LogicalResult tosa::ReduceAllOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceAnyOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceMaxOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceMinOp::verify() { return verifyReduceOp(*this); }
-LogicalResult tosa::ReduceProdOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceProductOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceSumOp::verify() { return verifyReduceOp(*this); }
 
 static LogicalResult NAryInferReturnTypes(
