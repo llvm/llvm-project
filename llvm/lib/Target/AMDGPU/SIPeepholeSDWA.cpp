@@ -514,8 +514,7 @@ bool SDWASrcOperand::canCombineSelections(const MachineInstr &MI,
     const MachineOperand *Src = TII->getNamedOperand(MI, SrcOpName);
     const MachineOperand *SrcSel = TII->getNamedOperand(MI, SrcSelOpName);
     return !Src || !isSameReg(*Src, *getReplacedOperand()) ||
-           combineSdwaSel(static_cast<SdwaSel>(SrcSel->getImm()), getSrcSel())
-               .has_value();
+           !combineSdwaSel(static_cast<SdwaSel>(SrcSel->getImm()), getSrcSel());
   };
 
   using namespace AMDGPU;
