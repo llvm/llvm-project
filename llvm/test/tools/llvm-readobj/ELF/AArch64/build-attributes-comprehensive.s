@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o - | llvm-readelf --arch-specific - | FileCheck %s --check-prefix=ATTR
+# RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-readelf --arch-specific - | FileCheck %s --check-prefix=ATTR
 
 # ATTR: BuildAttributes {
 # ATTR-NEXT:   FormatVersion: 0x41
