@@ -15,6 +15,7 @@
 #include "RunInTerminal.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
@@ -80,7 +81,11 @@ typedef int socklen_t;
 #endif
 
 using namespace lldb_dap;
-using lldb_private::NativeSocket;
+using lldb_private::File;
+using lldb_private::IOObject;
+using lldb_private::MainLoop;
+using lldb_private::MainLoopBase;
+using lldb_private::NativeFile;
 using lldb_private::Socket;
 using lldb_private::Status;
 
@@ -308,14 +313,14 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   // address.
   llvm::outs().flush();
 
-  static lldb_private::MainLoop g_loop;
+  static MainLoop g_loop;
   llvm::sys::SetInterruptFunction([]() {
     g_loop.AddPendingCallback(
-        [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+        [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
   std::condition_variable dap_sessions_condition;
   std::mutex dap_sessions_mutex;
-  std::map<Socket *, DAP *> dap_sessions;
+  std::map<IOObject *, DAP *> dap_sessions;
   unsigned int clientCount = 0;
   auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
                                           &dap_sessions_mutex, &dap_sessions,
@@ -329,18 +334,15 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
            << " client connected: " << name << "\n";
     }
 
+    lldb::IOObjectSP io(std::move(sock));
+
     // Move the client into a background thread to unblock accepting the next
     // client.
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
-                        &dap_sessions, sock = std::move(sock)]() {
+                        &dap_sessions]() {
       llvm::set_thread_name(name + ".runloop");
-      StreamDescriptor input =
-          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
-      // Close the output last for the best chance at error reporting.
-      StreamDescriptor output =
-          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
-      DAP dap = DAP(name, program_path, log, std::move(input),
-                    std::move(output), default_repl_mode, pre_init_commands);
+      DAP dap = DAP(name, program_path, log, io, io, default_repl_mode,
+                    pre_init_commands);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -352,7 +354,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
 
       {
         std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
-        dap_sessions[sock.get()] = &dap;
+        dap_sessions[io.get()] = &dap;
       }
 
       if (auto Err = dap.Loop()) {
@@ -368,7 +370,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       }
 
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
-      dap_sessions.erase(sock.get());
+      dap_sessions.erase(io.get());
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
     });
     client.detach();
@@ -560,8 +562,10 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
-  StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
+  lldb::IOObjectSP input = std::make_shared<NativeFile>(
+      fileno(stdin), File::eOpenOptionReadOnly, true);
+  lldb::IOObjectSP output = std::make_shared<NativeFile>(
+      stdout_fd, File::eOpenOptionWriteOnly, false);
 
   DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
                 std::move(output), default_repl_mode, pre_init_commands);
