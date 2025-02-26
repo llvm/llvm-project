@@ -2078,7 +2078,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testi64 = "test.i64"() : () -> (i64)
-  // expected-error @below {{invalid numTasks modifier : 'default'}}
+  // expected-error @below {{invalid num_tasks modifier : 'default'}}
   omp.taskloop num_tasks(default: %testi64: i64) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield

@@ -472,6 +472,56 @@ static void printOrderClause(OpAsmPrinter &p, Operation *op,
     p << stringifyClauseOrderKind(order.getValue());
 }
 
+template <typename ClauseTypeAttr, typename ClauseType>
+static ParseResult
+parseGranularityClause(OpAsmParser &parser, ClauseTypeAttr &prescriptiveness,
+                       std::optional<OpAsmParser::UnresolvedOperand> &operand,
+                       Type &operandType,
+                       std::optional<ClauseType> (*symbolizeClause)(StringRef),
+                       StringRef clauseName) {
+  StringRef enumStr;
+  if (succeeded(parser.parseOptionalKeyword(&enumStr))) {
+    if (std::optional<ClauseType> enumValue = symbolizeClause(enumStr)) {
+      prescriptiveness = ClauseTypeAttr::get(parser.getContext(), *enumValue);
+      if (parser.parseColon())
+        return failure();
+    } else {
+      return parser.emitError(parser.getCurrentLocation())
+             << "invalid " << clauseName << " modifier : '" << enumStr << "'";
+      ;
+    }
+  }
+
+  OpAsmParser::UnresolvedOperand var;
+  if (succeeded(parser.parseOperand(var))) {
+    operand = var;
+  } else {
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected " << clauseName << " operand";
+  }
+
+  if (operand.has_value()) {
+    if (parser.parseColonType(operandType))
+      return failure();
+  }
+
+  return success();
+}
+
+template <typename ClauseTypeAttr, typename ClauseType>
+static void
+printGranularityClause(OpAsmPrinter &p, Operation *op,
+                       ClauseTypeAttr prescriptiveness, Value operand,
+                       mlir::Type operandType,
+                       StringRef (*stringifyClauseType)(ClauseType)) {
+
+  if (prescriptiveness)
+    p << stringifyClauseType(prescriptiveness.getValue()) << ": ";
+
+  if (operand)
+    p << operand << ": " << operandType;
+}
+
 //===----------------------------------------------------------------------===//
 // Parser and printer for grainsize Clause
 //===----------------------------------------------------------------------===//
@@ -481,46 +531,17 @@ static ParseResult
 parseGrainsizeClause(OpAsmParser &parser, ClauseGrainsizeTypeAttr &grainsizeMod,
                      std::optional<OpAsmParser::UnresolvedOperand> &grainsize,
                      Type &grainsizeType) {
-  SMLoc loc = parser.getCurrentLocation();
-  StringRef enumStr;
-
-  if (succeeded(parser.parseOptionalKeyword(&enumStr))) {
-    if (std::optional<ClauseGrainsizeType> enumValue =
-            symbolizeClauseGrainsizeType(enumStr)) {
-      grainsizeMod =
-          ClauseGrainsizeTypeAttr::get(parser.getContext(), *enumValue);
-      if (parser.parseColon())
-        return failure();
-    } else {
-      return parser.emitError(loc, "invalid grainsize modifier : '")
-             << enumStr << "'";
-    }
-  }
-
-  OpAsmParser::UnresolvedOperand operand;
-  if (succeeded(parser.parseOperand(operand))) {
-    grainsize = operand;
-  } else {
-    return parser.emitError(parser.getCurrentLocation())
-           << "expected grainsize operand";
-  }
-
-  if (grainsize.has_value()) {
-    if (parser.parseColonType(grainsizeType))
-      return failure();
-  }
-
-  return success();
+  return parseGranularityClause<ClauseGrainsizeTypeAttr, ClauseGrainsizeType>(
+      parser, grainsizeMod, grainsize, grainsizeType,
+      &symbolizeClauseGrainsizeType, "grainsize");
 }
 
 static void printGrainsizeClause(OpAsmPrinter &p, Operation *op,
                                  ClauseGrainsizeTypeAttr grainsizeMod,
                                  Value grainsize, mlir::Type grainsizeType) {
-  if (grainsizeMod)
-    p << stringifyClauseGrainsizeType(grainsizeMod.getValue()) << ": ";
-
-  if (grainsize)
-    p << grainsize << ": " << grainsizeType;
+  printGranularityClause<ClauseGrainsizeTypeAttr, ClauseGrainsizeType>(
+      p, op, grainsizeMod, grainsize, grainsizeType,
+      &stringifyClauseGrainsizeType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -532,46 +553,16 @@ static ParseResult
 parseNumTasksClause(OpAsmParser &parser, ClauseNumTasksTypeAttr &numTasksMod,
                     std::optional<OpAsmParser::UnresolvedOperand> &numTasks,
                     Type &numTasksType) {
-  SMLoc loc = parser.getCurrentLocation();
-  StringRef enumStr;
-
-  if (succeeded(parser.parseOptionalKeyword(&enumStr))) {
-    if (std::optional<ClauseNumTasksType> enumValue =
-            symbolizeClauseNumTasksType(enumStr)) {
-      numTasksMod =
-          ClauseNumTasksTypeAttr::get(parser.getContext(), *enumValue);
-      if (parser.parseColon())
-        return failure();
-    } else {
-      return parser.emitError(loc, "invalid numTasks modifier : '")
-             << enumStr << "'";
-    }
-  }
-
-  OpAsmParser::UnresolvedOperand operand;
-  if (succeeded(parser.parseOperand(operand))) {
-    numTasks = operand;
-  } else {
-    return parser.emitError(parser.getCurrentLocation())
-           << "expected num_tasks operand";
-  }
-
-  if (numTasks.has_value()) {
-    if (parser.parseColonType(numTasksType))
-      return failure();
-  }
-
-  return success();
+  return parseGranularityClause<ClauseNumTasksTypeAttr, ClauseNumTasksType>(
+      parser, numTasksMod, numTasks, numTasksType, &symbolizeClauseNumTasksType,
+      "num_tasks");
 }
 
 static void printNumTasksClause(OpAsmPrinter &p, Operation *op,
                                 ClauseNumTasksTypeAttr numTasksMod,
                                 Value numTasks, mlir::Type numTasksType) {
-  if (numTasksMod)
-    p << stringifyClauseNumTasksType(numTasksMod.getValue()) << ": ";
-
-  if (numTasks)
-    p << numTasks << ": " << numTasksType;
+  printGranularityClause<ClauseNumTasksTypeAttr, ClauseNumTasksType>(
+      p, op, numTasksMod, numTasks, numTasksType, &stringifyClauseNumTasksType);
 }
 
 //===----------------------------------------------------------------------===//
