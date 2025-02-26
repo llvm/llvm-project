@@ -4997,7 +4997,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     Register NewActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
 
     Register FF1Reg = MRI.createVirtualRegister(DstRegClass);
-    Register LaneValueReg = MRI.createVirtualRegister(DstRegClass);
+    Register LaneValueReg =
+        MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
     bool IsWave32 = ST.isWave32();
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
