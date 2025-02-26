@@ -3639,7 +3639,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
     return std::make_unique<Dependence>(Src, Dst);
   }
 
-  auto EltSize = SrcLoc.Size.toRaw();
+  uint64_t EltSize = SrcLoc.Size.toRaw();
   assert(EltSize == DstLoc.Size.toRaw() && "Array element size differ");
 
   // Check that memory access offsets in V are multiples of array EltSize.
