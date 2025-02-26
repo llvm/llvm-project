@@ -2179,7 +2179,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureGloballyAddressableScratch,
    FeatureIndexedResources,
    FeatureVmemPrefInsts,
-   FeatureCvtPkF16F32Inst
+   FeatureCvtPkF16F32Inst,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts
 ]>;
 
 //===----------------------------------------------------------------------===//
