@@ -23,18 +23,20 @@ add_lldb_tool(lldb-dap
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
+  DAPLog.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
   FunctionBreakpoint.cpp
   InstructionBreakpoint.cpp
-  IOStream.cpp
   JSONUtils.cpp
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
+  Transport.cpp
+  Protocol.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp

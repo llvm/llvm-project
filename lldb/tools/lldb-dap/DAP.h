@@ -14,11 +14,12 @@
 #include "FunctionBreakpoint.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
-#include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
+#include "Protocol.h"
 #include "SourceBreakpoint.h"
+#include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <fstream>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -145,11 +147,10 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
-  std::string name;
+  llvm::StringRef name;
   llvm::StringRef debug_adaptor_path;
   std::ofstream *log;
-  InputStream input;
-  OutputStream output;
+  Transport transport;
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
@@ -210,7 +211,7 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+  DAP(llvm::StringRef name, llvm::StringRef path, std::ofstream *log,
       lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
       std::vector<std::string> pre_init_commands);
   ~DAP();
@@ -232,8 +233,6 @@ struct DAP {
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
   void SendJSON(const llvm::json::Value &json);
-
-  std::string ReadJSON();
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
@@ -307,8 +306,8 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  PacketStatus GetNextObject(llvm::json::Object &object);
-  bool HandleObject(const llvm::json::Object &object);
+  llvm::Expected<protocol::ProtocolMessage> GetNextObject();
+  bool HandleObject(const protocol::ProtocolMessage &);
 
   /// Disconnect the DAP session.
   lldb::SBError Disconnect();
