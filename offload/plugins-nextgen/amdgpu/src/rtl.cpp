@@ -1857,6 +1857,10 @@ private:
   /// Use synchronous copy back.
   bool UseSyncCopyBack;
 
+  /// When copying data from one host buffer to another, only do it
+  /// asynchronously if `MinHostToHostAsyncCopySize <= size`.
+  UInt32Envar OMPX_MinHostToHostAsyncCopySize;
+
   /// Arguments for the callback function.
   PostKernelRunProcessingArgsTy PostKernelRunProcessingArgs;
 
@@ -2279,6 +2283,14 @@ public:
                                              Agent, Src, Agent, CopySize, 0,
                                              nullptr, OutputSignals[0]->get()))
         return Err;
+    }
+
+    if (CopySize < OMPX_MinHostToHostAsyncCopySize) {
+      if (auto Err =
+              OutputSignals[0]->wait(StreamBusyWaitMicroseconds, &Device))
+        return Err;
+      std::memcpy(Dst, Inter, CopySize);
+      return Error::success();
     }
 
     // Consume another stream slot and compute dependencies.
@@ -4679,7 +4691,9 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       Slots(32), NextSlot(0), SyncCycle(0),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
       UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()),
-      UseSyncCopyBack(Device.syncCopyBack()) {}
+      UseSyncCopyBack(Device.syncCopyBack()),
+      OMPX_MinHostToHostAsyncCopySize(
+          "LIBOMPTARGET_AMDGPU_MIN_HOST_TO_HOST_ASYNC_COPY_SIZE", 2048) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
