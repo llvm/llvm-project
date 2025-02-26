@@ -58562,8 +58562,9 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 
   // If we're splatting the lower half subvector of a full vector load into the
   // upper half, attempt to create a subvector broadcast.
-  if (IdxVal == (OpVT.getVectorNumElements() / 2) && SubVec.hasOneUse() &&
-      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits())) {
+  if (IdxVal == (OpVT.getVectorNumElements() / 2) &&
+      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
+      (Vec.hasOneUse() || SubVec.hasOneUse())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);
     auto *SubLd = dyn_cast<LoadSDNode>(SubVec);
     if (VecLd && SubLd &&

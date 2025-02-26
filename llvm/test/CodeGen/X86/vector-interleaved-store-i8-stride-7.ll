@@ -10210,11 +10210,9 @@ define void @store_i8_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-NEXT:    vpshufb %ymm28, %ymm18, %ymm23
 ; AVX512BW-NEXT:    vporq %ymm2, %ymm23, %ymm2
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
-; AVX512BW-NEXT:    vmovdqa64 (%rdx), %zmm2
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm14, %zmm2, %zmm2
+; AVX512BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = mem[0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpshufb %zmm20, %zmm2, %zmm2
-; AVX512BW-NEXT:    vmovdqa64 (%rcx), %zmm20
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm15, %zmm20, %zmm20
+; AVX512BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm20 = mem[0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpshufb %zmm22, %zmm20, %zmm20
 ; AVX512BW-NEXT:    vporq %zmm2, %zmm20, %zmm2
 ; AVX512BW-NEXT:    vpermq {{.*#+}} zmm1 = zmm1[2,3,2,3,6,7,6,7]
@@ -10816,11 +10814,9 @@ define void @store_i8_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-BW-NEXT:    vpshufb %ymm28, %ymm18, %ymm23
 ; AVX512DQ-BW-NEXT:    vporq %ymm2, %ymm23, %ymm2
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
-; AVX512DQ-BW-NEXT:    vmovdqa64 (%rdx), %zmm2
-; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm14, %zmm2, %zmm2
+; AVX512DQ-BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-BW-NEXT:    vpshufb %zmm20, %zmm2, %zmm2
-; AVX512DQ-BW-NEXT:    vmovdqa64 (%rcx), %zmm20
-; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm15, %zmm20, %zmm20
+; AVX512DQ-BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm20 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-BW-NEXT:    vpshufb %zmm22, %zmm20, %zmm20
 ; AVX512DQ-BW-NEXT:    vporq %zmm2, %zmm20, %zmm2
 ; AVX512DQ-BW-NEXT:    vpermq {{.*#+}} zmm1 = zmm1[2,3,2,3,6,7,6,7]
