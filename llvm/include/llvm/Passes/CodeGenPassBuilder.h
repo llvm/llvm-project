@@ -48,6 +48,7 @@
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineScheduler.h"

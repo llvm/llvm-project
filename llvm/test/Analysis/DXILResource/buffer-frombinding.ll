@@ -106,6 +106,30 @@ define void @test_typedbuffer() {
   ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4
 
+  %cb0 = call target("dx.CBuffer", {float})
+      @llvm.dx.resource.handlefrombinding(i32 1, i32 0, i32 1, i32 0, i1 false)
+  ; CHECK: Binding [[CB0:[0-9]+]]:
+  ; CHECK:   Binding:
+  ; CHECK:     Record ID: 0
+  ; CHECK:     Space: 1
+  ; CHECK:     Lower Bound: 0
+  ; CHECK:     Size: 1
+  ; CHECK:   Class: CBuffer
+  ; CHECK:   Kind: CBuffer
+  ; CHECK:   CBuffer size: 4
+
+  %cb1 = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
+      @llvm.dx.resource.handlefrombinding(i32 1, i32 8, i32 1, i32 0, i1 false)
+  ; CHECK: Binding [[CB1:[0-9]+]]:
+  ; CHECK:   Binding:
+  ; CHECK:     Record ID: 1
+  ; CHECK:     Space: 1
+  ; CHECK:     Lower Bound: 8
+  ; CHECK:     Size: 1
+  ; CHECK:   Class: CBuffer
+  ; CHECK:   Kind: CBuffer
+  ; CHECK:   CBuffer size: 4
+
   ; CHECK-NOT: Binding {{[0-9]+}}:
 
   ret void
@@ -118,5 +142,7 @@ define void @test_typedbuffer() {
 ; CHECK-DAG: Call bound to [[UAV1]]: %uav1 =
 ; CHECK-DAG: Call bound to [[UAV2]]: %uav2_1 =
 ; CHECK-DAG: Call bound to [[UAV2]]: %uav2_2 =
+; CHECK-DAG: Call bound to [[CB0]]: %cb0 =
+; CHECK-DAG: Call bound to [[CB1]]: %cb1 =
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

@@ -2295,7 +2295,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     return LoopInfo.takeError();
 
   InsertPointOrErrorTy WsloopIP =
-      applyStaticWorkshareLoop(Loc.DL, *LoopInfo, AllocaIP, !IsNowait);
+      applyStaticWorkshareLoop(Loc.DL, *LoopInfo, AllocaIP,
+                               WorksharingLoopType::ForStaticLoop, !IsNowait);
   if (!WsloopIP)
     return WsloopIP.takeError();
   InsertPointTy AfterIP = *WsloopIP;
@@ -4058,10 +4059,9 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
   return CL;
 }
 
-Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
-    const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
-    Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
-    InsertPointTy ComputeIP, const Twine &Name) {
+Value *OpenMPIRBuilder::calculateCanonicalLoopTripCount(
+    const LocationDescription &Loc, Value *Start, Value *Stop, Value *Step,
+    bool IsSigned, bool InclusiveStop, const Twine &Name) {
 
   // Consider the following difficulties (assuming 8-bit signed integers):
   //  * Adding \p Step to the loop counter which passes \p Stop may overflow:
@@ -4074,9 +4074,7 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
   assert(IndVarTy == Stop->getType() && "Stop type mismatch");
   assert(IndVarTy == Step->getType() && "Step type mismatch");
 
-  LocationDescription ComputeLoc =
-      ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
-  updateToLocation(ComputeLoc);
+  updateToLocation(Loc);
 
   ConstantInt *Zero = ConstantInt::get(IndVarTy, 0);
   ConstantInt *One = ConstantInt::get(IndVarTy, 1);
@@ -4116,8 +4114,20 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
     Value *OneCmp = Builder.CreateICmp(CmpInst::ICMP_ULE, Span, Incr);
     CountIfLooping = Builder.CreateSelect(OneCmp, One, CountIfTwo);
   }
-  Value *TripCount = Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping,
-                                          "omp_" + Name + ".tripcount");
+
+  return Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping,
+                              "omp_" + Name + ".tripcount");
+}
+
+Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
+    const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
+    Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
+    InsertPointTy ComputeIP, const Twine &Name) {
+  LocationDescription ComputeLoc =
+      ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
+
+  Value *TripCount = calculateCanonicalLoopTripCount(
+      ComputeLoc, Start, Stop, Step, IsSigned, InclusiveStop, Name);
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
@@ -4127,6 +4137,23 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
   };
   LocationDescription LoopLoc = ComputeIP.isSet() ? Loc.IP : Builder.saveIP();
   return createCanonicalLoop(LoopLoc, BodyGen, TripCount, Name);
+}
+
+// Returns an LLVM function to call for initializing loop bounds using OpenMP
+// static scheduling for composite `distribute parallel for` depending on
+// `type`. Only i32 and i64 are supported by the runtime. Always interpret
+// integers as unsigned similarly to CanonicalLoopInfo.
+static FunctionCallee
+getKmpcDistForStaticInitForType(Type *Ty, Module &M,
+                                OpenMPIRBuilder &OMPBuilder) {
+  unsigned Bitwidth = Ty->getIntegerBitWidth();
+  if (Bitwidth == 32)
+    return OMPBuilder.getOrCreateRuntimeFunction(
+        M, omp::RuntimeFunction::OMPRTL___kmpc_dist_for_static_init_4u);
+  if (Bitwidth == 64)
+    return OMPBuilder.getOrCreateRuntimeFunction(
+        M, omp::RuntimeFunction::OMPRTL___kmpc_dist_for_static_init_8u);
+  llvm_unreachable("unknown OpenMP loop iterator bitwidth");
 }
 
 // Returns an LLVM function to call for initializing loop bounds using OpenMP
@@ -4145,10 +4172,9 @@ static FunctionCallee getKmpcForStaticInitForType(Type *Ty, Module &M,
   llvm_unreachable("unknown OpenMP loop iterator bitwidth");
 }
 
-OpenMPIRBuilder::InsertPointOrErrorTy
-OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                          InsertPointTy AllocaIP,
-                                          bool NeedsBarrier) {
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    WorksharingLoopType LoopType, bool NeedsBarrier) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
   assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
          "Require dedicated allocate IP");
@@ -4164,7 +4190,10 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   // Declare useful OpenMP runtime functions.
   Value *IV = CLI->getIndVar();
   Type *IVTy = IV->getType();
-  FunctionCallee StaticInit = getKmpcForStaticInitForType(IVTy, M, *this);
+  FunctionCallee StaticInit =
+      LoopType == WorksharingLoopType::DistributeForStaticLoop
+          ? getKmpcDistForStaticInitForType(IVTy, M, *this)
+          : getKmpcForStaticInitForType(IVTy, M, *this);
   FunctionCallee StaticFini =
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
@@ -4191,14 +4220,24 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
 
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
 
-  Constant *SchedulingType = ConstantInt::get(
-      I32Type, static_cast<int>(OMPScheduleType::UnorderedStatic));
+  OMPScheduleType SchedType =
+      (LoopType == WorksharingLoopType::DistributeStaticLoop)
+          ? OMPScheduleType::OrderedDistribute
+          : OMPScheduleType::UnorderedStatic;
+  Constant *SchedulingType =
+      ConstantInt::get(I32Type, static_cast<int>(SchedType));
 
   // Call the "init" function and update the trip count of the loop with the
   // value it produced.
-  Builder.CreateCall(StaticInit,
-                     {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound,
-                      PUpperBound, PStride, One, Zero});
+  SmallVector<Value *, 10> Args(
+      {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound, PUpperBound});
+  if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
+    Value *PDistUpperBound =
+        Builder.CreateAlloca(IVTy, nullptr, "p.distupperbound");
+    Args.push_back(PDistUpperBound);
+  }
+  Args.append({PStride, One, Zero});
+  Builder.CreateCall(StaticInit, Args);
   Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
   Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
@@ -4452,6 +4491,7 @@ static void createTargetLoopWorkshareCall(
   RealArgs.push_back(TripCount);
   if (LoopType == WorksharingLoopType::DistributeStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    Builder.restoreIP({InsertBlock, std::prev(InsertBlock->end())});
     Builder.CreateCall(RTLFn, RealArgs);
     return;
   }
@@ -4645,7 +4685,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
     // FIXME: Monotonicity ignored?
-    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier);
+    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, LoopType, NeedsBarrier);
 
   case OMPScheduleType::BaseStaticChunked:
     if (IsOrdered)
@@ -9270,6 +9310,44 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
 
   addOutlineInfo(std::move(OI));
 
+  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createDistribute(const LocationDescription &Loc,
+                                  InsertPointTy OuterAllocaIP,
+                                  BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
+
+  BasicBlock *OuterAllocaBB = OuterAllocaIP.getBlock();
+
+  if (OuterAllocaBB == Builder.GetInsertBlock()) {
+    BasicBlock *BodyBB =
+        splitBB(Builder, /*CreateBranch=*/true, "distribute.entry");
+    Builder.SetInsertPoint(BodyBB, BodyBB->begin());
+  }
+  BasicBlock *ExitBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.exit");
+  BasicBlock *BodyBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.body");
+  BasicBlock *AllocaBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.alloca");
+
+  // Generate the body of distribute clause
+  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
+  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
+  if (Error Err = BodyGenCB(AllocaIP, CodeGenIP))
+    return Err;
+
+  OutlineInfo OI;
+  OI.OuterAllocaBB = OuterAllocaIP.getBlock();
+  OI.EntryBB = AllocaBB;
+  OI.ExitBB = ExitBB;
+
+  addOutlineInfo(std::move(OI));
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 
   return Builder.saveIP();

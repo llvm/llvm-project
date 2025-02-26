@@ -411,6 +411,12 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
          Phase == ThinOrFullLTOPhase::FullLTOPreLink;
 }
 
+// Helper to check if the current compilation phase is LTO backend
+static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
+  return Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
+         Phase == ThinOrFullLTOPhase::FullLTOPostLink;
+}
+
 // Helper to wrap conditionally Coro passes.
 static CoroConditionalWrapper buildCoroWrapper(ThinOrFullLTOPhase Phase) {
   // TODO: Skip passes according to Phase.
@@ -1613,8 +1619,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     MPM.addPass(MergeFunctionsPass());
 
   if (PTO.CallGraphProfile && !LTOPreLink)
-    MPM.addPass(CGProfilePass(LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
-                              LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink));
+    MPM.addPass(CGProfilePass(isLTOPostLink(LTOPhase)));
 
   // RelLookupTableConverterPass runs later in LTO post-link pipeline.
   if (!LTOPreLink)
