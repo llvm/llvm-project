@@ -4049,11 +4049,10 @@ TEST_P(
   )cc");
 }
 
-
 TEST_P(
-  UncheckedOptionalAccessTest,
-  ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithAnotherConstCallAfterCheck) {
-    ExpectDiagnosticsFor(R"cc(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithAnotherConstCallAfterCheck) {
+  ExpectDiagnosticsFor(R"cc(
       #include "unchecked_optional_access_test.h"
   
       class A {
