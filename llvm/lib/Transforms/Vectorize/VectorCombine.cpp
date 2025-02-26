@@ -761,18 +761,24 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   if (NewCost > OldCost)
     return false;
 
-  Value *NewShuf;
+  Value *NewShuf, *LenChgShuf = nullptr;
   // insertelt DstVec, (fneg (extractelt SrcVec, Index)), Index
   Value *VecFNeg = Builder.CreateFNegFMF(SrcVec, FNeg);
   if (NeedLenChg) {
     // shuffle DstVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
-    Value *LenChgShuf = Builder.CreateShuffleVector(VecFNeg, SrcMask);
+    LenChgShuf = Builder.CreateShuffleVector(VecFNeg, SrcMask);
     NewShuf = Builder.CreateShuffleVector(DstVec, LenChgShuf, Mask);
+    Worklist.pushValue(LenChgShuf);
   } else {
     // shuffle DstVec, (fneg SrcVec), Mask
     NewShuf = Builder.CreateShuffleVector(DstVec, VecFNeg, Mask);
   }
 
+  if (LenChgShuf)
+    Worklist.pushValue(LenChgShuf);
+
+  Worklist.pushValue(VecFNeg);
+  Worklist.pushValue(NewShuf);
   replaceValue(I, *NewShuf);
   return true;
 }
