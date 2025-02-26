@@ -115,6 +115,12 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
 
+- Improved :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by adding
+  a new (off-by-default) option `AllowFalseEvaluated`, which allows marking
+  move constructors with ``noexcept(expr)`` even if ``expr``
+  evaluates to ``false``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
