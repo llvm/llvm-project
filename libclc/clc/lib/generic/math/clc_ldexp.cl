@@ -20,21 +20,22 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_add_sat.h>
+#include <clc/internal/clc.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
 #include <clc/relational/clc_isinf.h>
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
 
-_CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
+#define _CLC_DEF_ldexp _CLC_DEF __attribute__((weak))
+
+_CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
 
   if (!__clc_fp32_subnormals_supported()) {
-
     // This treats subnormals as zeros
-    int i = as_int(x);
+    int i = __clc_as_int(x);
     int e = (i >> 23) & 0xff;
     int m = i & 0x007fffff;
     int s = i & 0x80000000;
@@ -45,7 +46,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
     mr = c ? m : mr;
     int er = c ? e : v;
     er = e ? er : e;
-    return as_float(s | (er << 23) | mr);
+    return __clc_as_float(s | (er << 23) | mr);
   }
 
   /* supports denormal values */
@@ -54,7 +55,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
   uint val_ui;
   uint sign;
   int exponent;
-  val_ui = as_uint(x);
+  val_ui = __clc_as_uint(x);
   sign = val_ui & 0x80000000;
   val_ui = val_ui & 0x7fffffff; /* remove the sign bit */
   int val_x = val_ui;
@@ -64,7 +65,9 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
 
   /* denormal support */
   int fbh =
-      127 - (as_uint((float)(as_float(val_ui | 0x3f800000) - 1.0f)) >> 23);
+      127 -
+      (__clc_as_uint((float)(__clc_as_float(val_ui | 0x3f800000) - 1.0f)) >>
+       23);
   int dexponent = 25 - fbh;
   uint dval_ui = (((val_ui << fbh) & 0x007fffff) | (dexponent << 23));
   int ex = dexponent + n - multiplier;
@@ -77,7 +80,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
   dval_ui = dexponent > 254 ? 0x7f800000 : dval_ui; /*overflow*/
   dval_ui = dexponent < -multiplier ? 0 : dval_ui;  /*underflow*/
   dval_ui = dval_ui | sign;
-  val_f = as_float(dval_ui);
+  val_f = __clc_as_float(dval_ui);
 
   exponent += n;
 
@@ -91,22 +94,24 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
   val_ui = val_ui | sign;
 
   val_ui = dexp == 0 ? dval_ui : val_ui;
-  val_f = as_float(val_ui);
+  val_f = __clc_as_float(val_ui);
 
   val_f = __clc_isnan(x) | __clc_isinf(x) | val_x == 0 ? x : val_f;
   return val_f;
 }
 
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF_ldexp, float, __clc_ldexp, float, int);
+
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_DEF _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
-  long l = as_ulong(x);
+_CLC_DEF_ldexp _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
+  long l = __clc_as_ulong(x);
   int e = (l >> 52) & 0x7ff;
   long s = l & 0x8000000000000000;
 
-  ulong ux = as_ulong(x * 0x1.0p+53);
+  ulong ux = __clc_as_ulong(x * 0x1.0p+53);
   int de = ((int)(ux >> 52) & 0x7ff) - 53;
   int c = e == 0;
   e = c ? de : e;
@@ -118,17 +123,19 @@ _CLC_DEF _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
 
   ux &= ~EXPBITS_DP64;
 
-  double mr = as_double(ux | ((ulong)(v + 53) << 52));
+  double mr = __clc_as_double(ux | ((ulong)(v + 53) << 52));
   mr = mr * 0x1.0p-53;
 
-  mr = v > 0 ? as_double(ux | ((ulong)v << 52)) : mr;
+  mr = v > 0 ? __clc_as_double(ux | ((ulong)v << 52)) : mr;
 
-  mr = v == 0x7ff ? as_double(s | PINFBITPATT_DP64) : mr;
-  mr = v < -53 ? as_double(s) : mr;
+  mr = v == 0x7ff ? __clc_as_double(s | PINFBITPATT_DP64) : mr;
+  mr = v < -53 ? __clc_as_double(s) : mr;
 
   mr = ((n == 0) | __clc_isinf(x) | (x == 0)) ? x : mr;
   return mr;
 }
+
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF_ldexp, double, __clc_ldexp, double, int);
 
 #endif
 
@@ -136,10 +143,10 @@ _CLC_DEF _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-_CLC_OVERLOAD _CLC_DEF half __clc_ldexp(half x, int n) {
+_CLC_OVERLOAD _CLC_DEF_ldexp half __clc_ldexp(half x, int n) {
   return (half)__clc_ldexp((float)x, n);
 }
 
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_ldexp, half, int);
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF_ldexp, half, __clc_ldexp, half, int);
 
 #endif
