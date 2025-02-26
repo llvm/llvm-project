@@ -3133,7 +3133,36 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_sumop4s_za64_wide_1x2 : SME_OuterProduct_QuaterTile_Multi;
   def int_aarch64_sme_usmop4a_za64_wide_1x2 : SME_OuterProduct_QuaterTile_Multi;
   def int_aarch64_sme_usmop4s_za64_wide_1x2 : SME_OuterProduct_QuaterTile_Multi;
-  
+
+  def int_aarch64_sme_mop4a_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_mop4s_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_mop4a_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_mop4s_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_smop4a_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_smop4s_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_smop4a_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_smop4s_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_umop4a_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_umop4s_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_umop4a_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_umop4s_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_sumop4a_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_sumop4s_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_sumop4a_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_sumop4s_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_usmop4a_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_usmop4s_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_usmop4a_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_usmop4s_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_smop4a_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_smop4s_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_umop4a_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_umop4s_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_sumop4a_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_sumop4s_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_usmop4a_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+  def int_aarch64_sme_usmop4s_za64_wide_2x1 : SME_OuterProduct_QuaterTile_Multi;
+
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,

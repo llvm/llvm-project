@@ -122,6 +122,15 @@ class sme2_quarter_tile_outer_product_pseudo_single_multi<ZPRRegOp zn_ty, Regist
   let usesCustomInserter = 1;
 }
 
+class sme2_quarter_tile_outer_product_pseudo_multi_single<RegisterOperand zn_ty, ZPRRegOp zm_ty, SMEMatrixTypeEnum za_flag>
+    : Pseudo<(outs), (ins i32imm:$tile,
+                          zn_ty:$zn, zm_ty:$zm), []>,
+      Sched<[]> {
+  // Translated to the actual instructions in AArch64ISelLowering.cpp
+  let SMEMatrixType = za_flag;
+  let usesCustomInserter = 1;
+}
+
 class sme2_za_array_2op_multi_single_pseudo<string name, Operand index_ty, RegisterOperand multi_vector_ty,
                                             ZPRRegOp zpr_ty, SMEMatrixTypeEnum za_flag>
     : SMEPseudo2Instr<name, 0>,
@@ -282,6 +291,11 @@ class SME2_ZA_Tile_TwoVec_Pat<string name, SDPatternOperator intrinsic, Operand 
 class SME2_ZA_Tile_Vec_Multi_Pat<string name, SDPatternOperator intrinsic, Operand imm_ty, ValueType vt>
     : Pat<(intrinsic imm_ty:$tile, vt:$Zn, vt:$Zm1, vt:$Zm2),
           (!cast<Instruction>(name # _PSEUDO) $tile, $Zn, (REG_SEQUENCE ZPR2Mul2, vt:$Zm1, zsub0, vt:$Zm2, zsub1))>;
+
+class SME2_ZA_Tile_Vec_Multi_Single_Pat<string name, SDPatternOperator intrinsic, Operand imm_ty, ValueType vt>
+    : Pat<(intrinsic imm_ty:$tile, vt:$Zn1, vt:$Zn2, vt:$Zm),
+          (!cast<Instruction>(name # _PSEUDO) $tile, (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1), $Zm)>;
+
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -625,6 +639,7 @@ class sme_quarter_outer_product_i16_i32<bit u0, bit N, bit M, bit subtr, Registe
 }
 
 multiclass sme_quarter_outer_product_i8_i32<bit zn_u, bit zm_u, bit subtr, string mnemonic, string op>{
+  // Single vectors
   def _MZZ_BToS   : sme_quarter_outer_product_i8_i32<{zn_u, 0}, {zm_u, 0}, subtr,
                                                         ZPR8Mul2_Lo, ZPR8Mul2_Hi, mnemonic>, SMEPseudo2Instr<NAME # _MZZ_BToS, 1>;
 
@@ -632,8 +647,15 @@ multiclass sme_quarter_outer_product_i8_i32<bit zn_u, bit zm_u, bit subtr, strin
 
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_BToS, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_3, nxv16i8>;
 
+  // Multiple and single vectors
   def _M2ZZ_BToS  : sme_quarter_outer_product_i8_i32<{zn_u, 1}, {zm_u, 0}, subtr,
-                                                         ZZ_b_mul_r_Lo, ZPR8Mul2_Hi, mnemonic>;
+                                                         ZZ_b_mul_r_Lo, ZPR8Mul2_Hi, mnemonic>, SMEPseudo2Instr<NAME # _M2ZZ_BToS, 1>;
+
+  def NAME # _M2ZZ_BToS # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_b_mul_r_Lo, ZPR8Mul2_Hi, SMEMatrixTileS>, SMEPseudo2Instr<NAME # _M2ZZ_BToS, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_BToS, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_3, nxv16i8>;
+
+  // Single and multiple vectors
   def _MZ2Z_BToS  : sme_quarter_outer_product_i8_i32<{zn_u, 0}, {zm_u, 1}, subtr,
                                                          ZPR8Mul2_Lo, ZZ_b_mul_r_Hi, mnemonic>, SMEPseudo2Instr<NAME # _MZ2Z_BToS, 1>;
 
@@ -641,11 +663,13 @@ multiclass sme_quarter_outer_product_i8_i32<bit zn_u, bit zm_u, bit subtr, strin
 
   def : SME2_ZA_Tile_Vec_Multi_Pat<NAME # _MZ2Z_BToS, !cast<SDPatternOperator>(op # "_1x2"), timm32_0_3, nxv16i8>;
 
+  // Multiple vectors
   def _M2Z2Z_BToS : sme_quarter_outer_product_i8_i32<{zn_u, 1}, {zm_u, 1}, subtr,
                                                           ZZ_b_mul_r_Lo, ZZ_b_mul_r_Hi, mnemonic>;
 }
 
 multiclass sme_quarter_outer_product_i16_i32<bit unsigned, bit subtr, string mnemonic, string op>{
+  // Single vectors
   def _MZZ_HToS   : sme_quarter_outer_product_i16_i32<unsigned, 0b0, 0b0, subtr,
                                                         ZPR16Mul2_Lo, ZPR16Mul2_Hi, mnemonic>, SMEPseudo2Instr<NAME # _MZZ_HToS, 1>;
 
@@ -653,8 +677,15 @@ multiclass sme_quarter_outer_product_i16_i32<bit unsigned, bit subtr, string mne
 
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_HToS, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_3, nxv8i16>;
 
+  // Multiple and single vectors
   def _M2ZZ_HToS  : sme_quarter_outer_product_i16_i32<unsigned, 0b1, 0b0, subtr,
-                                                         ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, mnemonic>;
+                                                         ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, mnemonic>, SMEPseudo2Instr<NAME # _M2ZZ_HToS, 1>;
+
+  def NAME # _M2ZZ_HToS # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, SMEMatrixTileS>, SMEPseudo2Instr<NAME # _M2ZZ_HToS, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_HToS, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_3, nxv8i16>;
+
+  // Single and multiple vectors
   def _MZ2Z_HToS  : sme_quarter_outer_product_i16_i32<unsigned, 0b0, 0b1, subtr,
                                                          ZPR16Mul2_Lo, ZZ_h_mul_r_Hi, mnemonic>, SMEPseudo2Instr<NAME # _MZ2Z_HToS, 1>;
 
@@ -662,11 +693,13 @@ multiclass sme_quarter_outer_product_i16_i32<bit unsigned, bit subtr, string mne
 
   def : SME2_ZA_Tile_Vec_Multi_Pat<NAME # _MZ2Z_HToS, !cast<SDPatternOperator>(op # "_1x2"), timm32_0_3, nxv8i16>;
 
+  // Multiple vectors
   def _M2Z2Z_HToS : sme_quarter_outer_product_i16_i32<unsigned, 0b1, 0b1, subtr,
                                                           ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi, mnemonic>;
 }
 
 multiclass sme_quarter_outer_product_i64<bit zn_u, bit zm_u, bit subtr, string mnemonic, string op>{
+  // Single vectors
   def _MZZ_HtoD   : sme_quarter_outer_product_i64<{zn_u, 0}, {zm_u, 0}, subtr,
                                                         ZPR16Mul2_Lo, ZPR16Mul2_Hi, mnemonic>, SMEPseudo2Instr<NAME # _MZZ_HtoD, 1>;
 
@@ -674,8 +707,15 @@ multiclass sme_quarter_outer_product_i64<bit zn_u, bit zm_u, bit subtr, string m
 
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_HtoD, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_7, nxv8i16>;
 
+  // Multiple and single vectors
   def _M2ZZ_HtoD  : sme_quarter_outer_product_i64<{zn_u, 1}, {zm_u, 0}, subtr,
-                                                         ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, mnemonic>;
+                                                         ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, mnemonic>, SMEPseudo2Instr<NAME # _M2ZZ_HtoD, 1>;
+
+  def NAME # _M2ZZ_HtoD # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, SMEMatrixTileD>, SMEPseudo2Instr<NAME # _M2ZZ_HtoD, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_HtoD, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_7, nxv8i16>;
+
+  // Single and multiple vectors
   def _MZ2Z_HtoD  : sme_quarter_outer_product_i64<{zn_u, 0}, {zm_u, 1}, subtr,
                                                          ZPR16Mul2_Lo, ZZ_h_mul_r_Hi, mnemonic>, SMEPseudo2Instr<NAME # _MZ2Z_HtoD, 1>;
 
@@ -683,6 +723,7 @@ multiclass sme_quarter_outer_product_i64<bit zn_u, bit zm_u, bit subtr, string m
 
   def : SME2_ZA_Tile_Vec_Multi_Pat<NAME # _MZ2Z_HtoD, !cast<SDPatternOperator>(op # "_1x2"), timm32_0_7, nxv8i16>;
 
+  // Multiple vectors
   def _M2Z2Z_HtoD : sme_quarter_outer_product_i64<{zn_u, 1}, {zm_u, 1}, subtr,
                                                           ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi, mnemonic>;
 }
@@ -5533,7 +5574,11 @@ multiclass sme2_bfmop4as_widening<bit S, string mnemonic, string op> {
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_S, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_3, nxv8bf16>;
 
   // Multiple and single vectors
-  def _M2ZZ_S : sme2_bf16_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>;
+  def _M2ZZ_S : sme2_bf16_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>, SMEPseudo2Instr<NAME # _M2ZZ_S, 1>;
+
+  def NAME # _M2ZZ_S # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, SMEMatrixTileS>, SMEPseudo2Instr<NAME # _M2ZZ_S, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_S, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_3, nxv8bf16>;
 
   // Single and multiple vectors
   def _MZ2Z_S : sme2_bf16_fp32_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR16Mul2_Lo, ZZ_h_mul_r_Hi>, SMEPseudo2Instr<NAME # _MZ2Z_S, 1>;
@@ -5541,7 +5586,6 @@ multiclass sme2_bfmop4as_widening<bit S, string mnemonic, string op> {
   def NAME # _MZ2Z_S # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_single_multi<ZPR16Mul2_Lo, ZZ_h_mul_r_Hi, SMEMatrixTileS>, SMEPseudo2Instr<NAME # _MZ2Z_S, 0>;
 
   def : SME2_ZA_Tile_Vec_Multi_Pat<NAME # _MZ2Z_S, !cast<SDPatternOperator>(op # "_1x2"), timm32_0_3, nxv8bf16>;
-
 
   // Multiple vectors
   def _M2Z2Z_S : sme2_bf16_fp32_quarter_tile_outer_product<1, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi>;
@@ -5689,7 +5733,11 @@ multiclass sme2_fmop4as_fp16_non_widening<bit S, string mnemonic, string op> {
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_H, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_1, nxv8f16>;
 
   // Multiple and single vectors
-  def _M2ZZ_H : sme2_fp16_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>;
+  def _M2ZZ_H : sme2_fp16_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>, SMEPseudo2Instr<NAME # _M2ZZ_H, 1>;
+
+  def NAME # _M2ZZ_H # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, SMEMatrixTileH>, SMEPseudo2Instr<NAME # _M2ZZ_H, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_H, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_1, nxv8f16>;
 
   // Single and multiple vectors
   def _MZ2Z_H : sme2_fp16_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR16Mul2_Lo, ZZ_h_mul_r_Hi>, SMEPseudo2Instr<NAME # _MZ2Z_H, 1>;
@@ -5769,7 +5817,11 @@ multiclass sme2_bfmop4as_non_widening<bit S, string mnemonic, string op> {
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_H, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_1, nxv8bf16>;
 
   // Multiple and single vectors
-  def _M2ZZ_H : sme2_bf16_fp16_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>;
+  def _M2ZZ_H : sme2_bf16_fp16_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>, SMEPseudo2Instr<NAME # _M2ZZ_H, 1>;
+
+  def NAME # _M2ZZ_H # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, SMEMatrixTileH>, SMEPseudo2Instr<NAME # _M2ZZ_H, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_H, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_1, nxv8bf16>;
 
   // Single and multiple vectors
   def _MZ2Z_H : sme2_bf16_fp16_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR16Mul2_Lo, ZZ_h_mul_r_Hi>, SMEPseudo2Instr<NAME # _MZ2Z_H, 1>;
@@ -5814,7 +5866,11 @@ multiclass sme2_fmop4as_fp32_non_widening<bit S, string mnemonic, string op> {
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_S, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_3, nxv4f32>;
 
   // Multiple and single vectors
-  def _M2ZZ_S : sme2_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_s_mul_r_Lo, ZPR32Mul2_Hi>;
+  def _M2ZZ_S : sme2_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_s_mul_r_Lo, ZPR32Mul2_Hi>, SMEPseudo2Instr<NAME # _M2ZZ_S, 1>;
+
+  def NAME # _M2ZZ_S # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_s_mul_r_Lo, ZPR32Mul2_Hi, SMEMatrixTileS>, SMEPseudo2Instr<NAME # _M2ZZ_S, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_S, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_3, nxv4f32>;
 
   // Single and multiple vectors
   def _MZ2Z_S : sme2_fp32_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR32Mul2_Lo, ZZ_s_mul_r_Hi>, SMEPseudo2Instr<NAME # _MZ2Z_S, 1>;
@@ -5859,7 +5915,11 @@ multiclass sme2_fmop4as_fp64_non_widening<bit S, string mnemonic, string op> {
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_D, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_7, nxv2f64>;
 
   // Multiple and single vectors
-  def _M2ZZ_D : sme2_fp64_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_d_mul_r_Lo, ZPR64Mul2_Hi>;
+  def _M2ZZ_D : sme2_fp64_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_d_mul_r_Lo, ZPR64Mul2_Hi>, SMEPseudo2Instr<NAME # _M2ZZ_D, 1>;
+
+  def NAME # _M2ZZ_D # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_d_mul_r_Lo, ZPR64Mul2_Hi, SMEMatrixTileD>, SMEPseudo2Instr<NAME # _M2ZZ_D, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_D, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_7, nxv2f64>;
 
   // Single and multiple vectors
   def _MZ2Z_D : sme2_fp64_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR64Mul2_Lo, ZZ_d_mul_r_Hi>, SMEPseudo2Instr<NAME # _MZ2Z_D, 1>;
@@ -5904,7 +5964,11 @@ multiclass sme2_fmop4as_fp16_fp32_widening<bit S, string mnemonic, string op> {
   def : SME2_ZA_Tile_TwoVec_Pat<NAME # _MZZ_HtoS, !cast<SDPatternOperator>(op # "_1x1"), timm32_0_3, nxv8f16>;
 
   // Multiple and single vectors
-  def _M2ZZ_HtoS : sme2_fp16_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>;
+  def _M2ZZ_HtoS : sme2_fp16_fp32_quarter_tile_outer_product<0, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZPR16Mul2_Hi>, SMEPseudo2Instr<NAME # _M2ZZ_HtoS, 1>;
+
+  def NAME # _M2ZZ_HtoS # _PSEUDO : sme2_quarter_tile_outer_product_pseudo_multi_single<ZZ_h_mul_r_Lo, ZPR16Mul2_Hi, SMEMatrixTileS>, SMEPseudo2Instr<NAME # _M2ZZ_HtoS, 0>;
+
+  def : SME2_ZA_Tile_Vec_Multi_Single_Pat<NAME # _M2ZZ_HtoS, !cast<SDPatternOperator>(op # "_2x1"), timm32_0_3, nxv8f16>;
 
   // Single and multiple vectors
   def _MZ2Z_HtoS : sme2_fp16_fp32_quarter_tile_outer_product<1, 0, S, mnemonic, ZPR16Mul2_Lo, ZZ_h_mul_r_Hi>, SMEPseudo2Instr<NAME # _MZ2Z_HtoS, 1>;
