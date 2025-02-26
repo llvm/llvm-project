@@ -687,24 +687,24 @@ ol_result_t olReleaseQueueWithCodeLoc(ol_queue_handle_t Queue,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olFinishQueue_val(ol_queue_handle_t Queue) {
+ol_impl_result_t olWaitQueue_val(ol_queue_handle_t Queue) {
   if (true /*enableParameterValidation*/) {
     if (NULL == Queue) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
   }
 
-  return olFinishQueue_impl(Queue);
+  return olWaitQueue_impl(Queue);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olFinishQueue(ol_queue_handle_t Queue) {
+OL_APIEXPORT ol_result_t OL_APICALL olWaitQueue(ol_queue_handle_t Queue) {
   if (offloadConfig().TracingEnabled) {
-    std::cerr << "---> olFinishQueue";
+    std::cerr << "---> olWaitQueue";
   }
 
-  ol_result_t Result = olFinishQueue_val(Queue);
+  ol_result_t Result = olWaitQueue_val(Queue);
 
   if (offloadConfig().TracingEnabled) {
-    ol_finish_queue_params_t Params = {&Queue};
+    ol_wait_queue_params_t Params = {&Queue};
     std::cerr << "(" << &Params << ")";
     std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -713,10 +713,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olFinishQueue(ol_queue_handle_t Queue) {
   }
   return Result;
 }
-ol_result_t olFinishQueueWithCodeLoc(ol_queue_handle_t Queue,
-                                     ol_code_location_t *CodeLocation) {
+ol_result_t olWaitQueueWithCodeLoc(ol_queue_handle_t Queue,
+                                   ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = olFinishQueue(Queue);
+  ol_result_t Result = olWaitQueue(Queue);
 
   currentCodeLocation() = nullptr;
   return Result;

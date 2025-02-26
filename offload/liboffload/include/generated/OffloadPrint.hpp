@@ -536,7 +536,7 @@ operator<<(std::ostream &os, const struct ol_release_queue_params_t *params) {
 }
 
 inline std::ostream &operator<<(std::ostream &os,
-                                const struct ol_finish_queue_params_t *params) {
+                                const struct ol_wait_queue_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   return os;

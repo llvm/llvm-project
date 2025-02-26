@@ -55,7 +55,7 @@ TEST_F(olEnqueueKernelLaunchTest, Success) {
   ASSERT_SUCCESS(olEnqueueKernelLaunch(Queue, Kernel, &Args, sizeof(Args),
                                        &LaunchArgs, nullptr));
 
-  ASSERT_SUCCESS(olFinishQueue(Queue));
+  ASSERT_SUCCESS(olWaitQueue(Queue));
 
   int *Data = (int *)Mem;
   for (int i = 0; i < 64; i++) {

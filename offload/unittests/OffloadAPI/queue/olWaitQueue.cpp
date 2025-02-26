@@ -10,8 +10,8 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olFinishQueueTest = offloadQueueTest;
+using olWaitQueueTest = offloadQueueTest;
 
-TEST_F(olFinishQueueTest, SuccessEmptyQueue) {
-  ASSERT_SUCCESS(olFinishQueue(Queue));
+TEST_F(olWaitQueueTest, SuccessEmptyQueue) {
+  ASSERT_SUCCESS(olWaitQueue(Queue));
 }

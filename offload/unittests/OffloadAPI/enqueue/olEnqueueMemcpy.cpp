@@ -21,7 +21,7 @@ TEST_F(olEnqueueMemcpyTest, SuccessH2D) {
   ASSERT_SUCCESS(olGetHostDevice(&Host));
   ASSERT_SUCCESS(
       olEnqueueMemcpy(Queue, Alloc, Device, Input.data(), Host, Size, nullptr));
-  olFinishQueue(Queue);
+  olWaitQueue(Queue);
   olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc);
 }
 
@@ -38,7 +38,7 @@ TEST_F(olEnqueueMemcpyTest, SuccessDtoH) {
       olEnqueueMemcpy(Queue, Alloc, Device, Input.data(), Host, Size, nullptr));
   ASSERT_SUCCESS(olEnqueueMemcpy(Queue, Output.data(), Host, Alloc, Device,
                                  Size, nullptr));
-  ASSERT_SUCCESS(olFinishQueue(Queue));
+  ASSERT_SUCCESS(olWaitQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
@@ -62,7 +62,7 @@ TEST_F(olEnqueueMemcpyTest, SuccessDtoD) {
       olEnqueueMemcpy(Queue, AllocB, Device, AllocA, Device, Size, nullptr));
   ASSERT_SUCCESS(olEnqueueMemcpy(Queue, Output.data(), Host, AllocB, Device,
                                  Size, nullptr));
-  ASSERT_SUCCESS(olFinishQueue(Queue));
+  ASSERT_SUCCESS(olWaitQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }

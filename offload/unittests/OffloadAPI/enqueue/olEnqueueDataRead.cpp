@@ -23,7 +23,7 @@ TEST_F(olEnqueueMemcpyDtoHTest, Success) {
       olEnqueueMemcpyHtoD(Queue, Alloc, Input.data(), Size, nullptr));
   ASSERT_SUCCESS(
       olEnqueueMemcpyDtoH(Queue, Output.data(), Alloc, Size, nullptr));
-  ASSERT_SUCCESS(olFinishQueue(Queue));
+  ASSERT_SUCCESS(olWaitQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }

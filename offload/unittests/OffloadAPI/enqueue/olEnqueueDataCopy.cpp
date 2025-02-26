@@ -27,7 +27,7 @@ TEST_F(olEnqueueMemcpyDtoDTest, Success) {
       olEnqueueMemcpyDtoD(Queue, Device, AllocB, AllocA, Size, nullptr));
   ASSERT_SUCCESS(
       olEnqueueMemcpyDtoH(Queue, Output.data(), AllocB, Size, nullptr));
-  ASSERT_SUCCESS(olFinishQueue(Queue));
+  ASSERT_SUCCESS(olWaitQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }

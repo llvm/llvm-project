@@ -53,7 +53,7 @@ ol_impl_result_t olRetainQueue_impl(ol_queue_handle_t Queue);
 
 ol_impl_result_t olReleaseQueue_impl(ol_queue_handle_t Queue);
 
-ol_impl_result_t olFinishQueue_impl(ol_queue_handle_t Queue);
+ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue);
 
 ol_impl_result_t olRetainEvent_impl(ol_event_handle_t Event);
 

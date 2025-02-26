@@ -342,7 +342,7 @@ ol_impl_result_t olReleaseQueue_impl(ol_queue_handle_t Queue) {
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olFinishQueue_impl(ol_queue_handle_t Queue) {
+ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue) {
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {

@@ -44,7 +44,7 @@ def : Function {
 }
 
 def : Function {
-    let name = "olFinishQueue";
+    let name = "olWaitQueue";
     let desc = "Wait for the enqueued work on a queue to complete";
     let details = [];
     let params = [

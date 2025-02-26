@@ -618,7 +618,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueue(
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Queue`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olFinishQueue(
+OL_APIEXPORT ol_result_t OL_APICALL olWaitQueue(
     // [in] handle of the queue
     ol_queue_handle_t Queue);
 
@@ -1066,11 +1066,11 @@ typedef struct ol_release_queue_params_t {
 } ol_release_queue_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olFinishQueue
+/// @brief Function parameters for olWaitQueue
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_finish_queue_params_t {
+typedef struct ol_wait_queue_params_t {
   ol_queue_handle_t *pQueue;
-} ol_finish_queue_params_t;
+} ol_wait_queue_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olRetainEvent
@@ -1318,10 +1318,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueueWithCodeLoc(
     ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olFinishQueue that also sets source code location
+/// @brief Variant of olWaitQueue that also sets source code location
 /// information
-/// @details See also ::olFinishQueue
-OL_APIEXPORT ol_result_t OL_APICALL olFinishQueueWithCodeLoc(
+/// @details See also ::olWaitQueue
+OL_APIEXPORT ol_result_t OL_APICALL olWaitQueueWithCodeLoc(
     ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////

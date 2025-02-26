@@ -19,6 +19,6 @@ TEST_F(olEnqueueMemcpyHtoDTest, Success) {
   std::vector<uint8_t> Input(Size, 42);
   ASSERT_SUCCESS(
       olEnqueueMemcpyHtoD(Queue, Alloc, Input.data(), Size, nullptr));
-  olFinishQueue(Queue);
+  olWaitQueue(Queue);
   olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc);
 }

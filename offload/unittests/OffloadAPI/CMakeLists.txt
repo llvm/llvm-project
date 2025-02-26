@@ -15,7 +15,7 @@ add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfo.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfoSize.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/queue/olCreateQueue.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/queue/olFinishQueue.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/queue/olWaitQueue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/queue/olReleaseQueue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/queue/olRetainQueue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemAlloc.cpp
