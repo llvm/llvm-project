@@ -2202,6 +2202,8 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
     // Don't need to write VGPR out.
   }
 
+  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+
   // Restore clobbered registers in the specified restore block.
   MI = RestoreMBB.end();
   SB.setMI(&RestoreMBB, MI);
@@ -2216,6 +2218,7 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
+      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
       bool LastSubReg = (i + 1 == e);
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
                          SubReg)
