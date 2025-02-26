@@ -535,9 +535,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (actualLastSymbol) {
     actualLastSymbol = &ResolveAssociations(*actualLastSymbol);
   }
-  const ObjectEntityDetails *actualLastObject{actualLastSymbol
-          ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
-          : nullptr};
   int actualRank{actualType.Rank()};
   if (dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape)) {
@@ -689,6 +686,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
   }
+  const ObjectEntityDetails *actualLastObject{actualLastSymbol
+          ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
+          : nullptr};
   if (actualLastObject && actualLastObject->IsCoarray() &&
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
       dummy.intent == common::Intent::Out &&

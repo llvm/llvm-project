@@ -3289,7 +3289,7 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
           const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
           const Symbol *lastWhole{
-              lastWhole0 ? &lastWhole0->GetUltimate() : nullptr};
+              lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
           if (!lastWhole || !IsAllocatable(*lastWhole)) {
             Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
           } else if (evaluate::IsCoarray(*lastWhole)) {
