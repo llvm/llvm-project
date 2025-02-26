@@ -649,6 +649,8 @@ AddressSpaceAttr::getValueFromLangAS(clang::LangAS langAS) {
     // Local means local among the work-group (OpenCL) or block (CUDA).
     // All threads inside the kernel can access local memory.
     return Kind::offload_local;
+  case LangAS::cuda_device:
+    return Kind::offload_global;
   case LangAS::opencl_constant:
     return Kind::offload_constant;
   case LangAS::opencl_private:
@@ -658,7 +660,6 @@ AddressSpaceAttr::getValueFromLangAS(clang::LangAS langAS) {
 
   case LangAS::opencl_global_device:
   case LangAS::opencl_global_host:
-  case LangAS::cuda_device:
   case LangAS::cuda_constant:
   case LangAS::sycl_global:
   case LangAS::sycl_global_device:

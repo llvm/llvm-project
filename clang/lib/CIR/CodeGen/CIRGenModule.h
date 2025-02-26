@@ -271,6 +271,9 @@ public:
 
   // Return whether structured convergence intrinsics should be generated for
   // this target.
+
+  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
   bool shouldEmitConvergenceTokens() const {
     // TODO: this shuld probably become unconditional once the controlled
     // convergence becomes the norm.

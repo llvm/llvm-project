@@ -510,6 +510,23 @@ const ABIInfo &CIRGenModule::getABIInfo() {
   return getTargetCIRGenInfo().getABIInfo();
 }
 
+bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
+  assert(langOpts.CUDA && "Should not be called by non-CUDA languages");
+  // We need to emit host-side 'shadows' for all global
+  // device-side variables because the CUDA runtime needs their
+  // size and host-side address in order to provide access to
+  // their device-side incarnations.
+
+  if (global->hasAttr<CUDAConstantAttr>() ||
+      global->hasAttr<CUDASharedAttr>() ||
+      global->getType()->isCUDADeviceBuiltinSurfaceType() ||
+      global->getType()->isCUDADeviceBuiltinTextureType()) {
+    llvm_unreachable("NYI");
+  }
+
+  return !langOpts.CUDAIsDevice || global->hasAttr<CUDADeviceAttr>();
+}
+
 void CIRGenModule::emitGlobal(GlobalDecl GD) {
   llvm::TimeTraceScope scope("build CIR Global", [&]() -> std::string {
     auto *ND = dyn_cast<NamedDecl>(GD.getDecl());
@@ -554,8 +571,10 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
       }
     }
 
-    if (dyn_cast<VarDecl>(Global))
-      llvm_unreachable("NYI");
+    if (const auto *VD = dyn_cast<VarDecl>(Global)) {
+      if (!shouldEmitCUDAGlobalVar(VD))
+        return;
+    }
   }
 
   if (langOpts.OpenMP) {
@@ -599,7 +618,6 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
       return;
     }
   } else {
-    assert(!langOpts.CUDA && "NYI");
     const auto *VD = cast<VarDecl>(Global);
     assert(VD->isFileVarDecl() && "Cannot emit local var decl as global.");
     if (VD->isThisDeclarationADefinition() != VarDecl::Definition &&
@@ -1149,8 +1167,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
     // External HIP managed variables needed to be recorded for transformation
     // in both device and host compilations.
-    if (getLangOpts().CUDA)
-      assert(0 && "not implemented");
+    // External HIP managed variables needed to be recorded for transformation
+    // in both device and host compilations.
+    if (getLangOpts().CUDA && D && D->hasAttr<HIPManagedAttr>() &&
+        D->hasExternalStorage())
+      llvm_unreachable("NYI");
   }
 
   // TODO(cir): address space cast when needed for DAddrSpace.
@@ -1422,9 +1443,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *D,
   // the device. [...]"
   // CUDA B.2.2 "The __constant__ qualifier, optionally used together with
   // __device__, declares a variable that: [...]
-  if (GV && getLangOpts().CUDA) {
-    assert(0 && "not implemented");
-  }
 
   // Set initializer and finalize emission
   CIRGenModule::setInitializer(GV, Init);
@@ -4012,9 +4030,17 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *D) {
     llvm_unreachable("NYI");
 
   if (langOpts.CUDA && langOpts.CUDAIsDevice) {
-    if (D && D->hasAttr<CUDASharedAttr>())
-      return LangAS::cuda_shared;
-    llvm_unreachable("NYI");
+    if (D) {
+      if (D->hasAttr<CUDAConstantAttr>())
+        return LangAS::cuda_constant;
+      if (D->hasAttr<CUDASharedAttr>())
+        return LangAS::cuda_shared;
+      if (D->hasAttr<CUDADeviceAttr>())
+        return LangAS::cuda_device;
+      if (D->getType().isConstQualified())
+        return LangAS::cuda_constant;
+    }
+    return LangAS::cuda_device;
   }
 
   if (langOpts.OpenMP)
