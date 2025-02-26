@@ -1999,6 +1999,19 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
       Value *IntValue =
           Builder.CreateBitOrPointerCast(ValueOperand, SizedIntTy);
       Args.push_back(IntValue);
+
+      // Set the zeroext/signext attributes on the parameter if needed to match
+      // the target's ABI.
+      if (TLI->shouldExtendTypeInLibCall(
+              TLI->getMemValueType(DL, SizedIntTy))) {
+        // The only atomic operations affected by signedness are min/max, and
+        // we don't have __atomic_ libcalls for them, so IsSigned is always
+        // false.
+        if (TLI->shouldSignExtendTypeInLibCall(SizedIntTy, false /*IsSigned*/))
+          Attr = Attr.addParamAttribute(Ctx, Args.size() - 1, Attribute::SExt);
+        else
+          Attr = Attr.addParamAttribute(Ctx, Args.size() - 1, Attribute::ZExt);
+      }
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
       AllocaValue->setAlignment(AllocaAlignment);

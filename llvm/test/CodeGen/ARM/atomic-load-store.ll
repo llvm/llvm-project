@@ -143,7 +143,7 @@ define void @test3(ptr %ptr1, ptr %ptr2) {
 ; ARMV4-NEXT:    mov r4, r1
 ; ARMV4-NEXT:    mov r1, #0
 ; ARMV4-NEXT:    bl __atomic_load_1
-; ARMV4-NEXT:    mov r1, r0
+; ARMV4-NEXT:    and r1, r0, #255
 ; ARMV4-NEXT:    mov r0, r4
 ; ARMV4-NEXT:    mov r2, #0
 ; ARMV4-NEXT:    bl __atomic_store_1
@@ -214,7 +214,7 @@ define void @test4(ptr %ptr1, ptr %ptr2) {
 ; ARMV4-NEXT:    mov r4, r1
 ; ARMV4-NEXT:    mov r1, #5
 ; ARMV4-NEXT:    bl __atomic_load_1
-; ARMV4-NEXT:    mov r1, r0
+; ARMV4-NEXT:    and r1, r0, #255
 ; ARMV4-NEXT:    mov r0, r4
 ; ARMV4-NEXT:    mov r2, #5
 ; ARMV4-NEXT:    bl __atomic_store_1
@@ -698,6 +698,9 @@ define void @store_atomic_f16__seq_cst(ptr %ptr, half %val1) {
 ; ARMV4-LABEL: store_atomic_f16__seq_cst:
 ; ARMV4:       @ %bb.0:
 ; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r2, #255
+; ARMV4-NEXT:    orr r2, r2, #65280
+; ARMV4-NEXT:    and r1, r1, r2
 ; ARMV4-NEXT:    mov r2, #5
 ; ARMV4-NEXT:    bl __atomic_store_2
 ; ARMV4-NEXT:    pop {r11, lr}
@@ -759,6 +762,9 @@ define void @store_atomic_bf16__seq_cst(ptr %ptr, bfloat %val1) {
 ; ARMV4-LABEL: store_atomic_bf16__seq_cst:
 ; ARMV4:       @ %bb.0:
 ; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r2, #255
+; ARMV4-NEXT:    orr r2, r2, #65280
+; ARMV4-NEXT:    and r1, r1, r2
 ; ARMV4-NEXT:    mov r2, #5
 ; ARMV4-NEXT:    bl __atomic_store_2
 ; ARMV4-NEXT:    pop {r11, lr}

@@ -365,6 +365,7 @@ define void @trunc_store8(ptr %p, i32 %val) {
 ; NO-ATOMIC32:       @ %bb.0:
 ; NO-ATOMIC32-NEXT:    .save {r7, lr}
 ; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    uxtb r1, r1
 ; NO-ATOMIC32-NEXT:    movs r2, #5
 ; NO-ATOMIC32-NEXT:    bl __atomic_store_1
 ; NO-ATOMIC32-NEXT:    pop {r7, pc}
@@ -385,6 +386,7 @@ define i8 @trunc_rmw8(ptr %p, i32 %val) {
 ; NO-ATOMIC32:       @ %bb.0:
 ; NO-ATOMIC32-NEXT:    .save {r7, lr}
 ; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    uxtb r1, r1
 ; NO-ATOMIC32-NEXT:    movs r2, #5
 ; NO-ATOMIC32-NEXT:    bl __atomic_fetch_add_1
 ; NO-ATOMIC32-NEXT:    pop {r7, pc}
@@ -411,31 +413,32 @@ define i8 @trunc_rmw8_signed(ptr %p, i32 %val) {
 ; NO-ATOMIC32-NEXT:    sub sp, #8
 ; NO-ATOMIC32-NEXT:    mov r4, r1
 ; NO-ATOMIC32-NEXT:    mov r5, r0
-; NO-ATOMIC32-NEXT:    ldrb r2, [r0]
+; NO-ATOMIC32-NEXT:    ldrb r0, [r0]
 ; NO-ATOMIC32-NEXT:    b .LBB18_2
 ; NO-ATOMIC32-NEXT:  .LBB18_1: @ %atomicrmw.start
 ; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB18_2 Depth=1
+; NO-ATOMIC32-NEXT:    uxtb r2, r0
 ; NO-ATOMIC32-NEXT:    mov r0, r5
 ; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_1
-; NO-ATOMIC32-NEXT:    ldr r2, [sp, #4]
-; NO-ATOMIC32-NEXT:    cmp r0, #0
+; NO-ATOMIC32-NEXT:    mov r1, r0
+; NO-ATOMIC32-NEXT:    ldr r0, [sp, #4]
+; NO-ATOMIC32-NEXT:    cmp r1, #0
 ; NO-ATOMIC32-NEXT:    bne .LBB18_4
 ; NO-ATOMIC32-NEXT:  .LBB18_2: @ %atomicrmw.start
 ; NO-ATOMIC32-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; NO-ATOMIC32-NEXT:    add r1, sp, #4
-; NO-ATOMIC32-NEXT:    strb r2, [r1]
+; NO-ATOMIC32-NEXT:    strb r0, [r1]
 ; NO-ATOMIC32-NEXT:    movs r3, #5
 ; NO-ATOMIC32-NEXT:    str r3, [sp]
-; NO-ATOMIC32-NEXT:    sxtb r0, r4
-; NO-ATOMIC32-NEXT:    sxtb r6, r2
-; NO-ATOMIC32-NEXT:    cmp r6, r0
+; NO-ATOMIC32-NEXT:    sxtb r2, r4
+; NO-ATOMIC32-NEXT:    sxtb r6, r0
+; NO-ATOMIC32-NEXT:    cmp r6, r2
 ; NO-ATOMIC32-NEXT:    bgt .LBB18_1
 ; NO-ATOMIC32-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB18_2 Depth=1
-; NO-ATOMIC32-NEXT:    mov r2, r4
+; NO-ATOMIC32-NEXT:    mov r0, r4
 ; NO-ATOMIC32-NEXT:    b .LBB18_1
 ; NO-ATOMIC32-NEXT:  .LBB18_4: @ %atomicrmw.end
-; NO-ATOMIC32-NEXT:    mov r0, r2
 ; NO-ATOMIC32-NEXT:    add sp, #8
 ; NO-ATOMIC32-NEXT:    pop {r4, r5, r6, pc}
 ;
@@ -463,6 +466,7 @@ define i8 @trunc_cmpxchg8(ptr %p, i32 %cmp, i32 %new) {
 ; NO-ATOMIC32-NEXT:    strb r1, [r4]
 ; NO-ATOMIC32-NEXT:    movs r3, #5
 ; NO-ATOMIC32-NEXT:    str r3, [sp]
+; NO-ATOMIC32-NEXT:    uxtb r2, r2
 ; NO-ATOMIC32-NEXT:    mov r1, r4
 ; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_1
 ; NO-ATOMIC32-NEXT:    ldr r0, [sp, #4]
@@ -489,6 +493,7 @@ define void @trunc_store16(ptr %p, i32 %val) {
 ; NO-ATOMIC32:       @ %bb.0:
 ; NO-ATOMIC32-NEXT:    .save {r7, lr}
 ; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    uxth r1, r1
 ; NO-ATOMIC32-NEXT:    movs r2, #5
 ; NO-ATOMIC32-NEXT:    bl __atomic_store_2
 ; NO-ATOMIC32-NEXT:    pop {r7, pc}
@@ -509,6 +514,7 @@ define i16 @trunc_rmw16(ptr %p, i32 %val) {
 ; NO-ATOMIC32:       @ %bb.0:
 ; NO-ATOMIC32-NEXT:    .save {r7, lr}
 ; NO-ATOMIC32-NEXT:    push {r7, lr}
+; NO-ATOMIC32-NEXT:    uxth r1, r1
 ; NO-ATOMIC32-NEXT:    movs r2, #5
 ; NO-ATOMIC32-NEXT:    bl __atomic_fetch_add_2
 ; NO-ATOMIC32-NEXT:    pop {r7, pc}
@@ -535,31 +541,32 @@ define i16 @trunc_rmw16_signed(ptr %p, i32 %val) {
 ; NO-ATOMIC32-NEXT:    sub sp, #8
 ; NO-ATOMIC32-NEXT:    mov r4, r1
 ; NO-ATOMIC32-NEXT:    mov r5, r0
-; NO-ATOMIC32-NEXT:    ldrh r2, [r0]
+; NO-ATOMIC32-NEXT:    ldrh r0, [r0]
 ; NO-ATOMIC32-NEXT:    b .LBB22_2
 ; NO-ATOMIC32-NEXT:  .LBB22_1: @ %atomicrmw.start
 ; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB22_2 Depth=1
+; NO-ATOMIC32-NEXT:    uxth r2, r0
 ; NO-ATOMIC32-NEXT:    mov r0, r5
 ; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_2
-; NO-ATOMIC32-NEXT:    ldr r2, [sp, #4]
-; NO-ATOMIC32-NEXT:    cmp r0, #0
+; NO-ATOMIC32-NEXT:    mov r1, r0
+; NO-ATOMIC32-NEXT:    ldr r0, [sp, #4]
+; NO-ATOMIC32-NEXT:    cmp r1, #0
 ; NO-ATOMIC32-NEXT:    bne .LBB22_4
 ; NO-ATOMIC32-NEXT:  .LBB22_2: @ %atomicrmw.start
 ; NO-ATOMIC32-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; NO-ATOMIC32-NEXT:    add r1, sp, #4
-; NO-ATOMIC32-NEXT:    strh r2, [r1]
+; NO-ATOMIC32-NEXT:    strh r0, [r1]
 ; NO-ATOMIC32-NEXT:    movs r3, #5
 ; NO-ATOMIC32-NEXT:    str r3, [sp]
-; NO-ATOMIC32-NEXT:    sxth r0, r4
-; NO-ATOMIC32-NEXT:    sxth r6, r2
-; NO-ATOMIC32-NEXT:    cmp r6, r0
+; NO-ATOMIC32-NEXT:    sxth r2, r4
+; NO-ATOMIC32-NEXT:    sxth r6, r0
+; NO-ATOMIC32-NEXT:    cmp r6, r2
 ; NO-ATOMIC32-NEXT:    bgt .LBB22_1
 ; NO-ATOMIC32-NEXT:  @ %bb.3: @ %atomicrmw.start
 ; NO-ATOMIC32-NEXT:    @ in Loop: Header=BB22_2 Depth=1
-; NO-ATOMIC32-NEXT:    mov r2, r4
+; NO-ATOMIC32-NEXT:    mov r0, r4
 ; NO-ATOMIC32-NEXT:    b .LBB22_1
 ; NO-ATOMIC32-NEXT:  .LBB22_4: @ %atomicrmw.end
-; NO-ATOMIC32-NEXT:    mov r0, r2
 ; NO-ATOMIC32-NEXT:    add sp, #8
 ; NO-ATOMIC32-NEXT:    pop {r4, r5, r6, pc}
 ;
@@ -587,6 +594,7 @@ define i16 @trunc_cmpxchg16(ptr %p, i32 %cmp, i32 %new) {
 ; NO-ATOMIC32-NEXT:    strh r1, [r4]
 ; NO-ATOMIC32-NEXT:    movs r3, #5
 ; NO-ATOMIC32-NEXT:    str r3, [sp]
+; NO-ATOMIC32-NEXT:    uxth r2, r2
 ; NO-ATOMIC32-NEXT:    mov r1, r4
 ; NO-ATOMIC32-NEXT:    bl __atomic_compare_exchange_2
 ; NO-ATOMIC32-NEXT:    ldr r0, [sp, #4]
