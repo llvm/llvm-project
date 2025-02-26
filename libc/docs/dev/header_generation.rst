@@ -153,7 +153,7 @@ Common Errors
 
    When running ``ninja libc`` in the build directory to generate headers you
    may receive the error above. Essentially this means that in
-   ``libc/utils/hdrgen/hgrgen/header.py`` there is a missing attribute named functions.
+   ``libc/utils/hdrgen/hdrgen/header.py`` there is a missing attribute named functions.
    Make sure all function components are defined within this file and there are
    no missing functions to add these components.
 
