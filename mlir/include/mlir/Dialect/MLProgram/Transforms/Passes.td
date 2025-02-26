@@ -11,7 +11,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-def MLProgramPipelineGlobalsPass : Pass<"mlprogram-pipeline-globals", "ModuleOp"> {
+def MLProgramPipelineGlobalsPass
+    : Pass<"mlprogram-pipeline-globals", "ModuleOp"> {
   let summary = "Optimize `ml_program` global operations for read and store";
   let description = [{
     `ml_program`'s load and store operations can be optimized for

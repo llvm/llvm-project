@@ -163,7 +163,8 @@ void constructShapeFunc(
 }
 
 struct OutlineShapeComputationPass
-    : public impl::OutlineShapeComputationPassBase<OutlineShapeComputationPass> {
+    : public impl::OutlineShapeComputationPassBase<
+          OutlineShapeComputationPass> {
 
   void runOnOperation() override;
 

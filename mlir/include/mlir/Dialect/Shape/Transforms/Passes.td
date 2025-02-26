@@ -11,7 +11,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-def OutlineShapeComputationPass : Pass<"outline-shape-computation", "ModuleOp"> {
+def OutlineShapeComputationPass
+    : Pass<"outline-shape-computation", "ModuleOp"> {
   let summary = "Using shape.func to preserve shape computation";
   let description = [{
     This pass outlines the shape computation part in high level IR by adding
@@ -92,7 +93,8 @@ def OutlineShapeComputationPass : Pass<"outline-shape-computation", "ModuleOp"> 
   let dependentDialects = ["shape::ShapeDialect"];
 }
 
-def RemoveShapeConstraintsPass : Pass<"remove-shape-constraints", "func::FuncOp"> {
+def RemoveShapeConstraintsPass
+    : Pass<"remove-shape-constraints", "func::FuncOp"> {
   let summary = "Replace all cstr_ ops with a true witness";
 }
 
