@@ -880,8 +880,7 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
 // profitable. Returns false if neither is the case. If \p G is not needed (e.g.
 // it is discardable and linkonce_odr), \p G is removed directly.
 bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
-  if (G->isDiscardableIfUnused() &&
-      G->use_empty() && !MergeFunctionsPDI) {
+  if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
     G->eraseFromParent();
     return true;
   }
