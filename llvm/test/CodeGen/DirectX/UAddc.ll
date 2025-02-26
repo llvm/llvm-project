@@ -1,11 +1,14 @@
 ; RUN: opt -S -scalarizer -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
-; CHECK: %dx.types.i32c = type { i32, i1 }
+; This test exercises the lowering of the intrinsic @llvm.uadd.with.overflow.i32 to the UAddc DXIL op
 
+; CHECK-DAG: [[DX_TYPES_I32C:%dx\.types\.i32c]] = type { i32, i1 }
+
+; NOTE: The uint2 overload of AddUint64 HLSL uses @llvm.uadd.with.overflow.i32, resulting in one UAddc op
 define noundef i32 @test_UAddc(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: define noundef i32 @test_UAddc(
 ; CHECK-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C:%dx\.types\.i32c]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[CARRY:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC]], 1
 ; CHECK-NEXT:    [[SUM:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC]], 0
 ; CHECK-NEXT:    [[CARRY_ZEXT:%.*]] = zext i1 [[CARRY]] to i32
@@ -20,12 +23,13 @@ define noundef i32 @test_UAddc(i32 noundef %a, i32 noundef %b) {
   ret i32 %result
 }
 
+; NOTE: The uint4 overload of AddUint64 HLSL uses @llvm.uadd.with.overflow.v2i32, resulting in two UAddc ops after scalarization
 define noundef <2 x i32> @test_UAddc_vec2(<2 x i32> noundef %a, <2 x i32> noundef %b) {
 ; CHECK-LABEL: define noundef <2 x i32> @test_UAddc_vec2(
 ; CHECK-SAME: <2 x i32> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x i32> [[A]], i64 0
 ; CHECK-NEXT:    [[B_I0:%.*]] = extractelement <2 x i32> [[B]], i64 0
-; CHECK-NEXT:    [[UADDC_I0:%.*]] = call [[DX_TYPES_I32C:%dx\.types\.i32c]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A_I0]], i32 [[B_I0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[UADDC_I0:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A_I0]], i32 [[B_I0]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x i32> [[A]], i64 1
 ; CHECK-NEXT:    [[B_I1:%.*]] = extractelement <2 x i32> [[B]], i64 1
 ; CHECK-NEXT:    [[UADDC_I1:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A_I1]], i32 [[B_I1]]) #[[ATTR0]]
@@ -56,7 +60,7 @@ define noundef <2 x i32> @test_UAddc_vec2(<2 x i32> noundef %a, <2 x i32> nounde
 define noundef i32 @test_UAddc_insert(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: define noundef i32 @test_UAddc_insert(
 ; CHECK-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C:%dx\.types\.i32c]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]]) #[[ATTR0]]
+; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[UNUSED:%.*]] = insertvalue [[DX_TYPES_I32C]] [[UADDC]], i32 [[A]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC]], 0
 ; CHECK-NEXT:    ret i32 [[RESULT]]
