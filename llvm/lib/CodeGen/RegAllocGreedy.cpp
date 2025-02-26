@@ -202,7 +202,7 @@ struct RAGreedy::RequiredAnalyses {
   RegAllocEvictionAdvisorProvider *EvictProvider;
   RegAllocPriorityAdvisorProvider *PriorityProvider;
 
-  RequiredAnalyses() {}
+  RequiredAnalyses() = delete;
   RequiredAnalyses(Pass &P);
   RequiredAnalyses(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
@@ -1476,7 +1476,8 @@ MCRegister RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
   }
 
   if (VerifyEnabled)
-    MF->verify(LIS, Indexes, "After splitting live range around basic blocks", &errs());
+    MF->verify(LIS, Indexes, "After splitting live range around basic blocks",
+               &errs());
   return MCRegister();
 }
 
