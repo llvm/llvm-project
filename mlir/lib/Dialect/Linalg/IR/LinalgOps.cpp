@@ -56,9 +56,8 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-
 SmallVector<int64_t> computeInterchangeFromDimPos(ArrayRef<int64_t> dimsPos,
-  int64_t rank) {
+                                                  int64_t rank) {
   SmallVector<int64_t> interchangeVector;
   interchangeVector.reserve(dimsPos.size());
   // First map dims and their position. For example, dims_pos = [2, 0] will map
@@ -93,7 +92,6 @@ SmallVector<T> interchange(ArrayRef<T> elements,
   }
   return vec;
 }
-
 
 /// Return a `memref.dim` or `tensor.dim` for the shape of `v` at `dim`.
 static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
@@ -4860,9 +4858,8 @@ static void generatePackOpScalarImplementationBody(PackOp packOp,
       Value idx =
           getValueOrCreateConstantIndexOp(builder, loc, sourceIndices[dim]);
       Value dimValue = getValueOrCreateConstantIndexOp(
-        builder, loc, getDimValue(builder, loc, packOp.getInput(), dim));
-      Value cond = arithBuilder.slt(
-          idx, dimValue);
+          builder, loc, getDimValue(builder, loc, packOp.getInput(), dim));
+      Value cond = arithBuilder.slt(idx, dimValue);
       isInBounds = dim == 0 ? cond : arithBuilder._and(isInBounds, cond);
     }
     scalar = builder
@@ -4928,7 +4925,6 @@ LogicalResult PackOp::generateScalarImplementation(OpBuilder &builder,
       });
   return success();
 }
-
 
 Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
                                       ArrayRef<OpFoldResult> innerTileSizes,
@@ -5266,8 +5262,8 @@ LogicalResult UnPackOp::generateScalarImplementation(OpBuilder &builder,
   }
   if (outputShape.size() != 1 || outputShape[0].size() != getOutputRank()) {
     return getOperation()->emitError(
-      "expected shape of one result value of rank")
-      << getOutputRank();
+               "expected shape of one result value of rank")
+           << getOutputRank();
   }
 
   DenseMap<int64_t, OpFoldResult> dimAndTileMapping = getDimAndTileMapping();
@@ -5281,7 +5277,7 @@ LogicalResult UnPackOp::generateScalarImplementation(OpBuilder &builder,
       affine::DivModValue divMod =
           affine::getDivMod(builder, loc, ivs[dim],
                             getValueOrCreateConstantIndexOp(
-                                    builder, loc, dimAndTileMapping[dim]));
+                                builder, loc, dimAndTileMapping[dim]));
       inputIvsPointLoops.push_back(divMod.remainder);
       inputIvs.push_back(divMod.quotient);
     } else {
@@ -5311,7 +5307,6 @@ LogicalResult UnPackOp::generateScalarImplementation(OpBuilder &builder,
   builder.create<memref::StoreOp>(loc, scalar, getOutput(), ivs);
   return success();
 }
-
 
 LogicalResult
 UnPackOp::reifyResultShapes(OpBuilder &builder,
