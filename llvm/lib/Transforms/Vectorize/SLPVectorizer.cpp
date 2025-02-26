@@ -13353,6 +13353,14 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       return EdgeInfo(const_cast<TreeEntry *>(TE), 0);
     return TE->UserTreeIndex;
   };
+  auto HasGatherUser = [&](const TreeEntry *TE) {
+    while (TE->Idx != 0 && TE->UserTreeIndex) {
+      if (TE->UserTreeIndex.EdgeIdx == UINT_MAX)
+        return true;
+      TE = TE->UserTreeIndex.UserTE;
+    }
+    return false;
+  };
   const EdgeInfo TEUseEI = GetUserEntry(TE);
   if (!TEUseEI)
     return std::nullopt;
@@ -13453,7 +13461,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         // If the user instruction is used for some reason in different
         // vectorized nodes - make it depend on index.
         if (TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->Idx < UseEI.UserTE->Idx)
+            (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
+             HasGatherUser(TEUseEI.UserTE)))
           continue;
       }
 
