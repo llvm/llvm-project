@@ -4010,7 +4010,7 @@ TEST_P(UncheckedOptionalAccessTest,
 
 TEST_P(
     UncheckedOptionalAccessTest,
-    ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObjectWithModAfterCheck) {
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithModAfterCheck) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -4027,7 +4027,7 @@ TEST_P(
 
         A& getA() { return a; }
 
-        void clear() { a = A{}; };
+        void clear() { a = A{}; }
 
       private:
         A a;
@@ -4047,6 +4047,41 @@ TEST_P(
       }
     }
   )cc");
+}
+
+
+TEST_P(
+  UncheckedOptionalAccessTest,
+  ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithAnotherConstCallAfterCheck) {
+    ExpectDiagnosticsFor(R"cc(
+      #include "unchecked_optional_access_test.h"
+  
+      class A {
+        public:
+          const $ns::$optional<int>& get() const { return x; }
+        private:
+          $ns::$optional<int> x;
+      };
+  
+      class B {
+        public:
+          const A& getA() const { return a; }
+  
+          void callWithoutChanges() const { 
+            // no-op 
+          }
+  
+        private:
+          A a;
+      };
+  
+      void target(B& b) {  
+        if (b.getA().get().has_value()) {
+          b.callWithoutChanges(); // calling const method which cannot change A
+          b.getA().get().value();
+        }
+      }
+    )cc");
 }
 
 // FIXME: Add support for:
