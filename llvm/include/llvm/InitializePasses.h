@@ -59,7 +59,7 @@ void initializeBasicBlockSectionsPass(PassRegistry &);
 void initializeBarrierNoopPass(PassRegistry &);
 void initializeBasicAAWrapperPassPass(PassRegistry &);
 void initializeBlockFrequencyInfoWrapperPassPass(PassRegistry &);
-void initializeBranchFolderPassPass(PassRegistry &);
+void initializeBranchFolderLegacyPass(PassRegistry &);
 void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 void initializeBranchRelaxationPass(PassRegistry &);
 void initializeBreakCriticalEdgesPass(PassRegistry &);
