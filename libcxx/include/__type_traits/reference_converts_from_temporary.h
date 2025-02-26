@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
      (__clang_patchlevel__ >= 2))
 
 template <class _Tp, class _Up>
-inline constexpr bool __reference_converts_from_temporary_v = __reference_converts_from_temporary(_Tp, _Up);
+const bool __reference_converts_from_temporary_v = __reference_converts_from_temporary(_Tp, _Up);
 
 #  if _LIBCPP_STD_VER >= 23
 

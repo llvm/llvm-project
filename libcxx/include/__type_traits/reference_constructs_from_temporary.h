@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Up>
 const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
 
-#  if _LIBCPP_STD_VER >= 23
+#if _LIBCPP_STD_VER >= 23
 
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS reference_constructs_from_temporary
@@ -31,7 +31,7 @@ template <class _Tp, class _Up>
 _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_constructs_from_temporary_v =
     __reference_constructs_from_temporary_v<_Tp, _Up>;
 
-#  endif
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
