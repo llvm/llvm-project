@@ -370,6 +370,43 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "RelayoutOpInterfaceTdFiles",
+    srcs = ["include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.td"],
+    includes = ["include"],
+    deps = [
+        ":DestinationStyleOpInterfaceTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "RelayoutOpInterfaceIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.td",
+    deps = [
+        ":RelayoutOpInterfaceTdFiles",
+    ],
+)
+
+cc_library(
+    name = "RelayoutOpInterface",
+    hdrs = ["include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.h"],
+    deps = [
+        ":IR",
+        ":RelayoutOpInterfaceIncGen",
+    ],
+)
+
 cc_library(
     name = "IR",
     srcs = glob([
@@ -3910,6 +3947,7 @@ cc_library(
         ":MaskableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":Support",
         ":VectorDialect",
         ":ViewLikeInterface",
         ":XeGPUEnumsIncGen",
@@ -7857,9 +7895,9 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
-        ":LinalgInterfaces",
         ":LoopLikeInterface",
         ":ParallelCombiningOpInterface",
+        ":RelayoutOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
@@ -11140,6 +11178,7 @@ td_library(
         "include/mlir/Dialect/Linalg/IR/LinalgInterfaces.td",
         "include/mlir/Dialect/Linalg/IR/LinalgOps.td",
         "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.td",
+        "include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.td",
     ],
     includes = ["include"],
     deps = [
@@ -11149,6 +11188,7 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":RelayoutOpInterfaceIncGen",
         ":SideEffectInterfacesTdFiles",
         ":TilingInterfaceTdFiles",
         ":ViewLikeInterfaceTdFiles",
@@ -11563,6 +11603,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":LinalgInterfacesIncGen",
         ":LinalgStructuredOpsIncGen",
+        ":RelayoutOpInterfaceIncGen",
         ":Support",
         ":ViewLikeInterface",
     ],
@@ -11608,6 +11649,7 @@ cc_library(
         ":MemRefDialect",
         ":MeshShardingInterface",
         ":Parser",
+        ":RelayoutOpInterfaceIncGen",
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":SparseTensorDialect",

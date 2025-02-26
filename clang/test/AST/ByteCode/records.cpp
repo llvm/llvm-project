@@ -1738,4 +1738,12 @@ namespace DeadUpcast {
 namespace CtorOfInvalidClass {
   constexpr struct { Unknown U; } InvalidCtor; // both-error {{unknown type name 'Unknown'}} \
                                                // both-error {{must be initialized by a constant expression}}
+
+#if __cplusplus >= 202002L
+  template <typename T, auto Q>
+  concept ReferenceOf = Q;
+  /// This calls a valid and constexpr copy constructor of InvalidCtor, 
+  /// but should still be rejected.
+  template<ReferenceOf<InvalidCtor> auto R, typename Rep> int F; // both-error {{non-type template argument is not a constant expression}}
+#endif
 }
