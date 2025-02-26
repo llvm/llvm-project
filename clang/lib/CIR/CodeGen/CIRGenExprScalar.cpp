@@ -63,7 +63,7 @@ public:
 
   // l-values
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e) {
-    // TODO: Handle constant emission
+    assert(!cir::MissingFeatures::tryEmitAsConstant());
     return emitLoadOfLValue(e);
   }
 
@@ -91,8 +91,8 @@ public:
                                    QualType dstType, SourceLocation loc) {
     // No sort of type conversion is implemented yet, but the path for implicit
     // paths goes through here even if the type isn't being changed.
-    srcType = cgf.getContext().getCanonicalType(srcType);
-    dstType = cgf.getContext().getCanonicalType(dstType);
+    srcType = srcType.getCanonicalType();
+    dstType = dstType.getCanonicalType();
     if (srcType == dstType)
       return src;
 
@@ -120,9 +120,6 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   QualType destTy = ce->getType();
   CastKind kind = ce->getCastKind();
 
-  // Since almost all cast kinds apply to scalars, this switch doesn't have a
-  // default case, so the compiler will warn on a missing case. The cases are
-  // in the same order as in the CastKind enum.
   switch (kind) {
   case CK_LValueToRValue:
     assert(cgf.getContext().hasSameUnqualifiedType(e->getType(), destTy));

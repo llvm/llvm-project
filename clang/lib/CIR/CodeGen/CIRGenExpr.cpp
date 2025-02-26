@@ -13,6 +13,7 @@
 #include "Address.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -33,11 +34,11 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
   Address addr = lvalue.getAddress();
   mlir::Type eltTy = addr.getElementType();
 
-  auto ptr = addr.getPointer();
+  mlir::Value ptr = addr.getPointer();
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
 
-  auto loadOp = builder.CIRBaseBuilderTy::createLoad(getLoc(loc), ptr,
+  mlir::Value loadOp = builder.CIRBaseBuilderTy::createLoad(getLoc(loc), ptr,
                                                      false /*isVolatile*/);
 
   return loadOp;
@@ -54,6 +55,7 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
     return RValue::get(emitLoadOfScalar(lv, loc));
 
   cgm.errorNYI(loc, "emitLoadOfLValue");
+  return RValue::get(nullptr);
 }
 
 LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
@@ -92,37 +94,35 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   }
 
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
+  return LValue();
 }
 
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
-                                       mlir::Location loc, CharUnits alignment,
-                                       mlir::Value arraySize) {
+                                       mlir::Location loc, CharUnits alignment) {
   mlir::Block *entryBlock = getCurFunctionEntryBlock();
 
-  // CIR uses its own alloca AS rather than follow the target data layout like
-  // original CodeGen. The data layout awareness should be done in the lowering
-  // pass instead.
+  // CIR uses its own alloca address space rather than follow the target data
+  // layout like original CodeGen. The data layout awareness should be done in
+  // the lowering pass instead.
   assert(!cir::MissingFeatures::addressSpace());
-  auto localVarPtrTy = builder.getPointerTo(ty);
-  auto alignIntAttr = cgm.getSize(alignment);
+  cir::PointerType localVarPtrTy = builder.getPointerTo(ty);
+  mlir::IntegerAttr alignIntAttr = cgm.getSize(alignment);
 
   mlir::Value addr;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(builder.getBestAllocaInsertPoint(entryBlock));
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
-                                /*var type*/ ty, name, alignIntAttr, arraySize);
+                                /*var type*/ ty, name, alignIntAttr);
     assert(!cir::MissingFeatures::opAllocaVarDeclContext());
   }
   return addr;
 }
 
-/// This creates an alloca and inserts it into the entry block if \p ArraySize
-/// is nullptr, otherwise inserts it at the current insertion point of the
+/// This creates an alloca and inserts it  at the current insertion point of the
 /// builder.
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
-                                         mlir::Location loc, const Twine &name,
-                                         mlir::Value arraySize) {
-  mlir::Value alloca = emitAlloca(name.str(), ty, loc, align, arraySize);
+                                         mlir::Location loc, const Twine &name) {
+  mlir::Value alloca = emitAlloca(name.str(), ty, loc, align);
   return Address(alloca, ty, align);
 }

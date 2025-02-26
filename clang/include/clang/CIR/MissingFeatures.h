@@ -30,6 +30,9 @@ struct MissingFeatures {
   // This isn't needed until we add support for bools.
   static bool convertTypeForMemory() { return false; }
 
+  // CIRGenFunction implementation details
+  static bool cgfSymbolTable() { return false; }
+
   // Unhandled global/linkage information.
   static bool opGlobalDSOLocal() { return false; }
   static bool opGlobalThreadLocal() { return false; }
@@ -47,13 +50,15 @@ struct MissingFeatures {
   static bool opAllocaStaticLocal() { return false; }
   static bool opAllocaNonGC() { return false; }
   static bool opAllocaImpreciseLifetime() { return false; }
+  static bool opAllocaPreciseLifetime() { return false; }
   static bool opAllocaTLS() { return false; }
   static bool opAllocaOpenMPThreadPrivate() { return false; }
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
 
-  // Options for casts
+  // Misc
   static bool scalarConversionOpts() { return false; }
+  static bool tryEmitAsConstant() { return false; }
 };
 
 } // namespace cir

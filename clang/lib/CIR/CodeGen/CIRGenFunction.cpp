@@ -13,6 +13,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <cassert>
 
@@ -129,6 +130,21 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   SmallVector<mlir::Location, 2> locs = {lhs, rhs};
   mlir::Attribute metadata;
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
+}
+
+mlir::LogicalResult CIRGenFunction::declare(Address addr, const Decl *var,
+                                            QualType ty, mlir::Location loc,
+                                            CharUnits alignment) {
+  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
+  assert(namedVar && "Needs a named decl");
+  assert(!cir::MissingFeatures::cgfSymbolTable());
+
+  mlir::Value addrVal = addr.getPointer();
+  auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
+  if (ty->isReferenceType() || ty.isConstQualified())
+    allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
+
+  return mlir::success();
 }
 
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,

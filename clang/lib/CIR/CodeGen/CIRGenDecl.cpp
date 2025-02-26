@@ -11,18 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
-/// Emit code and set up symbol table for a variable declaration with auto,
-/// register, or no storage class specifier. These turn into simple stack
-/// objects, globals depending on target.
-void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
+void CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   QualType ty = d.getType();
-  assert(ty.getAddressSpace() == LangAS::Default);
+  if (ty.getAddressSpace() != LangAS::Default)
+    cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
 
   auto loc = getLoc(d.getSourceRange());
 
@@ -43,18 +43,50 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
   // A normal fixed sized variable becomes an alloca in the entry block,
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
-  mlir::Value addrVal;
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
-                             /*ArraySize=*/nullptr);
+  address = createTempAlloca(allocaTy, alignment, loc, d.getName());
+  declare(address, &d, ty, getLoc(d.getSourceRange()), alignment);
+    
   setAddrOfLocalVar(&d, address);
-  // TODO: emit var init and cleanup
+}
+
+void CIRGenFunction::emitAutoVarInit(const clang::VarDecl &d) {
+  QualType type = d.getType();
+
+  // If this local has an initializer, emit it now.
+  const Expr *init = d.getInit();
+
+  if (init || !type.isPODType(getContext())) {
+    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit");
+  }
+}
+
+void CIRGenFunction::emitAutoVarCleanups(const clang::VarDecl &d) {
+  // Check the type for a cleanup.
+  if (QualType::DestructionKind dtorKind = d.needsDestruction(getContext()))
+    cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: type cleanup");
+
+  assert(!cir::MissingFeatures::opAllocaPreciseLifetime());
+
+  // Handle the cleanup attribute.
+  if (d.hasAttr<CleanupAttr>())
+    cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: CleanupAttr");
+}
+
+
+/// Emit code and set up symbol table for a variable declaration with auto,
+/// register, or no storage class specifier. These turn into simple stack
+/// objects, globals depending on target.
+void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
+  emitAutoVarAlloca(d);
+  emitAutoVarInit(d);
+  emitAutoVarCleanups(d);
 }
 
 void CIRGenFunction::emitVarDecl(const VarDecl &d) {
-  if (d.hasExternalStorage()) {
-    // Don't emit it now, allow it to be emitted lazily on its first use.
+  // If the declaration has external storage, don't emit it now, allow it to be
+  // emitted lazily on its first use.
+  if (d.hasExternalStorage())
     return;
-  }
 
   if (d.getStorageDuration() != SD_Automatic)
     cgm.errorNYI(d.getSourceRange(), "emitVarDecl automatic storage duration");

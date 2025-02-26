@@ -86,9 +86,8 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
 mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   assert(builder.getInsertionBlock() && "expected valid insertion point");
 
-  for (const auto *I : s.decls()) {
+  for (const Decl *I : s.decls())
     emitDecl(*I);
-  }
 
   return mlir::success();
 }

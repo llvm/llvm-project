@@ -55,7 +55,7 @@ public:
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
-  /// delcs.
+  /// declarations.
   DeclMapTy LocalDeclMap;
 
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
@@ -93,9 +93,16 @@ public:
 
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
 
+private:
+  /// Declare a variable in the current scope, return success if the variable
+  /// wasn't declared yet.
+  mlir::LogicalResult declare(Address addr, const clang::Decl *var,
+                              clang::QualType ty, mlir::Location loc,
+                              clang::CharUnits alignment);
+
+public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
-                         mlir::Location loc, clang::CharUnits alignment,
-                         mlir::Value arraySize = nullptr);
+                         mlir::Location loc, clang::CharUnits alignment);
 
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
@@ -169,6 +176,10 @@ public:
   /// objects, globals depending on target.
   void emitAutoVarDecl(const clang::VarDecl &d);
 
+  void emitAutoVarAlloca(const clang::VarDecl &d);
+  void emitAutoVarInit(const clang::VarDecl &d);
+  void emitAutoVarCleanups(const clang::VarDecl &d);
+
   /// This method handles emission of any variable declaration
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
@@ -193,8 +204,7 @@ public:
                      clang::SourceLocation loc, clang::SourceLocation startLoc);
 
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
-                           const Twine &name = "tmp",
-                           mlir::Value arraySize = nullptr);
+                           const Twine &name = "tmp");
 };
 } // namespace clang::CIRGen
 

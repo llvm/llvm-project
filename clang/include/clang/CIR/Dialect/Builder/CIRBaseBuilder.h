@@ -55,10 +55,8 @@ public:
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
                            mlir::Type type, llvm::StringRef name,
-                           mlir::IntegerAttr alignment,
-                           mlir::Value dynAllocSize) {
-    return create<cir::AllocaOp>(loc, addrType, type, name, alignment,
-                                 dynAllocSize);
+                           mlir::IntegerAttr alignment) {
+    return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,

@@ -139,25 +139,16 @@ def AllocaOp : CIR_Op<"alloca", [
   let description = [{
     The `cir.alloca` operation defines a scope-local variable.
 
-    The presence `init` attribute indicates that the local variable represented
-    by this alloca was originally initialized in C/C++ source code. In such
-    cases, the first use contains the initialization (a cir.store, a cir.call
-    to a ctor, etc).
-
     The presence of the `const` attribute indicates that the local variable is
     declared with C/C++ `const` keyword.
-
-    The `dynAllocSize` specifies the size to dynamically allocate on the stack
-    and ignores the allocation size based on the original type. This is useful
-    when handling VLAs and is omitted when declaring regular local variables.
 
     The result type is a pointer to the input's type.
 
     Example:
 
     ```mlir
-    // int count = 3;
-    %0 = cir.alloca i32, !cir.ptr<i32>, ["count", init] {alignment = 4 : i64}
+    // int count;
+    %0 = cir.alloca i32, !cir.ptr<i32>, ["count"] {alignment = 4 : i64}
 
     // int *ptr;
     %1 = cir.alloca !cir.ptr<i32>, !cir.ptr<!cir.ptr<i32>>, ["ptr"] {alignment = 8 : i64}
@@ -166,7 +157,6 @@ def AllocaOp : CIR_Op<"alloca", [
   }];
 
   let arguments = (ins
-    Optional<PrimitiveInt>:$dynAllocSize,
     TypeAttr:$allocaType,
     StrAttr:$name,
     UnitAttr:$init,
@@ -180,32 +170,19 @@ def AllocaOp : CIR_Op<"alloca", [
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "mlir::Type":$addr, "mlir::Type":$allocaType,
-                   "llvm::StringRef":$name,
-                   "mlir::IntegerAttr":$alignment)>,
-
     OpBuilder<(ins "mlir::Type":$addr,
                    "mlir::Type":$allocaType,
                    "llvm::StringRef":$name,
-                   "mlir::IntegerAttr":$alignment,
-                   "mlir::Value":$dynAllocSize),
-    [{
-      if (dynAllocSize)
-        $_state.addOperands(dynAllocSize);
-      build($_builder, $_state, addr, allocaType, name, alignment);
-    }]>
+                   "mlir::IntegerAttr":$alignment)>
   ];
 
   let extraClassDeclaration = [{
     // Whether the alloca input type is a pointer.
     bool isPointerType() { return ::mlir::isa<::cir::PointerType>(getAllocaType()); }
-
-    bool isDynamic() { return (bool)getDynAllocSize(); }
   }];
 
   let assemblyFormat = [{
     $allocaType `,` qualified(type($addr)) `,`
-    ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
     `[` $name
        (`,` `init` $init^)?
        (`,` `const` $constant^)?
@@ -229,13 +206,7 @@ def LoadOp : CIR_Op<"load", [
   let summary = "Load value from memory adddress";
   let description = [{
     `cir.load` reads a value (lvalue to rvalue conversion) given an address
-    backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
-    mark the resulting value as used by another operation to dereference
-    a pointer. A unit attribute `volatile` can be used to indicate a volatile
-    loading. Load can be marked atomic by using `atomic(<mem_order>)`.
-
-    `align` can be used to specify an alignment that's different from the
-    default, which is computed from `result`'s type ABI data layout.
+    backed up by a `cir.ptr` type.
 
     Example:
 
@@ -247,8 +218,7 @@ def LoadOp : CIR_Op<"load", [
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr
-                       );
+                           [MemRead]>:$addr);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{

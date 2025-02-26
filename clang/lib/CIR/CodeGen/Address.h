@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CIR_ADDRESS_H
-#define LLVM_CLANG_LIB_CIR_ADDRESS_H
+#ifndef CLANG_LIB_CIR_ADDRESS_H
+#define CLANG_LIB_CIR_ADDRESS_H
 
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
@@ -73,4 +73,4 @@ public:
 
 } // namespace clang::CIRGen
 
-#endif // LLVM_CLANG_LIB_CIR_ADDRESS_H
+#endif // CLANG_LIB_CIR_ADDRESS_H

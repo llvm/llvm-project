@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
-#define LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
+#ifndef CLANG_LIB_CIR_CIRGENVALUE_H
+#define CLANG_LIB_CIR_CIRGENVALUE_H
 
 #include "Address.h"
 
@@ -122,4 +122,4 @@ public:
 
 } // namespace clang::CIRGen
 
-#endif // LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
+#endif // CLANG_LIB_CIR_CIRGENVALUE_H
