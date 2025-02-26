@@ -987,6 +987,95 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
   return true;
 }
 
+// If `I` is a load instruction, used only by shufflevector instructions with 
+// poison values, attempt to shrink the load to only the lanes being used.
+static bool shrinkLoadsForBroadcast(Instruction &I) {
+  auto *OldLoad = dyn_cast<LoadInst>(&I);
+  if (!OldLoad)
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!VecTy)
+    return false;
+
+  auto IsPoisonOrUndef = [](Value *V) -> bool {
+    if (auto *C = dyn_cast<Constant>(V)) {
+      return isa<PoisonValue>(C) || isa<UndefValue>(C);
+    }
+    return false;
+  };
+
+  using IndexRange = std::pair<unsigned, unsigned>;
+  auto GetIndexRangeInShuffles = [&]() -> std::optional<IndexRange> {
+    auto OutputRange = IndexRange(VecTy->getNumElements(), 0u);
+    for (auto &Use: I.uses()) {
+      // All uses must be ShuffleVector instructions.
+      auto *Shuffle = dyn_cast<ShuffleVectorInst>(Use.getUser());
+      if (!Shuffle)
+        return {};
+
+      // Get index range for value.
+      auto *Op0 = Shuffle->getOperand(0u);
+      auto *Op1 = Shuffle->getOperand(1u);
+      if (!IsPoisonOrUndef(Op1))
+        return {};
+
+      // Find the min and max indices used by the ShuffleVector instruction.
+      auto Mask = Shuffle->getShuffleMask();
+      auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
+      auto NumElems = Op0Ty->getNumElements();
+
+      for (unsigned Index: Mask) {
+        if (Index < NumElems) {
+          OutputRange.first = std::min(Index, OutputRange.first);
+          OutputRange.second = std::max(Index, OutputRange.second);
+        }
+      }
+    }
+    return OutputRange;
+  };
+
+  if (auto Indices = GetIndexRangeInShuffles()) {
+    auto OldSize = VecTy->getNumElements();
+    auto NewSize = Indices->second + 1u;
+
+    if (NewSize < OldSize) {
+      auto Builder = IRBuilder(&I);
+      Builder.SetCurrentDebugLocation(I.getDebugLoc());
+
+      // Create new load of smaller vector.
+      auto *ElemTy = VecTy->getElementType();
+      auto *NewVecTy = FixedVectorType::get(ElemTy, NewSize);
+      auto *NewLoad = cast<LoadInst>(
+        Builder.CreateLoad(NewVecTy, OldLoad->getPointerOperand()));
+      NewLoad->copyMetadata(I);
+
+      // Replace all users.
+      auto OldShuffles = SmallVector<ShuffleVectorInst*, 4u>{};
+      for (auto &Use: I.uses()) {
+        auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+        
+        Builder.SetInsertPoint(Shuffle);
+        Builder.SetCurrentDebugLocation(Shuffle->getDebugLoc());
+        auto *NewShuffle = Builder.CreateShuffleVector(
+          NewLoad, PoisonValue::get(NewVecTy), Shuffle->getShuffleMask()
+        );
+
+        Shuffle->replaceAllUsesWith(NewShuffle);
+        OldShuffles.push_back(Shuffle);
+      }
+
+      // Erase old users.
+      for (auto *Shuffle: OldShuffles)
+        Shuffle->eraseFromParent();
+
+      I.eraseFromParent();
+      return true;
+    }
+  }
+  return false;
+}
+
 namespace {
 class StrNCmpInliner {
 public:
@@ -1325,6 +1414,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
+      MadeChange |= shrinkLoadsForBroadcast(I);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
