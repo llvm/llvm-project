@@ -8621,17 +8621,14 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       // The legacy cost model uses SCEV to check if some of the operands are
       // constants. To match the legacy cost model's behavior, use SCEV to try
       // to replace operands with constants.
-      ScalarEvolution &SE = *PSE.getSE();
-      auto GetConstantViaSCEV = [this, &SE](VPValue *Op) {
-        if (!Op->isLiveIn())
+      auto GetConstantViaSCEV = [this](VPValue *Op) {
+        ScalarEvolution &SE = *PSE.getSE();
+        Value *V = dyn_cast_if_present<Value>(Op->getUnderlyingValue());
+        if (!V || !SE.isSCEVable(V->getType()))
           return Op;
-        Value *V = Op->getUnderlyingValue();
-        if (isa<Constant>(V) || !SE.isSCEVable(V->getType()))
-          return Op;
-        auto *C = dyn_cast<SCEVConstant>(SE.getSCEV(V));
-        if (!C)
-          return Op;
-        return Plan.getOrAddLiveIn(C->getValue());
+        if (auto *C = dyn_cast<SCEVConstant>(SE.getSCEV(V)))
+          return Plan.getOrAddLiveIn(C->getValue());
+        return Op;
       };
       // For Mul, the legacy cost model checks both operands.
       if (I->getOpcode() == Instruction::Mul)
