@@ -8,7 +8,7 @@
 
 import re
 from functools import total_ordering
-from type import Type
+from hdrgen.type import Type
 
 
 # These are the keywords that appear in C type syntax but are not part of the
