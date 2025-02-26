@@ -41,7 +41,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
-#include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -563,38 +562,7 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
-class AArch64CodeGenPassBuilder
-    : public CodeGenPassBuilder<AArch64CodeGenPassBuilder,
-                                AArch64TargetMachine> {
-  using Base =
-      CodeGenPassBuilder<AArch64CodeGenPassBuilder, AArch64TargetMachine>;
-
-public:
-  AArch64CodeGenPassBuilder(AArch64TargetMachine &TM,
-                            const CGPassBuilderOption &Opts,
-                            PassInstrumentationCallbacks *PIC)
-      : CodeGenPassBuilder(TM, Opts, PIC) {}
-  void addPreISel(AddIRPass &) const {
-    // TODO: Add pre-isel passes
-  }
-  void addAsmPrinter(AddMachinePass &addPass, CreateMCStreamer) const {
-    // TODO: Add asm printer passes
-  }
-  Error addInstSelector(AddMachinePass &) const {
-    // TODO: Add instruction selector passes
-    return Error::success();
-  }
-};
-
 } // end anonymous namespace
-
-Error AArch64TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AArch64CodeGenPassBuilder Builder(*this, Opts, PIC);
-  return Builder.buildPipeline(MPM, Out, DwoOut, FileType);
-}
 
 void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
