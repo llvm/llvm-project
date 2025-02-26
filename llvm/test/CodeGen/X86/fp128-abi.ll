@@ -97,6 +97,7 @@ define fp128 @first_arg(fp128 %x) {
 ;
 ; CHECK-MSVC64-LABEL: first_arg:
 ; CHECK-MSVC64:       # %bb.0:
+; CHECK-MSVC64-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: first_arg:
@@ -118,6 +119,7 @@ define fp128 @first_arg(fp128 %x) {
 ;
 ; CHECK-MINGW-LABEL: first_arg:
 ; CHECK-MINGW:       # %bb.0:
+; CHECK-MINGW-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-MINGW-NEXT:    retq
   ret fp128 %x
 }
@@ -152,7 +154,8 @@ define fp128 @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, fp128 %x) {
 ;
 ; CHECK-MSVC64-LABEL: leading_args:
 ; CHECK-MSVC64:       # %bb.0:
-; CHECK-MSVC64-NEXT:    movaps %xmm4, %xmm0
+; CHECK-MSVC64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-MSVC64-NEXT:    movaps (%rax), %xmm0
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: leading_args:
@@ -174,7 +177,8 @@ define fp128 @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, fp128 %x) {
 ;
 ; CHECK-MINGW-LABEL: leading_args:
 ; CHECK-MINGW:       # %bb.0:
-; CHECK-MINGW-NEXT:    movaps %xmm4, %xmm0
+; CHECK-MINGW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-MINGW-NEXT:    movaps (%rax), %xmm0
 ; CHECK-MINGW-NEXT:    retq
   ret fp128 %x
 }
@@ -210,7 +214,8 @@ define fp128 @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, fp1
 ;
 ; CHECK-MSVC64-LABEL: many_leading_args:
 ; CHECK-MSVC64:       # %bb.0:
-; CHECK-MSVC64-NEXT:    movaps %xmm5, %xmm0
+; CHECK-MSVC64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-MSVC64-NEXT:    movaps (%rax), %xmm0
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: many_leading_args:
@@ -232,7 +237,8 @@ define fp128 @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, fp1
 ;
 ; CHECK-MINGW-LABEL: many_leading_args:
 ; CHECK-MINGW:       # %bb.0:
-; CHECK-MINGW-NEXT:    movaps %xmm5, %xmm0
+; CHECK-MINGW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-MINGW-NEXT:    movaps (%rax), %xmm0
 ; CHECK-MINGW-NEXT:    retq
   ret fp128 %x
 }
@@ -267,7 +273,8 @@ define fp128 @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, fp128 %x
 ;
 ; CHECK-MSVC64-LABEL: trailing_arg:
 ; CHECK-MSVC64:       # %bb.0:
-; CHECK-MSVC64-NEXT:    movaps %xmm4, %xmm0
+; CHECK-MSVC64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-MSVC64-NEXT:    movaps (%rax), %xmm0
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: trailing_arg:
@@ -289,7 +296,8 @@ define fp128 @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, fp128 %x
 ;
 ; CHECK-MINGW-LABEL: trailing_arg:
 ; CHECK-MINGW:       # %bb.0:
-; CHECK-MINGW-NEXT:    movaps %xmm4, %xmm0
+; CHECK-MINGW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-MINGW-NEXT:    movaps (%rax), %xmm0
 ; CHECK-MINGW-NEXT:    retq
   ret fp128 %x
 }
@@ -317,9 +325,12 @@ define void @call_first_arg(fp128 %x) nounwind {
 ;
 ; CHECK-MSVC64-LABEL: call_first_arg:
 ; CHECK-MSVC64:       # %bb.0:
-; CHECK-MSVC64-NEXT:    subq $40, %rsp
+; CHECK-MSVC64-NEXT:    subq $56, %rsp
+; CHECK-MSVC64-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MSVC64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MSVC64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-MSVC64-NEXT:    callq first_arg
-; CHECK-MSVC64-NEXT:    addq $40, %rsp
+; CHECK-MSVC64-NEXT:    addq $56, %rsp
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: call_first_arg:
@@ -342,9 +353,12 @@ define void @call_first_arg(fp128 %x) nounwind {
 ;
 ; CHECK-MINGW-LABEL: call_first_arg:
 ; CHECK-MINGW:       # %bb.0:
-; CHECK-MINGW-NEXT:    subq $40, %rsp
+; CHECK-MINGW-NEXT:    subq $56, %rsp
+; CHECK-MINGW-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MINGW-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MINGW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-MINGW-NEXT:    callq first_arg
-; CHECK-MINGW-NEXT:    addq $40, %rsp
+; CHECK-MINGW-NEXT:    addq $56, %rsp
 ; CHECK-MINGW-NEXT:    retq
   call i128 @first_arg(fp128 %x)
   ret void
@@ -385,14 +399,17 @@ define void @call_leading_args(fp128 %x) nounwind {
 ;
 ; CHECK-MSVC64-LABEL: call_leading_args:
 ; CHECK-MSVC64:       # %bb.0:
-; CHECK-MSVC64-NEXT:    subq $40, %rsp
+; CHECK-MSVC64-NEXT:    subq $72, %rsp
+; CHECK-MSVC64-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MSVC64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MSVC64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MSVC64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-MSVC64-NEXT:    xorl %ecx, %ecx
 ; CHECK-MSVC64-NEXT:    xorl %edx, %edx
 ; CHECK-MSVC64-NEXT:    xorl %r8d, %r8d
 ; CHECK-MSVC64-NEXT:    xorl %r9d, %r9d
-; CHECK-MSVC64-NEXT:    movaps %xmm0, %xmm4
 ; CHECK-MSVC64-NEXT:    callq leading_args
-; CHECK-MSVC64-NEXT:    addq $40, %rsp
+; CHECK-MSVC64-NEXT:    addq $72, %rsp
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: call_leading_args:
@@ -423,14 +440,17 @@ define void @call_leading_args(fp128 %x) nounwind {
 ;
 ; CHECK-MINGW-LABEL: call_leading_args:
 ; CHECK-MINGW:       # %bb.0:
-; CHECK-MINGW-NEXT:    subq $40, %rsp
+; CHECK-MINGW-NEXT:    subq $72, %rsp
+; CHECK-MINGW-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MINGW-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MINGW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MINGW-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-MINGW-NEXT:    xorl %ecx, %ecx
 ; CHECK-MINGW-NEXT:    xorl %edx, %edx
 ; CHECK-MINGW-NEXT:    xorl %r8d, %r8d
 ; CHECK-MINGW-NEXT:    xorl %r9d, %r9d
-; CHECK-MINGW-NEXT:    movaps %xmm0, %xmm4
 ; CHECK-MINGW-NEXT:    callq leading_args
-; CHECK-MINGW-NEXT:    addq $40, %rsp
+; CHECK-MINGW-NEXT:    addq $72, %rsp
 ; CHECK-MINGW-NEXT:    retq
   call i128 @leading_args(i64 0, i64 0, i64 0, i64 0, fp128 %x)
   ret void
@@ -477,15 +497,21 @@ define void @call_many_leading_args(fp128 %x) nounwind {
 ;
 ; CHECK-MSVC64-LABEL: call_many_leading_args:
 ; CHECK-MSVC64:       # %bb.0:
-; CHECK-MSVC64-NEXT:    subq $40, %rsp
-; CHECK-MSVC64-NEXT:    xorps %xmm4, %xmm4
+; CHECK-MSVC64-NEXT:    subq $88, %rsp
+; CHECK-MSVC64-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MSVC64-NEXT:    xorps %xmm1, %xmm1
+; CHECK-MSVC64-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-MSVC64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MSVC64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MSVC64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-MSVC64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MSVC64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-MSVC64-NEXT:    xorl %ecx, %ecx
 ; CHECK-MSVC64-NEXT:    xorl %edx, %edx
 ; CHECK-MSVC64-NEXT:    xorl %r8d, %r8d
 ; CHECK-MSVC64-NEXT:    xorl %r9d, %r9d
-; CHECK-MSVC64-NEXT:    movaps %xmm0, %xmm5
 ; CHECK-MSVC64-NEXT:    callq many_leading_args
-; CHECK-MSVC64-NEXT:    addq $40, %rsp
+; CHECK-MSVC64-NEXT:    addq $88, %rsp
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: call_many_leading_args:
@@ -520,15 +546,21 @@ define void @call_many_leading_args(fp128 %x) nounwind {
 ;
 ; CHECK-MINGW-LABEL: call_many_leading_args:
 ; CHECK-MINGW:       # %bb.0:
-; CHECK-MINGW-NEXT:    subq $40, %rsp
-; CHECK-MINGW-NEXT:    xorps %xmm4, %xmm4
+; CHECK-MINGW-NEXT:    subq $88, %rsp
+; CHECK-MINGW-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MINGW-NEXT:    xorps %xmm1, %xmm1
+; CHECK-MINGW-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-MINGW-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MINGW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MINGW-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-MINGW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MINGW-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-MINGW-NEXT:    xorl %ecx, %ecx
 ; CHECK-MINGW-NEXT:    xorl %edx, %edx
 ; CHECK-MINGW-NEXT:    xorl %r8d, %r8d
 ; CHECK-MINGW-NEXT:    xorl %r9d, %r9d
-; CHECK-MINGW-NEXT:    movaps %xmm0, %xmm5
 ; CHECK-MINGW-NEXT:    callq many_leading_args
-; CHECK-MINGW-NEXT:    addq $40, %rsp
+; CHECK-MINGW-NEXT:    addq $88, %rsp
 ; CHECK-MINGW-NEXT:    retq
   call i128 @many_leading_args(i64 0, i64 0, i64 0, i64 0, fp128 0xL0, fp128 %x)
   ret void
@@ -569,14 +601,17 @@ define void @call_trailing_arg(fp128 %x) nounwind {
 ;
 ; CHECK-MSVC64-LABEL: call_trailing_arg:
 ; CHECK-MSVC64:       # %bb.0:
-; CHECK-MSVC64-NEXT:    subq $40, %rsp
+; CHECK-MSVC64-NEXT:    subq $72, %rsp
+; CHECK-MSVC64-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MSVC64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MSVC64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MSVC64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-MSVC64-NEXT:    xorl %ecx, %ecx
 ; CHECK-MSVC64-NEXT:    xorl %edx, %edx
 ; CHECK-MSVC64-NEXT:    xorl %r8d, %r8d
 ; CHECK-MSVC64-NEXT:    xorl %r9d, %r9d
-; CHECK-MSVC64-NEXT:    movaps %xmm0, %xmm4
 ; CHECK-MSVC64-NEXT:    callq trailing_arg
-; CHECK-MSVC64-NEXT:    addq $40, %rsp
+; CHECK-MSVC64-NEXT:    addq $72, %rsp
 ; CHECK-MSVC64-NEXT:    retq
 ;
 ; CHECK-MSVC32-LABEL: call_trailing_arg:
@@ -607,14 +642,17 @@ define void @call_trailing_arg(fp128 %x) nounwind {
 ;
 ; CHECK-MINGW-LABEL: call_trailing_arg:
 ; CHECK-MINGW:       # %bb.0:
-; CHECK-MINGW-NEXT:    subq $40, %rsp
+; CHECK-MINGW-NEXT:    subq $72, %rsp
+; CHECK-MINGW-NEXT:    movaps (%rcx), %xmm0
+; CHECK-MINGW-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-MINGW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-MINGW-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-MINGW-NEXT:    xorl %ecx, %ecx
 ; CHECK-MINGW-NEXT:    xorl %edx, %edx
 ; CHECK-MINGW-NEXT:    xorl %r8d, %r8d
 ; CHECK-MINGW-NEXT:    xorl %r9d, %r9d
-; CHECK-MINGW-NEXT:    movaps %xmm0, %xmm4
 ; CHECK-MINGW-NEXT:    callq trailing_arg
-; CHECK-MINGW-NEXT:    addq $40, %rsp
+; CHECK-MINGW-NEXT:    addq $72, %rsp
 ; CHECK-MINGW-NEXT:    retq
   call i128 @trailing_arg(i64 0, i64 0, i64 0, i64 0, fp128 %x)
   ret void

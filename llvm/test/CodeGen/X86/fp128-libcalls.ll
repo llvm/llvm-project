@@ -62,10 +62,16 @@ define dso_local void @Test128Add(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; WIN-LABEL: Test128Add:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __addtf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Add:
@@ -158,12 +164,16 @@ define dso_local void @Test128_1Add(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128_1Add:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
-; WIN-NEXT:    movaps %xmm0, %xmm1
-; WIN-NEXT:    movaps vf128(%rip), %xmm0
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __addtf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128_1Add:
@@ -251,10 +261,16 @@ define dso_local void @Test128Sub(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; WIN-LABEL: Test128Sub:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __subtf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Sub:
@@ -347,12 +363,16 @@ define dso_local void @Test128_1Sub(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128_1Sub:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
-; WIN-NEXT:    movaps %xmm0, %xmm1
-; WIN-NEXT:    movaps vf128(%rip), %xmm0
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __subtf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128_1Sub:
@@ -440,10 +460,16 @@ define dso_local void @Test128Mul(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; WIN-LABEL: Test128Mul:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __multf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Mul:
@@ -536,12 +562,16 @@ define dso_local void @Test128_1Mul(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128_1Mul:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
-; WIN-NEXT:    movaps %xmm0, %xmm1
-; WIN-NEXT:    movaps vf128(%rip), %xmm0
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __multf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128_1Mul:
@@ -629,10 +659,16 @@ define dso_local void @Test128Div(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; WIN-LABEL: Test128Div:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __divtf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Div:
@@ -725,12 +761,16 @@ define dso_local void @Test128_1Div(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128_1Div:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
-; WIN-NEXT:    movaps %xmm0, %xmm1
-; WIN-NEXT:    movaps vf128(%rip), %xmm0
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq __divtf3
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128_1Div:
@@ -810,10 +850,16 @@ define dso_local void @Test128Rem(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; WIN-LABEL: Test128Rem:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq fmodl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Rem:
@@ -896,12 +942,16 @@ define dso_local void @Test128_1Rem(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128_1Rem:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
-; WIN-NEXT:    movaps %xmm0, %xmm1
-; WIN-NEXT:    movaps vf128(%rip), %xmm0
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    callq fmodl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $72, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128_1Rem:
@@ -977,10 +1027,13 @@ define dso_local void @Test128Sqrt(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Sqrt:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq sqrtl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Sqrt:
@@ -1052,10 +1105,13 @@ define dso_local void @Test128Sin(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Sin:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq sinl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Sin:
@@ -1127,10 +1183,13 @@ define dso_local void @Test128Cos(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Cos:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq cosl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Cos:
@@ -1202,10 +1261,13 @@ define dso_local void @Test128Ceil(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Ceil:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq ceill
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Ceil:
@@ -1277,10 +1339,13 @@ define dso_local void @Test128Floor(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Floor:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq floorl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Floor:
@@ -1352,10 +1417,13 @@ define dso_local void @Test128Trunc(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Trunc:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq truncl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Trunc:
@@ -1427,10 +1495,13 @@ define dso_local void @Test128Nearbyint(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Nearbyint:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq nearbyintl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Nearbyint:
@@ -1502,10 +1573,13 @@ define dso_local void @Test128Rint(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Rint:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq rintl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Rint:
@@ -1577,10 +1651,13 @@ define dso_local void @Test128Round(fp128 %d1) nounwind {
 ;
 ; WIN-LABEL: Test128Round:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    subq $40, %rsp
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    callq roundl
 ; WIN-NEXT:    movaps %xmm0, vf128(%rip)
-; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Round:
@@ -1657,7 +1734,19 @@ define fp128 @Test128FMA(fp128 %a, fp128 %b, fp128 %c) nounwind {
 ;
 ; WIN-LABEL: Test128FMA:
 ; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    jmp fmal # TAILCALL
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%r8), %xmm0
+; WIN-NEXT:    movaps (%rcx), %xmm1
+; WIN-NEXT:    movaps (%rdx), %xmm2
+; WIN-NEXT:    movaps %xmm2, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq fmal
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128FMA:
 ; WIN-X86:       # %bb.0: # %entry
@@ -1736,7 +1825,13 @@ define fp128 @Test128Acos(fp128 %a) nounwind {
 ;
 ; WIN-LABEL: Test128Acos:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp acosl # TAILCALL
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    callq acosl
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Acos:
 ; WIN-X86:       # %bb.0:
@@ -1805,7 +1900,13 @@ define fp128 @Test128Asin(fp128 %a) nounwind {
 ;
 ; WIN-LABEL: Test128Asin:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp asinl # TAILCALL
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    callq asinl
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Asin:
 ; WIN-X86:       # %bb.0:
@@ -1874,7 +1975,13 @@ define fp128 @Test128Atan(fp128 %a) nounwind {
 ;
 ; WIN-LABEL: Test128Atan:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp atanl # TAILCALL
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    callq atanl
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Atan:
 ; WIN-X86:       # %bb.0:
@@ -1947,7 +2054,16 @@ define fp128 @Test128Atan2(fp128 %a, fp128 %b) nounwind {
 ;
 ; WIN-LABEL: Test128Atan2:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp atan2l # TAILCALL
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    callq atan2l
+; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Atan2:
 ; WIN-X86:       # %bb.0:
@@ -2020,7 +2136,13 @@ define fp128 @Test128Cosh(fp128 %a) nounwind {
 ;
 ; WIN-LABEL: Test128Cosh:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp coshl # TAILCALL
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    callq coshl
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Cosh:
 ; WIN-X86:       # %bb.0:
@@ -2089,7 +2211,13 @@ define fp128 @Test128Sinh(fp128 %a) nounwind {
 ;
 ; WIN-LABEL: Test128Sinh:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp sinhl # TAILCALL
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    callq sinhl
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Sinh:
 ; WIN-X86:       # %bb.0:
@@ -2158,7 +2286,13 @@ define fp128 @Test128Tan(fp128 %a) nounwind {
 ;
 ; WIN-LABEL: Test128Tan:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp tanl # TAILCALL
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    callq tanl
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Tan:
 ; WIN-X86:       # %bb.0:
@@ -2227,7 +2361,13 @@ define fp128 @Test128Tanh(fp128 %a) nounwind {
 ;
 ; WIN-LABEL: Test128Tanh:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    jmp tanhl # TAILCALL
+; WIN-NEXT:    subq $56, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    callq tanhl
+; WIN-NEXT:    addq $56, %rsp
+; WIN-NEXT:    retq
 ;
 ; WIN-X86-LABEL: Test128Tanh:
 ; WIN-X86:       # %bb.0:
