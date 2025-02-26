@@ -18455,7 +18455,45 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   return SDValue();
 }
 
+// Eliminate a floating-point widening of a narrowed value if the fast math
+// flags allow it.
+static SDValue eliminateFPCastPair(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  unsigned NarrowingOp;
+  switch (N->getOpcode()) {
+  case ISD::FP16_TO_FP:
+    NarrowingOp = ISD::FP_TO_FP16;
+    break;
+  case ISD::BF16_TO_FP:
+    NarrowingOp = ISD::FP_TO_BF16;
+    break;
+  case ISD::FP_EXTEND:
+    NarrowingOp = ISD::FP_ROUND;
+    break;
+  default:
+    llvm_unreachable("Expected widening FP cast");
+  }
+
+  if (N0.getOpcode() == NarrowingOp && N0.getOperand(0).getValueType() == VT) {
+    const SDNodeFlags SrcFlags = N0->getFlags();
+    const SDNodeFlags DstFlags = N->getFlags();
+    // Narrowing can introduce inf and change the encoding of a nan, so the
+    // destination must have the nnan and ninf flags to indicate that we don't
+    // need to care about that. We are also removing a rounding step, and that
+    // requires both the source and destination to allow contraction.
+    if (DstFlags.hasNoNaNs() && DstFlags.hasNoInfs() &&
+        SrcFlags.hasAllowContract() && DstFlags.hasAllowContract()) {
+      return N0.getOperand(0);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
@@ -18506,6 +18544,9 @@ SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
+
+  if (SDValue CastEliminated = eliminateFPCastPair(N))
+    return CastEliminated;
 
   return SDValue();
 }
@@ -27209,6 +27250,7 @@ SDValue DAGCombiner::visitFP_TO_FP16(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   auto Op = N->getOpcode();
   assert((Op == ISD::FP16_TO_FP || Op == ISD::BF16_TO_FP) &&
          "opcode should be FP16_TO_FP or BF16_TO_FP.");
@@ -27222,6 +27264,9 @@ SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
       return DAG.getNode(Op, SDLoc(N), N->getValueType(0), N0.getOperand(0));
     }
   }
+
+  if (SDValue CastEliminated = eliminateFPCastPair(N))
+    return CastEliminated;
 
   // Sometimes constants manage to survive very late in the pipeline, e.g.,
   // because they are wrapped inside the <1 x f16> type. Try one last time to
