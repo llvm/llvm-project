@@ -90,7 +90,7 @@
 "`LWG4072 <https://wg21.link/LWG4072>`__","``std::optional`` comparisons: constrain harder","2024-11 (Wrocław)","","",""
 "`LWG4084 <https://wg21.link/LWG4084>`__","``std::fixed`` ignores ``std::uppercase``","2024-11 (Wrocław)","","",""
 "`LWG4085 <https://wg21.link/LWG4085>`__","``ranges::generate_random``'s helper lambda should specify the return type","2024-11 (Wrocław)","","",""
-"`LWG4088 <https://wg21.link/LWG4088>`__","``println`` ignores the locale imbued in ``std::ostream``","2024-11 (Wrocław)","","",""
+"`LWG4088 <https://wg21.link/LWG4088>`__","``println`` ignores the locale imbued in ``std::ostream``","2024-11 (Wrocław)","|Complete|","18",""
 "`LWG4112 <https://wg21.link/LWG4112>`__","``has-arrow`` should required ``operator->()`` to be ``const``-qualified","2024-11 (Wrocław)","","",""
 "`LWG4113 <https://wg21.link/LWG4113>`__","Disallow ``has_unique_object_representations<Incomplete[]>``","2024-11 (Wrocław)","","",""
 "`LWG4119 <https://wg21.link/LWG4119>`__","``generator::promise_type::yield_value(ranges::elements_of<R, Alloc>)``'s nested ``generator`` may be ill-formed","2024-11 (Wrocław)","","",""
