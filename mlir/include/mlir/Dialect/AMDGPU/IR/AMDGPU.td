@@ -552,9 +552,14 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
 // wmma
-def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[8, 16], [F16, BF16, I8, SI8, UI8, F8E4M3FN, F8E5M2]>]>;
+def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
+                             [4, 8, 16],
+                             [F16, BF16,
+                              I8, SI8, UI8,
+                              I<4>, SI<4>, UI<4>,
+                              F8E4M3FN, F8E5M2]>]>;
 def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
-                              VectorOfLengthAndType<[8, 16], [F16, BF16]>]>;
+                              VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>]>;
 
 def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
@@ -615,8 +620,7 @@ def AMDGPU_MFMAOp :
 
 def AMDGPU_WMMAOp :
     AMDGPU_Op<"wmma", [AllTypesMatch<["destC", "destD"]>,
-                       AllTypesMatch<["sourceA", "sourceB"]>,
-                        Pure]>,
+                       Pure]>,
     Arguments<(ins
                    WMMAInTypes:$sourceA,
                    WMMAInTypes:$sourceB,
@@ -629,13 +633,17 @@ def AMDGPU_WMMAOp :
   let summary = "MLIR wrapper for RDNA3 wmma instructions";
   let description = [{
     The `amdgpu.wmma` op is an MLIR wrapper around intrinsics
-    for various `wmma` instructions in the RDNA3 architecture, which perform
-    a 16x16 matrix multiplication for different data types.
+    for various `wmma` instructions in the RDNA3 or RDNA4 architecture, which
+    perform a 16x16 * 16x16 matrix multiplication for different data types.
+    Note that in gfx12/RDNA4, there is also a 16x32 * 32x16 instruction for 4-bit
+    integer inputs.
 
-    When emitting f16->f16 (or bf16->bf16) wmma the output is a 16xf16 (or 16xbf16) vector
-    containing only 8 valid values:
+    On gfx11/RDNA3, emitting f16->f16 (or bf16->bf16) wmma the output is a 16xf16
+    (or 16xbf16) vector containing only 8 valid values:
       - If `subwordOffset` is 0, then the output is stored at indices 0, 2, 4, ..., 14.
       - If `subwordOffset` is 1, then the output is stored at indices 1, 3, 5, ..., 15.
+    On gfx12/RDNA4, the result is instead returned as a vector<8 x f16/bf16> where
+    all values are valid and the `subwordOffset` must be `0`, as it cannot be used.
 
     `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
 
