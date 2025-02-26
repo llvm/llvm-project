@@ -160,6 +160,12 @@ LogicalResult CvtFloatToTF32Op::verify() {
   return success();
 }
 
+LogicalResult BulkStoreOp::verify() {
+  if (getInitVal() != 0)
+    return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
+  return success();
+}
+
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.

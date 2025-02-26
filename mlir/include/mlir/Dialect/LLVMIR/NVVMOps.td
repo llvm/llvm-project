@@ -2630,6 +2630,36 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Bulk Store Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, I64:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
+
+  let summary = "Bulk Store Op";
+  let description = [{
+    Initializes a region of shared memory at the address given by `addr`.
+    The `size` operand specifies the number of bytes to initialize and must be 
+    a multiple of 8.
+    The `initVal` operand specifies the value to initialize the memory to. The 
+    only supported value is 0.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk)
+  }];
+
+  string llvmBuilder = [{
+    auto intId = getStBulkIntrinsicId(
+          llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType()));
+    createIntrinsicCall(builder, intId,
+                      {$addr, $size, builder.getInt64($initVal)});
+  }];
+  
+  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr)";
+  
+  let hasVerifier = 1;
+}
+
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
