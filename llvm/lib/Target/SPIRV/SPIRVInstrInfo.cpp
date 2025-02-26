@@ -258,8 +258,8 @@ unsigned SPIRVInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
 void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   // Actually we don't need this COPY instruction. However if we do nothing with
   // it, post RA pseudo instrs expansion just removes it and we get the code

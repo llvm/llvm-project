@@ -34,7 +34,7 @@ MakeArgv(const llvm::ArrayRef<std::string> &strs) {
 // Both attach and launch take a either a sourcePath or sourceMap
 // argument (or neither), from which we need to set the target.source-map.
 void RequestHandler::SetSourceMapFromArguments(
-    const llvm::json::Object &arguments) {
+    const llvm::json::Object &arguments) const {
   const char *sourceMapHelp =
       "source must be be an array of two-element arrays, "
       "each containing a source and replacement path string.\n";
@@ -101,15 +101,8 @@ static llvm::Error RunInTerminal(DAP &dap,
 #endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       launch_request, dap.debug_adaptor_path, comm_file.m_path, debugger_pid);
-  dap.SendReverseRequest("runInTerminal", std::move(reverse_request),
-                         [](llvm::Expected<llvm::json::Value> value) {
-                           if (!value) {
-                             llvm::Error err = value.takeError();
-                             llvm::errs()
-                                 << "runInTerminal request failed: "
-                                 << llvm::toString(std::move(err)) << "\n";
-                           }
-                         });
+  dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
+                                                    std::move(reverse_request));
 
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
@@ -153,7 +146,8 @@ static llvm::Error RunInTerminal(DAP &dap,
                                  error.GetCString());
 }
 
-lldb::SBError RequestHandler::LaunchProcess(const llvm::json::Object &request) {
+lldb::SBError
+RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
   lldb::SBError error;
   const auto *arguments = request.getObject("arguments");
   auto launchCommands = GetStrings(arguments, "launchCommands");
@@ -219,10 +213,17 @@ lldb::SBError RequestHandler::LaunchProcess(const llvm::json::Object &request) {
   return error;
 }
 
-void RequestHandler::PrintWelcomeMessage() {
+void RequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
   dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
+}
+
+bool RequestHandler::HasInstructionGranularity(
+    const llvm::json::Object &arguments) const {
+  if (std::optional<llvm::StringRef> value = arguments.getString("granularity"))
+    return value == "instruction";
+  return false;
 }
 
 } // namespace lldb_dap
