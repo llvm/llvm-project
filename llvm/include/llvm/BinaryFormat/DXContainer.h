@@ -632,7 +632,7 @@ struct RootSignatureValidations {
     case ShaderVisibility::Amplification:
     case ShaderVisibility::Mesh:
       return true;
-    case ShaderVisibility::Empty:
+    default:
       return false;
     }
   }
