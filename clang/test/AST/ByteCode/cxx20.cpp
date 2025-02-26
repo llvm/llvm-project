@@ -751,7 +751,7 @@ namespace FailingDestructor {
     }
   };
   template<D d> // both-note{{template parameter is declared here}}
-  void f() {} // both-note{{andidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  void f() {} // both-note{{candidate template ignored: invalid explicitly-specified argument}}
 
   void g() {
     f<D{0, false}>(); // both-error {{no matching function}}
