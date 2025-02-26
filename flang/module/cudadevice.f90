@@ -524,29 +524,29 @@ implicit none
 
   interface __double2float_rd
     attributes(device) real function __double2float_rd(r) bind(c)
-     !dir$ ignore_tkr (d) r
+      !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2loint
     attributes(device) integer function __double2loint(r) bind(c)
-     !dir$ ignore_tkr (d) r
+      !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2hiint
     attributes(device) integer function __double2hiint(r) bind(c)
-     !dir$ ignore_tkr (d) r
+      !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __hiloint2double
     attributes(device) double precision function __hiloint2double(i, j) bind(c)
-      integer, value :: i, j
       !dir$ ignore_tkr (d) i, (d) j
+      integer, value :: i, j
     end function
   end interface
 
@@ -671,8 +671,8 @@ implicit none
 
   interface __ull2double_rd
     attributes(device) double precision function __ull2double_rd(i) bind(c)
-      integer(8), value :: i
       !dir$ ignore_tkr (d) i
+      integer(8), value :: i
     end function
   end interface
 
