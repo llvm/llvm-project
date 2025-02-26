@@ -195,6 +195,15 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
       return parseRegAllocFastPassOptions(*PB, Params);
     },
     "filter=reg-filter;no-clear-vregs")
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "greedy", "RAGreedyPass",
+    [](RAGreedyPass::Options Opts) { return RAGreedyPass(Opts); },
+    [PB = this](StringRef Params) {
+      // TODO: parseRegAllocGreedyFilterFunc(*PB, Params);
+      return Expected<RAGreedyPass::Options>(RAGreedyPass::Options{});
+    }, "reg-filter"
+)
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
 
 // After a pass is converted to new pass manager, its entry should be moved from
@@ -260,7 +269,6 @@ DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog", PrologEpilogInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)
-DUMMY_MACHINE_FUNCTION_PASS("ra-greedy", RAGreedyPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass)
 DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)
