@@ -54,6 +54,8 @@ def uimm10 : RISCVUImmLeafOp<10>;
 
 def uimm11 : RISCVUImmLeafOp<11>;
 
+def simm11 : RISCVSImmLeafOp<11>;
+
 def simm26 : RISCVSImmLeafOp<26>;
 
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
