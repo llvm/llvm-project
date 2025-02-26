@@ -140,23 +140,65 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       m_forward_branch_offset = 0;
 
       inst = inst_list.GetInstructionAtIndex(idx).get();
-      if (inst) {
-        lldb::addr_t current_offset =
-            inst->GetAddress().GetFileAddress() - base_addr;
-        auto it = saved_unwind_states.upper_bound(current_offset);
-        assert(it != saved_unwind_states.begin() &&
-               "Unwind row for the function entry missing");
-        --it; // Move it to the row corresponding to the current offset
+      if (!inst)
+        continue;
 
-        // If the offset of m_curr_row don't match with the offset we see in
-        // saved_unwind_states then we have to update m_curr_row and
-        // m_register_values based on the saved values. It is happening after we
-        // processed an epilogue and a return to caller instruction.
-        if (it->second.first->GetOffset() != m_curr_row->GetOffset()) {
-          UnwindPlan::Row *newrow = new UnwindPlan::Row;
-          *newrow = *it->second.first;
-          m_curr_row.reset(newrow);
-          m_register_values = it->second.second;
+      lldb::addr_t current_offset =
+          inst->GetAddress().GetFileAddress() - base_addr;
+      auto it = saved_unwind_states.upper_bound(current_offset);
+      assert(it != saved_unwind_states.begin() &&
+             "Unwind row for the function entry missing");
+      --it; // Move it to the row corresponding to the current offset
+
+      // If the offset of m_curr_row don't match with the offset we see in
+      // saved_unwind_states then we have to update m_curr_row and
+      // m_register_values based on the saved values. It is happening after we
+      // processed an epilogue and a return to caller instruction.
+      if (it->second.first->GetOffset() != m_curr_row->GetOffset()) {
+        UnwindPlan::Row *newrow = new UnwindPlan::Row;
+        *newrow = *it->second.first;
+        m_curr_row.reset(newrow);
+        m_register_values = it->second.second;
+        // re-set the CFA register ivars to match the new m_curr_row.
+        if (sp_reg_info.name &&
+            m_curr_row->GetCFAValue().IsRegisterPlusOffset()) {
+          uint32_t row_cfa_regnum =
+              m_curr_row->GetCFAValue().GetRegisterNumber();
+          lldb::RegisterKind row_kind = m_unwind_plan_ptr->GetRegisterKind();
+          // set m_cfa_reg_info to the row's CFA reg.
+          m_cfa_reg_info =
+              *m_inst_emulator_up->GetRegisterInfo(row_kind, row_cfa_regnum);
+          // set m_fp_is_cfa.
+          if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
+            m_fp_is_cfa = false;
+          else
+            m_fp_is_cfa = true;
+        }
+      }
+
+      m_inst_emulator_up->SetInstruction(inst->GetOpcode(), inst->GetAddress(),
+                                         nullptr);
+
+      if (last_condition != m_inst_emulator_up->GetInstructionCondition()) {
+        if (m_inst_emulator_up->GetInstructionCondition() !=
+                EmulateInstruction::UnconditionalCondition &&
+            saved_unwind_states.count(current_offset) == 0) {
+          // If we don't have a saved row for the current offset then save our
+          // current state because we will have to restore it after the
+          // conditional block.
+          auto new_row = std::make_shared<UnwindPlan::Row>(*m_curr_row.get());
+          saved_unwind_states.insert(
+              {current_offset, {new_row, m_register_values}});
+        }
+
+        // If the last instruction was conditional with a different condition
+        // then the then current condition then restore the condition.
+        if (last_condition != EmulateInstruction::UnconditionalCondition) {
+          const auto &saved_state =
+              saved_unwind_states.at(condition_block_start_offset);
+          m_curr_row = std::make_shared<UnwindPlan::Row>(*saved_state.first);
+          m_curr_row->SetOffset(current_offset);
+          m_register_values = saved_state.second;
           // re-set the CFA register ivars to match the new m_curr_row.
           if (sp_reg_info.name &&
               m_curr_row->GetCFAValue().IsRegisterPlusOffset()) {
@@ -172,105 +214,62 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
             else
               m_fp_is_cfa = true;
           }
+          // The last instruction might already created a row for this offset
+          // and we want to overwrite it.
+          bool replace_existing = true;
+          unwind_plan.InsertRow(std::make_shared<UnwindPlan::Row>(*m_curr_row),
+                                replace_existing);
         }
 
-        m_inst_emulator_up->SetInstruction(inst->GetOpcode(),
-                                           inst->GetAddress(), nullptr);
+        // We are starting a new conditional block at the actual offset
+        condition_block_start_offset = current_offset;
+      }
 
-        if (last_condition != m_inst_emulator_up->GetInstructionCondition()) {
-          if (m_inst_emulator_up->GetInstructionCondition() !=
-                  EmulateInstruction::UnconditionalCondition &&
-              saved_unwind_states.count(current_offset) == 0) {
-            // If we don't have a saved row for the current offset then save our
-            // current state because we will have to restore it after the
-            // conditional block.
-            auto new_row = std::make_shared<UnwindPlan::Row>(*m_curr_row.get());
-            saved_unwind_states.insert(
-                {current_offset, {new_row, m_register_values}});
-          }
+      if (log && log->GetVerbose()) {
+        StreamString strm;
+        lldb_private::FormatEntity::Entry format;
+        FormatEntity::Parse("${frame.pc}: ", format);
+        inst->Dump(&strm, inst_list.GetMaxOpcocdeByteSize(), show_address,
+                   show_bytes, show_control_flow_kind, nullptr, nullptr,
+                   nullptr, &format, 0);
+        log->PutString(strm.GetString());
+      }
 
-          // If the last instruction was conditional with a different condition
-          // then the then current condition then restore the condition.
-          if (last_condition != EmulateInstruction::UnconditionalCondition) {
-            const auto &saved_state =
-                saved_unwind_states.at(condition_block_start_offset);
-            m_curr_row = std::make_shared<UnwindPlan::Row>(*saved_state.first);
-            m_curr_row->SetOffset(current_offset);
-            m_register_values = saved_state.second;
-            // re-set the CFA register ivars to match the new m_curr_row.
-            if (sp_reg_info.name &&
-                m_curr_row->GetCFAValue().IsRegisterPlusOffset()) {
-              uint32_t row_cfa_regnum =
-                  m_curr_row->GetCFAValue().GetRegisterNumber();
-              lldb::RegisterKind row_kind =
-                  m_unwind_plan_ptr->GetRegisterKind();
-              // set m_cfa_reg_info to the row's CFA reg.
-              m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
-                  row_kind, row_cfa_regnum);
-              // set m_fp_is_cfa.
-              if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
-                m_fp_is_cfa = false;
-              else
-                m_fp_is_cfa = true;
-            }
-            // The last instruction might already created a row for this offset
-            // and we want to overwrite it.
-            bool replace_existing = true;
-            unwind_plan.InsertRow(
-                std::make_shared<UnwindPlan::Row>(*m_curr_row),
-                replace_existing);
-          }
+      last_condition = m_inst_emulator_up->GetInstructionCondition();
 
-          // We are starting a new conditional block at the actual offset
-          condition_block_start_offset = current_offset;
-        }
+      m_inst_emulator_up->EvaluateInstruction(
+          eEmulateInstructionOptionIgnoreConditions);
 
-        if (log && log->GetVerbose()) {
-          StreamString strm;
-          lldb_private::FormatEntity::Entry format;
-          FormatEntity::Parse("${frame.pc}: ", format);
-          inst->Dump(&strm, inst_list.GetMaxOpcocdeByteSize(), show_address,
-                     show_bytes, show_control_flow_kind, nullptr, nullptr,
-                     nullptr, &format, 0);
-          log->PutString(strm.GetString());
-        }
+      // If the current instruction is a branch forward then save the current
+      // CFI information for the offset where we are branching.
+      if (m_forward_branch_offset != 0 &&
+          range.ContainsFileAddress(inst->GetAddress().GetFileAddress() +
+                                    m_forward_branch_offset)) {
+        auto newrow = std::make_shared<UnwindPlan::Row>(*m_curr_row.get());
+        newrow->SetOffset(current_offset + m_forward_branch_offset);
+        saved_unwind_states.insert({current_offset + m_forward_branch_offset,
+                                    {newrow, m_register_values}});
+        unwind_plan.InsertRow(newrow);
+      }
 
-        last_condition = m_inst_emulator_up->GetInstructionCondition();
+      // Were there any changes to the CFI while evaluating this instruction?
+      if (m_curr_row_modified) {
+        // Save the modified row if we don't already have a CFI row in the
+        // current address
+        if (saved_unwind_states.count(current_offset +
+                                      inst->GetOpcode().GetByteSize()) == 0) {
+          m_curr_row->SetOffset(current_offset +
+                                inst->GetOpcode().GetByteSize());
+          unwind_plan.InsertRow(m_curr_row);
+          saved_unwind_states.insert(
+              {current_offset + inst->GetOpcode().GetByteSize(),
+               {m_curr_row, m_register_values}});
 
-        m_inst_emulator_up->EvaluateInstruction(
-            eEmulateInstructionOptionIgnoreConditions);
-
-        // If the current instruction is a branch forward then save the current
-        // CFI information for the offset where we are branching.
-        if (m_forward_branch_offset != 0 &&
-            range.ContainsFileAddress(inst->GetAddress().GetFileAddress() +
-                                      m_forward_branch_offset)) {
-          auto newrow = std::make_shared<UnwindPlan::Row>(*m_curr_row.get());
-          newrow->SetOffset(current_offset + m_forward_branch_offset);
-          saved_unwind_states.insert({current_offset + m_forward_branch_offset,
-                                      {newrow, m_register_values}});
-          unwind_plan.InsertRow(newrow);
-        }
-
-        // Were there any changes to the CFI while evaluating this instruction?
-        if (m_curr_row_modified) {
-          // Save the modified row if we don't already have a CFI row in the
-          // current address
-          if (saved_unwind_states.count(current_offset +
-                                        inst->GetOpcode().GetByteSize()) == 0) {
-            m_curr_row->SetOffset(current_offset +
-                                  inst->GetOpcode().GetByteSize());
-            unwind_plan.InsertRow(m_curr_row);
-            saved_unwind_states.insert(
-                {current_offset + inst->GetOpcode().GetByteSize(),
-                 {m_curr_row, m_register_values}});
-
-            // Allocate a new Row for m_curr_row, copy the current state
-            // into it
-            UnwindPlan::Row *newrow = new UnwindPlan::Row;
-            *newrow = *m_curr_row.get();
-            m_curr_row.reset(newrow);
-          }
+          // Allocate a new Row for m_curr_row, copy the current state
+          // into it
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *m_curr_row.get();
+          m_curr_row.reset(newrow);
         }
       }
     }
