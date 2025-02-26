@@ -692,7 +692,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     // selection.
     if (!getRunPassNames().empty()) {
       if (!MIR) {
-        WithColor::warning(errs(), argv[0])
+        WithColor::error(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
         delete MMIWP;
         return 1;
@@ -700,7 +700,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TargetPassConfig *PTPC = Target->createPassConfig(PM);
       TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
-        WithColor::warning(errs(), argv[0])
+        WithColor::error(errs(), argv[0])
             << "run-pass cannot be used with "
             << TPC.getLimitedCodeGenPipelineReason() << ".\n";
         delete PTPC;

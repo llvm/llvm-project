@@ -93,7 +93,7 @@ int llvm::compileModuleWithNewPM(
     CodeGenFileType FileType) {
 
   if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
-    WithColor::warning(errs(), Arg0)
+    WithColor::error(errs(), Arg0)
         << "--passes cannot be used with "
         << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
     return 1;
@@ -139,7 +139,7 @@ int llvm::compileModuleWithNewPM(
     // selection.
 
     if (!MIR) {
-      WithColor::warning(errs(), Arg0) << "-passes is for .mir file only.\n";
+      WithColor::error(errs(), Arg0) << "-passes is for .mir file only.\n";
       return 1;
     }
 
