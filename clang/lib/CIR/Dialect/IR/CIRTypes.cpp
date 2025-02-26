@@ -104,12 +104,6 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
       });
 }
 
-Type BoolType::parse(mlir::AsmParser &parser) {
-  return get(parser.getContext());
-}
-
-void BoolType::print(mlir::AsmPrinter &printer) const {}
-
 //===----------------------------------------------------------------------===//
 // StructType Definitions
 //===----------------------------------------------------------------------===//

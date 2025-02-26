@@ -322,8 +322,6 @@ def CIR_BoolType :
   let description = [{
     `cir.bool` represent's C++ bool type.
   }];
-
-  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
