@@ -46,12 +46,6 @@ public:
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
-                             CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts,
-                             PassInstrumentationCallbacks *PIC) override;
-
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
