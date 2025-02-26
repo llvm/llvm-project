@@ -2125,11 +2125,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
   assert(Def->isPHI() && "Invalid definition");
   ValueTrackerResult Res;
 
-  // If we look for a different subreg, bail as we do not support composing
-  // subregs yet.
-  if (Def->getOperand(0).getSubReg() != DefSubReg)
-    return ValueTrackerResult();
-
   // Return all register sources for PHI instructions.
   for (unsigned i = 1, e = Def->getNumOperands(); i < e; i += 2) {
     const MachineOperand &MO = Def->getOperand(i);
