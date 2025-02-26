@@ -458,6 +458,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"ieee_support_halting", &I::genIeeeSupportHalting},
     {"ieee_support_rounding", &I::genIeeeSupportRounding},
+    {"ieee_support_standard", &I::genIeeeSupportStandard},
     {"ieee_unordered", &I::genIeeeUnordered},
     {"ieee_value", &I::genIeeeValue},
     {"ieor", &I::genIeor},
@@ -5669,6 +5670,19 @@ IntrinsicLibrary::genIeeeSupportRounding(mlir::Type resultType,
       builder.createIntegerConstant(loc, fieldTy, _FORTRAN_RUNTIME_IEEE_DOWN));
   return builder.createConvert(
       loc, resultType, builder.create<mlir::arith::AndIOp>(loc, lbOk, ubOk));
+}
+
+// IEEE_SUPPORT_STANDARD
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportStandard(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Check if IEEE standard support is available, which reduces to checking
+  // if halting control is supported, as that is the only support component
+  // that may not be available.
+  assert(args.size() <= 1);
+  mlir::Value nearest = builder.createIntegerConstant(
+      loc, builder.getIntegerType(32), _FORTRAN_RUNTIME_IEEE_NEAREST);
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genSupportHalting(builder, loc, nearest));
 }
 
 // IEEE_UNORDERED
