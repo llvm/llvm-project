@@ -119,12 +119,12 @@ namespace DirectX {
 
 class RootSignature {
 private:
-  uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t RootParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplersOffset;
-  uint32_t Flags;
+  uint32_t Version = 2;
+  uint32_t NumParameters = 0;
+  uint32_t RootParametersOffset = 0;
+  uint32_t NumStaticSamplers = 0;
+  uint32_t StaticSamplersOffset = 0;
+  uint32_t Flags = 0;
 
   SmallVector<dxbc::RootParameter> Parameters;
 

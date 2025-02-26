@@ -16,8 +16,10 @@ class raw_ostream;
 
 namespace mcdxbc {
 struct RootSignatureDesc {
+
   dxbc::RootSignatureHeader Header;
   SmallVector<dxbc::RootParameter> Parameters;
+  RootSignatureDesc() { Header = dxbc::RootSignatureHeader{2, 0}; }
 
   void write(raw_ostream &OS) const;
 };
