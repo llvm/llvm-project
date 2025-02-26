@@ -37,7 +37,7 @@
 "`LWG3973 <https://wg21.link/LWG3973>`__","Monadic operations should be ADL-proof","2023-11 (Kona)","","",""
 "`LWG3974 <https://wg21.link/LWG3974>`__","``mdspan::operator[]`` should not copy ``OtherIndexTypes``","2023-11 (Kona)","","",""
 "`LWG3987 <https://wg21.link/LWG3987>`__","Including ``<flat_foo>`` doesn't provide ``std::begin``/``end``","2023-11 (Kona)","","",""
-"`LWG3990 <https://wg21.link/LWG3990>`__","Program-defined specializations of ``std::tuple`` and ``std::variant`` can't be properly supported","2023-11 (Kona)","|Partial|","21","Implemented for Clang only."
+"`LWG3990 <https://wg21.link/LWG3990>`__","Program-defined specializations of ``std::tuple`` and ``std::variant`` can't be properly supported","2023-11 (Kona)","|Complete|","21",""
 "`LWG4001 <https://wg21.link/LWG4001>`__","``iota_view`` should provide ``empty``","2023-11 (Kona)","|Complete|","19",""
 "","","","","",""
 "`LWG3767 <https://wg21.link/LWG3767>`__","``codecvt<charN_t, char8_t, mbstate_t>`` incorrectly added to locale","2024-03 (Tokyo)","","",""
