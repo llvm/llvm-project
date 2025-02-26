@@ -5465,15 +5465,11 @@ ExpectedDecl ASTNodeImporter::VisitUnresolvedUsingTypenameDecl(
 ExpectedDecl ASTNodeImporter::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   Decl* ToD = nullptr;
   switch (D->getBuiltinTemplateKind()) {
-  case BuiltinTemplateKind::BTK__make_integer_seq:
-    ToD = Importer.getToContext().getMakeIntegerSeqDecl();
+#define BuiltinTemplate(BTName)                                                \
+  case BuiltinTemplateKind::BTK##BTName:                                       \
+    ToD = Importer.getToContext().get##BTName##Decl();                         \
     break;
-  case BuiltinTemplateKind::BTK__type_pack_element:
-    ToD = Importer.getToContext().getTypePackElementDecl();
-    break;
-  case BuiltinTemplateKind::BTK__builtin_common_type:
-    ToD = Importer.getToContext().getBuiltinCommonTypeDecl();
-    break;
+#include "clang/Basic/BuiltinTemplates.inc"
   }
   assert(ToD && "BuiltinTemplateDecl of unsupported kind!");
   Importer.MapImported(D, ToD);
