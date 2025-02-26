@@ -2711,11 +2711,11 @@ template <class _CharT, class _Traits, class _Allocator>
 template <bool __is_short>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* __s, size_type __n) {
-  const auto __cap = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
-  const auto __sz  = __is_short ? __get_short_size() : __get_long_size();
+  const auto __cap  = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
+  const auto __size = __is_short ? __get_short_size() : __get_long_size();
   if (__n < __cap) {
-    if (__n > __sz)
-      __annotate_increase(__n - __sz);
+    if (__n > __size)
+      __annotate_increase(__n - __size);
     pointer __p;
     if (__is_short) {
       __p = __get_short_pointer();
@@ -2726,10 +2726,10 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* _
     }
     traits_type::copy(std::__to_address(__p), __s, __n);
     traits_type::assign(__p[__n], value_type());
-    if (__sz > __n)
-      __annotate_shrink(__sz);
+    if (__size > __n)
+      __annotate_shrink(__size);
   } else {
-    __grow_by_and_replace(__cap - 1, __n - __cap + 1, __sz, 0, __sz, __n, __s);
+    __grow_by_and_replace(__cap - 1, __n - __cap + 1, __size, 0, __size, __n, __s);
   }
   return *this;
 }
@@ -2737,16 +2737,16 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* _
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::__assign_external(const value_type* __s, size_type __n) {
-  const auto __cap = capacity();
-  const auto __sz  = size();
+  const auto __cap  = capacity();
+  const auto __size = size();
   if (__cap >= __n) {
-    if (__n > __sz)
-      __annotate_increase(__n - __sz);
+    if (__n > __size)
+      __annotate_increase(__n - __size);
     value_type* __p = std::__to_address(__get_pointer());
     traits_type::move(__p, __s, __n);
     return __null_terminate_at(__p, __n);
   } else {
-    __grow_by_and_replace(__cap, __n - __cap, __sz, 0, __sz, __n, __s);
+    __grow_by_and_replace(__cap, __n - __cap, __size, 0, __size, __n, __s);
     return *this;
   }
 }
@@ -2781,11 +2781,11 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(value_type __c) {
     __annotate_increase(1);
   pointer __p;
   if (__is_long()) {
-    __set_long_size(1);
     __p = __get_long_pointer();
+    __set_long_size(1);
   } else {
-    __set_short_size(1);
     __p = __get_short_pointer();
+    __set_short_size(1);
   }
   traits_type::assign(*__p, __c);
   traits_type::assign(*++__p, value_type());
