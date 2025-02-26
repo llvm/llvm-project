@@ -16,9 +16,8 @@ define <vscale x 4 x i16> @load_promote_4i16(ptr %a) {
 define <vscale x 16 x i16> @load_split_i16(ptr %a) {
 ; CHECK-LABEL: load_split_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 16 x i16>, ptr %a
   ret <vscale x 16 x i16> %load
@@ -27,10 +26,9 @@ define <vscale x 16 x i16> @load_split_i16(ptr %a) {
 define <vscale x 24 x i16> @load_split_24i16(ptr %a) {
 ; CHECK-LABEL: load_split_24i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [x0, #2, mul vl]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 24 x i16>, ptr %a
   ret <vscale x 24 x i16> %load
@@ -39,11 +37,10 @@ define <vscale x 24 x i16> @load_split_24i16(ptr %a) {
 define <vscale x 32 x i16> @load_split_32i16(ptr %a) {
 ; CHECK-LABEL: load_split_32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [x0, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 32 x i16>, ptr %a
   ret <vscale x 32 x i16> %load
@@ -52,15 +49,14 @@ define <vscale x 32 x i16> @load_split_32i16(ptr %a) {
 define <vscale x 16 x i64> @load_split_16i64(ptr %a) {
 ; CHECK-LABEL: load_split_16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1d { z4.d }, p0/z, [x0, #4, mul vl]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x0, #5, mul vl]
-; CHECK-NEXT:    ld1d { z6.d }, p0/z, [x0, #6, mul vl]
-; CHECK-NEXT:    ld1d { z7.d }, p0/z, [x0, #7, mul vl]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [x0, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x0, #3, mul vl]
+; CHECK-NEXT:    ldr z4, [x0, #4, mul vl]
+; CHECK-NEXT:    ldr z5, [x0, #5, mul vl]
+; CHECK-NEXT:    ldr z6, [x0, #6, mul vl]
+; CHECK-NEXT:    ldr z7, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 16 x i64>, ptr %a
   ret <vscale x 16 x i64> %load
