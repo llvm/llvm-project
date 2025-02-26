@@ -540,9 +540,8 @@ class MetadataLoader::MetadataLoaderImpl {
         break;
     }
 
-    auto &PS = ParentSubprogram[InitialScope];
-    PS = llvm::dyn_cast_or_null<DISubprogram>(S);
-    return PS;
+    return ParentSubprogram[InitialScope] =
+               llvm::dyn_cast_or_null<DISubprogram>(S);
   }
 
   /// Move local imports from DICompileUnit's 'imports' field to
