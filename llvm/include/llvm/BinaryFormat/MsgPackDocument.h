@@ -437,7 +437,7 @@ public:
   /// Copy a string into the Document's strings list, and return the copy that
   /// is owned by the Document.
   StringRef addString(StringRef S) {
-    Strings.push_back(std::unique_ptr<char[]>(new char[S.size()]));
+    Strings.push_back(std::make_unique<char[]>(S.size()));
     memcpy(&Strings.back()[0], S.data(), S.size());
     return StringRef(&Strings.back()[0], S.size());
   }

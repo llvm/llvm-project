@@ -27,7 +27,7 @@ using namespace llvm;
 Expected<std::unique_ptr<ObjectFile>>
 ObjectFile::createGOFFObjectFile(MemoryBufferRef Object) {
   Error Err = Error::success();
-  std::unique_ptr<GOFFObjectFile> Ret(new GOFFObjectFile(Object, Err));
+  auto Ret = std::make_unique<GOFFObjectFile>(Object, Err);
   if (Err)
     return std::move(Err);
   return std::move(Ret);

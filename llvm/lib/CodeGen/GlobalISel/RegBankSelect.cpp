@@ -215,8 +215,7 @@ bool RegBankSelect::repairReg(
   // TODO:
   // Check if MI is legal. if not, we need to legalize all the
   // instructions we are going to insert.
-  std::unique_ptr<MachineInstr *[]> NewInstrs(
-      new MachineInstr *[RepairPt.getNumInsertPoints()]);
+  auto NewInstrs = std::make_unique<MachineInstr *[]>(RepairPt.getNumInsertPoints());
   bool IsFirst = true;
   unsigned Idx = 0;
   for (const std::unique_ptr<InsertPoint> &InsertPt : RepairPt) {

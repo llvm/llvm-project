@@ -310,7 +310,7 @@ InterfaceFile::extract(Architecture Arch) const {
                                    inconvertibleErrorCode());
   }
 
-  std::unique_ptr<InterfaceFile> IF(new InterfaceFile());
+  auto IF = std::make_unique<InterfaceFile>();
   IF->setFileType(getFileType());
   IF->setPath(getPath());
   IF->addTargets(targets(Arch));

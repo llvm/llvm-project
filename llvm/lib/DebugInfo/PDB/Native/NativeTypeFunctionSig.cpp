@@ -138,8 +138,7 @@ NativeTypeFunctionSig::findChildren(PDB_SymType Type) const {
 
   auto NET = std::make_unique<NativeEnumTypes>(Session,
                                                 /* copy */ ArgList.ArgIndices);
-  return std::unique_ptr<IPDBEnumSymbols>(
-      new NativeEnumFunctionArgs(Session, std::move(NET)));
+  return std::make_unique<NativeEnumFunctionArgs>(Session, std::move(NET));
 }
 
 SymIndexId NativeTypeFunctionSig::getClassParentId() const {

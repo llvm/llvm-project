@@ -275,8 +275,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
 
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));
+  auto TLII = std::make_unique<TargetLibraryInfoImpl> (Triple(TM->getTargetTriple()));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });

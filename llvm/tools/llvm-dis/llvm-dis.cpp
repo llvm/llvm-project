@@ -262,8 +262,8 @@ int main(int argc, char **argv) {
       }
 
       std::error_code EC;
-      std::unique_ptr<ToolOutputFile> Out(
-          new ToolOutputFile(FinalFilename, EC, sys::fs::OF_TextWithCRLF));
+      auto Out = std::make_unique<ToolOutputFile>(
+        FinalFilename, EC, sys::fs::OF_TextWithCRLF);
       if (EC) {
         errs() << EC.message() << '\n';
         return 1;

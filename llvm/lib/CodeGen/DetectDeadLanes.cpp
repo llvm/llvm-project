@@ -42,7 +42,7 @@ DeadLaneDetector::DeadLaneDetector(const MachineRegisterInfo *MRI,
                                    const TargetRegisterInfo *TRI)
     : MRI(MRI), TRI(TRI) {
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
-  VRegInfos = std::unique_ptr<VRegInfo[]>(new VRegInfo[NumVirtRegs]);
+  VRegInfos = std::make_unique<VRegInfo[]>(NumVirtRegs);
   WorklistMembers.resize(NumVirtRegs);
   DefinedByCopy.resize(NumVirtRegs);
 }

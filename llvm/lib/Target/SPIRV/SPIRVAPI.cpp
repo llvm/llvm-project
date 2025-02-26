@@ -121,8 +121,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP(
-      new MachineModuleInfoWrapperPass(Target.get()));
+  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(Target.get());
   const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
       ->Initialize(MMIWP.get()->getMMI().getContext(), *Target);
 
