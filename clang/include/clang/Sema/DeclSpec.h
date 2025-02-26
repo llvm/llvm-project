@@ -305,6 +305,7 @@ public:
   static const TST TST_class = clang::TST_class;
   static const TST TST_coroutine = clang::TST_coroutine;
   static const TST TST_task = clang::TST_task;
+  static const TST TST_monitor = clang::TST_monitor;
   static const TST TST_typename = clang::TST_typename;
   static const TST TST_typeofType = clang::TST_typeofType;
   static const TST TST_typeofExpr = clang::TST_typeofExpr;
@@ -472,7 +473,7 @@ public:
     return (T == TST_enum || T == TST_struct ||
             T == TST_interface || T == TST_union ||
             T == TST_class || T == TST_coroutine ||
-            T == TST_task);
+            T == TST_task || T == TST_monitor);
   }
   static bool isTransformTypeTrait(TST T) {
     constexpr std::array<TST, 16> Traits = {

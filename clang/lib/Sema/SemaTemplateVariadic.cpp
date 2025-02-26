@@ -992,6 +992,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_class:
   case TST_coroutine:
   case TST_task:
+  case TST_monitor:
   case TST_auto:
   case TST_auto_type:
   case TST_decltype_auto:

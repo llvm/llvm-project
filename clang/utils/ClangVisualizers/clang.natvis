@@ -854,7 +854,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="extra" Condition="TypeSpecType == TST_typeofExpr || TypeSpecType == TST_decltype">
       , [{ExprRep}]
     </DisplayString>
-    <DisplayString IncludeView="extra" Condition="TypeSpecType == TST_enum || TypeSpecType == TST_struct || TypeSpecType == TST_interface || TypeSpecType == TST_union || TypeSpecType == TST_class || TypeSpecType == TST_coroutine || TypeSpecType == TST_task">
+    <DisplayString IncludeView="extra" Condition="TypeSpecType == TST_enum || TypeSpecType == TST_struct || TypeSpecType == TST_interface || TypeSpecType == TST_union || TypeSpecType == TST_class || TypeSpecType == TST_coroutine || TypeSpecType == TST_task || TypeSpecType == TST_monitor">
       , [{DeclRep}]
     </DisplayString>
     <DisplayString IncludeView="extra"></DisplayString>
@@ -868,7 +868,7 @@ For later versions of Visual Studio, no setup is required-->
       <Item Name="ExprRep" Condition="TypeSpecType == TST_typeofExpr || TypeSpecType == TST_decltype">
         ExprRep
       </Item>
-      <Item Name="DeclRep" Condition="TypeSpecType == TST_enum || TypeSpecType == TST_struct || TypeSpecType == TST_interface || TypeSpecType == TST_union || TypeSpecType == TST_class || TypeSpecType == TST_coroutine || TypeSpecType == TST_task">
+      <Item Name="DeclRep" Condition="TypeSpecType == TST_enum || TypeSpecType == TST_struct || TypeSpecType == TST_interface || TypeSpecType == TST_union || TypeSpecType == TST_class || TypeSpecType == TST_coroutine || TypeSpecType == TST_task || TypeSpecType == TST_monitor">
         DeclRep
       </Item>
 

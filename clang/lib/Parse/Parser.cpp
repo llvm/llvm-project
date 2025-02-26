@@ -1164,6 +1164,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
       case DeclSpec::TST_class:
       case DeclSpec::TST_coroutine:
       case DeclSpec::TST_task:
+      case DeclSpec::TST_monitor:
         return 5;
       case DeclSpec::TST_struct:
         return 6;

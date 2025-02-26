@@ -3768,7 +3768,7 @@ public:
 
   bool isStruct() const { return getTagKind() == TagTypeKind::Struct; }
   bool isInterface() const { return getTagKind() == TagTypeKind::Interface; }
-  bool isClass() const { return getTagKind() == TagTypeKind::Class || getTagKind() == TagTypeKind::Coroutine || getTagKind() == TagTypeKind::Task; }
+  bool isClass() const { return getTagKind() == TagTypeKind::Class || getTagKind() == TagTypeKind::Coroutine || getTagKind() == TagTypeKind::Task || getTagKind() == TagTypeKind::Monitor; }
   bool isUnion() const { return getTagKind() == TagTypeKind::Union; }
   bool isEnum() const { return getTagKind() == TagTypeKind::Enum; }
 

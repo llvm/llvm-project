@@ -4363,6 +4363,7 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
   case ElaboratedTypeKeyword::Class:
   case ElaboratedTypeKeyword::Coroutine:
   case ElaboratedTypeKeyword::Task:
+  case ElaboratedTypeKeyword::Monitor:
   case ElaboratedTypeKeyword::Interface:
     Out << "Ts";
     break;

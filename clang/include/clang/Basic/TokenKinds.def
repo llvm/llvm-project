@@ -339,6 +339,7 @@ KEYWORD(_Generic                    , KEYALL)
 KEYWORD(_Coroutine                  , KEYALL)
 KEYWORD(_Task                       , KEYALL)
 KEYWORD(_When                       , KEYALL)
+KEYWORD(_Monitor                    , KEYALL)
 // Note, C2y removed support for _Imaginary; we retain it as a keyword because
 // 1) it's a reserved identifier, so we're allowed to steal it, 2) there's no
 // good way to specify a keyword in earlier but not later language modes within
