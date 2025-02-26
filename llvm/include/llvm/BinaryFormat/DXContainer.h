@@ -561,9 +561,9 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
 struct RootConstants {
-  uint32_t ShaderRegister = 0;
-  uint32_t RegisterSpace = 0;
-  uint32_t Num32BitValues = 0;
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
 
   void swapBytes() {
     sys::swapByteOrder(ShaderRegister);
@@ -599,8 +599,8 @@ struct RootParameter {
 };
 
 struct RootSignatureHeader {
-  uint32_t Version = 2;
-  uint32_t Flags = 0;
+  uint32_t Version;
+  uint32_t Flags;
 
   void swapBytes() {
     sys::swapByteOrder(Version);
