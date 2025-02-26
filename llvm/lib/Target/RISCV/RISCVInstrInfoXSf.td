@@ -859,9 +859,9 @@ let Predicates = [HasVendorXSiFivecflushdlone] in {
 let Predicates = [HasVendorXSfcease] in {
   let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
       DecoderNamespace = "XSfcease" in
-  def SF_CEASE : RVInstIUnary<0b001100000101, 0b000, OPC_SYSTEM, (outs), (ins),
-                              "sf.cease", "">, Sched<[]> {
-    let rs1 = 0b00000;
+  def SF_CEASE : Priv<"sf.cease", 0b0011000>, Sched<[]> {
     let rd = 0b00000;
+    let rs1 = 0b00000;
+    let rs2 = 0b00101;
 }
 }
