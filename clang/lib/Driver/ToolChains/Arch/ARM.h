@@ -41,6 +41,7 @@ enum class ReadTPMode {
   TPIDRURW,
   TPIDRURO,
   TPIDRPRW,
+  Auto,
 };
 
 enum class FloatABI {
