@@ -851,16 +851,6 @@ public:
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
   }
 
-  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_C:
-    case CC_Win64:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
-  }
-
   TargetInfo::CallingConvKind
   getCallingConvKind(bool ClangABICompat4) const override {
     return CCK_MicrosoftWin64;
