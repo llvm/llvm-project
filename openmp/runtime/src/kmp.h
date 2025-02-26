@@ -3408,7 +3408,6 @@ extern kmp_bootstrap_lock_t
                              __kmp_threads expansion to co-exist */
 
 extern kmp_lock_t __kmp_global_lock; /* control OS/global access  */
-extern kmp_lock_t __kmp_debug_lock; /* control I/O access for KMP_DEBUG */
 
 extern enum library_type __kmp_library;
 

@@ -747,3 +747,13 @@ func.func @parallel_missing_terminator(%0 : index) {
   return
 }
 
+// -----
+
+func.func @invalid_reference(%a: index) {
+  // expected-error @below{{use of undeclared SSA value name}}
+  scf.for %x = %a to %a step %a iter_args(%var = %foo) -> tensor<?xf32> {
+    %foo = "test.inner"() : () -> (tensor<?xf32>)
+    scf.yield %foo : tensor<?xf32>
+  }
+  return
+}

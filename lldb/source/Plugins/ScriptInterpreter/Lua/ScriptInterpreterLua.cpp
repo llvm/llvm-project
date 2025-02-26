@@ -17,6 +17,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
@@ -76,8 +77,13 @@ public:
     }
     if (instructions == nullptr)
       return;
-    if (interactive)
-      *io_handler.GetOutputStreamFileSP() << instructions;
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream << instructions;
+      }
+    }
   }
 
   bool IOHandlerIsInputComplete(IOHandler &io_handler,
@@ -112,8 +118,11 @@ public:
       for (BreakpointOptions &bp_options : *bp_options_vec) {
         Status error = m_script_interpreter.SetBreakpointCommandCallback(
             bp_options, data.c_str(), /*is_callback=*/false);
-        if (error.Fail())
-          *io_handler.GetErrorStreamFileSP() << error.AsCString() << '\n';
+        if (error.Fail()) {
+          LockedStreamFile locked_stream =
+              io_handler.GetErrorStreamFileSP()->Lock();
+          locked_stream << error.AsCString() << '\n';
+        }
       }
       io_handler.SetIsDone(true);
     } break;
@@ -130,8 +139,11 @@ public:
         io_handler.SetIsDone(true);
         return;
       }
-      if (llvm::Error error = m_script_interpreter.GetLua().Run(data))
-        *io_handler.GetErrorStreamFileSP() << toString(std::move(error));
+      if (llvm::Error error = m_script_interpreter.GetLua().Run(data)) {
+        LockedStreamFile locked_stream =
+            io_handler.GetErrorStreamFileSP()->Lock();
+        locked_stream << toString(std::move(error));
+      }
       break;
     }
   }

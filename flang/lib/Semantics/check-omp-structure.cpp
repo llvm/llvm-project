@@ -1251,6 +1251,22 @@ void OmpStructureChecker::CheckMasterNesting(
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPAssumeConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assume);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPAssumeConstruct &) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAssumes &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assumes);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
@@ -1477,7 +1493,20 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                 }
               }
             },
-            [&](const parser::Name &) {}, // common block
+            [&](const parser::Name &name) {
+              if (name.symbol) {
+                if (auto *cb{name.symbol->detailsIf<CommonBlockDetails>()}) {
+                  for (const auto &obj : cb->objects()) {
+                    if (FindEquivalenceSet(*obj)) {
+                      context_.Say(name.source,
+                          "A variable in a %s directive cannot appear in an EQUIVALENCE statement (variable '%s' from common block '/%s/')"_err_en_US,
+                          ContextDirectiveAsFortran(), obj->name(),
+                          name.symbol->name());
+                    }
+                  }
+                }
+              }
+            },
         },
         ompObject.u);
   }

@@ -7874,8 +7874,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     IsOptional = AArch64BuildAttrs::getOptionalID(Optionality);
     if (AArch64BuildAttrs::OPTIONAL_NOT_FOUND == IsOptional) {
       Error(Parser.getTok().getLoc(),
-            AArch64BuildAttrs::getSubsectionOptionalUnknownError() + ": " +
-                Optionality);
+            AArch64BuildAttrs::getSubsectionOptionalUnknownError());
       return true;
     }
     if (SubsectionExists) {
@@ -7923,7 +7922,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     Type = AArch64BuildAttrs::getTypeID(Name);
     if (AArch64BuildAttrs::TYPE_NOT_FOUND == Type) {
       Error(Parser.getTok().getLoc(),
-            AArch64BuildAttrs::getSubsectionTypeUnknownError() + ": " + Name);
+            AArch64BuildAttrs::getSubsectionTypeUnknownError());
       return true;
     }
     if (SubsectionExists) {
@@ -7952,6 +7951,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     }
   }
   Parser.Lex();
+
   // Parsing finished, check for trailing tokens.
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build "
@@ -7990,14 +7990,18 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
 
   StringRef TagStr = "";
   unsigned Tag;
-  if (Parser.getTok().is(AsmToken::Identifier)) {
+  if (Parser.getTok().is(AsmToken::Integer)) {
+    Tag = getTok().getIntVal();
+  } else if (Parser.getTok().is(AsmToken::Identifier)) {
     TagStr = Parser.getTok().getIdentifier();
     switch (ActiveSubsectionID) {
-    default:
-      assert(0 && "Subsection name error");
-      break;
     case AArch64BuildAttrs::VENDOR_UNKNOWN:
-      // Private subsection, accept any tag.
+      // Tag was provided as an unrecognized string instead of an unsigned
+      // integer
+      Error(Parser.getTok().getLoc(), "unrecognized Tag: '" + TagStr +
+                                          "' \nExcept for public subsections, "
+                                          "tags have to be an unsigned int.");
+      return true;
       break;
     case AArch64BuildAttrs::AEABI_PAUTHABI:
       Tag = AArch64BuildAttrs::getPauthABITagsID(TagStr);
@@ -8018,8 +8022,6 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
       }
       break;
     }
-  } else if (Parser.getTok().is(AsmToken::Integer)) {
-    Tag = getTok().getIntVal();
   } else {
     Error(Parser.getTok().getLoc(), "AArch64 build attributes tag not found");
     return true;
@@ -8063,10 +8065,9 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     Error(Parser.getTok().getLoc(), "AArch64 build attributes value not found");
     return true;
   }
-  // Check for possible unaccepted values for known tags (AEABI_PAUTHABI,
-  // AEABI_FEATURE_AND_BITS)
-  if (!(ActiveSubsectionID == AArch64BuildAttrs::VENDOR_UNKNOWN) &&
-      TagStr != "") { // TagStr was a recognized string
+  // Check for possible unaccepted values for known tags
+  // (AEABI_FEATURE_AND_BITS)
+  if (ActiveSubsectionID == AArch64BuildAttrs::AEABI_FEATURE_AND_BITS) {
     if (0 != ValueInt && 1 != ValueInt) {
       Error(Parser.getTok().getLoc(),
             "unknown AArch64 build attributes Value for Tag '" + TagStr +
@@ -8075,7 +8076,8 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     }
   }
   Parser.Lex();
-  // Parsing finished, check for trailing tokens.
+
+  // Parsing finished. Check for trailing tokens.
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(),
           "unexpected token for AArch64 build attributes tag and value "
@@ -8084,13 +8086,11 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   }
 
   if (unsigned(-1) != ValueInt) {
-    getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, ValueInt, "",
-                                      false);
+    getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, ValueInt, "");
   }
-
   if ("" != ValueStr) {
     getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, unsigned(-1),
-                                      ValueStr, false);
+                                      ValueStr);
   }
   return false;
 }

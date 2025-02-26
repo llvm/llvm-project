@@ -20,6 +20,7 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
+#include "bolt/Passes/NonPacProtectedRetAnalysis.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -244,6 +245,13 @@ SequentialDisassembly("sequential-disassembly",
 static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
+
+cl::list<GadgetScannerKind>
+    GadgetScannersToRun("scanners", cl::desc("which gadget scanners to run"),
+                        cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
+                                   clEnumValN(GS_ALL, "all", "all")),
+                        cl::ZeroOrMore, cl::CommaSeparated,
+                        cl::cat(BinaryAnalysisCategory));
 
 } // namespace opts
 
@@ -3490,7 +3498,24 @@ void RewriteInstance::runOptimizationPasses() {
   BC->logBOLTErrorsAndQuitOnFatal(BinaryFunctionPassManager::runAllPasses(*BC));
 }
 
-void RewriteInstance::runBinaryAnalyses() {}
+void RewriteInstance::runBinaryAnalyses() {
+  NamedRegionTimer T("runBinaryAnalyses", "run binary analysis passes",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
+  BinaryFunctionPassManager Manager(*BC);
+  // FIXME: add a pass that warns about which functions do not have CFG,
+  // and therefore, analysis is most likely to be less accurate.
+  using GSK = opts::GadgetScannerKind;
+  // if no command line option was given, act as if "all" was specified.
+  if (opts::GadgetScannersToRun.empty())
+    opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
+  for (GSK ScannerToRun : opts::GadgetScannersToRun) {
+    if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
+      Manager.registerPass(
+          std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
+  }
+
+  BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
+}
 
 void RewriteInstance::preregisterSections() {
   // Preregister sections before emission to set their order in the output.
@@ -5907,9 +5932,9 @@ void RewriteInstance::writeEHFrameHeader() {
 }
 
 uint64_t RewriteInstance::getNewValueForSymbol(const StringRef Name) {
-  auto Value = Linker->lookupSymbol(Name);
+  auto Value = Linker->lookupSymbolInfo(Name);
   if (Value)
-    return *Value;
+    return Value->Address;
 
   // Return the original value if we haven't emitted the symbol.
   BinaryData *BD = BC->getBinaryDataByName(Name);
