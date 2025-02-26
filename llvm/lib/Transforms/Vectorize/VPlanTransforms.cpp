@@ -894,9 +894,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
       VPValue *Inc0 = NewBlend->getIncomingValue(0);
       VPValue *Inc1 = NewBlend->getIncomingValue(1);
+      VPValue *OldMask = NewBlend->getOperand(2);
       NewBlend->setOperand(0, Inc1);
       NewBlend->setOperand(1, Inc0);
       NewBlend->setOperand(2, NewMask);
+      if (OldMask->getNumUsers() == 0)
+        cast<VPInstruction>(OldMask)->eraseFromParent();
     }
     return;
   }
