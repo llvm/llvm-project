@@ -810,6 +810,7 @@ include "X86ScheduleZnver1.td"
 include "X86ScheduleZnver2.td"
 include "X86ScheduleZnver3.td"
 include "X86ScheduleZnver4.td"
+include "X86ScheduleZnver5.td"
 include "X86ScheduleBdVer2.td"
 include "X86ScheduleBtVer2.td"
 include "X86SchedSkylakeClient.td"
@@ -1958,7 +1959,7 @@ def : ProcModel<"znver3", Znver3Model, ProcessorFeatures.ZN3Features,
                 ProcessorFeatures.ZN3Tuning>;
 def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
                 ProcessorFeatures.ZN4Tuning>;
-def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
+def : ProcModel<"znver5", Znver5Model, ProcessorFeatures.ZN5Features,
                 ProcessorFeatures.ZN5Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
