@@ -36,6 +36,26 @@ Potentially Breaking Changes
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
 
+- ``-Wreturn-type`` now diagnoses missing returns when the default branch of a
+  switch statement's default branch misses a return, even if the switch covers
+  all enum values.
+
+  This was previously ok and is now warned about:
+
+  .. code-block:: c++
+
+    enum E { a, b };
+
+    int foo(E e) {
+        switch(e) {
+        case a:
+            return 20;
+        case b:
+            return 30;
+        }
+        // warning: non-void function does not return a value in all control paths
+    }
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
