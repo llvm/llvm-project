@@ -3868,20 +3868,16 @@ TEST_P(UncheckedOptionalAccessTest,
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    class A {
-      public:
-        const $ns::$optional<int>& get() const { return x; }
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
       
-      private:
-        $ns::$optional<int> x;
+      $ns::$optional<int> x;
     };
 
-    class B {
-      public:
-        const A& getA() const { return a; }
+    struct B {
+      const A& getA() const { return a; }
     
-      private:
-        A a;
+      A a;
     };
 
     void target(B& b) {
@@ -3898,20 +3894,16 @@ TEST_P(
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    class A {
-      public:
-        const $ns::$optional<int>& get() const { return x; }
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
       
-      private:
-        $ns::$optional<int> x;
+      $ns::$optional<int> x;
     };
 
-    class B {
-      public:
-        const A& getA() const { return a; }
+    struct B {
+      const A& getA() const { return a; }
     
-      private:
-        A a;
+      A a;
     };
 
     void target(B& b) {
@@ -3925,20 +3917,16 @@ TEST_P(UncheckedOptionalAccessTest,
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    class A {
-      public:
-        const $ns::$optional<int>& get() const { return x; }
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
       
-      private:
-        $ns::$optional<int> x;
+      $ns::$optional<int> x;
     };
 
-    class B {
-      public:
-        const A& getA() const { return a; }
+    struct B {
+      const A& getA() const { return a; }
     
-      private:
-        A a;
+      A a;
     };
 
     void target(B& b) {
@@ -3951,24 +3939,20 @@ TEST_P(UncheckedOptionalAccessTest,
 }
 
 TEST_P(UncheckedOptionalAccessTest,
-       ConstRefAccessorToOptionalViaConstValueAccessorToHoldingObject) {
+       ConstRefAccessorToOptionalViaAccessorToHoldingObjectByValue) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    class A {
-      public:
-        const $ns::$optional<int>& get() const { return x; }
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
       
-      private:
-        $ns::$optional<int> x;
+      $ns::$optional<int> x;
     };
 
-    class B {
-      public:
-        const A copyA() const { return a; }
+    struct B {
+      const A copyA() const { return a; }
     
-      private:
-        A a;
+      A a;
     };
 
     void target(B& b) {
@@ -3984,20 +3968,16 @@ TEST_P(UncheckedOptionalAccessTest,
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    class A {
-      public:
-        const $ns::$optional<int>& get() const { return x; }
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
       
-      private:
-        $ns::$optional<int> x;
+      $ns::$optional<int> x;
     };
 
-    class B {
-      public:
-        A& getA() { return a; }
+    struct B {
+      A& getA() { return a; }
     
-      private:
-        A a;
+      A a;
     };
 
     void target(B& b) {
@@ -4014,23 +3994,20 @@ TEST_P(
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    class A {
-      public:
-        const $ns::$optional<int>& get() const { return x; }
-      private:
-        $ns::$optional<int> x;
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
     };
 
-    class B {
-      public:
-        const A& getA() const { return a; }
+    struct B {
+      const A& getA() const { return a; }
 
-        A& getA() { return a; }
+      A& getA() { return a; }
 
-        void clear() { a = A{}; }
+      void clear() { a = A{}; }
 
-      private:
-        A a;
+      A a;
     };
 
     void target(B& b) {
@@ -4055,23 +4032,20 @@ TEST_P(
   ExpectDiagnosticsFor(R"cc(
       #include "unchecked_optional_access_test.h"
   
-      class A {
-        public:
-          const $ns::$optional<int>& get() const { return x; }
-        private:
-          $ns::$optional<int> x;
+      struct A {
+        const $ns::$optional<int>& get() const { return x; }
+      
+        $ns::$optional<int> x;
       };
   
-      class B {
-        public:
-          const A& getA() const { return a; }
+      struct B {
+        const A& getA() const { return a; }
   
-          void callWithoutChanges() const { 
-            // no-op 
-          }
+        void callWithoutChanges() const { 
+          // no-op 
+        }
   
-        private:
-          A a;
+        A a;
       };
   
       void target(B& b) {  
