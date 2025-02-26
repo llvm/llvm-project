@@ -6824,6 +6824,17 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
   SDLoc DL(Op);
 
+  if (Subtarget->useRealTrue16Insts()) {
+    if (getTargetMachine().Options.UnsafeFPMath) {
+      SDValue Flags = Op.getOperand(1);
+      SDValue Src32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Src, Flags);
+      return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Src32, Flags);
+    }
+
+    SDValue FpToFp16 = LowerF64ToF16(Src, MVT::i16, DL, DAG);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f16, FpToFp16);
+  }
+
   SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
   return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
@@ -17002,6 +17013,8 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   if (RC == &AMDGPU::VReg_1RegClass && !isDivergent)
     return Subtarget->isWave64() ? &AMDGPU::SReg_64RegClass
                                  : &AMDGPU::SReg_32RegClass;
+  if (VT == MVT::f16 && TRI->isVGPRClass(RC))
+    return RC;
   if (!TRI->isSGPRClass(RC) && !isDivergent)
     return TRI->getEquivalentSGPRClass(RC);
   if (TRI->isSGPRClass(RC) && isDivergent)
