@@ -193,7 +193,7 @@
 // CHECK-NEXT:     smctr                1.0       'Smctr' (Control Transfer Records Machine Level)
 // CHECK-NEXT:     ssctr                1.0       'Ssctr' (Control Transfer Records Supervisor Level)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
-// CHECK-NEXT:     xqcia                0.2       'Xqcia' (Qualcomm uC Arithmetic Extension)
+// CHECK-NEXT:     xqcia                0.4       'Xqcia' (Qualcomm uC Arithmetic Extension)
 // CHECK-NEXT:     xqciac               0.3       'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
 // CHECK-NEXT:     xqcicli              0.2       'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)
 // CHECK-NEXT:     xqcicm               0.2       'Xqcicm' (Qualcomm uC Conditional Move Extension)
@@ -204,6 +204,7 @@
 // CHECK-NEXT:     xqcilo               0.2       'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)
 // CHECK-NEXT:     xqcilsm              0.2       'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 // CHECK-NEXT:     xqcisls              0.2       'Xqcisls' (Qualcomm uC Scaled Load Store Extension)
+// CHECK-NEXT:     xrivosvisni          0.1       'XRivosVisni' (Rivos Vector Integer Small New)
 // CHECK-NEXT:     xrivosvizip          0.1       'XRivosVizip' (Rivos Vector Register Zips)
 // CHECK-EMPTY:
 // CHECK-NEXT: Supported Profiles

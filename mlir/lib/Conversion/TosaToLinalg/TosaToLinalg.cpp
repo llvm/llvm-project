@@ -524,6 +524,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::CastOp>(op)) {
     Type srcTy = elementTy;
     Type dstTy = resultTypes.front();
+    if (!srcTy.isIntOrFloat() || !dstTy.isIntOrFloat()) {
+      (void)rewriter.notifyMatchFailure(op, "unsupported type");
+      return nullptr;
+    }
+
     bool bitExtend =
         srcTy.getIntOrFloatBitWidth() < dstTy.getIntOrFloatBitWidth();
 
