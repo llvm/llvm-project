@@ -175,11 +175,11 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   // FIXME: We should de-allocate MostRecentTU
   for (Decl *D : MostRecentTU->decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND)
+    if (!ND || ND->getDeclName().isEmpty()) 
       continue;
     // Check if we need to clean up the IdResolver chain.
-    if (!ND->getDeclName().isEmpty() && ND->getDeclName().getFETokenInfo() &&
-        !D->getLangOpts().ObjC && !D->getLangOpts().CPlusPlus)
+    if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
+        !D->getLangOpts().CPlusPlus)
       S.IdResolver.RemoveDecl(ND);
   }
 }
