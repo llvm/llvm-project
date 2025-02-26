@@ -20,7 +20,7 @@
 ;; Test error messages when unable to execute the preprocessor.
 
 ; RUN: not llvm-windres --preprocessor intentionally-missing-executable %p/Inputs/empty.rc %t.res 2>&1 | FileCheck %s --check-prefix=CHECK4
-; CHECK4: llvm-rc: Preprocessing failed: Executable "intentionally-missing-executable" doesn't exist!
+; CHECK4: llvm-rc: Preprocessing failed: posix_spawn failed: No such file or directory
 
 ;; Test --preprocessor with an argument with spaces.
 
