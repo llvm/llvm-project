@@ -823,7 +823,7 @@ def CreateHandle : DXILOp<57, createHandle> {
 }
 
 def CBufferLoadLegacy : DXILOp<59, cbufferLoadLegacy> {
-  let Doc = "reads from a TypedBuffer";
+  let Doc = "loads a value from a constant buffer resource";
   // Handle, Index
   let arguments = [HandleTy, Int32Ty];
   let result = OverloadTy;
