@@ -7,15 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/dump-expr.h"
-#include <iostream>
 
-static constexpr char whiteSpacePadding[] =
-    ">>                                               ";
-static constexpr auto whiteSize = sizeof(whiteSpacePadding) - 1;
+static constexpr char whiteSpacePadding[]{
+    ">>                                               "};
+static constexpr auto whiteSize{sizeof(whiteSpacePadding) - 1};
 
 inline const char *
 Fortran::semantics::DumpEvaluateExpr::getIndentString() const {
-  auto count = (level * 2 >= whiteSize) ? whiteSize : level * 2;
+  auto count{(level * 2 >= whiteSize) ? whiteSize : level * 2};
   return whiteSpacePadding + whiteSize - count;
 }
 
@@ -44,8 +43,8 @@ void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
   print("symbol: "s + symbol.name().ToString());
-  if (const auto *assoc =
-          ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>()) {
+  if (const auto *assoc{
+          ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>()}) {
     indent("assoc details");
     show(assoc->expr());
     outdent();
@@ -79,7 +78,7 @@ void Fortran::semantics::DumpEvaluateExpr::show(
 void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::NamedEntity &x) {
   indent("named entity");
-  if (const auto *component = x.UnwrapComponent())
+  if (const auto *component{x.UnwrapComponent()})
     show(*component);
   else
     show(x.GetFirstSymbol());
@@ -185,7 +184,7 @@ void Fortran::semantics::DumpEvaluateExpr::show(
 void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::ActualArgument &x) {
   indent("actual argument");
-  if (const auto *symbol = x.GetAssumedTypeDummy())
+  if (const auto *symbol{x.GetAssumedTypeDummy()})
     show(*symbol);
   else
     show(x.UnwrapExpr());
@@ -195,9 +194,9 @@ void Fortran::semantics::DumpEvaluateExpr::show(
 void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::ProcedureDesignator &x) {
   indent("procedure designator");
-  if (const auto *component = x.GetComponent())
+  if (const auto *component{x.GetComponent()})
     show(*component);
-  else if (const auto *symbol = x.GetSymbol())
+  else if (const auto *symbol{x.GetSymbol()})
     show(*symbol);
   else
     show(DEREF(x.GetSpecificIntrinsic()));

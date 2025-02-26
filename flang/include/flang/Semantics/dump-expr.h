@@ -13,6 +13,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 
+#include <memory>
+#include <optional>
+#include <variant>
+#include <vector>
+
 namespace Fortran::semantics {
 
 /// Class to dump Fortran::evaluate::Expr trees out in a user readable way.
@@ -174,7 +179,7 @@ private:
   void outdent();
 
   llvm::raw_ostream &outs;
-  unsigned level = 0;
+  unsigned level{0};
 };
 
 LLVM_DUMP_METHOD void dumpEvExpr(
