@@ -391,35 +391,27 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   return error;
 }
 
-bool ABISysV_arm64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_arm64::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = arm64_dwarf::lr;
   uint32_t sp_reg_num = arm64_dwarf::sp;
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
-  // Our previous Call Frame Address is the stack pointer
+  // Our previous Call Frame Address is the stack pointer, all other registers
+  // are the same.
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetReturnAddressRegister(lr_reg_num);
-
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("arm64 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetReturnAddressRegister(lr_reg_num);
+  plan_sp->SetSourceName("arm64 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_arm64::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = arm64_dwarf::fp;
   uint32_t pc_reg_num = arm64_dwarf::pc;
 
@@ -433,13 +425,13 @@ bool ABISysV_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("arm64 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("arm64 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says
