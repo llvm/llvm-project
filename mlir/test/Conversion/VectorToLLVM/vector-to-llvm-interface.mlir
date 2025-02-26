@@ -808,6 +808,22 @@ func.func @insert_scalar_into_vec_2d_f32_dynamic_idx_scalable(%arg0: vector<1x[1
 //       CHECK:   llvm.insertelement {{.*}} : vector<[16]xf32>
 //       CHECK:   llvm.insertvalue {{.*}} : !llvm.array<1 x vector<[16]xf32>>
 
+
+// -----
+
+func.func @insert_scalar_into_vec_2d_f32_dynamic_idx_fail(%arg0: vector<2x16xf32>, %arg1: f32, %idx: index)
+                                        -> vector<2x16xf32> {
+  %0 = vector.insert %arg1, %arg0[%idx, 0]: f32 into vector<2x16xf32>
+  return %0 : vector<2x16xf32>
+}
+
+// Currently fails to convert because of the dynamic index in non-innermost
+// dimension that converts to a llvm.array, as llvm.extractvalue does not
+// support dynamic dimensions
+
+// CHECK-LABEL: @insert_scalar_into_vec_2d_f32_dynamic_idx_fail
+//       CHECK: vector.insert
+
 // -----
 
 func.func @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<4x1xf32>) -> vector<4x1xf32> {
