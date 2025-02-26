@@ -541,8 +541,8 @@ MachineInstr *SDWADstOperand::potentialToConvert(const SIInstrInfo *TII,
       return nullptr;
   }
 
-  auto parent = PotentialMO->getParent();
-  return canCombineSelections(*parent, TII) ? parent : nullptr;
+  MachineInstr *Parent = PotentialMO->getParent();
+  return canCombineSelections(*Parent, TII) ? Parent : nullptr;
 }
 
 bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
