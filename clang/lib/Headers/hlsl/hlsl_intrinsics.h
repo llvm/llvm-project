@@ -58,6 +58,15 @@ int16_t3 abs(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int16_t4 abs(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t abs(uint16_t V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t2 abs(uint16_t2 V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t3 abs(uint16_t3 V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t4 abs(uint16_t4 V) { return V; }
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
@@ -82,6 +91,11 @@ int3 abs(int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int4 abs(int4);
 
+constexpr uint abs(uint V) { return V; }
+constexpr uint2 abs(uint2 V) { return V; }
+constexpr uint3 abs(uint3 V) { return V; }
+constexpr uint4 abs(uint4 V) { return V; }
+
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float abs(float);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -99,6 +113,11 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t3 abs(int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t4 abs(int64_t4);
+
+constexpr uint64_t abs(uint64_t V) { return V; }
+constexpr uint64_t2 abs(uint64_t2 V) { return V; }
+constexpr uint64_t3 abs(uint64_t3 V) { return V; }
+constexpr uint64_t4 abs(uint64_t4 V) { return V; }
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double abs(double);
