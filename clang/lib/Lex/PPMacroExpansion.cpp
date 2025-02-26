@@ -1865,10 +1865,9 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
             return true;
           } else {
             return llvm::StringSwitch<bool>(II->getName())
-                // Report builtin templates as being builtins.
-                .Case("__make_integer_seq", getLangOpts().CPlusPlus)
-                .Case("__type_pack_element", getLangOpts().CPlusPlus)
-                .Case("__builtin_common_type", getLangOpts().CPlusPlus)
+        // Report builtin templates as being builtins.
+#define BuiltinTemplate(BTName) .Case(#BTName, getLangOpts().CPlusPlus)
+#include "clang/Basic/BuiltinTemplates.inc"
                 // Likewise for some builtin preprocessor macros.
                 // FIXME: This is inconsistent; we usually suggest detecting
                 // builtin macros via #ifdef. Don't add more cases here.
