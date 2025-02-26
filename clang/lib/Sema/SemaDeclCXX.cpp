@@ -5456,10 +5456,31 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
            NumInitializers * sizeof(CXXCtorInitializer*));
     Constructor->setCtorInitializers(baseOrMemberInitializers);
 
+    SourceLocation Location = Constructor->getLocation();
+
+    for (CXXCtorInitializer *Initializer : Info.AllToInit) {
+      FieldDecl *Field = Initializer->getAnyMember();
+      if (!Field)
+        continue;
+
+      RecordDecl *Parent = Field->getParent();
+
+      while (Parent) {
+        if (Parent->isUnion()) {
+          MarkFieldDestructorReferenced(Location, Field);
+          break;
+        }
+
+        if (!Parent->isAnonymousStructOrUnion() || Parent == ClassDecl) {
+          break;
+        }
+
+        Parent = cast<RecordDecl>(Parent->getDeclContext());
+      }
+    }
     // Constructors implicitly reference the base and member
     // destructors.
-    MarkBaseAndMemberDestructorsReferenced(Constructor->getLocation(),
-                                           Constructor->getParent());
+    MarkBaseAndMemberDestructorsReferenced(Location, Constructor->getParent());
   }
 
   return HadError;
@@ -5764,6 +5785,42 @@ void Sema::ActOnMemInitializers(Decl *ConstructorDecl,
   DiagnoseUninitializedFields(*this, Constructor);
 }
 
+void Sema::MarkFieldDestructorReferenced(SourceLocation Location,
+                                         FieldDecl *Field) {
+  if (Field->isInvalidDecl())
+    return;
+
+  // Don't destroy incomplete or zero-length arrays.
+  if (isIncompleteOrZeroLengthArrayType(Context, Field->getType()))
+    return;
+
+  QualType FieldType = Context.getBaseElementType(Field->getType());
+
+  const RecordType *RT = FieldType->getAs<RecordType>();
+  if (!RT)
+    return;
+
+  CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
+  if (FieldClassDecl->isInvalidDecl())
+    return;
+  if (FieldClassDecl->hasIrrelevantDestructor())
+    return;
+  // The destructor for an implicit anonymous union member is never invoked.
+  if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
+    return;
+
+  CXXDestructorDecl *Dtor = LookupDestructor(FieldClassDecl);
+  // Dtor might still be missing, e.g because it's invalid.
+  if (!Dtor)
+    return;
+  CheckDestructorAccess(Field->getLocation(), Dtor,
+                        PDiag(diag::err_access_dtor_field)
+                            << Field->getDeclName() << FieldType);
+
+  MarkFunctionReferenced(Location, Dtor);
+  DiagnoseUseOfDecl(Dtor, Location);
+}
+
 void
 Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
                                              CXXRecordDecl *ClassDecl) {
@@ -5779,39 +5836,7 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
 
   // Non-static data members.
   for (auto *Field : ClassDecl->fields()) {
-    if (Field->isInvalidDecl())
-      continue;
-
-    // Don't destroy incomplete or zero-length arrays.
-    if (isIncompleteOrZeroLengthArrayType(Context, Field->getType()))
-      continue;
-
-    QualType FieldType = Context.getBaseElementType(Field->getType());
-
-    const RecordType* RT = FieldType->getAs<RecordType>();
-    if (!RT)
-      continue;
-
-    CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-    if (FieldClassDecl->isInvalidDecl())
-      continue;
-    if (FieldClassDecl->hasIrrelevantDestructor())
-      continue;
-    // The destructor for an implicit anonymous union member is never invoked.
-    if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
-      continue;
-
-    CXXDestructorDecl *Dtor = LookupDestructor(FieldClassDecl);
-    // Dtor might still be missing, e.g because it's invalid.
-    if (!Dtor)
-      continue;
-    CheckDestructorAccess(Field->getLocation(), Dtor,
-                          PDiag(diag::err_access_dtor_field)
-                            << Field->getDeclName()
-                            << FieldType);
-
-    MarkFunctionReferenced(Location, Dtor);
-    DiagnoseUseOfDecl(Dtor, Location);
+    MarkFieldDestructorReferenced(Location, Field);
   }
 
   // We only potentially invoke the destructors of potentially constructed
