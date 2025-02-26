@@ -3569,6 +3569,11 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
+// Check that memory access offsets in V are multiples of array element size
+// EltSize. Param records the first parametric expression. If the scalar
+// evolution V contains two or more parameters, we check that the subsequent
+// parametric expressions are multiples of the first parametric expression
+// Param.
 static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
                          uint64_t EltSize) {
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V)) {
@@ -3578,9 +3583,20 @@ static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
   }
   if (auto *Cst = dyn_cast<SCEVConstant>(V)) {
     APInt C = Cst->getAPInt();
+
+    // For example, alias_with_different_offsets in
+    // test/Analysis/DependenceAnalysis/DifferentOffsets.ll accesses "%A + 2":
+    //   %arrayidx = getelementptr inbounds i8, ptr %A, i64 2
+    //   store i32 42, ptr %arrayidx, align 1
+    // which is writing an i32, i.e., EltSize = 4 bytes, with an offset C = 2.
+    // checkOffsets returns false, as the offset C=2 is not a multiple of 4.
     return C.srem(EltSize) == 0;
   }
 
+  // Use a lambda helper function to check V for parametric expressions.
+  // Param records the first parametric expression. If the scalar evolution V
+  // contains two or more parameters, we check that the subsequent parametric
+  // expressions are multiples of the first parametric expression Param.
   auto checkParamsMultipleOfSize = [&](const SCEV *V,
                                        const SCEV *&Param) -> bool {
     if (EltSize == 1)
@@ -3600,6 +3616,12 @@ static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
         return true;
       auto Rem = Val.srem(APInt(Val.getBitWidth(), EltSize, /*isSigned=*/true));
       if (Rem.isZero())
+        // For example in test/Analysis/DependenceAnalysis/Preliminary.ll
+        // SrcSCEV = ((4 * (sext i8 %n to i64))<nsw> + %A)
+        // DstSCEV = (4 + (4 * (sext i8 %n to i64))<nsw> + %A)
+        // Param = (4 * (sext i8 %n to i64))<nsw>
+        // V = 4 + (4 * (sext i8 %n to i64))<nsw>
+        // Diff = -4, Rem = 0, and so all offsets are multiple of 4.
         return true;
       LLVM_DEBUG(dbgs() << "SCEV with different offsets: " << *Param << " - "
                         << *V << " = " << *Diff << " % " << EltSize << " = "
@@ -3614,6 +3636,10 @@ static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
     const SCEV *Remainder = SE->getURemExpr(Diff, Val);
     if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Remainder))
       if (C->getValue()->isZero())
+        // For example test/Analysis/DependenceAnalysis/DADelin.ll
+        // SrcSCEV = {{{%A,+,(4 * %m * %o)}<%for.cond1.preheader>,+,(4 * %o)}
+        // DstSCEV = {{{%A,+,(4 * %m * %o)}<%for.cond1.preheader>,+,(4 * %o)}
+        // The strides '(4 * %m * %o)' and '(4 * %o)' are multiple of 4.
         return true;
 
     // Check by using the division computation.
@@ -3625,17 +3651,32 @@ static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
                       << *Param << " - " << *V << " = " << *Diff << "\n"
                       << "Remainder = " << *Remainder << "\n"
                       << "Q = " << *Q << " Product = " << *Product << "\n");
+    // For example in test/Analysis/DependenceAnalysis/MIVCheckConst.ll
+    // SrcSCEV = {(80640 + (4 * (1 + %n) * %v1) + %A),+,(8 * %v1)}<%bb13>
+    // DstSCEV = {(126720 + (128 * %m) + %A),+,256}<%bb13>
+    // We fail to prove that the offsets 80640 + (4 * (1 + %n) * %v1) and
+    // (8 * %v1) are multiples of 128.
+    // Param = 80640 + (4 * (1 + %n) * %v1)
+    // (80640 + (4 * (1 + %n) * %v1)) - (8 * %v1) =
+    // (80640 + ((-4 + (4 * %n)) * %v1))
+    // Remainder = (zext i7 ((trunc i32 %v1 to i7) *
+    //                       (-4 + (4 * (trunc i32 %n to i7)))) to i32)
+    // Q = ((80640 + ((-4 + (4 * %n)) * %v1)) /u 128)
+    // Product = (128 * ((80640 + ((-4 + (4 * %n)) * %v1)) /u 128))<nuw>
     return false;
   };
+
   // Expressions like "n".
   if (isa<SCEVUnknown>(V))
     return checkParamsMultipleOfSize(V, Param);
+
   // Expressions like "n + 1".
   if (isa<SCEVAddExpr>(V))
     return !SCEVExprContains(V, [](const SCEV *S) {
       return isa<SCEVUnknown>(S);
     }) || checkParamsMultipleOfSize(V, Param);
 
+  // Expressions like "n * 2".
   if (isa<SCEVMulExpr>(V))
     return !SCEVExprContains(V, [](const SCEV *S) {
       return isa<SCEVUnknown>(S);
