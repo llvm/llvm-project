@@ -498,7 +498,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
     SdwaSel ExistingSel = static_cast<SdwaSel>(SrcSel->getImm());
-    SrcSel->setImm(combineSdwaSel(ExistingSel, getSrcSel()).value());
+    SrcSel->setImm(*combineSdwaSel(ExistingSel, getSrcSel()));
     SrcMods->setImm(getSrcMods(TII, Src));
   }
   getTargetOperand()->setIsKill(false);
