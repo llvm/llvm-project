@@ -533,11 +533,9 @@ namespace std
 #  if _LIBCPP_STD_VER >= 23
 #    include <__type_traits/is_implicit_lifetime.h>
 #  endif
-// C++23 but private declarations are available in C++11.
-#  if !defined(_LIBCPP_CXX03_LANG)
-#    include <__type_traits/reference_constructs_from_temporary.h>
-#    include <__type_traits/reference_converts_from_temporary.h>
-#  endif
+// C++23 but private declarations are available in previous standards.
+#  include <__type_traits/reference_constructs_from_temporary.h>
+#  include <__type_traits/reference_converts_from_temporary.h>
 
 #  include <version>
 

@@ -9,7 +9,7 @@
 // REQUIRES: std-at-least-c++23
 
 // These compilers don't support std::reference_converts_from_temporary yet.
-// UNSUPPORTED: android, apple-clang-15, apple-clang-16.1, apple-clang-16.2, clang-19
+// UNSUPPORTED: android, apple-clang, clang-19.1.1
 
 // <type_traits>
 
@@ -21,6 +21,8 @@
 
 #include <cassert>
 #include <type_traits>
+
+#include "test_macros.h"
 
 struct NonPOD {
   NonPOD(int);
@@ -93,7 +95,9 @@ constexpr bool test() {
 
   assert((std::is_constructible_v<const int&, LongRef>));
   test_reference_converts_from_temporary<const int&, LongRef, true>();
+#ifndef TEST_COMPILER_GCC
   test_reference_converts_from_temporary<const int&, ConvertsToRefPrivate<long, long&>, false>();
+#endif
 
   // Test that it doesn't accept non-reference types as input.
   test_reference_converts_from_temporary<int, long, false>();

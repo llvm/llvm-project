@@ -19,6 +19,8 @@
 #include <cassert>
 #include <type_traits>
 
+#include "test_macros.h"
+
 struct NonPOD {
   NonPOD(int);
 };
@@ -90,7 +92,9 @@ constexpr bool test() {
 
   assert((std::is_constructible_v<const int&, LongRef>));
   test_reference_constructs_from_temporary<const int&, LongRef, true>();
+#ifndef TEST_COMPILER_GCC
   test_reference_constructs_from_temporary<const int&, ConvertsToRefPrivate<long, long&>, false>();
+#endif
 
   // Test that it doesn't accept non-reference types as input.
   test_reference_constructs_from_temporary<int, long, false>();

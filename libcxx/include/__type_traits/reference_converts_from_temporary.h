@@ -18,7 +18,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_CXX03_LANG) && __has_builtin(__reference_converts_from_temporary)
+#if __has_builtin(__reference_converts_from_temporary) ||                                                              \
+    (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1) &&                     \
+     (__clang_patchlevel__ >= 2))
 
 template <class _Tp, class _Up>
 inline constexpr bool __reference_converts_from_temporary_v = __reference_converts_from_temporary(_Tp, _Up);

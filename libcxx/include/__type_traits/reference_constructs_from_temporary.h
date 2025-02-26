@@ -18,10 +18,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_CXX03_LANG)
-
 template <class _Tp, class _Up>
-inline constexpr bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
+const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
 
 #  if _LIBCPP_STD_VER >= 23
 
@@ -34,8 +32,6 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_constructs_from_tempo
     __reference_constructs_from_temporary_v<_Tp, _Up>;
 
 #  endif
-
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
