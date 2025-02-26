@@ -285,7 +285,7 @@ private:
 
   // If needed, replace G with an alias to F if possible, or a thunk to F if
   // profitable. Returns false if neither is the case. If \p G is not needed
-  // (e.g. it is discardable and linkonce_odr), \p G is removed directly.
+  // (i.e. it is discardable and not used), \p G is removed directly.
   bool writeThunkOrAliasIfNeeded(Function *F, Function *G);
 
   /// Replace function F with function G in the function tree.
@@ -877,8 +877,8 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
 }
 
 // If needed, replace G with an alias to F if possible, or a thunk to F if
-// profitable. Returns false if neither is the case. If \p G is not needed (e.g.
-// it is discardable and linkonce_odr), \p G is removed directly.
+// profitable. Returns false if neither is the case. If \p G is not needed (i.e.
+// it is discardable and unused), \p G is removed directly.
 bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
   if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
     G->eraseFromParent();
