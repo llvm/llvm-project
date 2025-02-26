@@ -7,8 +7,6 @@
 ; The problem with this is that the linker could then choose these two stubs
 ; each of the two modules and we end up with two stubs calling each other.
 
-
-
 define linkonce_odr i32 @funC(i32 %x, i32 %y) {
   %sum = add i32 %x, %y
   %sum2 = add i32 %x, %sum
@@ -37,7 +35,7 @@ define linkonce_odr i32 @funA(i32 %x, i32 %y) {
 ;.
 ; CHECK: @take_addr_of_funB = global ptr @funB
 ;.
-; CHECK-LABEL: define linkonce_odr i32 @funA(
+; CHECK-LABEL: define private i32 @0(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i32 [[X]], [[SUM]]
@@ -45,8 +43,14 @@ define linkonce_odr i32 @funA(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[SUM3]]
 ;
 ;
+; CHECK-LABEL: define linkonce_odr i32 @funC(
+; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @[[GLOB0:[0-9]+]](i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+;
 ; CHECK-LABEL: define linkonce_odr i32 @funB(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @funA(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @[[GLOB0]](i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

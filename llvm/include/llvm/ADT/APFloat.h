@@ -353,6 +353,7 @@ struct APFloatBase {
   static bool semanticsHasSignedRepr(const fltSemantics &);
   static bool semanticsHasInf(const fltSemantics &);
   static bool semanticsHasNaN(const fltSemantics &);
+  static bool isIEEELikeFP(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.

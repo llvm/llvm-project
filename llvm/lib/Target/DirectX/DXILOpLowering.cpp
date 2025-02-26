@@ -770,8 +770,20 @@ public:
         continue;
       Intrinsic::ID ID = F.getIntrinsicID();
       switch (ID) {
-      default:
+      // NOTE: Skip dx_resource_casthandle here. They are
+      // resolved after this loop in cleanupHandleCasts.
+      case Intrinsic::dx_resource_casthandle:
+      // NOTE: llvm.dbg.value is supported as is in DXIL.
+      case Intrinsic::dbg_value:
+      case Intrinsic::not_intrinsic:
         continue;
+      default: {
+        DiagnosticInfoUnsupported Diag(
+            F, "Unsupported intrinsic for DXIL lowering");
+        M.getContext().diagnose(Diag);
+        HasErrors |= true;
+        break;
+      }
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
