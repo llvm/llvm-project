@@ -2927,6 +2927,7 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "Before post optimization", &errs());
   postOptimization();
+  cleanupFailedVRegs();
   reportStats();
 
   releaseMemory();
