@@ -81,8 +81,9 @@ Register RISCVExegesisPostprocessing::allocateGPRRegister(
     const MachineFunction &MF, const MachineRegisterInfo &MRI) {
   const auto &TRI = *MRI.getTargetRegisterInfo();
 
-  const TargetRegisterClass *GPRClass =
-      TRI.getRegClass(RISCV::GPRJALRRegClassID);
+  // We hope to avoid allocating callee-saved registers. And GPRTC
+  // happens to account for nearly all caller-saved registers.
+  const TargetRegisterClass *GPRClass = TRI.getRegClass(RISCV::GPRTCRegClassID);
   BitVector Candidates = TRI.getAllocatableSet(MF, GPRClass);
 
   for (unsigned SetIdx : Candidates.set_bits()) {

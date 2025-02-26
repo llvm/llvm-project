@@ -149,17 +149,15 @@ public:
         RISCV::GPRRegClassID, RISCV::FPR16RegClassID, RISCV::VRRegClassID};
 
     for (unsigned RegClassID : StandaloneRegClasses)
-      for (unsigned Reg : RegInfo.getRegClass(RegClassID)) {
+      for (unsigned Reg : RegInfo.getRegClass(RegClassID))
         AggregateRegisters.reset(Reg);
-      }
 
     // Initialize ELEN and VLEN.
-    // FIXME: We could have obtained these two from RISCVSubtarget
+    // FIXME: We could have obtained these two constants from RISCVSubtarget
     // but in order to get that from TargetMachine, we need a Function.
-    const Triple &TT = State.getTargetMachine().getTargetTriple();
-    ELEN = TT.isRISCV32() ? 32 : 64;
-
     const MCSubtargetInfo &STI = State.getSubtargetInfo();
+    ELEN = STI.checkFeatures("+zve64x") ? 64 : 32;
+
     std::string ZvlQuery;
     for (unsigned I = 5U, Size = (1 << I); I < 17U; ++I, Size <<= 1) {
       ZvlQuery = "+zvl";
@@ -175,15 +173,15 @@ public:
                         const BitVector &ForbiddenRegisters) const override;
 };
 
-static bool isMaskedSibiling(unsigned MaskedOp, unsigned UnmaskedOp) {
+static bool isMaskedSibling(unsigned MaskedOp, unsigned UnmaskedOp) {
   const auto *RVVMasked = RISCV::getMaskedPseudoInfo(MaskedOp);
   return RVVMasked && RVVMasked->UnmaskedPseudo == UnmaskedOp;
 }
 
 // There are primarily two kinds of opcodes that are not eligible
 // in a serial snippet:
-// (1) Only has a single use operand that can not be overlap with
-// the def operand.
+// (1) Has a use operand that can not overlap with the def operand
+// (i.e. early clobber).
 // (2) The register file of the only use operand is different from
 // that of the def operand. For instance, use operand is vector and
 // the result is a scalar.
@@ -197,6 +195,8 @@ static bool isIneligibleOfSerialSnippets(unsigned BaseOpcode,
   case RISCV::VCOMPRESS_VM:
   case RISCV::VCPOP_M:
   case RISCV::VCPOP_V:
+  // The permutation instructions listed below cannot have destination
+  // overlapping with the source.
   case RISCV::VRGATHEREI16_VV:
   case RISCV::VRGATHER_VI:
   case RISCV::VRGATHER_VV:
@@ -204,16 +204,6 @@ static bool isIneligibleOfSerialSnippets(unsigned BaseOpcode,
   case RISCV::VSLIDE1UP_VX:
   case RISCV::VSLIDEUP_VI:
   case RISCV::VSLIDEUP_VX:
-  // The truncate instructions that arraive here are those who cannot
-  // have any overlap between source and dest at all (i.e.
-  // those whoe don't satisfy condition 2 and 3 in RVV spec
-  // 5.2).
-  case RISCV::VNCLIPU_WI:
-  case RISCV::VNCLIPU_WV:
-  case RISCV::VNCLIPU_WX:
-  case RISCV::VNCLIP_WI:
-  case RISCV::VNCLIP_WV:
-  case RISCV::VNCLIP_WX:
     return true;
   default:
     return false;
@@ -372,8 +362,8 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
         const auto *RVVBase =
             RISCVVInversePseudosTable::getBaseInfo(BaseOpcode, VLMul, SEW);
         if (RVVBase && (RVVBase->Pseudo == VPseudoOpcode ||
-                        isMaskedSibiling(VPseudoOpcode, RVVBase->Pseudo) ||
-                        isMaskedSibiling(RVVBase->Pseudo, VPseudoOpcode))) {
+                        isMaskedSibling(VPseudoOpcode, RVVBase->Pseudo) ||
+                        isMaskedSibling(RVVBase->Pseudo, VPseudoOpcode))) {
           // There is an integrated SEW, remove all but the SEW pushed last.
           SEWCandidates.erase(SEWCandidates.begin(), SEWCandidates.end() - 1);
           break;
@@ -395,7 +385,7 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
           }
         }
 
-        // The EEW for source operand in VSEXT and VZEXT is a fractional
+        // The EEW for source operand in VSEXT and VZEXT is a fraction
         // of the SEW, hence only SEWs that will lead to valid EEW are allowed.
         if (auto Frac = isRVVSignZeroExtend(BaseOpcode))
           if (*SEW / *Frac < MinSEW) {
@@ -411,7 +401,7 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
                                              Feature_HasStdExtZvksedBit,
                                              Feature_HasStdExtZvkshBit})) {
           if (*SEW != 32)
-            // Zvknhb support SEW=64 as well.
+            // Zvknhb supports SEW=64 as well.
             if (*SEW != 64 || !STI.hasFeature(RISCV::FeatureStdExtZvknhb) ||
                 !isOpcodeAvailableIn(BaseOpcode,
                                      {Feature_HasStdExtZvknhaOrZvknhbBit})) {

@@ -1,10 +1,59 @@
 # RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency \
-# RUN:    --opcode-name=PseudoVCOMPRESS_VM_M2_E8,PseudoVCPOP_M_B32 | FileCheck %s --allow-empty --check-prefix=LATENCY
+# RUN:    --opcode-name=PseudoVCOMPRESS_VM_M2_E8,PseudoVCPOP_M_B32 | \
+# RUN:    FileCheck %s --allow-empty --check-prefix=LATENCY
 # RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
-# RUN:    --opcode-name=PseudoVCOMPRESS_VM_M2_E8,PseudoVCPOP_M_B32 --min-instructions=100 | FileCheck %s --check-prefix=RTHROUGHPUT
+# RUN:    --opcode-name=PseudoVCOMPRESS_VM_M2_E8,PseudoVCPOP_M_B32 \
+# RUN:    --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=RTHROUGHPUT1
+
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency \
+# RUN:    --opcode-name=PseudoVRGATHEREI16_VV_M2_E32_M1,PseudoVRGATHER_VI_M2,PseudoVRGATHER_VV_M8_E32,PseudoVRGATHER_VX_M4 | \
+# RUN:    FileCheck %s --allow-empty --check-prefix=LATENCY
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVRGATHEREI16_VV_M2_E32_M1,PseudoVRGATHER_VI_M2,PseudoVRGATHER_VV_M8_E32,PseudoVRGATHER_VX_M4 \
+# RUN:    --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=RTHROUGHPUT2
+
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency \
+# RUN:    --opcode-name=PseudoVSLIDE1UP_VX_M1,PseudoVSLIDEUP_VI_M2,PseudoVSLIDEUP_VX_M2 | \
+# RUN:    FileCheck %s --allow-empty --check-prefix=LATENCY
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVSLIDE1UP_VX_M1,PseudoVSLIDEUP_VI_M2,PseudoVSLIDEUP_VX_M2 \
+# RUN:    --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=RTHROUGHPUT3
+
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency \
+# RUN:    --opcode-name=PseudoVNCLIPU_WI_M2,PseudoVNSRA_WI_M2,PseudoVNSRL_WI_M2 | \
+# RUN:    FileCheck %s --allow-empty --check-prefix=LATENCY
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVNCLIPU_WI_M2,PseudoVNSRA_WI_M2,PseudoVNSRL_WI_M2 \
+# RUN:    --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=RTHROUGHPUT4
+
+# These instructions are only eligible under the inverse throughput mode.
 
 # LATENCY-NOT: PseudoVCOMPRESS_VM_M2_E8
 # LATENCY-NOT: PseudoVCPOP_M_B32
+# LATENCY-NOT: PseudoVRGATHEREI16_VV_M2_E32_M1
+# LATENCY-NOT: PseudoVRGATHER_VI_M2
+# LATENCY-NOT: PseudoVRGATHER_VV_M8_E32
+# LATENCY-NOT: PseudoVRGATHER_VX_M4
+# LATENCY-NOT: PseudoVSLIDE1UP_VX_M1
+# LATENCY-NOT: PseudoVSLIDEUP_VI_M2
+# LATENCY-NOT: PseudoVSLIDEUP_VX_M2
+# LATENCY-NOT: PseudoVNCLIPU_WI_M2
+# LATENCY-NOT: PseudoVNSRA_WI_M2
+# LATENCY-NOT: PseudoVNSRL_WI_M2
 
-# RTHROUGHPUT: PseudoVCOMPRESS_VM_M2_E8
-# RTHROUGHPUT: PseudoVCPOP_M_B32
+# RTHROUGHPUT1: PseudoVCOMPRESS_VM_M2_E8
+# RTHROUGHPUT1: PseudoVCPOP_M_B32
+# RTHROUGHPUT2: PseudoVRGATHEREI16_VV_M2_E32_M1
+# RTHROUGHPUT2: PseudoVRGATHER_VI_M2
+# RTHROUGHPUT2: PseudoVRGATHER_VV_M8_E32
+# RTHROUGHPUT2: PseudoVRGATHER_VX_M4
+# RTHROUGHPUT3: PseudoVSLIDE1UP_VX_M1
+# RTHROUGHPUT3: PseudoVSLIDEUP_VI_M2
+# RTHROUGHPUT3: PseudoVSLIDEUP_VX_M2
+# RTHROUGHPUT4: PseudoVNCLIPU_WI_M2
+# RTHROUGHPUT4: PseudoVNSRA_WI_M2
+# RTHROUGHPUT4: PseudoVNSRL_WI_M2
