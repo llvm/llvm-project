@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++17
+// UNSUPPORTED: c++03, c++11, c++14
 
 // Check that user-specializations are diagnosed
 // See [variant.variant.general]/4
