@@ -71,6 +71,8 @@ struct Config {
 
   explicit Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
 
+  virtual ~Config() = default;
+
   // Telemetry can only be enabled if both the runtime and buildtime flag
   // are set.
   explicit Config(bool E) : EnableTelemetry(E && BuildTimeEnableTelemetry) {}
