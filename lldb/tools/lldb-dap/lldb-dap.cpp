@@ -13,10 +13,6 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "RunInTerminal.h"
-#include "Watchpoint.h"
-#include "lldb/API/SBEvent.h"
-#include "lldb/API/SBFile.h"
-#include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoop.h"
@@ -26,8 +22,6 @@
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,7 +38,6 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <array>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
@@ -52,13 +45,11 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <ostream>
-#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>

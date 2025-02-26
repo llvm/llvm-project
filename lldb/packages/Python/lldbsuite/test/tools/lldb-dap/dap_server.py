@@ -1068,6 +1068,19 @@ class DebugCommunication(object):
                 print("[%3u] %s" % (idx, name))
         return response
 
+    def request_source(self, sourceReference):
+        """Request a source from a 'Source' reference."""
+        command_dict = {
+            "command": "source",
+            "type": "request",
+            "arguments": {
+                "source": {"sourceReference": sourceReference},
+                # legacy version of the request
+                "sourceReference": sourceReference,
+            },
+        }
+        return self.send_recv(command_dict)
+
     def request_threads(self):
         """Request a list of all threads and combine any information from any
         "stopped" events since those contain more information about why a

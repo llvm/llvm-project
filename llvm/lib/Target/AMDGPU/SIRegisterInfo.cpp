@@ -35,7 +35,7 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
-std::array<std::vector<int16_t>, 16> SIRegisterInfo::RegSplitParts;
+std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
 // Map numbers of DWORDs to indexes in SubRegFromChannelTable.
@@ -351,9 +351,9 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
   static auto InitializeRegSplitPartsOnce = [this]() {
     for (unsigned Idx = 1, E = getNumSubRegIndices() - 1; Idx < E; ++Idx) {
       unsigned Size = getSubRegIdxSize(Idx);
-      if (Size & 31)
+      if (Size & 15)
         continue;
-      std::vector<int16_t> &Vec = RegSplitParts[Size / 32 - 1];
+      std::vector<int16_t> &Vec = RegSplitParts[Size / 16 - 1];
       unsigned Pos = getSubRegIdxOffset(Idx);
       if (Pos % Size)
         continue;
@@ -2202,6 +2202,8 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
     // Don't need to write VGPR out.
   }
 
+  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+
   // Restore clobbered registers in the specified restore block.
   MI = RestoreMBB.end();
   SB.setMI(&RestoreMBB, MI);
@@ -2216,6 +2218,7 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
+      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
       bool LastSubReg = (i + 1 == e);
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
                          SubReg)
@@ -2994,10 +2997,15 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (IsSALU && !LiveSCC)
           Shift.getInstr()->getOperand(3).setIsDead(); // Mark SCC as dead.
         if (IsSALU && LiveSCC) {
-          Register NewDest =
-              IsCopy ? ResultReg
-                     : RS->scavengeRegisterBackwards(AMDGPU::SReg_32RegClass,
-                                                     Shift, false, 0);
+          Register NewDest;
+          if (IsCopy) {
+            MF->getRegInfo().constrainRegClass(ResultReg,
+                                               &AMDGPU::SReg_32_XM0RegClass);
+            NewDest = ResultReg;
+          } else {
+            NewDest = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
+                                                    Shift, false, 0);
+          }
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), NewDest)
               .addReg(TmpResultReg);
           ResultReg = NewDest;
@@ -3120,10 +3128,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   .addReg(TmpResultReg);
             }
 
-            Register NewDest = IsCopy ? ResultReg
-                                      : RS->scavengeRegisterBackwards(
-                                            AMDGPU::SReg_32RegClass, *Add,
-                                            false, 0, /*AllowSpill=*/true);
+            Register NewDest;
+            if (IsCopy) {
+              MF->getRegInfo().constrainRegClass(ResultReg,
+                                                 &AMDGPU::SReg_32_XM0RegClass);
+              NewDest = ResultReg;
+            } else {
+              NewDest = RS->scavengeRegisterBackwards(
+                  AMDGPU::SReg_32_XM0RegClass, *Add, false, 0,
+                  /*AllowSpill=*/true);
+            }
+
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                     NewDest)
                 .addReg(TmpResultReg);
@@ -3554,14 +3569,14 @@ bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
 ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC,
                                                    unsigned EltSize) const {
   const unsigned RegBitWidth = AMDGPU::getRegBitWidth(*RC);
-  assert(RegBitWidth >= 32 && RegBitWidth <= 1024);
+  assert(RegBitWidth >= 32 && RegBitWidth <= 1024 && EltSize >= 2);
 
-  const unsigned RegDWORDs = RegBitWidth / 32;
-  const unsigned EltDWORDs = EltSize / 4;
-  assert(RegSplitParts.size() + 1 >= EltDWORDs);
+  const unsigned RegHalves = RegBitWidth / 16;
+  const unsigned EltHalves = EltSize / 2;
+  assert(RegSplitParts.size() + 1 >= EltHalves);
 
-  const std::vector<int16_t> &Parts = RegSplitParts[EltDWORDs - 1];
-  const unsigned NumParts = RegDWORDs / EltDWORDs;
+  const std::vector<int16_t> &Parts = RegSplitParts[EltHalves - 1];
+  const unsigned NumParts = RegHalves / EltHalves;
 
   return ArrayRef(Parts.data(), NumParts);
 }
