@@ -12039,7 +12039,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
           assert(isa<AllocaInst>(PHIOp) &&
                  FuncInfo.StaticAllocaMap.count(cast<AllocaInst>(PHIOp)) &&
                  "Didn't codegen value into a register!??");
-          Reg = FuncInfo.CreateRegs(PHIOp);
+          Reg = FuncInfo.CreateRegs(&PN);
           CopyValueToVirtualRegister(PHIOp, Reg);
         }
       }
