@@ -806,28 +806,28 @@ static bool isPop(unsigned Opcode) {
   }
 }
 
-static unsigned getPushOpcode(RISCVMachineFunctionInfo::PushKind Kind,
-                              bool hasFP) {
+static unsigned getPushOpcode(RISCVMachineFunctionInfo::PushPopKind Kind,
+                              bool HasFP) {
   switch (Kind) {
-  case RISCVMachineFunctionInfo::PushKind::StdExtZcmp:
+  case RISCVMachineFunctionInfo::PushPopKind::StdExtZcmp:
     return RISCV::CM_PUSH;
-  case RISCVMachineFunctionInfo::PushKind::VendorXqccmp:
-    return hasFP ? RISCV::QC_CM_PUSHFP : RISCV::QC_CM_PUSH;
+  case RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp:
+    return HasFP ? RISCV::QC_CM_PUSHFP : RISCV::QC_CM_PUSH;
   default:
-    llvm_unreachable("Unhandled PushKind");
+    llvm_unreachable("Unhandled PushPopKind");
   }
 }
 
-static unsigned getPopOpcode(RISCVMachineFunctionInfo::PushKind Kind) {
+static unsigned getPopOpcode(RISCVMachineFunctionInfo::PushPopKind Kind) {
   // There are other pops but they are introduced later by the Push/Pop
   // Optimizer.
   switch (Kind) {
-  case RISCVMachineFunctionInfo::PushKind::StdExtZcmp:
+  case RISCVMachineFunctionInfo::PushPopKind::StdExtZcmp:
     return RISCV::CM_POP;
-  case llvm::RISCVMachineFunctionInfo::PushKind::VendorXqccmp:
-    return RISCV::CM_POP;
+  case RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp:
+    return RISCV::QC_CM_POP;
   default:
-    llvm_unreachable("Unhandled Push Kind");
+    llvm_unreachable("Unhandled PushPopKind");
   }
 }
 
@@ -974,8 +974,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   emitCFIForCSI<CFISaveRegisterEmitter>(MBB, MBBI, getUnmanagedCSI(MF, CSI));
 
   // Generate new FP.
-  if (hasFP(MF) && RVFI->getPushKind(MF) !=
-                       RISCVMachineFunctionInfo::PushKind::VendorXqccmp) {
+  if (hasFP(MF) && RVFI->getPushPopKind(MF) !=
+                       RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
     if (STI.isRegisterReservedByUser(FPReg))
       MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
           MF.getFunction(), "Frame pointer required, but has been reserved."});
@@ -1863,8 +1863,8 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
           FixedCSRFIMap, [&](auto P) { return P.first == CS.getReg(); });
       if (FII != std::end(FixedCSRFIMap)) {
         int64_t Offset;
-        if (RVFI->getPushKind(MF) ==
-            RISCVMachineFunctionInfo::PushKind::StdExtZcmp)
+        if (RVFI->getPushPopKind(MF) ==
+            RISCVMachineFunctionInfo::PushPopKind::StdExtZcmp)
           Offset = -((FII->second + RVFI->getRVPushRegs() + 1) * (int64_t)Size);
         else
           Offset = FII->second * (int64_t)Size;
@@ -1930,7 +1930,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       // Use encoded number to represent registers to spill.
       int RegEnc = RVFI->getRVPushRlist();
 
-      unsigned Opcode = getPushOpcode(RVFI->getPushKind(*MF), hasFP(*MF));
+      unsigned Opcode = getPushOpcode(RVFI->getPushPopKind(*MF), hasFP(*MF));
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameSetup);
@@ -2085,7 +2085,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   if (RVFI->isPushable(*MF)) {
     int RegEnc = RVFI->getRVPushRlist();
     if (RegEnc != llvm::RISCVZC::RLISTENCODE::INVALID_RLIST) {
-      unsigned Opcode = getPopOpcode(RVFI->getPushKind(*MF));
+      unsigned Opcode = getPopOpcode(RVFI->getPushPopKind(*MF));
       MachineInstrBuilder PopBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameDestroy);

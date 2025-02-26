@@ -137,42 +137,12 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
+  enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
+
+  PushPopKind getPushPopKind(const MachineFunction &MF) const;
+
   bool isPushable(const MachineFunction &MF) const {
-    // We cannot use fixed locations for the callee saved spill slots if the
-    // function uses a varargs save area.
-    // TODO: Use a separate placement for vararg registers to enable Zcmp.
-    if (VarArgsSaveSize != 0)
-      return false;
-
-    // Zcmp is not compatible with the frame pointer convention.
-    if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp())
-      return !MF.getTarget().Options.DisableFramePointerElim(MF);
-
-    // Xqccmp is Zcmp but has a push order compatible with the frame-pointer
-    // convention.
-    if (MF.getSubtarget<RISCVSubtarget>().hasVendorXqccmp())
-      return true;
-
-    return false;
-  }
-
-  enum class PushKind { None = 0, StdExtZcmp, VendorXqccmp };
-
-  PushKind getPushKind(const MachineFunction &MF) const {
-    if (VarArgsSaveSize != 0)
-      return PushKind::None;
-
-    // Zcmp is not compatible with the frame pointer convention.
-    if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
-        !MF.getTarget().Options.DisableFramePointerElim(MF))
-      return PushKind::StdExtZcmp;
-
-    // Xqccmp is Zcmp but has a push order compatible with the frame-pointer
-    // convention.
-    if (MF.getSubtarget<RISCVSubtarget>().hasVendorXqccmp())
-      return PushKind::VendorXqccmp;
-
-    return PushKind::None;
+    return getPushPopKind(MF) != PushPopKind::None;
   }
 
   int getRVPushRlist() const { return RVPushRlist; }
