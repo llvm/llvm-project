@@ -4122,24 +4122,24 @@ define double @global_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr add
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
-; GFX90A-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX90A-NEXT:    v_max_f64 v[6:7], v[2:3], v[2:3]
 ; GFX90A-NEXT:  .LBB24_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[4:5] op_sel:[0,1]
-; GFX90A-NEXT:    v_max_f64 v[4:5], v[6:7], v[6:7]
-; GFX90A-NEXT:    v_max_f64 v[4:5], v[4:5], v[2:3]
-; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off glc
+; GFX90A-NEXT:    v_max_f64 v[2:3], v[4:5], v[4:5]
+; GFX90A-NEXT:    v_max_f64 v[2:3], v[2:3], v[6:7]
+; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[2:3], v[0:1], v[2:5], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_wbinvl1
-; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX90A-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[4:5]
 ; GFX90A-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB24_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v5
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v2
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: global_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory:

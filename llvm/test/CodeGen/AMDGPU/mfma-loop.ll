@@ -2401,7 +2401,6 @@ define amdgpu_kernel void @test_mfma_nested_loop_zeroinit(ptr addrspace(1) %arg)
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a31, a0
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 2.0
-; GFX90A-NEXT:    ; kill: def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 killed $exec
 ; GFX90A-NEXT:  .LBB9_1: ; %for.cond.preheader
 ; GFX90A-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX90A-NEXT:    ; Child Loop BB9_2 Depth 2
@@ -2471,7 +2470,6 @@ define amdgpu_kernel void @test_mfma_nested_loop_zeroinit(ptr addrspace(1) %arg)
 ; GFX942-NEXT:    v_accvgpr_mov_b32 a31, a0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 2.0
-; GFX942-NEXT:    ; kill: def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 killed $exec
 ; GFX942-NEXT:  .LBB9_1: ; %for.cond.preheader
 ; GFX942-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX942-NEXT:    ; Child Loop BB9_2 Depth 2
