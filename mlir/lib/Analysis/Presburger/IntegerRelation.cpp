@@ -1578,13 +1578,11 @@ void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
 
 /// Returns a non-negative constant bound on the extent (upper bound - lower
 /// bound) of the specified variable if it is found to be a constant; returns
-/// std::nullopt if it's not a constant. This methods treats symbolic variables
-/// specially, i.e., it looks for constant differences between affine
-/// expressions involving only the symbolic variables. See comments at function
-/// definition for example. 'lb', if provided, is set to the lower bound
-/// associated with the constant difference. Note that 'lb' is purely symbolic
-/// and thus will contain the coefficients of the symbolic variables and the
-/// constant coefficient.
+/// std::nullopt if it's not a constant. This methods looks for constant
+/// differences between affine expressions. See comments at function definition
+/// for example. 'lb', if provided, is set to the lower bound associated with
+/// the constant difference. `lb' will contain the coefficients of the symbolic
+/// variables, local variables and the constant coefficient.
 //  Egs: 0 <= i <= 15, return 16.
 //       s0 + 2 <= i <= s0 + 17, returns 16. (s0 has to be a symbol)
 //       s0 + s1 + 16 <= d0 <= s0 + s1 + 31, returns 16.
@@ -1600,21 +1598,14 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
   // of the symbolic variables (+ constant).
   int eqPos = findEqualityToConstant(*this, pos, /*symbolic=*/true);
   if (eqPos != -1) {
-    auto eq = getEquality(eqPos);
-    // If the equality involves a local var, punt for now.
-    // TODO: this can be handled in the future by using the explicit
-    // representation of the local vars.
-    if (!std::all_of(eq.begin() + getNumDimAndSymbolVars(), eq.end() - 1,
-                     [](const DynamicAPInt &coeff) { return coeff == 0; }))
-      return std::nullopt;
-
     // This variable can only take a single value.
     if (lb) {
       // Set lb to that symbolic value.
-      lb->resize(getNumSymbolVars() + 1);
+      lb->resize(getNumSymbolVars() + getNumLocalVars() + 1);
       if (ub)
-        ub->resize(getNumSymbolVars() + 1);
-      for (unsigned c = 0, f = getNumSymbolVars() + 1; c < f; c++) {
+        ub->resize(getNumSymbolVars() + getNumLocalVars() + 1);
+      for (unsigned c = 0, f = getNumSymbolVars() + getNumLocalVars() + 1;
+           c < f; c++) {
         DynamicAPInt v = atEq(eqPos, pos);
         // atEq(eqRow, pos) is either -1 or 1.
         assert(v * v == 1);
@@ -1687,27 +1678,30 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
   }
   if (lb && minDiff) {
     // Set lb to the symbolic lower bound.
-    lb->resize(getNumSymbolVars() + 1);
+    lb->resize(getNumSymbolVars() + getNumLocalVars() + 1);
     if (ub)
-      ub->resize(getNumSymbolVars() + 1);
+      ub->resize(getNumSymbolVars() + getNumLocalVars() + 1);
     // The lower bound is the ceildiv of the lb constraint over the coefficient
     // of the variable at 'pos'. We express the ceildiv equivalently as a floor
     // for uniformity. For eg., if the lower bound constraint was: 32*d0 - N +
     // 31 >= 0, the lower bound for d0 is ceil(N - 31, 32), i.e., floor(N, 32).
     *boundFloorDivisor = atIneq(minLbPosition, pos);
     assert(*boundFloorDivisor == -atIneq(minUbPosition, pos));
-    for (unsigned c = 0, e = getNumSymbolVars() + 1; c < e; c++) {
+    for (unsigned c = 0, e = getNumSymbolVars() + getNumLocalVars() + 1; c < e;
+         c++) {
       (*lb)[c] = -atIneq(minLbPosition, getNumDimVars() + c);
     }
     if (ub) {
-      for (unsigned c = 0, e = getNumSymbolVars() + 1; c < e; c++)
+      for (unsigned c = 0, e = getNumSymbolVars() + getNumLocalVars() + 1;
+           c < e; c++)
         (*ub)[c] = atIneq(minUbPosition, getNumDimVars() + c);
     }
     // The lower bound leads to a ceildiv while the upper bound is a floordiv
     // whenever the coefficient at pos != 1. ceildiv (val / d) = floordiv (val +
     // d - 1 / d); hence, the addition of 'atIneq(minLbPosition, pos) - 1' to
     // the constant term for the lower bound.
-    (*lb)[getNumSymbolVars()] += atIneq(minLbPosition, pos) - 1;
+    (*lb)[getNumSymbolVars() + getNumLocalVars()] +=
+        atIneq(minLbPosition, pos) - 1;
   }
   if (minLbPos)
     *minLbPos = minLbPosition;
@@ -2180,8 +2174,6 @@ static void getCommonConstraints(const IntegerRelation &a,
 LogicalResult
 IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
   assert(space.isEqual(otherCst.getSpace()) && "Spaces should match.");
-  assert(getNumLocalVars() == 0 && "local ids not supported yet here");
-
   // Get the constraints common to both systems; these will be added as is to
   // the union.
   IntegerRelation commonCst(PresburgerSpace::getRelationSpace());
@@ -2211,11 +2203,9 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     auto otherExtent = otherCst.getConstantBoundOnDimSize(
         d, &otherLb, &otherLbFloorDivisor, &otherUb);
     if (!otherExtent.has_value() || lbFloorDivisor != otherLbFloorDivisor)
-      // TODO: symbolic extents when necessary.
       return failure();
 
     assert(lbFloorDivisor > 0 && "divisor always expected to be positive");
-
     auto res = compareBounds(lb, otherLb);
     // Identify min.
     if (res == BoundCmpResult::Less || res == BoundCmpResult::Equal) {

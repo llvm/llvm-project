@@ -1303,8 +1303,6 @@ LogicalResult FlatLinearValueConstraints::unionBoundingBox(
                     otherMaybeValues.begin(),
                     otherMaybeValues.begin() + getNumDimVars()) &&
          "dim values mismatch");
-  assert(otherCst.getNumLocalVars() == 0 && "local vars not supported here");
-  assert(getNumLocalVars() == 0 && "local vars not supported yet here");
 
   // Align `other` to this.
   if (!areVarsAligned(*this, otherCst)) {

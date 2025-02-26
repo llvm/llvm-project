@@ -474,11 +474,10 @@ public:
   bool areVarsAlignedWithOther(const FlatLinearConstraints &other);
 
   /// Updates the constraints to be the smallest bounding (enclosing) box that
-  /// contains the points of `this` set and that of `other`, with the symbols
-  /// being treated specially. For each of the dimensions, the min of the lower
-  /// bounds (symbolic) and the max of the upper bounds (symbolic) is computed
-  /// to determine such a bounding box. `other` is expected to have the same
-  /// dimensional variables as this constraint system (in the same order).
+  /// contains the points of `this` set and that of `other`. For each of the
+  /// dimensions, the min of the lower bounds and the max of the upper bounds is
+  /// computed to determine such a bounding box. `other` is expected to have the
+  /// same dimensional variables as this constraint system (in the same order).
   ///
   /// E.g.:
   /// 1) this   = {0 <= d0 <= 127},
