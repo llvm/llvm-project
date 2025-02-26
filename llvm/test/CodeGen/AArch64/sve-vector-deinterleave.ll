@@ -70,6 +70,41 @@ define {<vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f
   ret {<vscale x 2 x double>, <vscale x 2 x double>}   %retval
 }
 
+define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_nxv2bf16_nxv4bf16(<vscale x 4 x bfloat> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv2bf16_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z1.s, z0.s, z0.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z0.s
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpklo z1.d, z2.s
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @llvm.vector.deinterleave2.nxv4bf16(<vscale x 4 x bfloat> %vec)
+  ret {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>}   %retval
+}
+
+define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4bf16_nxv8bf16(<vscale x 8 x bfloat> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv4bf16_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z1.h, z0.h, z0.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z0.h
+; CHECK-NEXT:    uunpklo z0.s, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z2.h
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @llvm.vector.deinterleave2.nxv8bf16(<vscale x 8 x bfloat> %vec)
+  ret {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>}   %retval
+}
+
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8bf16_nxv16bf16(<vscale x 16 x bfloat> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv8bf16_nxv16bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp2 z1.h, z0.h, z1.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.vector.deinterleave2.nxv16bf16(<vscale x 16 x bfloat> %vec)
+  ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>}   %retval
+}
+
 ; Integers
 
 define {<vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_nxv16i8_nxv32i8(<vscale x 32 x i8> %vec) {
