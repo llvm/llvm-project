@@ -82,8 +82,6 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
           // Create a region containing the seed slice.
           auto &Ctx = F.getContext();
           Region Rgn(Ctx, A.getTTI());
-          // TODO: Replace save() with a save pass in the pass pipeline.
-          Ctx.save();
           Rgn.setAux(SeedSlice);
           // Run the region pass pipeline.
           Change |= RPM.runOnRegion(Rgn, A);

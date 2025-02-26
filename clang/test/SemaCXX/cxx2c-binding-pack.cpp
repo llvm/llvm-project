@@ -218,3 +218,18 @@ auto X = [] <typename = void> () {
     static_assert(sizeof...(pack3) == 5);
 };
 }  // namespace
+
+namespace GH125165 {
+
+template <typename = void>
+auto f(auto t) {
+    const auto& [...pack] = t;
+    // expected-error@-1 {{cannot decompose non-class, non-array type 'char const'}}
+    (pack, ...);
+};
+
+void g() {
+    f('x'); // expected-note {{in instantiation}}
+}
+
+}

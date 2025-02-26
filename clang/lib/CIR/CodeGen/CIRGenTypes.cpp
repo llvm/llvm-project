@@ -3,6 +3,7 @@
 #include "CIRGenModule.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 
@@ -56,7 +57,7 @@ bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *ft) {
   return true;
 }
 
-mlir::Type CIRGenTypes::ConvertFunctionTypeInternal(QualType qft) {
+mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   assert(qft.isCanonical());
   const FunctionType *ft = cast<FunctionType>(qft.getTypePtr());
   // First, check whether we can build the full fucntion type. If the function
@@ -105,6 +106,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     // void
     case BuiltinType::Void:
       resultType = cgm.VoidTy;
+      break;
+
+    // bool
+    case BuiltinType::Bool:
+      resultType = cir::BoolType::get(&getMLIRContext());
       break;
 
     // Signed integral types.
@@ -198,7 +204,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    resultType = ConvertFunctionTypeInternal(type);
+    resultType = convertFunctionTypeInternal(type);
     break;
 
   case Type::BitInt: {
@@ -223,4 +229,20 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   typeCache[ty] = resultType;
   return resultType;
+}
+
+mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
+                                          bool forBitField) {
+  assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
+
+  mlir::Type convertedType = convertType(qualType);
+
+  assert(!forBitField && "Bit fields NYI");
+
+  // If this is a bit-precise integer type in a bitfield representation, map
+  // this integer to the target-specified size.
+  if (forBitField && qualType->isBitIntType())
+    assert(!qualType->isBitIntType() && "Bit field with type _BitInt NYI");
+
+  return convertedType;
 }

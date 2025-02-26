@@ -14,13 +14,11 @@
 #define LLVM_ANALYSIS_CAPTURETRACKING_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/ModRef.h"
 
 namespace llvm {
 
   class Value;
   class Use;
-  class CaptureInfo;
   class DataLayout;
   class Instruction;
   class DominatorTree;
@@ -37,14 +35,12 @@ namespace llvm {
   /// by the enclosing function (which is required to exist).  This routine can
   /// be expensive, so consider caching the results.  The boolean ReturnCaptures
   /// specifies whether returning the value (or part of it) from the function
-  /// counts as capturing it or not.  The boolean StoreCaptures specified
-  /// whether storing the value (or part of it) into memory anywhere
-  /// automatically counts as capturing it or not.
+  /// counts as capturing it or not.
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
   bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
-                            bool StoreCaptures, unsigned MaxUsesToExplore = 0);
+                            unsigned MaxUsesToExplore = 0);
 
   /// PointerMayBeCapturedBefore - Return true if this pointer value may be
   /// captured by the enclosing function (which is required to exist). If a
@@ -52,16 +48,13 @@ namespace llvm {
   /// instruction are considered. This routine can be expensive, so consider
   /// caching the results.  The boolean ReturnCaptures specifies whether
   /// returning the value (or part of it) from the function counts as capturing
-  /// it or not.  The boolean StoreCaptures specified whether storing the value
-  /// (or part of it) into memory anywhere automatically counts as capturing it
-  /// or not. Captures by the provided instruction are considered if the
+  /// it or not. Captures by the provided instruction are considered if the
   /// final parameter is true.
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
   bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
-                                  bool StoreCaptures, const Instruction *I,
-                                  const DominatorTree *DT,
+                                  const Instruction *I, const DominatorTree *DT,
                                   bool IncludeI = false,
                                   unsigned MaxUsesToExplore = 0,
                                   const LoopInfo *LI = nullptr);
@@ -75,51 +68,13 @@ namespace llvm {
   // that the instruction the result value is compared against is not in a
   // cycle.
   Instruction *FindEarliestCapture(const Value *V, Function &F,
-                                   bool ReturnCaptures, bool StoreCaptures,
-                                   const DominatorTree &DT,
+                                   bool ReturnCaptures, const DominatorTree &DT,
                                    unsigned MaxUsesToExplore = 0);
-
-  /// Capture information for a specific Use.
-  struct UseCaptureInfo {
-    /// Components captured by this use.
-    CaptureComponents UseCC;
-    /// Components captured by the return value of the user of this Use.
-    CaptureComponents ResultCC;
-
-    UseCaptureInfo(CaptureComponents UseCC,
-                   CaptureComponents ResultCC = CaptureComponents::None)
-        : UseCC(UseCC), ResultCC(ResultCC) {}
-
-    static UseCaptureInfo passthrough() {
-      return UseCaptureInfo(CaptureComponents::None, CaptureComponents::All);
-    }
-
-    bool isPassthrough() const {
-      return capturesNothing(UseCC) && capturesAnything(ResultCC);
-    }
-
-    operator CaptureComponents() const { return UseCC | ResultCC; }
-  };
 
   /// This callback is used in conjunction with PointerMayBeCaptured. In
   /// addition to the interface here, you'll need to provide your own getters
   /// to see whether anything was captured.
   struct CaptureTracker {
-    /// Action returned from captures().
-    enum Action {
-      /// Stop the traversal.
-      Stop,
-      /// Continue traversal, and also follow the return value of the user if
-      /// it has additional capture components (that is, if it has capture
-      /// components in Ret that are not part of Other).
-      Continue,
-      /// Continue traversal, but do not follow the return value of the user,
-      /// even if it has additional capture components. Should only be used if
-      /// captures() has already taken the potential return captures into
-      /// account.
-      ContinueIgnoringReturn,
-    };
-
     virtual ~CaptureTracker();
 
     /// tooManyUses - The depth of traversal has breached a limit. There may be
@@ -133,12 +88,10 @@ namespace llvm {
     /// U->getUser() is always an Instruction.
     virtual bool shouldExplore(const Use *U);
 
-    /// Use U directly captures CI.UseCC and additionally CI.ResultCC
-    /// through the return value of the user of U.
-    ///
-    /// Return one of Stop, Continue or ContinueIgnoringReturn to control
-    /// further traversal.
-    virtual Action captured(const Use *U, UseCaptureInfo CI) = 0;
+    /// captured - Information about the pointer was captured by the user of
+    /// use U. Return true to stop the traversal or false to continue looking
+    /// for more capturing instructions.
+    virtual bool captured(const Use *U) = 0;
 
     /// isDereferenceableOrNull - Overload to allow clients with additional
     /// knowledge about pointer dereferenceability to provide it and thereby
@@ -146,18 +99,21 @@ namespace llvm {
     virtual bool isDereferenceableOrNull(Value *O, const DataLayout &DL);
   };
 
+  /// Types of use capture kinds, see \p DetermineUseCaptureKind.
+  enum class UseCaptureKind {
+    NO_CAPTURE,
+    MAY_CAPTURE,
+    PASSTHROUGH,
+  };
+
   /// Determine what kind of capture behaviour \p U may exhibit.
   ///
-  /// The returned UseCaptureInfo contains the components captured directly
-  /// by the use (UseCC) and the components captured through the return value
-  /// of the user (ResultCC).
-  ///
-  /// \p Base is the starting value of the capture analysis, which is
-  /// relevant for address_is_null captures.
+  /// A use can be no-capture, a use can potentially capture, or a use can be
+  /// passthrough such that the uses of the user or \p U should be inspected.
   /// The \p IsDereferenceableOrNull callback is used to rule out capturing for
   /// certain comparisons.
-  UseCaptureInfo
-  DetermineUseCaptureKind(const Use &U, const Value *Base,
+  UseCaptureKind
+  DetermineUseCaptureKind(const Use &U,
                           llvm::function_ref<bool(Value *, const DataLayout &)>
                               IsDereferenceableOrNull);
 

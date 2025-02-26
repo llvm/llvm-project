@@ -2078,6 +2078,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   switch (IID) {
   default:
     return false;
+  case Intrinsic::amdgcn_make_buffer_rsrc:
   case Intrinsic::ptrmask:
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
@@ -2092,6 +2093,25 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
   switch (IID) {
   default:
     break;
+  case Intrinsic::amdgcn_make_buffer_rsrc: {
+    if (!isSplitFatPtr(I.getType()))
+      return {nullptr, nullptr};
+    Value *Base = I.getArgOperand(0);
+    Value *Stride = I.getArgOperand(1);
+    Value *NumRecords = I.getArgOperand(2);
+    Value *Flags = I.getArgOperand(3);
+    auto *SplitType = cast<StructType>(I.getType());
+    Type *RsrcType = SplitType->getElementType(0);
+    Type *OffType = SplitType->getElementType(1);
+    IRB.SetInsertPoint(&I);
+    Value *Rsrc = IRB.CreateIntrinsic(IID, {RsrcType, Base->getType()},
+                                      {Base, Stride, NumRecords, Flags});
+    copyMetadata(Rsrc, &I);
+    Rsrc->takeName(&I);
+    Value *Zero = Constant::getNullValue(OffType);
+    SplitUsers.insert(&I);
+    return {Rsrc, Zero};
+  }
   case Intrinsic::ptrmask: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))

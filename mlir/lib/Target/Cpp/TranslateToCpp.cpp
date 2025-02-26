@@ -568,7 +568,21 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::VerbatimOp verbatimOp) {
   raw_ostream &os = emitter.ostream();
 
-  os << verbatimOp.getValue();
+  FailureOr<SmallVector<ReplacementItem>> items =
+      verbatimOp.parseFormatString();
+  if (failed(items))
+    return failure();
+
+  auto fmtArg = verbatimOp.getFmtArgs().begin();
+
+  for (ReplacementItem &item : *items) {
+    if (auto *str = std::get_if<StringRef>(&item)) {
+      os << *str;
+    } else {
+      if (failed(emitter.emitOperand(*fmtArg++)))
+        return failure();
+    }
+  }
 
   return success();
 }

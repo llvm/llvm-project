@@ -124,9 +124,8 @@ public:
 
   virtual const LegalizerInfo *getLegalizerInfo() const { return nullptr; }
 
-  /// getRegisterInfo - If register information is available, return it.  If
-  /// not, return null.
-  virtual const TargetRegisterInfo *getRegisterInfo() const { return nullptr; }
+  /// Return the target's register information.
+  virtual const TargetRegisterInfo *getRegisterInfo() const = 0;
 
   /// If the information for the register banks is available, return it.
   /// Otherwise return nullptr.

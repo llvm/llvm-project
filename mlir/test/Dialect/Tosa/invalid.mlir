@@ -4,8 +4,7 @@
 // validation flow.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=bi,mi,mt strict-op-spec-alignment"
-
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=pro_int,pro_fp extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow strict-op-spec-alignment"
 
 func.func @test_const() -> tensor<1xf32> {
   // expected-error@+1{{'tosa.const' op expected same attr/result element types}}
@@ -236,97 +235,74 @@ func.func @test_pad_padding_shape_mismatch(%arg0: tensor<13x21x3xf32>) -> tensor
 
 // -----
 
-func.func @test_transpose_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21xf32> {
-  // expected-error@+1 {{'tosa.transpose' op perms of transpose is not constant}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21xf32>
-  return %0 : tensor<3x13x21xf32>
-}
-
-// -----
-
 func.func @test_transpose_io_rank_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21x1xf32> {
   // expected-error@+1 {{'tosa.transpose' op expected input tensor rank to equal result tensor rank}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21x1xf32>
+  %0 = tosa.transpose %arg0 {perms = array<i32: 2, 1, 0>}: (tensor<13x21x3xf32>) -> tensor<3x13x21x1xf32>
   return %0 : tensor<3x13x21x1xf32>
-}
-
-// -----
-
-func.func @test_transpose_invalid_perms_rank(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3x2xi32>) -> tensor<3x13x21xf32> {
-  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor to be rank 1 but got rank 2}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3x2xi32>) -> tensor<3x13x21xf32>
-  return %0 : tensor<3x13x21xf32>
 }
 
 // -----
 
 func.func @test_transpose_rank0_perms() {
   %14 = tensor.empty() : tensor<5x27xi64>
-  %cst = tensor.empty() : tensor<i32>
-  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor to be rank 1 but got rank 0}}
-  %72 = tosa.transpose %14, %cst : (tensor<5x27xi64>, tensor<i32>) -> tensor<?x?xi64>
+  // expected-error@+1 {{'tosa.transpose' op expected perms attribute to have size 2 (input rank) but got size 0}}
+  %72 = tosa.transpose %14 {perms = array<i32> }: (tensor<5x27xi64>) -> tensor<?x?xi64>
   return
 }
 
 // -----
 
-func.func @test_transpose_invalid_perms_size(%arg0: tensor<13x21x3xf32>, %arg1: tensor<7xi32>) -> tensor<3x13x21xf32> {
-  // expected-error@+1 {{'tosa.transpose' op expected permutation tensor dim 0 to have size 3 (input rank) but got size 7}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<7xi32>) -> tensor<3x13x21xf32>
+func.func @test_transpose_invalid_perms_size(%arg0: tensor<13x21x3xf32>) -> tensor<3x13x21xf32> {
+  // expected-error@+1 {{'tosa.transpose' op expected perms attribute to have size 3 (input rank) but got size 7}}
+  %0 = tosa.transpose %arg0 {perms = array<i32: 6, 5, 4, 3, 2, 1, 0> }: (tensor<13x21x3xf32>) -> tensor<3x13x21xf32>
   return %0 : tensor<3x13x21xf32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_tensor(%arg0: tensor<13x21x3xf32>) -> tensor<?x?x?xf32> {
-  %perms = arith.constant dense<[2, 0, 0]> : tensor<3xi32>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation tensor}}
-  %0 = tosa.transpose %arg0, %perms : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<?x?x?xf32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %0 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 0> }: (tensor<13x21x3xf32>) -> tensor<?x?x?xf32>
   return %0 : tensor<?x?x?xf32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_negative(%arg0: tensor<3x2xi32>) -> tensor<*xi32> {
-  %perms = "tosa.const"() {value = dense<[-1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation tensor}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<3x2xi32>, tensor<2xi32>) -> tensor<*xi32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %1 = tosa.transpose %arg0 {perms = array<i32: -1, 0> }: (tensor<3x2xi32>) -> tensor<*xi32>
   return %1 : tensor<*xi32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_tensor_above_range(%arg0: tensor<3x2xi32>) -> tensor<*xi32> {
-  %perms = "tosa.const"() {value = dense<[2, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation tensor}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<3x2xi32>, tensor<2xi32>) -> tensor<*xi32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0> }: (tensor<3x2xi32>) -> tensor<*xi32>
   return %1 : tensor<*xi32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_types(%arg0: tensor<3x2xi32>) -> tensor<3x4xi32> {
-  %perms = "tosa.const"() {value = dense<[1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
   // expected-error@+1 {{'tosa.transpose' op expected output tensor dim 0 to match input dim 1 with value of 2}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<3x2xi32>, tensor<2xi32>) -> tensor<3x4xi32>
+  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0> }: (tensor<3x2xi32>) -> tensor<3x4xi32>
   return %1 : tensor<3x4xi32>
 }
 
 // -----
 
 func.func @test_transpose_invalid_permutation_types_dynamic_dim_ok(%arg0: tensor<2x?xi32>) -> tensor<3x4xi32> {
-  %perms = "tosa.const"() {value = dense<[1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
   // expected-error@+1 {{'tosa.transpose' op expected output tensor dim 1 to match input dim 0 with value of 2}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<2x?xi32>, tensor<2xi32>) -> tensor<3x4xi32>
+  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0> }: (tensor<2x?xi32>) -> tensor<3x4xi32>
   return %1 : tensor<3x4xi32>
 }
 
 // -----
 
 func.func @test_transpose_element_type_mismatch(%arg0: tensor<2x3xi32>) -> tensor<3x2xf32> {
-  %perms = "tosa.const"() {value = dense<[1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
   // expected-error@+1 {{'tosa.transpose' op failed to verify that all of {input1, output} have same element type}}
-  %1 = tosa.transpose %arg0, %perms : (tensor<2x3xi32>, tensor<2xi32>) -> tensor<3x2xf32>
+  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0>} : (tensor<2x3xi32>) -> tensor<3x2xf32>
   return %1 : tensor<3x2xf32>
 }
 
@@ -675,10 +651,9 @@ func.func @test_tile_io_rank_mismatch() {
 
 // CHECK-LABEL: @test_invalid_constant_permutation
 func.func @test_invalid_constant_permutation() {
-  // expected-error@+3 {{'tosa.transpose' op expected valid permutation tensor}}
   %0 = tensor.empty() : tensor<3x4x5xi32>
-  %1 = arith.constant dense<[3, 0, 1]> : tensor<3xi32>
-  %2 = tosa.transpose %0, %1 : (tensor<3x4x5xi32>, tensor<3xi32>) -> tensor<3x4x5xi32>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %2 = tosa.transpose %0 {perms = array<i32: 3, 0, 1>}: (tensor<3x4x5xi32>) -> tensor<3x4x5xi32>
   return
 }
 
@@ -686,11 +661,10 @@ func.func @test_invalid_constant_permutation() {
 
 // CHECK-LABEL: test_rank_size_constant_permutation
 func.func @test_rank_size_constant_permutation() {
-  // expected-error@+4 {{'tosa.transpose' op expected valid permutation tensor}}
   %0 = arith.constant 6 : index
-  %1 = arith.constant dense<[0, 2]> : tensor<2xi32>
   %2 = tensor.empty(%0) : tensor<?x27xi64>
-  %3 = tosa.transpose %2, %1 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %3 = tosa.transpose %2 {perms = array<i32: 0, 2>}: (tensor<?x27xi64>) -> tensor<?x27xi64>
   return
 }
 
@@ -698,11 +672,10 @@ func.func @test_rank_size_constant_permutation() {
 
 // CHECK-LABEL: test_large_constant_permutation
 func.func @test_large_constant_permutation() {
-  // expected-error@+4 {{'tosa.transpose' op expected valid permutation tensor}}
   %0 = arith.constant 6 : index
-  %1 = arith.constant dense<[1185677355, 332462212]> : tensor<2xi32>
   %2 = tensor.empty(%0) : tensor<?x27xi64>
-  %3 = tosa.transpose %2, %1 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
+  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
+  %3 = tosa.transpose %2 {perms = array<i32: 1185677355, 332462212>}: (tensor<?x27xi64>) -> tensor<?x27xi64>
   return
 }
 
@@ -1112,4 +1085,161 @@ func.func @test_mul_non_broadcast(%arg0: tensor<13x21x2xf32>, %arg1: tensor<3x1x
   // expected-error@+1 {{'tosa.mul' op operands don't have broadcast-compatible shapes}}
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x2xf32>, tensor<3x1x3xf32>, tensor<1xi8>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_resize_invalid_scale_values
+func.func @test_resize_invalid_scale_values(%arg0: tensor<1x8x8x8xf32>) -> tensor<?x?x?x?xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 0, -1, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expect all scale values to be > 0, got 2, 0, -1, 2}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return %1 : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_wholly_divisible_height
+func.func @test_resize_invalid_wholly_divisible_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 3, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expected (input_height - 1) * scale_y_n - offset_y + border_y to be wholly divisible by scale_y_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
+  return %1 : tensor<1x8x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_output_height
+func.func @test_resize_invalid_output_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x9x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 1, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output height did not match expected: calculated=15, expected=9}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x9x8x8xf32>
+  return %1 : tensor<1x9x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_wholly_divisible_width
+func.func @test_resize_invalid_wholly_divisible_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 1, 1, 3]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expected (input_width - 1) * scale_x_n - offset_x + border_x to be wholly divisible by scale_x_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
+  return %1 : tensor<1x8x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_output_width
+func.func @test_resize_invalid_output_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x9x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 1, 2, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output width did not match expected: calculated=15, expected=9}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x9x8xf32>
+  return %1 : tensor<1x8x9x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: broadcast_resize_nearest_f32
+func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output width did not match expected: calculated=1, expected=5}}
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<3x1x1x7xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x5x7xf32>
+
+  return %resize : tensor<3x1x5x7xf32>
+}
+
+// -----
+
+// CHECK-LABEL: broadcast_resize_bilinear_i8
+func.func @broadcast_resize_bilinear_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32> {
+  %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output height did not match expected: calculated=1, expected=4}}
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<3x1x1x7xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x4x5x7xi32>
+
+  return %resize : tensor<3x4x5x7xi32>
+}
+
+// -----
+
+func.func @test_conv2d_invalid_padding(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op expect all padding values to be >= 0, got 0, 0, -1, 0}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, -1, 0>, stride = array<i64: 1, 1>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
+  return %0 : tensor<1x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_invalid_stride(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op expect all stride values to be >= 1, got 0, 1}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 0, 1>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
+  return %0 : tensor<1x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_invalid_dilation(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op expect all dilation values to be >= 1, got 1, 0}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 0>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
+  return %0 : tensor<1x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_wholly_divisible_height(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op expected input_height - 1 + pad_top + pad_bottom - (kernel_height - 1) * dilation_y to be wholly divisible by stride_y, got (4 - 1 + 0 + 0 - (1 - 1) * 1) / 2}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 1>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
+  return %0 : tensor<1x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_wholly_divisible_width(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op expected input_width - 1 + pad_left + pad_right - (kernel_width - 1) * dilation_x to be wholly divisible by stride_x, got (4 - 1 + 0 + 0 - (1 - 1) * 1) / 2}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 2>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
+  return %0 : tensor<1x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_unexpected_output_height(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x6x4x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op calculated output height did not match expected: calculated=4, expected=6}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x6x4x8xf32>
+  return %0 : tensor<1x6x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_unexpected_output_width(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x6x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op calculated output width did not match expected: calculated=4, expected=6}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x6x8xf32>
+  return %0 : tensor<1x4x6x8xf32>
+}
+
+// -----
+
+func.func @test_conv2d_invalid_bias_size(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<7xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
+  // expected-error@+1 {{'tosa.conv2d' op bias channels expected to be equal to output channels (8) or 1, got 7}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true}
+    : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
+  return %0 : tensor<1x4x4x8xf32>
 }

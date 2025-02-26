@@ -32,9 +32,46 @@
 #include "llvm/ADT/Sequence.h"
 
 #include <numeric>
+#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::tosa;
+
+// Helper function to materialize the semantically correct compare and select
+// operations given a binary operation with a specific NaN propagation mode.
+//
+// In the case of "PROPAGATE" semantics no compare and selection is required and
+// this function does nothing.
+//
+// In the case of "IGNORE" semantics this function materializes a comparison of
+// the current operands to the op which will return true for any NaN
+// argument and then selects between the non-NaN operation argument and the
+// calculated result based on whether the lhs or rhs is NaN or not. In pseudo
+// code:
+//
+// binary<op>(lhs, rhs):
+//   result = op(lhs, rhs)
+//   if lhs == NaN return rhs
+//   if rhs == NaN return lhs
+//   return result
+template <typename OpTy>
+static Value
+materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
+                                    Value lhs, Value rhs, Value result) {
+  auto nanMode = op.getNanMode();
+  if (nanMode == "PROPAGATE")
+    return result;
+
+  // Unordered comparison of NaN against itself will always return true.
+  Value lhsIsNaN = rewriter.create<arith::CmpFOp>(
+      op.getLoc(), arith::CmpFPredicate::UNO, lhs, lhs);
+  Value rhsIsNaN = rewriter.create<arith::CmpFOp>(
+      op.getLoc(), arith::CmpFPredicate::UNO, rhs, rhs);
+  Value rhsOrResult =
+      rewriter.create<arith::SelectOp>(op.getLoc(), lhsIsNaN, rhs, result);
+  return rewriter.create<arith::SelectOp>(op.getLoc(), rhsIsNaN, lhs,
+                                          rhsOrResult);
+}
 
 template <typename T>
 static arith::ConstantOp
@@ -367,7 +404,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::MaximumOp
   if (isa<tosa::MaximumOp>(op) && isa<FloatType>(elementTy)) {
-    return rewriter.create<arith::MaximumFOp>(loc, args[0], args[1]);
+    auto max = rewriter.create<arith::MaximumFOp>(loc, args[0], args[1]);
+    return materializeBinaryNanCheckIfRequired(llvm::cast<tosa::MaximumOp>(op),
+                                               rewriter, args[0], args[1], max);
   }
 
   if (isa<tosa::MaximumOp>(op) && elementTy.isSignlessInteger()) {
@@ -376,7 +415,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::MinimumOp
   if (isa<tosa::MinimumOp>(op) && isa<FloatType>(elementTy)) {
-    return rewriter.create<arith::MinimumFOp>(loc, args[0], args[1]);
+    auto min = rewriter.create<arith::MinimumFOp>(loc, args[0], args[1]);
+    return materializeBinaryNanCheckIfRequired(llvm::cast<tosa::MinimumOp>(op),
+                                               rewriter, args[0], args[1], min);
   }
 
   if (isa<tosa::MinimumOp>(op) && elementTy.isSignlessInteger()) {
@@ -404,7 +445,31 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         loc, elementTy, rewriter.getFloatAttr(elementTy, minApf));
     auto max = rewriter.create<arith::ConstantOp>(
         loc, elementTy, rewriter.getFloatAttr(elementTy, maxApf));
-    return clampFloatHelper(loc, args[0], min, max, rewriter);
+    auto result = clampFloatHelper(loc, args[0], min, max, rewriter);
+
+    auto clampOp = llvm::cast<tosa::ClampOp>(op);
+    const auto nanMode = clampOp.getNanMode();
+    // In the case of "PROPAGATE" semantics no compare and selection is
+    // required.
+    if (nanMode == "PROPAGATE")
+      return result;
+
+    // In the case of "IGNORE" semantics materialize a comparison
+    // of the current operand to the reduction which will return true for a NaN
+    // argument and then selects between the initial reduction value and the
+    // calculated result based on whether the argument is NaN or not. In pseudo
+    // code:
+    //
+    // reduce<op>(x, init):
+    //   result = op(init, x)
+    //   return init if x == NaN else result
+
+    // Unordered comparison of NaN against itself will always return true.
+    Value isNaN = rewriter.create<arith::CmpFOp>(
+        op->getLoc(), arith::CmpFPredicate::UNO, args[0], args[0]);
+    // TOSA specifies that in "ignore" NaN mode the result is "min" if the input
+    // is NaN.
+    return rewriter.create<arith::SelectOp>(op->getLoc(), isNaN, min, result);
   }
 
   if (isa<tosa::ClampOp>(op) && isa<IntegerType>(elementTy)) {
@@ -1078,7 +1143,8 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
 // Performs the match and rewrite for reduction operations. This includes
 // declaring a correctly sized initial value, and the linalg.generic operation
 // that reduces across the specified axis.
-static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
+template <typename OpTy>
+static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
                                                  PatternRewriter &rewriter) {
   auto loc = op->getLoc();
   auto inputTy = cast<ShapedType>(op->getOperand(0).getType());
@@ -1095,6 +1161,9 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
         dynDims.push_back(rewriter.create<tensor::DimOp>(loc, input, i));
     }
   }
+
+  SmallVector<Value> inputs, outputs;
+  inputs.push_back(input);
 
   // First fill the output buffer with the init value.
   auto emptyTensor =
@@ -1113,26 +1182,127 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
                           .create<linalg::FillOp>(loc, ValueRange{fillValue},
                                                   ValueRange{emptyTensor})
                           .result();
+  outputs.push_back(filledTensor);
+
+  bool isNanIgnoreMode = false;
+  if constexpr (std::is_same_v<OpTy, tosa::ReduceMinOp> ||
+                std::is_same_v<OpTy, tosa::ReduceMaxOp>) {
+    if (op.getNanMode() == "IGNORE") {
+      isNanIgnoreMode = true;
+      // Because the TOSA spec requires the result be NaN iff all elements in
+      // the reduction are NaN we can't simply perform a compare and select.
+      // Additionally we have to keep track of whether we've seen any non-NaN
+      // values and then do a final select based on this predicate.
+      auto trueAttr = rewriter.getBoolAttr(true);
+      auto trueValue = rewriter.create<arith::ConstantOp>(loc, trueAttr);
+      auto emptyBoolTensor =
+          rewriter
+              .create<tensor::EmptyOp>(loc, reduceShape, trueValue.getType(),
+                                       dynDims)
+              .getResult();
+      auto allResultsNaNTensor =
+          rewriter
+              .create<linalg::FillOp>(loc, ValueRange{trueValue},
+                                      ValueRange{emptyBoolTensor})
+              .result();
+      // Note that because the linalg::ReduceOp has two variadic arguments
+      // (inputs and outputs) and it has the SameVariadicOperandSize trait we
+      // need to have the same number of inputs and outputs.
+      //
+      // The second input isn't actually used anywhere since the value used to
+      // update the NaN flag is calculated inside the body of the reduction and
+      // then used to update an out value.
+      // In order to satisfy type constraints we just pass another copy of the
+      // input here.
+      inputs.push_back(input);
+      outputs.push_back(allResultsNaNTensor);
+    }
+  }
 
   bool didEncounterError = false;
-  auto linalgOp = rewriter.create<linalg::ReduceOp>(
-      loc, input, filledTensor, axis,
+  linalg::LinalgOp linalgOp = rewriter.create<linalg::ReduceOp>(
+      loc, inputs, outputs, axis,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
+        std::array<Value, 2> binaryArgs{
+            blockArgs[0], isNanIgnoreMode ? blockArgs[2] : blockArgs[1]};
         auto result = createLinalgBodyCalculationForReduceOp(
-            op, blockArgs, elementTy, rewriter);
+            op, binaryArgs, elementTy, rewriter);
         if (result)
           didEncounterError = true;
 
-        nestedBuilder.create<linalg::YieldOp>(loc, result);
+        SmallVector<Value> resultsToYield;
+        if (isNanIgnoreMode) {
+          auto inputValue = blockArgs[0];
+          auto initialValue = blockArgs[2];
+          auto oldAllResultsNanFlagValue = blockArgs[3];
+
+          // Unordered comparison of NaN against itself will always return true.
+          Value isNaN = nestedBuilder.create<arith::CmpFOp>(
+              op->getLoc(), arith::CmpFPredicate::UNO, inputValue, inputValue);
+          // If we've encountered a NaN, take the non-NaN value.
+          auto selectOp = nestedBuilder.create<arith::SelectOp>(
+              op->getLoc(), isNaN, initialValue, result);
+          // Update the flag which keeps track of whether we have seen a non-NaN
+          // value.
+          auto newAllResultsNanFlagValue = nestedBuilder.create<arith::AndIOp>(
+              op->getLoc(), oldAllResultsNanFlagValue, isNaN);
+          resultsToYield.push_back(selectOp);
+          resultsToYield.push_back(newAllResultsNanFlagValue);
+        } else {
+          resultsToYield.push_back(result);
+        }
+        nestedBuilder.create<linalg::YieldOp>(loc, resultsToYield);
       });
 
   if (!didEncounterError)
     return rewriter.notifyMatchFailure(
         op, "unable to create linalg.generic body for reduce op");
 
+  if (isNanIgnoreMode) {
+    // Materialize a check to see whether we encountered any non-NaN values, if
+    // we didn't we need to select a tensor of NaNs since the result will just
+    // be the initial identity value propagated through all the compares and
+    // selects inside the reduction.
+
+    // Create a tensor full of NaNs.
+    auto nanValueAttr = rewriter.getFloatAttr(
+        elementTy,
+        APFloat::getNaN(cast<FloatType>(elementTy).getFloatSemantics(), false));
+    auto nanValue = rewriter.create<arith::ConstantOp>(loc, nanValueAttr);
+    auto emptyNanTensor =
+        rewriter
+            .create<tensor::EmptyOp>(loc, reduceShape,
+                                     resultTy.getElementType(), dynDims)
+            .getResult();
+    auto nanFilledTensor =
+        rewriter
+            .create<linalg::FillOp>(loc, ValueRange{nanValue},
+                                    ValueRange{emptyNanTensor})
+            .result();
+
+    // Create an empty tensor, non need to fill this since it will be
+    // overwritten by the select.
+    auto finalEmptyTensor =
+        rewriter
+            .create<tensor::EmptyOp>(loc, reduceShape,
+                                     resultTy.getElementType(), dynDims)
+            .getResult();
+
+    // Do a selection between the tensors akin to:
+    // result = NaN if "all results NaN" else result.
+    SmallVector<Value> ins, outs;
+    ins.push_back(linalgOp->getOpResult(1));
+    ins.push_back(nanFilledTensor);
+    ins.push_back(linalgOp->getResult(0));
+    outs.push_back(finalEmptyTensor);
+    auto linalgSelect =
+        rewriter.create<linalg::SelectOp>(op->getLoc(), ins, outs);
+    linalgOp = linalgSelect;
+  }
+
   SmallVector<ReassociationExprs, 4> reassociationMap;
   uint64_t expandInputRank =
-      cast<ShapedType>(linalgOp.getResults()[0].getType()).getRank();
+      cast<ShapedType>(linalgOp->getResults()[0].getType()).getRank();
   reassociationMap.resize(expandInputRank);
 
   for (uint64_t i = 0; i < expandInputRank; i++) {
@@ -1151,7 +1321,7 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   // not have access to such information. This matters when handling dynamically
   // sized tensors.
   rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
-      op, resultTy, linalgOp.getResults()[0], reassociationMap);
+      op, resultTy, linalgOp->getResults()[0], reassociationMap);
   return success();
 }
 
@@ -1387,7 +1557,10 @@ public:
       return success();
     }
 
-    ArrayRef<int64_t> scale = op.getScale();
+    SmallVector<int64_t> scale;
+    if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale)) {
+      return failure();
+    }
 
     // Collapse the unit width and height away.
     SmallVector<ReassociationExprs, 4> reassociationMap(2);
@@ -1488,8 +1661,9 @@ public:
     resizeShape.push_back(channels);
 
     auto resizeTy = resultTy.clone(resizeShape);
-    auto resize =
-        builder.create<tosa::ResizeOp>(resizeTy, input, op->getAttrs());
+    auto resize = builder.create<tosa::ResizeOp>(resizeTy, input, op.getScale(),
+                                                 op.getOffset(), op.getBorder(),
+                                                 op.getMode());
 
     // Collapse an unit result dims.
     SmallVector<ReassociationExprs, 4> reassociationMap(2);
@@ -1604,9 +1778,14 @@ public:
       Value inY = b.create<arith::IndexCastOp>(b.getI32Type(), y);
       Value inX = b.create<arith::IndexCastOp>(b.getI32Type(), x);
 
-      ArrayRef<int64_t> offset = op.getOffset();
-      ArrayRef<int64_t> border = op.getBorder();
-      ArrayRef<int64_t> scale = op.getScale();
+      SmallVector<int64_t> scale, offset, border;
+      if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale) ||
+          !tosa::getConstShapeValue(op.getOffset().getDefiningOp(), offset) ||
+          !tosa::getConstShapeValue(op.getBorder().getDefiningOp(), border)) {
+        return rewriter.notifyMatchFailure(
+            op, "tosa.resize scale/offset/border should have compile time "
+                "constant values.");
+      }
 
       Value yScaleN, yScaleD, xScaleN, xScaleD;
       yScaleN = b.create<arith::ConstantOp>(b.getI32IntegerAttr(scale[0]));
@@ -2088,6 +2267,27 @@ public:
               nestedLoc, predicate, newValue, oldValue);
           auto resultIndex = rewriter.create<arith::SelectOp>(
               nestedLoc, predicate, newIndex, oldIndex);
+
+          // Check if we need to materialize compare and select for the given
+          // NaN propagation mode.
+
+          // "PROPAGATE" matches the default NaN propagation mode of the arith
+          // dialect so no compare and select is required.
+          //
+          // In the case "IGNORE" we check if the current argument is NaN and
+          // select the old index and value otherwise take the updated index and
+          // value.
+          if (const auto nanMode = argmaxOp.getNanMode(); nanMode == "IGNORE") {
+            // Unordered comparison of NaN against itself will always return
+            // true.
+            Value isNaN = rewriter.create<arith::CmpFOp>(
+                argmaxOp.getLoc(), arith::CmpFPredicate::UNO, newValue,
+                newValue);
+            resultMax = rewriter.create<arith::SelectOp>(nestedLoc, isNaN,
+                                                         oldValue, resultMax);
+            resultIndex = rewriter.create<arith::SelectOp>(
+                nestedLoc, isNaN, oldIndex, resultIndex);
+          }
           nestedBuilder.create<linalg::YieldOp>(
               nestedLoc, ValueRange({resultIndex, resultMax}));
         });
