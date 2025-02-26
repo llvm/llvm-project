@@ -118,3 +118,39 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // LLVM-NEXT: %[[#adj_cmp:]] = icmp ne i64 %[[#lhs_adj]], %[[#rhs_adj]]
 // LLVM-NEXT: %[[#tmp:]] = and i1 %[[#ptr_null]], %[[#adj_cmp]]
 // LLVM-NEXT: %{{.+}} = or i1 %[[#tmp]], %[[#ptr_cmp]]
+
+struct Bar {
+  void m4();
+};
+
+bool memfunc_to_bool(void (Foo::*func)(int)) {
+  return func;
+}
+
+// CIR-LABEL: @_Z15memfunc_to_boolM3FooFviE
+// CIR:   %{{.+}} = cir.cast(member_ptr_to_bool, %{{.+}} : !cir.method<!cir.func<(!s32i)> in !ty_Foo>), !cir.bool
+// CIR: }
+
+// LLVM-LABEL: @_Z15memfunc_to_boolM3FooFviE
+//      LLVM:   %[[#memfunc:]] = load { i64, i64 }, ptr %{{.+}}
+// LLVM-NEXT:   %[[#ptr:]] = extractvalue { i64, i64 } %[[#memfunc]], 0
+// LLVM-NEXT:   %{{.+}} = icmp ne i64 %[[#ptr]], 0
+//      LLVM: }
+
+auto memfunc_reinterpret(void (Foo::*func)(int)) -> void (Bar::*)() {
+  return reinterpret_cast<void (Bar::*)()>(func);
+}
+
+// CIR-LABEL: @_Z19memfunc_reinterpretM3FooFviE
+// CIR:   %{{.+}} = cir.cast(bitcast, %{{.+}} : !cir.method<!cir.func<(!s32i)> in !ty_Foo>), !cir.method<!cir.func<()> in !ty_Bar>
+// CIR: }
+
+// LLVM-LABEL: @_Z19memfunc_reinterpretM3FooFviE
+// LLVM-NEXT:   %[[#arg_slot:]] = alloca { i64, i64 }, i64 1
+// LLVM-NEXT:   %[[#ret_slot:]] = alloca { i64, i64 }, i64 1
+// LLVM-NEXT:   store { i64, i64 } %{{.+}}, ptr %[[#arg_slot]]
+// LLVM-NEXT:   %[[#tmp:]] = load { i64, i64 }, ptr %[[#arg_slot]]
+// LLVM-NEXT:   store { i64, i64 } %[[#tmp]], ptr %[[#ret_slot]]
+// LLVM-NEXT:   %[[#ret:]] = load { i64, i64 }, ptr %[[#ret_slot]]
+// LLVM-NEXT:   ret { i64, i64 } %[[#ret]]
+// LLVM-NEXT: }

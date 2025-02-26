@@ -114,6 +114,13 @@ public:
   mlir::Value
   lowerDataMemberToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
                             mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerMethodBitcast(cir::CastOp op, mlir::Type loweredDstTy,
+                                 mlir::Value loweredSrc,
+                                 mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerMethodToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
+                                    mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -554,6 +561,30 @@ ItaniumCXXABI::lowerDataMemberToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
   auto nullValue = builder.create<cir::ConstantOp>(op.getLoc(), nullAttr);
   return builder.create<cir::CmpOp>(op.getLoc(), cir::CmpOpKind::ne, loweredSrc,
                                     nullValue);
+}
+
+mlir::Value ItaniumCXXABI::lowerMethodBitcast(cir::CastOp op,
+                                              mlir::Type loweredDstTy,
+                                              mlir::Value loweredSrc,
+                                              mlir::OpBuilder &builder) const {
+  return loweredSrc;
+}
+
+mlir::Value
+ItaniumCXXABI::lowerMethodToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
+                                     mlir::OpBuilder &builder) const {
+  // Itanium C++ ABI 2.3.2:
+  //
+  //   In the standard representation, a null member function pointer is
+  //   represented with ptr set to a null pointer. The value of adj is
+  //   unspecified for null member function pointers.
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(LM);
+  mlir::Value ptrdiffZero = builder.create<cir::ConstantOp>(
+      op.getLoc(), ptrdiffCIRTy, cir::IntAttr::get(ptrdiffCIRTy, 0));
+  mlir::Value ptrField = builder.create<cir::ExtractMemberOp>(
+      op.getLoc(), ptrdiffCIRTy, loweredSrc, 0);
+  return builder.create<cir::CmpOp>(op.getLoc(), cir::CmpOpKind::ne, ptrField,
+                                    ptrdiffZero);
 }
 
 CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {

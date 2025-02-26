@@ -1272,14 +1272,18 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     auto dstTy = castOp.getType();
     auto llvmDstTy = getTypeConverter()->convertType(dstTy);
 
-    if (mlir::isa<cir::DataMemberType>(castOp.getSrc().getType())) {
-      mlir::Value loweredResult = lowerMod->getCXXABI().lowerDataMemberBitcast(
-          castOp, llvmDstTy, src, rewriter);
+    if (mlir::isa<cir::DataMemberType, cir::MethodType>(
+            castOp.getSrc().getType())) {
+      mlir::Value loweredResult;
+      if (mlir::isa<cir::DataMemberType>(castOp.getSrc().getType()))
+        loweredResult = lowerMod->getCXXABI().lowerDataMemberBitcast(
+            castOp, llvmDstTy, src, rewriter);
+      else
+        loweredResult = lowerMod->getCXXABI().lowerMethodBitcast(
+            castOp, llvmDstTy, src, rewriter);
       rewriter.replaceOp(castOp, loweredResult);
       return mlir::success();
     }
-    if (mlir::isa<cir::MethodType>(castOp.getSrc().getType()))
-      llvm_unreachable("NYI");
 
     auto llvmSrcVal = adaptor.getOperands().front();
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
@@ -1308,7 +1312,8 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
   case cir::CastKind::member_ptr_to_bool: {
     mlir::Value loweredResult;
     if (mlir::isa<cir::MethodType>(castOp.getSrc().getType()))
-      llvm_unreachable("NYI");
+      loweredResult =
+          lowerMod->getCXXABI().lowerMethodToBoolCast(castOp, src, rewriter);
     else
       loweredResult = lowerMod->getCXXABI().lowerDataMemberToBoolCast(
           castOp, src, rewriter);

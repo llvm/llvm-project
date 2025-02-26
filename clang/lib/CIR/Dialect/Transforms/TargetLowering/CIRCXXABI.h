@@ -134,6 +134,15 @@ public:
   virtual mlir::Value
   lowerDataMemberToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
                             mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerMethodBitcast(cir::CastOp op,
+                                         mlir::Type loweredDstTy,
+                                         mlir::Value loweredSrc,
+                                         mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerMethodToBoolCast(cir::CastOp op,
+                                            mlir::Value loweredSrc,
+                                            mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.
