@@ -1,7 +1,6 @@
-import * as path from "path";
-import * as util from "util";
 import * as vscode from "vscode";
 
+import { pickProcess } from "./commands/pick-process";
 import {
   LLDBDapDescriptorFactory,
   isExecutable,
@@ -37,6 +36,10 @@ export class LLDBDapExtension extends DisposableContext {
           LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath || "");
         }
       }),
+    );
+
+    this.pushSubscription(
+      vscode.commands.registerCommand("lldb-dap.pickProcess", pickProcess),
     );
   }
 }

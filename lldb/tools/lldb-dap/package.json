@@ -146,6 +146,9 @@
         "windows": {
           "program": "./bin/lldb-dap.exe"
         },
+        "variables": {
+          "PickProcess": "lldb-dap.pickProcess"
+        },
         "configurationAttributes": {
           "launch": {
             "required": [
@@ -518,6 +521,16 @@
             }
           },
           {
+            "label": "LLDB: Attach to Process",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${1:Attach}",
+              "pid": "^\"\\${command:PickProcess}\""
+            }
+          },
+          {
             "label": "LLDB: Attach",
             "description": "",
             "body": {
@@ -541,6 +554,21 @@
           }
         ]
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "lldb-dap.pickProcess",
+        "title": "Pick Process",
+        "category": "LLDB DAP"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "lldb-dap.pickProcess",
+          "when": "false"
+        }
+      ]
+    }
   }
 }
