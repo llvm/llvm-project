@@ -195,7 +195,8 @@ private:
 
   // Get the Frame Address register for a given frame.
   bool ReadFrameAddress(lldb::RegisterKind register_kind,
-                          UnwindPlan::Row::FAValue &fa, lldb::addr_t &address);
+                        const UnwindPlan::Row::FAValue &fa,
+                        lldb::addr_t &address);
 
   lldb::UnwindPlanSP GetFastUnwindPlanForFrame();
 
