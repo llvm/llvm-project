@@ -22515,11 +22515,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Tag = EmitScalarExpr(E->getArg(0));
     Value *Obj = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_throw);
-    return Builder.CreateCall(Callee, {Tag, Obj});
+    return EmitRuntimeCallOrInvoke(Callee, {Tag, Obj});
   }
   case WebAssembly::BI__builtin_wasm_rethrow: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_rethrow);
-    return Builder.CreateCall(Callee);
+    return EmitRuntimeCallOrInvoke(Callee);
   }
   case WebAssembly::BI__builtin_wasm_memory_atomic_wait32: {
     Value *Addr = EmitScalarExpr(E->getArg(0));
