@@ -1166,7 +1166,7 @@
 
 // -fsanitize-skip-hot-cutoff=undefined=0.5
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-skip-hot-cutoff=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF1
-// CHECK-SKIP-HOT-CUTOFF1: "-fsanitize-skip-hot-cutoff={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function)=0.5(0*),?){19}"}}
+// CHECK-SKIP-HOT-CUTOFF1: "-fsanitize-skip-hot-cutoff={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function)=0.5(0*),?){18}"}}
 
 // No-op: no sanitizers are specified
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF2
@@ -1175,11 +1175,11 @@
 
 // Enable undefined, then cancel out integer using a cutoff of 0.0
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-skip-hot-cutoff=undefined=0.5,integer=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF3
-// CHECK-SKIP-HOT-CUTOFF3: "-fsanitize-skip-hot-cutoff={{((unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.5(0*),?){15}"}}
+// CHECK-SKIP-HOT-CUTOFF3: "-fsanitize-skip-hot-cutoff={{((unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function)=0.5(0*),?){14}"}}
 
 // Enable undefined, then cancel out integer using a cutoff of 0.0, then re-enable signed-integer-overflow
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-skip-hot-cutoff=undefined=0.5,integer=0.0,signed-integer-overflow=0.7 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF4
-// CHECK-SKIP-HOT-CUTOFF4: "-fsanitize-skip-hot-cutoff={{((signed-integer-overflow|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.[57]0*,?){16}"}}
+// CHECK-SKIP-HOT-CUTOFF4: "-fsanitize-skip-hot-cutoff={{((signed-integer-overflow|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function)=0.[57]0*,?){15}"}}
 
 // Check that -fsanitize-skip-hot-cutoff=undefined=0.4 does not widen the set of -fsanitize=integer checks.
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=integer -fsanitize-skip-hot-cutoff=undefined=0.4 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF5
@@ -1187,7 +1187,7 @@
 
 // No-op: it's allowed for the user to specify a cutoff of 0.0, though the argument is not passed along by the driver.
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-skip-hot-cutoff=undefined=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF6
-// CHECK-SKIP-HOT-CUTOFF6: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr),?){19}"}}
+// CHECK-SKIP-HOT-CUTOFF6: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
 // CHECK-SKIP-HOT-CUTOFF6-NOT: "-fsanitize-skip-hot-cutoff"
 
 // Invalid: bad sanitizer
