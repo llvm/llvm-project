@@ -47254,7 +47254,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       for (auto [I, M] : enumerate(ByteMask)) {
         // getConstVector sets negative shuffle mask values as undef, so ensure
         // we hardcode SM_SentinelZero values to zero (0x80).
-        if (M < ByteMask.size()) {
+        if (M < (int)ByteMask.size()) {
           LHSMask[I] = isUndefOrZero(LHSMask[I]) ? 0x80 : LHSMask[I];
           RHSMask[I] = 0x80;
         } else {
