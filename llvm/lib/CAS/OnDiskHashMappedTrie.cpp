@@ -326,8 +326,7 @@ class HashMappedTrieHandle;
 /// Subtrie layout:
 /// - 2-bytes: StartBit
 /// - 1-bytes: NumBits=lg(num-slots)
-/// - 1-bytes: NumUnusedBits=lg(num-slots-unused)
-/// - 4-bytes: 0-pad
+/// - 5-bytes: 0-pad
 /// - <slots>
 class SubtrieHandle {
 public:
@@ -338,11 +337,8 @@ public:
     /// The number of bits this subtrie handles. It has 2^NumBits slots.
     uint8_t NumBits;
 
-    /// The number of extra bits this allocation *could* handle, due to
-    /// over-allocation. It has 2^NumUnusedBits unused slots.
-    uint8_t NumUnusedBits;
-
     /// 0-pad to 8B.
+    uint8_t ZeroPad1B;
     uint32_t ZeroPad4B;
   };
 
@@ -408,11 +404,9 @@ public:
   Header &getHeader() const { return *H; }
   uint32_t getStartBit() const { return H->StartBit; }
   uint32_t getNumBits() const { return H->NumBits; }
-  uint32_t getNumUnusedBits() const { return H->NumUnusedBits; }
 
   static Expected<SubtrieHandle> create(MappedFileRegionBumpPtr &Alloc,
-                                        uint32_t StartBit, uint32_t NumBits,
-                                        uint32_t NumUnusedBits = 0);
+                                        uint32_t StartBit, uint32_t NumBits);
 
   static SubtrieHandle getFromFileOffset(MappedFileRegion &Region,
                                          FileOffset Offset) {
@@ -558,19 +552,17 @@ struct OnDiskHashMappedTrie::ImplType {
 
 Expected<SubtrieHandle> SubtrieHandle::create(MappedFileRegionBumpPtr &Alloc,
                                               uint32_t StartBit,
-                                              uint32_t NumBits,
-                                              uint32_t NumUnusedBits) {
+                                              uint32_t NumBits) {
   assert(StartBit <= HashMappedTrieHandle::MaxNumHashBits);
   assert(NumBits <= UINT8_MAX);
-  assert(NumUnusedBits <= UINT8_MAX);
-  assert(NumBits + NumUnusedBits <= HashMappedTrieHandle::MaxNumRootBits);
+  assert(NumBits <= HashMappedTrieHandle::MaxNumRootBits);
 
-  auto Mem = Alloc.allocate(getSize(NumBits + NumUnusedBits));
+  auto Mem = Alloc.allocate(getSize(NumBits));
   if (LLVM_UNLIKELY(!Mem))
     return Mem.takeError();
   auto *H =
       new (*Mem) SubtrieHandle::Header{(uint16_t)StartBit, (uint8_t)NumBits,
-                                       (uint8_t)NumUnusedBits, /*ZeroPad4B=*/0};
+                                       /*ZeroPad1B=*/0, /*ZeroPad4B=*/0};
   SubtrieHandle S(Alloc.getRegion(), *H);
   for (auto I = S.Slots.begin(), E = S.Slots.end(); I != E; ++I)
     new (I) SlotT(0);
@@ -722,16 +714,13 @@ OnDiskHashMappedTrie::find(ArrayRef<uint8_t> Hash) const {
     // Try to set the content.
     SubtrieSlotValue V = S.load(Index);
     if (!V)
-      return const_pointer(S.getFileOffset(),
-                           HintT(this, Index, *IndexGen.StartBit));
+      return const_pointer();
 
     // Check for an exact match.
     if (V.isData()) {
       HashMappedTrieHandle::RecordData D = Trie.getRecord(V);
-      return D.Proxy.Hash == Hash
-                 ? const_pointer(D.getFileOffset(), D.Proxy)
-                 : const_pointer(S.getFileOffset(),
-                                 HintT(this, Index, *IndexGen.StartBit));
+      return D.Proxy.Hash == Hash ? const_pointer(D.getFileOffset(), D.Proxy)
+                                  : const_pointer();
     }
 
     Index = IndexGen.next();
@@ -750,7 +739,7 @@ void SubtrieHandle::reinitialize(uint32_t StartBit, uint32_t NumBits) {
 }
 
 Expected<OnDiskHashMappedTrie::pointer>
-OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
+OnDiskHashMappedTrie::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
   HashMappedTrieHandle Trie = Impl->Trie;
@@ -763,14 +752,7 @@ OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
     return std::move(Err);
 
   IndexGenerator IndexGen = Trie.getIndexGen(*S, Hash);
-
-  size_t Index;
-  if (std::optional<HintT> H = Hint.getHint(*this)) {
-    S = SubtrieHandle::getFromFileOffset(Trie.getRegion(), Hint.getOffset());
-    Index = IndexGen.hint(H->I, H->B);
-  } else {
-    Index = IndexGen.next();
-  }
+  size_t Index = IndexGen.next();
 
   // FIXME: Add non-assertion based checks for data corruption that would
   // otherwise cause infinite loops in release builds, instead calling
@@ -1440,7 +1422,7 @@ OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
 }
 
 Expected<OnDiskHashMappedTrie::pointer>
-OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
+OnDiskHashMappedTrie::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
   report_fatal_error("not supported");
