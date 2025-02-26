@@ -170,14 +170,14 @@ CachedCommandAdaptor::getIdentifier() const {
   return Id;
 }
 
-CachedCommand::CachedCommand(driver::Command &Command,
-                             DiagnosticOptions &DiagOpts,
-                             llvm::vfs::FileSystem &VFS,
-                             ExecuteFnTy &&ExecuteImpl)
+ClangCommand::ClangCommand(driver::Command &Command,
+                           DiagnosticOptions &DiagOpts,
+                           llvm::vfs::FileSystem &VFS,
+                           ExecuteFnTy &&ExecuteImpl)
     : Command(Command), DiagOpts(DiagOpts), VFS(VFS),
       ExecuteImpl(std::move(ExecuteImpl)) {}
 
-Error CachedCommand::addInputIdentifier(HashAlgorithm &H) const {
+Error ClangCommand::addInputIdentifier(HashAlgorithm &H) const {
   auto Inputs(getInputFiles(Command));
   for (StringRef Input : Inputs) {
     if (Error E = addFile(H, Input)) {
@@ -188,7 +188,7 @@ Error CachedCommand::addInputIdentifier(HashAlgorithm &H) const {
   return Error::success();
 }
 
-void CachedCommand::addOptionsIdentifier(HashAlgorithm &H) const {
+void ClangCommand::addOptionsIdentifier(HashAlgorithm &H) const {
   auto Inputs(getInputFiles(Command));
   StringRef Output = Command.getOutputFilenames().front();
   ArrayRef<const char *> Arguments = Command.getArguments();
@@ -230,11 +230,11 @@ void CachedCommand::addOptionsIdentifier(HashAlgorithm &H) const {
   }
 }
 
-CachedCommand::ActionClass CachedCommand::getClass() const {
+ClangCommand::ActionClass ClangCommand::getClass() const {
   return Command.getSource().getKind();
 }
 
-bool CachedCommand::canCache() const {
+bool ClangCommand::canCache() const {
   bool HasOneOutput = Command.getOutputFilenames().size() == 1;
   bool IsPreprocessorCommand = getClass() == driver::Action::PreprocessJobClass;
 
@@ -248,7 +248,7 @@ bool CachedCommand::canCache() const {
          !hasDebugOrProfileInfo(Command.getArguments());
 }
 
-Error CachedCommand::writeExecuteOutput(StringRef CachedBuffer) {
+Error ClangCommand::writeExecuteOutput(StringRef CachedBuffer) {
   StringRef OutputFilename = Command.getOutputFilenames().front();
   std::error_code EC;
   raw_fd_ostream Out(OutputFilename, EC);
@@ -269,7 +269,7 @@ Error CachedCommand::writeExecuteOutput(StringRef CachedBuffer) {
   return Error::success();
 }
 
-Expected<StringRef> CachedCommand::readExecuteOutput() {
+Expected<StringRef> ClangCommand::readExecuteOutput() {
   StringRef OutputFilename = Command.getOutputFilenames().front();
   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
       MemoryBuffer::getFile(OutputFilename);
@@ -282,7 +282,7 @@ Expected<StringRef> CachedCommand::readExecuteOutput() {
   return Output->getBuffer();
 }
 
-amd_comgr_status_t CachedCommand::execute(llvm::raw_ostream &LogS) {
+amd_comgr_status_t ClangCommand::execute(llvm::raw_ostream &LogS) {
   return ExecuteImpl(Command, LogS, DiagOpts, VFS);
 }
 } // namespace COMGR

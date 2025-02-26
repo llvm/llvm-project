@@ -80,7 +80,7 @@ protected:
   virtual llvm::Error addInputIdentifier(HashAlgorithm &) const = 0;
 };
 
-class CachedCommand final : public CachedCommandAdaptor {
+class ClangCommand final : public CachedCommandAdaptor {
 public:
   using ExecuteFnTy = std::function<amd_comgr_status_t(
       clang::driver::Command &, llvm::raw_ostream &, clang::DiagnosticOptions &,
@@ -97,16 +97,16 @@ private:
   std::unique_ptr<llvm::MemoryBuffer> Output;
 
 public:
-  CachedCommand(clang::driver::Command &Command,
-                clang::DiagnosticOptions &DiagOpts, llvm::vfs::FileSystem &VFS,
-                ExecuteFnTy &&ExecuteImpl);
+  ClangCommand(clang::driver::Command &Command,
+               clang::DiagnosticOptions &DiagOpts, llvm::vfs::FileSystem &VFS,
+               ExecuteFnTy &&ExecuteImpl);
 
   bool canCache() const override;
   llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) override;
   llvm::Expected<llvm::StringRef> readExecuteOutput() override;
   amd_comgr_status_t execute(llvm::raw_ostream &LogS) override;
 
-  ~CachedCommand() override = default;
+  ~ClangCommand() override = default;
 
 protected:
   ActionClass getClass() const override;

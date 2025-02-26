@@ -784,7 +784,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 
   auto Cache = CommandCache::get(LogS);
   for (auto &Job : C->getJobs()) {
-    CachedCommand C(Job, *DiagOpts, *VFS, executeCommand);
+    ClangCommand C(Job, *DiagOpts, *VFS, executeCommand);
     if (Cache) {
       if (auto Status = Cache->execute(C, LogS)) {
         return Status;
