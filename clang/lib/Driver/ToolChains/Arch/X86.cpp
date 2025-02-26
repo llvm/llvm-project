@@ -237,15 +237,18 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
     bool IsNegative = Name.consume_front("no-");
 
-#ifndef NDEBUG
-    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
     StringRef Version, Width;
     std::tie(Version, Width) = Name.substr(6).split('-');
+    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
     assert((Version == "1" || Version == "2") && "Invalid AVX10 feature name.");
-    assert((Width == "256" || Width == "512") && "Invalid AVX10 feature name.");
-#endif
 
-    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+    if (Width == "") {
+      assert(IsNegative && "Only negative options can omit width.");
+      Features.push_back(Args.MakeArgString("-" + Name + "-256"));
+    } else {
+      assert((Width == "256" || Width == "512") && "Invalid vector length.");
+      Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+    }
   }
 
   // Now add any that the user explicitly requested on the command line,

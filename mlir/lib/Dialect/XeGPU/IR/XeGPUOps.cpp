@@ -73,6 +73,38 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
 }
 
+// Helper to validate value shape of LoadNd and StoreNd ops.
+static LogicalResult
+isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
+                 ArrayRef<int64_t> adjustedTdescShape,
+                 function_ref<InFlightDiagnostic()> emitError) {
+  auto sgMap = tdescTy.getSGMapAttr();
+  auto valueShape = valueTy.getShape();
+  // sg_map not present means IR is in SIMD mode. In this case value shape must
+  // match adjusted tensor descriptor shape.
+  if (!sgMap)
+    return valueShape == adjustedTdescShape
+               ? success()
+               : emitError()
+                     << "Value shape " << makeString(valueShape)
+                     << " is not consistent with tensor descriptor " << tdescTy;
+
+  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
+  // value shape.
+  auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
+  assert(succeeded(expectedValueShapeOrFailure) &&
+         "Failed to compute distributed vector shape for "
+         "tensor descriptor ");
+
+  return valueTy == expectedValueShapeOrFailure.value()
+             ? success()
+             : emitError()
+                   << "Result shape " << makeString(valueShape)
+                   << " is not consistent with distributed vector shape "
+                   << makeString(expectedValueShapeOrFailure.value().getShape())
+                   << " for tensor descriptor " << tdescTy;
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -194,10 +226,6 @@ LogicalResult CreateNdDescOp::verify() {
   if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
-  if (getType().getRank() == 2 &&
-      tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
-    return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
-
   return success();
 }
 
@@ -210,13 +238,13 @@ LogicalResult PrefetchNdOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return success();
 }
@@ -238,16 +266,17 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError("Invalid result, it should be a VectorType.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto array_len = tdescTy.getArrayLength();
-  auto tdescShape = getShapeOf(tdescTy);
+  // adjusted tensor descriptor shape tracks the expected shape of the result.
+  auto adjustedTdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
 
   if (getTranspose()) {
@@ -259,34 +288,31 @@ LogicalResult LoadNdOp::verify() {
     });
 
     if (valid)
-      transpose(trans, tdescShape);
+      transpose(trans, adjustedTdescShape);
     else
-      emitWarning("Invalid transpose attr. It is ignored.");
+      mlir::emitWarning(getLoc()) << "Invalid transpose attr. It is ignored.";
   }
 
   if (getPacked()) {
     if (tdescTy.getRank() == 2) {
       const int axis = 0;
       auto vnni_factor = valueShape.back();
-      tdescShape[axis] /= vnni_factor;
-      tdescShape.push_back(vnni_factor);
+      adjustedTdescShape[axis] /= vnni_factor;
+      adjustedTdescShape.push_back(vnni_factor);
     } else {
-      emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
-                  "TensorDesc only).");
+      mlir::emitWarning(getLoc())
+          << "Invalid Packed Attr. It is ignored (available for 2D "
+             "TensorDesc only).";
     }
   }
 
   if (array_len > 1) {
-    auto it = tdescShape.begin();
-    tdescShape.insert(it, array_len);
+    auto it = adjustedTdescShape.begin();
+    adjustedTdescShape.insert(it, array_len);
   }
 
-  if (tdescShape != valueShape)
-    return emitOpError() << "Result shape doesn't match TensorDesc shape."
-                         << "The expected shape is " << makeString(tdescShape)
-                         << ". But the given shape is "
-                         << makeString(valueShape) << ".\n";
-  return success();
+  return isArgShapesValid(tdescTy, valueTy, adjustedTdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -303,18 +329,22 @@ LogicalResult StoreNdOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!valTy)
-    return emitOpError("Exepcting a VectorType result.\n");
+    return emitOpError("Expecting a VectorType result.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isWriteHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isWriteHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  return success();
+  auto tdescShape = getShapeOf(dstTy);
+  auto valueShape = getShapeOf(valTy);
+
+  return isArgShapesValid(dstTy, valTy, tdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -375,16 +405,8 @@ LogicalResult CreateDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
-  auto chunkSize = tdescTy.getChunkSize();
-
-  // check chunk_size
-  llvm::SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
-                                                    16, 32, 64, 128, 256};
-  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
-    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, "
-                       "8, 16, 32, 64, 128, or 256.");
-
   // check total size
+  auto chunkSize = tdescTy.getChunkSize();
   auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
   auto bitsPerLane = elemBits * chunkSize;
   if (chunkSize > 1 && bitsPerLane % 32) {
@@ -423,13 +445,13 @@ LogicalResult PrefetchOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return success();
 }
@@ -442,17 +464,20 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (!valueTy)
+    return emitOpError("Expecting a vector type result.\n");
+
   if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto tdescElemTy = tdescTy.getElementType();
   auto valueElemTy = getElementType();
@@ -469,16 +494,12 @@ LogicalResult LoadGatherOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("load of rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
   }
 
-  if (valueShape != tdescShape)
-    return emitOpError("Unexpected result shape")
-           << "(Expected shape: " << makeString(tdescShape)
-           << ", Given shape: " << makeString(valueShape) << ").\n";
-
-  return success();
+  return isArgShapesValid(tdescTy, valueTy, tdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -490,16 +511,20 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isWriteHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isWriteHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
+
+  if (!valueTy)
+    return emitOpError("Expecting a vector type for the value.\n");
+
   auto maskShape = getShapeOf(maskTy);
   auto tdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
@@ -508,16 +533,12 @@ LogicalResult StoreScatterOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("Store of a rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
   }
 
-  if (valueShape != tdescShape)
-    return emitOpError("Unexpected value shape")
-           << "(Expected shape: " << makeString(tdescShape)
-           << ", Given shape: " << makeString(valueShape) << ").\n";
-
-  return success();
+  return isArgShapesValid(tdescTy, valueTy, tdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -548,20 +569,61 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult DpasOp::verify() {
   int64_t lhsRank = getLhsType().getRank();
   int64_t rhsRank = getRhsType().getRank();
-
-  if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3))
-    return emitOpError("expecting lhs to be a 2D vector, and rhs to be either "
-                       "2D or 3D (packed) vector.");
-
+  int64_t resultRank = getResultType().getRank();
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
-  auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-  if (bK != lhsShape[1])
+  auto resultShape = getResultType().getShape();
+
+  auto sgMapA = getSgMapAAttr();
+  auto sgMapB = getSgMapBAttr();
+  auto sgMapC = getSgMapCAttr();
+
+  // If sg_maps are not present, then the operation is in SIMD mode.
+  if (!sgMapA && !sgMapB && !sgMapC) {
+    if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resultRank != 2)
+      return emitOpError(
+          "expecting lhs and result to be a 2D vector, and rhs to be either "
+          "2D or 3D (packed) vector.");
+    auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
+    if (bK != lhsShape[1])
+      return emitOpError("K-dimension mismatch.");
+    if (lhsShape[0] != resultShape[0])
+      return emitOpError("M-dimension mismatch.");
+    if (rhsShape[1] != resultShape[1])
+      return emitOpError("N-dimension mismatch.");
+    return success();
+  }
+  // Otherwise, in SIMT mode we expect sg_map attributes for all operands and
+  // result of DPAS operation.
+  if (!sgMapA || !sgMapB || !sgMapC)
+    return emitOpError("sg_map attributes for all operands and outputs are "
+                       "expected in SIMT xegpu::Dpas operation");
+
+  // In SIMT mode, All data fragments must be 2D
+  if (lhsRank != 2 || rhsRank != 2 || resultRank != 2)
+    return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
+
+  auto wiLayoutA = sgMapA.getWiLayout();
+  auto wiLayoutB = sgMapB.getWiLayout();
+  auto wiLayoutC = sgMapC.getWiLayout();
+  // Obtain the expanded shapes of the operands and result using wi_layout.
+  // NOTE: For B, get rid of the packed dimension for the expanded shape.
+  SmallVector<int64_t> expandedShapeA = {lhsShape[0] * wiLayoutA[0],
+                                         lhsShape[1] * wiLayoutA[1]};
+  SmallVector<int64_t> expandedShapeB = {
+      rhsShape[0] * rhsShape[1] * wiLayoutB[0], 1 * wiLayoutB[1]};
+  SmallVector<int64_t> expandedShapeC = {resultShape[0] * wiLayoutC[0],
+                                         resultShape[1] * wiLayoutC[1]};
+  auto bK = expandedShapeB[0];
+  if (bK != expandedShapeA[1])
     return emitOpError("K-dimension mismatch.");
+  if (expandedShapeA[0] != expandedShapeC[0])
+    return emitOpError("M-dimension mismatch.");
+  if (expandedShapeB[1] != expandedShapeC[1])
+    return emitOpError("N-dimension mismatch.");
 
   return success();
 }
-
 } // namespace xegpu
 } // namespace mlir
 

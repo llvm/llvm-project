@@ -1011,24 +1011,24 @@ define void @get_lane_mask() #0 {
 
 define void @fshr() #0 {
 ; CHECK-VSCALE-1-LABEL: 'fshr'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshr.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshr.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshr.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshr.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'fshr'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshr.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshr.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshr.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshr.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'fshr'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %1 = call <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %2 = call <vscale x 8 x i16> @llvm.fshr.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %3 = call <vscale x 4 x i32> @llvm.fshr.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %4 = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshr.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshr.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
@@ -1040,24 +1040,24 @@ define void @fshr() #0 {
 
 define void @fshl() #0 {
 ; CHECK-VSCALE-1-LABEL: 'fshl'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'fshl'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'fshl'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %1 = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %2 = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %3 = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %4 = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %1 = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %2 = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %3 = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %4 = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef)

@@ -22,6 +22,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
-#include <charconv>
 #include <regex>
 
 using namespace llvm;
@@ -228,9 +228,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
         } else {
           MDsItem.push_back(MDString::get(Ctx, Item));
         }
-      } else if (int32_t Num;
-                 std::from_chars(Item.data(), Item.data() + Item.size(), Num)
-                     .ec == std::errc{}) {
+      } else if (int32_t Num; llvm::to_integer(StringRef(Item), Num, 10)) {
         MDsItem.push_back(
             ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Num)));
       } else {

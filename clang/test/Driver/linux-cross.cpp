@@ -44,7 +44,7 @@
 // DEBIAN_X86_64-SAME: {{^}} "-L[[SYSROOT]]/lib/x86_64-linux-gnu"
 // DEBIAN_X86_64-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib64"
 // DEBIAN_X86_64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/x86_64-linux-gnu"
-// DEBIAN_X86_64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib64"
+// DEBIAN_X86_64-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 /// /usr/x86_64-linux-gnu does not exist, so there is no /usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/lib.
 /// -ccc-install-dir is not within sysroot. No bin/../lib.
 /// $sysroot/lib and $sysroot/usr/lib. Fallback when GCC installation is unavailable.
@@ -71,7 +71,7 @@
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/lib/i386-linux-gnu"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/i386-linux-gnu"
-// DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib32"
+// DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/lib"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
@@ -122,7 +122,7 @@
 // DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/lib/x86_64-linux-gnu"
 // DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib64"
 // DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/x86_64-linux-gnu"
-// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib64"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/lib"
 // DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
@@ -146,7 +146,7 @@
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/lib/aarch64-linux-gnu"
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib64"
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/aarch64-linux-gnu"
-// DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib64"
+// DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/lib"
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/lib"
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
@@ -171,7 +171,7 @@
 // DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/lib/x86_64-linux-gnu"
 // DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib64"
 // DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/x86_64-linux-gnu"
-// DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib64"
+// DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 /// /usr/x86_64-linux-gnu does not exist, so there is no /usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/lib.
 /// -ccc-install-dir is not within sysroot. No bin/../lib.
 /// $sysroot/lib and $sysroot/usr/lib. Fallback when GCC installation is unavailable.
@@ -196,7 +196,7 @@
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/lib/i386-linux-gnu"
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib32"
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/i386-linux-gnu"
-// DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib32"
+// DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/lib"
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 

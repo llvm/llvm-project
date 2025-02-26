@@ -6,11 +6,11 @@
 #
 #===----------------------------------------------------------------------===//
 # Stage 1. Check out LLVM source code and run the build.
-FROM nvidia/cuda:8.0-devel as builder
-LABEL maintainer "LLVM Developers"
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04 AS builder
+LABEL maintainer="LLVM Developers"
 # Install llvm build dependencies.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates cmake python \
+    apt-get install -y --no-install-recommends ca-certificates cmake 2to3 python-is-python3 \
         subversion ninja-build git && \
     rm -rf /var/lib/apt/lists/*
 
@@ -26,8 +26,8 @@ RUN /tmp/scripts/build_install_llvm.sh --to /tmp/clang-install ${buildscript_arg
 
 
 # Stage 2. Produce a minimal release image with build results.
-FROM nvidia/cuda:8.0-devel
-LABEL maintainer "LLVM Developers"
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
+LABEL maintainer="LLVM Developers"
 # Copy clang installation into this container.
 COPY --from=builder /tmp/clang-install/ /usr/local/
 # C++ standard library and binutils are already included in the base package.

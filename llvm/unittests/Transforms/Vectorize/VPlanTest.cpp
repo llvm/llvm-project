@@ -9,6 +9,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
+#include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "VPlanTestBase.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -659,6 +660,50 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
   }
 }
 
+TEST_F(VPBasicBlockTest, reassociateBlocks) {
+  {
+    // Ensure that when we reassociate a basic block, we make sure to update any
+    // references to it in VPWidenPHIRecipes' incoming blocks.
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+
+    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    WidenPhi->addOperand(Val);
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(VPBB2->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
+  }
+
+  {
+    // Ensure that we update VPWidenPHIRecipes that are nested inside a
+    // VPRegionBlock.
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+
+    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    WidenPhi->addOperand(Val);
+    WidenPhi->addOperand(Val);
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(R1->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
   VPInstruction *TC = new VPInstruction(Instruction::Add, {});
@@ -949,7 +994,7 @@ TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
 TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   auto *GEP = GetElementPtrInst::Create(Int32, PoisonValue::get(Int32Ptr),
                                         PoisonValue::get(Int32));
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
@@ -1034,7 +1079,7 @@ TEST_F(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
 TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   auto *Load =
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
@@ -1055,7 +1100,7 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
 TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   IntegerType *Int1 = IntegerType::get(C, 1);
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   VPlan &Plan = getPlan();
 
   {

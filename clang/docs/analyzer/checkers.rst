@@ -1332,10 +1332,69 @@ security
 
 Security related checkers.
 
+.. _security-ArrayBound:
+
+security.ArrayBound (C, C++)
+""""""""""""""""""""""""""""
+Report out of bounds access to memory that is before the start or after the end
+of the accessed region (array, heap-allocated region, string literal etc.).
+This usually means incorrect indexing, but the checker also detects access via
+the operators ``*`` and ``->``.
+
+.. code-block:: c
+
+ void test_underflow(int x) {
+   int buf[100][100];
+   if (x < 0)
+     buf[0][x] = 1; // warn
+ }
+
+ void test_overflow() {
+   int buf[100];
+   int *p = buf + 100;
+   *p = 1; // warn
+ }
+
+If checkers like :ref:`unix-Malloc` or :ref:`cplusplus-NewDelete` are enabled
+to model the behavior of ``malloc()``, ``operator new`` and similar
+allocators), then this checker can also reports out of bounds access to
+dynamically allocated memory:
+
+.. code-block:: cpp
+
+ int *test_dynamic() {
+   int *mem = new int[100];
+   mem[-1] = 42; // warn
+   return mem;
+ }
+
+In uncertain situations (when the checker can neither prove nor disprove that
+overflow occurs), the checker assumes that the the index (more precisely, the
+memory offeset) is within bounds.
+
+However, if :ref:`optin-taint-GenericTaint` is enabled and the index/offset is
+tainted (i.e. it is influenced by an untrusted souce), then this checker
+reports the potential out of bounds access:
+
+.. code-block:: c
+
+ void test_with_tainted_index() {
+   char s[] = "abc";
+   int x = getchar();
+   char c = s[x]; // warn: potential out of bounds access with tainted index
+ }
+
+.. note::
+
+  This checker is an improved and renamed version of the checker that was
+  previously known as ``alpha.security.ArrayBoundV2``. The old checker
+  ``alpha.security.ArrayBound`` was removed when the (previously
+  "experimental") V2 variant became stable enough for regular use.
+
 .. _security-cert-env-InvalidPtr:
 
 security.cert.env.InvalidPtr
-""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""
 
 Corresponds to SEI CERT Rules `ENV31-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV31-C.+Do+not+rely+on+an+environment+pointer+following+an+operation+that+may+invalidate+it>`_ and `ENV34-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV34-C.+Do+not+store+pointers+returned+by+certain+functions>`_.
 
@@ -3216,78 +3275,6 @@ Warns against using one vs. many plural pattern in code when generating localize
 alpha.security
 ^^^^^^^^^^^^^^
 
-.. _alpha-security-ArrayBound:
-
-alpha.security.ArrayBound (C)
-"""""""""""""""""""""""""""""
-Warn about buffer overflows (older checker).
-
-.. code-block:: c
-
- void test() {
-   char *s = "";
-   char c = s[1]; // warn
- }
-
- struct seven_words {
-   int c[7];
- };
-
- void test() {
-   struct seven_words a, *p;
-   p = &a;
-   p[0] = a;
-   p[1] = a;
-   p[2] = a; // warn
- }
-
- // note: requires unix.Malloc or
- // alpha.unix.MallocWithAnnotations checks enabled.
- void test() {
-   int *p = malloc(12);
-   p[3] = 4; // warn
- }
-
- void test() {
-   char a[2];
-   int *b = (int*)a;
-   b[1] = 3; // warn
- }
-
-.. _alpha-security-ArrayBoundV2:
-
-alpha.security.ArrayBoundV2 (C)
-"""""""""""""""""""""""""""""""
-Warn about buffer overflows (newer checker).
-
-.. code-block:: c
-
- void test() {
-   char *s = "";
-   char c = s[1]; // warn
- }
-
- void test() {
-   int buf[100];
-   int *p = buf;
-   p = p + 99;
-   p[1] = 1; // warn
- }
-
- // note: compiler has internal check for this.
- // Use -Wno-array-bounds to suppress compiler warning.
- void test() {
-   int buf[100][100];
-   buf[0][-1] = 1; // warn
- }
-
- // note: requires optin.taint check turned on.
- void test() {
-   char s[] = "abc";
-   int x = getchar();
-   char c = s[x]; // warn: index is tainted
- }
-
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
@@ -3679,6 +3666,51 @@ Here are some examples of situations that we warn about as they *might* be poten
       RefPtr<RefCountable> counted;
       // The scope of uncounted is not EMBEDDED in the scope of counted.
       RefCountable* uncounted = counted.get(); // warn
+    }
+
+alpha.webkit.UnretainedLocalVarsChecker
+"""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of Retainptr object that backs it.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is EMBEDDED in the scope of retained.
+      {
+        NSObject* unretained = retained.get(); // ok
+      }
+    }
+
+    void foo2(RetainPtr<NSObject> retained_param) {
+      NSObject* unretained = retained_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      NSObject* unretained = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      NSObject* unretained = [[NSObject alloc] init]; // warn
+    }
+
+    NSObject* global_unretained;
+    void foo2() {
+      NSObject* unretained = global_unretained; // warn
+    }
+
+    void foo3() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is not EMBEDDED in the scope of retained.
+      NSObject* unretained = retained.get(); // warn
     }
 
 Debug Checkers

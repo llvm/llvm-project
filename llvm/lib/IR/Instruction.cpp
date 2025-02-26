@@ -114,6 +114,12 @@ void Instruction::insertAfter(Instruction *InsertPos) {
   DestParent->getInstList().insertAfter(InsertPos->getIterator(), this);
 }
 
+void Instruction::insertAfter(BasicBlock::iterator InsertPos) {
+  BasicBlock *DestParent = InsertPos->getParent();
+
+  DestParent->getInstList().insertAfter(InsertPos, this);
+}
+
 BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
                                              BasicBlock::iterator It) {
   assert(getParent() == nullptr && "Expected detached instruction");
@@ -170,8 +176,16 @@ void Instruction::moveBefore(Instruction *MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
 }
 
+void Instruction::moveBefore(BasicBlock::iterator MovePos) {
+  moveBeforeImpl(*MovePos->getParent(), MovePos, false);
+}
+
 void Instruction::moveBeforePreserving(Instruction *MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
+}
+
+void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
+  moveBeforeImpl(*MovePos->getParent(), MovePos, true);
 }
 
 void Instruction::moveAfter(Instruction *MovePos) {
@@ -1155,7 +1169,7 @@ bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
     // Landingpads themselves don't unwind -- however, an invoke of a skipped
     // landingpad may continue unwinding.
     BasicBlock *UnwindDest = cast<InvokeInst>(this)->getUnwindDest();
-    Instruction *Pad = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator Pad = UnwindDest->getFirstNonPHIIt();
     if (auto *LP = dyn_cast<LandingPadInst>(Pad))
       return canUnwindPastLandingPad(LP, IncludePhaseOneUnwind);
     return false;
@@ -1219,10 +1233,7 @@ Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
 const Instruction *
 Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I) &&
-        !(SkipPseudoOp && isa<PseudoProbeInst>(I)) &&
-        !(isa<IntrinsicInst>(I) &&
-          cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fake_use))
+    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
       return I;
   return nullptr;
 }

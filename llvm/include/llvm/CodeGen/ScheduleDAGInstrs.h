@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/ADT/identity.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -58,7 +59,7 @@ namespace llvm {
       : VirtReg(VReg), LaneMask(LaneMask), SU(SU) {}
 
     unsigned getSparseSetIndex() const {
-      return Register::virtReg2Index(VirtReg);
+      return Register(VirtReg).virtRegIndex();
     }
   };
 
@@ -169,7 +170,7 @@ namespace llvm {
     /// Tracks the last instructions in this region using each virtual register.
     VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
-    AAResults *AAForDep = nullptr;
+    mutable std::optional<BatchAAResults> AAForDep;
 
     /// Remember a generic side-effecting instruction as we proceed.
     /// No other SU ever gets scheduled around it (except in the special
@@ -200,6 +201,13 @@ namespace llvm {
     /// A map from ValueType to SUList, used during DAG construction, as
     /// a means of remembering which SUs depend on which memory locations.
     class Value2SUsMap;
+
+    /// Returns a (possibly null) pointer to the current BatchAAResults.
+    BatchAAResults *getAAForDep() const {
+      if (AAForDep.has_value())
+        return &AAForDep.value();
+      return nullptr;
+    }
 
     /// Reduces maps in FIFO order, by N SUs. This is better than turning
     /// every Nth memory SU into BarrierChain in buildSchedGraph(), since

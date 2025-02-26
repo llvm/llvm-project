@@ -332,19 +332,19 @@ struct llvm::gvn::AvailableValueInBlock {
 //===----------------------------------------------------------------------===//
 
 GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
-  Expression e;
-  e.type = I->getType();
-  e.opcode = I->getOpcode();
+  Expression E;
+  E.type = I->getType();
+  E.opcode = I->getOpcode();
   if (const GCRelocateInst *GCR = dyn_cast<GCRelocateInst>(I)) {
     // gc.relocate is 'special' call: its second and third operands are
     // not real values, but indices into statepoint's argument list.
     // Use the refered to values for purposes of identity.
-    e.varargs.push_back(lookupOrAdd(GCR->getOperand(0)));
-    e.varargs.push_back(lookupOrAdd(GCR->getBasePtr()));
-    e.varargs.push_back(lookupOrAdd(GCR->getDerivedPtr()));
+    E.varargs.push_back(lookupOrAdd(GCR->getOperand(0)));
+    E.varargs.push_back(lookupOrAdd(GCR->getBasePtr()));
+    E.varargs.push_back(lookupOrAdd(GCR->getDerivedPtr()));
   } else {
     for (Use &Op : I->operands())
-      e.varargs.push_back(lookupOrAdd(Op));
+      E.varargs.push_back(lookupOrAdd(Op));
   }
   if (I->isCommutative()) {
     // Ensure that commutative instructions that only differ by a permutation
@@ -352,78 +352,78 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
     // numbers.  Since commutative operands are the 1st two operands it is more
     // efficient to sort by hand rather than using, say, std::sort.
     assert(I->getNumOperands() >= 2 && "Unsupported commutative instruction!");
-    if (e.varargs[0] > e.varargs[1])
-      std::swap(e.varargs[0], e.varargs[1]);
-    e.commutative = true;
+    if (E.varargs[0] > E.varargs[1])
+      std::swap(E.varargs[0], E.varargs[1]);
+    E.commutative = true;
   }
 
   if (auto *C = dyn_cast<CmpInst>(I)) {
     // Sort the operand value numbers so x<y and y>x get the same value number.
     CmpInst::Predicate Predicate = C->getPredicate();
-    if (e.varargs[0] > e.varargs[1]) {
-      std::swap(e.varargs[0], e.varargs[1]);
+    if (E.varargs[0] > E.varargs[1]) {
+      std::swap(E.varargs[0], E.varargs[1]);
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
-    e.opcode = (C->getOpcode() << 8) | Predicate;
-    e.commutative = true;
-  } else if (auto *E = dyn_cast<InsertValueInst>(I)) {
-    e.varargs.append(E->idx_begin(), E->idx_end());
+    E.opcode = (C->getOpcode() << 8) | Predicate;
+    E.commutative = true;
+  } else if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+    E.varargs.append(IVI->idx_begin(), IVI->idx_end());
   } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
     ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
-    e.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
+    E.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
   } else if (auto *CB = dyn_cast<CallBase>(I)) {
-    e.attrs = CB->getAttributes();
+    E.attrs = CB->getAttributes();
   }
 
-  return e;
+  return E;
 }
 
 GVNPass::Expression GVNPass::ValueTable::createCmpExpr(
     unsigned Opcode, CmpInst::Predicate Predicate, Value *LHS, Value *RHS) {
   assert((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
          "Not a comparison!");
-  Expression e;
-  e.type = CmpInst::makeCmpResultType(LHS->getType());
-  e.varargs.push_back(lookupOrAdd(LHS));
-  e.varargs.push_back(lookupOrAdd(RHS));
+  Expression E;
+  E.type = CmpInst::makeCmpResultType(LHS->getType());
+  E.varargs.push_back(lookupOrAdd(LHS));
+  E.varargs.push_back(lookupOrAdd(RHS));
 
   // Sort the operand value numbers so x<y and y>x get the same value number.
-  if (e.varargs[0] > e.varargs[1]) {
-    std::swap(e.varargs[0], e.varargs[1]);
+  if (E.varargs[0] > E.varargs[1]) {
+    std::swap(E.varargs[0], E.varargs[1]);
     Predicate = CmpInst::getSwappedPredicate(Predicate);
   }
-  e.opcode = (Opcode << 8) | Predicate;
-  e.commutative = true;
-  return e;
+  E.opcode = (Opcode << 8) | Predicate;
+  E.commutative = true;
+  return E;
 }
 
 GVNPass::Expression
 GVNPass::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
   assert(EI && "Not an ExtractValueInst?");
-  Expression e;
-  e.type = EI->getType();
-  e.opcode = 0;
+  Expression E;
+  E.type = EI->getType();
+  E.opcode = 0;
 
   WithOverflowInst *WO = dyn_cast<WithOverflowInst>(EI->getAggregateOperand());
   if (WO != nullptr && EI->getNumIndices() == 1 && *EI->idx_begin() == 0) {
     // EI is an extract from one of our with.overflow intrinsics. Synthesize
     // a semantically equivalent expression instead of an extract value
     // expression.
-    e.opcode = WO->getBinaryOp();
-    e.varargs.push_back(lookupOrAdd(WO->getLHS()));
-    e.varargs.push_back(lookupOrAdd(WO->getRHS()));
-    return e;
+    E.opcode = WO->getBinaryOp();
+    E.varargs.push_back(lookupOrAdd(WO->getLHS()));
+    E.varargs.push_back(lookupOrAdd(WO->getRHS()));
+    return E;
   }
 
   // Not a recognised intrinsic. Fall back to producing an extract value
   // expression.
-  e.opcode = EI->getOpcode();
+  E.opcode = EI->getOpcode();
   for (Use &Op : EI->operands())
-    e.varargs.push_back(lookupOrAdd(Op));
+    E.varargs.push_back(lookupOrAdd(Op));
 
-  append_range(e.varargs, EI->indices());
+  append_range(E.varargs, EI->indices());
 
-  return e;
+  return E;
 }
 
 GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
@@ -1096,7 +1096,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
-      Res = getValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
+      Res = getValueForLoad(Res, Offset, LoadTy, InsertPt, Load->getFunction());
 
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL VAL:\nOffset: " << Offset
                         << "  " << *getSimpleValue() << '\n'
@@ -1109,7 +1109,8 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
       Res = CoercedLoad;
       combineMetadataForCSE(CoercedLoad, Load, false);
     } else {
-      Res = getValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt, DL);
+      Res = getValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt,
+                            Load->getFunction());
       // We are adding a new user for this load, for which the original
       // metadata may not hold. Additionally, the new load may have a different
       // size and type, so their metadata cannot be combined in any
@@ -1291,7 +1292,8 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
 
         // If MD reported clobber, check it was nested.
         if (DepInfo.isClobber() &&
-            canCoerceMustAliasedValueToLoad(DepLoad, LoadType, DL)) {
+            canCoerceMustAliasedValueToLoad(DepLoad, LoadType,
+                                            DepLoad->getFunction())) {
           const auto ClobberOff = MD->getClobberOffset(DepLoad);
           // GVN has no deal with a negative offset.
           Offset = (ClobberOff == std::nullopt || *ClobberOff < 0)
@@ -1343,7 +1345,7 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     // different types if we have to. If the stored value is convertable to
     // the loaded value, we can reuse it.
     if (!canCoerceMustAliasedValueToLoad(S->getValueOperand(), Load->getType(),
-                                         DL))
+                                         S->getFunction()))
       return std::nullopt;
 
     // Can't forward from non-atomic to atomic without violating memory model.
@@ -1357,7 +1359,8 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     // If the types mismatch and we can't handle it, reject reuse of the load.
     // If the stored value is larger or equal to the loaded value, we can reuse
     // it.
-    if (!canCoerceMustAliasedValueToLoad(LD, Load->getType(), DL))
+    if (!canCoerceMustAliasedValueToLoad(LD, Load->getType(),
+                                         LD->getFunction()))
       return std::nullopt;
 
     // Can't forward from non-atomic to atomic without violating memory model.
@@ -1720,7 +1723,8 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // to speculatively execute the load at that points.
   if (MustEnsureSafetyOfSpeculativeExecution) {
     if (CriticalEdgePredSplit.size())
-      if (!isSafeToSpeculativelyExecute(Load, LoadBB->getFirstNonPHI(), AC, DT))
+      if (!isSafeToSpeculativelyExecute(Load, &*LoadBB->getFirstNonPHIIt(), AC,
+                                        DT))
         return false;
     for (auto &PL : PredLoads)
       if (!isSafeToSpeculativelyExecute(Load, PL.first->getTerminator(), AC,
@@ -2890,7 +2894,7 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
   if (!success)
     return false;
 
-  Instr->insertBefore(Pred->getTerminator());
+  Instr->insertBefore(Pred->getTerminator()->getIterator());
   Instr->setName(Instr->getName() + ".pre");
   Instr->setDebugLoc(Instr->getDebugLoc());
 

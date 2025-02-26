@@ -564,21 +564,20 @@ unsigned int GVNHoist::rank(const Value *V) const {
 }
 
 bool GVNHoist::hasEH(const BasicBlock *BB) {
-  auto It = BBSideEffects.find(BB);
-  if (It != BBSideEffects.end())
+  auto [It, Inserted] = BBSideEffects.try_emplace(BB);
+  if (!Inserted)
     return It->second;
 
   if (BB->isEHPad() || BB->hasAddressTaken()) {
-    BBSideEffects[BB] = true;
+    It->second = true;
     return true;
   }
 
   if (BB->getTerminator()->mayThrow()) {
-    BBSideEffects[BB] = true;
+    It->second = true;
     return true;
   }
 
-  BBSideEffects[BB] = false;
   return false;
 }
 
@@ -922,7 +921,7 @@ void GVNHoist::makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
     }
 
   // Copy Gep and replace its uses in Repl with ClonedGep.
-  ClonedGep->insertBefore(HoistPt->getTerminator());
+  ClonedGep->insertBefore(HoistPt->getTerminator()->getIterator());
 
   // Conservatively discard any optimization hints, they may differ on the
   // other paths.
@@ -1108,7 +1107,7 @@ std::pair<unsigned, unsigned> GVNHoist::hoist(HoistingPointList &HPL) {
       // Move the instruction at the end of HoistPt.
       Instruction *Last = DestBB->getTerminator();
       MD->removeInstruction(Repl);
-      Repl->moveBefore(Last);
+      Repl->moveBefore(Last->getIterator());
 
       DFSNumber[Repl] = DFSNumber[Last]++;
     }

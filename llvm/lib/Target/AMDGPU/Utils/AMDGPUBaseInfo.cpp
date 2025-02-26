@@ -134,6 +134,12 @@ unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
 }
 
+/// \returns VaSdst bit width
+inline unsigned getVaSdstBitWidth() { return 3; }
+
+/// \returns VaSdst bit shift
+inline unsigned getVaSdstBitShift() { return 9; }
+
 /// \returns VmVsrc bit width
 inline unsigned getVmVsrcBitWidth() { return 3; }
 
@@ -145,6 +151,12 @@ inline unsigned getVaVdstBitWidth() { return 4; }
 
 /// \returns VaVdst bit shift
 inline unsigned getVaVdstBitShift() { return 12; }
+
+/// \returns VaVcc bit width
+inline unsigned getVaVccBitWidth() { return 1; }
+
+/// \returns VaVcc bit shift
+inline unsigned getVaVccBitShift() { return 1; }
 
 /// \returns SaSdst bit width
 inline unsigned getSaSdstBitWidth() { return 1; }
@@ -418,6 +430,7 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDPairs_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
+#define GET_True16D16Table_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
@@ -1719,6 +1732,14 @@ unsigned decodeFieldSaSdst(unsigned Encoded) {
   return unpackBits(Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
 }
 
+unsigned decodeFieldVaSdst(unsigned Encoded) {
+  return unpackBits(Encoded, getVaSdstBitShift(), getVaSdstBitWidth());
+}
+
+unsigned decodeFieldVaVcc(unsigned Encoded) {
+  return unpackBits(Encoded, getVaVccBitShift(), getVaVccBitWidth());
+}
+
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
   return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
@@ -1741,6 +1762,22 @@ unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
 
 unsigned encodeFieldSaSdst(unsigned SaSdst) {
   return encodeFieldSaSdst(0xffff, SaSdst);
+}
+
+unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst) {
+  return packBits(VaSdst, Encoded, getVaSdstBitShift(), getVaSdstBitWidth());
+}
+
+unsigned encodeFieldVaSdst(unsigned VaSdst) {
+  return encodeFieldVaSdst(0xffff, VaSdst);
+}
+
+unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc) {
+  return packBits(VaVcc, Encoded, getVaVccBitShift(), getVaVccBitWidth());
+}
+
+unsigned encodeFieldVaVcc(unsigned VaVcc) {
+  return encodeFieldVaVcc(0xffff, VaVcc);
 }
 
 } // namespace DepCtr
@@ -2446,6 +2483,8 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 // (move from MC* level to Target* level). Return size in bits.
 unsigned getRegBitWidth(unsigned RCID) {
   switch (RCID) {
+  case AMDGPU::VGPR_16RegClassID:
+  case AMDGPU::VGPR_16_Lo128RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
   case AMDGPU::AGPR_LO16RegClassID:
     return 16;
@@ -2487,6 +2526,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_128_Align2RegClassID:
   case AMDGPU::AV_128RegClassID:
   case AMDGPU::AV_128_Align2RegClassID:
+  case AMDGPU::SReg_128_XNULLRegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
@@ -2523,6 +2563,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_256_Align2RegClassID:
   case AMDGPU::AV_256RegClassID:
   case AMDGPU::AV_256_Align2RegClassID:
+  case AMDGPU::SReg_256_XNULLRegClassID:
     return 256;
   case AMDGPU::SGPR_288RegClassID:
   case AMDGPU::SReg_288RegClassID:

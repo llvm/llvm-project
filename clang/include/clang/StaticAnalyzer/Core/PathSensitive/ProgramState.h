@@ -126,6 +126,7 @@ private:
   /// makeWithStore - Return a ProgramState with the same values as the current
   ///  state with the exception of using the specified Store.
   ProgramStateRef makeWithStore(const StoreRef &store) const;
+  ProgramStateRef makeWithStore(const BindResult &BindRes) const;
 
   void setStore(const StoreRef &storeRef);
 

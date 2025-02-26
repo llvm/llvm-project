@@ -1058,6 +1058,14 @@ enum NodeType {
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
+  /// FSINCOSPI - Compute both the sine and cosine times pi more accurately
+  /// than FSINCOS(pi*x), especially for large x.
+  FSINCOSPI,
+
+  /// FMODF - Decomposes the operand into integral and fractional parts, each
+  /// having the same type and sign as the operand.
+  FMODF,
+
   /// Gets the current floating-point environment. The first operand is a token
   /// chain. The results are FP environment, represented by an integer value,
   /// and a token chain.
@@ -1451,6 +1459,23 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
+  // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
+  // The partial reduction nodes sign or zero extend Input1 and Input2 to the
+  // element type of Accumulator before multiplying their results.
+  // This result is concatenated to the Accumulator, and this is then reduced,
+  // using addition, to the result type.
+  // The output is only expected to either be given to another partial reduction
+  // operation or an equivalent vector reduce operation, so the order in which
+  // the elements are reduced is deliberately not specified.
+  // Input1 and Input2 must be the same type. Accumulator and the output must be
+  // the same type.
+  // The number of elements in Input1 and Input2 must be a positive integer
+  // multiple of the number of elements in the Accumulator / output type.
+  // Input1 and Input2 must have an element type which is the same as or smaller
+  // than the element type of the Accumulator and output.
+  PARTIAL_REDUCE_SMLA,
+  PARTIAL_REDUCE_UMLA,
+
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
   // Outputs: output chain, glue
@@ -1479,6 +1504,10 @@ enum NodeType {
   // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  // Finds the index of the last active mask element
+  // Operands: Mask
+  VECTOR_FIND_LAST_ACTIVE,
 
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address

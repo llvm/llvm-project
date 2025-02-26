@@ -253,15 +253,24 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UMUL_LOHI, MVT::i128, Expand);
     setOperationAction(ISD::ROTR,      MVT::i128, Expand);
     setOperationAction(ISD::ROTL,      MVT::i128, Expand);
-    setOperationAction(ISD::MUL,       MVT::i128, Expand);
-    setOperationAction(ISD::MULHS,     MVT::i128, Expand);
-    setOperationAction(ISD::MULHU,     MVT::i128, Expand);
-    setOperationAction(ISD::SDIV,      MVT::i128, Expand);
-    setOperationAction(ISD::UDIV,      MVT::i128, Expand);
-    setOperationAction(ISD::SREM,      MVT::i128, Expand);
-    setOperationAction(ISD::UREM,      MVT::i128, Expand);
-    setOperationAction(ISD::CTLZ,      MVT::i128, Expand);
-    setOperationAction(ISD::CTTZ,      MVT::i128, Expand);
+
+    // No special instructions for these before arch15.
+    if (!Subtarget.hasVectorEnhancements3()) {
+      setOperationAction(ISD::MUL,   MVT::i128, Expand);
+      setOperationAction(ISD::MULHS, MVT::i128, Expand);
+      setOperationAction(ISD::MULHU, MVT::i128, Expand);
+      setOperationAction(ISD::SDIV,  MVT::i128, Expand);
+      setOperationAction(ISD::UDIV,  MVT::i128, Expand);
+      setOperationAction(ISD::SREM,  MVT::i128, Expand);
+      setOperationAction(ISD::UREM,  MVT::i128, Expand);
+      setOperationAction(ISD::CTLZ,  MVT::i128, Expand);
+      setOperationAction(ISD::CTTZ,  MVT::i128, Expand);
+    } else {
+      // Even if we do have a legal 128-bit multiply, we do not
+      // want 64-bit multiply-high operations to use it.
+      setOperationAction(ISD::MULHS, MVT::i64, Custom);
+      setOperationAction(ISD::MULHU, MVT::i64, Custom);
+    }
 
     // Support addition/subtraction with carry.
     setOperationAction(ISD::UADDO, MVT::i128, Custom);
@@ -271,6 +280,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
     // Use VPOPCT and add up partial results.
     setOperationAction(ISD::CTPOP, MVT::i128, Custom);
+
+    // Additional instructions available with arch15.
+    if (Subtarget.hasVectorEnhancements3()) {
+      setOperationAction(ISD::ABS, MVT::i128, Legal);
+    }
 
     // We have to use libcalls for these.
     setOperationAction(ISD::FP_TO_UINT, MVT::i128, LibCall);
@@ -338,6 +352,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ, MVT::i64, Legal);
+
+  // On arch15 we have native support for a 64-bit CTTZ.
+  if (Subtarget.hasMiscellaneousExtensions4()) {
+    setOperationAction(ISD::CTTZ, MVT::i32, Promote);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Promote);
+    setOperationAction(ISD::CTTZ, MVT::i64, Legal);
+  }
 
   // On z15 we have native support for a 64-bit CTPOP.
   if (Subtarget.hasMiscellaneousExtensions3()) {
@@ -433,8 +454,15 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
       setOperationAction(ISD::ADD, VT, Legal);
       setOperationAction(ISD::SUB, VT, Legal);
-      if (VT != MVT::v2i64)
+      if (VT != MVT::v2i64 || Subtarget.hasVectorEnhancements3())
         setOperationAction(ISD::MUL, VT, Legal);
+      if (Subtarget.hasVectorEnhancements3() &&
+          VT != MVT::v16i8 && VT != MVT::v8i16) {
+        setOperationAction(ISD::SDIV, VT, Legal);
+        setOperationAction(ISD::UDIV, VT, Legal);
+        setOperationAction(ISD::SREM, VT, Legal);
+        setOperationAction(ISD::UREM, VT, Legal);
+      }
       setOperationAction(ISD::ABS, VT, Legal);
       setOperationAction(ISD::AND, VT, Legal);
       setOperationAction(ISD::OR, VT, Legal);
@@ -528,6 +556,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FCEIL, VT, Legal);
         setOperationAction(ISD::FTRUNC, VT, Legal);
         setOperationAction(ISD::FROUND, VT, Legal);
+        setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       }
 
       // No special instructions for these.
@@ -554,8 +583,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
         setOperationAction(ISD::STRICT_FFLOOR, VT, Legal);
         setOperationAction(ISD::STRICT_FCEIL, VT, Legal);
-        setOperationAction(ISD::STRICT_FROUND, VT, Legal);
         setOperationAction(ISD::STRICT_FTRUNC, VT, Legal);
+        setOperationAction(ISD::STRICT_FROUND, VT, Legal);
+        setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
       }
     }
   }
@@ -588,6 +618,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
     setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
     setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f64, Legal);
 
     // Handle constrained floating-point operations.
     setOperationAction(ISD::STRICT_FADD, MVT::v2f64, Legal);
@@ -602,6 +633,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FCEIL, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FROUND, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v2f64, Legal);
 
     setOperationAction(ISD::SETCC, MVT::v2f64, Custom);
     setOperationAction(ISD::SETCC, MVT::v4f32, Custom);
@@ -629,6 +661,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
     setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::f64, Legal);
@@ -666,8 +699,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FFLOOR, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FCEIL, MVT::v4f32, Legal);
-    setOperationAction(ISD::STRICT_FROUND, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FROUND, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v4f32, Legal);
     for (auto VT : { MVT::f32, MVT::f64, MVT::f128,
                      MVT::v4f32, MVT::v2f64 }) {
       setOperationAction(ISD::STRICT_FMAXNUM, VT, Legal);
@@ -2412,7 +2446,8 @@ bool SystemZTargetLowering::
 CanLowerReturn(CallingConv::ID CallConv,
                MachineFunction &MF, bool isVarArg,
                const SmallVectorImpl<ISD::OutputArg> &Outs,
-               LLVMContext &Context) const {
+               LLVMContext &Context,
+               const Type *RetTy) const {
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)
@@ -2527,6 +2562,7 @@ static bool isIntrinsicWithCC(SDValue Op, unsigned &Opcode, unsigned &CCValid) {
   case Intrinsic::s390_vceqhs:
   case Intrinsic::s390_vceqfs:
   case Intrinsic::s390_vceqgs:
+  case Intrinsic::s390_vceqqs:
     Opcode = SystemZISD::VICMPES;
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
@@ -2535,6 +2571,7 @@ static bool isIntrinsicWithCC(SDValue Op, unsigned &Opcode, unsigned &CCValid) {
   case Intrinsic::s390_vchhs:
   case Intrinsic::s390_vchfs:
   case Intrinsic::s390_vchgs:
+  case Intrinsic::s390_vchqs:
     Opcode = SystemZISD::VICMPHS;
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
@@ -2543,6 +2580,7 @@ static bool isIntrinsicWithCC(SDValue Op, unsigned &Opcode, unsigned &CCValid) {
   case Intrinsic::s390_vchlhs:
   case Intrinsic::s390_vchlfs:
   case Intrinsic::s390_vchlgs:
+  case Intrinsic::s390_vchlqs:
     Opcode = SystemZISD::VICMPHLS;
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
@@ -3222,6 +3260,8 @@ static void adjustICmp128(SelectionDAG &DAG, const SDLoc &DL,
     return;
   if (C.Op0.getValueType() != MVT::i128)
     return;
+  if (DAG.getSubtarget<SystemZSubtarget>().hasVectorEnhancements3())
+    return;
 
   // (In-)Equality comparisons can be implemented via VCEQGS.
   if (C.CCMask == SystemZ::CCMASK_CMP_EQ ||
@@ -3635,6 +3675,18 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
     // matter whether we try the inversion or the swap first, since
     // there are no cases where both work.
   default:
+    // Optimize sign-bit comparisons to signed compares.
+    if (Mode == CmpMode::Int && (CC == ISD::SETEQ || CC == ISD::SETNE) &&
+        ISD::isConstantSplatVectorAllZeros(CmpOp1.getNode())) {
+      unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+      APInt Mask;
+      if (CmpOp0.getOpcode() == ISD::AND
+          && ISD::isConstantSplatVector(CmpOp0.getOperand(1).getNode(), Mask)
+          && Mask == APInt::getSignMask(EltSize)) {
+        CC = CC == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
+        CmpOp0 = CmpOp0.getOperand(0);
+      }
+    }
     if (unsigned Opcode = getVectorComparisonOrInvert(CC, Mode, Invert))
       Cmp = getVectorCmp(DAG, Opcode, DL, VT, CmpOp0, CmpOp1, Chain);
     else {
@@ -3733,6 +3785,42 @@ static SDValue getAbsolute(SelectionDAG &DAG, const SDLoc &DL, SDValue Op,
   return Op;
 }
 
+static SDValue getI128Select(SelectionDAG &DAG, const SDLoc &DL,
+                             Comparison C, SDValue TrueOp, SDValue FalseOp) {
+  EVT VT = MVT::i128;
+  unsigned Op;
+
+  if (C.CCMask == SystemZ::CCMASK_CMP_NE ||
+      C.CCMask == SystemZ::CCMASK_CMP_GE ||
+      C.CCMask == SystemZ::CCMASK_CMP_LE) {
+    std::swap(TrueOp, FalseOp);
+    C.CCMask ^= C.CCValid;
+  }
+  if (C.CCMask == SystemZ::CCMASK_CMP_LT) {
+    std::swap(C.Op0, C.Op1);
+    C.CCMask = SystemZ::CCMASK_CMP_GT;
+  }
+  switch (C.CCMask) {
+  case SystemZ::CCMASK_CMP_EQ:
+    Op = SystemZISD::VICMPE;
+    break;
+  case SystemZ::CCMASK_CMP_GT:
+    if (C.ICmpType == SystemZICMP::UnsignedOnly)
+      Op = SystemZISD::VICMPHL;
+    else
+      Op = SystemZISD::VICMPH;
+    break;
+  default:
+    llvm_unreachable("Unhandled comparison");
+    break;
+  }
+
+  SDValue Mask = DAG.getNode(Op, DL, VT, C.Op0, C.Op1);
+  TrueOp = DAG.getNode(ISD::AND, DL, VT, TrueOp, Mask);
+  FalseOp = DAG.getNode(ISD::AND, DL, VT, FalseOp, DAG.getNOT(DL, Mask, VT));
+  return DAG.getNode(ISD::OR, DL, VT, TrueOp, FalseOp);
+}
+
 SDValue SystemZTargetLowering::lowerSELECT_CC(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDValue CmpOp0   = Op.getOperand(0);
@@ -3756,6 +3844,13 @@ SDValue SystemZTargetLowering::lowerSELECT_CC(SDValue Op,
       return getAbsolute(DAG, DL, TrueOp, C.CCMask & SystemZ::CCMASK_CMP_LT);
     if (isAbsolute(C.Op0, FalseOp, TrueOp))
       return getAbsolute(DAG, DL, FalseOp, C.CCMask & SystemZ::CCMASK_CMP_GT);
+  }
+
+  if (Subtarget.hasVectorEnhancements3() &&
+      C.Opcode == SystemZISD::ICMP &&
+      C.Op0.getValueType() == MVT::i128 &&
+      TrueOp.getValueType() == MVT::i128) {
+    return getI128Select(DAG, DL, C, TrueOp, FalseOp);
   }
 
   SDValue CCReg = emitCmp(DAG, DL, C);
@@ -4370,6 +4465,24 @@ SDValue SystemZTargetLowering::lowerGET_DYNAMIC_AREA_OFFSET(
   return DAG.getNode(SystemZISD::ADJDYNALLOC, DL, MVT::i64);
 }
 
+SDValue SystemZTargetLowering::lowerMULH(SDValue Op,
+                                         SelectionDAG &DAG,
+                                         unsigned Opcode) const {
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  SDValue Even, Odd;
+
+  // This custom expander is only used on arch15 and later for 64-bit types.
+  assert(!is32Bit(VT));
+  assert(Subtarget.hasMiscellaneousExtensions2());
+
+  // SystemZISD::xMUL_LOHI returns the low result in the odd register and
+  // the high result in the even register.  Return the latter.
+  lowerGR128Binary(DAG, DL, VT, Opcode,
+                   Op.getOperand(0), Op.getOperand(1), Even, Odd);
+  return Even;
+}
+
 SDValue SystemZTargetLowering::lowerSMUL_LOHI(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -4601,15 +4714,19 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
 }
 
 static bool isAddCarryChain(SDValue Carry) {
-  while (Carry.getOpcode() == ISD::UADDO_CARRY)
+  while (Carry.getOpcode() == ISD::UADDO_CARRY &&
+         Carry->getValueType(0) != MVT::i128)
     Carry = Carry.getOperand(2);
-  return Carry.getOpcode() == ISD::UADDO;
+  return Carry.getOpcode() == ISD::UADDO &&
+         Carry->getValueType(0) != MVT::i128;
 }
 
 static bool isSubBorrowChain(SDValue Carry) {
-  while (Carry.getOpcode() == ISD::USUBO_CARRY)
+  while (Carry.getOpcode() == ISD::USUBO_CARRY &&
+         Carry->getValueType(0) != MVT::i128)
     Carry = Carry.getOperand(2);
-  return Carry.getOpcode() == ISD::USUBO;
+  return Carry.getOpcode() == ISD::USUBO &&
+         Carry->getValueType(0) != MVT::i128;
 }
 
 // Lower UADDO_CARRY/USUBO_CARRY nodes.
@@ -5117,24 +5234,28 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::s390_vuphb:
   case Intrinsic::s390_vuphh:
   case Intrinsic::s390_vuphf:
+  case Intrinsic::s390_vuphg:
     return DAG.getNode(SystemZISD::UNPACK_HIGH, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1));
 
   case Intrinsic::s390_vuplhb:
   case Intrinsic::s390_vuplhh:
   case Intrinsic::s390_vuplhf:
+  case Intrinsic::s390_vuplhg:
     return DAG.getNode(SystemZISD::UNPACKL_HIGH, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1));
 
   case Intrinsic::s390_vuplb:
   case Intrinsic::s390_vuplhw:
   case Intrinsic::s390_vuplf:
+  case Intrinsic::s390_vuplg:
     return DAG.getNode(SystemZISD::UNPACK_LOW, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1));
 
   case Intrinsic::s390_vupllb:
   case Intrinsic::s390_vupllh:
   case Intrinsic::s390_vupllf:
+  case Intrinsic::s390_vupllg:
     return DAG.getNode(SystemZISD::UNPACKL_LOW, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1));
 
@@ -6058,8 +6179,8 @@ SystemZTargetLowering::buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     for (unsigned I = 0; I < NumElements; ++I)
       if (isVectorElementLoad(Elems[I])) {
         SDNode *Ld = Elems[I].getNode();
-        UseCounts[Ld]++;
-        if (LoadMaxUses == nullptr || UseCounts[LoadMaxUses] < UseCounts[Ld])
+        unsigned Count = ++UseCounts[Ld];
+        if (LoadMaxUses == nullptr || UseCounts[LoadMaxUses] < Count)
           LoadMaxUses = Ld;
       }
     if (LoadMaxUses != nullptr) {
@@ -6441,6 +6562,10 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::GET_DYNAMIC_AREA_OFFSET:
     return lowerGET_DYNAMIC_AREA_OFFSET(Op, DAG);
+  case ISD::MULHS:
+    return lowerMULH(Op, DAG, SystemZISD::SMUL_LOHI);
+  case ISD::MULHU:
+    return lowerMULH(Op, DAG, SystemZISD::UMUL_LOHI);
   case ISD::SMUL_LOHI:
     return lowerSMUL_LOHI(Op, DAG);
   case ISD::UMUL_LOHI:
@@ -7945,9 +8070,9 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     auto *FalseVal = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(1));
     if (!FalseVal)
       return false;
-    if (CompareRHS->getZExtValue() == FalseVal->getZExtValue())
+    if (CompareRHS->getAPIntValue() == FalseVal->getAPIntValue())
       Invert = !Invert;
-    else if (CompareRHS->getZExtValue() != TrueVal->getZExtValue())
+    else if (CompareRHS->getAPIntValue() != TrueVal->getAPIntValue())
       return false;
 
     // Compute the effective CC mask for the new branch or select.

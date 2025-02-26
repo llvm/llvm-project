@@ -21,12 +21,6 @@ if(CLANG_ENABLE_CIR)
     )
 endif()
 
-if(CLANG_ENABLE_ARCMT)
-  list(APPEND link_libs
-    clangARCMigrate
-    )
-endif()
-
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND link_libs
     clangStaticAnalyzerFrontend

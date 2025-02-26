@@ -211,7 +211,7 @@ struct DependenceAnalysis final : public AnalysisInfoMixin<DependenceAnalysis> {
 
     /// Invalidate the dependence information and recompute it when needed
     /// again.
-    /// May be required when the underlaying Scop was changed in a way that
+    /// May be required when the underlying Scop was changed in a way that
     /// would add new dependencies (e.g. between new statement instances
     /// insierted into the SCoP) or intentionally breaks existing ones. It is
     /// not required when updating the schedule that conforms the existing
@@ -251,7 +251,7 @@ public:
   const Dependences &recomputeDependences(Dependences::AnalysisLevel Level);
 
   /// Invalidate the dependence information and recompute it when needed again.
-  /// May be required when the underlaying Scop was changed in a way that would
+  /// May be required when the underlying Scop was changed in a way that would
   /// add new dependencies (e.g. between new statement instances insierted into
   /// the SCoP) or intentionally breaks existing ones. It is not required when
   /// updating the schedule that conforms the existing dependencies.

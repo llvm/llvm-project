@@ -43,6 +43,7 @@ config.suffixes = [
     ".test",
     ".pdll",
     ".c",
+    ".spv",
 ]
 
 # test_source_root: The root path where tests are located.
@@ -55,8 +56,8 @@ config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
-config.substitutions.append(("%host_cxx", config.host_cxx))
-config.substitutions.append(("%host_cc", config.host_cc))
+config.substitutions.append(("%host_cxx", config.host_cxx.strip()))
+config.substitutions.append(("%host_cc", config.host_cc.strip()))
 
 
 # Searches for a runtime library with the given name and returns the found path.
@@ -82,17 +83,32 @@ def add_runtime(name):
 # available. This is darwin specific since it's currently only needed on darwin.
 # Stolen from llvm/test/lit.cfg.py with a few modifications
 def get_asan_rtlib():
-    if not "asan" in config.available_features or not "Darwin" in config.host_os:
+    if not "asan" in config.available_features:
         return ""
-    # Find the asan rt lib
-    resource_dir = (
-        subprocess.check_output([config.host_cc.strip(), "-print-resource-dir"])
-        .decode("utf-8")
-        .strip()
-    )
-    return os.path.join(
-        resource_dir, "lib", "darwin", "libclang_rt.asan_osx_dynamic.dylib"
-    )
+
+    if "Darwin" in config.host_os:
+        # Find the asan rt lib
+        resource_dir = (
+            subprocess.check_output([config.host_cc.strip(), "-print-resource-dir"])
+            .decode("utf-8")
+            .strip()
+        )
+        return os.path.join(
+            resource_dir, "lib", "darwin", "libclang_rt.asan_osx_dynamic.dylib"
+        )
+    if "Linux" in config.host_os:
+        return (
+            subprocess.check_output(
+                [
+                    config.host_cxx.strip(),
+                    f"-print-file-name=libclang_rt.asan-{config.host_arch}.so",
+                ]
+            )
+            .decode("utf-8")
+            .strip()
+        )
+
+    return ""
 
 
 # On macOS, we can't do the DYLD_INSERT_LIBRARIES trick with a shim python
@@ -185,7 +201,7 @@ tools = [
     "mlir-capi-transform-test",
     "mlir-capi-transform-interpreter-test",
     "mlir-capi-translation-test",
-    "mlir-cpu-runner",
+    "mlir-runner",
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
     add_runtime("mlir_async_runtime"),
@@ -197,7 +213,7 @@ tools = [
 ]
 
 if config.enable_vulkan_runner:
-    tools.extend([add_runtime("vulkan-runtime-wrappers")])
+    tools.extend([add_runtime("mlir_vulkan_runtime")])
 
 if config.enable_rocm_runner:
     tools.extend([add_runtime("mlir_rocm_runtime")])
@@ -247,7 +263,9 @@ python_executable = config.python_executable
 # TODO: detect Windows situation (or mark these tests as unsupported on these platforms).
 if "asan" in config.available_features:
     if "Linux" in config.host_os:
-        python_executable = f"LD_PRELOAD=$({config.host_cxx} -print-file-name=libclang_rt.asan-{config.host_arch}.so) {config.python_executable}"
+        python_executable = (
+            f"env LD_PRELOAD={get_asan_rtlib()} {config.python_executable}"
+        )
     if "Darwin" in config.host_os:
         # Ensure we use a non-shim Python executable, for the `DYLD_INSERT_LIBRARIES`
         # env variable to take effect
@@ -316,24 +334,24 @@ else:
 
 
 def have_host_jit_feature_support(feature_name):
-    mlir_cpu_runner_exe = lit.util.which("mlir-cpu-runner", config.mlir_tools_dir)
+    mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)
 
-    if not mlir_cpu_runner_exe:
+    if not mlir_runner_exe:
         return False
 
     try:
-        mlir_cpu_runner_cmd = subprocess.Popen(
-            [mlir_cpu_runner_exe, "--host-supports-" + feature_name],
+        mlir_runner_cmd = subprocess.Popen(
+            [mlir_runner_exe, "--host-supports-" + feature_name],
             stdout=subprocess.PIPE,
         )
     except OSError:
-        print("could not exec mlir-cpu-runner")
+        print("could not exec mlir-runner")
         return False
 
-    mlir_cpu_runner_out = mlir_cpu_runner_cmd.stdout.read().decode("ascii")
-    mlir_cpu_runner_cmd.wait()
+    mlir_runner_out = mlir_runner_cmd.stdout.read().decode("ascii")
+    mlir_runner_cmd.wait()
 
-    return "true" in mlir_cpu_runner_out
+    return "true" in mlir_runner_out
 
 
 if have_host_jit_feature_support("jit"):

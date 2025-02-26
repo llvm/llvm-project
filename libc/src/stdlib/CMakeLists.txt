@@ -185,6 +185,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  a64l
+  SRCS
+    a64l.cpp
+  HDRS
+    a64l.h
+  DEPENDS
+    libc.src.__support.ctype_utils
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   abs
   SRCS
     abs.cpp
@@ -539,7 +550,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
-# TODO: Move all exit functions to linux specific 
+# TODO: Move all exit functions to linux specific
 
 if(TARGET libc.src.__support.threads.mutex)
 add_header_library(
@@ -563,7 +574,7 @@ add_entrypoint_object(
   HDRS
     atexit.h
   CXX_STANDARD
-    20 # For constinit 
+    20 # For constinit
   DEPENDS
     .exit_handler
 )
@@ -575,7 +586,7 @@ add_entrypoint_object(
   HDRS
     at_quick_exit.h
   CXX_STANDARD
-    20 # For constinit 
+    20 # For constinit
   DEPENDS
     .exit_handler
     .atexit

@@ -9,7 +9,7 @@
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
-#include "SystemZTargetStreamer.h"
+#include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -75,7 +75,8 @@ enum MemoryKind {
   BDXMem,
   BDLMem,
   BDRMem,
-  BDVMem
+  BDVMem,
+  LXAMem
 };
 
 class SystemZOperand : public MCParsedAsmOperand {
@@ -339,6 +340,13 @@ public:
     addExpr(Inst, Mem.Disp);
     Inst.addOperand(MCOperand::createReg(Mem.Index));
   }
+  void addLXAAddrOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 3 && "Invalid number of operands");
+    assert(isMem(LXAMem) && "Invalid operand type");
+    Inst.addOperand(MCOperand::createReg(Mem.Base));
+    addExpr(Inst, Mem.Disp);
+    Inst.addOperand(MCOperand::createReg(Mem.Index));
+  }
   void addImmTLSOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands");
     assert(Kind == KindImmTLS && "Invalid operand type");
@@ -376,6 +384,7 @@ public:
   bool isBDLAddr64Disp12Len8() const { return isMemDisp12Len8(GR64Reg); }
   bool isBDRAddr64Disp12() const { return isMemDisp12(BDRMem, GR64Reg); }
   bool isBDVAddr64Disp12() const { return isMemDisp12(BDVMem, GR64Reg); }
+  bool isLXAAddr64Disp20() const { return isMemDisp20(LXAMem, GR64Reg); }
   bool isU1Imm() const { return isImm(0, 1); }
   bool isU2Imm() const { return isImm(0, 3); }
   bool isU3Imm() const { return isImm(0, 7); }
@@ -581,6 +590,9 @@ public:
   }
   ParseStatus parseBDVAddr64(OperandVector &Operands) {
     return parseAddress(Operands, BDVMem, GR64Reg);
+  }
+  ParseStatus parseLXAAddr64(OperandVector &Operands) {
+    return parseAddress(Operands, LXAMem, GR64Reg);
   }
   ParseStatus parsePCRel12(OperandVector &Operands) {
     return parsePCRel(Operands, -(1LL << 12), (1LL << 12) - 1, false);
@@ -1144,15 +1156,20 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
       return Error(StartLoc, "invalid use of indexed addressing");
     break;
   case BDXMem:
+  case LXAMem:
     // If we have Reg1, it must be an address register.
     if (HaveReg1) {
+      const unsigned *IndexRegs = Regs;
+      if (MemKind == LXAMem)
+        IndexRegs = SystemZMC::GR32Regs;
+
       if (parseAddressRegister(Reg1))
         return ParseStatus::Failure;
       // If there are two registers, the first one is the index and the
       // second is the base.  If there is only a single register, it is
       // used as base with GAS and as index with HLASM.
       if (HaveReg2 || isParsingHLASM())
-        Index = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
+        Index = Reg1.Num == 0 ? 0 : IndexRegs[Reg1.Num];
       else
         Base = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
     }
@@ -1278,6 +1295,8 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ResTy = parseBDAddr64(Operands);
     else if (Kind == MCK_BDVAddr64Disp12)
       ResTy = parseBDVAddr64(Operands);
+    else if (Kind == MCK_LXAAddr64Disp20)
+      ResTy = parseLXAAddr64(Operands);
     else if (Kind == MCK_PCRel32)
       ResTy = parsePCRel32(Operands);
     else if (Kind == MCK_PCRel16)
@@ -1324,6 +1343,8 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
       ZOperand.addBDXAddrOperands(Inst, 3);
     else if (ZOperand.isMem(BDVMem))
       ZOperand.addBDVAddrOperands(Inst, 3);
+    else if (ZOperand.isMem(LXAMem))
+      ZOperand.addLXAAddrOperands(Inst, 3);
     else if (ZOperand.isImm())
       ZOperand.addImmOperands(Inst, 1);
     else

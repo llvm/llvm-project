@@ -94,7 +94,7 @@ void check_string_literal2( FILE* fp, const char* s, char *buf, ... ) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
   __builtin___vsnprintf_chk(buf,2,0,-1,s,ap); // no-warning
 
-  vscanf(s, ap); // expected-warning {{format string is not a string literal}}
+  vscanf(s, ap); // expected-warning {{passing 'printf' format string where 'scanf' format string is expected}}
 }
 
 void check_conditional_literal(const char* s, int i) {

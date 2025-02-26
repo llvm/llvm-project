@@ -1316,6 +1316,9 @@ enum DeclCode {
   /// A BlockDecl record.
   DECL_BLOCK,
 
+  /// A OutlinedFunctionDecl record.
+  DECL_OUTLINEDFUNCTION,
+
   /// A CapturedDecl record.
   DECL_CAPTURED,
 
@@ -1519,13 +1522,13 @@ enum DeclCode {
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_SPECIALIZATIONS,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_PARTIAL_SPECIALIZATIONS,
 
-  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
+  DECL_LAST = DECL_PARTIAL_SPECIALIZATIONS
 };
 
 /// Record codes for each kind of statement or expression.
@@ -1599,6 +1602,9 @@ enum StmtCode {
 
   /// A CapturedStmt record.
   STMT_CAPTURED,
+
+  /// A SYCLKernelCallStmt record.
+  STMT_SYCLKERNELCALL,
 
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,
@@ -1932,6 +1938,7 @@ enum StmtCode {
   STMT_OMP_PARALLEL_DIRECTIVE,
   STMT_OMP_SIMD_DIRECTIVE,
   STMT_OMP_TILE_DIRECTIVE,
+  STMP_OMP_STRIPE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
   STMT_OMP_REVERSE_DIRECTIVE,
   STMT_OMP_INTERCHANGE_DIRECTIVE,
@@ -2038,6 +2045,7 @@ enum StmtCode {
   STMT_OPENACC_SHUTDOWN_CONSTRUCT,
   STMT_OPENACC_SET_CONSTRUCT,
   STMT_OPENACC_UPDATE_CONSTRUCT,
+  STMT_OPENACC_ATOMIC_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,

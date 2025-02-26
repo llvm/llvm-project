@@ -12,11 +12,11 @@
 #ifndef FORTRAN_EVALUATE_TARGET_H_
 #define FORTRAN_EVALUATE_TARGET_H_
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/target-rounding.h"
 #include "flang/Evaluate/common.h"
+#include "flang/Support/Fortran.h"
 #include <cstdint>
 
 namespace Fortran::evaluate {
@@ -143,9 +143,10 @@ private:
   std::string compilerOptionsString_;
   std::string compilerVersionString_;
   IeeeFeatures ieeeFeatures_{IeeeFeature::Denormal, IeeeFeature::Divide,
-      IeeeFeature::Flags, IeeeFeature::Inf, IeeeFeature::Io, IeeeFeature::NaN,
-      IeeeFeature::Rounding, IeeeFeature::Sqrt, IeeeFeature::Standard,
-      IeeeFeature::Subnormal, IeeeFeature::UnderflowControl};
+      IeeeFeature::Flags, IeeeFeature::Halting, IeeeFeature::Inf,
+      IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
+      IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
+      IeeeFeature::UnderflowControl};
 };
 
 } // namespace Fortran::evaluate

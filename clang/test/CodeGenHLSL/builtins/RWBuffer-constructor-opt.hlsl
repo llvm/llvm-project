@@ -11,11 +11,11 @@ void main() {
 // CHECK: define void @main()
 // CHECK-NEXT: entry:
 
-// CHECK-SPIRV-NEXT: %Buf_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
-// CHECK-SPIRV-NEXT: store target("spirv.Image", float, 5, 2, 0, 0, 2, 0) %Buf_h.i, ptr @Buf, align 8
+// CHECK-SPIRV-NEXT: %[[HANDLE:.*]] = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+// CHECK-SPIRV-NEXT: store target("spirv.Image", float, 5, 2, 0, 0, 2, 0) %[[HANDLE:.*]], ptr @Buf, align 8
 
-// CHECK-DXIL-NEXT: %Buf_h.i = tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
-// CHECK-DXIL-NEXT: store target("dx.TypedBuffer", float, 1, 0, 0) %Buf_h.i, ptr @Buf, align 4
+// CHECK-DXIL-NEXT: %[[HANDLE:.*]] = tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+// CHECK-DXIL-NEXT: store target("dx.TypedBuffer", float, 1, 0, 0) %[[HANDLE]], ptr @Buf, align 4
 
 // CHECK-NEXT: ret void
 }

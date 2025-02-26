@@ -144,7 +144,7 @@ lives.
 
    When set to true convert loops when in C++20 or later mode using
    ``std::ranges::reverse_view``.
-   Default value is ``true``.
+   Default value is `true`.
 
 .. option:: MakeReverseRangeFunction
 

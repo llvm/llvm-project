@@ -357,12 +357,13 @@ public:
     return Reg;
   }
 
-  /// AllocateRegBlock - Attempt to allocate a block of RegsRequired consecutive
-  /// registers. If this is not possible, return zero. Otherwise, return the first
-  /// register of the block that were allocated, marking the entire block as allocated.
-  MCPhysReg AllocateRegBlock(ArrayRef<MCPhysReg> Regs, unsigned RegsRequired) {
+  /// Attempt to allocate a block of RegsRequired consecutive registers.
+  /// If this is not possible, return an empty range. Otherwise, return a
+  /// range of consecutive registers, marking the entire block as allocated.
+  ArrayRef<MCPhysReg> AllocateRegBlock(ArrayRef<MCPhysReg> Regs,
+                                       unsigned RegsRequired) {
     if (RegsRequired > Regs.size())
-      return 0;
+      return {};
 
     for (unsigned StartIdx = 0; StartIdx <= Regs.size() - RegsRequired;
          ++StartIdx) {
@@ -379,11 +380,11 @@ public:
         for (unsigned BlockIdx = 0; BlockIdx < RegsRequired; ++BlockIdx) {
           MarkAllocated(Regs[StartIdx + BlockIdx]);
         }
-        return Regs[StartIdx];
+        return Regs.slice(StartIdx, RegsRequired);
       }
     }
     // No block was available
-    return 0;
+    return {};
   }
 
   /// Version of AllocateReg with list of registers to be shadowed.

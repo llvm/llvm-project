@@ -14,13 +14,14 @@ namespace clang::tidy::utils {
 
 ExceptionSpecAnalyzer::State
 ExceptionSpecAnalyzer::analyze(const FunctionDecl *FuncDecl) {
-  // Check if the function has already been analyzed and reuse that result.
-  const auto CacheEntry = FunctionCache.find(FuncDecl);
-  if (CacheEntry == FunctionCache.end()) {
+  // Check if function exist in cache or add temporary value to cache to protect
+  // against endless recursion.
+  const auto [CacheEntry, NotFound] =
+      FunctionCache.try_emplace(FuncDecl, State::NotThrowing);
+  if (NotFound) {
     ExceptionSpecAnalyzer::State State = analyzeImpl(FuncDecl);
-
-    // Cache the result of the analysis.
-    FunctionCache.try_emplace(FuncDecl, State);
+    // Update result with calculated value
+    FunctionCache[FuncDecl] = State;
     return State;
   }
 

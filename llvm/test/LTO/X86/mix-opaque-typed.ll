@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare i64 @foo(i64* %p);
 
 define i64 @call_foo(i64* %p) {
-  ; CHECK-LABEL: define i64 @call_foo(ptr nocapture readonly %p) local_unnamed_addr #0 {
+  ; CHECK-LABEL: define i64 @call_foo(ptr readonly captures(none) %p) local_unnamed_addr #0 {
   ; CHECK-NEXT: %t.i = load i64, ptr %p, align 8
   %t = call i64 @foo(i64* %p)
   ret i64 %t

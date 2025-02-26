@@ -873,20 +873,20 @@ define amdgpu_kernel void @mul_v8half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
 ; NOSDWA-NEXT:    v_mul_f16_e32 v1, v5, v1
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; NOSDWA-NEXT:    v_lshrrev_b32_e32 v14, 16, v4
 ; NOSDWA-NEXT:    v_mul_f16_e32 v0, v4, v0
-; NOSDWA-NEXT:    v_mul_f16_e32 v4, v11, v10
+; NOSDWA-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
+; NOSDWA-NEXT:    v_mul_f16_e32 v10, v11, v10
 ; NOSDWA-NEXT:    v_mul_f16_e32 v7, v12, v7
 ; NOSDWA-NEXT:    v_mul_f16_e32 v6, v13, v6
-; NOSDWA-NEXT:    v_mul_f16_e32 v5, v14, v5
-; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; NOSDWA-NEXT:    v_mul_f16_e32 v4, v4, v5
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v5, 16, v10
 ; NOSDWA-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; NOSDWA-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; NOSDWA-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; NOSDWA-NEXT:    v_or_b32_e32 v3, v3, v4
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; NOSDWA-NEXT:    v_or_b32_e32 v3, v3, v5
 ; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v7
 ; NOSDWA-NEXT:    v_or_b32_e32 v1, v1, v6
-; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v5
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v4
 ; NOSDWA-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -2015,13 +2015,14 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; NOSDWA-LABEL: sdwa_crash_inlineasm_def:
 ; NOSDWA:       ; %bb.0: ; %bb
 ; NOSDWA-NEXT:    s_mov_b32 s0, 0xffff
+; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
+; NOSDWA-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; NOSDWA-NEXT:  .LBB21_1: ; %bb1
+; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    ;;#ASMSTART
 ; NOSDWA-NEXT:    v_and_b32_e32 v0, s0, v0
 ; NOSDWA-NEXT:    ;;#ASMEND
 ; NOSDWA-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
-; NOSDWA-NEXT:  .LBB21_1: ; %bb1
-; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    s_mov_b64 vcc, vcc
@@ -2032,13 +2033,14 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX89-LABEL: sdwa_crash_inlineasm_def:
 ; GFX89:       ; %bb.0: ; %bb
 ; GFX89-NEXT:    s_mov_b32 s0, 0xffff
+; GFX89-NEXT:    s_and_b64 vcc, exec, -1
+; GFX89-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX89-NEXT:  .LBB21_1: ; %bb1
+; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    ;;#ASMSTART
 ; GFX89-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX89-NEXT:    ;;#ASMEND
 ; GFX89-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; GFX89-NEXT:    s_and_b64 vcc, exec, -1
-; GFX89-NEXT:  .LBB21_1: ; %bb1
-; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    s_mov_b64 vcc, vcc
@@ -2049,13 +2051,14 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX9-LABEL: sdwa_crash_inlineasm_def:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b32 s0, 0xffff
+; GFX9-NEXT:    s_and_b64 vcc, exec, -1
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX9-NEXT:  .LBB21_1: ; %bb1
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; GFX9-NEXT:    s_and_b64 vcc, exec, -1
-; GFX9-NEXT:  .LBB21_1: ; %bb1
-; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 vcc, vcc
@@ -2066,13 +2069,14 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX10-LABEL: sdwa_crash_inlineasm_def:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_mov_b32 s0, 0xffff
+; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX10-NEXT:  .LBB21_1: ; %bb1
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    v_or_b32_e32 v0, 0x10000, v0
-; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; GFX10-NEXT:  .LBB21_1: ; %bb1
-; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB21_1

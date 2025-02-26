@@ -645,24 +645,74 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-//===----------------------------------------------------------------------===//
-// UnrankedMemRefType
-//===----------------------------------------------------------------------===//
+bool MemRefType::areTrailingDimsContiguous(int64_t n) {
+  if (!isLastDimUnitStride())
+    return false;
 
-unsigned UnrankedMemRefType::getMemorySpaceAsInt() const {
-  return detail::getMemorySpaceAsInt(getMemorySpace());
+  auto memrefShape = getShape().take_back(n);
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
+
+  if (getLayout().isIdentity())
+    return true;
+
+  int64_t offset;
+  SmallVector<int64_t> stridesFull;
+  if (!succeeded(getStridesAndOffset(stridesFull, offset)))
+    return false;
+  auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
+
+  if (strides.empty())
+    return true;
+
+  // Check whether strides match "flattened" dims.
+  SmallVector<int64_t> flattenedDims;
+  auto dimProduct = 1;
+  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
+    dimProduct *= dim;
+    flattenedDims.push_back(dimProduct);
+  }
+
+  strides = strides.drop_back(1);
+  return llvm::equal(strides, llvm::reverse(flattenedDims));
 }
 
-LogicalResult
-UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
-                           Type elementType, Attribute memorySpace) {
-  if (!BaseMemRefType::isValidElementType(elementType))
-    return emitError() << "invalid memref element type";
+MemRefType MemRefType::canonicalizeStridedLayout() {
+  AffineMap m = getLayout().getAffineMap();
 
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
+  // Already in canonical form.
+  if (m.isIdentity())
+    return *this;
 
-  return success();
+  // Can't reduce to canonical identity form, return in canonical form.
+  if (m.getNumResults() > 1)
+    return *this;
+
+  // Corner-case for 0-D affine maps.
+  if (m.getNumDims() == 0 && m.getNumSymbols() == 0) {
+    if (auto cst = llvm::dyn_cast<AffineConstantExpr>(m.getResult(0)))
+      if (cst.getValue() == 0)
+        return MemRefType::Builder(*this).setLayout({});
+    return *this;
+  }
+
+  // 0-D corner case for empty shape that still have an affine map. Example:
+  // `memref<f32, affine_map<()[s0] -> (s0)>>`. This is a 1 element memref whose
+  // offset needs to remain, just return t.
+  if (getShape().empty())
+    return *this;
+
+  // If the canonical strided layout for the sizes of `t` is equal to the
+  // simplified layout of `t` we can just return an empty layout. Otherwise,
+  // just simplify the existing layout.
+  AffineExpr expr = makeCanonicalStridedLayoutExpr(getShape(), getContext());
+  auto simplifiedLayoutExpr =
+      simplifyAffineExpr(m.getResult(0), m.getNumDims(), m.getNumSymbols());
+  if (expr != simplifiedLayoutExpr)
+    return MemRefType::Builder(*this).setLayout(
+        AffineMapAttr::get(AffineMap::get(m.getNumDims(), m.getNumSymbols(),
+                                          simplifiedLayoutExpr)));
+  return MemRefType::Builder(*this).setLayout({});
 }
 
 // Fallback cases for terminal dim/sym/cst that are not part of a binary op (
@@ -783,11 +833,10 @@ static LogicalResult getStridesAndOffset(MemRefType t,
   return success();
 }
 
-LogicalResult mlir::getStridesAndOffset(MemRefType t,
-                                        SmallVectorImpl<int64_t> &strides,
-                                        int64_t &offset) {
+LogicalResult MemRefType::getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
+                                              int64_t &offset) {
   // Happy path: the type uses the strided layout directly.
-  if (auto strided = llvm::dyn_cast<StridedLayoutAttr>(t.getLayout())) {
+  if (auto strided = llvm::dyn_cast<StridedLayoutAttr>(getLayout())) {
     llvm::append_range(strides, strided.getStrides());
     offset = strided.getOffset();
     return success();
@@ -797,14 +846,14 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   // convertible to affine maps.
   AffineExpr offsetExpr;
   SmallVector<AffineExpr, 4> strideExprs;
-  if (failed(::getStridesAndOffset(t, strideExprs, offsetExpr)))
+  if (failed(::getStridesAndOffset(*this, strideExprs, offsetExpr)))
     return failure();
-  if (auto cst = dyn_cast<AffineConstantExpr>(offsetExpr))
+  if (auto cst = llvm::dyn_cast<AffineConstantExpr>(offsetExpr))
     offset = cst.getValue();
   else
     offset = ShapedType::kDynamic;
   for (auto e : strideExprs) {
-    if (auto c = dyn_cast<AffineConstantExpr>(e))
+    if (auto c = llvm::dyn_cast<AffineConstantExpr>(e))
       strides.push_back(c.getValue());
     else
       strides.push_back(ShapedType::kDynamic);
@@ -812,14 +861,47 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   return success();
 }
 
-std::pair<SmallVector<int64_t>, int64_t>
-mlir::getStridesAndOffset(MemRefType t) {
+std::pair<SmallVector<int64_t>, int64_t> MemRefType::getStridesAndOffset() {
   SmallVector<int64_t> strides;
   int64_t offset;
-  LogicalResult status = getStridesAndOffset(t, strides, offset);
+  LogicalResult status = getStridesAndOffset(strides, offset);
   (void)status;
   assert(succeeded(status) && "Invalid use of check-free getStridesAndOffset");
   return {strides, offset};
+}
+
+bool MemRefType::isStrided() {
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  auto res = getStridesAndOffset(strides, offset);
+  return succeeded(res);
+}
+
+bool MemRefType::isLastDimUnitStride() {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  auto successStrides = getStridesAndOffset(strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
+}
+
+//===----------------------------------------------------------------------===//
+// UnrankedMemRefType
+//===----------------------------------------------------------------------===//
+
+unsigned UnrankedMemRefType::getMemorySpaceAsInt() const {
+  return detail::getMemorySpaceAsInt(getMemorySpace());
+}
+
+LogicalResult
+UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
+                           Type elementType, Attribute memorySpace) {
+  if (!BaseMemRefType::isValidElementType(elementType))
+    return emitError() << "invalid memref element type";
+
+  if (!isSupportedMemorySpace(memorySpace))
+    return emitError() << "unsupported memory space Attribute";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -848,49 +930,6 @@ size_t TupleType::size() const { return getImpl()->size(); }
 //===----------------------------------------------------------------------===//
 // Type Utilities
 //===----------------------------------------------------------------------===//
-
-/// Return a version of `t` with identity layout if it can be determined
-/// statically that the layout is the canonical contiguous strided layout.
-/// Otherwise pass `t`'s layout into `simplifyAffineMap` and return a copy of
-/// `t` with simplified layout.
-/// If `t` has multiple layout maps or a multi-result layout, just return `t`.
-MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
-  AffineMap m = t.getLayout().getAffineMap();
-
-  // Already in canonical form.
-  if (m.isIdentity())
-    return t;
-
-  // Can't reduce to canonical identity form, return in canonical form.
-  if (m.getNumResults() > 1)
-    return t;
-
-  // Corner-case for 0-D affine maps.
-  if (m.getNumDims() == 0 && m.getNumSymbols() == 0) {
-    if (auto cst = dyn_cast<AffineConstantExpr>(m.getResult(0)))
-      if (cst.getValue() == 0)
-        return MemRefType::Builder(t).setLayout({});
-    return t;
-  }
-
-  // 0-D corner case for empty shape that still have an affine map. Example:
-  // `memref<f32, affine_map<()[s0] -> (s0)>>`. This is a 1 element memref whose
-  // offset needs to remain, just return t.
-  if (t.getShape().empty())
-    return t;
-
-  // If the canonical strided layout for the sizes of `t` is equal to the
-  // simplified layout of `t` we can just return an empty layout. Otherwise,
-  // just simplify the existing layout.
-  AffineExpr expr =
-      makeCanonicalStridedLayoutExpr(t.getShape(), t.getContext());
-  auto simplifiedLayoutExpr =
-      simplifyAffineExpr(m.getResult(0), m.getNumDims(), m.getNumSymbols());
-  if (expr != simplifiedLayoutExpr)
-    return MemRefType::Builder(t).setLayout(AffineMapAttr::get(AffineMap::get(
-        m.getNumDims(), m.getNumSymbols(), simplifiedLayoutExpr)));
-  return MemRefType::Builder(t).setLayout({});
-}
 
 AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                                 ArrayRef<AffineExpr> exprs,
@@ -931,50 +970,4 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
   for (auto dim : llvm::seq<unsigned>(0, sizes.size()))
     exprs.push_back(getAffineDimExpr(dim, context));
   return makeCanonicalStridedLayoutExpr(sizes, exprs, context);
-}
-
-bool mlir::isStrided(MemRefType t) {
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto res = getStridesAndOffset(t, strides, offset);
-  return succeeded(res);
-}
-
-bool mlir::isLastMemrefDimUnitStride(MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  auto successStrides = getStridesAndOffset(type, strides, offset);
-  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
-}
-
-bool mlir::trailingNDimsContiguous(MemRefType type, int64_t n) {
-  if (!isLastMemrefDimUnitStride(type))
-    return false;
-
-  auto memrefShape = type.getShape().take_back(n);
-  if (ShapedType::isDynamicShape(memrefShape))
-    return false;
-
-  if (type.getLayout().isIdentity())
-    return true;
-
-  int64_t offset;
-  SmallVector<int64_t> stridesFull;
-  if (!succeeded(getStridesAndOffset(type, stridesFull, offset)))
-    return false;
-  auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
-
-  if (strides.empty())
-    return true;
-
-  // Check whether strides match "flattened" dims.
-  SmallVector<int64_t> flattenedDims;
-  auto dimProduct = 1;
-  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
-    dimProduct *= dim;
-    flattenedDims.push_back(dimProduct);
-  }
-
-  strides = strides.drop_back(1);
-  return llvm::equal(strides, llvm::reverse(flattenedDims));
 }

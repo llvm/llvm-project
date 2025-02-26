@@ -150,14 +150,15 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  if (Args.hasArg(options::OPT_pthread))
+    CmdArgs.push_back("--shared-memory");
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
-    if (Args.hasArg(options::OPT_pthread)) {
+    if (Args.hasArg(options::OPT_pthread))
       CmdArgs.push_back("-lpthread");
-      CmdArgs.push_back("--shared-memory");
-    }
 
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
@@ -344,9 +345,15 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     }
   }
 
+  bool HasBannedIncompatibleOptionsForWasmEHSjLj = false;
+  bool HasEnabledFeaturesForWasmEHSjLj = false;
+
   // Bans incompatible options for Wasm EH / SjLj. We don't allow using
   // different modes for EH and SjLj.
   auto BanIncompatibleOptionsForWasmEHSjLj = [&](StringRef CurOption) {
+    if (HasBannedIncompatibleOptionsForWasmEHSjLj)
+      return;
+    HasBannedIncompatibleOptionsForWasmEHSjLj = true;
     if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,
                            options::OPT_mexception_handing, false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
@@ -374,6 +381,9 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
 
   // Enable necessary features for Wasm EH / SjLj in the backend.
   auto EnableFeaturesForWasmEHSjLj = [&]() {
+    if (HasEnabledFeaturesForWasmEHSjLj)
+      return;
+    HasEnabledFeaturesForWasmEHSjLj = true;
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+exception-handling");
     // The standardized Wasm EH spec requires multivalue and reference-types.

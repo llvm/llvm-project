@@ -112,6 +112,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPDeclarativeConstruct &c) {
             const CharBlock &source{o.source};
             return normalize_construct_name(source.ToString());
           },
+          [&](const OmpMetadirectiveDirective &o) -> std::string {
+            const CharBlock &source{o.source};
+            return normalize_construct_name(source.ToString());
+          },
           [&](const auto &o) -> std::string {
             const CharBlock &source{std::get<Verbatim>(o.t).source};
             return normalize_construct_name(source.ToString());
@@ -136,6 +140,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
             return normalize_construct_name(source.ToString());
           },
           [&](const OpenMPDeclarativeAllocate &c) -> std::string {
+            const CharBlock &source{std::get<0>(c.t).source};
+            return normalize_construct_name(source.ToString());
+          },
+          [&](const OpenMPAssumeConstruct &c) -> std::string {
             const CharBlock &source{std::get<0>(c.t).source};
             return normalize_construct_name(source.ToString());
           },

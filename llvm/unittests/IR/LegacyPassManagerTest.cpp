@@ -601,7 +601,7 @@ namespace llvm {
 
             CallBase *NewCB = cast<CallBase>(OldCB->clone());
 
-            NewCB->insertBefore(OldCB);
+            NewCB->insertBefore(OldCB->getIterator());
             NewCB->takeName(OldCB);
 
             CallerCGN->replaceCallEdge(*OldCB, *NewCB, CG[F]);

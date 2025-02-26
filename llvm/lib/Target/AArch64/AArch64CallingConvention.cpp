@@ -176,27 +176,27 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // [N x i32] arguments get packed into x-registers on Darwin's arm64_32
   // because that's how the armv7k Clang front-end emits small structs.
   unsigned EltsPerReg = (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32) ? 2 : 1;
-  unsigned RegResult = State.AllocateRegBlock(
+  ArrayRef<MCPhysReg> RegResult = State.AllocateRegBlock(
       RegList, alignTo(PendingMembers.size(), EltsPerReg) / EltsPerReg);
-  if (RegResult && EltsPerReg == 1) {
-    for (auto &It : PendingMembers) {
-      It.convertToReg(RegResult);
+  if (!RegResult.empty() && EltsPerReg == 1) {
+    for (const auto &[It, Reg] : zip(PendingMembers, RegResult)) {
+      It.convertToReg(Reg);
       State.addLoc(It);
-      ++RegResult;
     }
     PendingMembers.clear();
     return true;
-  } else if (RegResult) {
+  } else if (!RegResult.empty()) {
     assert(EltsPerReg == 2 && "unexpected ABI");
     bool UseHigh = false;
     CCValAssign::LocInfo Info;
+    unsigned RegIdx = 0;
     for (auto &It : PendingMembers) {
       Info = UseHigh ? CCValAssign::AExtUpper : CCValAssign::ZExt;
-      State.addLoc(CCValAssign::getReg(It.getValNo(), MVT::i32, RegResult,
-                                       MVT::i64, Info));
+      State.addLoc(CCValAssign::getReg(It.getValNo(), MVT::i32,
+                                       RegResult[RegIdx], MVT::i64, Info));
       UseHigh = !UseHigh;
       if (!UseHigh)
-        ++RegResult;
+        ++RegIdx;
     }
     PendingMembers.clear();
     return true;
