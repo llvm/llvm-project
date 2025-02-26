@@ -53,7 +53,7 @@ define <16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <16 x i1> @llvm.experimental.get.noalias.lane.mask.v16i1(ptr %a, ptr %b, i64 1, i1 1)
+  %0 = call <16 x i1> @llvm.experimental.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)
   ret <16 x i1> %0
 }
 
@@ -95,7 +95,7 @@ define <8 x i1> @whilewr_16(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <8 x i1> @llvm.experimental.get.noalias.lane.mask.v8i1(ptr %a, ptr %b, i64 2, i1 1)
+  %0 = call <8 x i1> @llvm.experimental.loop.dependence.war.mask.v8i1(ptr %a, ptr %b, i64 2)
   ret <8 x i1> %0
 }
 
@@ -129,7 +129,7 @@ define <4 x i1> @whilewr_32(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <4 x i1> @llvm.experimental.get.noalias.lane.mask.v4i1(ptr %a, ptr %b, i64 4, i1 1)
+  %0 = call <4 x i1> @llvm.experimental.loop.dependence.war.mask.v4i1(ptr %a, ptr %b, i64 4)
   ret <4 x i1> %0
 }
 
@@ -159,7 +159,7 @@ define <2 x i1> @whilewr_64(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <2 x i1> @llvm.experimental.get.noalias.lane.mask.v2i1(ptr %a, ptr %b, i64 8, i1 1)
+  %0 = call <2 x i1> @llvm.experimental.loop.dependence.war.mask.v2i1(ptr %a, ptr %b, i64 8)
   ret <2 x i1> %0
 }
 
@@ -215,7 +215,7 @@ define <16 x i1> @whilerw_8(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <16 x i1> @llvm.experimental.get.noalias.lane.mask.v16i1(ptr %a, ptr %b, i64 1, i1 0)
+  %0 = call <16 x i1> @llvm.experimental.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 1)
   ret <16 x i1> %0
 }
 
@@ -258,7 +258,7 @@ define <8 x i1> @whilerw_16(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <8 x i1> @llvm.experimental.get.noalias.lane.mask.v8i1(ptr %a, ptr %b, i64 2, i1 0)
+  %0 = call <8 x i1> @llvm.experimental.loop.dependence.raw.mask.v8i1(ptr %a, ptr %b, i64 2)
   ret <8 x i1> %0
 }
 
@@ -293,7 +293,7 @@ define <4 x i1> @whilerw_32(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <4 x i1> @llvm.experimental.get.noalias.lane.mask.v4i1(ptr %a, ptr %b, i64 4, i1 0)
+  %0 = call <4 x i1> @llvm.experimental.loop.dependence.raw.mask.v4i1(ptr %a, ptr %b, i64 4)
   ret <4 x i1> %0
 }
 
@@ -324,6 +324,6 @@ define <2 x i1> @whilerw_64(ptr %a, ptr %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <2 x i1> @llvm.experimental.get.noalias.lane.mask.v2i1(ptr %a, ptr %b, i64 8, i1 0)
+  %0 = call <2 x i1> @llvm.experimental.loop.dependence.raw.mask.v2i1(ptr %a, ptr %b, i64 8)
   ret <2 x i1> %0
 }

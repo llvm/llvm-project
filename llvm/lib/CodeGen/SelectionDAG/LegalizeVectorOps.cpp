@@ -138,7 +138,7 @@ class VectorLegalizer {
   SDValue ExpandVP_FNEG(SDNode *Node);
   SDValue ExpandVP_FABS(SDNode *Node);
   SDValue ExpandVP_FCOPYSIGN(SDNode *Node);
-  SDValue ExpandEXPERIMENTAL_NOALIAS_LANE_MASK(SDNode *N);
+  SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -476,7 +476,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
-  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK:
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1293,8 +1294,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::UCMP:
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
-  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK:
-    Results.push_back(ExpandEXPERIMENTAL_NOALIAS_LANE_MASK(Node));
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
+    Results.push_back(ExpandLOOP_DEPENDENCE_MASK(Node));
     return;
 
   case ISD::FADD:
@@ -1801,13 +1803,14 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
 
-SDValue VectorLegalizer::ExpandEXPERIMENTAL_NOALIAS_LANE_MASK(SDNode *N) {
+SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDLoc DL(N);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSize = N->getOperand(2);
 
-  bool IsWriteAfterRead = N->getConstantOperandVal(3) != 0;
+  bool IsWriteAfterRead =
+      N->getOpcode() == ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK;
   auto VT = N->getValueType(0);
   auto PtrVT = SourceValue->getValueType(0);
 

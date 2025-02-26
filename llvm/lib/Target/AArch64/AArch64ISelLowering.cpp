@@ -1920,7 +1920,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
     for (auto VT : {MVT::v2i32, MVT::v4i16, MVT::v8i8, MVT::v16i8, MVT::nxv2i1,
                     MVT::nxv4i1, MVT::nxv8i1, MVT::nxv16i1}) {
-      setOperationAction(ISD::EXPERIMENTAL_NOALIAS_LANE_MASK, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK, VT,
+                         Custom);
+      setOperationAction(ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK, VT,
+                         Custom);
     }
   }
 
@@ -5238,11 +5241,13 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
 
 static MVT getSVEContainerType(EVT ContentTy);
 
-SDValue AArch64TargetLowering::LowerNOALIAS_LANE_MASK(SDValue Op,
-                                                      SelectionDAG &DAG) const {
+SDValue
+AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
+                                                 SelectionDAG &DAG) const {
   SDLoc DL(Op);
   uint64_t EltSize = Op.getConstantOperandVal(2);
-  bool IsWriteAfterRead = Op.getConstantOperandVal(3) == 1;
+  bool IsWriteAfterRead =
+      Op.getOpcode() == ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK;
   unsigned Opcode =
       IsWriteAfterRead ? AArch64ISD::WHILEWR : AArch64ISD::WHILERW;
   EVT VT = Op.getValueType();
@@ -7463,8 +7468,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   default:
     llvm_unreachable("unimplemented operand");
     return SDValue();
-  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK:
-    return LowerNOALIAS_LANE_MASK(Op, DAG);
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+    return LowerLOOP_DEPENDENCE_MASK(Op, DAG);
   case ISD::BITCAST:
     return LowerBITCAST(Op, DAG);
   case ISD::GlobalAddress:
@@ -28295,7 +28301,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::GET_ACTIVE_LANE_MASK:
     ReplaceGetActiveLaneMaskResults(N, Results, DAG);
     return;
-  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK: {
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK: {
     EVT VT = N->getValueType(0);
     if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
       return;
@@ -28306,8 +28313,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
 
     SDLoc DL(N);
-    auto V =
-        DAG.getNode(ISD::EXPERIMENTAL_NOALIAS_LANE_MASK, DL, NewVT, N->ops());
+    auto V = DAG.getNode(N->getOpcode(), DL, NewVT, N->ops());
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
     return;
   }
@@ -28368,7 +28374,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::experimental_vector_match:
-    case Intrinsic::experimental_get_noalias_lane_mask: {
+    case Intrinsic::experimental_loop_dependence_raw_mask:
+    case Intrinsic::experimental_loop_dependence_war_mask: {
       if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
         return;
 
