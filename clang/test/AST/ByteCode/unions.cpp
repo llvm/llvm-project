@@ -539,4 +539,17 @@ namespace InactiveTrivialDestroy {
                         // both-note {{in call to}}
 }
 
+namespace ActiveDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+  constexpr bool foo2() {
+    U u{};
+    u.a.~A();
+    return true;
+  }
+  static_assert(foo2());
+}
+
 #endif
