@@ -96,9 +96,9 @@ class DriverData:
     supported_joined_option_sequence: list[UnsupportedDriverOption] = dataclasses.field(
         default_factory=list
     )
-    supported_non_joined_option_sequence: list[UnsupportedDriverOption] = (
-        dataclasses.field(default_factory=list)
-    )
+    supported_non_joined_option_sequence: list[
+        UnsupportedDriverOption
+    ] = dataclasses.field(default_factory=list)
     test_option_sequence: list[str] = dataclasses.field(default_factory=list)
 
 
