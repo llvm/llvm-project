@@ -6,6 +6,7 @@ import {
   isExecutable,
 } from "./debug-adapter-factory";
 import { DisposableContext } from "./disposable-context";
+import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -14,6 +15,12 @@ import { DisposableContext } from "./disposable-context";
 export class LLDBDapExtension extends DisposableContext {
   constructor() {
     super();
+    this.pushSubscription(
+      vscode.debug.registerDebugConfigurationProvider(
+        "lldb-dap",
+        new LLDBDapConfigurationProvider(),
+      ),
+    );
     this.pushSubscription(
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "lldb-dap",

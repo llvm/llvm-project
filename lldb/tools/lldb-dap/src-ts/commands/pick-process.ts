@@ -9,6 +9,10 @@ interface ProcessQuickPick extends vscode.QuickPickItem {
 /**
  * Prompts the user to select a running process.
  *
+ * The return value must be a string so that it is compatible with VS Code's
+ * string substitution infrastructure. The value will eventually be converted
+ * to a number by the debug configuration provider.
+ *
  * @returns The pid of the process as a string or undefined if cancelled.
  */
 export async function pickProcess(): Promise<string | undefined> {
