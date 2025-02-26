@@ -1071,31 +1071,38 @@ LogicalResult
 ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
   if (!globalVar->hasInitializer() || !globalVar->hasAppendingLinkage())
     return failure();
-  auto *initializer =
-      dyn_cast<llvm::ConstantArray>(globalVar->getInitializer());
-  if (!initializer)
+  llvm::Constant *initializer = globalVar->getInitializer();
+
+  bool knownInit = isa<llvm::ConstantArray>(initializer) ||
+                   isa<llvm::ConstantAggregateZero>(initializer);
+  if (!knownInit)
     return failure();
 
   SmallVector<Attribute> funcs;
   SmallVector<int32_t> priorities;
-  for (llvm::Value *operand : initializer->operands()) {
-    auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
-    if (!aggregate || aggregate->getNumOperands() != 3)
-      return failure();
+  if (auto caInit = dyn_cast<llvm::ConstantArray>(initializer)) {
+    for (llvm::Value *operand : initializer->operands()) {
+      auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
+      if (!aggregate || aggregate->getNumOperands() != 3)
+        return failure();
 
-    auto *priority = dyn_cast<llvm::ConstantInt>(aggregate->getOperand(0));
-    auto *func = dyn_cast<llvm::Function>(aggregate->getOperand(1));
-    auto *data = dyn_cast<llvm::Constant>(aggregate->getOperand(2));
-    if (!priority || !func || !data)
-      return failure();
+      auto *priority = dyn_cast<llvm::ConstantInt>(aggregate->getOperand(0));
+      auto *func = dyn_cast<llvm::Function>(aggregate->getOperand(1));
+      auto *data = dyn_cast<llvm::Constant>(aggregate->getOperand(2));
+      if (!priority || !func || !data)
+        return failure();
 
-    // GlobalCtorsOps and GlobalDtorsOps do not support non-null data fields.
-    if (!data->isNullValue())
-      return failure();
+      // GlobalCtorsOps and GlobalDtorsOps do not support non-null data fields.
+      if (!data->isNullValue())
+        return failure();
 
-    funcs.push_back(FlatSymbolRefAttr::get(context, func->getName()));
-    priorities.push_back(priority->getValue().getZExtValue());
+      funcs.push_back(FlatSymbolRefAttr::get(context, func->getName()));
+      priorities.push_back(priority->getValue().getZExtValue());
+    }
   }
+
+  // Note: no action needed for ConstantAggregateZero, which implies empty
+  // ctor/dtor lists.
 
   // Insert the global after the last one or at the start of the module.
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
