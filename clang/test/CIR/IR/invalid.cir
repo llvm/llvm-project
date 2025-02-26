@@ -1500,3 +1500,11 @@ cir.func @cast0(%arg0: !s32i, %arg1: !s32i) {
 // expected-error @below {{!cir.func cannot have an explicit 'void' return type}}
 // expected-error @below {{failed to parse CIR_PointerType parameter}}
 cir.global external dsolocal @vfp = #cir.ptr<null> : !cir.ptr<!cir.func<(!s32i) -> !cir.void>>
+
+// -----
+
+// Verify that variadic functions do not allow an ellipsis anywhere except at
+// the end of the parameter list.
+
+// expected-error @below {{variadic `...` must be the last parameter}}
+!fty = !cir.func<(..., !s32i)>
