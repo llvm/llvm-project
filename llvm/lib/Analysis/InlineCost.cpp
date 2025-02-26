@@ -263,6 +263,8 @@ protected:
   // Cache the DataLayout since we use it a lot.
   const DataLayout &DL;
 
+  DominatorTree DT;
+
   /// The OptimizationRemarkEmitter available for this compilation.
   OptimizationRemarkEmitter *ORE;
 
@@ -1726,7 +1728,14 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
     DomConditionCache DC;
     DC.registerBranch(Br);
     SQ.DC = &DC;
-    DominatorTree DT(*F);
+    if (DT.root_size() == 0) {
+      // Dominator tree was never constructed for any function yet.
+      DT.recalculate(*F);
+    } else if (DT.getRoot()->getParent() != F) {
+      // Dominator tree was constructed for a different function, recalculate
+      // it for the current function.
+      DT.recalculate(*F);
+    }
     SQ.DT = &DT;
     Value *simplifiedInstruction = llvm::simplifyInstructionWithOperands(
         CmpInstr, {CallArg, Cmp.getOperand(1)}, SQ);
