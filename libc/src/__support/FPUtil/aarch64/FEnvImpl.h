@@ -250,8 +250,10 @@ LIBC_INLINE int set_round(int mode) {
   }
 
   uint32_t controlWord = FEnv::getControlWord();
-  controlWord &= static_cast<uint32_t>(~(0x3 << FEnv::RoundingControlBitPosition));
-  controlWord |= static_cast<uint32_t>(bitValue << FEnv::RoundingControlBitPosition);
+  controlWord &=
+      static_cast<uint32_t>(~(0x3 << FEnv::RoundingControlBitPosition));
+  controlWord |=
+      static_cast<uint32_t>(bitValue << FEnv::RoundingControlBitPosition);
   FEnv::writeControlWord(controlWord);
 
   return 0;
