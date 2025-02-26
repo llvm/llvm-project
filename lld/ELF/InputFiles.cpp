@@ -1703,39 +1703,22 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-// Check if an archive file is a thin archive.
-static bool isThinArchive(Ctx &ctx, StringRef archiveFilePath) {
-  const size_t thinArchiveMagicLen = sizeof(ThinArchiveMagic) - 1;
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> memBufferOrError =
-      MemoryBuffer::getFileSlice(archiveFilePath, thinArchiveMagicLen, 0);
-  if (std::error_code ec = memBufferOrError.getError()) {
-    ErrAlways(ctx) << "cannot open " << archiveFilePath << ": " << ec.message();
-    return false;
-  }
-
-  MemoryBufferRef memBufRef = *memBufferOrError.get();
-  return memBufRef.getBuffer().starts_with(ThinArchiveMagic);
-}
-
-// Compute a thin archive member full file path.
-static std::string
-computeThinArchiveMemberFullPath(const StringRef modulePath,
-                                 const StringRef archiveName) {
-  assert(!archiveName.empty());
+static SmallString<64> dtltoGetMemberPathIfThinArchive(StringRef archivePath,
+                                                       StringRef memberPath) {
+  assert(!archivePath.empty());
   SmallString<64> archiveMemberPath;
-  if (path::is_relative(modulePath)) {
-    archiveMemberPath = path::parent_path(archiveName);
-    path::append(archiveMemberPath, modulePath);
+  if (path::is_relative(memberPath)) {
+    archiveMemberPath = path::parent_path(archivePath);
+    path::append(archiveMemberPath, memberPath);
   } else
-    archiveMemberPath = modulePath;
-
+    archiveMemberPath = memberPath;
   path::remove_dots(archiveMemberPath, /*remove_dot_dot=*/true);
-  return archiveMemberPath.c_str();
+  return archiveMemberPath;
 }
 
 BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive, bool lazy)
+                         uint64_t offsetInArchive, bool isThinArchive,
+                         bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
   this->archiveName = archiveName;
   this->lazy = lazy;
@@ -1744,12 +1727,13 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
-  // For DTLTO the name needs to be a valid path to a bitcode file.
-  bool dtltoThinArchiveHandling = !ctx.arg.dtltoDistributor.empty() &&
-                                  !archiveName.empty() &&
-                                  isThinArchive(ctx, archiveName);
-  if (dtltoThinArchiveHandling)
-    path = computeThinArchiveMemberFullPath(path, archiveName);
+  // For DTLTO the member name needs to be a valid path to a bitcode file on
+  // disk. For ThinArchives we compute that. Non-thin archives are not yet
+  // supported.
+  bool dtltoAdjustThinArchivePath = !archiveName.empty() && isThinArchive &&
+                                    !ctx.arg.dtltoDistributor.empty();
+  if (dtltoAdjustThinArchivePath)
+    path = dtltoGetMemberPathIfThinArchive(archiveName, path).str();
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
@@ -1758,29 +1742,13 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name = (archiveName.empty() || dtltoThinArchiveHandling)
+  StringRef name = (archiveName.empty() || dtltoAdjustThinArchivePath)
                        ? ss.save(path)
                        : ss.save(archiveName + "(" + path::filename(path) +
                                  " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
-
-  // A thin archive member file path potentially can be relative to a thin
-  // archive. This will result in an invalid file path name passed in
-  // 'mb->Identifier', (because from the linker's perspective, relative -
-  // means relative to the linker process' current directory).
-  // For non-archive bitcodes and referenced archive members, a correctly
-  // generated 'name' is used to identify the memory buffer associated with
-  // these bitcode files. However, for a non-referenced archive member,
-  // incorrect 'mb->Identifer' will be used as a path for generating an empty
-  // summary index file later, leading to a crash. We have to fix this problem
-  // by replacing the value of 'mb->Identifier' with 'name'.
-  // Since the MemoryBufferRef class does not allow an individual access to
-  // its data members, we will use the class copy constructor for updating the
-  // 'Indentifier' data member value.
-  if (dtltoThinArchiveHandling)
-    this->mb = mbref;
 
   Triple t(obj->getTargetTriple());
   ekind = getBitcodeELFKind(t);
