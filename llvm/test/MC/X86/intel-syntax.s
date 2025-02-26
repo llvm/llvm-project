@@ -830,6 +830,8 @@ fucomip st, st(2)
 
 jrcxz _nop_label
 jecxz _nop_label + 1
+// CHECK: jrcxz _nop_label
+// CHECK: jecxz _nop_label+1
 
 loopz _foo
 loopnz _foo
