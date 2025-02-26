@@ -109,6 +109,30 @@ define <vscale x  8 x half> @select_nxv8f16(i1 %cond, <vscale x  8 x half> %a, <
   ret <vscale x  8 x half> %res
 }
 
+define <vscale x  4 x half> @select_nxv4f16(i1 %cond, <vscale x  4 x half> %a, <vscale x  4 x half> %b) {
+; CHECK-LABEL: select_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = select i1 %cond, <vscale x  4 x half> %a, <vscale x  4 x half> %b
+  ret <vscale x  4 x half> %res
+}
+
+define <vscale x  2 x half> @select_nxv2f16(i1 %cond, <vscale x  2 x half> %a, <vscale x  2 x half> %b) {
+; CHECK-LABEL: select_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = select i1 %cond, <vscale x  2 x half> %a, <vscale x  2 x half> %b
+  ret <vscale x  2 x half> %res
+}
+
 define <vscale x  4 x float> @select_nxv4f32(i1 %cond, <vscale x  4 x float> %a, <vscale x  4 x float> %b) {
 ; CHECK-LABEL: select_nxv4f32:
 ; CHECK:       // %bb.0:
@@ -121,6 +145,18 @@ define <vscale x  4 x float> @select_nxv4f32(i1 %cond, <vscale x  4 x float> %a,
   ret <vscale x  4 x float> %res
 }
 
+define <vscale x  2 x float> @select_nxv2f32(i1 %cond, <vscale x  2 x float> %a, <vscale x  2 x float> %b) {
+; CHECK-LABEL: select_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = select i1 %cond, <vscale x  2 x float> %a, <vscale x  2 x float> %b
+  ret <vscale x  2 x float> %res
+}
+
 define <vscale x  2 x double> @select_nxv2f64(i1 %cond, <vscale x  2 x double> %a, <vscale x  2 x double> %b) {
 ; CHECK-LABEL: select_nxv2f64:
 ; CHECK:       // %bb.0:
@@ -131,6 +167,42 @@ define <vscale x  2 x double> @select_nxv2f64(i1 %cond, <vscale x  2 x double> %
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <vscale x  2 x double> %a, <vscale x  2 x double> %b
   ret <vscale x  2 x double> %res
+}
+
+define <vscale x  8 x bfloat> @select_nxv8bf16(i1 %cond, <vscale x  8 x bfloat> %a, <vscale x  8 x bfloat> %b) {
+; CHECK-LABEL: select_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = select i1 %cond, <vscale x  8 x bfloat> %a, <vscale x  8 x bfloat> %b
+  ret <vscale x  8 x bfloat> %res
+}
+
+define <vscale x  4 x bfloat> @select_nxv4bf16(i1 %cond, <vscale x  4 x bfloat> %a, <vscale x  4 x bfloat> %b) {
+; CHECK-LABEL: select_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = select i1 %cond, <vscale x  4 x bfloat> %a, <vscale x  4 x bfloat> %b
+  ret <vscale x  4 x bfloat> %res
+}
+
+define <vscale x  2 x bfloat> @select_nxv2bf16(i1 %cond, <vscale x  2 x bfloat> %a, <vscale x  2 x bfloat> %b) {
+; CHECK-LABEL: select_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = select i1 %cond, <vscale x  2 x bfloat> %a, <vscale x  2 x bfloat> %b
+  ret <vscale x  2 x bfloat> %res
 }
 
 define <vscale x  16 x i1> @select_nxv16i1(i1 %cond, <vscale x  16 x i1> %a, <vscale x  16 x i1> %b) {
@@ -324,6 +396,20 @@ define <vscale x 2 x double> @icmp_select_nxv2f64(<vscale x 2 x double> %a, <vsc
   ret <vscale x 2 x double> %sel
 }
 
+define <vscale x 2 x bfloat> @icmp_select_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, i64 %x0) {
+; CHECK-LABEL: icmp_select_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %mask = icmp eq i64 %x0, 0
+  %sel = select i1 %mask, <vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b
+  ret <vscale x 2 x bfloat> %sel
+}
+
 define <vscale x 4 x half> @icmp_select_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, i64 %x0) {
 ; CHECK-LABEL: icmp_select_nxv4f16:
 ; CHECK:       // %bb.0:
@@ -352,6 +438,20 @@ define <vscale x 4 x float> @icmp_select_nxv4f32(<vscale x 4 x float> %a, <vscal
   ret <vscale x 4 x float> %sel
 }
 
+define <vscale x 4 x bfloat> @icmp_select_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, i64 %x0) {
+; CHECK-LABEL: icmp_select_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %mask = icmp eq i64 %x0, 0
+  %sel = select i1 %mask, <vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b
+  ret <vscale x 4 x bfloat> %sel
+}
+
 define <vscale x 8 x half> @icmp_select_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, i64 %x0) {
 ; CHECK-LABEL: icmp_select_nxv8f16:
 ; CHECK:       // %bb.0:
@@ -364,6 +464,20 @@ define <vscale x 8 x half> @icmp_select_nxv8f16(<vscale x 8 x half> %a, <vscale 
   %mask = icmp eq i64 %x0, 0
   %sel = select i1 %mask, <vscale x 8 x half> %a, <vscale x 8 x half> %b
   ret <vscale x 8 x half> %sel
+}
+
+define <vscale x 8 x bfloat> @icmp_select_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, i64 %x0) {
+; CHECK-LABEL: icmp_select_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %mask = icmp eq i64 %x0, 0
+  %sel = select i1 %mask, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b
+  ret <vscale x 8 x bfloat> %sel
 }
 
 define <vscale x 1 x i64> @icmp_select_nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b, i64 %x0) {
