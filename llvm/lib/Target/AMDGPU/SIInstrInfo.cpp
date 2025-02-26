@@ -1580,6 +1580,8 @@ static unsigned getSGPRSpillSaveOpcode(unsigned Size) {
 
 static unsigned getVGPRSpillSaveOpcode(unsigned Size) {
   switch (Size) {
+  case 2:
+    return AMDGPU::SI_SPILL_V16_SAVE;
   case 4:
     return AMDGPU::SI_SPILL_V32_SAVE;
   case 8:
@@ -1807,6 +1809,8 @@ static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
 
 static unsigned getVGPRSpillRestoreOpcode(unsigned Size) {
   switch (Size) {
+  case 2:
+    return AMDGPU::SI_SPILL_V16_RESTORE;
   case 4:
     return AMDGPU::SI_SPILL_V32_RESTORE;
   case 8:
