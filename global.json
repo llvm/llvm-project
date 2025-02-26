@@ -1,10 +1,10 @@
 {
   "tools": {
-    "dotnet": "10.0.100-preview.2.25118.3"
+    "dotnet": "10.0.100-preview.3.25125.5"
   },
   "msbuild-sdks": {
-    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25120.6",
-    "Microsoft.DotNet.Helix.Sdk": "10.0.0-beta.25120.6",
+    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25125.2",
+    "Microsoft.DotNet.Helix.Sdk": "10.0.0-beta.25125.2",
     "Microsoft.Build.Traversal": "3.4.0"
   }
 }

@@ -5,7 +5,7 @@
 # IgnoreDirectories - Directories to ignore for SBOM generation. This will be passed through to the CG component detector.
 
 parameters:
-  PackageVersion: 9.0.0
+  PackageVersion: 10.0.0
   BuildDropPath: '$(Build.SourcesDirectory)/artifacts'
   PackageName: '.NET'
   ManifestDirPath: $(Build.ArtifactStagingDirectory)/sbom
