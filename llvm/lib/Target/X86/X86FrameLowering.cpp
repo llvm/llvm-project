@@ -3942,6 +3942,14 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
 }
 
 bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
+  // Pseudo-expansion's handling of tail-calls currently interacts badly
+  // with shrink-wrapping when using callee-pop CCs on x86_64.
+  // Disable shrink-wrapping until that's resolved, if it can be.
+  // See llvm issue 109279.
+  CallingConv::ID CC = MF.getFunction().getCallingConv();
+  if (CC == CallingConv::Tail || CC == CallingConv::SwiftTail)
+    return false;
+
   // If we may need to emit frameless compact unwind information, give
   // up as this is currently broken: PR25614.
   bool CompactUnwind =
