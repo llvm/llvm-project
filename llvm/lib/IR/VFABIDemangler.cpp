@@ -39,11 +39,19 @@ static ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
 
   if (MangledName.consume_front(VFABI::_LLVM_)) {
     ISA = VFISAKind::LLVM;
+  } else if (MangledName.consume_front("r")) {
+    ISA = StringSwitch<VFISAKind>(MangledName.take_front(1))
+              .Case("1", VFISAKind::RVVM1)
+              .Case("2", VFISAKind::RVVM2)
+              .Case("4", VFISAKind::RVVM4)
+              .Case("8", VFISAKind::RVVM8)
+              .Default(VFISAKind::RVV);
+    if (ISA != VFISAKind::RVV)
+      MangledName = MangledName.drop_front(1);
   } else {
     ISA = StringSwitch<VFISAKind>(MangledName.take_front(1))
               .Case("n", VFISAKind::AdvancedSIMD)
               .Case("s", VFISAKind::SVE)
-              .Case("r", VFISAKind::RVV)
               .Case("b", VFISAKind::SSE)
               .Case("c", VFISAKind::AVX)
               .Case("d", VFISAKind::AVX2)
@@ -80,8 +88,10 @@ static ParseRet tryParseMask(StringRef &MangledName, bool &IsMasked) {
 static ParseRet tryParseVLEN(StringRef &ParseString, VFISAKind ISA,
                              std::pair<unsigned, bool> &ParsedVF) {
   if (ParseString.consume_front("x")) {
-    // SVE is the only scalable ISA currently supported.
-    if (ISA != VFISAKind::SVE && ISA != VFISAKind::RVV) {
+    // SVE/RVV is the only two scalable ISAs currently supported.
+    if (ISA != VFISAKind::SVE && ISA != VFISAKind::RVV &&
+        ISA != VFISAKind::RVVM1 && ISA != VFISAKind::RVVM2 &&
+        ISA != VFISAKind::RVVM4 && ISA != VFISAKind::RVVM8) {
       LLVM_DEBUG(dbgs() << "Vector function variant declared with scalable VF "
                         << "but ISA supported for SVE and RVV only\n");
       return ParseRet::Error;
@@ -303,17 +313,52 @@ static ParseRet tryParseAlign(StringRef &ParseString, Align &Alignment) {
 // the number of elements of the given type which would fit in such a vector.
 static std::optional<ElementCount> getElementCountForTy(const VFISAKind ISA,
                                                         const Type *Ty) {
-  assert((ISA == VFISAKind::SVE || ISA == VFISAKind::RVV) &&
+  // Only AArch64 SVE and RVV are supported at present.
+  assert((ISA == VFISAKind::SVE || ISA == VFISAKind::RVV ||
+          ISA == VFISAKind::RVVM1 || ISA == VFISAKind::RVVM2 ||
+          ISA == VFISAKind::RVVM4 || ISA == VFISAKind::RVVM8) &&
          "Scalable VF decoding only implemented for SVE and RVV\n");
 
-  if (Ty->isIntegerTy(64) || Ty->isDoubleTy() || Ty->isPointerTy())
-    return ElementCount::getScalable(2);
-  if (Ty->isIntegerTy(32) || Ty->isFloatTy())
-    return ElementCount::getScalable(4);
-  if (Ty->isIntegerTy(16) || Ty->is16bitFPTy())
-    return ElementCount::getScalable(8);
-  if (Ty->isIntegerTy(8))
-    return ElementCount::getScalable(16);
+  if (ISA == VFISAKind::SVE || ISA == VFISAKind::RVV) {
+    if (Ty->isIntegerTy(64) || Ty->isDoubleTy() || Ty->isPointerTy())
+      return ElementCount::getScalable(2);
+    if (Ty->isIntegerTy(32) || Ty->isFloatTy())
+      return ElementCount::getScalable(4);
+    if (Ty->isIntegerTy(16) || Ty->is16bitFPTy())
+      return ElementCount::getScalable(8);
+    if (Ty->isIntegerTy(8))
+      return ElementCount::getScalable(16);
+  } else if (ISA == VFISAKind::RVVM1 || ISA == VFISAKind::RVVM2 ||
+             ISA == VFISAKind::RVVM4 || ISA == VFISAKind::RVVM8) {
+    // Because 'vscale = VLENB/8', so the ElementCount should be
+    // 'vscale x (LMUL * 64 / sizeof(Type))'.
+    unsigned Number = 1;
+    unsigned LMUL = 1;
+    unsigned ElemCount;
+
+    // TODO: need to distingush rv32 and rv64.
+    if (Ty->isPointerTy())
+      return std::nullopt;
+
+    if (Ty->isIntegerTy(64) || Ty->isDoubleTy())
+      Number = 1;
+    if (Ty->isIntegerTy(32) || Ty->isFloatTy())
+      Number = 2;
+    if (Ty->isIntegerTy(16) || Ty->is16bitFPTy())
+      Number = 4;
+    if (Ty->isIntegerTy(8))
+      Number = 8;
+
+    if (ISA == VFISAKind::RVVM2)
+      LMUL = 2;
+    else if (ISA == VFISAKind::RVVM4)
+      LMUL = 4;
+    else if (ISA == VFISAKind::RVVM8)
+      LMUL = 8;
+
+    ElemCount = LMUL * Number;
+    return ElementCount::getScalable(ElemCount);
+  }
 
   return std::nullopt;
 }
