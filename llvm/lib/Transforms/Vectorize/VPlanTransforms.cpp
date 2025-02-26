@@ -1264,17 +1264,10 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     if (RK != RecurKind::Add && RK != RecurKind::Mul)
       continue;
 
-    for (VPUser *U : collectUsersRecursively(PhiR)) {
-      // Flags in reduction recipes are control/store by the recurrence
-      // descriptor. Dropping flags for VPExtendedReductionRecipe and
-      // VPMulaccRecipe may drop flags that we don't expect to drop.
-      if (isa<VPReductionRecipe>(U))
-        continue;
-
+    for (VPUser *U : collectUsersRecursively(PhiR))
       if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(U)) {
         RecWithFlags->dropPoisonGeneratingFlags();
       }
-    }
   }
 }
 

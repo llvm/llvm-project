@@ -2677,13 +2677,6 @@ public:
 
   /// Return the non negative flag of the ext recipe.
   bool isNonNeg() const { return IsNonNeg; }
-
-  /// Drop flags in this recipe.
-  void dropPoisonGeneratingFlags() {
-    VPRecipeWithIRFlags::dropPoisonGeneratingFlags();
-    // Also drop the extra flags not in VPRecipeWithIRFlags.
-    this->IsNonNeg = false;
-  }
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
