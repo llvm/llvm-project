@@ -4158,6 +4158,24 @@ def warn_pt_guarded_return_by_reference : Warning<
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
 
+// Thread safety warnings on pointer passing
+def warn_guarded_pass_pointer : Warning<
+  "passing pointer to variable %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_pt_guarded_pass_pointer : Warning<
+  "passing pointer %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_guarded_return_pointer : Warning<
+  "returning pointer to variable %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_pt_guarded_return_pointer : Warning<
+  "returning pointer %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+
 // Imprecise thread safety warnings
 def warn_variable_requires_lock : Warning<
   "%select{reading|writing}3 variable %1 requires holding %0 "
