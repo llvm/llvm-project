@@ -624,11 +624,11 @@ void RISCVDisassembler::addSPOperands(MCInst &MI) const {
 
 static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
-    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
-    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcibm,  RISCV::FeatureVendorXqcicli,
+    RISCV::FeatureVendorXqcicm,  RISCV::FeatureVendorXqcics,
+    RISCV::FeatureVendorXqcicsr, RISCV::FeatureVendorXqciint,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisls,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
