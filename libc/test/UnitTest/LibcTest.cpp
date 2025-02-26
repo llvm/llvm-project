@@ -16,7 +16,6 @@
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "src/__support/uint128.h"
 #include "test/UnitTest/TestLogger.h"
-#include <_types/_uint64_t.h>
 
 #if __STDC_HOSTED__
 #include <time.h>
