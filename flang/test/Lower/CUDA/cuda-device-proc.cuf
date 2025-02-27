@@ -175,3 +175,26 @@ end subroutine
 ! CHECK: %[[VAL:.*]] = fir.convert %c14{{.*}} : (i32) -> i64
 ! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<i64> to !llvm.ptr
 ! CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %[[VAL]] acq_rel monotonic : !llvm.ptr, i64
+
+attributes(device) subroutine testAtomic3()
+  real :: a, i, istat
+  istat = atomiccas(a, i, 14.0)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestatomic3()
+! CHECK: %[[BCAST1:.*]] = llvm.bitcast %{{.*}} : f32 to i32
+! CHECK: %[[BCAST2:.*]] = llvm.bitcast %{{.*}} : f32 to i32
+! CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<f32> to !llvm.ptr
+! CHECK: llvm.cmpxchg %[[CAST]], %[[BCAST1]], %[[BCAST2]] acq_rel monotonic : !llvm.ptr, i32
+
+attributes(device) subroutine testAtomic4()
+  real(8) :: a, i, istat
+  istat = atomiccas(a, i, 14.0d0)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestatomic4()
+! CHECK: %[[BCAST1:.*]] = llvm.bitcast %{{.*}} : f64 to i64
+! CHECK: %[[BCAST2:.*]] = llvm.bitcast %{{.*}} : f64 to i64
+! CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<f64> to !llvm.ptr
+! CHECK: %[[ATOMIC:.*]] = llvm.cmpxchg %[[CAST]], %[[BCAST1]], %[[BCAST2]] acq_rel monotonic : !llvm.ptr, i64
+! CHECK: %[[RES:.*]] = llvm.extractvalue %[[ATOMIC]][1] : !llvm.struct<(i64, i1)> 
