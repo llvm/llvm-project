@@ -19,3 +19,7 @@ without waiting for your language or language implementations non-deterministic 
 of the SBProgress object.
 
 Note once finalized, no further increments will be processed.") lldb::SBProgress::Finalize;
+
+%feature("docstring",
+"Increment the progress by a given number of units, optionally with a message. Not all progress events are guaraunteed
+to be sent, but incrementing to the total will always guarauntee a progress end event being sent.") lldb::SBProcess::Increment; 

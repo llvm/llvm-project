@@ -61,7 +61,7 @@ public:
 
   /// Explicitly finalize an SBProgress, this can be used to terminate a
   /// progress on command instead of waiting for a garbage collection or other
-  /// finalizer.
+  /// RAII to destroy the contained progress object.
   void Finalize();
 
 protected:
