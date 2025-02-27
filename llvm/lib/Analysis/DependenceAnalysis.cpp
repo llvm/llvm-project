@@ -3670,13 +3670,7 @@ static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
     return checkParamsMultipleOfSize(V, Param);
 
   // Expressions like "n + 1".
-  if (isa<SCEVAddExpr>(V))
-    return !SCEVExprContains(V, [](const SCEV *S) {
-      return isa<SCEVUnknown>(S);
-    }) || checkParamsMultipleOfSize(V, Param);
-
-  // Expressions like "n * 2".
-  if (isa<SCEVMulExpr>(V))
+  if (isa<SCEVAddExpr>(V) || isa<SCEVMulExpr>(V))
     return !SCEVExprContains(V, [](const SCEV *S) {
       return isa<SCEVUnknown>(S);
     }) || checkParamsMultipleOfSize(V, Param);
