@@ -3398,11 +3398,12 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
     return;
   }
   if (const Scope * dtScope{derivedType.scope()}) {
-    if (auto iter{dtScope->find(generic.name())}; iter != dtScope->end()) {
+    if (auto iter{dtScope->find(generic.name())}; iter != dtScope->end() &&
+        IsAccessible(*iter->second, generic.owner())) {
       for (auto specRef : iter->second->get<GenericDetails>().specificProcs()) {
         const Symbol &specific{specRef->get<ProcBindingDetails>().symbol()};
-        if (specific == proc) { // unambiguous, accept
-          continue;
+        if (specific == proc) {
+          continue; // unambiguous, accept
         }
         if (const auto *specDT{GetDtvArgDerivedType(specific)};
             specDT && evaluate::AreSameDerivedType(derivedType, *specDT)) {
