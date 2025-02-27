@@ -892,8 +892,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     VPValue *NewMask;
     if (NewBlend->getNumOperands() == 3 &&
         match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-      VPValue *Inc0 = NewBlend->getIncomingValue(0);
-      VPValue *Inc1 = NewBlend->getIncomingValue(1);
+      VPValue *Inc0 = NewBlend->getOperand(0);
+      VPValue *Inc1 = NewBlend->getOperand(1);
       VPValue *OldMask = NewBlend->getOperand(2);
       NewBlend->setOperand(0, Inc1);
       NewBlend->setOperand(1, Inc0);
