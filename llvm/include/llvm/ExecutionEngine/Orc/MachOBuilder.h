@@ -117,6 +117,12 @@ struct MachOBuilderLoadCommand<MachO::LC_LOAD_DYLIB>
 };
 
 template <>
+struct MachOBuilderLoadCommand<MachO::LC_LOAD_WEAK_DYLIB>
+    : public MachOBuilderDylibLoadCommand<MachO::LC_LOAD_WEAK_DYLIB> {
+  using MachOBuilderDylibLoadCommand::MachOBuilderDylibLoadCommand;
+};
+
+template <>
 struct MachOBuilderLoadCommand<MachO::LC_RPATH>
     : public MachOBuilderLoadCommandImplBase<MachO::LC_RPATH> {
   MachOBuilderLoadCommand(std::string Path)
