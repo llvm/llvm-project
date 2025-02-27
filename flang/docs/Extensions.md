@@ -216,7 +216,7 @@ end
   the length parameter of the implicit type, not the first.
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
-* Classic C-style /*comments*/ are skipped, so multi-language header
+* Classic C-style `/*comments*/` are skipped, so multi-language header
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
