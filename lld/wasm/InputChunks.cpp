@@ -384,7 +384,9 @@ void InputChunk::generateRelocationCode(std::vector<std::string> &funcs) const {
     if (!requiresRuntimeReloc)
       continue;
 
-    if (funcs.empty() || funcs.back().size() >= 7654300) {
+    // https://www.w3.org/TR/wasm-js-api-2/#limits
+    // The maximum size of a function body, including locals declarations, is 7,654,321 bytes.
+    if (funcs.empty() || funcs.back().size() >= 7654321) {
       funcs.emplace_back(std::string());
       raw_string_ostream os(funcs.back());
       writeUleb128(os, 0, "num locals");
