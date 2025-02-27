@@ -74,24 +74,24 @@ void useage() {
   // WIN32: CXXMethodDecl {{.*}} operator() 'void (int) __attribute__((thiscall)) const' implicit_instantiation inline
   //
   // NODEF: FunctionTemplateDecl {{.*}} operator auto (*)(type-parameter-0-0)
-  // VECDEF: FunctionTemplateDecl {{.*}} operator auto (*)(type-parameter-0-0) __attribute__((vectorcall))
+  // VECTDEF: FunctionTemplateDecl {{.*}} operator auto (*)(type-parameter-0-0) __attribute__((vectorcall))
   // LIN64: CXXConversionDecl {{.*}} operator auto (*)(type-parameter-0-0) 'auto (*() const noexcept)(auto)'
   // LIN64: CXXConversionDecl {{.*}} operator auto (*)(char) 'void (*() const noexcept)(char)'
   // LIN64: CXXConversionDecl {{.*}} operator auto (*)(int) 'void (*() const noexcept)(int)'
   // WIN32: CXXConversionDecl {{.*}} operator auto (*)(type-parameter-0-0) 'auto (*() __attribute__((thiscall)) const noexcept)(auto)'
   // WIN32: CXXConversionDecl {{.*}} operator auto (*)(char) 'void (*() __attribute__((thiscall)) const noexcept)(char)'
   // WIN32: CXXConversionDecl {{.*}} operator auto (*)(int) 'void (*() __attribute__((thiscall)) const noexcept)(int)'
-  // VECDEF: CXXConversionDecl {{.*}} operator auto (*)(type-parameter-0-0) __attribute__((vectorcall)) 'auto (*() const noexcept)(auto)' __attribute__((vectorcall))
-  // VECDEF: CXXConversionDecl {{.*}} operator auto (*)(char) __attribute__((vectorcall)) 'void (*() const noexcept)(char)' __attribute__((vectorcall))
-  // VECDEF: CXXConversionDecl {{.*}} operator auto (*)(int) __attribute__((vectorcall)) 'void (*() const noexcept)(int)' __attribute__((vectorcall))
+  // VECTDEF: CXXConversionDecl {{.*}} operator auto (*)(type-parameter-0-0) __attribute__((vectorcall)) 'auto (*() const noexcept)(auto) __attribute__((vectorcall))' inline
+  // VECTDEF: CXXConversionDecl {{.*}} operator auto (*)(char) __attribute__((vectorcall)) 'void (*() const noexcept)(char)' __attribute__((vectorcall))
+  // VECTDEF: CXXConversionDecl {{.*}} operator auto (*)(int) __attribute__((vectorcall)) 'void (*() const noexcept)(int)' __attribute__((vectorcall))
   //
   // CHECK: FunctionTemplateDecl {{.*}} __invoke
   // NODEF: CXXMethodDecl {{.*}} __invoke 'auto (auto)'
   // NODEF: CXXMethodDecl {{.*}} __invoke 'void (char)'
   // NODEF: CXXMethodDecl {{.*}} __invoke 'void (int)'
-  // VECDEF: CXXMethodDecl {{.*}} __invoke 'auto (auto) __attribute__((vectorcall))'
-  // VECDEF: CXXMethodDecl {{.*}} __invoke 'void (char) __attribute__((vectorcall))'
-  // VECDEF: CXXMethodDecl {{.*}} __invoke 'void (int) __attribute__((vectorcall))'
+  // VECTDEF: CXXMethodDecl {{.*}} __invoke 'auto (auto) __attribute__((vectorcall))'
+  // VECTDEF: CXXMethodDecl {{.*}} __invoke 'void (char) __attribute__((vectorcall))'
+  // VECTDEF: CXXMethodDecl {{.*}} __invoke 'void (int) __attribute__((vectorcall))'
   //
   // ONLY WIN32 has the duplicate here.
   // WIN32: FunctionTemplateDecl {{.*}} operator auto (*)(type-parameter-0-0) __attribute__((thiscall))

@@ -7021,8 +7021,8 @@ void test_mm256_mask_store_ps(void *__P, __mmask8 __U, __m256 __A) {
 }
 
 void test_mm_storeu_epi64(void *__p, __m128i __a) {
-  // check-label: @test_mm_storeu_epi64
-  // check: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
+  // CHECK-LABEL: @test_mm_storeu_epi64
+  // CHECK: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   return _mm_storeu_epi64(__p, __a);
 }
 

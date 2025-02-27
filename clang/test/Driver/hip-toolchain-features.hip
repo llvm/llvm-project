@@ -20,7 +20,7 @@
 // SRAM: {{.*}}clang{{.*}}"-target-feature" "+sramecc"
 // NOSRAM: {{.*}}clang{{.*}}"-target-feature" "-sramecc"
 // SRAM: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+sramecc"
-// NOTSRAM: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-sramecc"
+// NOSRAM: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-sramecc"
 
 // RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \

@@ -222,61 +222,61 @@ template struct CopyAssignmentCheck<1>;
 // CHECK:             "definitionData": {
 // CHECK-NEXT:          "canConstDefaultInit": true,
 // CHECK-NEXT:          "canPassInRegisters": true,
-// CHECK-NEXT           "copyAssign": {
-// CHECK-NEXT             "hasConstParam": true,
-// CHECK-NEXT             "implicitHasConstParam": true,
-// CHECK-NEXT             "trivial": true,
-// CHECK-NEXT             "userDeclared": true
-// CHECK-NEXT           },
+// CHECK-NEXT:          "copyAssign": {
+// CHECK-NEXT:            "hasConstParam": true,
+// CHECK-NEXT:            "implicitHasConstParam": true,
+// CHECK-NEXT:            "trivial": true,
+// CHECK-NEXT:            "userDeclared": true
+// CHECK-NEXT:          },
 
 // CHECK:               "hasConstexprNonCopyMoveConstructor": true,
-// CHECK-NEXT           "isAggregate": true,
-// CHECK-NEXT           "isEmpty": true,
-// CHECK-NEXT           "isLiteral": true,
-// CHECK-NEXT           "isStandardLayout": true,
-// CHECK-NEXT           "isTrivial": true,
-// CHECK-NEXT           "isTriviallyCopyable": true,
-// CHECK-NEXT           "moveAssign": {},
+// CHECK-NEXT:          "isAggregate": true,
+// CHECK-NEXT:          "isEmpty": true,
+// CHECK-NEXT:          "isLiteral": true,
+// CHECK-NEXT:          "isStandardLayout": true,
+// CHECK-NEXT:          "isTrivial": true,
+// CHECK-NEXT:          "isTriviallyCopyable": true,
+// CHECK-NEXT:          "moveAssign": {},
 
 template struct CopyAssignmentCheck<2>;
 // CHECK:             "kind": "ClassTemplateSpecializationDecl",
 // CHECK:             "definitionData": {
 // CHECK-NEXT:          "canConstDefaultInit": true,
 // CHECK-NEXT:          "canPassInRegisters": true,
-// CHECK-NEXT           "copyAssign": {
-// CHECK-NEXT             "hasConstParam": true,
-// CHECK-NEXT             "implicitHasConstParam": true,
-// CHECK-NEXT             "trivial": true,
-// CHECK-NEXT             "userDeclared": true
-// CHECK-NEXT           },
+// CHECK-NEXT:          "copyAssign": {
+// CHECK-NEXT:            "hasConstParam": true,
+// CHECK-NEXT:            "implicitHasConstParam": true,
+// CHECK-NEXT:            "trivial": true,
+// CHECK-NEXT:            "userDeclared": true
+// CHECK-NEXT:          },
 
 // CHECK:               "hasConstexprNonCopyMoveConstructor": true,
-// CHECK-NEXT           "isAggregate": true,
-// CHECK-NEXT           "isEmpty": true,
-// CHECK-NEXT           "isLiteral": true,
-// CHECK-NEXT           "isStandardLayout": true,
-// CHECK-NEXT           "isTrivial": true,
-// CHECK-NEXT           "isTriviallyCopyable": true,
-// CHECK-NEXT           "moveAssign": {},
+// CHECK-NEXT:          "isAggregate": true,
+// CHECK-NEXT:          "isEmpty": true,
+// CHECK-NEXT:          "isLiteral": true,
+// CHECK-NEXT:          "isStandardLayout": true,
+// CHECK-NEXT:          "isTrivial": true,
+// CHECK-NEXT:          "isTriviallyCopyable": true,
+// CHECK-NEXT:          "moveAssign": {},
 
 template struct CopyAssignmentCheck<3>;
 // CHECK:             "kind": "ClassTemplateSpecializationDecl",
 // CHECK:             "definitionData": {
 // CHECK-NEXT:          "canConstDefaultInit": true,
 // CHECK-NEXT:          "canPassInRegisters": true,
-// CHECK-NEXT           "copyAssign": {
-// CHECK-NEXT             "hasConstParam": true,
-// CHECK-NEXT             "implicitHasConstParam": true,
-// CHECK-NEXT             "trivial": true,
-// CHECK-NEXT             "userDeclared": true
-// CHECK-NEXT           },
+// CHECK-NEXT:          "copyAssign": {
+// CHECK-NEXT:            "hasConstParam": true,
+// CHECK-NEXT:            "implicitHasConstParam": true,
+// CHECK-NEXT:            "trivial": true,
+// CHECK-NEXT:            "userDeclared": true
+// CHECK-NEXT:          },
 
 // CHECK:               "hasConstexprNonCopyMoveConstructor": true,
-// CHECK-NEXT           "isAggregate": true,
-// CHECK-NEXT           "isEmpty": true,
-// CHECK-NEXT           "isLiteral": true,
-// CHECK-NEXT           "isStandardLayout": true,
-// CHECK-NEXT           "moveAssign": {},
+// CHECK-NEXT:          "isAggregate": true,
+// CHECK-NEXT:          "isEmpty": true,
+// CHECK-NEXT:          "isLiteral": true,
+// CHECK-NEXT:          "isStandardLayout": true,
+// CHECK-NEXT:          "moveAssign": {},
 
 template <int N>
 struct MoveAssignmentCheck {

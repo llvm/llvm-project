@@ -68,7 +68,7 @@ struct testRecoverExtraStruct { };
 
 enum testNoEnumAbiTag { CaseCase };
 // CHECK-LABEL: EnumDecl{{.*}} testNoEnumAbiTag
-// CHECK-NO: AbiTagAttr
+// CHECK-NOT: AbiTagAttr
 
 #pragma clang attribute pop
 

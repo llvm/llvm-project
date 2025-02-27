@@ -90,7 +90,7 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-RELOCATABLE
 // CHECK-RELOCATABLE-NOT: "-pie"
 // CHECK-RELOCATABLE-NOT: "--build-id"
-// CHECK-RELOCATABLE-NOT "-dynamic-linker"
+// CHECK-RELOCATABLE-NOT: "-dynamic-linker"
 // CHECK-RELOCATABLE: "-r"
 // CHECK-RELOCATABLE-NOT: "-l
 // CHECK-RELOCATABLE-NOT: crt{{[^./\\]+}}.o

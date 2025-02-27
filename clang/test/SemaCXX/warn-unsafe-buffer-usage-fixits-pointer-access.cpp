@@ -101,7 +101,7 @@ void safe_method_invocation_single_param() {
 void safe_method_invocation_single_param_array() {
   int p[10];
   foo(p);
-  // CHECK-NO: fix-it:"{{.*}}":{[[@LINE-1]]:{{.*}}-[[@LINE-1]]:{{.*}}}:".data()"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:{{.*}}-[[@LINE-1]]:{{.*}}}:".data()"
 }
 
 void unsafe_method_invocation_double_param() {

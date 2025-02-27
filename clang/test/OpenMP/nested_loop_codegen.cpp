@@ -42,26 +42,26 @@ int inline_decl() {
 }
 
 #endif
-// CHECK1-NEXT     [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK1-NEXT     [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK1-NEXT     call void @__kmpc_for_static_init_4(ptr @1, i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-//CHECK1     cond.end:
-//CHECK1     omp.inner.for.cond:
-//CHECK1     omp.inner.for.body:
-//CHECK1     omp.body.continue:
-//CHECK1     omp.inner.for.inc:
-//CHECK1     omp.inner.for.end:
-//CHECK1     omp.loop.exit:
-// CHECK1-NEXT     [[TMP13:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK1-NEXT     [[TMP14:%.*]] = load i32, ptr [[TMP12]], align 4
-// CHECK1-NEXT     call void @__kmpc_for_static_fini(ptr @1, i32 [[TMP14]])
-// CHECK1-NEXT     [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK1-NEXT     [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK1-NEXT     call void @__kmpc_barrier(ptr @2, i32 [[TMP16]])
-//CHECK1     for.inc:
-//CHECK1     for.end:
-// CHECK1-NEXT     ret void
-// CHECK2-NEXT    br label [[FOR_INC]], !dbg !119
+// CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// CHECK1-NEXT:    call void @__kmpc_for_static_init_4(ptr @1, i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+//CHECK1:    cond.end:
+//CHECK1:    omp.inner.for.cond:
+//CHECK1:    omp.inner.for.body:
+//CHECK1:    omp.body.continue:
+//CHECK1:    omp.inner.for.inc:
+//CHECK1:    omp.inner.for.end:
+//CHECK1:    omp.loop.exit:
+// CHECK1-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP12]], align 4
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @1, i32 [[TMP14]])
+// CHECK1-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
+// CHECK1-NEXT:    call void @__kmpc_barrier(ptr @2, i32 [[TMP16]])
+//CHECK1:    for.inc:
+//CHECK1:    for.end:
+// CHECK1-NEXT:    ret void
+// CHECK2-NEXT:   br label [[FOR_INC]], !dbg !119
 // CHECK1-LABEL: define {{[^@]+}}@_Z12outline_declv
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:

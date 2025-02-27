@@ -54,9 +54,9 @@
 
 // -fno-sanitize-ignorelist disables all ignorelists specified earlier.
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.good -fno-sanitize-ignorelist -fsanitize-ignorelist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ONLY-FIRST-DISABLED --implicit-check-not=-fsanitize-ignorelist=
-// CHECK-ONLY_FIRST-DISABLED-NOT: good
+// CHECK-ONLY-FIRST-DISABLED-NOT: good
 // CHECK-ONLY-FIRST-DISABLED: -fsanitize-ignorelist={{.*}}.second
-// CHECK-ONLY_FIRST-DISABLED-NOT: good
+// CHECK-ONLY-FIRST-DISABLED-NOT: good
 
 // -fno-sanitize-ignorelist disables the system ignorelists.
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fno-sanitize-ignorelist %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-SYSTEM --check-prefix=DELIMITERS

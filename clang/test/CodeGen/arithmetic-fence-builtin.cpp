@@ -27,7 +27,7 @@ int addit(float a, float b) {
   // CHECK-NEXT:  store float [[CALL2]], ptr [[AF]], align 4
 
   return 0;
-  // CHECK-NEXT ret i32 0
+  // CHECK-NEXT: ret i32 0
 }
 
   // CHECK-LABEL: define linkonce_odr noundef float @_Z5addAFIfET_S0_S0_(float noundef {{.*}}, float noundef {{.*}})

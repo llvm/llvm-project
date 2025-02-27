@@ -59,8 +59,8 @@ void foo() {
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTLINED_5]](
-// NO-CHECK: call void @__kmpc_for_static_init
-// NO-CHECK: call void @__kmpc_for_static_fini
+// CHECK-NOT: call void @__kmpc_for_static_init
+// CHECK-NOT: call void @__kmpc_for_static_fini
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTLINED_6]](
@@ -69,8 +69,8 @@ void foo() {
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTLINED_7]](
-// NO-CHECK: call void @__kmpc_for_static_init
-// NO-CHECK: call void @__kmpc_for_static_fini
+// CHECK-NOT: call void @__kmpc_for_static_init
+// CHECK-NOT: call void @__kmpc_for_static_fini
 // CHECK: ret void
 
 #endif

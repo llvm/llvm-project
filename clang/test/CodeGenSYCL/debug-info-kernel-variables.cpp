@@ -29,7 +29,7 @@ int my_host() {
 }
 
 // CHECK:      define {{.*}}spir_func void @_Z9my_kerneli(
-// CHECK-SAME    i32 %my_param
+// CHECK-SAME:   i32 %my_param
 // CHECK-SAME:   !dbg [[MY_KERNEL:![0-9]+]]
 // CHECK-SAME: {
 // CHECK:        %my_param.addr = alloca i32, align 4

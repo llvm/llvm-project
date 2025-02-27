@@ -10,7 +10,7 @@
 // This test checks that macro Debug info is correctly generated.
 
 // TODO: Check for an following entry once support macros defined in pch files.
-// -PCH: !DIMacro(type: DW_MACINFO_define, name: "C3", value: "1")>
+// COM: PCH: !DIMacro(type: DW_MACINFO_define, name: "C3", value: "1")>
 
 #line 15
 /*Line 15*/ #define D1 1

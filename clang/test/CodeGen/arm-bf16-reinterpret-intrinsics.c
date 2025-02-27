@@ -153,10 +153,10 @@ bfloat16x4_t test_vreinterpret_bf16_p64(poly64x1_t a)   { return vreinterpret_bf
 bfloat16x8_t test_vreinterpretq_bf16_p64(poly64x2_t a)  { return vreinterpretq_bf16_p64(a);  }
 
 // TODO: poly128_t not implemented on aarch32
-// CHCK-LABEL: @test_vreinterpretq_bf16_p128(
-// CHCK-NEXT:  entry:
-// CHCK-NEXT:    [[TMP0:%.*]] = bitcast i128 [[A:%.*]] to <4 x i32>
-// CHCK-NEXT:    ret <4 x i32> [[TMP0]]
+// COM: CHECK-LABEL: @test_vreinterpretq_bf16_p128(
+// COM: CHECK-NEXT:  entry:
+// COM: CHECK-NEXT:    [[TMP0:%.*]] = bitcast i128 [[A:%.*]] to <4 x i32>
+// COM: CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 //bfloat16x8_t test_vreinterpretq_bf16_p128(poly128_t a)  { return vreinterpretq_bf16_p128(a); }
 
@@ -306,9 +306,9 @@ int64x2_t   test_vreinterpretq_s64_bf16(bfloat16x8_t a)  { return vreinterpretq_
 poly64x2_t  test_vreinterpretq_p64_bf16(bfloat16x8_t a)  { return vreinterpretq_p64_bf16(a);  }
 
 // TODO: poly128_t not implemented on aarch32
-// CHCK-LABEL: @test_vreinterpretq_p128_bf16(
-// CHCK-NEXT:  entry:
-// CHCK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to i128
-// CHCK-NEXT:    ret i128 [[TMP0]]
+// COM: CHECK-LABEL: @test_vreinterpretq_p128_bf16(
+// COM: CHECK-NEXT:  entry:
+// COM: CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to i128
+// COM: CHECK-NEXT:    ret i128 [[TMP0]]
 //
 //poly128_t   test_vreinterpretq_p128_bf16(bfloat16x8_t a) { return vreinterpretq_p128_bf16(a); }

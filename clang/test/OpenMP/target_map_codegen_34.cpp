@@ -137,7 +137,7 @@ void default_mapper() {
   #pragma omp target map(to: s)
   s.foo();
 
-  // CK34 : call void
+  // CK34: call void
 
   // CK34-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK34-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2

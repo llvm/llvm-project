@@ -74,13 +74,13 @@ poly64x2_t test_vaddq_p64(poly64x2_t a, poly64x2_t b){
 }
 
 // TODO: poly128_t not implemented on aarch32
-// CHCK-LABEL: @test_vaddq_p128(
-// CHCK-NEXT:  entry:
-// CHCK-NEXT:    [[TMP0:%.*]] = bitcast i128 [[A:%.*]] to <16 x i8>
-// CHCK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[B:%.*]] to <16 x i8>
-// CHCK-NEXT:    [[TMP2:%.*]] = xor <16 x i8> [[TMP0]], [[TMP1]]
-// CHCK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
-// CHCK-NEXT:    ret i128 [[TMP3]]
+// COM: CHECK-LABEL: @test_vaddq_p128(
+// COM: CHECK-NEXT:  entry:
+// COM: CHECK-NEXT:    [[TMP0:%.*]] = bitcast i128 [[A:%.*]] to <16 x i8>
+// COM: CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[B:%.*]] to <16 x i8>
+// COM: CHECK-NEXT:    [[TMP2:%.*]] = xor <16 x i8> [[TMP0]], [[TMP1]]
+// COM: CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
+// COM: CHECK-NEXT:    ret i128 [[TMP3]]
 //
 //poly128_t test_vaddq_p128 (poly128_t a, poly128_t b){
 //  return vaddq_p128(a, b);

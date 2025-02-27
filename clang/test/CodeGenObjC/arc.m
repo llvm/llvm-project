@@ -740,9 +740,9 @@ char *helper;
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[SELF]]
 // CHECK-NEXT: [[IVAR:%.*]] = load i64, ptr @"OBJC_IVAR_$_Test30.helper"
 // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T1]], i64 [[IVAR]]
-// CHECK-NEXT#: [[T5:%.*]] = load ptr, ptr [[T3]]
-// CHECK-NEXT#: [[T6:%.*]] = call ptr @llvm.objc.retain(ptr [[CALL]])
-// CHECK-NEXT#: call void @llvm.objc.release(ptr [[T5]])
+// CHECK-NEXT: [[T5:%.*]] = load ptr, ptr [[T3]]
+// CHECK-NEXT: [[T6:%.*]] = call ptr @llvm.objc.retain(ptr [[CALL]])
+// CHECK-NEXT: call void @llvm.objc.release(ptr [[T5]])
 // CHECK-NEXT: store ptr [[CALL]], ptr [[T3]]
 
 // Return.

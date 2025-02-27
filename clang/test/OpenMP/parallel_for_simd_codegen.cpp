@@ -804,7 +804,7 @@ for (int i = 0; i < 10; ++i);
 // OMP45-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
 // OMP50-DAG: ![[VECT]] = distinct !{![[VECT]], ![[PA:.+]], ![[VM:.+]]}
-// OMP50-DAG  ![[PA]] = !{!"llvm.loop.parallel_accesses", !{{.+}}}
+// OMP50-DAG: ![[PA]] = !{!"llvm.loop.parallel_accesses", !{{.+}}}
 // OMP50-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // OMP50-DAG: ![[NOVECT]] = distinct !{![[NOVECT]], ![[NOVM:.+]]}
 // OMP50-DAG: ![[NOVM]] = !{!"llvm.loop.vectorize.enable", i1 false}

@@ -272,10 +272,10 @@ uint32_t g14(StructM2 *M, StructS *S) {
 // OLD-PATH: [[TYPE_D]] = !{!"_ZTS7StructD", [[TYPE_SHORT]], i64 0, [[TYPE_B]], i64 4, [[TYPE_INT]], i64 28, [[TYPE_CHAR]], i64 32}
 // OLD-PATH: [[TAG_M1_f16_2]] = !{[[TYPE_M1:!.*]], [[TYPE_SHORT]], i64 12}
 // OLD-PATH: [[TYPE_M1]] = !{!"_ZTS8StructM1", [[TYPE_S]], i64 0, [[TYPE_T:!.*]], i64 8, [[TYPE_SHORT]], i64 12}
-// OLD_PATH: [[TYPE_T]] = !{!"_ZTS7StructT", [[TYPE_INT]], i64 0}
+// OLD-PATH: [[TYPE_T]] = !{!"_ZTS7StructT", [[TYPE_INT]], i64 0}
 // OLD-PATH: [[TAG_M2_f16_2]] = !{[[TYPE_M2:!.*]], [[TYPE_SHORT]], i64 20}
 // OLD-PATH: [[TYPE_M2]] = !{!"_ZTS8StructM2", [[TYPE_DYN:!.*]], i64 0, [[TYPE_S]], i64 12, [[TYPE_SHORT]], i64 20}
-// OLD_PATH: [[TYPE_DYN]] = !{!"_ZTS9StructDyn", [[TYPE_INT]], i64 8}
+// OLD-PATH: [[TYPE_DYN]] = !{!"_ZTS9StructDyn", [[TYPE_INT]], i64 8}
 
 // NEW-PATH: [[TYPE_CHAR:!.*]] = !{!{{.*}}, i64 1, !"omnipotent char"}
 // NEW-PATH: [[TAG_i32]] = !{[[TYPE_INT:!.*]], [[TYPE_INT]], i64 0, i64 4}
@@ -300,7 +300,7 @@ uint32_t g14(StructM2 *M, StructS *S) {
 // NEW-PATH: [[TYPE_D]] = !{[[TYPE_CHAR]], i64 36, !"_ZTS7StructD", [[TYPE_SHORT]], i64 0, i64 2, [[TYPE_B]], i64 4, i64 24, [[TYPE_INT]], i64 28, i64 4, [[TYPE_CHAR]], i64 32, i64 1}
 // NEW-PATH: [[TAG_M1_f16_2]] = !{[[TYPE_M1:!.*]], [[TYPE_SHORT]], i64 12, i64 2}
 // NEW-PATH: [[TYPE_M1]] = !{[[TYPE_CHAR]], i64 16, !"_ZTS8StructM1", [[TYPE_S]], i64 0, i64 8, [[TYPE_T:!.*]], i64 8, i64 4, [[TYPE_SHORT]], i64 12, i64 2}
-// NEW_PATH: [[TYPE_T]] = !{[[TYPE_CHAR]], i64 4, !"_ZTS7StructT", [[TYPE_INT]], i64 0, i64 4}
+// NEW-PATH: [[TYPE_T]] = !{[[TYPE_CHAR]], i64 4, !"_ZTS7StructT", [[TYPE_INT]], i64 0, i64 4}
 // NEW-PATH: [[TAG_M2_f16_2]] = !{[[TYPE_M2:!.*]], [[TYPE_SHORT]], i64 20, i64 2}
 // NEW-PATH: [[TYPE_M2]] = !{[[TYPE_CHAR]], i64 24, !"_ZTS8StructM2", [[TYPE_DYN:!.*]], i64 0, i64 12, [[TYPE_S]], i64 12, i64 8, [[TYPE_SHORT]], i64 20, i64 2}
-// NEW_PATH: [[TYPE_DYN]] = !{[[TYPE_CHAR]], i64 12, !"_ZTS9StructDyn", [[TYPE_INT]], i64 8, i64 4}
+// NEW-PATH: [[TYPE_DYN]] = !{[[TYPE_CHAR]], i64 16, !"_ZTS9StructDyn", [[TYPE_INT]], i64 8, i64 4}

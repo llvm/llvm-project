@@ -73,7 +73,7 @@ enum TestEnumDeclForward;
 // CHECK:      EnumDecl{{.*}} TestEnumDeclForward
 
 __module_private__ enum TestEnumDeclPrivate;
-// CHECK-MODULE:      EnumDecl{{.*}} TestEnumDeclPrivate __module_private__
+// CHECK-MODULES:      EnumDecl{{.*}} TestEnumDeclPrivate __module_private__
 
 struct TestRecordDecl {
   int i;
@@ -103,7 +103,7 @@ struct TestRecordDeclForward;
 // CHECK:      RecordDecl{{.*}} struct TestRecordDeclForward
 
 __module_private__ struct TestRecordDeclPrivate;
-// CHECK-MODULE:      RecordDecl{{.*}} struct TestRecordDeclPrivate __module_private__
+// CHECK-MODULES:      RecordDecl{{.*}} struct TestRecordDeclPrivate __module_private__
 
 enum testEnumConstantDecl {
   TestEnumConstantDecl,
@@ -163,7 +163,7 @@ struct testFieldDecl {
 // CHECK-NEXT:   ConstantExpr
 // CHECK-NEXT:     value: Int 1
 // CHECK-NEXT:       IntegerLiteral
-// CHECK-MODULE:      FieldDecl{{.*}} TestFieldDeclPrivate 'int' __module_private__
+// CHECK-MODULES:      FieldDecl{{.*}} TestFieldDeclPrivate 'int' __module_private__
 
 int TestVarDecl;
 // CHECK:      VarDecl{{.*}} TestVarDecl 'int'
@@ -175,7 +175,7 @@ __thread int TestVarDeclThread;
 // CHECK:      VarDecl{{.*}} TestVarDeclThread 'int' tls{{$}}
 
 __module_private__ int TestVarDeclPrivate;
-// CHECK-MODULE:      VarDecl{{.*}} TestVarDeclPrivate 'int' __module_private__
+// CHECK-MODULES:      VarDecl{{.*}} TestVarDeclPrivate 'int' __module_private__
 
 int TestVarDeclInit = 0;
 // CHECK:      VarDecl{{.*}} TestVarDeclInit 'int'

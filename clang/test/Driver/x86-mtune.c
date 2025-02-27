@@ -32,7 +32,7 @@
 // -march should remove default mtune generic.
 // RUN: %clang -### -c --target=x86_64 %s -march=core2 -mtune=nehalem 2>&1 | FileCheck %s -check-prefix=marchmtune
 // marchmtune: "-target-cpu" "core2"
-// mmarchmtune: "-tune-cpu" "nehalem"
+// marchmtune: "-tune-cpu" "nehalem"
 
 // RUN: not %clang %s -target x86_64 -E -mtune=x86-64-v2 2>&1 | FileCheck %s --check-prefix=INVALID
 // RUN: not %clang %s -target x86_64 -E -mtune=x86-64-v3 2>&1 | FileCheck %s --check-prefix=INVALID

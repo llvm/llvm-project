@@ -8,5 +8,5 @@
 // SHORT-WCHAR: !{{[0-9]+}} = !{i32 1, !"wchar_size", i32 2}
 // SHORT-WCHAR:   !{{[0-9]+}} = !{i32 1, !"min_enum_size", i32 4}
 
-// SHORT_ENUM:  !{{[0-9]+}} = !{i32 1, !"wchar_size", i32 4}
+// SHORT-ENUM:  !{{[0-9]+}} = !{i32 1, !"wchar_size", i32 4}
 // SHORT-ENUM:  !{{[0-9]+}} = !{i32 1, !"min_enum_size", i32 1}

@@ -826,7 +826,7 @@ struct SSA {
   SSA(double *&pr) : pr(pr) {}
 };
 
-//CK-15-LABEL: lvalue_member
+//CK15-LABEL: lvalue_member
 void lvalue_member(SSA *sap) {
 
   // CK15-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GSIZE:%.+]], ptr [[MTYPE00]]{{.+}}, ptr null)

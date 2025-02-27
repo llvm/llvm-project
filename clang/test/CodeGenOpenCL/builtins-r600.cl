@@ -9,8 +9,8 @@ void test_recipsqrt_ieee_f32(global float* out, float a)
 }
 
 #if cl_khr_fp64
-// XCHECK-LABEL: @test_recipsqrt_ieee_f64
-// XCHECK: call double @llvm.r600.recipsqrt.ieee.f64
+// CHECK-LABEL: @test_recipsqrt_ieee_f64
+// CHECK: call double @llvm.r600.recipsqrt.ieee.f64
 void test_recipsqrt_ieee_f64(global double* out, double a)
 {
   *out = __builtin_r600_recipsqrt_ieee(a);

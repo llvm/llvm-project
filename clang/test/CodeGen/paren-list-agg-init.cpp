@@ -179,11 +179,11 @@ void foo4() {
 
 // CHECK: define dso_local { i64, double } @{{.*foo5.*}}
 // CHECK-NEXT: entry:
-// CHECK-NEXT [[RETVAL:%.*]] = alloca [[UNION_U]], align 8
-// CHECK-NEXT call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[U1]], i64 16, i1 false)
-// CHECK-NEXT [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[UNION_U]], ptr %retval, i32 0, i32 0
-// CHECK-NEXT [[TMP_0:%.*]] = load { i64, double }, ptr [[COERCE_DIVE]], align 8
-// CHECK-NEXT ret { i64, double } [[TMP_0]]
+// CHECK-NEXT: [[RETVAL:%.*]] = alloca [[UNION_U]], align 8
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[U1]], i64 16, i1 false)
+// CHECK-NEXT: [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[UNION_U]], ptr %retval, i32 0, i32 0
+// CHECK-NEXT: [[TMP_0:%.*]] = load { i64, double }, ptr [[COERCE_DIVE]], align 8
+// CHECK-NEXT: ret { i64, double } [[TMP_0]]
 U foo5() {
   return u1;
 }
@@ -377,7 +377,7 @@ void foo18() {
 // CHECK-NEXT: [[A:%.*a.*]] = getelementptr inbounds nuw [[STRUCT_G]], ptr [[G]], i32 0, i32 0
 // CHECK-NEXT: store i32 2, ptr [[A]], align 4
 // CHECK-NEXT: [[F:%.*]] = getelementptr inbounds i8, ptr [[G]], i64 4
-// CHECk-NEXT: call void @{{.*F.*}}(ptr noundef nonnull align 1 dereferenceable(1)) [[F]], ie32 noundef 1)
+// CHECK-NEXT: call void @_ZN1FC1Ei(ptr noundef nonnull align 1 dereferenceable(1) [[F]], i32 noundef 1)
 // CHECK: ret void
 void foo19() {
   G g(2);

@@ -27,7 +27,7 @@
 // CHECK: @OBJC_MODULES = private global {{.*}}section "__OBJC,__module_info,regular,no_dead_strip", align 4
 
 // Clang's Obj-C 32-bit doesn't emit ivars for the root class.
-// CHECKX: @"\01L_OBJC_CLASS_VARIABLES_A" = private global {{.*}}section "__OBJC,__class_vars,regular,no_dead_strip", align 4
+// COM: CHECK: @"\01L_OBJC_CLASS_VARIABLES_A" = private global {{.*}}section "__OBJC,__class_vars,regular,no_dead_strip", align 4
 
 
 /*

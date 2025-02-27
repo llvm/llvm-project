@@ -1000,7 +1000,7 @@ typedef struct {
 TEST(padded_alloc_size_vector)
 // X86-64-LABEL: take_padded_alloc_size_vector(<3 x i32> %0, i64 %1)
 // X86-64-NOT: [4 x i8]
-// x86-64: ret void
+// X86-64: ret void
 
 typedef union {
   float f1;

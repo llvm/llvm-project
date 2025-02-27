@@ -15,6 +15,6 @@ export auto &[a, b] = ary;
 auto &[c, d] = ary;
 // FIXME: We mangle the module name here, as we give this ModuleInternalLinkage
 // That's no longer needed.
-// CHECK DAG: @_ZN1MDC1e1fEE =
+// COM: CHECK-DAG: @_ZN1MDC1e1fEE =
 static auto &__attribute__((used))[e, f] = ary;
 } // namespace N

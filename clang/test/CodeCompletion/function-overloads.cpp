@@ -39,7 +39,7 @@ void test_adl() {
 // RUN:    FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: OVERLOAD: [#int#]f(<#float x#>, float y)
 // CHECK-CC1: OVERLOAD: [#int#]f(<#int i#>)
-// CHECK-CC1-NOT, CHECK-CC2-NOT: OVERLOAD: A(
+// CHECK-CC1-NOT: CHECK-CC2-NOT: OVERLOAD: A(
 // CHECK-CC2: OVERLOAD: [#int#]f(float x, float y)
 // CHECK-CC2-NOT: OVERLOAD: [#int#]f(int i)
 // CHECK-CC3: OVERLOAD: A(<#int#>, int, int)

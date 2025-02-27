@@ -30,7 +30,7 @@ int b = 0;
 // CHECK:       for.cond:
 // C99-NOT:       br {{.*}}!llvm.loop
 // C11-NOT:       br {{.*}}!llvm.loop
-// FINITE-NOR:    br {{.*}}!llvm.loop
+// FINITE-NOT:    br {{.*}}!llvm.loop
 //
 void f0(void) {
   for (; ;) ;

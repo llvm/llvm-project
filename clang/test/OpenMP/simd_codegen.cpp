@@ -55,7 +55,7 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: store i32 [[CALC_I_2]], ptr [[LC_I:.+]]{{.*}}!llvm.access.group
 // ... loop body ...
 // End of body: store into a[i]:
-// OMP45-NOT: load ptr,{{.*}}!nontemporal
+// OMP5-NOT: load ptr,{{.*}}!nontemporal
 // CHECK-NOT: load float,{{.*}}!nontemporal
 // OMP5: load ptr,{{.*}}!nontemporal
 // OMP5: load ptr,{{.*}}!nontemporal

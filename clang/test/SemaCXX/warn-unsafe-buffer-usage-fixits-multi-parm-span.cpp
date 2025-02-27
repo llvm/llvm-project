@@ -35,18 +35,18 @@ void parmsSingleton(int *p) { //expected-warning{{'p' is an unsafe pointer used 
 
 // Parameters other than `r` all will be fixed
 // CHECK: fix-it:{{.*}}:{[[@LINE+15]]:24-[[@LINE+15]]:30}:"std::span<int> p"
-// CHECK  fix-it:{{.*}}:{[[@LINE+14]]:32-[[@LINE+14]]:39}:"std::span<int *> q"
+// CHECK: fix-it:{{.*}}:{[[@LINE+14]]:32-[[@LINE+14]]:39}:"std::span<int *> q"
 // CHECK: fix-it:{{.*}}:{[[@LINE+13]]:41-[[@LINE+13]]:48}:"std::span<int> a"
 // CHECK: fix-it:{{.*}}:{[[@LINE+23]]:2-[[@LINE+23]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void * multiParmAllFix(int *p, int **q, int a[], int * r) {return multiParmAllFix(std::span<int>(p, <# size #>), std::span<int *>(q, <# size #>), std::span<int>(a, <# size #>), r);}\n"
 
 // repeat 2 more times as each of the 3 fixing parameters generates the set of fix-its above.
 
 // CHECK: fix-it:{{.*}}:{[[@LINE+8]]:24-[[@LINE+8]]:30}:"std::span<int> p"
-// CHECK  fix-it:{{.*}}:{[[@LINE+7]]:32-[[@LINE+7]]:39}:"std::span<int *> q"
+// CHECK: fix-it:{{.*}}:{[[@LINE+7]]:32-[[@LINE+7]]:39}:"std::span<int *> q"
 // CHECK: fix-it:{{.*}}:{[[@LINE+6]]:41-[[@LINE+6]]:48}:"std::span<int> a"
 // CHECK: fix-it:{{.*}}:{[[@LINE+16]]:2-[[@LINE+16]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void * multiParmAllFix(int *p, int **q, int a[], int * r) {return multiParmAllFix(std::span<int>(p, <# size #>), std::span<int *>(q, <# size #>), std::span<int>(a, <# size #>), r);}\n"
 // CHECK: fix-it:{{.*}}:{[[@LINE+4]]:24-[[@LINE+4]]:30}:"std::span<int> p"
-// CHECK  fix-it:{{.*}}:{[[@LINE+3]]:32-[[@LINE+3]]:39}:"std::span<int *> q"
+// CHECK: fix-it:{{.*}}:{[[@LINE+3]]:32-[[@LINE+3]]:39}:"std::span<int *> q"
 // CHECK: fix-it:{{.*}}:{[[@LINE+2]]:41-[[@LINE+2]]:48}:"std::span<int> a"
 // CHECK: fix-it:{{.*}}:{[[@LINE+12]]:2-[[@LINE+12]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void * multiParmAllFix(int *p, int **q, int a[], int * r) {return multiParmAllFix(std::span<int>(p, <# size #>), std::span<int *>(q, <# size #>), std::span<int>(a, <# size #>), r);}\n"
 void * multiParmAllFix(int *p, int **q, int a[], int * r) { // expected-warning{{'p' is an unsafe pointer used for buffer access}}   expected-warning{{'q' is an unsafe pointer used for buffer access}} \

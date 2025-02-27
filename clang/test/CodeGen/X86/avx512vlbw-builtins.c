@@ -2570,8 +2570,8 @@ __m256i test_mm256_maskz_loadu_epi8(__mmask32 __U, void const *__P) {
 }
 
 void test_mm_storeu_epi16(void *__p, __m128i __a) {
-  // check-label: @test_mm_storeu_epi16
-  // check: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
+  // CHECK-LABEL: @test_mm_storeu_epi16
+  // CHECK: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   return _mm_storeu_epi16(__p, __a);
 }
 
@@ -2594,8 +2594,8 @@ void test_mm256_mask_storeu_epi16(void *__P, __mmask16 __U, __m256i __A) {
 }
 
 void test_mm_storeu_epi8(void *__p, __m128i __a) {
-  // check-label: @test_mm_storeu_epi8
-  // check: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
+  // CHECK-LABEL: @test_mm_storeu_epi8
+  // CHECK: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   return _mm_storeu_epi8(__p, __a);
 }
 

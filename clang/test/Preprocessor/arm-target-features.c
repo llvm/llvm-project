@@ -180,19 +180,19 @@
 // CHECK-V8-BAREHF: #define __ARM_FEATURE_CRC32 1
 // CHECK-V8-BAREHF: #define __ARM_FEATURE_DIRECTED_ROUNDING 1
 // CHECK-V8-BAREHF: #define __ARM_FEATURE_NUMERIC_MAXMIN 1
-// CHECK-V8-BAREHP: #define __ARM_FP 0xe
+// CHECK-V8-BAREHF: #define __ARM_FP 0xe
 // CHECK-V8-BAREHF: #define __ARM_NEON__ 1
 // CHECK-V8-BAREHF: #define __ARM_PCS_VFP 1
 // CHECK-V8-BAREHF: #define __VFP_FP__ 1
 
 // RUN: %clang -target armv8a -mfloat-abi=hard -mfpu=fp-armv8 -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-V8-BAREHF-FP %s
 // CHECK-V8-BAREHF-FP-NOT: __ARM_NEON__ 1
-// CHECK-V8-BAREHP-FP: #define __ARM_FP 0xe
+// CHECK-V8-BAREHF-FP: #define __ARM_FP 0xe
 // CHECK-V8-BAREHF-FP: #define __VFP_FP__ 1
 
 // RUN: %clang -target armv8a -mfloat-abi=hard -mfpu=neon-fp-armv8 -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-V8-BAREHF-NEON-FP %s
 // RUN: %clang -target armv8a -mfloat-abi=hard -mfpu=crypto-neon-fp-armv8 -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-V8-BAREHF-NEON-FP %s
-// CHECK-V8-BAREHP-NEON-FP: #define __ARM_FP 0xe
+// CHECK-V8-BAREHF-NEON-FP: #define __ARM_FP 0xe
 // CHECK-V8-BAREHF-NEON-FP: #define __ARM_NEON__ 1
 // CHECK-V8-BAREHF-NEON-FP: #define __VFP_FP__ 1
 

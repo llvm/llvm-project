@@ -1191,7 +1191,7 @@ void test1() {
   res_vsll = vec_neg(vsll);
 // CHECK: sub <2 x i64> zeroinitializer, {{%[0-9]+}}
 // CHECK-LE: sub <2 x i64> zeroinitializer, {{%[0-9]+}}
-// CHECK_PPC: call to 'vec_neg' is ambiguous
+// CHECK-PPC: call to 'vec_neg' is ambiguous
 
 
 }

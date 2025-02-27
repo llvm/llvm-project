@@ -122,7 +122,7 @@ void ref_map() {
   #pragma omp target map(to: s, s.b)
   s.foo();
 
-  // CK35 : call void
+  // CK35: call void
 
   // CK35-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
   // CK35-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2

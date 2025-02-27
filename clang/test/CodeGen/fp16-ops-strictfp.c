@@ -502,7 +502,7 @@ void foo(void) {
 
   // Check assignments (inc. compound)
   // CHECK: store {{.*}} half {{.*}}, ptr
-  // xATIVE-HALF: store {{.*}} half 0xHC000 // FIXME: We should be folding here.
+  // COM: NATIVE-HALF: store {{.*}} half 0xHC000 // FIXME: We should be folding here.
   h0 = h1;
 
   // CHECK: call half @llvm.experimental.constrained.fptrunc.f16.f32(float -2.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict")

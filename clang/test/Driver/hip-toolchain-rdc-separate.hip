@@ -126,7 +126,7 @@
 // LINK-SAME: "--whole-archive"
 // LLD-TMP-SAME: "-o" "[[IMG_DEV1:.*.out]]"
 // LLD-FIN-SAME: "-o" "[[IMG_DEV1:a.out-.*gfx803]]"
-// LINK-SAME "[[A_BC1]]" "[[B_BC1]]"
+// LINK-SAME: "[[A_BC1]]" "[[B_BC1]]"
 // LINK-SAME: "--no-whole-archive"
 
 // LINK-NOT: "*.llvm-link"
@@ -137,7 +137,7 @@
 // LINK-SAME: "--whole-archive"
 // LLD-TMP-SAME: "-o" "[[IMG_DEV2:.*.out]]"
 // LLD-FIN-SAME: "-o" "[[IMG_DEV1:a.out-.*gfx900]]"
-// LINK-SAME "[[A_BC2]]" "[[B_BC2]]"
+// LINK-SAME: "[[A_BC2]]" "[[B_BC2]]"
 // LINK-SAME: "--no-whole-archive"
 
 // LINK-BUNDLE: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"

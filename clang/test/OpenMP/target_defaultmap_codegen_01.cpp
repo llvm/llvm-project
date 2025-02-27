@@ -207,7 +207,7 @@ void implicit_maps_double (int a){
 // CK4-64-DAG: store i[[sz:64|32]] [[VAL:%[^,]+]], ptr [[BP1]]
 // CK4-64-DAG: store i[[sz]] [[VAL]], ptr [[P1]]
 // CK4-64-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
-// CK4-64-64-DAG: store double {{.+}}, ptr [[ADDR]],
+// CK4-64-DAG: store double {{.+}}, ptr [[ADDR]],
 
 // CK4-32-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK4-32-DAG: store ptr [[DECL]], ptr [[P1]]
@@ -1120,7 +1120,7 @@ void implicit_maps_double (int a){
 // CK20-64-DAG: store i[[sz:64|32]] [[VAL:%[^,]+]], ptr [[BP1]]
 // CK20-64-DAG: store i[[sz]] [[VAL]], ptr [[P1]]
 // CK20-64-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
-// CK20-64-64-DAG: store double {{.+}}, ptr [[ADDR]],
+// CK20-64-DAG: store double {{.+}}, ptr [[ADDR]],
 
 // CK20-32-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK20-32-DAG: store ptr [[DECL]], ptr [[P1]]

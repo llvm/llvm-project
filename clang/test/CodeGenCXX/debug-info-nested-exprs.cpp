@@ -198,5 +198,5 @@ int foo(int x, int y, int z) {
 // COLUMNS: ![[ANDRHS]] = !DILocation
 // COLUMNS: ![[AND_CREATE]] = !DILocation
 // COLUMNS: ![[AND_FUNC]] = !DILocation
-// COLUNMS: ![[RETSUB]] = !DILocation(
+// COLUMNS: ![[RETSUB]] = !DILocation(
 // COLUMNS: ![[RETMUL]] = !DILocation(

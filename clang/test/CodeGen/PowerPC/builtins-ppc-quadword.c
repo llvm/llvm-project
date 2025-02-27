@@ -69,12 +69,12 @@ void test1() {
   res_vlll = vec_addc(vlll, vlll);
 // CHECK: @llvm.ppc.altivec.vaddcuq
 // CHECK-LE: @llvm.ppc.altivec.vaddcuq
-// KCHECK-PPC: error: call to 'vec_addc' is ambiguous
+// CHECK-PPC: error: call to 'vec_addc' is ambiguous
 
   res_vulll = vec_addc(vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vaddcuq
 // CHECK-LE: @llvm.ppc.altivec.vaddcuq
-// KCHECK-PPC: error: call to 'vec_addc' is ambiguous
+// CHECK-PPC: error: call to 'vec_addc' is ambiguous
 
 
   /* vec_vaddcuq */
@@ -165,12 +165,12 @@ void test1() {
   res_vlll = vec_subc(vlll, vlll);
 // CHECK: @llvm.ppc.altivec.vsubcuq
 // CHECK-LE: @llvm.ppc.altivec.vsubcuq
-// KCHECK-PPC: error: call to 'vec_subc' is ambiguous
+// CHECK-PPC: error: call to 'vec_subc' is ambiguous
 
   res_vulll = vec_subc(vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vsubcuq
 // CHECK-LE: @llvm.ppc.altivec.vsubcuq
-// KCHECK-PPC: error: call to 'vec_subc' is ambiguous
+// CHECK-PPC: error: call to 'vec_subc' is ambiguous
 
   res_vuc = vec_subc_u128(vuc, vuc);
 // CHECK: @llvm.ppc.altivec.vsubcuq
@@ -219,7 +219,7 @@ void test1() {
 // CHECK-LE: store <16 x i8> splat (i8 -1), ptr {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
-// CHECK_PPC: error: call to 'vec_revb' is ambiguous
+// CHECK-PPC: error: call to 'vec_revb' is ambiguous
 
   /* vec_xl */
   res_vlll = vec_xl(param_sll, &param_lll);

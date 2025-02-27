@@ -112,8 +112,8 @@ float mymuladd(float x, float y, float z) {
   // CHECK-FPC-OFF: load float, ptr
   // CHECK-FPC-OFF: fadd float {{.*}}, {{.*}}
 
-  // CHECK-FFPC-OFF: load float, ptr
-  // CHECK-FFPC-OFF: load float, ptr
+  // CHECK-FPSC-OFF: load float, ptr
+  // CHECK-FPSC-OFF: load float, ptr
   // CHECK-FPSC-OFF: call float @llvm.experimental.constrained.fmul.f32(float {{.*}}, float {{.*}}, {{.*}})
   // CHECK-FPSC-OFF: load float, ptr
   // CHECK-FPSC-OFF: [[RES:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, {{.*}})

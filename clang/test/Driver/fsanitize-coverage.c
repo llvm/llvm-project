@@ -147,7 +147,7 @@
 // CHECK-VS-SHADOWCALLSTACK: -fsanitize-coverage-trace-pc-guard
 // CHECK-VS-SHADOWCALLSTACK: -fsanitize=shadow-call-stack
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=shadow-call-stack -fsanitize-coverage=trace-pc-guard -fno-sanitize=shadow-call-stack %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SAFESTACK
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=shadow-call-stack -fsanitize-coverage=trace-pc-guard -fno-sanitize=shadow-call-stack %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SHADOWCALLSTACK
 // CHECK-NO-SHADOWCALLSTACK-NOT: error:
 // CHECK-NO-SHADOWCALLSTACK-NOT: warning:
 // CHECK-NO-SHADOWCALLSTACK-NOT: argument unused

@@ -656,19 +656,19 @@ struct __declspec(dllexport) DefaultedCtorsDtors {
 // Export defaulted member function definitions declared inside class.
 struct __declspec(dllexport) ExportDefaultedInclassDefs {
   ExportDefaultedInclassDefs() = default;
-  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@XZ"(ptr returned %this)
+  // M32MSVC2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@XZ"(ptr returned %this)
   // M64VS2013-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@XZ"(ptr returned %this)
   // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@XZ"(ptr returned %this)
   // M64VS2015-NOT: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@XZ"(ptr returned %this)
 
   ~ExportDefaultedInclassDefs() = default;
-  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedInclassDefs@@QAE@XZ"(ptr %this)
+  // M32MSVC2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedInclassDefs@@QAE@XZ"(ptr %this)
   // M64VS2013-DAG: define weak_odr dso_local dllexport                void @"??1ExportDefaultedInclassDefs@@QEAA@XZ"(ptr %this)
   // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedInclassDefs@@QAE@XZ"(ptr %this)
   // M64VS2015-NOT: define weak_odr dso_local dllexport                void @"??1ExportDefaultedInclassDefs@@QEAA@XZ"(ptr %this)
 
   ExportDefaultedInclassDefs(const ExportDefaultedInclassDefs&) = default;
-  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}))
+  // M32MSVC2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}))
   // M64VS2013-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}))
   // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}))
   // M64VS2015-NOT: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}))
