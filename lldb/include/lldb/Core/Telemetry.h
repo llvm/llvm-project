@@ -42,7 +42,7 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   std::optional<SteadyTimePoint> end_time;
   // TBD: could add some memory stats here too?
 
-  uint64_t debugger_id = LLDB_INVALID_UID;
+  lldb::user_id_t debugger_id = LLDB_INVALID_UID;
   Debugger *debugger;
 
   // For dyn_cast, isa, etc operations.
