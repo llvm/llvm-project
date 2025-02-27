@@ -51,11 +51,9 @@ StringRef
 ELFExtendedAttrParser::getTagName(const StringRef &BuildAttrSubsectionName,
                                   const unsigned Tag) {
   for (const auto &Entry : TagsNamesMap) {
-    if (BuildAttrSubsectionName == Entry.SubsectionName) {
-      if (Tag == Entry.Tag) {
+    if (BuildAttrSubsectionName == Entry.SubsectionName)
+      if (Tag == Entry.Tag)
         return Entry.TagName;
-      }
-    }
   }
   return "";
 }
@@ -136,23 +134,21 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
            (OffsetInSection + ExtBASubsectionLength - BytesAllButAttributes)) {
 
       uint64_t Tag = De.getULEB128(Cursor);
-      std::string Str = utostr(Tag);
-      StringRef TagStr(Str);
 
-      StringRef TagAsString = getTagName(VendorName, Tag);
-      if ("" != TagAsString)
-        TagStr = TagAsString;
+      StringRef TagName = getTagName(VendorName, Tag);
+      if ("" == TagName)
+        TagName = StringRef(utostr(Tag));
 
       uint64_t ValueInt = 0;
       std::string ValueStr = "";
       if (Type) { // type==1 --> ntbs
         StringRef Value = De.getCStrRef(Cursor);
         if (Sw)
-          Sw->printString(TagStr, Value);
+          Sw->printString(TagName, Value);
       } else { // type==0 --> uleb128
         uint64_t Value = De.getULEB128(Cursor);
         if (Sw)
-          Sw->printNumber(TagStr, Value);
+          Sw->printNumber(TagName, Value);
       }
 
       // populate data structure
