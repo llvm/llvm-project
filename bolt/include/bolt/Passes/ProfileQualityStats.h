@@ -56,7 +56,7 @@
 // CFG flow conservation property.
 //
 // The default value of 1000 above can be changed via the hidden BOLT option
-// `-num-functions-for-profile-quality-check=[N]`.
+// `-top-functions-for-profile-quality-check=[N]`.
 // The default reporting of the 95th percentile can be changed via the hidden
 // BOLT option `-percentile-for-profile-quality-check=[M]`.
 //

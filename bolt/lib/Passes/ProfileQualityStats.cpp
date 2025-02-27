@@ -24,8 +24,8 @@ using namespace bolt;
 
 namespace opts {
 extern cl::opt<unsigned> Verbosity;
-cl::opt<unsigned> NumFunctionsForProfileQualityCheck(
-    "num-functions-for-profile-quality-check",
+cl::opt<unsigned> TopFunctionsForProfileQualityCheck(
+    "top-functions-for-profile-quality-check",
     cl::desc("number of hottest functions to print aggregated "
              "profile quality stats of."),
     cl::init(1000), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
@@ -40,18 +40,16 @@ namespace {
 using FunctionListType = std::vector<const BinaryFunction *>;
 using function_iterator = FunctionListType::iterator;
 
-// BB index -> flow count
-using FlowMapTy = std::unordered_map<unsigned, uint64_t>;
-// Function number -> FlowMapTy
-using TotalFlowMapTy = std::unordered_map<uint64_t, FlowMapTy>;
+// Function number -> vector of flows for BBs in the function
+using TotalFlowMapTy = std::unordered_map<uint64_t, std::vector<uint64_t>>;
 // Function number -> flow count
 using FunctionFlowMapTy = std::unordered_map<uint64_t, uint64_t>;
 struct FlowInfo {
-  TotalFlowMapTy TotalIncomingMaps;
-  TotalFlowMapTy TotalOutgoingMaps;
+  TotalFlowMapTy TotalIncomingFlows;
+  TotalFlowMapTy TotalOutgoingFlows;
   TotalFlowMapTy TotalMaxCountMaps;
   TotalFlowMapTy TotalMinCountMaps;
-  FunctionFlowMapTy CallGraphIncomingMap;
+  FunctionFlowMapTy CallGraphIncomingFlows;
 };
 
 template <typename T>
@@ -69,7 +67,7 @@ void printDistribution(raw_ostream &OS, std::vector<T> &values,
       Rank = values.size() - 1;
     if (Fraction)
       OS << "  " << Text << std::string(11 - Text.length(), ' ') << ": "
-         << format("%.2lf%%", values[Rank] * 100) << "\n";
+         << formatv("{0:P}", values[Rank]) << "\n";
     else
       OS << "  " << Text << std::string(11 - Text.length(), ' ') << ": "
          << values[Rank] << "\n";
@@ -114,11 +112,11 @@ void printCFGContinuityStats(raw_ostream &OS,
 
     Function->forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) {
       const BinaryBasicBlock *EntryBB = Function->getBasicBlockAtOffset(Offset);
-      if (EntryBB && EntryBB->getKnownExecutionCount() > 0) {
-        Queue.push(EntryBB->getLayoutIndex());
-        Visited.insert(EntryBB->getLayoutIndex());
-        SumReachableBBEC += EntryBB->getKnownExecutionCount();
-      }
+      if (!EntryBB || EntryBB->getKnownExecutionCount() == 0)
+        return true;
+      Queue.push(EntryBB->getLayoutIndex());
+      Visited.insert(EntryBB->getLayoutIndex());
+      SumReachableBBEC += EntryBB->getKnownExecutionCount();
       return true;
     });
 
@@ -128,20 +126,15 @@ void printCFGContinuityStats(raw_ostream &OS,
       const unsigned BBIndex = Queue.front();
       const BinaryBasicBlock *BB = Layout.getBlock(BBIndex);
       Queue.pop();
-      auto SuccBIIter = BB->branch_info_begin();
-      for (const BinaryBasicBlock *Succ : BB->successors()) {
-        const uint64_t Count = SuccBIIter->Count;
-        if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0) {
-          ++SuccBIIter;
+      for (const auto &Tuple : llvm::zip(BB->successors(), BB->branch_info())) {
+        const auto *Succ = std::get<0>(Tuple);
+        const auto &BI = std::get<1>(Tuple);
+        const uint64_t Count = BI.Count;
+        if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0 ||
+            !Visited.insert(Succ->getLayoutIndex()).second)
           continue;
-        }
-        if (!Visited.insert(Succ->getLayoutIndex()).second) {
-          ++SuccBIIter;
-          continue;
-        }
         SumReachableBBEC += Succ->getKnownExecutionCount();
         Queue.push(Succ->getLayoutIndex());
-        ++SuccBIIter;
       }
     }
 
@@ -168,19 +161,19 @@ void printCFGContinuityStats(raw_ostream &OS,
   if (FractionECUnreachables.empty())
     return;
 
-  std::sort(FractionECUnreachables.begin(), FractionECUnreachables.end());
+  llvm::sort(FractionECUnreachables);
   const int Rank = int(FractionECUnreachables.size() *
                        opts::PercentileForProfileQualityCheck / 100);
-  OS << format("function CFG discontinuity %.2lf%%; ",
-               FractionECUnreachables[Rank] * 100);
+  OS << formatv("function CFG discontinuity {0:P}; ",
+                FractionECUnreachables[Rank]);
   if (opts::Verbosity >= 1) {
     OS << "\nabbreviations: EC = execution count, POS BBs = positive EC BBs\n"
        << "distribution of NUM(unreachable POS BBs) per function\n";
-    std::sort(NumUnreachables.begin(), NumUnreachables.end());
+    llvm::sort(NumUnreachables);
     printDistribution(OS, NumUnreachables);
 
     OS << "distribution of SUM_EC(unreachable POS BBs) per function\n";
-    std::sort(SumECUnreachables.begin(), SumECUnreachables.end());
+    llvm::sort(SumECUnreachables);
     printDistribution(OS, SumECUnreachables);
 
     OS << "distribution of [(SUM_EC(unreachable POS BBs) / SUM_EC(all "
@@ -199,27 +192,31 @@ void printCallGraphFlowConservationStats(
       continue;
 
     const uint64_t FunctionNum = Function->getFunctionNumber();
-    FlowMapTy &IncomingMap = TotalFlowMap.TotalIncomingMaps[FunctionNum];
-    FlowMapTy &OutgoingMap = TotalFlowMap.TotalOutgoingMaps[FunctionNum];
-    FunctionFlowMapTy &CallGraphIncomingMap = TotalFlowMap.CallGraphIncomingMap;
+    std::vector<uint64_t> &IncomingFlows =
+        TotalFlowMap.TotalIncomingFlows[FunctionNum];
+    std::vector<uint64_t> &OutgoingFlows =
+        TotalFlowMap.TotalOutgoingFlows[FunctionNum];
+    FunctionFlowMapTy &CallGraphIncomingFlows =
+        TotalFlowMap.CallGraphIncomingFlows;
 
     // Only consider functions that are not a program entry.
-    if (CallGraphIncomingMap.find(FunctionNum) != CallGraphIncomingMap.end()) {
+    if (CallGraphIncomingFlows.find(FunctionNum) !=
+        CallGraphIncomingFlows.end()) {
       uint64_t EntryInflow = 0;
       uint64_t EntryOutflow = 0;
       uint32_t NumConsideredEntryBlocks = 0;
-      for (const BinaryBasicBlock &BB : *Function) {
-        if (BB.isEntryPoint()) {
-          // If entry is an exit, then we don't consider it for flow
-          // conservation
-          if (BB.succ_size() == 0)
-            continue;
-          NumConsideredEntryBlocks++;
 
-          EntryInflow += IncomingMap[BB.getLayoutIndex()];
-          EntryOutflow += OutgoingMap[BB.getLayoutIndex()];
-        }
-      }
+      Function->forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) {
+        const BinaryBasicBlock *EntryBB =
+            Function->getBasicBlockAtOffset(Offset);
+        if (!EntryBB || EntryBB->succ_size() == 0)
+          return true;
+        NumConsideredEntryBlocks++;
+        EntryInflow += IncomingFlows[EntryBB->getLayoutIndex()];
+        EntryOutflow += OutgoingFlows[EntryBB->getLayoutIndex()];
+        return true;
+      });
+
       uint64_t NetEntryOutflow = 0;
       if (EntryOutflow < EntryInflow) {
         if (opts::Verbosity >= 2) {
@@ -227,8 +224,7 @@ void printCallGraphFlowConservationStats(
           // non-negative net outflow. If this is not the case, then raise a
           // warning if requested.
           OS << "BOLT WARNING: unexpected entry block CFG outflow < inflow "
-                "in "
-                "function "
+                "in function "
              << Function->getPrintName() << "\n";
           if (opts::Verbosity >= 3)
             Function->dump();
@@ -238,15 +234,15 @@ void printCallGraphFlowConservationStats(
       }
       if (NumConsideredEntryBlocks > 0) {
         const uint64_t CallGraphInflow =
-            TotalFlowMap.CallGraphIncomingMap[Function->getFunctionNumber()];
+            TotalFlowMap.CallGraphIncomingFlows[Function->getFunctionNumber()];
         const uint64_t Min = std::min(NetEntryOutflow, CallGraphInflow);
         const uint64_t Max = std::max(NetEntryOutflow, CallGraphInflow);
         const double CallGraphGap = 1 - (double)Min / Max;
 
         if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
           OS << "Nontrivial call graph gap of size "
-             << format("%.2lf%%", 100 * CallGraphGap)
-             << " observed in function " << Function->getPrintName() << "\n";
+             << formatv("{0:P}", CallGraphGap) << " observed in function "
+             << Function->getPrintName() << "\n";
           if (opts::Verbosity >= 3)
             Function->dump();
         }
@@ -259,11 +255,11 @@ void printCallGraphFlowConservationStats(
   if (CallGraphGaps.empty())
     return;
 
-  std::sort(CallGraphGaps.begin(), CallGraphGaps.end());
+  llvm::sort(CallGraphGaps);
   const int Rank =
       int(CallGraphGaps.size() * opts::PercentileForProfileQualityCheck / 100);
-  OS << format("call graph flow conservation gap %.2lf%%; ",
-               CallGraphGaps[Rank] * 100);
+  OS << formatv("call graph flow conservation gap {0:P}; ",
+                CallGraphGaps[Rank]);
   if (opts::Verbosity >= 1) {
     OS << "\ndistribution of function entry flow conservation gaps\n";
     printDistribution(OS, CallGraphGaps, /*Fraction=*/true);
@@ -282,8 +278,10 @@ void printCFGFlowConservationStats(raw_ostream &OS,
       continue;
 
     const uint64_t FunctionNum = Function->getFunctionNumber();
-    FlowMapTy &MaxCountMaps = TotalFlowMap.TotalMaxCountMaps[FunctionNum];
-    FlowMapTy &MinCountMaps = TotalFlowMap.TotalMinCountMaps[FunctionNum];
+    std::vector<uint64_t> &MaxCountMaps =
+        TotalFlowMap.TotalMaxCountMaps[FunctionNum];
+    std::vector<uint64_t> &MinCountMaps =
+        TotalFlowMap.TotalMinCountMaps[FunctionNum];
     double WeightedGapSum = 0.0;
     double WeightSum = 0.0;
     double WorstGap = 0.0;
@@ -321,9 +319,9 @@ void printCFGFlowConservationStats(raw_ostream &OS,
       if (opts::Verbosity >= 2 && (WeightedGap >= 0.1 || WorstGap >= 0.9)) {
         OS << "Nontrivial CFG gap observed in function "
            << Function->getPrintName() << "\n"
-           << "Weighted gap: " << format("%.2lf%%", 100 * WeightedGap) << "\n";
+           << "Weighted gap: " << formatv("{0:P}", WeightedGap) << "\n";
         if (BBWorstGap)
-          OS << "Worst gap: " << format("%.2lf%%", 100 * WorstGap)
+          OS << "Worst gap: " << formatv("{0:P}", WorstGap)
              << " at BB with input offset: 0x"
              << Twine::utohexstr(BBWorstGap->getInputOffset()) << "\n";
         if (BBWorstGapAbs)
@@ -342,14 +340,14 @@ void printCFGFlowConservationStats(raw_ostream &OS,
 
   if (CFGGapsWeightedAvg.empty())
     return;
-  std::sort(CFGGapsWeightedAvg.begin(), CFGGapsWeightedAvg.end());
+  llvm::sort(CFGGapsWeightedAvg);
   const int RankWA = int(CFGGapsWeightedAvg.size() *
                          opts::PercentileForProfileQualityCheck / 100);
-  std::sort(CFGGapsWorst.begin(), CFGGapsWorst.end());
+  llvm::sort(CFGGapsWorst);
   const int RankW =
       int(CFGGapsWorst.size() * opts::PercentileForProfileQualityCheck / 100);
-  OS << format("CFG flow conservation gap %.2lf%% (weighted) %.2lf%% (worst)\n",
-               CFGGapsWeightedAvg[RankWA] * 100, CFGGapsWorst[RankW] * 100);
+  OS << formatv("CFG flow conservation gap {0:P} (weighted) {1:P} (worst)\n",
+                CFGGapsWeightedAvg[RankWA], CFGGapsWorst[RankW]);
   if (opts::Verbosity >= 1) {
     OS << "distribution of weighted CFG flow conservation gaps\n";
     printDistribution(OS, CFGGapsWeightedAvg, /*Fraction=*/true);
@@ -359,68 +357,74 @@ void printCFGFlowConservationStats(raw_ostream &OS,
     printDistribution(OS, CFGGapsWorst, /*Fraction=*/true);
     OS << "distribution of worst block flow conservation gap (absolute "
           "value) per function\n";
-    std::sort(CFGGapsWorstAbs.begin(), CFGGapsWorstAbs.end());
+    llvm::sort(CFGGapsWorstAbs);
     printDistribution(OS, CFGGapsWorstAbs, /*Fraction=*/false);
   }
 }
 
 void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
   // Increment block inflow and outflow with CFG jump counts.
-  TotalFlowMapTy &TotalIncomingMaps = TotalFlowMap.TotalIncomingMaps;
-  TotalFlowMapTy &TotalOutgoingMaps = TotalFlowMap.TotalOutgoingMaps;
+  TotalFlowMapTy &TotalIncomingFlows = TotalFlowMap.TotalIncomingFlows;
+  TotalFlowMapTy &TotalOutgoingFlows = TotalFlowMap.TotalOutgoingFlows;
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction *Function = &BFI.second;
+    std::vector<uint64_t> &IncomingFlows =
+        TotalIncomingFlows[Function->getFunctionNumber()];
+    std::vector<uint64_t> &OutgoingFlows =
+        TotalOutgoingFlows[Function->getFunctionNumber()];
+    const uint64_t NumBlocks = Function->size();
+    IncomingFlows.resize(NumBlocks, 0);
+    OutgoingFlows.resize(NumBlocks, 0);
     if (Function->empty() || !Function->hasValidProfile())
       continue;
-    FlowMapTy &IncomingMap = TotalIncomingMaps[Function->getFunctionNumber()];
-    FlowMapTy &OutgoingMap = TotalOutgoingMaps[Function->getFunctionNumber()];
     for (const BinaryBasicBlock &BB : *Function) {
       uint64_t TotalOutgoing = 0ULL;
-      auto SuccBIIter = BB.branch_info_begin();
-      for (BinaryBasicBlock *Succ : BB.successors()) {
-        const uint64_t Count = SuccBIIter->Count;
-        if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0) {
-          ++SuccBIIter;
+      for (const auto &Tuple : llvm::zip(BB.successors(), BB.branch_info())) {
+        const auto *Succ = std::get<0>(Tuple);
+        const auto &BI = std::get<1>(Tuple);
+        const uint64_t Count = BI.Count;
+        if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0)
           continue;
-        }
         TotalOutgoing += Count;
-        IncomingMap[Succ->getLayoutIndex()] += Count;
-        ++SuccBIIter;
+        IncomingFlows[Succ->getLayoutIndex()] += Count;
       }
-      OutgoingMap[BB.getLayoutIndex()] = TotalOutgoing;
+      OutgoingFlows[BB.getLayoutIndex()] = TotalOutgoing;
     }
   }
-
   // Initialize TotalMaxCountMaps and TotalMinCountMaps using
-  // TotalIncomingMaps and TotalOutgoingMaps
+  // TotalIncomingFlows and TotalOutgoingFlows
   TotalFlowMapTy &TotalMaxCountMaps = TotalFlowMap.TotalMaxCountMaps;
   TotalFlowMapTy &TotalMinCountMaps = TotalFlowMap.TotalMinCountMaps;
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction *Function = &BFI.second;
+    uint64_t FunctionNum = Function->getFunctionNumber();
+    std::vector<uint64_t> &IncomingFlows = TotalIncomingFlows[FunctionNum];
+    std::vector<uint64_t> &OutgoingFlows = TotalOutgoingFlows[FunctionNum];
+    std::vector<uint64_t> &MaxCountMap = TotalMaxCountMaps[FunctionNum];
+    std::vector<uint64_t> &MinCountMap = TotalMinCountMaps[FunctionNum];
+    const uint64_t NumBlocks = Function->size();
+    MaxCountMap.resize(NumBlocks, 0);
+    MinCountMap.resize(NumBlocks, 0);
     if (Function->empty() || !Function->hasValidProfile())
       continue;
-    uint64_t FunctionNum = Function->getFunctionNumber();
-    FlowMapTy &IncomingMap = TotalIncomingMaps[FunctionNum];
-    FlowMapTy &OutgoingMap = TotalOutgoingMaps[FunctionNum];
-    FlowMapTy &MaxCountMap = TotalMaxCountMaps[FunctionNum];
-    FlowMapTy &MinCountMap = TotalMinCountMaps[FunctionNum];
     for (const BinaryBasicBlock &BB : *Function) {
       uint64_t BBNum = BB.getLayoutIndex();
-      MaxCountMap[BBNum] = std::max(IncomingMap[BBNum], OutgoingMap[BBNum]);
-      MinCountMap[BBNum] = std::min(IncomingMap[BBNum], OutgoingMap[BBNum]);
+      MaxCountMap[BBNum] = std::max(IncomingFlows[BBNum], OutgoingFlows[BBNum]);
+      MinCountMap[BBNum] = std::min(IncomingFlows[BBNum], OutgoingFlows[BBNum]);
     }
   }
 
   // Modify TotalMaxCountMaps and TotalMinCountMaps using call counts and
-  // fill out CallGraphIncomingMap
-  FunctionFlowMapTy &CallGraphIncomingMap = TotalFlowMap.CallGraphIncomingMap;
+  // fill out CallGraphIncomingFlows
+  FunctionFlowMapTy &CallGraphIncomingFlows =
+      TotalFlowMap.CallGraphIncomingFlows;
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction *Function = &BFI.second;
     uint64_t FunctionNum = Function->getFunctionNumber();
-    FlowMapTy &MaxCountMap = TotalMaxCountMaps[FunctionNum];
-    FlowMapTy &MinCountMap = TotalMinCountMaps[FunctionNum];
+    std::vector<uint64_t> &MaxCountMap = TotalMaxCountMaps[FunctionNum];
+    std::vector<uint64_t> &MinCountMap = TotalMinCountMaps[FunctionNum];
 
-    // Update MaxCountMap, MinCountMap, and CallGraphIncomingMap
+    // Update MaxCountMap, MinCountMap, and CallGraphIncomingFlows
     auto recordCall = [&](const BinaryBasicBlock *SourceBB,
                           const MCSymbol *DestSymbol, uint64_t Count,
                           uint64_t TotalCallCount) {
@@ -429,7 +433,7 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
       const BinaryFunction *DstFunc =
           DestSymbol ? BC.getFunctionForSymbol(DestSymbol) : nullptr;
       if (DstFunc)
-        CallGraphIncomingMap[DstFunc->getFunctionNumber()] += Count;
+        CallGraphIncomingFlows[DstFunc->getFunctionNumber()] += Count;
       if (SourceBB) {
         unsigned BlockIndex = SourceBB->getLayoutIndex();
         MaxCountMap[BlockIndex] =
@@ -449,9 +453,8 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
       const MCSymbol *DstSym = BC.MIB->getTargetSymbol(Inst);
 
       if (!DstSym && BC.MIB->hasAnnotation(Inst, "CallProfile")) {
-        const auto &ICSP = BC.MIB->getAnnotationAs<IndirectCallSiteProfile>(
-            Inst, "CallProfile");
-        for (const IndirectCallProfile &CSI : ICSP)
+        for (const auto &CSI : BC.MIB->getAnnotationAs<IndirectCallSiteProfile>(
+                 Inst, "CallProfile"))
           if (CSI.Symbol)
             Counts.emplace_back(CSI.Symbol, CSI.Count);
       } else {
@@ -463,29 +466,28 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
     };
 
     // If the function has an invalid profile, try to use the perf data
-    // directly. The call EC is only used to update CallGraphIncomingMap.
+    // directly. The call EC is only used to update CallGraphIncomingFlows.
     if (!Function->hasValidProfile() && !Function->getAllCallSites().empty()) {
-      for (const IndirectCallProfile &CSI : Function->getAllCallSites()) {
+      for (const IndirectCallProfile &CSI : Function->getAllCallSites())
         if (CSI.Symbol)
           recordCall(nullptr, CSI.Symbol, CSI.Count, CSI.Count);
-      }
       continue;
     } else {
       // If the function has a valid profile
       for (const BinaryBasicBlock &BB : *Function) {
         for (const MCInst &Inst : BB) {
-          if (BC.MIB->isCall(Inst)) {
-            // Find call instructions and extract target symbols from each
-            // one.
-            const CallInfoTy CallInfo = getCallInfo(&BB, Inst);
-            // We need the total call count to update MaxCountMap and
-            // MinCountMap in recordCall for indirect calls
-            uint64_t TotalCallCount = 0;
-            for (const TargetDesc &CI : CallInfo)
-              TotalCallCount += CI.second;
-            for (const TargetDesc &CI : CallInfo)
-              recordCall(&BB, CI.first, CI.second, TotalCallCount);
-          }
+          if (!BC.MIB->isCall(Inst))
+            continue;
+          // Find call instructions and extract target symbols from each
+          // one.
+          const CallInfoTy CallInfo = getCallInfo(&BB, Inst);
+          // We need the total call count to update MaxCountMap and
+          // MinCountMap in recordCall for indirect calls
+          uint64_t TotalCallCount = 0;
+          for (const TargetDesc &CI : CallInfo)
+            TotalCallCount += CI.second;
+          for (const TargetDesc &CI : CallInfo)
+            recordCall(&BB, CI.first, CI.second, TotalCallCount);
         }
       }
     }
@@ -567,9 +569,9 @@ Error PrintProfileQualityStats::runOnFunctions(BinaryContext &BC) {
     if (PrintProfileQualityStats::shouldOptimize(*Function))
       ValidFunctions.push_back(Function);
   }
-  if (ValidFunctions.empty() || opts::NumFunctionsForProfileQualityCheck == 0)
+  if (ValidFunctions.empty() || opts::TopFunctionsForProfileQualityCheck == 0)
     return Error::success();
 
-  printAll(BC, ValidFunctions, opts::NumFunctionsForProfileQualityCheck);
+  printAll(BC, ValidFunctions, opts::TopFunctionsForProfileQualityCheck);
   return Error::success();
 }
