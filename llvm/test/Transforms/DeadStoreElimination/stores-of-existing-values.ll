@@ -658,9 +658,7 @@ exit:
 
 define void @scalable_scalable_redundant_store(ptr %ptr) {
 ; CHECK-LABEL: @scalable_scalable_redundant_store(
-; CHECK-NEXT:    [[GEP_PTR_2:%.*]] = getelementptr i64, ptr [[PTR:%.*]], i64 2
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[GEP_PTR_2]], align 16
-; CHECK-NEXT:    store <vscale x 4 x i64> zeroinitializer, ptr [[PTR]], align 32
+; CHECK-NEXT:    store <vscale x 4 x i64> zeroinitializer, ptr [[PTR:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %gep.ptr.2 = getelementptr i64, ptr %ptr, i64 2
@@ -697,9 +695,7 @@ define void @scalable_scalable_nonconst_offset_neg(ptr %ptr, i64 %i) {
 
 define void @scalable_fixed_redundant_store(ptr %ptr) vscale_range(1, 2) {
 ; CHECK-LABEL: @scalable_fixed_redundant_store(
-; CHECK-NEXT:    [[GEP_PTR_2:%.*]] = getelementptr i64, ptr [[PTR:%.*]], i64 2
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[GEP_PTR_2]], align 16
-; CHECK-NEXT:    store <vscale x 4 x i64> zeroinitializer, ptr [[PTR]], align 32
+; CHECK-NEXT:    store <vscale x 4 x i64> zeroinitializer, ptr [[PTR:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %gep.ptr.2 = getelementptr i64, ptr %ptr, i64 2
@@ -723,9 +719,7 @@ define void @scalable_fixed_neg(ptr %ptr) vscale_range(1, 2) {
 
 define void @fixed_scalable_redundant_store(ptr %ptr) vscale_range(1, 2) {
 ; CHECK-LABEL: @fixed_scalable_redundant_store(
-; CHECK-NEXT:    [[GEP_PTR_2:%.*]] = getelementptr i64, ptr [[PTR:%.*]], i64 2
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[GEP_PTR_2]], align 16
-; CHECK-NEXT:    store <8 x i64> zeroinitializer, ptr [[PTR]], align 64
+; CHECK-NEXT:    store <8 x i64> zeroinitializer, ptr [[PTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
   %gep.ptr.2 = getelementptr i64, ptr %ptr, i64 2
