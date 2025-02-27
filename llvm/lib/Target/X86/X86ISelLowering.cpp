@@ -58564,15 +58564,22 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 
   // If we're splatting the lower half subvector of a full vector load into the
   // upper half, attempt to create a subvector broadcast.
-  if (IdxVal == (OpVT.getVectorNumElements() / 2) && SubVec.hasOneUse() &&
-      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits())) {
+  // TODO: Drop hasOneUse checks.
+  if (IdxVal == (OpVT.getVectorNumElements() / 2) &&
+      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
+      (Vec.hasOneUse() || SubVec.hasOneUse())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);
     auto *SubLd = dyn_cast<LoadSDNode>(SubVec);
     if (VecLd && SubLd &&
-        DAG.areNonVolatileConsecutiveLoads(SubLd, VecLd,
-                                           SubVec.getValueSizeInBits() / 8, 0))
-      return getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, dl, OpVT, SubVecVT,
-                               SubLd, 0, DAG);
+        DAG.areNonVolatileConsecutiveLoads(
+            SubLd, VecLd, SubVec.getValueSizeInBits() / 8, 0)) {
+      SDValue BcastLd = getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, dl, OpVT,
+                                          SubVecVT, SubLd, 0, DAG);
+      SDValue NewSubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVecVT,
+                                      BcastLd, DAG.getVectorIdxConstant(0, dl));
+      DCI.CombineTo(SubLd, NewSubVec, BcastLd.getValue(1));
+      return BcastLd;
+    }
   }
 
   return SDValue();
