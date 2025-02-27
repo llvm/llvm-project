@@ -7748,6 +7748,7 @@ void ConstructVisitor::Post(const parser::TypeGuardStmt::Guard &x) {
       SetTypeFromAssociation(*symbol);
     } else if (const auto *type{GetDeclTypeSpec()}) {
       symbol->SetType(*type);
+      symbol->get<AssocEntityDetails>().set_isTypeGuard();
     }
     SetAttrsFromAssociation(*symbol);
   }
