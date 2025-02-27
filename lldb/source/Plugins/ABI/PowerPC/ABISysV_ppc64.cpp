@@ -1083,9 +1083,7 @@ ValueObjectSP ABISysV_ppc64::GetReturnValueObjectImpl(
   return GetReturnValueObjectSimple(thread, return_compiler_type);
 }
 
-bool ABISysV_ppc64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+UnwindPlanSP ABISysV_ppc64::CreateFunctionEntryUnwindPlan() {
 
   uint32_t lr_reg_num;
   uint32_t sp_reg_num;
@@ -1106,22 +1104,17 @@ bool ABISysV_ppc64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   // Our Call Frame Address is the stack pointer value
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // The previous PC is in the LR
+  // The previous PC is in the LR. All other registers are the same.
   row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
-  unwind_plan.AppendRow(row);
 
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("ppc64 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("ppc64 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_ppc64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
   uint32_t sp_reg_num;
   uint32_t pc_reg_num;
   uint32_t cr_reg_num;
@@ -1145,13 +1138,14 @@ bool ABISysV_ppc64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
   row->SetRegisterLocationToAtCFAPlusOffset(cr_reg_num, ptr_size, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("ppc64 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(pc_reg_num);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("ppc64 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  plan_sp->SetReturnAddressRegister(pc_reg_num);
+  return plan_sp;
 }
 
 bool ABISysV_ppc64::RegisterIsVolatile(const RegisterInfo *reg_info) {

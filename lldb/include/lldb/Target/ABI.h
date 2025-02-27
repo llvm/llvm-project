@@ -13,6 +13,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -102,9 +103,9 @@ protected:
   lldb::ProcessSP GetProcessSP() const { return m_process_wp.lock(); }
 
 public:
-  virtual bool CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) = 0;
+  virtual lldb::UnwindPlanSP CreateFunctionEntryUnwindPlan() = 0;
 
-  virtual bool CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) = 0;
+  virtual lldb::UnwindPlanSP CreateDefaultUnwindPlan() = 0;
 
   virtual bool RegisterIsVolatile(const RegisterInfo *reg_info) = 0;
 
