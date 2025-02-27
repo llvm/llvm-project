@@ -20,7 +20,6 @@ sub      w0, wsp, #4077
 sub      w4, w20, #546, lsl #12
 sub      sp, sp, #288
 sub      w13, wsp, w10
-sub      x16, x2, w19, uxtb
 sub      wsp, w19, #16
 adds     w13, w23, #291, lsl #12
 cmn      w2, #4095
@@ -200,7 +199,6 @@ mov      sp, x30
 mov      wsp, w20
 mov      x11, sp
 mov      w24, wsp
-mov      x30, v18.d[0]
 
 #------------------------------------------------------------------------------
 # Add-subtract (shifted register)
@@ -346,12 +344,7 @@ cbnz     x2, #-4
 cbnz     x26, #1048572
 cbz      wzr, #0
 cbnz     xzr, #0
-
-#------------------------------------------------------------------------------
-# Compare and branch (label)
-#------------------------------------------------------------------------------
-
-cbnz w21, test
+cbnz     w21, test
 
 #------------------------------------------------------------------------------
 # Conditional branch (immediate)
@@ -492,12 +485,8 @@ lsr	w17, w18, w19
 lsr	x20, x21, x22
 asr	w23, w24, w25
 asr	x26, x27, x28
-eon     w29, w4, w19
-eon     x19, x12, x2
-eor     w8, w27, w2
-eor     x22, x16, x6
 ror	w0, w1, w2
-ror    x3, x4, x5
+ror     x3, x4, x5
 lsl	w6, w7, w8
 lsl	x9, x10, x11
 lsr	w12, w13, w14
@@ -571,8 +560,6 @@ extr     w3, w5, w7, #0
 extr     w11, w13, w17, #31
 extr     x3, x5, x7, #15
 extr     x11, x13, x17, #63
-eor      wsp, w4, #0xe00
-eor      x27, x25, #0x1e00
 ror      x19, x23, #24
 ror      x29, xzr, #63
 ror      w9, w13, #31
@@ -940,6 +927,15 @@ stlxp      wzr, x6, x7, [x1]
 ldaxp      w5, w18, [sp]
 ldaxp      x6, x19, [x22]
 ldaxp      x6, x19, [x22]
+ldapur     w7, [x24]
+ldapur     x20, [x13]
+ldapurb    w13, [x17]
+ldapurh    w3, [x22]
+ldapursb   w7, [x8]
+ldapursb   x29, [x7]
+ldapursh   w17, [x19]
+ldapursh   x3, [x3]
+ldapursw   x3, [x18]
 stlrb      w24, [sp]
 stlrh      w25, [x30]
 stlr       w26, [x29]
@@ -1370,6 +1366,8 @@ and      wsp, w16, #0xe00
 and      x2, x22, #0x1e00
 ands     w14, w8, #0x70
 ands     x4, x10, #0x60
+eor      wsp, w4, #0xe00
+eor      x27, x25, #0x1e00
 mov      w3, #983055
 mov      x10, #-6148914691236517206
 
@@ -1391,6 +1389,10 @@ and      w3, wzr, w20, ror #2
 and      x7, x20, xzr, asr #63
 bic      x13, x20, x14, lsl #47
 bic      w2, w7, w9
+eon      w29, w4, w19
+eon      x19, x12, x2
+eor      w8, w27, w2
+eor      x22, x16, x6
 orr      w2, w7, w0, asr #31
 orr      x8, x9, x10, lsl #12
 orn      x3, x5, x7, asr #2
@@ -1421,6 +1423,12 @@ movz     x6, #0, lsl #32
 movk     x7, #0, lsl #32
 movz     x8, #0, lsl #48
 movk     x9, #0, lsl #48
+
+#------------------------------------------------------------------------------
+# Move immediate to Special Register
+#------------------------------------------------------------------------------
+
+msr     DAIFSet, #0
 
 #------------------------------------------------------------------------------
 # PC-relative addressing
@@ -1490,7 +1498,6 @@ bl test
 # CHECK-NEXT:  1      1     0.25                        sub	w4, w20, #546, lsl #12
 # CHECK-NEXT:  1      1     0.25                        sub	sp, sp, #288
 # CHECK-NEXT:  1      2     0.50                        sub	w13, wsp, w10
-# CHECK-NEXT:  1      2     0.50                        sub	x16, x2, w19, uxtb
 # CHECK-NEXT:  1      1     0.25                        sub	wsp, w19, #16
 # CHECK-NEXT:  1      1     0.33                        adds	w13, w23, #291, lsl #12
 # CHECK-NEXT:  1      1     0.33                        cmn	w2, #4095
@@ -1665,7 +1672,6 @@ bl test
 # CHECK-NEXT:  1      1     0.25                        mov	wsp, w20
 # CHECK-NEXT:  1      1     0.25                        mov	x11, sp
 # CHECK-NEXT:  1      1     0.25                        mov	w24, wsp
-# CHECK-NEXT:  1      2     0.25                        mov	x30, v18.d[0]
 # CHECK-NEXT:  1      1     0.25                        adc	w29, w27, w25
 # CHECK-NEXT:  1      1     0.25                        adc	wzr, w3, w4
 # CHECK-NEXT:  1      1     0.25                        adc	w9, wzr, w10
@@ -1907,10 +1913,6 @@ bl test
 # CHECK-NEXT:  1      1     0.25                        lsr	x20, x21, x22
 # CHECK-NEXT:  1      1     0.25                        asr	w23, w24, w25
 # CHECK-NEXT:  1      1     0.25                        asr	x26, x27, x28
-# CHECK-NEXT:  1      1     0.25                        eon	w29, w4, w19
-# CHECK-NEXT:  1      1     0.25                        eon	x19, x12, x2
-# CHECK-NEXT:  1      1     0.25                        eor	w8, w27, w2
-# CHECK-NEXT:  1      1     0.25                        eor	x22, x16, x6
 # CHECK-NEXT:  1      1     0.25                        ror	w0, w1, w2
 # CHECK-NEXT:  1      1     0.25                        ror	x3, x4, x5
 # CHECK-NEXT:  1      1     0.25                        lsl	w6, w7, w8
@@ -1976,8 +1978,6 @@ bl test
 # CHECK-NEXT:  2      3     0.50                        extr	w11, w13, w17, #31
 # CHECK-NEXT:  2      3     0.50                        extr	x3, x5, x7, #15
 # CHECK-NEXT:  2      3     0.50                        extr	x11, x13, x17, #63
-# CHECK-NEXT:  1      1     0.25                        eor	wsp, w4, #0xe00
-# CHECK-NEXT:  1      1     0.25                        eor	x27, x25, #0x1e00
 # CHECK-NEXT:  1      1     0.25                        ror	x19, x23, #24
 # CHECK-NEXT:  1      1     0.25                        ror	x29, xzr, #63
 # CHECK-NEXT:  1      1     0.25                        ror	w9, w13, #31
@@ -2290,6 +2290,15 @@ bl test
 # CHECK-NEXT:  2      4     0.67    *      *      U     ldaxp	w5, w18, [sp]
 # CHECK-NEXT:  2      4     0.67    *      *      U     ldaxp	x6, x19, [x22]
 # CHECK-NEXT:  2      4     0.67    *      *      U     ldaxp	x6, x19, [x22]
+# CHECK-NEXT:  2      1     0.50    *                   ldapur	w7, [x24]
+# CHECK-NEXT:  2      1     0.50    *                   ldapur	x20, [x13]
+# CHECK-NEXT:  2      1     0.50    *                   ldapurb	w13, [x17]
+# CHECK-NEXT:  2      1     0.50    *                   ldapurh	w3, [x22]
+# CHECK-NEXT:  2      1     0.50                  U     ldapursb	w7, [x8]
+# CHECK-NEXT:  2      1     0.50                  U     ldapursb	x29, [x7]
+# CHECK-NEXT:  2      1     0.50                  U     ldapursh	w17, [x19]
+# CHECK-NEXT:  2      1     0.50                  U     ldapursh	x3, [x3]
+# CHECK-NEXT:  2      1     0.50                  U     ldapursw	x3, [x18]
 # CHECK-NEXT:  2      1     0.50           *      U     stlrb	w24, [sp]
 # CHECK-NEXT:  2      1     0.50           *      U     stlrh	w25, [x30]
 # CHECK-NEXT:  2      1     0.50           *      U     stlr	w26, [x29]
@@ -2665,6 +2674,8 @@ bl test
 # CHECK-NEXT:  1      1     0.25                        and	x2, x22, #0x1e00
 # CHECK-NEXT:  1      1     0.33                        ands	w14, w8, #0x70
 # CHECK-NEXT:  1      1     0.33                        ands	x4, x10, #0x60
+# CHECK-NEXT:  1      1     0.25                        eor	wsp, w4, #0xe00
+# CHECK-NEXT:  1      1     0.25                        eor	x27, x25, #0x1e00
 # CHECK-NEXT:  1      1     0.25                        mov	w3, #983055
 # CHECK-NEXT:  1      1     0.25                        mov	x10, #-6148914691236517206
 # CHECK-NEXT:  1      1     0.25                        and	w12, w23, w21
@@ -2681,6 +2692,10 @@ bl test
 # CHECK-NEXT:  1      1     0.25                        and	x7, x20, xzr, asr #63
 # CHECK-NEXT:  1      1     0.25                        bic	x13, x20, x14, lsl #47
 # CHECK-NEXT:  1      1     0.25                        bic	w2, w7, w9
+# CHECK-NEXT:  1      1     0.25                        eon	w29, w4, w19
+# CHECK-NEXT:  1      1     0.25                        eon	x19, x12, x2
+# CHECK-NEXT:  1      1     0.25                        eor	w8, w27, w2
+# CHECK-NEXT:  1      1     0.25                        eor	x22, x16, x6
 # CHECK-NEXT:  1      1     0.25                        orr	w2, w7, w0, asr #31
 # CHECK-NEXT:  1      1     0.25                        orr	x8, x9, x10, lsl #12
 # CHECK-NEXT:  1      1     0.25                        orn	x3, x5, x7, asr #2
@@ -2706,6 +2721,7 @@ bl test
 # CHECK-NEXT:  1      1     0.25                        movk	x7, #0, lsl #32
 # CHECK-NEXT:  1      1     0.25                        movz	x8, #0, lsl #48
 # CHECK-NEXT:  1      1     0.25                        movk	x9, #0, lsl #48
+# CHECK-NEXT:  1      1     0.07                  U     msr	DAIFSet, #0
 # CHECK-NEXT:  1      1     0.25                        adr	x2, #1600
 # CHECK-NEXT:  1      1     0.25                        adrp	x21, #6553600
 # CHECK-NEXT:  1      1     0.25                        adr	x0, #262144
@@ -2748,7 +2764,7 @@ bl test
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT: 13.00  13.00  35.50  35.50  48.00  48.00  48.00  100.00 173.50 173.50 317.50 214.50 144.00 144.00 193.25 55.75  65.75  13.25
+# CHECK-NEXT: 13.00  13.00  40.00  40.00  48.00  48.00  48.00  100.00 178.00 178.00 317.00 214.00 144.00 144.00 193.00 55.50  65.50  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -2767,7 +2783,6 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	w4, w20, #546, lsl #12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	sp, sp, #288
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     sub	w13, wsp, w10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     sub	x16, x2, w19, uxtb
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	wsp, w19, #16
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adds	w13, w23, #291, lsl #12
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     cmn	w2, #4095
@@ -2942,7 +2957,6 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	wsp, w20
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x11, sp
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	w24, wsp
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	x30, v18.d[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adc	w29, w27, w25
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adc	wzr, w3, w4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adc	w9, wzr, w10
@@ -3184,10 +3198,6 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     lsr	x20, x21, x22
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     asr	w23, w24, w25
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     asr	x26, x27, x28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eon	w29, w4, w19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eon	x19, x12, x2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	w8, w27, w2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	x22, x16, x6
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ror	w0, w1, w2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ror	x3, x4, x5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     lsl	w6, w7, w8
@@ -3253,8 +3263,6 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -      -      -     extr	w11, w13, w17, #31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -      -      -     extr	x3, x5, x7, #15
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25    -      -      -      -     extr	x11, x13, x17, #63
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	wsp, w4, #0xe00
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	x27, x25, #0x1e00
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ror	x19, x23, #24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ror	x29, xzr, #63
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ror	w9, w13, #31
@@ -3567,6 +3575,15 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -      -      -     ldaxp	w5, w18, [sp]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -      -      -     ldaxp	x6, x19, [x22]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67   0.67    -      -      -      -      -      -      -      -     ldaxp	x6, x19, [x22]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapur	w7, [x24]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapur	x20, [x13]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapurb	w13, [x17]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapurh	w3, [x22]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursb	w7, [x8]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursb	x29, [x7]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursh	w17, [x19]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursh	x3, [x3]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursw	x3, [x18]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     stlrb	w24, [sp]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     stlrh	w25, [x30]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     stlr	w26, [x29]
@@ -3942,6 +3959,8 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     and	x2, x22, #0x1e00
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ands	w14, w8, #0x70
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ands	x4, x10, #0x60
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	wsp, w4, #0xe00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	x27, x25, #0x1e00
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	w3, #983055
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x10, #-6148914691236517206
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     and	w12, w23, w21
@@ -3958,6 +3977,10 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     and	x7, x20, xzr, asr #63
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     bic	x13, x20, x14, lsl #47
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     bic	w2, w7, w9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eon	w29, w4, w19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eon	x19, x12, x2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	w8, w27, w2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     eor	x22, x16, x6
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     orr	w2, w7, w0, asr #31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     orr	x8, x9, x10, lsl #12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     orn	x3, x5, x7, asr #2
@@ -3983,6 +4006,7 @@ bl test
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movk	x7, #0, lsl #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movz	x8, #0, lsl #48
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movk	x9, #0, lsl #48
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	DAIFSet, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adr	x2, #1600
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adrp	x21, #6553600
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adr	x0, #262144

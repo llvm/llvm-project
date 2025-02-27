@@ -622,6 +622,7 @@ mov d6, v0.d[1]
 mov h2, v0.h[5]
 mov s17, v0.s[2]
 mov w8, v8.s[0]
+mov x30, v18.d[0]
 mov v2.b[0], v0.b[0]
 mov v2.h[1], v0.h[1]
 mov v2.s[2], v0.s[2]
@@ -647,6 +648,7 @@ mul v26.4h, v20.4h, v14.h[5]
 mul v5.8h, v21.8h, v3.h[7]
 mul v29.2s, v10.2s, v3.s[1]
 mul v30.4s, v11.4s, v4.s[0]
+mul v30.4s, v11.4s, v4.4s
 mul v3.8h, v9.8h, v8.8h
 mvni v9.4h, #237
 mvni v8.8h, #171, lsl #8
@@ -681,7 +683,6 @@ raddhn2 v0.4s, v0.2d, v0.2d
 raddhn2 v0.8h, v0.4s, v0.4s
 rbit v0.16b, v0.16b
 rbit v0.8b, v0.8b
-rev p1.h, p2.h
 rev16 v21.8b, v1.8b
 rev16 v30.16b, v31.16b
 rev32 v0.4h, v9.4h
@@ -875,7 +876,7 @@ sqabs v0.4s, v0.4s
 sqabs v0.8b, v0.8b
 sqabs v0.8h, v0.8h
 sqadd b20, b11, b15
-sqadd h12, h18, h10 //  SQADD <V><d>, <V><n>, <V><m>  \\ ASIMD arith, complex  \\ 1 2  2  4.0 V1UnitV
+sqadd h12, h18, h10
 sqadd v0.16b, v0.16b, v0.16b
 sqadd v0.2s, v0.2s, v0.2s
 sqdmlal d19, s24, s12
@@ -1297,7 +1298,6 @@ uaddlv s0, v0.4h
 uaddlv s0, v0.8h
 uaddlv h0, v0.8b
 uaddlv h0, v0.16b
-uaddv d28, p6, z6.d
 uaddw v0.2d, v0.2d, v0.2s
 uaddw v0.4s, v0.4s, v0.4h
 uaddw v0.8h, v0.8h, v0.8b
@@ -1341,7 +1341,6 @@ umaxv b0, v0.16b
 umaxv h0, v0.4h
 umaxv h0, v0.8h
 umaxv s0, v0.4s
-umaxv d11, p4, z11.d
 umin v0.2s, v0.2s, v0.2s
 umin v0.4h, v0.4h, v0.4h
 umin v0.8b, v0.8b, v0.8b
@@ -1355,7 +1354,6 @@ uminv b0, v0.16b
 uminv h0, v0.4h
 uminv h0, v0.8h
 uminv s0, v0.4s
-uminv d24, p5, z29.d
 umlal v0.2d, v0.2s, v0.2s
 umlal v28.2d, v31.2s, v0.s[1]
 umlal v0.4s, v0.4h, v0.4h
@@ -2213,6 +2211,7 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        mov	h2, v0.h[5]
 # CHECK-NEXT:  1      2     0.25                        mov	s17, v0.s[2]
 # CHECK-NEXT:  1      2     0.25                        mov	w8, v8.s[0]
+# CHECK-NEXT:  1      2     0.25                        mov	x30, v18.d[0]
 # CHECK-NEXT:  1      2     0.25                        mov	v2.b[0], v0.b[0]
 # CHECK-NEXT:  1      2     0.25                        mov	v2.h[1], v0.h[1]
 # CHECK-NEXT:  1      2     0.25                        mov	v2.s[2], v0.s[2]
@@ -2238,6 +2237,7 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        mul	v5.8h, v21.8h, v3.h[7]
 # CHECK-NEXT:  1      4     0.50                        mul	v29.2s, v10.2s, v3.s[1]
 # CHECK-NEXT:  1      4     0.50                        mul	v30.4s, v11.4s, v4.s[0]
+# CHECK-NEXT:  1      4     0.50                        mul	v30.4s, v11.4s, v4.4s
 # CHECK-NEXT:  1      4     0.50                        mul	v3.8h, v9.8h, v8.8h
 # CHECK-NEXT:  1      2     0.25                        mvni	v9.4h, #237
 # CHECK-NEXT:  1      2     0.25                        mvni	v8.8h, #171, lsl #8
@@ -2272,7 +2272,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        raddhn2	v0.8h, v0.4s, v0.4s
 # CHECK-NEXT:  1      2     0.25                        rbit	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.25                        rbit	v0.8b, v0.8b
-# CHECK-NEXT:  1      2     1.00                        rev	p1.h, p2.h
 # CHECK-NEXT:  1      2     0.25                        rev16	v21.8b, v1.8b
 # CHECK-NEXT:  1      2     0.25                        rev16	v30.16b, v31.16b
 # CHECK-NEXT:  1      2     0.25                        rev32	v0.4h, v9.4h
@@ -2888,7 +2887,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  2      4     0.50                        uaddlv	s0, v0.8h
 # CHECK-NEXT:  2      4     0.50                        uaddlv	h0, v0.8b
 # CHECK-NEXT:  2      4     1.00                        uaddlv	h0, v0.16b
-# CHECK-NEXT:  2      8     0.50                        uaddv	d28, p6, z6.d
 # CHECK-NEXT:  1      2     0.25                        uaddw	v0.2d, v0.2d, v0.2s
 # CHECK-NEXT:  1      2     0.25                        uaddw	v0.4s, v0.4s, v0.4h
 # CHECK-NEXT:  1      2     0.25                        uaddw	v0.8h, v0.8h, v0.8b
@@ -2932,7 +2930,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        umaxv	h0, v0.4h
 # CHECK-NEXT:  2      4     0.50                        umaxv	h0, v0.8h
 # CHECK-NEXT:  1      2     0.50                        umaxv	s0, v0.4s
-# CHECK-NEXT:  2      8     0.50                        umaxv	d11, p4, z11.d
 # CHECK-NEXT:  1      2     0.25                        umin	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      2     0.25                        umin	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      2     0.25                        umin	v0.8b, v0.8b, v0.8b
@@ -2946,7 +2943,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        uminv	h0, v0.4h
 # CHECK-NEXT:  2      4     0.50                        uminv	h0, v0.8h
 # CHECK-NEXT:  1      2     0.50                        uminv	s0, v0.4s
-# CHECK-NEXT:  2      8     0.50                        uminv	d24, p5, z29.d
 # CHECK-NEXT:  1      4     0.50                        umlal	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.50                        umlal	v28.2d, v31.2s, v0.s[1]
 # CHECK-NEXT:  1      4     0.50                        umlal	v0.4s, v0.4h, v0.4h
@@ -3196,7 +3192,7 @@ zip2 v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -      -      -      -      -      -     87.33  170.83 170.83 21.75  7.75   7.75   7.75   610.75 505.75 502.75 397.75
+# CHECK-NEXT:  -      -      -      -      -      -      -     87.33  170.83 170.83 20.75  7.75   7.75   7.75   609.25 503.75 502.75 397.25
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -3821,6 +3817,7 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	h2, v0.h[5]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	s17, v0.s[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	w8, v8.s[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	x30, v18.d[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	v2.b[0], v0.b[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	v2.h[1], v0.h[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mov	v2.s[2], v0.s[2]
@@ -3846,6 +3843,7 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mul	v5.8h, v21.8h, v3.h[7]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mul	v29.2s, v10.2s, v3.s[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mul	v30.4s, v11.4s, v4.s[0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mul	v30.4s, v11.4s, v4.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mul	v3.8h, v9.8h, v8.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mvni	v9.4h, #237
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   mvni	v8.8h, #171, lsl #8
@@ -3880,7 +3878,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   raddhn2	v0.8h, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   rbit	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   rbit	v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     rev	p1.h, p2.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   rev16	v21.8b, v1.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   rev16	v30.16b, v31.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   rev32	v0.4h, v9.4h
@@ -4496,7 +4493,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.75   0.25   0.75   uaddlv	s0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.75   0.25   0.75   uaddlv	h0, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00   uaddlv	h0, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25   uaddv	d28, p6, z6.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   uaddw	v0.2d, v0.2d, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   uaddw	v0.4s, v0.4s, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   uaddw	v0.8h, v0.8h, v0.8b
@@ -4540,7 +4536,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   umaxv	h0, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.75   0.25   0.75   umaxv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   umaxv	s0, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25   umaxv	d11, p4, z11.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   umin	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   umin	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   umin	v0.8b, v0.8b, v0.8b
@@ -4554,7 +4549,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uminv	h0, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.75   0.25   0.75   uminv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uminv	s0, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.25   0.25   uminv	d24, p5, z29.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     umlal	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     umlal	v28.2d, v31.2s, v0.s[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     umlal	v0.4s, v0.4h, v0.4h

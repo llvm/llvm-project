@@ -15,15 +15,6 @@ dcps3
 dmb sy
 hlt #0x7a67
 hvc #0xecb9
-ldapur w7, [x24]
-ldapur x20, [x13]
-ldapurb w13, [x17]
-ldapurh w3, [x22]
-ldapursb w7, [x8]
-ldapursb x29, [x7]
-ldapursh w17, [x19]
-ldapursh x3, [x3]
-ldapursw x3, [x18]
 isb
 pssbb
 smc #0x7e57
@@ -53,15 +44,6 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT:  1      1     0.07    *      *      U     dmb	sy
 # CHECK-NEXT:  1      1     0.07                  U     hlt	#0x7a67
 # CHECK-NEXT:  1      1     0.07                  U     hvc	#0xecb9
-# CHECK-NEXT:  2      1     0.50    *                   ldapur	w7, [x24]
-# CHECK-NEXT:  2      1     0.50    *                   ldapur	x20, [x13]
-# CHECK-NEXT:  2      1     0.50    *                   ldapurb	w13, [x17]
-# CHECK-NEXT:  2      1     0.50    *                   ldapurh	w3, [x22]
-# CHECK-NEXT:  2      1     0.50                  U     ldapursb	w7, [x8]
-# CHECK-NEXT:  2      1     0.50                  U     ldapursb	x29, [x7]
-# CHECK-NEXT:  2      1     0.50                  U     ldapursh	w17, [x19]
-# CHECK-NEXT:  2      1     0.50                  U     ldapursh	x3, [x3]
-# CHECK-NEXT:  2      1     0.50                  U     ldapursw	x3, [x18]
 # CHECK-NEXT:  1      1     0.07    *      *      U     isb
 # CHECK-NEXT:  1      1     0.07    *      *      U     pssbb
 # CHECK-NEXT:  1      1     0.07                  U     smc	#0x7e57
@@ -94,7 +76,7 @@ sysl x16, #5, c11, c8, #5
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     6.50   6.50    -      -      -      -     6.50   6.50    -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -     2.00   2.00    -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -108,15 +90,6 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dmb	sy
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     hlt	#0x7a67
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     hvc	#0xecb9
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapur	w7, [x24]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapur	x20, [x13]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapurb	w13, [x17]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapurh	w3, [x22]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursb	w7, [x8]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursb	x29, [x7]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursh	w17, [x19]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursh	x3, [x3]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldapursw	x3, [x18]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     isb
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     pssbb
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smc	#0x7e57
