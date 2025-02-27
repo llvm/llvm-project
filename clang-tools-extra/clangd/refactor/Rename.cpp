@@ -340,7 +340,8 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
     for (const auto &Child : DS->getDeclGroup())
       if (const auto *ND = dyn_cast<NamedDecl>(Child))
         if (ND != &RenamedDecl && ND->getDeclName().isIdentifier() &&
-            ND->getName() == Name)
+            ND->getName() == Name &&
+            ND->getIdentifierNamespace() & RenamedDecl.getIdentifierNamespace())
           return ND;
     return nullptr;
   };
@@ -382,7 +383,9 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
     // Also check if there is a name collision with function arguments.
     if (const auto *Function = ScopeParent->get<FunctionDecl>())
       for (const auto *Parameter : Function->parameters())
-        if (Parameter->getName() == NewName)
+        if (Parameter->getName() == NewName &&
+            Parameter->getIdentifierNamespace() &
+                RenamedDecl.getIdentifierNamespace())
           return Parameter;
     return nullptr;
   }
@@ -407,7 +410,9 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
   if (const auto *EnclosingFunction = Parent->get<FunctionDecl>()) {
     // Check for conflicts with other arguments.
     for (const auto *Parameter : EnclosingFunction->parameters())
-      if (Parameter != &RenamedDecl && Parameter->getName() == NewName)
+      if (Parameter != &RenamedDecl && Parameter->getName() == NewName &&
+          Parameter->getIdentifierNamespace() &
+              RenamedDecl.getIdentifierNamespace())
         return Parameter;
     // FIXME: We don't modify all references to function parameters when
     // renaming from forward declaration now, so using a name colliding with
@@ -452,7 +457,8 @@ const NamedDecl *lookupSiblingsWithinContext(ASTContext &Ctx,
   }
   // Lookup may contain the RenameDecl itself, exclude it.
   for (const auto *D : LookupResult)
-    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl())
+    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl() &&
+        D->getIdentifierNamespace() & RenamedDecl.getIdentifierNamespace())
       return D;
   return nullptr;
 }
