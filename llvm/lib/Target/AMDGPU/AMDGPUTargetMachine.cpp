@@ -2165,97 +2165,6 @@ static const char NPMRegAllocOptNotSupportedMessage[] =
     "-wwm-regalloc-npm, "
     "and -vgpr-regalloc-npm";
 
-// void AMDGPUCodeGenPassBuilder::addSGPRRegAlloc(AddMachinePass &addPass,
-// RegAllocType RAType, RegAllocFilterFunc FilterFunc, bool Optimized) const {
-//   RegAllocType RAType = RegAllocTypeNPM;
-//   if (RAType == RegAllocType::Default) {
-//     RAType = Optimized ? RegAllocType::Greedy : RegAllocType::Fast;
-//   }
-
-//   if (RAType == RegAllocType::Greedy) {
-//       addPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
-//       return;
-//   }
-
-//   if (RAType == RegAllocType::Fast) {
-//     addPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}));
-//     return;
-//   }
-//   report_fatal_error("Unsupported SGPR regalloc type", false);
-// }
-
-// template<typename RegAllocPass>
-// void AMDGPUCodeGenPassBuilder::addRegAllocOfType(AddMachinePass &addPass,
-// RegAllocPass::Options Options) {
-//   addPass(RegAllocPass(Options));
-// }
-
-// this is the final method
-// template<typename RegAllocPass>
-// void AMDGPUCodeGenPassBuilder::addRegAllocOfType(AddMachinePass &addPass,
-// RegAllocPhase Phase) {
-// #define RA_OPTIONS(FilterFunc, Name, ClearVirtRegs) \
-//   [&]() { \
-//     if constexpr (std::is_same_v<RegAllocPass, RegAllocFastPass>) { \
-//       return RegAllocFastPass::Options{FilterFunc, Name, ClearVirtRegs}; \
-//     } else { \
-//       return typename RegAllocPass::Options{FilterFunc, Name}; \
-//     } \
-//   }()
-
-//   typename RegAllocPass::Options Options;
-//   RegAllocType RAType;
-
-//   switch (Phase) {
-//   case RegAllocPhase::SGPR:
-//     Options = RA_OPTIONS(onlyAllocateSGPRs, "sgpr", false);
-//     RAType = SGPRRegAllocTypeNPM;
-//     break;
-//   case RegAllocPhase::WWM:
-//     Options = RA_OPTIONS(onlyAllocateWWMRegs, "wwm", false);
-//     RAType = WWMRegAllocTypeNPM;
-//     break;
-//   case RegAllocPhase::VGPR:
-//     Options = RA_OPTIONS(onlyAllocateVGPRs, "vgpr", true);
-//     RAType = VGPRRegAllocTypeNPM;
-//     break;
-//   };
-
-//   switch(RAType) {
-//     case RegAllocType::Greedy:
-//       addPass(RAGreedyPass(Options));
-//       return;
-//     case RegAllocType::Fast:
-//       addPass(RegAllocFastPass(Options));
-//       return;
-//     case RegAllocType::Unset:
-//       addPass(RegAllocPass(Options));
-//   }
-// #undef RA_OPTIONS
-// }
-
-// template<typename RegAllocPass>
-// void AMDGPUCodeGenPassBuilder::addRegAlloc(AddMachinePass &addPass,
-// RegAllocPhase Phase) {
-//   RegAllocType RAType;
-//   switch(Phase) {
-//     case RegAllocPhase::SGPR:
-//       RAType = SGPRRegAllocTypeNPM;
-//       break;
-//     case RegAllocPhase::WWM:
-//       RAType = WWMRegAllocTypeNPM;
-//       break;
-//     case RegAllocPhase::VGPR:
-//       RAType = VGPRRegAllocTypeNPM;
-//       break;
-//   }
-//   switch (RAType) {
-//     case RegAllocType::Greedy:
-//       addRegAllocOfType(addPass, Phase);
-//   }
-//   addRegAllocOfType<RegAllocPass>(addPass, Phase);
-// }
-
 template <typename RegAllocPassT>
 typename RegAllocPassT::Options
 AMDGPUCodeGenPassBuilder::getRAOptionsForPhase(RegAllocPhase Phase) const {
@@ -2276,18 +2185,6 @@ AMDGPUCodeGenPassBuilder::getRAOptionsForPhase(RegAllocPhase Phase) const {
   case RegAllocPhase::VGPR:
     return RA_OPTIONS(onlyAllocateVGPRs, "vgpr", true);
   }
-  // static_assert(std::is_same_v<PhaseT, SGPRPhase> ||
-  //               std::is_same_v<PhaseT, WWMPhase> ||
-  //               std::is_same_v<PhaseT, VGPRPhase>,
-  //               "Unsupported phase type");
-
-  // if constexpr(std::is_same_v<PhaseT, SGPRPhase>) {
-  //   return RA_OPTIONS(onlyAllocateSGPRs, "sgpr", false);
-  // } else if constexpr(std::is_same_v<PhaseT, WWMPhase>) {
-  //   return RA_OPTIONS(onlyAllocateWWMRegs, "wwm", false);
-  // } else if constexpr(std::is_same_v<PhaseT, VGPRPhase>) {
-  //   return RA_OPTIONS(onlyAllocateVGPRs, "vgpr", true);
-  // }
 
 #undef RA_OPTIONS
 }
@@ -2318,10 +2215,11 @@ void AMDGPUCodeGenPassBuilder::addRegAlloc(AddMachinePass &addPass,
     addPass(RegAllocFastPass(getRAOptionsForPhase<RegAllocFastPass>(Phase)));
     return;
   case RegAllocType::Unset:
+  case RegAllocType::Default:
     addPass(RegAllocPassT(getRAOptionsForPhase<RegAllocPassT>(Phase)));
     return;
   default:
-    report_fatal_error("Unsupported regalloc type", false);
+    report_fatal_error("Unsupported regalloc type for AMDGPU", false);
   }
 }
 

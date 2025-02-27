@@ -194,10 +194,6 @@ public:
   void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
 
 private:
-  // /// Dummy structs to represent different phases of register allocation.
-  // struct SGPRPhase{};
-  // struct VGPRPhase{};
-  // struct WWMPhase{};
   enum class RegAllocPhase { SGPR, VGPR, WWM };
 
   template <typename RegAllocPassT>
