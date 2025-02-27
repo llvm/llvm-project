@@ -2091,8 +2091,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle DTLTO options.
   config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
-  config->dtltoRemoteCompiler =
-      args.getLastArgValue(OPT_thinlto_remote_compiler_eq);
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);

@@ -14,7 +14,7 @@
 
 // CHECK: ld.lld
 // CHECK-SAME: "--thinlto-distributor=dist.exe"
-// CHECK-SAME: "--thinlto-remote-compiler={{.*}}clang
+// CHECK-SAME: "-mllvm=-thinlto-remote-compiler={{.*}}clang
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg1"
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg2"
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg3"
@@ -30,7 +30,7 @@
 // NONE: warning: argument unused during compilation: '-Xthinlto-distributor=distarg2,distarg3'
 // NONE:     ld.lld
 // NOMORE-NOT: --thinlto-distributor=
-// NOMORE-NOT: --thinlto-remote-compiler=
+// NOMORE-NOT: -thinlto-remote-compiler=
 // NOMORE-NOT: -mllvm
 // NOMORE-NOT: -thinlto-distributor-arg=
 
@@ -43,4 +43,4 @@
 
 // DEFAULT: ld.lld
 // DEFAULT-SAME: "--thinlto-distributor=dist.exe"
-// DEFAULT-SAME: "--thinlto-remote-compiler={{.*}}clang
+// DEFAULT-SAME: "-mllvm=-thinlto-remote-compiler={{.*}}clang

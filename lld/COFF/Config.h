@@ -194,8 +194,6 @@ struct Configuration {
 
   // Used for --thinlto-distributor=
   StringRef dtltoDistributor;
-  // Used for --thinlto-remote-compiler=
-  StringRef dtltoRemoteCompiler;
 
   // Used for /opt:[no]ltodebugpassmanager
   bool ltoDebugPassManager = false;

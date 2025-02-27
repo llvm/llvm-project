@@ -14,7 +14,6 @@ RUN: opt t2.ll -o t2.o
 # object files supplied using -thinlto-distributor-arg in job order.
 RUN: not llvm-lto2 run t1.bc t2.bc -o t.o -save-temps \
 RUN:   -dtlto \
-RUN:   -dtlto-remote-compiler=dummy \
 RUN:   -dtlto-distributor=%python \
 RUN:   -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
 RUN:   -thinlto-distributor-arg=t1.o \

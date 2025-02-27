@@ -19,7 +19,7 @@ The command line interface for DTLTO is:
   Specifies the file to execute as a distributor process.
   If specified, ThinLTO backend compilations will be distributed.
 
-- ``--thinlto-remote-compiler=<path>``
+- ``-mllvm -thinlto-remote-compiler=<path>``
   Specifies the path to the tool that the distributor process will use for
   backend compilations.
 
@@ -55,6 +55,7 @@ COFF LLD
 --------
 
 The command line interface for COFF LLD is generally the same as for ELF LLD.
+Note however, that ``mllvm`` options are passed using ``/mllvm:<option>``.
 
-Currently, there is no DTLTO command line interface supplied for ``Clang-cl``, as
-users are expected to invoke LLD directly.
+Currently, there is no DTLTO command line interface supplied for ``Clang-cl``,
+as users are expected to invoke LLD directly.

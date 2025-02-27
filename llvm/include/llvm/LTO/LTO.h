@@ -312,8 +312,6 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
 /// LinkerOutputFile is a string that should identify this LTO invocation in
 /// the context of a wider build. It's used for naming to aid the user in
 /// identifying activity related to a specific LTO invocation.
-/// RemoteCompiler specifies the path to a Clang executable to be invoked for the
-/// backend jobs.
 /// Distributor specifies the path to a process to invoke to manage the backend
 /// jobs execution.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
@@ -321,8 +319,7 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
 ThinBackend createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef RemoteCompiler, StringRef Distributor,
-    bool SaveTemps);
+    StringRef LinkerOutputFile, StringRef Distributor, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds

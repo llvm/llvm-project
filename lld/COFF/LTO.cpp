@@ -123,8 +123,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         /*OnWrite=*/nullptr,
         /*ShouldEmitIndexFiles=*/false,
         /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
-        ctx.config.dtltoRemoteCompiler, ctx.config.dtltoDistributor,
-        !ctx.config.saveTempsArgs.empty());
+        ctx.config.dtltoDistributor, !ctx.config.saveTempsArgs.empty());
   } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(

@@ -99,10 +99,15 @@ cl::list<std::string> AdditionalThinLTODistributorArgs(
     "thinlto-distributor-arg",
     cl::desc("Additional arguments to pass to the ThinLTO distributor"));
 
+cl::opt<std::string>
+    ThinLTORemoteCompiler("thinlto-remote-compiler",
+                          cl::desc("Additional arguments to pass to the "
+                                   "ThinLTO remote optimization tool"));
+
 cl::list<std::string>
     ThinLTORemoteCompilerArgs("thinlto-remote-compiler-arg",
-                             cl::desc("Additional arguments to pass to the "
-                                      "ThinLTO remote optimization tool"));
+                              cl::desc("Additional arguments to pass to the "
+                                       "ThinLTO remote compiler"));
 } // namespace llvm
 
 // Computes a unique hash for the Module considering the current list of
@@ -2207,7 +2212,6 @@ class OutOfProcessThinBackend : public CGThinBackend {
   StringSaver Saver{Alloc};
 
   SString LinkerOutputFile;
-  SString RemoteCompiler;
   SString DistributorPath;
   bool SaveTemps;
 
@@ -2240,13 +2244,12 @@ public:
       AddStreamFn AddStream, AddBufferFn AddBuffer,
       lto::IndexWriteCallback OnWrite, bool ShouldEmitIndexFiles,
       bool ShouldEmitImportsFiles, StringRef LinkerOutputFile,
-      StringRef RemoteCompiler, StringRef Distributor, bool SaveTemps)
+      StringRef Distributor, bool SaveTemps)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries, OnWrite,
                       ShouldEmitIndexFiles, ShouldEmitImportsFiles,
                       ThinLTOParallelism),
         AddBuffer(std::move(AddBuffer)), LinkerOutputFile(LinkerOutputFile),
-        RemoteCompiler(RemoteCompiler), DistributorPath(Distributor),
-        SaveTemps(SaveTemps) {}
+        DistributorPath(Distributor), SaveTemps(SaveTemps) {}
 
   virtual void setup(unsigned MaxTasks, unsigned ReservedTasks) override {
     UID = itostr(sys::Process::getProcessId());
@@ -2372,7 +2375,7 @@ public:
 
         // Common command line template.
         JOS.attributeArray("args", [&]() {
-          JOS.value(RemoteCompiler);
+          JOS.value(ThinLTORemoteCompiler);
 
           // Reference to Job::NativeObjectPath.
           JOS.value("-o");
@@ -2502,8 +2505,7 @@ public:
 ThinBackend lto::createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, lto::IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef RemoteCompiler, StringRef Distributor,
-    bool SaveTemps) {
+    StringRef LinkerOutputFile, StringRef Distributor, bool SaveTemps) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
@@ -2511,8 +2513,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, AddBuffer, OnWrite, ShouldEmitIndexFiles,
-            ShouldEmitImportsFiles, LinkerOutputFile, RemoteCompiler,
-            Distributor, SaveTemps);
+            ShouldEmitImportsFiles, LinkerOutputFile, Distributor, SaveTemps);
       };
   return ThinBackend(Func, Parallelism);
 }

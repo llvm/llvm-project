@@ -13,7 +13,7 @@
 # RUN: echo "foo.obj /entry:foo /subsystem:console \
 # RUN:   --thinlto-distributor=%python \
 # RUN:   -mllvm:-thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
-# RUN:   --thinlto-remote-compiler=my_clang.exe" > l.rsp
+# RUN:   -mllvm:-thinlto-remote-compiler=my_clang.exe" > l.rsp
 
 ## Show that command line arguments have the desired effect when specified and
 ## that the effect is not present otherwise.
