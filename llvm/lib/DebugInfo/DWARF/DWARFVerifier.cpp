@@ -1247,7 +1247,7 @@ void DWARFVerifier::verifyDebugNamesCULists(const DWARFDebugNames &AccelTable) {
               "Name Index @ {0:x} references a non-existing CU @ {1:x}\n",
               NI.getUnitOffset(), Offset);
         });
-        return;
+        continue;
       }
       uint64_t DuplicateCUOffset = 0;
       {
@@ -1265,7 +1265,7 @@ void DWARFVerifier::verifyDebugNamesCULists(const DWARFDebugNames &AccelTable) {
               "this CU is already indexed by Name Index @ {2:x}\n",
               NI.getUnitOffset(), Offset, DuplicateCUOffset);
         });
-        return;
+        continue;
       }
     }
   });
@@ -2010,8 +2010,9 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
   auto populateNameToOffset =
       [&](const DWARFDebugNames::NameIndex &NI,
           StringMap<DenseSet<uint64_t>> &NamesToDieOffsets) {
-        for (DWARFDebugNames::NameTableEntry NTE : NI) {
-          const std::string Name = NTE.getString();
+        for (const DWARFDebugNames::NameTableEntry &NTE : NI) {
+          const char *tName = NTE.getString();
+          const std::string Name = tName ? std::string(tName) : "";
           uint64_t EntryID = NTE.getEntryOffset();
           Expected<DWARFDebugNames::Entry> EntryOr = NI.getEntry(&EntryID);
           auto Iter = NamesToDieOffsets.insert({Name, DenseSet<uint64_t>(3)});
