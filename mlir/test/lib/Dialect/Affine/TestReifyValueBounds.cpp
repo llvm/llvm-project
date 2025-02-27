@@ -84,6 +84,13 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
     auto boundType = op.getBoundType();
     Value value = op.getVar();
     std::optional<int64_t> dim = op.getDim();
+    auto shapedType = dyn_cast<ShapedType>(value.getType());
+    if (shapedType && shapedType.hasRank() && dim.has_value() &&
+        dim.value() >= shapedType.getRank()) {
+      op->emitOpError("invalid dim for shaped type");
+      return WalkResult::interrupt();
+    }
+
     bool constant = op.getConstant();
     bool scalable = op.getScalable();
 
