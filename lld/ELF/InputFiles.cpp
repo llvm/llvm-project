@@ -18,10 +18,8 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
@@ -1425,22 +1423,65 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   return verneeds;
 }
 
-// To determine if a shared file can support the AArch64 GCS extension, the
-// program headers for the object need to be read. This ensures when input
-// options are read, appropriate warning/error messages can be emitted depending
-// on the user's command line options.
+// To determine if a shared file can support any of the GNU Attributes,
+// the .note.gnu.properties section need to be read. This has to be done
+// differently for SharedFiles as the information available is not as
+// extensive as a normal object input file. This will take the program
+// headers, along with the SHT_NOTE section header to find the relevant
+// information. This uses a similar process to the readGnuProperty
+// function, but designed specifically for SharedFiles.
 template <typename ELFT>
-uint64_t
-SharedFile::parseGnuAttributes(const typename ELFT::PhdrRange headers) {
-  if (numElfPhdrs == 0)
-    return 0;
-  uint64_t attributes = 0;
-  for (unsigned i = 0; i < numElfPhdrs; i++)
-    if (headers[i].p_type == PT_GNU_PROPERTY &&
-        headers[i].p_flags & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-      attributes |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+void SharedFile::parseGnuAttributes(const uint8_t *base,
+                                    const typename ELFT::PhdrRange headers,
+                                    const typename ELFT::Shdr *sHeader) {
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << this->getName() << ":(" << ".note.gnu.properties" << "+0x"
+         << Twine::utohexstr(place - base) << "): ";
+    return diag;
+  };
 
-  return attributes;
+  if (numElfPhdrs == 0 || sHeader == nullptr)
+    return;
+  uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
+                                ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
+                                : GNU_PROPERTY_X86_FEATURE_1_AND;
+
+  for (unsigned i = 0; i < numElfPhdrs; i++) {
+    if (headers[i].p_type != PT_GNU_PROPERTY)
+      continue;
+
+    const typename ELFT::Note note(
+        *reinterpret_cast<const typename ELFT::Nhdr *>(base +
+                                                       headers[i].p_vaddr));
+    if (note.getType() != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU")
+      continue;
+
+    // Read a body of a NOTE record, which consists of type-length-value fields.
+    ArrayRef<uint8_t> desc = note.getDesc(sHeader->sh_addralign);
+    while (!desc.empty()) {
+      const uint8_t *place = desc.data();
+      if (desc.size() < 8)
+        return void(err(place) << "program property is too short");
+      uint32_t type = read32(ctx, desc.data());
+      uint32_t size = read32(ctx, desc.data() + 4);
+      desc = desc.slice(8);
+      if (desc.size() < size)
+        return void(err(place) << "program property is too short");
+
+      // We found a FEATURE_1_AND field. There may be more than one of these
+      // in a .note.gnu.property section, for a relocatable object we
+      // accumulate the bits set.
+      if (type == featureAndType) {
+        if (size < 4)
+          return void(err(place) << "FEATURE_1_AND entry is too short");
+        this->andFeatures |= read32(ctx, desc.data());
+      }
+
+      // Padding is present in the note descriptor, if necessary.
+      desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
+    }
+  }
 }
 
 // We do not usually care about alignments of data in shared object
@@ -1487,6 +1528,7 @@ template <class ELFT> void SharedFile::parse() {
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
   const Elf_Shdr *verneedSec = nullptr;
+  const Elf_Shdr *noteSec = nullptr;
   symbols = std::make_unique<Symbol *[]>(numSymbols);
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
@@ -1506,6 +1548,9 @@ template <class ELFT> void SharedFile::parse() {
       break;
     case SHT_GNU_verneed:
       verneedSec = &sec;
+      break;
+    case SHT_NOTE:
+      noteSec = &sec;
       break;
     }
   }
@@ -1553,7 +1598,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
-  this->andFeatures = parseGnuAttributes<ELFT>(getELFPhdrs<ELFT>());
+  parseGnuAttributes<ELFT>(obj.base(), getELFPhdrs<ELFT>(), noteSec);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use

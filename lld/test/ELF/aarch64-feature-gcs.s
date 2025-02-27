@@ -51,14 +51,14 @@
 
 ## gcs-report-dynamic should report any dynamic objects that does not have the gcs property. This also ensures the inhertance from gcs-report is working correctly.
 
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report-dynamic=warning -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report=error -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report=error -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report-dynamic=error -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
-# RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -o /dev/null -z gcs-report-dynamic=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
+# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=warning -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=error -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=error -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=error -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
+# RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
 
 # REPORT-WARN-DYNAMIC: warning: no-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependancies have the GCS marking.
 # REPORT-WARN-DYNAMIC-NOT: warning: force-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependancies have the GCS marking.
@@ -66,19 +66,11 @@
 # REPORT-ERROR-DYNAMIC-NOT: error: force-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependancies have the GCS marking.
 
 ## An invalid gcs option should give an error
-# RUN: not ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs=nonsense 2>&1 | FileCheck --check-prefix=INVALID %s
+# RUN: not ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs=nonsense -z gcs-report=nonsense -z gcs-report-dynamic=nonsense 2>&1 | FileCheck --check-prefix=INVALID %s
 
 # INVALID: error: unknown -z gcs= value: nonsense
-
-## An invalid gcs option should give an error
-# RUN: not ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs-report=nonsense 2>&1 | FileCheck --check-prefix=INVALID-GCS-REPORT %s
-
-# INVALID-GCS-REPORT: error: unknown -z gcs-report= value: nonsense
-
-## An invalid gcs-report-dynamic option should give an error
-# RUN: not ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs-report-dynamic=nonsense 2>&1 | FileCheck --check-prefix=INVALID-GCS-REPORT-DYNAMIC %s
-
-# INVALID-GCS-REPORT-DYNAMIC: error: unknown -z gcs-report-dynamic= value: nonsense
+# INVALID: error: unknown -z gcs-report= value: nonsense
+# INVALID: error: unknown -z gcs-report-dynamic= value: nonsense
 
 #--- func1-gcs.s
 .section ".note.gnu.property", "a"
