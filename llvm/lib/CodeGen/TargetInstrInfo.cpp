@@ -1560,6 +1560,12 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
   assert(MF->getProperties().hasProperty(
       MachineFunctionProperties::Property::NoVRegs));
 
+  int64_t ImmVal;
+  // A simplified DIExpression can be produced if the register is being set to
+  // a known constant value.
+  if (getConstValDefinedInReg(MI, Reg, ImmVal))
+    return ParamLoadedValue(MachineOperand::CreateImm(ImmVal), Expr);
+
   if (auto DestSrc = isCopyInstr(MI)) {
     Register DestReg = DestSrc->Destination->getReg();
 
