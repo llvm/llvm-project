@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s
+// RUN: %clang_cc1 %s -triple wasm32-unknown-emscripten -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s
 
 // Test code generation for Wasm's Emscripten (JavaScript-style) EH.
 
