@@ -91,6 +91,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-use-cpp-style-comments
+  <clang-tidy/checks/readability/use-cpp-style-comments>` check.
+
+  Replace C-style comments with C++-style comments.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
