@@ -41,10 +41,9 @@ CheckerManager::CheckerManager(AnalyzerOptions &AOptions,
   Registry.initializeRegistry(*this);
 }
 
-CheckerManager::~CheckerManager() {
-  // This is declared here to ensure that the destructors of `CheckerBase` and
-  // `CheckerRegistryData` are available.
-}
+// This is declared here to ensure that the destructors of `CheckerBase` and
+// `CheckerRegistryData` are available.
+CheckerManager::~CheckerManager() = default;
 
 } // namespace ento
 } // namespace clang
