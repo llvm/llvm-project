@@ -3598,13 +3598,12 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *
-CGDebugInfo::CreateSyntheticInline(llvm::DebugLoc TrapLocation,
-                                   StringRef FuncName) {
+llvm::DILocation *CGDebugInfo::CreateSyntheticInline(llvm::DebugLoc Location,
+                                                     StringRef FuncName) {
   llvm::DISubprogram *TrapSP =
-      createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
+      createInlinedTrapSubprogram(FuncName, Location->getFile());
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
+                               /*Scope=*/TrapSP, /*InlinedAt=*/Location);
 }
 
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(

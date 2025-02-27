@@ -1216,12 +1216,12 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
 
   SanitizerScope SanScope(this);
 
-  llvm::DILocation *TrapSP = Builder.getCurrentDebugLocation();
-  if (TrapSP) {
-    TrapSP = getDebugInfo()->CreateSyntheticInline(
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+  if (CheckDI) {
+    CheckDI = getDebugInfo()->CreateSyntheticInline(
         Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
   }
-  ApplyDebugLocation ApplyTrapDI(*this, TrapSP);
+  ApplyDebugLocation ApplyTrapDI(*this, CheckDI);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
