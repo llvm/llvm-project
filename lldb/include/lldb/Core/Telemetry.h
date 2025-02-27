@@ -31,8 +31,6 @@ namespace telemetry {
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000;
   static const llvm::telemetry::KindType DebuggerInfo = 0b11001;
-  // There are other entries in between (added in separate PRs)
-  static const llvm::telemetry::KindType MiscInfo = 0b11110;
 };
 
 /// Defines a convenient type for timestamp of various events.
