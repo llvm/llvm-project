@@ -175,14 +175,12 @@ define half @v_fdiv_f16(half %a, half %b) {
 ; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
 ; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v6, -v4, v3, v5 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v6, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v3, v5 op_sel_hi:[1,0,1]
+; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
+; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
+; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
 ; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
@@ -213,14 +211,12 @@ define half @v_fdiv_f16(half %a, half %b) {
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
 ; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v6, -v4, v3, v5 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v6, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v3, v5 op_sel_hi:[1,0,1]
+; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
+; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
+; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
 ; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
@@ -491,14 +487,12 @@ define half @v_fdiv_f16_ulp25(half %a, half %b) {
 ; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
 ; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v6, -v4, v3, v5 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v6, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v3, v5 op_sel_hi:[1,0,1]
+; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
+; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
+; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
 ; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
@@ -529,14 +523,12 @@ define half @v_fdiv_f16_ulp25(half %a, half %b) {
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
 ; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v6, -v4, v3, v5 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v6, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v3, v5 op_sel_hi:[1,0,1]
+; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
+; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
+; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
 ; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
