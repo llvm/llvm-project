@@ -1016,6 +1016,29 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+static const VPBasicBlock *getIncomingBlockForRecipe(const VPRecipeBase *R,
+                                                     unsigned I) {
+  const VPBasicBlock *Parent = R->getParent();
+  const VPBlockBase *Pred = nullptr;
+  if (Parent->getNumPredecessors() > 0) {
+    Pred = Parent->getPredecessors()[I];
+  } else {
+    auto *Region = Parent->getParent();
+    assert(Region && !Region->isReplicator() && Region->getEntry() == Parent &&
+           "must be in the entry block of a non-replicate region");
+    assert(
+        I < 2 &&
+        (R->getNumOperands() == 2 || isa<VPWidenIntOrFpInductionRecipe>(R)) &&
+        "when placed in an entry block, only 2 incoming blocks are available");
+
+    // I ==  0 selects the predecessor of the region, I == 1 selects the region
+    // itself whose exiting block feeds the phi across the backedge.
+    Pred = I == 0 ? Region->getSinglePredecessor() : Region;
+  }
+
+  return Pred->getExitingBasicBlock();
+}
+
 void VPIRPhi::execute(VPTransformState &State) {
   PHINode *Phi = &getIRPhi();
   for (const auto &[Idx, Op] : enumerate(operands())) {
@@ -3608,25 +3631,10 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
-  VPBasicBlock *Parent = getParent();
-  VPBlockBase *Pred = nullptr;
-  if (Parent->getNumPredecessors() > 0) {
-    Pred = Parent->getPredecessors()[I];
-  } else {
-    auto *Region = Parent->getParent();
-    assert(Region && !Region->isReplicator() && Region->getEntry() == Parent &&
-           "must be in the entry block of a non-replicate region");
-    assert(
-        I < 2 && getNumOperands() == 2 &&
-        "when placed in an entry block, only 2 incoming blocks are available");
-
-    // I ==  0 selects the predecessor of the region, I == 1 selects the region
-    // itself whose exiting block feeds the phi across the backedge.
-    Pred = I == 0 ? Region->getSinglePredecessor() : Region;
-  }
-
-  return Pred->getExitingBasicBlock();
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPWidenPHIRecipe>::getIncomingBlock(unsigned Idx) const {
+  return getIncomingBlockForRecipe(getAsRecipe(), Idx);
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
