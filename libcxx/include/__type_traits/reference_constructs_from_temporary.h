@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__reference_converts_from_temporary) ||                                                              \
+#if __has_builtin(__reference_constructs_from_temporary) ||                                                              \
     (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1) &&                     \
      (__clang_patchlevel__ >= 2))
 
