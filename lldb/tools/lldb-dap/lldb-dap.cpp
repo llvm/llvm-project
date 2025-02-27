@@ -15,6 +15,7 @@
 #include "RunInTerminal.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
@@ -80,7 +81,11 @@ typedef int socklen_t;
 #endif
 
 using namespace lldb_dap;
-using lldb_private::NativeSocket;
+using lldb_private::File;
+using lldb_private::IOObject;
+using lldb_private::MainLoop;
+using lldb_private::MainLoopBase;
+using lldb_private::NativeFile;
 using lldb_private::Socket;
 using lldb_private::Status;
 
@@ -161,7 +166,7 @@ static void printHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
 
-  std::string examples = R"___(
+  llvm::outs() << R"___(
 EXAMPLES:
   The debug adapter can be started in two modes.
 
@@ -176,7 +181,6 @@ EXAMPLES:
 
     lldb-dap -g
 )___";
-  llvm::outs() << examples;
 }
 
 // If --launch-target is provided, this instance of lldb-dap becomes a
@@ -198,12 +202,13 @@ EXAMPLES:
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adaptor.
-static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                      llvm::StringRef comm_file,
-                                      lldb::pid_t debugger_pid, char *argv[]) {
+static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                                             llvm::StringRef comm_file,
+                                             lldb::pid_t debugger_pid,
+                                             char *argv[]) {
 #if defined(_WIN32)
-  llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(
+      "runInTerminal is only supported on POSIX systems");
 #else
 
   // On Linux with the Yama security module enabled, a process can only attach
@@ -215,10 +220,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #endif
 
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid()) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
-  }
+  if (llvm::Error err = comm_channel.NotifyPid())
+    return err;
 
   // We will wait to be attached with a timeout. We don't wait indefinitely
   // using a signal to prevent being paused forever.
@@ -229,8 +232,7 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
       timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
   if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
+    return err;
   }
 
   const char *target = target_arg.getValue();
@@ -238,8 +240,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   std::string error = std::strerror(errno);
   comm_channel.NotifyError(error);
-  llvm::errs() << error << "\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 std::move(error));
 #endif
 }
 
@@ -309,14 +311,14 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   // address.
   llvm::outs().flush();
 
-  static lldb_private::MainLoop g_loop;
+  static MainLoop g_loop;
   llvm::sys::SetInterruptFunction([]() {
     g_loop.AddPendingCallback(
-        [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+        [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
   std::condition_variable dap_sessions_condition;
   std::mutex dap_sessions_mutex;
-  std::map<Socket *, DAP *> dap_sessions;
+  std::map<IOObject *, DAP *> dap_sessions;
   unsigned int clientCount = 0;
   auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
                                           &dap_sessions_mutex, &dap_sessions,
@@ -330,18 +332,15 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
            << " client connected: " << name << "\n";
     }
 
+    lldb::IOObjectSP io(std::move(sock));
+
     // Move the client into a background thread to unblock accepting the next
     // client.
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
-                        &dap_sessions, sock = std::move(sock)]() {
+                        &dap_sessions]() {
       llvm::set_thread_name(name + ".runloop");
-      StreamDescriptor input =
-          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
-      // Close the output last for the best chance at error reporting.
-      StreamDescriptor output =
-          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
-      DAP dap = DAP(name, program_path, log, std::move(input),
-                    std::move(output), default_repl_mode, pre_init_commands);
+      DAP dap = DAP(name, program_path, log, io, io, default_repl_mode,
+                    pre_init_commands);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -353,7 +352,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
 
       {
         std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
-        dap_sessions[sock.get()] = &dap;
+        dap_sessions[io.get()] = &dap;
       }
 
       if (auto Err = dap.Loop()) {
@@ -369,7 +368,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       }
 
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
-      dap_sessions.erase(sock.get());
+      dap_sessions.erase(io.get());
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
     });
     client.detach();
@@ -470,13 +469,18 @@ int main(int argc, char *argv[]) {
         }
       }
       int target_args_pos = argc;
-      for (int i = 0; i < argc; i++)
+      for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "--launch-target") == 0) {
           target_args_pos = i + 1;
           break;
         }
-      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                argv + target_args_pos);
+      }
+      if (llvm::Error err =
+              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
+                                        argv + target_args_pos)) {
+        llvm::errs() << llvm::toString(std::move(err)) << '\n';
+        return EXIT_FAILURE;
+      }
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
                       "specified\n";
@@ -561,8 +565,10 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
-  StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
+  lldb::IOObjectSP input = std::make_shared<NativeFile>(
+      fileno(stdin), File::eOpenOptionReadOnly, true);
+  lldb::IOObjectSP output = std::make_shared<NativeFile>(
+      stdout_fd, File::eOpenOptionWriteOnly, false);
 
   DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
                 std::move(output), default_repl_mode, pre_init_commands);
