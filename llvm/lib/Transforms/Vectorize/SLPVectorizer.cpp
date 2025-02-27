@@ -929,6 +929,11 @@ public:
         if (CIValue.isPowerOf2())
           return trySet(MulBIT | ShlBIT);
         break;
+      case Instruction::Add:
+      case Instruction::Sub:
+        if (CIValue.isZero())
+          return trySet(CanBeAll);
+        return trySet(SubBIT | AddBIT);
       case Instruction::And:
         if (CIValue.isAllOnes())
           return trySet(CanBeAll);
@@ -994,6 +999,17 @@ public:
         ToCIValue = ToOpcode == Instruction::And
                         ? APInt::getAllOnes(FromCIValueBitWidth)
                         : APInt::getZero(FromCIValueBitWidth);
+      }
+      break;
+    case Instruction::Add:
+    case Instruction::Sub:
+      if (FromCIValue.isZero()) {
+        ToCIValue = APInt::getZero(FromCIValueBitWidth);
+      } else {
+        assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
+               "Cannot convert the instruction.");
+        ToCIValue = FromCIValue;
+        ToCIValue.negate();
       }
       break;
     case Instruction::And:
