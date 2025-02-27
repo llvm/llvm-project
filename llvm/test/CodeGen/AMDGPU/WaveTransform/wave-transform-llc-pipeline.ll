@@ -1,7 +1,7 @@
 ; UNSUPPORTED: expensive_checks
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-wave-transform=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-wave-transform-cf=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
-; RUN: llc -O3 -mtriple=amdgcn--amdhsa -amdgpu-wave-transform=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O3 -mtriple=amdgcn--amdhsa -amdgpu-wave-transform-cf=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts
@@ -90,7 +90,7 @@
 ; GCN-O0-NEXT:        AMDGPU Pre-RA Long Branch Reg
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        Machine Cycle Info Analysis
-; GCN-O0-NEXT:        GCN Control Flow Wave Transform
+; GCN-O0-NEXT:        AMDGPU Control Flow Wave Transform
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI lower SGPR spill instructions
 ; GCN-O0-NEXT:        Slot index numbering
@@ -372,7 +372,7 @@
 ; GCN-O3-NEXT:        GCN NSA Reassign
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Machine Cycle Info Analysis
-; GCN-O3-NEXT:        GCN Control Flow Wave Transform
+; GCN-O3-NEXT:        AMDGPU Control Flow Wave Transform
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis
 ; GCN-O3-NEXT:        Machine Natural Loop Construction

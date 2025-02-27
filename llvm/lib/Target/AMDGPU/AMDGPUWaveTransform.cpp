@@ -1,4 +1,4 @@
-//===- GCNWaveTransform.cpp - GCN Wave Transform ----------------*- C++ -*-===//
+//===- AMDGPUWaveTransform.cpp - AMDGPU Wave Transform ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -91,10 +91,10 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "gcn-wave-transform"
+#define DEBUG_TYPE "amdgpu-wave-transform"
 
 static cl::opt<bool>
-    GCNWaveTransformPrintFinal("gcn-wave-transform-print-final",
+    AMDGPUWaveTransformPrintFinal("amdgpu-wave-transform-print-final",
                                cl::desc("Print the final wave CFG"),
                                cl::init(false));
 
@@ -2085,19 +2085,19 @@ void ControlFlowRewriter::rewrite() {
 namespace {
 
 /// \brief Wave transform machine function pass.
-class GCNWaveTransform : public MachineFunctionPass {
+class AMDGPUWaveTransform : public MachineFunctionPass {
 public:
   static char ID;
 
 public:
-  GCNWaveTransform() : MachineFunctionPass(ID) {
-    initializeGCNWaveTransformPass(*PassRegistry::getPassRegistry());
+  AMDGPUWaveTransform() : MachineFunctionPass(ID) {
+    initializeAMDGPUWaveTransformPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &function) override;
 
   StringRef getPassName() const override {
-    return "GCN Control Flow Wave Transform";
+    return "AMDGPU Control Flow Wave Transform";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -2119,25 +2119,25 @@ private:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(GCNWaveTransform, DEBUG_TYPE, "GCN Wave Transform", false,
+INITIALIZE_PASS_BEGIN(AMDGPUWaveTransform, DEBUG_TYPE, "AMDGPU Wave Transformnsform", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(GCNWaveTransform, DEBUG_TYPE, "GCN Wave Transform", false,
+INITIALIZE_PASS_END(AMDGPUWaveTransform, DEBUG_TYPE, "AMDGPU Wave Transformnsform", false,
                     false)
 
-char GCNWaveTransform::ID = 0;
+char AMDGPUWaveTransform::ID = 0;
 
-FunctionPass *llvm::createGCNWaveTransformPass() {
-  return new GCNWaveTransform();
+FunctionPass *llvm::createAMDGPUWaveTransformPass() {
+  return new AMDGPUWaveTransform();
 }
 
 /// \brief Run the wave transform.
-bool GCNWaveTransform::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUWaveTransform::runOnMachineFunction(MachineFunction &MF) {
   if (MF.size() <= 1)
     return false; // skip MFs without control flow
 
-  LLVM_DEBUG(dbgs() << "GCN Wave Transform: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "AMDGPU Wave Transformnsform: " << MF.getName() << '\n');
 
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   LMU.setFunction(MF);
@@ -2159,7 +2159,7 @@ bool GCNWaveTransform::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "Final Wave CFG:\n"; ReconvergeHelper.dumpNodes());
 
-  if (GCNWaveTransformPrintFinal) {
+  if (AMDGPUWaveTransformPrintFinal) {
     dbgs() << "Wave CFG for " << MF.getName() << ":\n";
     ReconvergeHelper.printNodes(dbgs());
   }

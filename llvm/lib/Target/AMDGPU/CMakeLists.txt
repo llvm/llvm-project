@@ -130,7 +130,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNRewritePartialRegUses.cpp
   GCNSchedStrategy.cpp
   GCNSubtarget.cpp
-  GCNWaveTransform.cpp
+  AMDGPUWaveTransform.cpp
   GCNVOPDUtils.cpp
   R600AsmPrinter.cpp
   R600ClauseMergePass.cpp

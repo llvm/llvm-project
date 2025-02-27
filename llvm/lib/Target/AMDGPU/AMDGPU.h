@@ -470,8 +470,8 @@ extern char &GCNRewritePartialRegUsesID;
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
-FunctionPass *createGCNWaveTransformPass();
-void initializeGCNWaveTransformPass(PassRegistry &);
+FunctionPass *createAMDGPUWaveTransformPass();
+void initializeAMDGPUWaveTransformPass(PassRegistry &);
 
 FunctionPass *createAMDGPUPreWaveTransformPass();
 void initializeAMDGPUPreWaveTransformPass(PassRegistry &);

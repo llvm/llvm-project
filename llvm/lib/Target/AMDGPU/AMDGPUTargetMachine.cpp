@@ -184,7 +184,7 @@ static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
 
 // Option to enable wave transform control flow
 static cl::opt<bool, true> WaveTransformCF(
-    "amdgpu-wave-transform",
+    "amdgpu-wave-transform-cf",
     cl::desc("Enable wave transform control flow implementation"),
     cl::location(AMDGPUTargetMachine::EnableWaveTransformCF), cl::init(false),
     cl::Hidden);
@@ -563,7 +563,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
-  initializeGCNWaveTransformPass(*PR);
+  initializeAMDGPUWaveTransformPass(*PR);
   initializeAMDGPUPreWaveTransformPass(*PR);
 }
 
@@ -1416,7 +1416,7 @@ bool GCNPassConfig::addPreISel() {
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
-  // TODO: Unify should be intergrated into GCNWaveTransform
+  // TODO: Unify should be intergrated into AMDGPUWaveTransform
   addPass(&AMDGPUUnifyDivergentExitNodesID);
 
   // In WaveTransformCF mode, we still want to run the following two passes.
@@ -1689,7 +1689,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
     addPass(createVGPRAllocPass(false));
 
     // Perform the WaveTransform in non-SSA form
-    addPass(createGCNWaveTransformPass());
+    addPass(createAMDGPUWaveTransformPass());
 
     // TODO-WAVETRANSFORM:
     // Short-term plan: we want to preserve physical registers that have been
@@ -1749,7 +1749,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
     addPass(createVirtRegRewriter(false));
 
     // Perform the WaveTransform in non-SSA form
-    addPass(createGCNWaveTransformPass());
+    addPass(createAMDGPUWaveTransformPass());
 
     // TODO-WAVETRANSFORM:
     // Short-term plan: we want to preserve physical registers that have been
