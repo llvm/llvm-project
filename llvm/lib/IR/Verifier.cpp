@@ -4959,7 +4959,7 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
   // DIAssignID metadata must be attached to either an alloca or some form of
   // store/memory-writing instruction.
   // FIXME: Is there any simpler way to express this property than manually
-  // enumerating all instructions that could perform a store?
+  // enumerating all instructions that could perform an assignment?
   bool ExpectedInstTy = isa<AllocaInst>(I) || isa<StoreInst>(I);
   if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
     const static Intrinsic::ID StoreIntrinsics[] = {
