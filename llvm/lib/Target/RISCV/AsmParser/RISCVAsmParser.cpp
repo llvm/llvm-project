@@ -1682,6 +1682,17 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
+  case Match_InvalidStackAdj: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    StringRef SpecName = "Zc";
+    if (getSTI().hasFeature(RISCV::FeatureVendorXqccmp))
+      SpecName = "Xqccmp";
+
+    return Error(ErrorLoc,
+                 Twine("stack adjustment is invalid for this instruction") +
+                     " and register list; refer to " + SpecName +
+                     " spec for a detailed range of stack adjustment");
+  }
   }
 
   if (const char *MatchDiag = getMatchKindDiag((RISCVMatchResultTy)Result)) {
@@ -3640,7 +3651,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
-  if (Opcode == RISCV::CM_MVSA01) {
+  if (Opcode == RISCV::CM_MVSA01 || Opcode == RISCV::QC_CM_MVSA01) {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
     MCRegister Rd2 = Inst.getOperand(1).getReg();
     if (Rd1 == Rd2) {
