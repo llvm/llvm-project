@@ -31,6 +31,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1214,6 +1215,13 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
     return;
 
   SanitizerScope SanScope(this);
+
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+  if (CheckDI) {
+    CheckDI = getDebugInfo()->CreateSyntheticInline(
+        Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
+  }
+  ApplyDebugLocation ApplyTrapDI(*this, CheckDI);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
