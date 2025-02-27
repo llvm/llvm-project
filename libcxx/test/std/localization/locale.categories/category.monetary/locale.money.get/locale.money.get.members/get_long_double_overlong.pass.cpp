@@ -13,6 +13,9 @@
 // iter_type get(iter_type b, iter_type e, bool intl, ios_base& iob,
 //               ios_base::iostate& err, long double& v) const;
 
+// Ensure that money_get::do_get correct works when the input doesn't fit into the stack buffer
+// (100 characters currently).
+
 #include <cassert>
 #include <cstddef>
 #include <ios>
@@ -20,26 +23,21 @@
 #include <streambuf>
 #include <string>
 
+#include "make_string.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
-typedef std::money_get<char, cpp17_input_iterator<const char*> > Fn;
+template <class CharT>
+class my_basic_facet : public std::money_get<CharT, cpp17_input_iterator<const CharT*> > {
+private:
+  typedef std::money_get<CharT, cpp17_input_iterator<const CharT*> > Base;
 
-class my_facet : public Fn {
 public:
-  explicit my_facet(std::size_t refs = 0) : Fn(refs) {}
+  explicit my_basic_facet(std::size_t refs = 0) : Base(refs) {}
 };
 
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-typedef std::money_get<wchar_t, cpp17_input_iterator<const wchar_t*> > Fw;
-
-class my_facetw : public Fw {
-public:
-  explicit my_facetw(std::size_t refs = 0) : Fw(refs) {}
-};
-#endif
-
-int main(int, char**) {
+template <class CharT>
+void test() {
   struct digit_result_case {
     std::size_t digit;
     long double result;
@@ -49,13 +47,13 @@ int main(int, char**) {
 
   std::ios ios(0);
   {
-    const my_facet f(1);
+    const my_basic_facet<CharT> f(1);
     for (std::size_t i = 0; i != sizeof(digit_result_cases) / sizeof(digit_result_cases[0]); ++i) {
       {
-        std::string v = "2";
-        v.append(digit_result_cases[i].digit, '0');
+        std::basic_string<CharT> v = MAKE_STRING(CharT, "2");
+        v.append(digit_result_cases[i].digit, static_cast<CharT>('0'));
 
-        typedef cpp17_input_iterator<const char*> I;
+        typedef cpp17_input_iterator<const CharT*> I;
         long double ex;
         std::ios_base::iostate err = std::ios_base::goodbit;
         I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
@@ -64,10 +62,10 @@ int main(int, char**) {
         assert(ex == digit_result_cases[i].result);
       }
       {
-        std::string v = "-2";
-        v.append(digit_result_cases[i].digit, '0');
+        std::basic_string<CharT> v = MAKE_STRING(CharT, "-2");
+        v.append(digit_result_cases[i].digit, static_cast<CharT>('0'));
 
-        typedef cpp17_input_iterator<const char*> I;
+        typedef cpp17_input_iterator<const CharT*> I;
         long double ex;
         std::ios_base::iostate err = std::ios_base::goodbit;
         I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
@@ -75,38 +73,40 @@ int main(int, char**) {
         assert(err == std::ios_base::eofbit);
         assert(ex == -digit_result_cases[i].result);
       }
+      {
+        std::basic_string<CharT> v = MAKE_STRING(CharT, "0.");
+        v.append(digit_result_cases[i].digit, static_cast<CharT>('0'));
+        v += MAKE_CSTRING(CharT, "2");
+
+        typedef cpp17_input_iterator<const CharT*> I;
+        long double ex;
+        std::ios_base::iostate err = std::ios_base::goodbit;
+        I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+        assert(base(iter) == v.data() + 1);
+        assert(err == std::ios_base::goodbit);
+        assert(ex == 0.0L);
+      }
+      {
+        std::basic_string<CharT> v = MAKE_STRING(CharT, "-0.");
+        v.append(digit_result_cases[i].digit, static_cast<CharT>('0'));
+        v += MAKE_CSTRING(CharT, "2");
+
+        typedef cpp17_input_iterator<const CharT*> I;
+        long double ex;
+        std::ios_base::iostate err = std::ios_base::goodbit;
+        I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
+        assert(base(iter) == v.data() + 2);
+        assert(err == std::ios_base::goodbit);
+        assert(ex == 0.0L);
+      }
     }
   }
+}
+
+int main(int, char**) {
+  test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  {
-    const my_facetw f(1);
-    for (std::size_t i = 0; i != sizeof(digit_result_cases) / sizeof(digit_result_cases[0]); ++i) {
-      {
-        std::wstring v = L"2";
-        v.append(digit_result_cases[i].digit, L'0');
-
-        typedef cpp17_input_iterator<const wchar_t*> I;
-        long double ex;
-        std::ios_base::iostate err = std::ios_base::goodbit;
-        I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
-        assert(base(iter) == v.data() + v.size());
-        assert(err == std::ios_base::eofbit);
-        assert(ex == digit_result_cases[i].result);
-      }
-      {
-        std::wstring v = L"-2";
-        v.append(digit_result_cases[i].digit, L'0');
-
-        typedef cpp17_input_iterator<const wchar_t*> I;
-        long double ex;
-        std::ios_base::iostate err = std::ios_base::goodbit;
-        I iter                     = f.get(I(v.data()), I(v.data() + v.size()), false, ios, err, ex);
-        assert(base(iter) == v.data() + v.size());
-        assert(err == std::ios_base::eofbit);
-        assert(ex == -digit_result_cases[i].result);
-      }
-    }
-  }
+  test<wchar_t>();
 #endif
 
   return 0;
