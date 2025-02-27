@@ -344,7 +344,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       const auto *Dest = cast<const BasicBlock *>(KV.first);
       MachineBasicBlock *DestMBB = getMBB(Dest);
       auto &Srcs = UnwindDestToSrcs[DestMBB];
-      Srcs = SmallPtrSet<BBOrMBB, 4>();
       for (const auto P : KV.second)
         Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
     }
