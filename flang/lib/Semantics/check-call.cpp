@@ -1483,6 +1483,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
       }
       if (const auto &targetArg{arguments[1]}) {
         // The standard requires that the TARGET= argument, when present,
+        // be type compatible with the POINTER= for a data pointer.  In
+        // the case of procedure pointers, the standard requires that it
         // be a valid RHS for a pointer assignment that has the POINTER=
         // argument as its LHS.  Some popular compilers misinterpret this
         // requirement more strongly than necessary, and actually validate
@@ -1589,7 +1591,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
             }
             if (const auto pointerType{pointerArg->GetType()}) {
               if (const auto targetType{targetArg->GetType()}) {
-                ok = pointerType->IsTkCompatibleWith(*targetType);
+                ok = pointerType->IsTkCompatibleWith(*targetType) ||
+                    targetType->IsTkCompatibleWith(*pointerType);
               }
             }
           } else {
