@@ -1493,10 +1493,6 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
   // copies via different reg classes.
   if (!TRI->isAGPR(*MRI, CopyMI->getOperand(0).getReg()))
     return false;
-  unsigned Size = TII->getOpSize(*CopyMI, 1);
-  if (Size <= 4)
-    return false;
-
   Register UseReg = CopyMI->getOperand(1).getReg();
   SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
   if (!getRegSeqInit(Defs, UseReg, AMDGPU::OPERAND_REG_INLINE_C_INT32))
@@ -1512,7 +1508,7 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
   MachineInstrBuilder B(*MBB.getParent(), CopyMI);
   DenseMap<TargetInstrInfo::RegSubRegPair, Register> VGPRCopies;
   SmallSetVector<TargetInstrInfo::RegSubRegPair, 32> SeenAGPRs;
-  for (unsigned I = 0; I < Size / 4; ++I) {
+  for (unsigned I = 0, NumElts = Defs.size(); I != NumElts; ++I) {
     MachineOperand *Def = Defs[I].first;
     TargetInstrInfo::RegSubRegPair CopyToVGPR;
     if (Def->isImm() &&
