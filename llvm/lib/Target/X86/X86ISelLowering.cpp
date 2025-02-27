@@ -9486,16 +9486,19 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
   unsigned NonZeros = 0;
+  SmallSet<SDValue, 4> Undefs;
   for (unsigned i = 0; i != NumOperands; ++i) {
     SDValue SubVec = Op.getOperand(i);
     if (SubVec.isUndef())
       continue;
     if (ISD::isFreezeUndef(SubVec.getNode())) {
         // If the freeze(undef) has multiple uses then we must fold to zero.
-        if (SubVec.hasOneUse())
+        if (SubVec.hasOneUse()) {
           ++NumFreezeUndef;
-        else
+        } else {
           ++NumZero;
+          Undefs.insert(SubVec);
+        }
     }
     else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
       ++NumZero;
@@ -9521,6 +9524,11 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
   SDValue Vec = NumZero ? getZeroVector(ResVT, Subtarget, DAG, dl)
                         : (NumFreezeUndef ? DAG.getFreeze(DAG.getUNDEF(ResVT))
                                           : DAG.getUNDEF(ResVT));
+
+  // Replace Undef operands with ZeroVector.
+  for (SDValue U : Undefs)
+    DAG.ReplaceAllUsesWith(
+        U, getZeroVector(U.getSimpleValueType(), Subtarget, DAG, dl));
 
   MVT SubVT = Op.getOperand(0).getSimpleValueType();
   unsigned NumSubElems = SubVT.getVectorNumElements();
@@ -47229,32 +47237,37 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // fold vselect(cond, pshufb(x), pshufb(y)) -> or (pshufb(x), pshufb(y))
   // by forcing the unselected elements to zero.
   // TODO: Can we handle more shuffles with this?
-  if (N->getOpcode() == ISD::VSELECT && CondVT.isVector() &&
-      LHS.getOpcode() == X86ISD::PSHUFB && RHS.getOpcode() == X86ISD::PSHUFB &&
-      LHS.hasOneUse() && RHS.hasOneUse()) {
-    MVT SimpleVT = VT.getSimpleVT();
+  if (N->getOpcode() == ISD::VSELECT && CondVT.isVector() && LHS.hasOneUse() &&
+      RHS.hasOneUse()) {
     SmallVector<SDValue, 1> LHSOps, RHSOps;
-    SmallVector<int, 64> LHSMask, RHSMask, CondMask;
-    if (createShuffleMaskFromVSELECT(CondMask, Cond) &&
-        getTargetShuffleMask(LHS, true, LHSOps, LHSMask) &&
-        getTargetShuffleMask(RHS, true, RHSOps, RHSMask)) {
-      int NumElts = VT.getVectorNumElements();
-      for (int i = 0; i != NumElts; ++i) {
+    SmallVector<int, 64> LHSMask, RHSMask, CondMask, ByteMask;
+    SDValue LHSShuf = peekThroughOneUseBitcasts(LHS);
+    SDValue RHSShuf = peekThroughOneUseBitcasts(RHS);
+    if (LHSShuf.getOpcode() == X86ISD::PSHUFB &&
+        RHSShuf.getOpcode() == X86ISD::PSHUFB &&
+        createShuffleMaskFromVSELECT(CondMask, Cond) &&
+        scaleShuffleMaskElts(VT.getSizeInBits() / 8, CondMask, ByteMask) &&
+        getTargetShuffleMask(LHSShuf, true, LHSOps, LHSMask) &&
+        getTargetShuffleMask(RHSShuf, true, RHSOps, RHSMask)) {
+      assert(ByteMask.size() == LHSMask.size() &&
+             ByteMask.size() == RHSMask.size() && "Shuffle mask mismatch");
+      for (auto [I, M] : enumerate(ByteMask)) {
         // getConstVector sets negative shuffle mask values as undef, so ensure
         // we hardcode SM_SentinelZero values to zero (0x80).
-        if (CondMask[i] < NumElts) {
-          LHSMask[i] = isUndefOrZero(LHSMask[i]) ? 0x80 : LHSMask[i];
-          RHSMask[i] = 0x80;
+        if (M < (int)ByteMask.size()) {
+          LHSMask[I] = isUndefOrZero(LHSMask[I]) ? 0x80 : LHSMask[I];
+          RHSMask[I] = 0x80;
         } else {
-          LHSMask[i] = 0x80;
-          RHSMask[i] = isUndefOrZero(RHSMask[i]) ? 0x80 : RHSMask[i];
+          LHSMask[I] = 0x80;
+          RHSMask[I] = isUndefOrZero(RHSMask[I]) ? 0x80 : RHSMask[I];
         }
       }
-      LHS = DAG.getNode(X86ISD::PSHUFB, DL, VT, LHS.getOperand(0),
-                        getConstVector(LHSMask, SimpleVT, DAG, DL, true));
-      RHS = DAG.getNode(X86ISD::PSHUFB, DL, VT, RHS.getOperand(0),
-                        getConstVector(RHSMask, SimpleVT, DAG, DL, true));
-      return DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
+      MVT ByteVT = LHSShuf.getSimpleValueType();
+      LHS = DAG.getNode(X86ISD::PSHUFB, DL, ByteVT, LHSOps[0],
+                        getConstVector(LHSMask, ByteVT, DAG, DL, true));
+      RHS = DAG.getNode(X86ISD::PSHUFB, DL, ByteVT, RHSOps[0],
+                        getConstVector(RHSMask, ByteVT, DAG, DL, true));
+      return DAG.getBitcast(VT, DAG.getNode(ISD::OR, DL, ByteVT, LHS, RHS));
     }
   }
 

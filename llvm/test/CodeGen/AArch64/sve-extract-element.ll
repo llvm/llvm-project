@@ -525,7 +525,7 @@ define i32 @test_undef_lane_4xi32(<vscale x 4 x i32> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %b = extractelement <vscale x 4 x i32> %a, i32 undef
+  %b = extractelement <vscale x 4 x i32> %a, i32 poison
   ret i32 %b
 }
 
@@ -533,7 +533,7 @@ define i8 @extract_of_insert_undef_16xi8(i8 %a) #0 {
 ; CHECK-LABEL: extract_of_insert_undef_16xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 16 x i8> undef, i8 %a, i32 0
+  %b = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
   %c = extractelement <vscale x 16 x i8> %b, i32 0
   ret i8 %c
 }
@@ -582,8 +582,8 @@ define i64 @test_lanex_splat_2xi64(i64 %x, i32 %y) #0 {
 ; CHECK-LABEL: test_lanex_splat_2xi64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i64> undef, i64 %x, i32 0
-  %b = shufflevector <vscale x 2 x i64> %a, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %a = insertelement <vscale x 2 x i64> poison, i64 %x, i32 0
+  %b = shufflevector <vscale x 2 x i64> %a, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   %c = extractelement <vscale x 2 x i64> %b, i32 %y
   ret i64 %c
 }

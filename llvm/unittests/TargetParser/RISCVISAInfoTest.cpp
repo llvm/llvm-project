@@ -654,13 +654,18 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input :
-       {"rv64i_xqcisls0p2", "rv64i_xqcia0p2", "rv64i_xqciac0p3",
+       {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
         "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
         "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p2",
         "rv64i_xqcilo0p2", "rv64i_xqcilia0p2", "rv64i_xqcisim0p2"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
+  }
+
+  for (StringRef Input : {"rv32i_zcmp_xqccmp0p1", "rv64i_zcmp_xqccmp0p1"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmp' and 'xqccmp' extensions are incompatible");
   }
 }
 
@@ -1119,7 +1124,8 @@ Experimental extensions
     smctr                1.0
     ssctr                1.0
     svukte               0.3
-    xqcia                0.2
+    xqccmp               0.1
+    xqcia                0.4
     xqciac               0.3
     xqcicli              0.2
     xqcicm               0.2
@@ -1131,6 +1137,7 @@ Experimental extensions
     xqcilsm              0.2
     xqcisim              0.2
     xqcisls              0.2
+    xrivosvisni          0.1
     xrivosvizip          0.1
 
 Supported Profiles
