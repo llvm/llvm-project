@@ -2503,10 +2503,7 @@ public:
 class VPBranchOnMaskRecipe : public VPRecipeBase {
 public:
   VPBranchOnMaskRecipe(VPValue *BlockInMask)
-      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {}) {
-    if (BlockInMask) // nullptr means all-one mask.
-      addOperand(BlockInMask);
-  }
+      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {BlockInMask}) {}
 
   VPBranchOnMaskRecipe *clone() override {
     return new VPBranchOnMaskRecipe(getOperand(0));
@@ -2527,20 +2524,9 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override {
     O << Indent << "BRANCH-ON-MASK ";
-    if (VPValue *Mask = getMask())
-      Mask->printAsOperand(O, SlotTracker);
-    else
-      O << " All-One";
+    printOperands(O, SlotTracker);
   }
 #endif
-
-  /// Return the mask used by this recipe. Note that a full mask is represented
-  /// by a nullptr.
-  VPValue *getMask() const {
-    assert(getNumOperands() <= 1 && "should have either 0 or 1 operands");
-    // Mask is optional.
-    return getNumOperands() == 1 ? getOperand(0) : nullptr;
-  }
 
   /// Returns true if the recipe uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
