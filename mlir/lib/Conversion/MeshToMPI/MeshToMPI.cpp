@@ -76,23 +76,22 @@ static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b,
 
   for (int i = n - 1; i >= 0; --i) {
     multiIndex[i] = b.create<arith::RemSIOp>(loc, linearIndex, dimensions[i]);
-    if (i > 0) {
+    if (i > 0)
       linearIndex = b.create<arith::DivSIOp>(loc, linearIndex, dimensions[i]);
-    }
   }
 
   return multiIndex;
 }
 
-// Create operations converting a multi-dimensional index to a linear index
+/// Create operations converting a multi-dimensional index to a linear index.
 Value multiToLinearIndex(Location loc, OpBuilder b, ValueRange multiIndex,
                          ValueRange dimensions) {
 
-  auto linearIndex = b.create<arith::ConstantIndexOp>(loc, 0).getResult();
-  auto stride = b.create<arith::ConstantIndexOp>(loc, 1).getResult();
+  Value linearIndex = b.create<arith::ConstantIndexOp>(loc, 0);
+  Value stride = b.create<arith::ConstantIndexOp>(loc, 1);
 
   for (int i = multiIndex.size() - 1; i >= 0; --i) {
-    auto off = b.create<arith::MulIOp>(loc, multiIndex[i], stride);
+    Value off = b.create<arith::MulIOp>(loc, multiIndex[i], stride);
     linearIndex = b.create<arith::AddIOp>(loc, linearIndex, off);
     stride = b.create<arith::MulIOp>(loc, stride, dimensions[i]);
   }
@@ -247,34 +246,32 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
 };
 
 struct ConvertProcessMultiIndexOp
-    : public mlir::OpRewritePattern<mlir::mesh::ProcessMultiIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+    : public OpConversionPattern<ProcessMultiIndexOp> {
+  using OpConversionPattern::OpConversionPattern;
 
-  mlir::LogicalResult
-  matchAndRewrite(mlir::mesh::ProcessMultiIndexOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewrite(ProcessMultiIndexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
 
     // Currently converts its linear index to a multi-dimensional index.
 
     SymbolTableCollection symbolTableCollection;
-    auto loc = op.getLoc();
+    Location loc = op.getLoc();
     auto meshOp = getMesh(op, symbolTableCollection);
     // For now we only support static mesh shapes
-    if (ShapedType::isDynamicShape(meshOp.getShape())) {
-      return mlir::failure();
-    }
+    if (ShapedType::isDynamicShape(meshOp.getShape()))
+      return failure();
 
     SmallVector<Value> dims;
     llvm::transform(
         meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
           return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
         });
-    auto rank =
-        rewriter.create<ProcessLinearIndexOp>(op.getLoc(), meshOp).getResult();
+    Value rank = rewriter.create<ProcessLinearIndexOp>(op.getLoc(), meshOp);
     auto mIdx = linearToMultiIndex(loc, rewriter, rank, dims);
 
     // optionally extract subset of mesh axes
-    auto axes = op.getAxes();
+    auto axes = adaptor.getAxes();
     if (!axes.empty()) {
       SmallVector<Value> subIndex;
       for (auto axis : axes) {
@@ -319,44 +316,43 @@ public:
             .getRank();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(op, rewriter.getIndexType(),
                                                     rank);
-    return mlir::success();
+    return success();
   }
 };
 
 struct ConvertNeighborsLinearIndicesOp
-    : public mlir::OpRewritePattern<mlir::mesh::NeighborsLinearIndicesOp> {
-  using OpRewritePattern::OpRewritePattern;
+    : public OpConversionPattern<NeighborsLinearIndicesOp> {
+  using OpConversionPattern::OpConversionPattern;
 
-  mlir::LogicalResult
-  matchAndRewrite(mlir::mesh::NeighborsLinearIndicesOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewrite(NeighborsLinearIndicesOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
 
     // Computes the neighbors indices along a split axis by simply
     // adding/subtracting 1 to the current index in that dimension.
     // Assigns -1 if neighbor is out of bounds.
 
-    auto axes = op.getSplitAxes();
+    auto axes = adaptor.getSplitAxes();
     // For now only single axis sharding is supported
-    if (axes.size() != 1) {
-      return mlir::failure();
-    }
+    if (axes.size() != 1)
+      return failure();
 
-    auto loc = op.getLoc();
+    Location loc = op.getLoc();
     SymbolTableCollection symbolTableCollection;
     auto meshOp = getMesh(op, symbolTableCollection);
-    auto mIdx = op.getDevice();
+    auto mIdx = adaptor.getDevice();
     auto orgIdx = mIdx[axes[0]];
     SmallVector<Value> dims;
     llvm::transform(
         meshOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
           return rewriter.create<arith::ConstantIndexOp>(loc, i).getResult();
         });
-    auto dimSz = dims[axes[0]];
-    auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1).getResult();
-    auto minus1 = rewriter.create<arith::ConstantIndexOp>(loc, -1).getResult();
-    auto atBorder = rewriter.create<arith::CmpIOp>(
+    Value dimSz = dims[axes[0]];
+    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value minus1 = rewriter.create<arith::ConstantIndexOp>(loc, -1);
+    Value atBorder = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::sle, orgIdx,
-        rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult());
+        rewriter.create<arith::ConstantIndexOp>(loc, 0));
     auto down = rewriter.create<scf::IfOp>(
         loc, atBorder,
         [&](OpBuilder &builder, Location loc) {
@@ -598,11 +594,10 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
     // we need the actual shape to compute offsets and sizes
     for (auto i = 0; i < rank; ++i) {
       auto s = dstShape[i];
-      if (ShapedType::isDynamic(s)) {
+      if (ShapedType::isDynamic(s))
         shape[i] = rewriter.create<memref::DimOp>(loc, array, s).getResult();
-      } else {
+      else
         shape[i] = rewriter.getIndexAttr(s);
-      }
 
       if ((size_t)i < opSplitAxes.size() && !opSplitAxes[i].empty()) {
         ++currHaloDim;
@@ -610,11 +605,9 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
         offsets[i] = haloSizes[currHaloDim * 2];
 
         // prepare shape and offsets of highest dim's halo exchange
-        auto _haloSz =
-            rewriter
-                .create<arith::AddIOp>(loc, toValue(haloSizes[currHaloDim * 2]),
-                                       toValue(haloSizes[currHaloDim * 2 + 1]))
-                .getResult();
+        Value _haloSz = rewriter.create<arith::AddIOp>(
+            loc, toValue(haloSizes[currHaloDim * 2]),
+            toValue(haloSizes[currHaloDim * 2 + 1]));
         // the halo shape of lower dims exlude the halos
         dimSizes[i] =
             rewriter.create<arith::SubIOp>(loc, toValue(shape[i]), _haloSz)
@@ -625,9 +618,9 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
     }
 
     auto tagAttr = rewriter.getI32IntegerAttr(91); // we just pick something
-    auto tag = rewriter.create<::mlir::arith::ConstantOp>(loc, tagAttr);
+    auto tag = rewriter.create<arith::ConstantOp>(loc, tagAttr);
     auto zeroAttr = rewriter.getI32IntegerAttr(0); // for detecting v<0
-    auto zero = rewriter.create<::mlir::arith::ConstantOp>(loc, zeroAttr);
+    auto zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
 
     SmallVector<Type> indexResultTypes(meshOp.getShape().size(),
                                        rewriter.getIndexType());
@@ -637,9 +630,8 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
     // traverse all split axes from high to low dim
     for (ssize_t dim = opSplitAxes.size() - 1; dim >= 0; --dim) {
       auto splitAxes = opSplitAxes[dim];
-      if (splitAxes.empty()) {
+      if (splitAxes.empty())
         continue;
-      }
       assert(currHaloDim >= 0 && (size_t)currHaloDim < haloSizes.size() / 2);
       // Get the linearized ids of the neighbors (down and up) for the
       // given split
