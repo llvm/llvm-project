@@ -18,6 +18,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
@@ -498,8 +499,9 @@ Instruction *GCNTTIImpl::hoistReadLaneThroughOperand(InstCombiner &IC,
   Value *LaneID = nullptr;
   if (IsReadLane) {
     LaneID = II.getOperand(1);
-    if (!isa<Constant>(LaneID) && !(isa<Instruction>(LaneID) &&
-                                    cast<Instruction>(LaneID)->comesBefore(Op)))
+    // Check LaneID is available at Op, otherwise we can't move the readlane
+    // higher.
+    if (!IC.getDominatorTree().dominates(LaneID, Op))
       return nullptr;
   }
 
@@ -508,8 +510,13 @@ Instruction *GCNTTIImpl::hoistReadLaneThroughOperand(InstCombiner &IC,
     if (IsReadLane)
       Ops.push_back(LaneID);
 
-    Instruction *NewII =
-        IC.Builder.CreateIntrinsic(II.getType(), II.getIntrinsicID(), Ops);
+    // Make sure convergence tokens are preserved.
+    // TODO: CreateIntrinsic should allow directly copying bundles
+    SmallVector<OperandBundleDef, 2> OpBundles;
+    II.getOperandBundlesAsDefs(OpBundles);
+
+    CallInst *NewII =
+        IC.Builder.CreateCall(II.getCalledFunction(), Ops, OpBundles);
 
     Instruction &NewOp = *Op->clone();
     NewOp.setOperand(OpIdx, NewII);
