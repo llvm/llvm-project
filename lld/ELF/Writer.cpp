@@ -2181,8 +2181,7 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
 // Check which input sections of RX output sections don't have the
 // SHF_AARCH64_PURECODE or SHF_ARM_PURECODE flag set.
 template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
-  if ((ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_ARM) ||
-      ctx.arg.zExecuteOnlyReport == "none")
+  if (ctx.arg.zExecuteOnlyReport == "none")
     return;
 
   auto reportUnless = [&](bool cond) -> ELFSyncStream {
@@ -2204,7 +2203,7 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
   for (OutputSection *osec : ctx.outputSections)
     if (osec->getPhdrFlags() == (PF_R | PF_X))
       for (InputSection *sec : getInputSections(*osec, storage))
-        if (sec->file && sec->file->getName() != "<internal>")
+        if (!isa<SyntheticSection>(sec))
           reportUnless(sec->flags & purecodeFlag)
               << "-z execute-only-report: " << sec << " does not have "
               << purecodeFlagName << " flag set";
