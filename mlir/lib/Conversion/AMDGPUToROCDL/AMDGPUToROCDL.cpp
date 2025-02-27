@@ -514,8 +514,11 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
 /// Push an input operand. If it is a float type, nothing to do. If it is
 /// an integer type, then we need to also push its signdness (1 for signed, 0
 /// for unsigned) and we need to pack the input 16xi8 vector into a 4xi32
-/// vector. We also need to convert bfloat inputs to i16 to account for the lack
-/// of bfloat support in the WMMA intrinsics themselves.
+/// vector (or the 8xi8 vector into a 2xi32 one for gfx12+).
+/// We also need to convert bfloat inputs to i16 to account for the bfloat
+/// intrinsics having been defined before the AMD backend supported bfloat. We
+/// similarly need to pack 8-bit float types into integers as if they were i8
+/// (which they are for the backend's purposes).
 static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
                                  Location loc,
                                  const TypeConverter *typeConverter,
@@ -524,12 +527,16 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
                                  SmallVector<Value, 4> &operands) {
   Type inputType = llvmInput.getType();
   auto vectorType = dyn_cast<VectorType>(inputType);
+  if (!vectorType) {
+    operands.push_back(llvmInput);
+    return;
+  }
   Type elemType = vectorType.getElementType();
 
   if (elemType.isBF16())
     llvmInput = rewriter.create<LLVM::BitcastOp>(
         loc, vectorType.clone(rewriter.getI16Type()), llvmInput);
-  if (!elemType.isInteger(8)) {
+  if (elemType.getIntOrFloatBitWidth() > 8) {
     operands.push_back(llvmInput);
     return;
   }
@@ -538,26 +545,34 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
   // for int8. This is because, in LLVM, fp8 type is converted to int8, so the
   // fp8/int8 information is lost during the conversion process.
   auto mlirInputType = cast<VectorType>(mlirInput.getType());
-  bool isInputInt8 = mlirInputType.getElementType().isInteger(8);
-  if (isInputInt8) {
+  bool isInputInteger = mlirInputType.getElementType().isInteger();
+  if (isInputInteger) {
     // if element type is 8-bit signed or unsigned, ignore the isUnsigned flag
     bool localIsUnsigned = isUnsigned;
-    if (elemType.isUnsignedInteger(8)) {
+    if (elemType.isUnsignedInteger()) {
       localIsUnsigned = true;
-    } else if (elemType.isSignedInteger(8)) {
+    } else if (elemType.isSignedInteger()) {
       localIsUnsigned = false;
     }
     Value sign = createI1Constant(rewriter, loc, !localIsUnsigned);
     operands.push_back(sign);
   }
 
-  int64_t numBytes = vectorType.getNumElements();
+  int64_t numBits =
+      vectorType.getNumElements() * elemType.getIntOrFloatBitWidth();
   Type i32 = rewriter.getI32Type();
-  VectorType vectorType32bits = VectorType::get(numBytes * 8 / 32, i32);
-  auto llvmVectorType32bits = typeConverter->convertType(vectorType32bits);
-  Value result = rewriter.createOrFold<LLVM::BitcastOp>(
-      loc, llvmVectorType32bits, llvmInput);
-  operands.push_back(result);
+  Type intrinsicInType = numBits <= 32
+                             ? (Type)rewriter.getIntegerType(numBits)
+                             : (Type)VectorType::get(numBits / 32, i32);
+  auto llvmIntrinsicInType = typeConverter->convertType(intrinsicInType);
+  Value castInput = rewriter.createOrFold<LLVM::BitcastOp>(
+      loc, llvmIntrinsicInType, llvmInput);
+  // The wave64-mode 16x16x16 intrinsics that take 4-bit integers only need
+  // (256 / 64) * 4 = 16 bits of input (on gfx12+) but take i32 arguments.
+  // Add in the zeros here.
+  if (numBits < 32)
+    castInput = rewriter.create<LLVM::ZExtOp>(loc, i32, castInput);
+  operands.push_back(castInput);
 }
 
 /// Push the output operand. For many cases this is only pushing the output in
@@ -565,7 +580,8 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
 /// since the same numbers of VGPRs is used, we need to decide if to store the
 /// result in the upper 16 bits of the VGPRs or in the lower part. To store the
 /// result in the lower 16 bits, set subwordOffset to 1, otherwise result will
-/// be stored it in the upper part
+/// be stored it in the upper part. The subwordOffset must not be set for gfx12,
+/// as the instructions have been changed to return fewer registers instead.
 static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
                                   Location loc,
                                   const TypeConverter *typeConverter,
@@ -728,8 +744,10 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
 static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
                                                   Chipset chipset) {
   auto sourceVectorType = dyn_cast<VectorType>(wmma.getSourceA().getType());
+  auto sourceBVectorType = dyn_cast<VectorType>(wmma.getSourceB().getType());
   auto destVectorType = dyn_cast<VectorType>(wmma.getDestC().getType());
   auto elemSourceType = sourceVectorType.getElementType();
+  auto elemBSourceType = sourceBVectorType.getElementType();
   auto elemDestType = destVectorType.getElementType();
 
   if (elemSourceType.isF16() && elemDestType.isF32())
@@ -742,10 +760,33 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
     return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
   if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
     return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
-  if (isa<Float8E4M3FNType>(elemSourceType) && elemDestType.isF32())
-    return ROCDL::wmma_f32_16x16x16_fp8::getOperationName();
-  if (isa<Float8E5M2Type>(elemSourceType) && elemDestType.isF32())
-    return ROCDL::wmma_f32_16x16x16_bf8::getOperationName();
+  if (chipset.majorVersion == 11) {
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+  }
+  if (chipset.majorVersion >= 12) {
+    if (isa<Float8E4M3FNType>(elemSourceType) &&
+        isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_fp8_fp8::getOperationName();
+    if (isa<Float8E4M3FNType>(elemSourceType) &&
+        isa<Float8E5M2Type>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_fp8_bf8::getOperationName();
+    if (isa<Float8E5M2Type>(elemSourceType) &&
+        isa<Float8E5M2Type>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf8_bf8::getOperationName();
+    if (isa<Float8E5M2Type>(elemSourceType) &&
+        isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf8_fp8::getOperationName();
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32)) {
+      bool isWave64 = destVectorType.getNumElements() == 4;
+      // This is the ambiguous case. 8 inputs to the wave64 version means that
+      // we want the 16x16x32 version, but for wave32 they mean the short form.
+      bool has8Inputs = sourceVectorType.getNumElements() == 8;
+      if ((isWave64 && has8Inputs) || (!isWave64 && !has8Inputs))
+        return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
+      return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+    }
+  }
   return std::nullopt;
 }
 
@@ -822,6 +863,9 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
 
     if (!maybeIntrinsic.has_value())
       return op.emitOpError("no intrinsic matching WMMA on the given chipset");
+
+    if (chipset.majorVersion >= 12 && op.getSubwordOffset() != 0)
+      return op.emitOpError("subwordOffset not supported on gfx12+");
 
     OperationState loweredOp(loc, *maybeIntrinsic);
     loweredOp.addTypes(rawOutType);
