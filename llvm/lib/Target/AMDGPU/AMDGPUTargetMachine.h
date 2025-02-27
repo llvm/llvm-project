@@ -209,17 +209,6 @@ private:
   /// \param Phase The phase of register allocation to add.
   template <typename PreferredRegAllocPassT>
   void addRegAlloc(AddMachinePass &, RegAllocPhase Phase) const;
-
-  // instantiate the template for each phase
-  /// Add the register allocation pass for given filter func and type
-  /// (greedy/fast).
-  /// @param Type If RegAllocType::Default, add according to the optimization
-  /// level.
-  // void addRegAllocPass(AddMachinePass &, RegAllocType Type,
-  // RegAllocFilterFunc FilterFunc) const;
-  void addSGPRRegAlloc(AddMachinePass &, bool Optimized) const;
-  void addWWMRegAlloc(AddMachinePass &, bool Optimized) const;
-  void addVGPRRegAlloc(AddMachinePass &, bool Optimized) const;
 };
 
 } // end namespace llvm
