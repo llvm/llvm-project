@@ -434,8 +434,8 @@ bool SIModeRegisterLegacy::runOnMachineFunction(MachineFunction &MF) {
 
 PreservedAnalyses SIModeRegisterPass::run(MachineFunction &MF,
                                           MachineFunctionAnalysisManager &AM) {
-  if (SIModeRegister().run(MF))
-    return PreservedAnalyses::none();
+  if (!SIModeRegister().run(MF))
+    return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;
