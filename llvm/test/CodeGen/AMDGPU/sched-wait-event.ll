@@ -22,18 +22,18 @@ define amdgpu_ps void @test_wait_event(i32 inreg %arg, float %arg1, float %arg2,
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_interp_p10_f32 v4, v2, v1, v2 wait_exp:1
 ; GFX12-NEXT:    v_interp_p10_f32 v1, v3, v1, v3 wait_exp:0
-; GFX12-NEXT:    s_wait_event 0x2
-; GFX12-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX12-NEXT:    v_interp_p2_f32 v4, v2, v0, v4 wait_exp:7
 ; GFX12-NEXT:    v_interp_p2_f32 v0, v3, v0, v1 wait_exp:7
 ; GFX12-NEXT:    v_mul_f32_e32 v1, 0x44800000, v4
 ; GFX12-NEXT:    v_mul_f32_e32 v0, 0x44800000, v0
 ; GFX12-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX12-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX12-NEXT:    s_wait_event 0x2
 ; GFX12-NEXT:    image_load v[4:7], [v1, v0], s[4:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_dual_mul_f32 v7, 0.5, v7 :: v_dual_mul_f32 v6, 0.5, v6
-; GFX12-NEXT:    v_dual_mul_f32 v5, 0.5, v5 :: v_dual_mul_f32 v4, 0.5, v4
+; GFX12-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mul_f32 v7, 0.5, v7
+; GFX12-NEXT:    v_dual_mul_f32 v6, 0.5, v6 :: v_dual_mul_f32 v5, 0.5, v5
+; GFX12-NEXT:    v_mul_f32_e32 v4, 0.5, v4
 ; GFX12-NEXT:    image_store v[4:7], [v1, v0], s[4:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    export mrt0 v8, v8, v8, v8 done

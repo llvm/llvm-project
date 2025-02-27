@@ -4214,6 +4214,13 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getOpcode() == AMDGPU::SCHED_BARRIER && MI.getOperand(0).getImm() == 0)
     return true;
 
+  // The scheduler does not understand what kind of external events this
+  // instruction waits for, so cannot do a good job of scheduling it. Making it
+  // a boundary allows front ends to insert it at an appropriate place without
+  // the scheduler arbitrarily moving it.
+  if (MI.getOpcode() == AMDGPU::S_WAIT_EVENT)
+    return true;
+
   // Target-independent instructions do not have an implicit-use of EXEC, even
   // when they operate on VGPRs. Treating EXEC modifications as scheduling
   // boundaries prevents incorrect movements of such instructions.
