@@ -35,7 +35,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE:%[0-9]+]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[EVL]]>)
-; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = vp.add nsw vp<[[SPLICE]]>, ir<[[LD]]>, vp<[[EVL]]>
+; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = add nsw vp<[[SPLICE]]>, ir<[[LD]]>
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%B>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ADD]]>, vp<[[EVL]]>

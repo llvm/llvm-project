@@ -47,7 +47,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[VP_OP_LOAD]], i32 -1, <vscale x 4 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32> [[TMP16]], <vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = add nsw <vscale x 4 x i32> [[TMP16]], [[VP_OP_LOAD]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -200,7 +200,7 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[VP_OP_LOAD]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP15]])
 ; IF-EVL-NEXT:    [[TMP19]] = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[VP_OP_LOAD]], i32 -1, <vscale x 4 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP15]])
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR2]], <vscale x 4 x i32> [[TMP19]], i32 -1, <vscale x 4 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP15]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32> [[TMP19]], <vscale x 4 x i32> [[TMP20]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP15]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = add nsw <vscale x 4 x i32> [[TMP19]], [[TMP20]]
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP16]]
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP21]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP]], ptr align 4 [[TMP22]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP15]])
@@ -378,8 +378,8 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[TMP22]] = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[VP_OP_LOAD]], i32 -1, <vscale x 4 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP18]])
 ; IF-EVL-NEXT:    [[TMP23]] = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR2]], <vscale x 4 x i32> [[TMP22]], i32 -1, <vscale x 4 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP18]])
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR4]], <vscale x 4 x i32> [[TMP23]], i32 -1, <vscale x 4 x i1> splat (i1 true), i32 [[PREV_EVL]], i32 [[TMP18]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32> [[TMP23]], <vscale x 4 x i32> [[TMP24]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP18]])
-; IF-EVL-NEXT:    [[VP_OP5:%.*]] = call <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32> [[VP_OP]], <vscale x 4 x i32> [[TMP22]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP18]])
+; IF-EVL-NEXT:    [[TMP40:%.*]] = add nsw <vscale x 4 x i32> [[TMP23]], [[TMP24]]
+; IF-EVL-NEXT:    [[VP_OP5:%.*]] = add <vscale x 4 x i32> [[TMP40]], [[TMP22]]
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP19]]
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP25]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP5]], ptr align 4 [[TMP26]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP18]])
@@ -405,14 +405,14 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL:       [[SCALAR_PH]]:
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 33, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT6]], %[[MIDDLE_BLOCK]] ], [ 22, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT9:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT7]], %[[MIDDLE_BLOCK]] ], [ 11, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT7:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT6]], %[[MIDDLE_BLOCK]] ], [ 22, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT7]], %[[MIDDLE_BLOCK]] ], [ 11, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP38:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT8]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR3:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT9]], %[[SCALAR_PH]] ], [ [[FOR2]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT7]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR3:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT8]], %[[SCALAR_PH]] ], [ [[FOR2]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS]]
 ; IF-EVL-NEXT:    [[TMP38]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[FOR2]], [[FOR3]]
