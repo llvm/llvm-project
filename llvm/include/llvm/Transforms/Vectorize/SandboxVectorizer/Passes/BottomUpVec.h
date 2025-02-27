@@ -16,14 +16,23 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
-#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
 
-class BottomUpVec final : public FunctionPass {
+/// This is a simple bottom-up vectorizer Region pass.
+/// It expects a "seed slice" as an input in the Region's Aux vector.
+/// The "seed slice" is a vector of instructions that can be used as a starting
+/// point for vectorization, like stores to consecutive memory addresses.
+/// Starting from the seed instructions, it walks up the def-use chain looking
+/// for more instructions that can be vectorized. This pass will generate vector
+/// code if it can legally vectorize the code, regardless of whether it is
+/// profitable or not. For now profitability is checked at the end of the region
+/// pass pipeline by a dedicated pass that accepts or rejects the IR
+/// transaction, depending on the cost.
+class BottomUpVec final : public RegionPass {
   bool Change = false;
   std::unique_ptr<LegalityAnalysis> Legality;
   /// The original instructions that are potentially dead after vectorization.
@@ -49,22 +58,39 @@ class BottomUpVec final : public FunctionPass {
   /// function helps collect these instructions (along with the pointer operands
   /// for loads/stores) so that they can be cleaned up later.
   void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
-  /// Recursively try to vectorize \p Bndl and its operands.
-  Value *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
-                      unsigned Depth);
+
+  /// Helper class describing how(if) to vectorize the code.
+  class ActionsVector {
+  private:
+    SmallVector<std::unique_ptr<Action>, 16> Actions;
+
+  public:
+    auto begin() const { return Actions.begin(); }
+    auto end() const { return Actions.end(); }
+    void push_back(std::unique_ptr<Action> &&ActPtr) {
+      ActPtr->Idx = Actions.size();
+      Actions.push_back(std::move(ActPtr));
+    }
+    void clear() { Actions.clear(); }
+#ifndef NDEBUG
+    void print(raw_ostream &OS) const;
+    void dump() const;
+#endif // NDEBUG
+  };
+  ActionsVector Actions;
+  /// Recursively try to vectorize \p Bndl and its operands. This populates the
+  /// `Actions` vector.
+  Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
+                       unsigned Depth);
+  /// Generate vector instructions based on `Actions` and return the last vector
+  /// created.
+  Value *emitVectors();
   /// Entry point for vectorization starting from \p Seeds.
   bool tryVectorize(ArrayRef<Value *> Seeds);
 
-  /// The PM containing the pipeline of region passes.
-  RegionPassManager RPM;
-
 public:
-  BottomUpVec(StringRef Pipeline);
-  bool runOnFunction(Function &F, const Analyses &A) final;
-  void printPipeline(raw_ostream &OS) const final {
-    OS << getName() << "\n";
-    RPM.printPipeline(OS);
-  }
+  BottomUpVec() : RegionPass("bottom-up-vec") {}
+  bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 
 } // namespace llvm::sandboxir

@@ -407,7 +407,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn) {
       if (__len > __bs) {
         __wb = (_CharT*)malloc(__len * sizeof(_CharT));
         if (__wb == 0)
-          __throw_bad_alloc();
+          std::__throw_bad_alloc();
         __h.reset(__wb);
       }
       for (_CharT* __p = __wb; *__strn != '\0'; ++__strn, ++__p)

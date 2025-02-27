@@ -367,11 +367,11 @@ bool LiveRegOptimizer::optimizeLiveType(
   for (Instruction *U : Uses) {
     // Replace all converted operands for a use.
     for (auto [OpIdx, Op] : enumerate(U->operands())) {
-      if (ValMap.contains(Op) && ValMap[Op]) {
+      if (Value *Val = ValMap.lookup(Op)) {
         Value *NewVal = nullptr;
         if (BBUseValMap.contains(U->getParent()) &&
-            BBUseValMap[U->getParent()].contains(ValMap[Op]))
-          NewVal = BBUseValMap[U->getParent()][ValMap[Op]];
+            BBUseValMap[U->getParent()].contains(Val))
+          NewVal = BBUseValMap[U->getParent()][Val];
         else {
           BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
           // We may pick up ops that were previously converted for users in

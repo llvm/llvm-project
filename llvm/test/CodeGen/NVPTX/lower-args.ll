@@ -40,24 +40,25 @@ define void @load_padding(ptr nocapture readonly byval(%class.padded) %arg) {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot1[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b64 %rd<5>;
+; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    mov.u64 %SPL, __local_depot1;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
-; PTX-NEXT:    ld.param.u64 %rd1, [load_padding_param_0];
-; PTX-NEXT:    st.u64 [%SP], %rd1;
-; PTX-NEXT:    add.u64 %rd2, %SP, 0;
+; PTX-NEXT:    add.u64         %rd1, %SP, 0;
+; PTX-NEXT:    add.u64         %rd2, %SPL, 0;
+; PTX-NEXT:    ld.param.u64 %rd3, [load_padding_param_0];
+; PTX-NEXT:    st.local.u64 [%rd2], %rd3;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd2;
+; PTX-NEXT:    st.param.b64 [param0], %rd1;
 ; PTX-NEXT:    .param .b64 retval0;
 ; PTX-NEXT:    call.uni (retval0),
 ; PTX-NEXT:    escape,
 ; PTX-NEXT:    (
 ; PTX-NEXT:    param0
 ; PTX-NEXT:    );
-; PTX-NEXT:    ld.param.b64 %rd3, [retval0];
+; PTX-NEXT:    ld.param.b64 %rd4, [retval0];
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
   %tmp = call ptr @escape(ptr nonnull align 16 %arg)
@@ -87,12 +88,12 @@ define ptx_kernel void @ptr_generic(ptr %out, ptr %in) {
 }
 
 ; COMMON-LABEL: ptr_nongeneric
-define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
+define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(3) %in) {
 ; IR-NOT: addrspacecast
 ; PTX-NOT: cvta.to.global
-; PTX:  ld.const.u32
+; PTX:  ld.shared.u32
 ; PTX   st.global.u32
-  %v = load i32, ptr addrspace(4) %in, align 4
+  %v = load i32, ptr addrspace(3) %in, align 4
   store i32 %v, ptr addrspace(1) %out, align 4
   ret void
 }

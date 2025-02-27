@@ -651,8 +651,8 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
       "start_wqthread", "_pthread_wqthread", "_pthread_start",
   };
 
-  static const char *g_bp_modules[] = {"libsystem_c.dylib",
-                                       "libSystem.B.dylib"};
+  static const char *g_bp_modules[] = {"libsystem_c.dylib", "libSystem.B.dylib",
+                                       "libsystem_pthread.dylib"};
 
   FileSpecList bp_modules;
   for (size_t i = 0; i < std::size(g_bp_modules); i++) {

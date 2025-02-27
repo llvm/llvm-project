@@ -5752,7 +5752,8 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   if (IRP.getPositionKind() == IRP_CALL_SITE_ARGUMENT)
     if (Argument *Arg = IRP.getAssociatedArgument()) {
       SmallVector<Attribute, 1> Attrs;
-      A.getAttrs(IRP, {Attribute::Captures, Attribute::ByVal}, Attrs,
+      A.getAttrs(IRPosition::argument(*Arg),
+                 {Attribute::Captures, Attribute::ByVal}, Attrs,
                  /* IgnoreSubsumingPositions */ true);
       bool ArgNoCapture = any_of(Attrs, [](Attribute Attr) {
         return Attr.getKindAsEnum() == Attribute::ByVal ||

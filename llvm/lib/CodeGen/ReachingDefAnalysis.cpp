@@ -147,16 +147,7 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
       assert(FrameIndex >= 0 && "Can't handle negative frame indicies yet!");
       if (!isFIDef(*MI, FrameIndex, TII))
         continue;
-      if (MBBFrameObjsReachingDefs.contains(MBBNumber)) {
-        auto Frame2InstrIdx = MBBFrameObjsReachingDefs[MBBNumber];
-        if (Frame2InstrIdx.count(FrameIndex - ObjectIndexBegin) > 0)
-          Frame2InstrIdx[FrameIndex - ObjectIndexBegin].push_back(CurInstr);
-        else
-          Frame2InstrIdx[FrameIndex - ObjectIndexBegin] = {CurInstr};
-      } else {
-        MBBFrameObjsReachingDefs[MBBNumber] = {
-            {FrameIndex - ObjectIndexBegin, {CurInstr}}};
-      }
+      MBBFrameObjsReachingDefs[{MBBNumber, FrameIndex}].push_back(CurInstr);
     }
     if (!isValidRegDef(MO))
       continue;
@@ -266,9 +257,13 @@ void ReachingDefAnalysis::printAllReachingDefs(MachineFunction &MF) {
         Defs.clear();
         getGlobalReachingDefs(&MI, Reg, Defs);
         MO.print(dbgs(), TRI);
-        dbgs() << ":{ ";
+        SmallVector<int, 0> Nums;
         for (MachineInstr *Def : Defs)
-          dbgs() << InstToNumMap[Def] << " ";
+          Nums.push_back(InstToNumMap[Def]);
+        llvm::sort(Nums);
+        dbgs() << ":{ ";
+        for (int Num : Nums)
+          dbgs() << Num << " ";
         dbgs() << "}\n";
       }
       dbgs() << Num << ": " << MI << "\n";
@@ -346,10 +341,14 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, Register Reg) const {
          "Unexpected basic block number.");
   int LatestDef = ReachingDefDefaultVal;
 
-  if (Register::isStackSlot(Reg)) {
-    int FrameIndex = Register::stackSlot2Index(Reg);
-    for (int Def : MBBFrameObjsReachingDefs.lookup(MBBNumber).lookup(
-             FrameIndex - ObjectIndexBegin)) {
+  if (Reg.isStack()) {
+    // Check that there was a reaching def.
+    int FrameIndex = Reg.stackSlotIndex();
+    auto Lookup = MBBFrameObjsReachingDefs.find({MBBNumber, FrameIndex});
+    if (Lookup == MBBFrameObjsReachingDefs.end())
+      return LatestDef;
+    auto &Defs = Lookup->second;
+    for (int Def : Defs) {
       if (Def >= InstId)
         break;
       DefRes = Def;
@@ -509,7 +508,7 @@ void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
   VisitedBBs.insert(MBB);
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (Register::isPhysicalRegister(Reg) && LiveRegs.available(Reg))
+  if (Reg.isPhysical() && LiveRegs.available(Reg))
     return;
 
   if (auto *Def = getLocalLiveOutMIDef(MBB, Reg))
@@ -590,7 +589,7 @@ bool ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI,
   MachineBasicBlock *MBB = MI->getParent();
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (Register::isPhysicalRegister(Reg) && LiveRegs.available(Reg))
+  if (Reg.isPhysical() && LiveRegs.available(Reg))
     return false;
 
   auto Last = MBB->getLastNonDebugInstr();
@@ -610,15 +609,15 @@ MachineInstr *ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
                                                         Register Reg) const {
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (Register::isPhysicalRegister(Reg) && LiveRegs.available(Reg))
+  if (Reg.isPhysical() && LiveRegs.available(Reg))
     return nullptr;
 
   auto Last = MBB->getLastNonDebugInstr();
   if (Last == MBB->end())
     return nullptr;
 
-  if (Register::isStackSlot(Reg)) {
-    int FrameIndex = Register::stackSlot2Index(Reg);
+  if (Reg.isStack()) {
+    int FrameIndex = Reg.stackSlotIndex();
     if (isFIDef(*Last, FrameIndex, TII))
       return &*Last;
   }

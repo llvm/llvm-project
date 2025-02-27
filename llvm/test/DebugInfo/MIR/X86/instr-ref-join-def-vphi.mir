@@ -233,10 +233,11 @@ body:             |
     liveins: $esi
 
     $eax = MOV32rr killed $esi, debug-location !35
-    SEH_Epilogue debug-location !35
+    SEH_BeginEpilogue debug-location !35
     $rsp = frame-destroy ADD64ri8 $rsp, 40, implicit-def dead $eflags, debug-location !35
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !35
     $rsi = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !35
+    SEH_EndEpilogue debug-location !35
     RET64 $eax, debug-location !35
 
 ...

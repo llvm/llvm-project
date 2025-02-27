@@ -345,10 +345,7 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
 
 void CodeGenFunction::registerGlobalDtorWithAtExit(llvm::Constant *dtorStub) {
   // extern "C" int atexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to atexit has a wrong type.");
 
   llvm::FunctionType *atexitTy =
@@ -372,10 +369,7 @@ CodeGenFunction::unregisterGlobalDtorWithUnAtExit(llvm::Constant *dtorStub) {
   // value is returned.
   //
   // extern "C" int unatexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to unatexit has a wrong type.");
 
   llvm::FunctionType *unatexitTy =

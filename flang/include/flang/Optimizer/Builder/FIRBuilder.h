@@ -16,12 +16,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/MathOptionsBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -57,7 +57,13 @@ public:
   explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
-        symbolTable{symbolTable} {}
+        symbolTable{symbolTable} {
+    auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+    if (fmi) {
+      // Set the builder with FastMathFlags attached to the operation.
+      setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+    }
+  }
   explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
@@ -378,6 +384,15 @@ public:
                                            llvm::StringRef name,
                                            mlir::FunctionType ty,
                                            mlir::SymbolTable *);
+
+  /// Returns a named function for a Fortran runtime API, creating
+  /// it, if it does not exist in the module yet.
+  /// If \p isIO is set to true, then the function corresponds
+  /// to one of Fortran runtime IO APIs.
+  mlir::func::FuncOp createRuntimeFunction(mlir::Location loc,
+                                           llvm::StringRef name,
+                                           mlir::FunctionType ty,
+                                           bool isIO = false);
 
   /// Cast the input value to IndexType.
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
@@ -813,6 +828,18 @@ uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
 llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
                                                     mlir::ValueRange extents2);
 
+/// Given array extents generate code that sets them all to zeroes,
+/// if the array is empty, e.g.:
+///   %false = arith.constant false
+///   %c0 = arith.constant 0 : index
+///   %p1 = arith.cmpi eq, %e0, %c0 : index
+///   %p2 = arith.ori %false, %p1 : i1
+///   %p3 = arith.cmpi eq, %e1, %c0 : index
+///   %p4 = arith.ori %p1, %p2 : i1
+///   %result0 = arith.select %p4, %c0, %e0 : index
+///   %result1 = arith.select %p4, %c0, %e1 : index
+llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

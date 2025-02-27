@@ -620,3 +620,51 @@ define i8 @oneArgPromotionBlockSExtZExt(i1 %arg1, ptr %base) {
   %res = load i8, ptr %arrayidx
   ret i8 %res
 }
+
+; Check that we replace the deleted sext with the promoted value.
+define void @pr70938(ptr %f) {
+; CHECK-LABEL: define void @pr70938(
+; CHECK-SAME: ptr [[F:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 0, 1
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[ADD]], 2
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[F]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 1
+; CHECK-NEXT:    store i8 0, ptr [[SUNKADDR2]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add = add nsw i32 0, 1
+  %idxprom3 = sext i32 %add to i64
+  %arrayidx4 = getelementptr [2 x [1 x [2 x i8]]], ptr %f, i64 0, i64 %idxprom3
+  %arrayidx8 = getelementptr [2 x i8], ptr %arrayidx4, i64 0, i64 %idxprom3
+  br label %if.end
+
+if.end:                                           ; preds = %entry
+  store i8 0, ptr %arrayidx8, align 1
+  ret void
+}
+
+define void @pr119429() {
+; CHECK-LABEL: define void @pr119429() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 0, 0
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = inttoptr i64 [[AND]] to ptr
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = mul i64 [[AND]], 2
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR]], i64 [[SUNKADDR1]]
+; CHECK-NEXT:    store i64 0, ptr [[SUNKADDR2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %and = and i32 0, 0
+  %conv1 = zext i32 %and to i64
+  %sub = add i64 %conv1, 0
+  br label %if.end
+
+if.end:
+  %mul = shl i64 %sub, 1
+  %add = add i64 %mul, %conv1
+  %ptr = inttoptr i64 %add to ptr
+  store i64 0, ptr %ptr, align 8
+  ret void
+}

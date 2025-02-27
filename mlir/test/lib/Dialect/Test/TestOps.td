@@ -557,7 +557,12 @@ def TestCallOp : TEST_Op<"call", [DeclareOpInterfaceMethods<SymbolUserOpInterfac
 
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {
-  let arguments = (ins Variadic<AnyType>:$arg_operands, SymbolRefAttr:$callee);
+  let arguments = (ins
+    Variadic<AnyType>:$arg_operands,
+    SymbolRefAttr:$callee,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
@@ -618,6 +623,10 @@ def ConversionFuncOp : TEST_Op<"conversion_func_op", [FunctionOpInterface]> {
 def FunctionalRegionOp : TEST_Op<"functional_region_op",
     [CallableOpInterface]> {
   let regions = (region AnyRegion:$body);
+  let arguments = (ins
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
   let results = (outs FunctionType);
 
   let extraClassDeclaration = [{
@@ -942,6 +951,25 @@ def ResultNameFromTypeOp
 def BlockArgumentNameFromTypeOp
   : TEST_Op<"block_argument_name_from_type",
       [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "regions attr-dict-with-keyword";
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for op result name when OpAsmOpInterface::getAsmResultNames is the default implementation
+// i.e. does nothing.
+def ResultNameFromTypeInterfaceOp
+ : TEST_Op<"result_name_from_type_interface",
+           [OpAsmOpInterface]> {
+  let results = (outs Variadic<AnyType>:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for block argument name when OpAsmOpInterface::getAsmBlockArgumentNames is the default implementation
+// i.e. does nothing.
+def BlockArgumentNameFromTypeInterfaceOp
+  : TEST_Op<"block_argument_name_from_type_interface",
+      [OpAsmOpInterface]> {
   let regions = (region AnyRegion:$body);
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
@@ -3309,7 +3337,9 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
     SymbolRefAttr:$callee,
     Arg<AnyMemRef, "", [MemWrite]>:$address,
     Variadic<AnyType>:$callee_operands,
-    BoolAttr:$store_before_call
+    BoolAttr:$store_before_call,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
   let results = (outs
     Variadic<AnyType>:$results
@@ -3324,7 +3354,9 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
   let arguments = (ins
     SymbolRefAttr:$callee,
     Variadic<AnyType>:$forwarded_operands,
-    AnyType:$non_forwarded_device_operand
+    AnyType:$non_forwarded_device_operand,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
   let results = (outs
     Variadic<AnyType>:$results

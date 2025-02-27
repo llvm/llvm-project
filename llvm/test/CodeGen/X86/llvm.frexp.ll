@@ -45,7 +45,7 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; WIN32-NEXT:    subl $20, %esp
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, (%esp)
-; WIN32-NEXT:    calll ___gnu_h2f_ieee
+; WIN32-NEXT:    calll ___extendhfsf2
 ; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
@@ -54,7 +54,7 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstps (%esp)
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    calll ___gnu_f2h_ieee
+; WIN32-NEXT:    calll ___truncsfhf2
 ; WIN32-NEXT:    movl %esi, %edx
 ; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    popl %esi
@@ -95,7 +95,7 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
 ; WIN32-NEXT:    subl $20, %esp
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, (%esp)
-; WIN32-NEXT:    calll ___gnu_h2f_ieee
+; WIN32-NEXT:    calll ___extendhfsf2
 ; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
@@ -103,7 +103,7 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    calll ___gnu_f2h_ieee
+; WIN32-NEXT:    calll ___truncsfhf2
 ; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    retl
   %result = call { half, i32 } @llvm.frexp.f16.i32(half %a)
@@ -146,7 +146,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; WIN32-NEXT:    subl $16, %esp
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, (%esp)
-; WIN32-NEXT:    calll ___gnu_h2f_ieee
+; WIN32-NEXT:    calll ___extendhfsf2
 ; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)

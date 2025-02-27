@@ -26,7 +26,6 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERIZATIONBUFFERIZE
 #define GEN_PASS_DEF_ONESHOTBUFFERIZE
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization

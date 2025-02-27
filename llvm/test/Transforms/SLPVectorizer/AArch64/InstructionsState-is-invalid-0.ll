@@ -19,9 +19,8 @@ define void @foo(ptr %0) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP7]], <4 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <4 x ptr> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i1> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
-; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i1> [[TMP5]], [[TMP10]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_OP]])
 ; CHECK-NEXT:    br i1 [[OP_RDX]], label [[DOTLR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    ret void

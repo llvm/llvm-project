@@ -176,15 +176,18 @@ struct ModuleAnalysisInfo {
     RegisterAliasTable[MF][Reg] = AliasReg;
   }
   Register getRegisterAlias(const MachineFunction *MF, Register Reg) {
-    auto RI = RegisterAliasTable[MF].find(Reg);
-    if (RI == RegisterAliasTable[MF].end()) {
+    auto &RegTable = RegisterAliasTable[MF];
+    auto RI = RegTable.find(Reg);
+    if (RI == RegTable.end()) {
       return Register(0);
     }
-    return RegisterAliasTable[MF][Reg];
+    return RI->second;
   }
   bool hasRegisterAlias(const MachineFunction *MF, Register Reg) {
-    return RegisterAliasTable.find(MF) != RegisterAliasTable.end() &&
-           RegisterAliasTable[MF].find(Reg) != RegisterAliasTable[MF].end();
+    auto RI = RegisterAliasTable.find(MF);
+    if (RI == RegisterAliasTable.end())
+      return false;
+    return RI->second.find(Reg) != RI->second.end();
   }
   unsigned getNextID() { return MaxID++; }
   bool hasMBBRegister(const MachineBasicBlock &MBB) {
@@ -194,12 +197,10 @@ struct ModuleAnalysisInfo {
   // Convert MBB's number to corresponding ID register.
   Register getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
     auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    auto It = BBNumToRegMap.find(Key);
-    if (It != BBNumToRegMap.end())
-      return It->second;
-    Register NewReg = Register::index2VirtReg(getNextID());
-    BBNumToRegMap[Key] = NewReg;
-    return NewReg;
+    auto [It, Inserted] = BBNumToRegMap.try_emplace(Key);
+    if (Inserted)
+      It->second = Register::index2VirtReg(getNextID());
+    return It->second;
   }
 };
 } // namespace SPIRV

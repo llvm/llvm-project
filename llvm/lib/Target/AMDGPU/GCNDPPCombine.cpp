@@ -70,9 +70,7 @@ class GCNDPPCombine {
                               RegSubRegPair CombOldVGPR, bool CombBCZ,
                               bool IsShrinkable) const;
 
-  bool hasNoImmOrEqual(MachineInstr &MI,
-                       unsigned OpndName,
-                       int64_t Value,
+  bool hasNoImmOrEqual(MachineInstr &MI, AMDGPU::OpName OpndName, int64_t Value,
                        int64_t Mask = -1) const;
 
   bool combineDPPMov(MachineInstr &MI) const;
@@ -513,7 +511,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(
 
 // returns true if MI doesn't have OpndName immediate operand or the
 // operand has Value
-bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, unsigned OpndName,
+bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, AMDGPU::OpName OpndName,
                                     int64_t Value, int64_t Mask) const {
   auto *Imm = TII->getNamedOperand(MI, OpndName);
   if (!Imm)

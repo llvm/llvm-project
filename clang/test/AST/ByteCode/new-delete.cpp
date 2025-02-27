@@ -268,11 +268,10 @@ namespace NowThrowNew {
     delete[] p;
     return result;
   }
-  /// This needs support for CXXConstrucExprs with non-constant array sizes.
-  static_assert(erroneous_array_bound_nothrow2(3)); // expected-error {{not an integral constant expression}}
-  static_assert(erroneous_array_bound_nothrow2(0));// expected-error {{not an integral constant expression}}
-  static_assert(erroneous_array_bound_nothrow2(-1) == 0);// expected-error {{not an integral constant expression}}
-  static_assert(!erroneous_array_bound_nothrow2(1LL << 62));// expected-error {{not an integral constant expression}}
+  static_assert(erroneous_array_bound_nothrow2(3));
+  static_assert(erroneous_array_bound_nothrow2(0));
+  static_assert(erroneous_array_bound_nothrow2(-1) == 0);
+  static_assert(!erroneous_array_bound_nothrow2(1LL << 62));
 
   constexpr bool erroneous_array_bound(long long n) {
     delete[] new int[n]; // both-note {{array bound -1 is negative}} both-note {{array bound 4611686018427387904 is too large}}
@@ -841,10 +840,17 @@ template <typename T>
 struct SS {
     constexpr SS(unsigned long long N)
     : data(nullptr){
-        data = alloc.allocate(N);  // #call
+        data = alloc.allocate(N);
         for(std::size_t i = 0; i < N; i ++)
-            std::construct_at<T>(data + i, i); // #construct_call
+            std::construct_at<T>(data + i, i);
     }
+
+    constexpr SS()
+    : data(nullptr){
+        data = alloc.allocate(1);
+        std::construct_at<T>(data);
+    }
+
     constexpr T operator[](std::size_t i) const {
       return data[i];
     }
@@ -856,6 +862,105 @@ struct SS {
     T* data;
 };
 constexpr unsigned short ssmall = SS<unsigned short>(100)[42];
+constexpr auto Ss = SS<S>()[0];
+
+
+namespace IncompleteArray {
+  struct A {
+    int b = 10;
+  };
+  constexpr int test1() {
+    int n = 5;
+    int* a = new int[n];
+    int c = a[0]; // both-note {{read of uninitialized object}}
+    delete[] a;
+    return c;
+  }
+  static_assert(test1() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
+
+  constexpr int test2() {
+    int n = 0;
+    int* a = new int[n];
+    delete[] a;
+    return 10;
+  }
+  static_assert(test2() == 10);
+
+  /// In this case, the type of the initializer is A[2], while the full size of the
+  /// allocated array is of course 5. The remaining 3 elements need to be initialized
+  /// using A's constructor.
+  constexpr int test3() {
+    int n = 3;
+    A* a = new A[n]{5, 1};
+    int c = a[0].b + a[1].b + a[2].b;
+    delete[] a;
+    return c;
+  }
+  static_assert(test3() == (5 + 1 + 10));
+
+  constexpr int test4() {
+    auto n = 3;
+    int *a = new int[n]{12};
+    int c =  a[0] + a[1];
+    delete[] a;
+    return c;
+  }
+  static_assert(test4() == 12);
+
+
+  constexpr char *f(int n) {
+    return new char[n]();
+  }
+  static_assert((delete[] f(2), true));
+}
+
+namespace NonConstexprArrayCtor {
+  struct S {
+    S() {} // both-note 2{{declared here}}
+  };
+
+  constexpr bool test() { // both-error {{never produces a constant expression}}
+     auto s = new S[1]; // both-note 2{{non-constexpr constructor}}
+     return true;
+  }
+  static_assert(test()); // both-error {{not an integral constant expression}} \
+                         // both-note {{in call to}}
+}
+
+namespace ArrayBaseCast {
+  struct A {};
+  struct B : A {};
+  constexpr bool test() {
+    B *b = new B[2];
+
+    A* a = b;
+
+    delete[] b;
+    return true;
+  }
+  static_assert(test());
+}
+
+namespace PR45350 {
+  int q;
+  struct V { int n; int *p = &n; constexpr ~V() { *p = *p * 10 + n; }};
+  constexpr int f(int n) {
+    int k = 0;
+    V *p = new V[n];
+    for (int i = 0; i != n; ++i) {
+      if (p[i].p != &p[i].n) return -1;
+      p[i].n = i;
+      p[i].p = &k;
+    }
+    delete[] p;
+    return k;
+  }
+  // [expr.delete]p6:
+  //   In the case of an array, the elements will be destroyed in order of
+  //   decreasing address
+  static_assert(f(6) == 543210);
+}
 
 #else
 /// Make sure we reject this prior to C++20

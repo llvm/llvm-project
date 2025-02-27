@@ -9,6 +9,7 @@
 #include "report.h"
 
 #include "atomic_helpers.h"
+#include "chunk.h"
 #include "string_utils.h"
 
 #include <stdarg.h>
@@ -65,9 +66,18 @@ void NORETURN reportInvalidFlag(const char *FlagType, const char *Value) {
 
 // The checksum of a chunk header is invalid. This could be caused by an
 // {over,under}write of the header, a pointer that is not an actual chunk.
-void NORETURN reportHeaderCorruption(void *Ptr) {
+void NORETURN reportHeaderCorruption(void *Header, void *Ptr) {
   ScopedErrorReport Report;
-  Report.append("corrupted chunk header at address %p\n", Ptr);
+  Report.append("corrupted chunk header at address %p", Ptr);
+  if (*static_cast<Chunk::PackedHeader *>(Header) == 0U) {
+    // Header all zero, which could indicate that this might be a pointer that
+    // has been double freed but the memory has been released to the kernel.
+    Report.append(": chunk header is zero and might indicate memory corruption "
+                  "or a double free\n",
+                  Ptr);
+  } else {
+    Report.append(": most likely due to memory corruption\n", Ptr);
+  }
 }
 
 // The allocator was compiled with parameters that conflict with field size

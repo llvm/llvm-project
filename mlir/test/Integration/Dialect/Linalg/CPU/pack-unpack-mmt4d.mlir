@@ -12,9 +12,9 @@
 /// End-to-end test for computing matrix-multiplication using linalg.mmt4d. In
 /// particular, demonstrates how the following MLIR sequence (implemented in @mmt4d):
 ///
-///   A_pack = tensor.pack A
-///   B_pack = tensor.pack B
-///   C_pack = tensor.pack C
+///   A_pack = linalg.pack A
+///   B_pack = linalg.pack B
+///   C_pack = linalg.pack C
 ///   out_pack = linalg.mmt4d(A_pack, B_pack, C_pack)
 ///
 /// is equivalent to:
@@ -86,16 +86,16 @@ func.func private @mmt4d(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor
   %C_pack_empty = tensor.empty() : tensor<2x2x8x8xi32>
 
   // Pack matrices
-  %A_pack = tensor.pack %A padding_value(%zero : i32) inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %A_pack_empty : tensor<7x16xi32> -> tensor<2x16x8x1xi32>
-  %B_pack = tensor.pack %B padding_value(%zero : i32) outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [8, 1] into %B_pack_empty : tensor<16x13xi32> -> tensor<2x16x8x1xi32>
-  %C_pack = tensor.pack %C padding_value(%zero : i32) outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %C_pack_empty : tensor<7x13xi32> -> tensor<2x2x8x8xi32>
+  %A_pack = linalg.pack %A padding_value(%zero : i32) inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %A_pack_empty : tensor<7x16xi32> -> tensor<2x16x8x1xi32>
+  %B_pack = linalg.pack %B padding_value(%zero : i32) outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [8, 1] into %B_pack_empty : tensor<16x13xi32> -> tensor<2x16x8x1xi32>
+  %C_pack = linalg.pack %C padding_value(%zero : i32) outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %C_pack_empty : tensor<7x13xi32> -> tensor<2x2x8x8xi32>
 
   // MMT4D
   %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<2x16x8x1xi32>, tensor<2x16x8x1xi32>) outs(%C_pack : tensor<2x2x8x8xi32>) -> tensor<2x2x8x8xi32>
 
   // Unpack output
   %C_out_empty = tensor.empty() : tensor<7x13xi32>
-  %C_out_unpack = tensor.unpack %mmt4d outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %C_out_empty : tensor<2x2x8x8xi32> -> tensor<7x13xi32>
+  %C_out_unpack = linalg.unpack %mmt4d outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %C_out_empty : tensor<2x2x8x8xi32> -> tensor<7x13xi32>
 
   return %C_out_unpack : tensor<7x13xi32>
 }
@@ -146,16 +146,16 @@ module @transforms attributes { transform.with_named_sequence } {
      transform.apply_patterns.canonicalization
    } : !transform.op<"func.func">
 
-   // Step 4. Lower tensor.pack
-   %pack = transform.structured.match ops{["tensor.pack"]} in %func_h
-     : (!transform.op<"func.func">) -> !transform.op<"tensor.pack">
-   transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+   // Step 4. Lower linalg.pack
+   %pack = transform.structured.match ops{["linalg.pack"]} in %func_h
+     : (!transform.op<"func.func">) -> !transform.op<"linalg.pack">
+   transform.structured.lower_pack %pack : (!transform.op<"linalg.pack">)
      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
 
-   // Step 5. Lower tensor.unpack
-   %unpack = transform.structured.match ops{["tensor.unpack"]} in %func_h
-      : (!transform.op<"func.func">) -> !transform.op<"tensor.unpack">
-    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+   // Step 5. Lower linalg.unpack
+   %unpack = transform.structured.match ops{["linalg.unpack"]} in %func_h
+      : (!transform.op<"func.func">) -> !transform.op<"linalg.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"linalg.unpack">)
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,

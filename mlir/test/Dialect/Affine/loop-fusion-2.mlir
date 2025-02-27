@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
 // Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part III of fusion tests in mlir/test/Transforms/loop-fusion-3.mlir
@@ -388,6 +388,8 @@ func.func @should_fuse_init_loops_siblings_then_shared_producer(%arg0: memref<10
 }
 
 // -----
+
+// Test sibling fusion of two matrix-vector products sharing the input matrix.
 
 func.func @two_matrix_vector_products() {
   %in_matrix = memref.alloc() : memref<10x10xf32>

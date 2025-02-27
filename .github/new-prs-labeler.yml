@@ -499,6 +499,7 @@ clang:static analyzer:
   - clang/tools/scan-build/**
   - clang/utils/analyzer/**
   - clang/docs/analyzer/**
+  - clang/test/Analysis/**
 
 pgo:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
@@ -729,6 +730,9 @@ llvm:regalloc:
 
 lldb:
   - lldb/**
+
+lldb-dap:
+  - lldb/tools/lldb-dap/**
 
 backend:AMDGPU:
   - '**/*amdgpu*'

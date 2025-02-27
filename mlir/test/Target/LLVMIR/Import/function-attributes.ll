@@ -12,6 +12,15 @@ define internal spir_func void @spir_func_internal() {
 
 ; // -----
 
+; Ensure that we have dso_local.
+; CHECK: llvm.func @dsolocal_func()
+; CHECK-SAME: attributes {dso_local}
+define dso_local void @dsolocal_func() {
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @func_readnone
 ; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 ; CHECK:   llvm.return

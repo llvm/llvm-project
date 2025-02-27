@@ -164,9 +164,10 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
            "Should not see file-scope variables inside a function!");
     EmitVarDecl(VD);
     if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
-      for (auto *B : DD->bindings())
+      for (auto *B : DD->flat_bindings())
         if (auto *HD = B->getHoldingVar())
           EmitVarDecl(*HD);
+
     return;
   }
 
@@ -2869,15 +2870,12 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
 
     // We can also keep the existing global if the address space is what we
     // expect it to be, if not, it is replaced.
-    QualType ASTTy = VD->getType();
     clang::LangAS GVAS = GetGlobalVarAddressSpace(VD);
     auto TargetAS = getContext().getTargetAddressSpace(GVAS);
     if (Entry->getType()->getAddressSpace() == TargetAS)
       continue;
 
-    // Make a new global with the correct type / address space.
-    llvm::Type *Ty = getTypes().ConvertTypeForMem(ASTTy);
-    llvm::PointerType *PTy = llvm::PointerType::get(Ty, TargetAS);
+    llvm::PointerType *PTy = llvm::PointerType::get(getLLVMContext(), TargetAS);
 
     // Replace all uses of the old global with a cast. Since we mutate the type
     // in place we neeed an intermediate that takes the spot of the old entry
@@ -2890,8 +2888,7 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
 
     Entry->mutateType(PTy);
     llvm::Constant *NewPtrForOldDecl =
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-            Entry, DummyGV->getType());
+        llvm::ConstantExpr::getAddrSpaceCast(Entry, DummyGV->getType());
 
     // Now we have a casted version of the changed global, the dummy can be
     // replaced and deleted.

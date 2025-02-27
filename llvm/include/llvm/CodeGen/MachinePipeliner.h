@@ -390,6 +390,9 @@ public:
 
   const SwingSchedulerDDG *getDDG() const { return DDG.get(); }
 
+  bool mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                             const MachineInstr *OtherMI) const;
+
 private:
   void addLoopCarriedDependences(AAResults *AA);
   void updatePhiDependences();
@@ -409,7 +412,7 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  bool computeDelta(MachineInstr &MI, unsigned &Delta) const;
+  bool computeDelta(const MachineInstr &MI, int &Delta) const;
   MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
@@ -465,9 +468,10 @@ public:
         SUnit *SuccSUnit = Succ.getDst();
         if (V != SuccSUnit)
           continue;
-        if (SUnitToDistance[U] + Succ.getLatency() > SUnitToDistance[V]) {
-          SUnitToDistance[V] = SUnitToDistance[U] + Succ.getLatency();
-        }
+        unsigned &DU = SUnitToDistance[U];
+        unsigned &DV = SUnitToDistance[V];
+        if (DU + Succ.getLatency() > DV)
+          DV = DU + Succ.getLatency();
       }
     }
     // Handle a back-edge in loop carried dependencies

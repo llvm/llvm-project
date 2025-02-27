@@ -32,6 +32,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:BuiltinsSPIRV",
     "//clang/include/clang/Basic:BuiltinsX86",
     "//clang/include/clang/Basic:BuiltinsX86_64",
+    "//clang/include/clang/Basic:BuiltinTemplates",
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:RegularKeywordAttrInfo",
     "//clang/include/clang/Basic:arm_cde_builtins",

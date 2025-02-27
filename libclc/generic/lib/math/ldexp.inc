@@ -20,15 +20,10 @@
  * THE SOFTWARE.
  */
 
-// TODO: Enable half precision when ldexp is implemented.
-#if __CLC_FPSIZE > 16
-
 #ifndef __CLC_SCALAR
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE ldexp(__CLC_GENTYPE x, int n) {
-  return ldexp(x, (__CLC_INTN)n);
+  return __clc_ldexp(x, (__CLC_INTN)n);
 }
-
-#endif
 
 #endif

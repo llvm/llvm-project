@@ -914,12 +914,18 @@ namespace TypeTraits {
 }
 
 #if __cplusplus >= 201402L
+namespace SomeNS {
+  using MyInt = int;
+}
+
 constexpr int ignoredDecls() {
   static_assert(true, "");
   struct F { int a; };
   enum E { b };
   using A = int;
   typedef int Z;
+  namespace NewNS = SomeNS;
+  using NewNS::MyInt;
 
   return F{12}.a;
 }
@@ -1324,3 +1330,14 @@ void localConstexpr() {
   static_assert(a == 0, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{initializer of 'a' is not a constant expression}}
 }
+
+namespace Foo {
+  namespace Bar {
+    constexpr int FB = 10;
+  }
+}
+constexpr int usingDirectiveDecl() {
+  using namespace Foo::Bar;
+  return FB;
+}
+static_assert(usingDirectiveDecl() == 10, "");

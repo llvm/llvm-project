@@ -125,12 +125,12 @@ define void @callee_with_stack_and_call() #0 {
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 0
-; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
-; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_getpc_b64 s[16:17]
 ; MUBUF-NEXT:    s_add_u32 s16, s16, external_void_func_void@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s17, s17, external_void_func_void@rel32@hi+12
+; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
@@ -155,12 +155,12 @@ define void @callee_with_stack_and_call() #0 {
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
-; FLATSCR-NEXT:    scratch_store_dword off, v0, s33
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
+; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s33
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
@@ -196,10 +196,10 @@ define void @callee_no_stack_with_call() #0 {
 ; MUBUF-NEXT:    v_writelane_b32 v40, s16, 2
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
-; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
 ; MUBUF-NEXT:    s_getpc_b64 s[16:17]
 ; MUBUF-NEXT:    s_add_u32 s16, s16, external_void_func_void@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s17, s17, external_void_func_void@rel32@hi+12
+; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
@@ -223,10 +223,10 @@ define void @callee_no_stack_with_call() #0 {
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s0, 2
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
-; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
+; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
@@ -1595,12 +1595,12 @@ define void @ipra_call_with_stack() #0 {
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
 ; MUBUF-NEXT:    v_writelane_b32 v1, s30, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 0
-; MUBUF-NEXT:    v_writelane_b32 v1, s31, 1
-; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_getpc_b64 s[16:17]
 ; MUBUF-NEXT:    s_add_u32 s16, s16, local_empty_func@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s17, s17, local_empty_func@rel32@hi+12
+; MUBUF-NEXT:    v_writelane_b32 v1, s31, 1
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; MUBUF-NEXT:    v_readlane_b32 s31, v1, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v1, 0
@@ -1623,12 +1623,12 @@ define void @ipra_call_with_stack() #0 {
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
 ; FLATSCR-NEXT:    v_writelane_b32 v1, s30, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    v_writelane_b32 v1, s31, 1
-; FLATSCR-NEXT:    scratch_store_dword off, v0, s33
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, local_empty_func@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, local_empty_func@rel32@hi+12
+; FLATSCR-NEXT:    v_writelane_b32 v1, s31, 1
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s33
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v1, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v1, 0

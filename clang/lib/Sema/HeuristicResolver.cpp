@@ -44,6 +44,9 @@ public:
       const DependentTemplateSpecializationType *DTST);
   QualType resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS);
   QualType getPointeeType(QualType T);
+  std::vector<const NamedDecl *>
+  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
 
 private:
   ASTContext &Ctx;
@@ -74,16 +77,15 @@ private:
   // resolves it to a TagDecl in which we can try name lookup.
   TagDecl *resolveTypeToTagDecl(const Type *T);
 
-  // This is a reimplementation of CXXRecordDecl::lookupDependentName()
-  // so that the implementation can call into other HeuristicResolver helpers.
-  // FIXME: Once HeuristicResolver is upstreamed to the clang libraries
-  // (https://github.com/clangd/clangd/discussions/1662),
-  // CXXRecordDecl::lookupDepenedentName() can be removed, and its call sites
-  // can be modified to benefit from the more comprehensive heuristics offered
-  // by HeuristicResolver instead.
-  std::vector<const NamedDecl *>
-  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
-                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+  // Helper function for simplifying a type.
+  // `Type` is the type to simplify.
+  // `E` is the expression whose type `Type` is, if known. This sometimes
+  // contains information relevant to the type that's not stored in `Type`
+  // itself.
+  // If `UnwrapPointer` is true, exactly only pointer type will be unwrapped
+  // during simplification, and the operation fails if no pointer type is found.
+  QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
+
   bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
                                             CXXBasePath &Path,
                                             DeclarationName Name);
@@ -198,6 +200,70 @@ QualType HeuristicResolverImpl::getPointeeType(QualType T) {
   return FirstArg.getAsType();
 }
 
+QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
+                                             bool UnwrapPointer) {
+  bool DidUnwrapPointer = false;
+  // A type, together with an optional expression whose type it represents
+  // which may have additional information about the expression's type
+  // not stored in the QualType itself.
+  struct TypeExprPair {
+    QualType Type;
+    const Expr *E = nullptr;
+  };
+  TypeExprPair Current{Type, E};
+  auto SimplifyOneStep = [UnwrapPointer, &DidUnwrapPointer,
+                          this](TypeExprPair T) -> TypeExprPair {
+    if (UnwrapPointer) {
+      if (QualType Pointee = getPointeeType(T.Type); !Pointee.isNull()) {
+        DidUnwrapPointer = true;
+        return {Pointee};
+      }
+    }
+    if (const auto *RT = T.Type->getAs<ReferenceType>()) {
+      // Does not count as "unwrap pointer".
+      return {RT->getPointeeType()};
+    }
+    if (const auto *BT = T.Type->getAs<BuiltinType>()) {
+      // If BaseType is the type of a dependent expression, it's just
+      // represented as BuiltinType::Dependent which gives us no information. We
+      // can get further by analyzing the dependent expression.
+      if (T.E && BT->getKind() == BuiltinType::Dependent) {
+        return {resolveExprToType(T.E), T.E};
+      }
+    }
+    if (const auto *AT = T.Type->getContainedAutoType()) {
+      // If T contains a dependent `auto` type, deduction will not have
+      // been performed on it yet. In simple cases (e.g. `auto` variable with
+      // initializer), get the approximate type that would result from
+      // deduction.
+      // FIXME: A more accurate implementation would propagate things like the
+      // `const` in `const auto`.
+      if (T.E && AT->isUndeducedAutoType()) {
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(T.E)) {
+          if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+            if (auto *Init = VD->getInit())
+              return {resolveExprToType(Init), Init};
+          }
+        }
+      }
+    }
+    return T;
+  };
+  // As an additional protection against infinite loops, bound the number of
+  // simplification steps.
+  size_t StepCount = 0;
+  const size_t MaxSteps = 64;
+  while (!Current.Type.isNull() && StepCount++ < MaxSteps) {
+    TypeExprPair New = SimplifyOneStep(Current);
+    if (New.Type == Current.Type)
+      break;
+    Current = New;
+  }
+  if (UnwrapPointer && !DidUnwrapPointer)
+    return QualType();
+  return Current.Type;
+}
+
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
     const CXXDependentScopeMemberExpr *ME) {
   // If the expression has a qualifier, try resolving the member inside the
@@ -230,36 +296,7 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   // Try resolving the member inside the expression's base type.
   Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
   QualType BaseType = ME->getBaseType();
-  if (ME->isArrow()) {
-    BaseType = getPointeeType(BaseType);
-    if (BaseType.isNull())
-      return {};
-  }
-  if (const auto *BT = BaseType->getAs<BuiltinType>()) {
-    // If BaseType is the type of a dependent expression, it's just
-    // represented as BuiltinType::Dependent which gives us no information. We
-    // can get further by analyzing the dependent expression.
-    if (Base && BT->getKind() == BuiltinType::Dependent) {
-      BaseType = resolveExprToType(Base);
-      if (BaseType.isNull())
-        return {};
-    }
-  }
-  if (const auto *AT = BaseType->getContainedAutoType()) {
-    // If BaseType contains a dependent `auto` type, deduction will not have
-    // been performed on it yet. In simple cases (e.g. `auto` variable with
-    // initializer), get the approximate type that would result from deduction.
-    // FIXME: A more accurate implementation would propagate things like the
-    // `const` in `const auto`.
-    if (AT->isUndeducedAutoType()) {
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-          if (VD->hasInit())
-            BaseType = resolveExprToType(VD->getInit());
-        }
-      }
-    }
-  }
+  BaseType = simplifyType(BaseType, Base, ME->isArrow());
   return resolveDependentMember(BaseType, ME->getMember(), NoFilter);
 }
 
@@ -451,7 +488,8 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
       if (!Filter(ND))
         return false;
       if (const auto *MD = dyn_cast<CXXMethodDecl>(ND)) {
-        return MD->getMethodQualifiers().compatiblyIncludes(QT.getQualifiers(),
+        return !MD->isInstance() ||
+               MD->getMethodQualifiers().compatiblyIncludes(QT.getQualifiers(),
                                                             Ctx);
       }
       return true;
@@ -493,6 +531,11 @@ HeuristicResolver::resolveTemplateSpecializationType(
 QualType HeuristicResolver::resolveNestedNameSpecifierToType(
     const NestedNameSpecifier *NNS) const {
   return HeuristicResolverImpl(Ctx).resolveNestedNameSpecifierToType(NNS);
+}
+std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
+    CXXRecordDecl *RD, DeclarationName Name,
+    llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
+  return HeuristicResolverImpl(Ctx).lookupDependentName(RD, Name, Filter);
 }
 const QualType HeuristicResolver::getPointeeType(QualType T) const {
   return HeuristicResolverImpl(Ctx).getPointeeType(T);

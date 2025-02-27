@@ -221,6 +221,7 @@ AFFECTING_VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option spec
 AFFECTING_VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
 CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
+CODEGENOPT(ContinuousProfileSync, 1, 0) ///< Enable continuous instrumentation profiling
 /// Choose profile instrumenation kind or no instrumentation.
 ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNone)
 /// Choose profile kind for PGO use compilation.
@@ -277,6 +278,7 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types
                                                     ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
                                                  ///< instead of creating a local jump table.
+CODEGENOPT(SanitizeKcfiArity, 1, 0) ///< Embed arity in KCFI patchable function prefix
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage
@@ -319,6 +321,7 @@ CODEGENOPT(TimePassesPerRun  , 1, 0) ///< Set when -ftime-report=per-pass-run is
 CODEGENOPT(TimeTrace         , 1, 0) ///< Set when -ftime-trace is enabled.
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500) ///< Minimum time granularity (in microseconds),
                                                ///< traced by time profiler
+CODEGENOPT(InterchangeLoops  , 1, 0) ///< Run loop-interchange.
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
@@ -464,6 +467,14 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0)
+
+/// Enables emitting Import Call sections on supported targets that can be used
+/// by the Windows kernel to enable import call optimization.
+CODEGENOPT(ImportCallOptimization, 1, 0)
+
+/// Controls whether we generate code for static linking of libclosure
+/// (BlocksRuntime) on Windows.
+CODEGENOPT(StaticClosure, 1, 0)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

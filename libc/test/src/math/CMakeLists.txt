@@ -1597,7 +1597,7 @@ add_fp_unittest(
     libc.src.math.sqrtf
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -1613,7 +1613,7 @@ add_fp_unittest(
     libc.src.math.sqrt
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -1629,7 +1629,7 @@ add_fp_unittest(
     libc.src.math.sqrtl
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2187,6 +2187,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinf16_test.cpp
+  DEPENDS
+    libc.src.math.asinf16  
+)
+
+add_fp_unittest(
   acosf_test
   NEED_MPFR
   SUITE
@@ -2197,6 +2208,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.acosf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  acosf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acosf16_test.cpp
+  DEPENDS
+    libc.src.math.acosf16  
 )
 
 add_fp_unittest(

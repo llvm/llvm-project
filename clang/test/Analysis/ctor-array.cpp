@@ -12,19 +12,19 @@ struct s {
 void a1(void) {
   s arr[3];
   int x = arr[0].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 void a2(void) {
   s arr[3];
   int x = arr[1].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 void a3(void) {
   s arr[3];
   int x = arr[2].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 struct s2 {
@@ -37,7 +37,7 @@ void b1(void) {
 
   clang_analyzer_eval(arr[0].y == 2); // expected-warning{{TRUE}}
   int x = arr[0].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 void b2(void) {
@@ -45,7 +45,7 @@ void b2(void) {
 
   clang_analyzer_eval(arr[1].y == 2); // expected-warning{{TRUE}}
   int x = arr[1].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 void b3(void) {
@@ -53,7 +53,7 @@ void b3(void) {
 
   clang_analyzer_eval(arr[2].y == 2); // expected-warning{{TRUE}}
   int x = arr[2].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 void c1(void) {
@@ -70,7 +70,7 @@ void c1(void) {
 
     clang_analyzer_eval(arr[1].y == 2); // expected-warning{{TRUE}}
     int x = arr[1].x;
-    // expected-warning@-1{{Assigned value is garbage or undefined}}
+    // expected-warning@-1{{Assigned value is uninitialized}}
   }
 }
 
@@ -100,7 +100,7 @@ void e1(void) {
   clang_analyzer_eval(arr[1].arr[1].y == 2); // expected-warning{{TRUE}}
 
   int x = arr[1].sarr[1].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 void f1(void) {
@@ -108,7 +108,7 @@ void f1(void) {
 
   clang_analyzer_eval(arr[1][1].y == 2); // expected-warning{{TRUE}}
   int x = arr[1][1].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 struct s5 {
@@ -168,14 +168,14 @@ void h2(void) {
   s a[2][2], b[2][2];
 
   int x = a[1][1].x;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 void h3(void) {
   s a[2][2], b[2][2];
 
   int x = b[1][1].y;
-  // expected-warning@-1{{Assigned value is garbage or undefined}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
 }
 
 struct Base {

@@ -1779,6 +1779,14 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     OutStreamer->emitWinCFIEndProlog();
     break;
 
+  case X86::SEH_BeginEpilogue:
+    OutStreamer->emitWinCFIBeginEpilogue();
+    break;
+
+  case X86::SEH_EndEpilogue:
+    OutStreamer->emitWinCFIEndEpilogue();
+    break;
+
   default:
     llvm_unreachable("expected SEH_ instruction");
   }
@@ -2420,11 +2428,17 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_SetFrame:
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
+  case X86::SEH_EndEpilogue:
     EmitSEHInstruction(MI);
     return;
 
-  case X86::SEH_Epilogue: {
+  case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
+    // Windows unwinder will not invoke function's exception handler if IP is
+    // either in prologue or in epilogue.  This behavior causes a problem when a
+    // call immediately precedes an epilogue, because the return address points
+    // into the epilogue.  To cope with that, we insert a 'nop' if it ends up
+    // immediately after a CALL in the final emitted code.
     MachineBasicBlock::const_iterator MBBI(MI);
     // Check if preceded by a call and emit nop if so.
     for (MBBI = PrevCrossBBInst(MBBI);
@@ -2439,6 +2453,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
         break;
       }
     }
+
+    EmitSEHInstruction(MI);
     return;
   }
   case X86::UBSAN_UD1:

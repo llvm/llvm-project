@@ -1631,7 +1631,13 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
         to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
       }
-    } else {
+
+      if (mapInfoOp.getMapperId() &&
+          !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+              mapInfoOp, mapInfoOp.getMapperIdAttr())) {
+        return emitError(op->getLoc(), "invalid mapper id");
+      }
+    } else if (!isa<DeclareMapperInfoOp>(op)) {
       emitError(op->getLoc(), "map argument is not a map entry operation");
     }
   }
@@ -2010,9 +2016,9 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
       return op.emitError() << "failed to lookup privatizer op with symbol: '"
                             << privateSym << "'";
 
-    Type privatizerType = privatizerOp.getType();
+    Type privatizerType = privatizerOp.getArgType();
 
-    if (varType != privatizerType)
+    if (privatizerType && (varType != privatizerType))
       return op.emitError()
              << "type mismatch between a "
              << (privatizerOp.getDataSharingType() ==
@@ -2428,6 +2434,22 @@ LogicalResult DistributeOp::verifyRegions() {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
   }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareMapperOp / DeclareMapperInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeclareMapperInfoOp::verify() {
+  return verifyMapClause(*this, getMapVars());
+}
+
+LogicalResult DeclareMapperOp::verifyRegions() {
+  if (!llvm::isa_and_present<DeclareMapperInfoOp>(
+          getRegion().getBlocks().front().getTerminator()))
+    return emitOpError() << "expected terminator to be a DeclareMapperInfoOp";
 
   return success();
 }
@@ -3059,8 +3081,7 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 }
 
 LogicalResult PrivateClauseOp::verifyRegions() {
-  Type symType = getType();
-
+  Type argType = getArgType();
   auto verifyTerminator = [&](Operation *terminator,
                               bool yieldsValue) -> LogicalResult {
     if (!terminator->getBlock()->getSuccessors().empty())
@@ -3081,11 +3102,11 @@ LogicalResult PrivateClauseOp::verifyRegions() {
              << "Did not expect any values to be yielded.";
     }
 
-    if (yieldedTypes.size() == 1 && yieldedTypes.front() == symType)
+    if (yieldedTypes.size() == 1 && yieldedTypes.front() == argType)
       return success();
 
     auto error = mlir::emitError(yieldOp.getLoc())
-                 << "Invalid yielded value. Expected type: " << symType
+                 << "Invalid yielded value. Expected type: " << argType
                  << ", got: ";
 
     if (yieldedTypes.empty())
@@ -3119,18 +3140,27 @@ LogicalResult PrivateClauseOp::verifyRegions() {
     return success();
   };
 
-  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc",
+  // Ensure all of the region arguments have the same type
+  for (Region *region : getRegions())
+    for (Type ty : region->getArgumentTypes())
+      if (ty != argType)
+        return emitError() << "Region argument type mismatch: got " << ty
+                           << " expected " << argType << ".";
+
+  mlir::Region &initRegion = getInitRegion();
+  if (!initRegion.empty() &&
+      failed(verifyRegion(getInitRegion(), /*expectedNumArgs=*/2, "init",
                           /*yieldsValue=*/true)))
     return failure();
 
   DataSharingClauseType dsType = getDataSharingType();
 
   if (dsType == DataSharingClauseType::Private && !getCopyRegion().empty())
-    return emitError("`private` clauses require only an `alloc` region.");
+    return emitError("`private` clauses do not require a `copy` region.");
 
   if (dsType == DataSharingClauseType::FirstPrivate && getCopyRegion().empty())
     return emitError(
-        "`firstprivate` clauses require both `alloc` and `copy` regions.");
+        "`firstprivate` clauses require at least a `copy` region.");
 
   if (dsType == DataSharingClauseType::FirstPrivate &&
       failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy",

@@ -508,6 +508,9 @@ getClosestQueryable(Operation *op) {
 
 FailureOr<Attribute>
 dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
+  if (!op)
+    return failure();
+
   if (keys.empty()) {
     if (emitError) {
       auto diag = op->emitError() << "target op of failed DLTI query";
@@ -560,6 +563,20 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
   }
 
   return currentAttr;
+}
+
+FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
+                                 bool emitError) {
+  if (!op)
+    return failure();
+
+  MLIRContext *ctx = op->getContext();
+  SmallVector<DataLayoutEntryKey> entryKeys;
+  entryKeys.reserve(keys.size());
+  for (StringRef key : keys)
+    entryKeys.push_back(StringAttr::get(ctx, key));
+
+  return dlti::query(op, entryKeys, emitError);
 }
 
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;

@@ -253,7 +253,7 @@ namespace {
                           /*Kill*/false, /*Dead*/false, /*Undef*/false,
                           /*EarlyClobber*/false, Sub);
         if (Reg.isStack()) {
-          int FI = llvm::Register::stackSlot2Index(Reg);
+          int FI = Reg.stackSlotIndex();
           return MachineOperand::CreateFI(FI);
         }
         llvm_unreachable("Cannot create MachineOperand");
@@ -1040,7 +1040,7 @@ unsigned HCE::getDirectRegReplacement(unsigned ExtOpc) const {
 // extender. It may be possible for MI to be tweaked to work for a register
 // defined with a slightly different value. For example
 //   ... = L2_loadrub_io Rb, 1
-// can be modifed to be
+// can be modified to be
 //   ... = L2_loadrub_io Rb', 0
 // if Rb' = Rb+1.
 // The range for Rb would be [Min+1, Max+1], where [Min, Max] is a range
@@ -1148,8 +1148,8 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
   bool IsStore = MI.mayStore();
 
   // Fixed stack slots have negative indexes, and they cannot be used
-  // with TRI::stackSlot2Index and TRI::index2StackSlot. This is somewhat
-  // unfortunate, but should not be a frequent thing.
+  // with Register::stackSlotIndex and Register::index2StackSlot. This is
+  // somewhat unfortunate, but should not be a frequent thing.
   for (MachineOperand &Op : MI.operands())
     if (Op.isFI() && Op.getIndex() < 0)
       return;

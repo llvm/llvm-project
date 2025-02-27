@@ -1523,7 +1523,7 @@ private:
   bool IsUsed = false;
 
   /// Reference locations to this record value.
-  SmallVector<SMRange> ReferenceLocs;
+  SmallVector<SMRange, 0> ReferenceLocs;
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);
@@ -1967,7 +1967,7 @@ public:
   }
 
   void saveInputFilename(std::string Filename) {
-    InputFilename = Filename;
+    InputFilename = std::move(Filename);
   }
 
   void addClass(std::unique_ptr<Record> R) {

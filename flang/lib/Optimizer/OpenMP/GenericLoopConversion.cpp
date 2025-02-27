@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/OpenMP-utils.h"
+#include "flang/Support/OpenMP-utils.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -52,11 +52,13 @@ public:
       rewriteStandaloneLoop(loopOp, rewriter);
       break;
     case GenericLoopCombinedInfo::ParallelLoop:
-      llvm_unreachable(
-          "not yet implemented: Combined `parallel loop` directive");
+      rewriteToWsloop(loopOp, rewriter);
       break;
     case GenericLoopCombinedInfo::TeamsLoop:
-      rewriteToDistributeParallelDo(loopOp, rewriter);
+      if (teamsLoopCanBeParallelFor(loopOp))
+        rewriteToDistributeParallelDo(loopOp, rewriter);
+      else
+        rewriteToDistrbute(loopOp, rewriter);
       break;
     }
 
@@ -66,29 +68,11 @@ public:
 
   static mlir::LogicalResult
   checkLoopConversionSupportStatus(mlir::omp::LoopOp loopOp) {
-    GenericLoopCombinedInfo combinedInfo = findGenericLoopCombineInfo(loopOp);
-
-    switch (combinedInfo) {
-    case GenericLoopCombinedInfo::Standalone:
-      break;
-    case GenericLoopCombinedInfo::ParallelLoop:
-      return loopOp.emitError(
-          "not yet implemented: Combined `parallel loop` directive");
-    case GenericLoopCombinedInfo::TeamsLoop:
-      break;
-    }
-
     auto todo = [&loopOp](mlir::StringRef clauseName) {
       return loopOp.emitError()
              << "not yet implemented: Unhandled clause " << clauseName << " in "
              << loopOp->getName() << " operation";
     };
-
-    // For standalone directives, `bind` is already supported. Other combined
-    // forms will be supported in a follow-up PR.
-    if (combinedInfo != GenericLoopCombinedInfo::Standalone &&
-        loopOp.getBindKind())
-      return todo("bind");
 
     if (loopOp.getOrder())
       return todo("order");
@@ -96,8 +80,6 @@ public:
     if (!loopOp.getReductionVars().empty())
       return todo("reduction");
 
-    // TODO For `teams loop`, check similar constrains to what is checked
-    // by `TeamsLoopChecker` in SemaOpenMP.cpp.
     return mlir::success();
   }
 
@@ -115,6 +97,63 @@ private:
       result = GenericLoopCombinedInfo::ParallelLoop;
 
     return result;
+  }
+
+  /// Checks whether a `teams loop` construct can be rewriten to `teams
+  /// distribute parallel do` or it has to be converted to `teams distribute`.
+  ///
+  /// This checks similar constrains to what is checked by `TeamsLoopChecker` in
+  /// SemaOpenMP.cpp in clang.
+  static bool teamsLoopCanBeParallelFor(mlir::omp::LoopOp loopOp) {
+    bool canBeParallelFor =
+        !loopOp
+             .walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
+               if (nestedOp == loopOp)
+                 return mlir::WalkResult::advance();
+
+               if (auto nestedLoopOp =
+                       mlir::dyn_cast<mlir::omp::LoopOp>(nestedOp)) {
+                 GenericLoopCombinedInfo combinedInfo =
+                     findGenericLoopCombineInfo(nestedLoopOp);
+
+                 // Worksharing loops cannot be nested inside each other.
+                 // Therefore, if the current `loop` directive nests another
+                 // `loop` whose `bind` modifier is `parallel`, this `loop`
+                 // directive cannot be mapped to `distribute parallel for`
+                 // but rather only to `distribute`.
+                 if (combinedInfo == GenericLoopCombinedInfo::Standalone &&
+                     nestedLoopOp.getBindKind() &&
+                     *nestedLoopOp.getBindKind() ==
+                         mlir::omp::ClauseBindKind::Parallel)
+                   return mlir::WalkResult::interrupt();
+
+                 if (combinedInfo == GenericLoopCombinedInfo::ParallelLoop)
+                   return mlir::WalkResult::interrupt();
+
+               } else if (auto callOp =
+                              mlir::dyn_cast<mlir::CallOpInterface>(nestedOp)) {
+                 // Calls to non-OpenMP API runtime functions inhibits
+                 // transformation to `teams distribute parallel do` since the
+                 // called functions might have nested parallelism themselves.
+                 bool isOpenMPAPI = false;
+                 mlir::CallInterfaceCallable callable =
+                     callOp.getCallableForCallee();
+
+                 if (auto callableSymRef =
+                         mlir::dyn_cast<mlir::SymbolRefAttr>(callable))
+                   isOpenMPAPI =
+                       callableSymRef.getRootReference().strref().starts_with(
+                           "omp_");
+
+                 if (!isOpenMPAPI)
+                   return mlir::WalkResult::interrupt();
+               }
+
+               return mlir::WalkResult::advance();
+             })
+             .wasInterrupted();
+
+    return canBeParallelFor;
   }
 
   void rewriteStandaloneLoop(mlir::omp::LoopOp loopOp,

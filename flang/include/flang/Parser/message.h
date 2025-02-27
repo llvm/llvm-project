@@ -15,10 +15,10 @@
 #include "char-block.h"
 #include "char-set.h"
 #include "provenance.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
+#include "flang/Support/Fortran-features.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>

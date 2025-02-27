@@ -9,6 +9,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
+#include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "VPlanTestBase.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -656,6 +657,50 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[3]);
 
     VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
+  }
+}
+
+TEST_F(VPBasicBlockTest, reassociateBlocks) {
+  {
+    // Ensure that when we reassociate a basic block, we make sure to update any
+    // references to it in VPWidenPHIRecipes' incoming blocks.
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+
+    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    WidenPhi->addOperand(Val);
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(VPBB2->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
+  }
+
+  {
+    // Ensure that we update VPWidenPHIRecipes that are nested inside a
+    // VPRegionBlock.
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+
+    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    WidenPhi->addOperand(Val);
+    WidenPhi->addOperand(Val);
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(R1->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
   }
 }
 

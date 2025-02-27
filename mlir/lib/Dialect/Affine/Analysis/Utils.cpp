@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
+
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -42,23 +43,49 @@ using Node = MemRefDependenceGraph::Node;
 // was encountered in the loop nest.
 void LoopNestStateCollector::collect(Operation *opToWalk) {
   opToWalk->walk([&](Operation *op) {
-    if (isa<AffineForOp>(op))
-      forOps.push_back(cast<AffineForOp>(op));
-    else if (op->getNumRegions() != 0 && !isa<AffineIfOp>(op))
-      hasNonAffineRegionOp = true;
-    else if (isa<AffineReadOpInterface>(op))
+    if (auto forOp = dyn_cast<AffineForOp>(op)) {
+      forOps.push_back(forOp);
+    } else if (isa<AffineReadOpInterface>(op)) {
       loadOpInsts.push_back(op);
-    else if (isa<AffineWriteOpInterface>(op))
+    } else if (isa<AffineWriteOpInterface>(op)) {
       storeOpInsts.push_back(op);
+    } else {
+      auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
+      if (!memInterface) {
+        if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+          // This op itself is memory-effect free.
+          return;
+        // Check operands. Eg. ops like the `call` op are handled here.
+        for (Value v : op->getOperands()) {
+          if (!isa<MemRefType>(v.getType()))
+            continue;
+          // Conservatively, we assume the memref is read and written to.
+          memrefLoads.push_back(op);
+          memrefStores.push_back(op);
+        }
+      } else {
+        // Non-affine loads and stores.
+        if (hasEffect<MemoryEffects::Read>(op))
+          memrefLoads.push_back(op);
+        if (hasEffect<MemoryEffects::Write>(op))
+          memrefStores.push_back(op);
+        if (hasEffect<MemoryEffects::Free>(op))
+          memrefFrees.push_back(op);
+      }
+    }
   });
 }
 
-// Returns the load op count for 'memref'.
 unsigned Node::getLoadOpCount(Value memref) const {
   unsigned loadOpCount = 0;
   for (Operation *loadOp : loads) {
-    if (memref == cast<AffineReadOpInterface>(loadOp).getMemRef())
+    // Common case: affine reads.
+    if (auto affineLoad = dyn_cast<AffineReadOpInterface>(loadOp)) {
+      if (memref == affineLoad.getMemRef())
+        ++loadOpCount;
+    } else if (hasEffect<MemoryEffects::Read>(loadOp, memref)) {
       ++loadOpCount;
+    }
   }
   return loadOpCount;
 }
@@ -66,11 +93,38 @@ unsigned Node::getLoadOpCount(Value memref) const {
 // Returns the store op count for 'memref'.
 unsigned Node::getStoreOpCount(Value memref) const {
   unsigned storeOpCount = 0;
-  for (Operation *storeOp : stores) {
-    if (memref == cast<AffineWriteOpInterface>(storeOp).getMemRef())
+  for (auto *storeOp : llvm::concat<Operation *const>(stores, memrefStores)) {
+    // Common case: affine writes.
+    if (auto affineStore = dyn_cast<AffineWriteOpInterface>(storeOp)) {
+      if (memref == affineStore.getMemRef())
+        ++storeOpCount;
+    } else if (hasEffect<MemoryEffects::Write>(const_cast<Operation *>(storeOp),
+                                               memref)) {
       ++storeOpCount;
+    }
   }
   return storeOpCount;
+}
+
+// Returns the store op count for 'memref'.
+unsigned Node::hasStore(Value memref) const {
+  return llvm::any_of(
+      llvm::concat<Operation *const>(stores, memrefStores),
+      [&](Operation *storeOp) {
+        if (auto affineStore = dyn_cast<AffineWriteOpInterface>(storeOp)) {
+          if (memref == affineStore.getMemRef())
+            return true;
+        } else if (hasEffect<MemoryEffects::Write>(storeOp, memref)) {
+          return true;
+        }
+        return false;
+      });
+}
+
+unsigned Node::hasFree(Value memref) const {
+  return llvm::any_of(memrefFrees, [&](Operation *freeOp) {
+    return hasEffect<MemoryEffects::Free>(freeOp, memref);
+  });
 }
 
 // Returns all store ops in 'storeOps' which access 'memref'.
@@ -106,46 +160,111 @@ void Node::getLoadAndStoreMemrefSet(
   }
 }
 
-// Initializes the data dependence graph by walking operations in `block`.
-// Assigns each node in the graph a node id based on program order in 'f'.
+/// Returns the values that this op has a memref effect of type `EffectTys` on,
+/// not considering recursive effects.
+template <typename... EffectTys>
+static void getEffectedValues(Operation *op, SmallVectorImpl<Value> &values) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp) {
+    if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      // No effects.
+      return;
+    // Memref operands have to be considered as being affected.
+    for (Value operand : op->getOperands()) {
+      if (isa<MemRefType>(operand.getType()))
+        values.push_back(operand);
+    }
+    return;
+  }
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  for (auto &effect : effects) {
+    Value effectVal = effect.getValue();
+    if (isa<EffectTys...>(effect.getEffect()) && effectVal &&
+        isa<MemRefType>(effectVal.getType()))
+      values.push_back(effectVal);
+  };
+}
+
+/// Add `op` to MDG creating a new node and adding its memory accesses (affine
+/// or non-affine to memrefAccesses (memref -> list of nodes with accesses) map.
+static Node *
+addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
+             DenseMap<Value, SetVector<unsigned>> &memrefAccesses) {
+  auto &nodes = mdg.nodes;
+  // Create graph node 'id' to represent top-level 'forOp' and record
+  // all loads and store accesses it contains.
+  LoopNestStateCollector collector;
+  collector.collect(nodeOp);
+  unsigned newNodeId = mdg.nextNodeId++;
+  Node &node = nodes.insert({newNodeId, Node(newNodeId, nodeOp)}).first->second;
+  for (Operation *op : collector.loadOpInsts) {
+    node.loads.push_back(op);
+    auto memref = cast<AffineReadOpInterface>(op).getMemRef();
+    memrefAccesses[memref].insert(node.id);
+  }
+  for (Operation *op : collector.storeOpInsts) {
+    node.stores.push_back(op);
+    auto memref = cast<AffineWriteOpInterface>(op).getMemRef();
+    memrefAccesses[memref].insert(node.id);
+  }
+  for (Operation *op : collector.memrefLoads) {
+    SmallVector<Value> effectedValues;
+    getEffectedValues<MemoryEffects::Read>(op, effectedValues);
+    if (llvm::any_of(((ValueRange)effectedValues).getTypes(),
+                     [](Type type) { return !isa<MemRefType>(type); }))
+      // We do not know the interaction here.
+      return nullptr;
+    for (Value memref : effectedValues)
+      memrefAccesses[memref].insert(node.id);
+    node.memrefLoads.push_back(op);
+  }
+  for (Operation *op : collector.memrefStores) {
+    SmallVector<Value> effectedValues;
+    getEffectedValues<MemoryEffects::Write>(op, effectedValues);
+    if (llvm::any_of((ValueRange(effectedValues)).getTypes(),
+                     [](Type type) { return !isa<MemRefType>(type); }))
+      return nullptr;
+    for (Value memref : effectedValues)
+      memrefAccesses[memref].insert(node.id);
+    node.memrefStores.push_back(op);
+  }
+  for (Operation *op : collector.memrefFrees) {
+    SmallVector<Value> effectedValues;
+    getEffectedValues<MemoryEffects::Free>(op, effectedValues);
+    if (llvm::any_of((ValueRange(effectedValues)).getTypes(),
+                     [](Type type) { return !isa<MemRefType>(type); }))
+      return nullptr;
+    for (Value memref : effectedValues)
+      memrefAccesses[memref].insert(node.id);
+    node.memrefFrees.push_back(op);
+  }
+
+  return &node;
+}
+
 bool MemRefDependenceGraph::init() {
   LLVM_DEBUG(llvm::dbgs() << "--- Initializing MDG ---\n");
   // Map from a memref to the set of ids of the nodes that have ops accessing
   // the memref.
   DenseMap<Value, SetVector<unsigned>> memrefAccesses;
 
+  // Create graph nodes.
   DenseMap<Operation *, unsigned> forToNodeMap;
   for (Operation &op : block) {
-    if (dyn_cast<AffineForOp>(op)) {
-      // Create graph node 'id' to represent top-level 'forOp' and record
-      // all loads and store accesses it contains.
-      LoopNestStateCollector collector;
-      collector.collect(&op);
-      // Return false if a region holding op other than 'affine.for' and
-      // 'affine.if' was found (not currently supported).
-      if (collector.hasNonAffineRegionOp)
+    if (auto forOp = dyn_cast<AffineForOp>(op)) {
+      Node *node = addNodeToMDG(&op, *this, memrefAccesses);
+      if (!node)
         return false;
-      Node node(nextNodeId++, &op);
-      for (auto *opInst : collector.loadOpInsts) {
-        node.loads.push_back(opInst);
-        auto memref = cast<AffineReadOpInterface>(opInst).getMemRef();
-        memrefAccesses[memref].insert(node.id);
-      }
-      for (auto *opInst : collector.storeOpInsts) {
-        node.stores.push_back(opInst);
-        auto memref = cast<AffineWriteOpInterface>(opInst).getMemRef();
-        memrefAccesses[memref].insert(node.id);
-      }
-      forToNodeMap[&op] = node.id;
-      nodes.insert({node.id, node});
-    } else if (dyn_cast<AffineReadOpInterface>(op)) {
+      forToNodeMap[&op] = node->id;
+    } else if (isa<AffineReadOpInterface>(op)) {
       // Create graph node for top-level load op.
       Node node(nextNodeId++, &op);
       node.loads.push_back(&op);
       auto memref = cast<AffineReadOpInterface>(op).getMemRef();
       memrefAccesses[memref].insert(node.id);
       nodes.insert({node.id, node});
-    } else if (dyn_cast<AffineWriteOpInterface>(op)) {
+    } else if (isa<AffineWriteOpInterface>(op)) {
       // Create graph node for top-level store op.
       Node node(nextNodeId++, &op);
       node.stores.push_back(&op);
@@ -155,19 +274,20 @@ bool MemRefDependenceGraph::init() {
     } else if (op.getNumResults() > 0 && !op.use_empty()) {
       // Create graph node for top-level producer of SSA values, which
       // could be used by loop nest nodes.
-      Node node(nextNodeId++, &op);
-      nodes.insert({node.id, node});
+      Node *node = addNodeToMDG(&op, *this, memrefAccesses);
+      if (!node)
+        return false;
     } else if (!isMemoryEffectFree(&op) &&
                (op.getNumRegions() == 0 || isa<RegionBranchOpInterface>(op))) {
       // Create graph node for top-level op unless it is known to be
       // memory-effect free. This covers all unknown/unregistered ops,
       // non-affine ops with memory effects, and region-holding ops with a
-      // well-defined control flow. During the fusion validity checks, we look
-      // for non-affine ops on the path from source to destination, at which
-      // point we check which memrefs if any are used in the region.
-      Node node(nextNodeId++, &op);
-      nodes.insert({node.id, node});
-    } else if (op.getNumRegions() != 0) {
+      // well-defined control flow. During the fusion validity checks, edges
+      // to/from these ops get looked at.
+      Node *node = addNodeToMDG(&op, *this, memrefAccesses);
+      if (!node)
+        return false;
+    } else if (op.getNumRegions() != 0 && !isa<RegionBranchOpInterface>(op)) {
       // Return false if non-handled/unknown region-holding ops are found. We
       // won't know what such ops do or what its regions mean; for e.g., it may
       // not be an imperative op.
@@ -175,13 +295,12 @@ bool MemRefDependenceGraph::init() {
                  << "MDG init failed; unknown region-holding op found!\n");
       return false;
     }
+    // We aren't creating nodes for memory-effect free ops either with no
+    // regions (unless it has results being used) or those with branch op
+    // interface.
   }
 
-  for (auto &idAndNode : nodes) {
-    LLVM_DEBUG(llvm::dbgs() << "Create node " << idAndNode.first << " for:\n"
-                            << *(idAndNode.second.op) << "\n");
-    (void)idAndNode;
-  }
+  LLVM_DEBUG(llvm::dbgs() << "Created " << nodes.size() << " nodes\n");
 
   // Add dependence edges between nodes which produce SSA values and their
   // users. Load ops can be considered as the ones producing SSA values.
@@ -216,16 +335,20 @@ bool MemRefDependenceGraph::init() {
   // Walk memref access lists and add graph edges between dependent nodes.
   for (auto &memrefAndList : memrefAccesses) {
     unsigned n = memrefAndList.second.size();
+    Value srcMemRef = memrefAndList.first;
+    // Add edges between all dependent pairs among the node IDs on this memref.
     for (unsigned i = 0; i < n; ++i) {
       unsigned srcId = memrefAndList.second[i];
-      bool srcHasStore =
-          getNode(srcId)->getStoreOpCount(memrefAndList.first) > 0;
+      Node *srcNode = getNode(srcId);
+      bool srcHasStoreOrFree =
+          srcNode->hasStore(srcMemRef) || srcNode->hasFree(srcMemRef);
       for (unsigned j = i + 1; j < n; ++j) {
         unsigned dstId = memrefAndList.second[j];
-        bool dstHasStore =
-            getNode(dstId)->getStoreOpCount(memrefAndList.first) > 0;
-        if (srcHasStore || dstHasStore)
-          addEdge(srcId, dstId, memrefAndList.first);
+        Node *dstNode = getNode(dstId);
+        bool dstHasStoreOrFree =
+            dstNode->hasStore(srcMemRef) || dstNode->hasFree(srcMemRef);
+        if (srcHasStoreOrFree || dstHasStoreOrFree)
+          addEdge(srcId, dstId, srcMemRef);
       }
     }
   }
@@ -233,14 +356,14 @@ bool MemRefDependenceGraph::init() {
 }
 
 // Returns the graph node for 'id'.
-Node *MemRefDependenceGraph::getNode(unsigned id) {
+const Node *MemRefDependenceGraph::getNode(unsigned id) const {
   auto it = nodes.find(id);
   assert(it != nodes.end());
   return &it->second;
 }
 
 // Returns the graph node for 'forOp'.
-Node *MemRefDependenceGraph::getForOpNode(AffineForOp forOp) {
+const Node *MemRefDependenceGraph::getForOpNode(AffineForOp forOp) const {
   for (auto &idAndNode : nodes)
     if (idAndNode.second.op == forOp)
       return &idAndNode.second;
@@ -264,7 +387,7 @@ void MemRefDependenceGraph::removeNode(unsigned id) {
     }
   }
   // Remove each edge in 'outEdges[id]'.
-  if (outEdges.count(id) > 0) {
+  if (outEdges.contains(id)) {
     SmallVector<Edge, 2> oldOutEdges = outEdges[id];
     for (auto &outEdge : oldOutEdges) {
       removeEdge(id, outEdge.id, outEdge.value);
@@ -278,8 +401,8 @@ void MemRefDependenceGraph::removeNode(unsigned id) {
 
 // Returns true if node 'id' writes to any memref which escapes (or is an
 // argument to) the block. Returns false otherwise.
-bool MemRefDependenceGraph::writesToLiveInOrEscapingMemrefs(unsigned id) {
-  Node *node = getNode(id);
+bool MemRefDependenceGraph::writesToLiveInOrEscapingMemrefs(unsigned id) const {
+  const Node *node = getNode(id);
   for (auto *storeOpInst : node->stores) {
     auto memref = cast<AffineWriteOpInterface>(storeOpInst).getMemRef();
     auto *op = memref.getDefiningOp();
@@ -299,14 +422,14 @@ bool MemRefDependenceGraph::writesToLiveInOrEscapingMemrefs(unsigned id) {
 // is for 'value' if non-null, or for any value otherwise. Returns false
 // otherwise.
 bool MemRefDependenceGraph::hasEdge(unsigned srcId, unsigned dstId,
-                                    Value value) {
-  if (outEdges.count(srcId) == 0 || inEdges.count(dstId) == 0) {
+                                    Value value) const {
+  if (!outEdges.contains(srcId) || !inEdges.contains(dstId)) {
     return false;
   }
-  bool hasOutEdge = llvm::any_of(outEdges[srcId], [=](Edge &edge) {
+  bool hasOutEdge = llvm::any_of(outEdges.lookup(srcId), [=](const Edge &edge) {
     return edge.id == dstId && (!value || edge.value == value);
   });
-  bool hasInEdge = llvm::any_of(inEdges[dstId], [=](Edge &edge) {
+  bool hasInEdge = llvm::any_of(inEdges.lookup(dstId), [=](const Edge &edge) {
     return edge.id == srcId && (!value || edge.value == value);
   });
   return hasOutEdge && hasInEdge;
@@ -351,7 +474,8 @@ void MemRefDependenceGraph::removeEdge(unsigned srcId, unsigned dstId,
 // Returns true if there is a path in the dependence graph from node 'srcId'
 // to node 'dstId'. Returns false otherwise. `srcId`, `dstId`, and the
 // operations that the edges connected are expected to be from the same block.
-bool MemRefDependenceGraph::hasDependencePath(unsigned srcId, unsigned dstId) {
+bool MemRefDependenceGraph::hasDependencePath(unsigned srcId,
+                                              unsigned dstId) const {
   // Worklist state is: <node-id, next-output-edge-index-to-visit>
   SmallVector<std::pair<unsigned, unsigned>, 4> worklist;
   worklist.push_back({srcId, 0});
@@ -364,13 +488,13 @@ bool MemRefDependenceGraph::hasDependencePath(unsigned srcId, unsigned dstId) {
       return true;
     // Pop and continue if node has no out edges, or if all out edges have
     // already been visited.
-    if (outEdges.count(idAndIndex.first) == 0 ||
-        idAndIndex.second == outEdges[idAndIndex.first].size()) {
+    if (!outEdges.contains(idAndIndex.first) ||
+        idAndIndex.second == outEdges.lookup(idAndIndex.first).size()) {
       worklist.pop_back();
       continue;
     }
     // Get graph edge to traverse.
-    Edge edge = outEdges[idAndIndex.first][idAndIndex.second];
+    const Edge edge = outEdges.lookup(idAndIndex.first)[idAndIndex.second];
     // Increment next output edge index for 'idAndIndex'.
     ++idAndIndex.second;
     // Add node at 'edge.id' to the worklist. We don't need to consider
@@ -386,34 +510,34 @@ bool MemRefDependenceGraph::hasDependencePath(unsigned srcId, unsigned dstId) {
 // Returns the input edge count for node 'id' and 'memref' from src nodes
 // which access 'memref' with a store operation.
 unsigned MemRefDependenceGraph::getIncomingMemRefAccesses(unsigned id,
-                                                          Value memref) {
+                                                          Value memref) const {
   unsigned inEdgeCount = 0;
-  if (inEdges.count(id) > 0)
-    for (auto &inEdge : inEdges[id])
-      if (inEdge.value == memref) {
-        Node *srcNode = getNode(inEdge.id);
-        // Only count in edges from 'srcNode' if 'srcNode' accesses 'memref'
-        if (srcNode->getStoreOpCount(memref) > 0)
-          ++inEdgeCount;
-      }
+  for (const Edge &inEdge : inEdges.lookup(id)) {
+    if (inEdge.value == memref) {
+      const Node *srcNode = getNode(inEdge.id);
+      // Only count in edges from 'srcNode' if 'srcNode' accesses 'memref'
+      if (srcNode->getStoreOpCount(memref) > 0)
+        ++inEdgeCount;
+    }
+  }
   return inEdgeCount;
 }
 
 // Returns the output edge count for node 'id' and 'memref' (if non-null),
 // otherwise returns the total output edge count from node 'id'.
-unsigned MemRefDependenceGraph::getOutEdgeCount(unsigned id, Value memref) {
+unsigned MemRefDependenceGraph::getOutEdgeCount(unsigned id,
+                                                Value memref) const {
   unsigned outEdgeCount = 0;
-  if (outEdges.count(id) > 0)
-    for (auto &outEdge : outEdges[id])
-      if (!memref || outEdge.value == memref)
-        ++outEdgeCount;
+  for (const auto &outEdge : outEdges.lookup(id))
+    if (!memref || outEdge.value == memref)
+      ++outEdgeCount;
   return outEdgeCount;
 }
 
 /// Return all nodes which define SSA values used in node 'id'.
 void MemRefDependenceGraph::gatherDefiningNodes(
-    unsigned id, DenseSet<unsigned> &definingNodes) {
-  for (MemRefDependenceGraph::Edge edge : inEdges[id])
+    unsigned id, DenseSet<unsigned> &definingNodes) const {
+  for (const Edge &edge : inEdges.lookup(id))
     // By definition of edge, if the edge value is a non-memref value,
     // then the dependence is between a graph node which defines an SSA value
     // and another graph node which uses the SSA value.
@@ -426,8 +550,8 @@ void MemRefDependenceGraph::gatherDefiningNodes(
 // dependences. Returns nullptr if no such insertion point is found.
 Operation *
 MemRefDependenceGraph::getFusedLoopNestInsertionPoint(unsigned srcId,
-                                                      unsigned dstId) {
-  if (outEdges.count(srcId) == 0)
+                                                      unsigned dstId) const {
+  if (!outEdges.contains(srcId))
     return getNode(dstId)->op;
 
   // Skip if there is any defining node of 'dstId' that depends on 'srcId'.
@@ -443,13 +567,13 @@ MemRefDependenceGraph::getFusedLoopNestInsertionPoint(unsigned srcId,
 
   // Build set of insts in range (srcId, dstId) which depend on 'srcId'.
   SmallPtrSet<Operation *, 2> srcDepInsts;
-  for (auto &outEdge : outEdges[srcId])
+  for (auto &outEdge : outEdges.lookup(srcId))
     if (outEdge.id != dstId)
       srcDepInsts.insert(getNode(outEdge.id)->op);
 
   // Build set of insts in range (srcId, dstId) on which 'dstId' depends.
   SmallPtrSet<Operation *, 2> dstDepInsts;
-  for (auto &inEdge : inEdges[dstId])
+  for (auto &inEdge : inEdges.lookup(dstId))
     if (inEdge.id != srcId)
       dstDepInsts.insert(getNode(inEdge.id)->op);
 
@@ -509,7 +633,7 @@ void MemRefDependenceGraph::updateEdges(unsigned srcId, unsigned dstId,
     SmallVector<Edge, 2> oldInEdges = inEdges[srcId];
     for (auto &inEdge : oldInEdges) {
       // Add edge from 'inEdge.id' to 'dstId' if it's not a private memref.
-      if (privateMemRefs.count(inEdge.value) == 0)
+      if (!privateMemRefs.contains(inEdge.value))
         addEdge(inEdge.id, dstId, inEdge.value);
     }
   }
@@ -565,12 +689,17 @@ void MemRefDependenceGraph::updateEdges(unsigned sibId, unsigned dstId) {
 }
 
 // Adds ops in 'loads' and 'stores' to node at 'id'.
-void MemRefDependenceGraph::addToNode(
-    unsigned id, const SmallVectorImpl<Operation *> &loads,
-    const SmallVectorImpl<Operation *> &stores) {
+void MemRefDependenceGraph::addToNode(unsigned id, ArrayRef<Operation *> loads,
+                                      ArrayRef<Operation *> stores,
+                                      ArrayRef<Operation *> memrefLoads,
+                                      ArrayRef<Operation *> memrefStores,
+                                      ArrayRef<Operation *> memrefFrees) {
   Node *node = getNode(id);
   llvm::append_range(node->loads, loads);
   llvm::append_range(node->stores, stores);
+  llvm::append_range(node->memrefLoads, memrefLoads);
+  llvm::append_range(node->memrefStores, memrefStores);
+  llvm::append_range(node->memrefFrees, memrefFrees);
 }
 
 void MemRefDependenceGraph::clearNodeLoadAndStores(unsigned id) {
@@ -1423,9 +1552,9 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolVars() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (auto *i : opsA) {
+  for (Operation *i : opsA) {
     MemRefAccess srcAccess(i);
-    for (auto *j : opsB) {
+    for (Operation *j : opsB) {
       MemRefAccess dstAccess(j);
       if (srcAccess.memref != dstAccess.memref)
         continue;
@@ -1454,7 +1583,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
 
       // Compute slice bounds for 'srcAccess' and 'dstAccess'.
       ComputationSliceState tmpSliceState;
-      mlir::affine::getComputationSliceState(i, j, &dependenceConstraints,
+      mlir::affine::getComputationSliceState(i, j, dependenceConstraints,
                                              loopDepth, isBackwardSlice,
                                              &tmpSliceState);
 
@@ -1513,8 +1642,10 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   }
 
   // Empty union.
-  if (sliceUnionCst.getNumDimAndSymbolVars() == 0)
+  if (sliceUnionCst.getNumDimAndSymbolVars() == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "empty slice union - unexpected\n");
     return SliceComputationResult::GenericFailure;
+  }
 
   // Gather loops surrounding ops from loop nest where slice will be inserted.
   SmallVector<Operation *, 4> ops;
@@ -1553,7 +1684,8 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   sliceUnion->ivs.clear();
   sliceUnionCst.getValues(0, numSliceLoopIVs, &sliceUnion->ivs);
 
-  // Set loop nest insertion point to block start at 'loopDepth'.
+  // Set loop nest insertion point to block start at 'loopDepth' for forward
+  // slices, while at the end for backward slices.
   sliceUnion->insertPoint =
       isBackwardSlice
           ? surroundingLoops[loopDepth - 1].getBody()->begin()
@@ -1652,7 +1784,7 @@ const char *const kSliceFusionBarrierAttrName = "slice_fusion_barrier";
 // the other loop nest's IVs, symbols and constants (using 'isBackwardsSlice').
 void mlir::affine::getComputationSliceState(
     Operation *depSourceOp, Operation *depSinkOp,
-    FlatAffineValueConstraints *dependenceConstraints, unsigned loopDepth,
+    const FlatAffineValueConstraints &dependenceConstraints, unsigned loopDepth,
     bool isBackwardSlice, ComputationSliceState *sliceState) {
   // Get loop nest surrounding src operation.
   SmallVector<AffineForOp, 4> srcLoopIVs;
@@ -1671,30 +1803,28 @@ void mlir::affine::getComputationSliceState(
   unsigned pos = isBackwardSlice ? numSrcLoopIVs + loopDepth : loopDepth;
   unsigned num =
       isBackwardSlice ? numDstLoopIVs - loopDepth : numSrcLoopIVs - loopDepth;
-  dependenceConstraints->projectOut(pos, num);
+  FlatAffineValueConstraints sliceCst(dependenceConstraints);
+  sliceCst.projectOut(pos, num);
 
   // Add slice loop IV values to 'sliceState'.
   unsigned offset = isBackwardSlice ? 0 : loopDepth;
   unsigned numSliceLoopIVs = isBackwardSlice ? numSrcLoopIVs : numDstLoopIVs;
-  dependenceConstraints->getValues(offset, offset + numSliceLoopIVs,
-                                   &sliceState->ivs);
+  sliceCst.getValues(offset, offset + numSliceLoopIVs, &sliceState->ivs);
 
   // Set up lower/upper bound affine maps for the slice.
   sliceState->lbs.resize(numSliceLoopIVs, AffineMap());
   sliceState->ubs.resize(numSliceLoopIVs, AffineMap());
 
   // Get bounds for slice IVs in terms of other IVs, symbols, and constants.
-  dependenceConstraints->getSliceBounds(offset, numSliceLoopIVs,
-                                        depSourceOp->getContext(),
-                                        &sliceState->lbs, &sliceState->ubs);
+  sliceCst.getSliceBounds(offset, numSliceLoopIVs, depSourceOp->getContext(),
+                          &sliceState->lbs, &sliceState->ubs);
 
   // Set up bound operands for the slice's lower and upper bounds.
   SmallVector<Value, 4> sliceBoundOperands;
-  unsigned numDimsAndSymbols = dependenceConstraints->getNumDimAndSymbolVars();
+  unsigned numDimsAndSymbols = sliceCst.getNumDimAndSymbolVars();
   for (unsigned i = 0; i < numDimsAndSymbols; ++i) {
-    if (i < offset || i >= offset + numSliceLoopIVs) {
-      sliceBoundOperands.push_back(dependenceConstraints->getValue(i));
-    }
+    if (i < offset || i >= offset + numSliceLoopIVs)
+      sliceBoundOperands.push_back(sliceCst.getValue(i));
   }
 
   // Give each bound its own copy of 'sliceBoundOperands' for subsequent
@@ -1868,9 +1998,7 @@ bool MemRefAccess::operator==(const MemRefAccess &rhs) const {
   AffineValueMap diff, thisMap, rhsMap;
   getAccessMap(&thisMap);
   rhs.getAccessMap(&rhsMap);
-  AffineValueMap::difference(thisMap, rhsMap, &diff);
-  return llvm::all_of(diff.getAffineMap().getResults(),
-                      [](AffineExpr e) { return e == 0; });
+  return thisMap == rhsMap;
 }
 
 void mlir::affine::getAffineIVs(Operation &op, SmallVectorImpl<Value> &ivs) {
@@ -1924,16 +2052,18 @@ static std::optional<int64_t> getMemoryFootprintBytes(Block &block,
     if (failed(
             region->compute(opInst,
                             /*loopDepth=*/getNestingDepth(&*block.begin())))) {
-      return opInst->emitError("error obtaining memory region\n");
+      LLVM_DEBUG(opInst->emitError("error obtaining memory region"));
+      return failure();
     }
 
     auto [it, inserted] = regions.try_emplace(region->memref);
     if (inserted) {
       it->second = std::move(region);
     } else if (failed(it->second->unionBoundingBox(*region))) {
-      return opInst->emitWarning(
+      LLVM_DEBUG(opInst->emitWarning(
           "getMemoryFootprintBytes: unable to perform a union on a memory "
-          "region");
+          "region"));
+      return failure();
     }
     return WalkResult::advance();
   });
@@ -2166,4 +2296,42 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
   }
   affine::canonicalizeMapAndOperands(&newMap, &newOperands);
   return AffineValueMap(newMap, newOperands);
+}
+
+Block *mlir::affine::findInnermostCommonBlockInScope(Operation *a,
+                                                     Operation *b) {
+  Region *aScope = mlir::affine::getAffineScope(a);
+  Region *bScope = mlir::affine::getAffineScope(b);
+  if (aScope != bScope)
+    return nullptr;
+
+  // Get the block ancestry of `op` while stopping at the affine scope `aScope`
+  // and store them in `ancestry`.
+  auto getBlockAncestry = [&](Operation *op,
+                              SmallVectorImpl<Block *> &ancestry) {
+    Operation *curOp = op;
+    do {
+      ancestry.push_back(curOp->getBlock());
+      if (curOp->getParentRegion() == aScope)
+        break;
+      curOp = curOp->getParentOp();
+    } while (curOp);
+    assert(curOp && "can't reach root op without passing through affine scope");
+    std::reverse(ancestry.begin(), ancestry.end());
+  };
+
+  SmallVector<Block *, 4> aAncestors, bAncestors;
+  getBlockAncestry(a, aAncestors);
+  getBlockAncestry(b, bAncestors);
+  assert(!aAncestors.empty() && !bAncestors.empty() &&
+         "at least one Block ancestor expected");
+
+  Block *innermostCommonBlock = nullptr;
+  for (unsigned a = 0, b = 0, e = aAncestors.size(), f = bAncestors.size();
+       a < e && b < f; ++a, ++b) {
+    if (aAncestors[a] != bAncestors[b])
+      break;
+    innermostCommonBlock = aAncestors[a];
+  }
+  return innermostCommonBlock;
 }

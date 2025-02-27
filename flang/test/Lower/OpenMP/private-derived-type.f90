@@ -15,16 +15,14 @@ subroutine s4
   !$omp end parallel
 end subroutine s4
 
-! CHECK:  omp.private {type = private} @[[DERIVED_PRIV:.*]] : !fir.ref<!fir.type<{{.*}}y3{x:!fir.box<!fir.heap<i32>>}>> alloc {
-! CHECK:             %[[VAL_23:.*]] = fir.alloca !fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}> {bindc_name = "v", pinned, uniq_name = "_QFs4Ev"}
-! CHECK:             %[[VAL_25:.*]] = fir.embox %[[VAL_23]] : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>
+! CHECK:  omp.private {type = private} @[[DERIVED_PRIV:.*]] : !fir.type<{{.*}}y3{x:!fir.box<!fir.heap<i32>>}> init {
+! CHECK:             %[[VAL_25:.*]] = fir.embox %[[VAL_23:.*]] : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:             %[[VAL_26:.*]] = fir.address_of
 ! CHECK:             %[[VAL_27:.*]] = arith.constant 8 : i32
 ! CHECK:             %[[VAL_28:.*]] = fir.convert %[[VAL_25]] : (!fir.box<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_29:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 !                    Check we do call FortranAInitialize on the derived type
 ! CHECK:             fir.call @_FortranAInitialize(%[[VAL_28]], %[[VAL_29]], %[[VAL_27]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
-! CHECK:             %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFs4Ev"} : (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>) -> (!fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>, !fir.ref<!fir.type<_QFs4Ty3{x:!fir.box<!fir.heap<i32>>}>>)
 ! CHECK:  }
 
 ! CHECK-LABEL:   func.func @_QPs4() {

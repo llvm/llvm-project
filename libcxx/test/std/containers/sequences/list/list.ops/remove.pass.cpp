@@ -19,8 +19,8 @@
 
 struct S {
   S(int i) : i_(new int(i)) {}
-  S(const S &rhs) : i_(new int(*rhs.i_)) {}
-  S &operator=(const S &rhs) {
+  S(const S& rhs) : i_(new int(*rhs.i_)) {}
+  S& operator=(const S& rhs) {
     *i_ = *rhs.i_;
     return *this;
   }
@@ -28,9 +28,9 @@ struct S {
     delete i_;
     i_ = NULL;
   }
-  bool operator==(const S &rhs) const { return *i_ == *rhs.i_; }
+  bool operator==(const S& rhs) const { return *i_ == *rhs.i_; }
   int get() const { return *i_; }
-  int *i_;
+  int* i_;
 };
 
 int main(int, char**) {
@@ -43,7 +43,7 @@ int main(int, char**) {
     assert(c.remove(3) == 1);
     ASSERT_SAME_TYPE(L::size_type, decltype(c.remove(3)));
 #else
-    ASSERT_SAME_TYPE(void,         decltype(c.remove(3)));
+    ASSERT_SAME_TYPE(void, decltype(c.remove(3)));
     c.remove(3);
 #endif
 
@@ -60,7 +60,7 @@ int main(int, char**) {
     int a1[] = {1, 2, 1, 3, 5, 8, 11, 1};
     int a2[] = {2, 3, 5, 8, 11};
     std::list<S> c;
-    for (int *ip = a1; ip < a1 + 8; ++ip)
+    for (int* ip = a1; ip < a1 + 8; ++ip)
       c.push_back(S(*ip));
 #if TEST_STD_VER > 17
     assert(c.remove(c.front()) == 3);
@@ -68,7 +68,7 @@ int main(int, char**) {
     c.remove(c.front());
 #endif
     std::list<S>::const_iterator it = c.begin();
-    for (int *ip = a2; ip < a2 + 5; ++ip, ++it) {
+    for (int* ip = a2; ip < a2 + 5; ++ip, ++it) {
       assert(it != c.end());
       assert(*ip == it->get());
     }
@@ -92,11 +92,11 @@ int main(int, char**) {
     int a1[] = {1, 2, 3, 4};
     int a2[] = {1, 2, 4};
     std::list<int, min_allocator<int>> c(a1, a1 + 4);
-#if TEST_STD_VER > 17
+#  if TEST_STD_VER > 17
     assert(c.remove(3) == 1);
-#else
+#  else
     c.remove(3);
-#endif
+#  endif
     assert((c == std::list<int, min_allocator<int>>(a2, a2 + 3)));
   }
 #endif
