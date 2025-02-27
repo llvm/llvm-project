@@ -1,4 +1,4 @@
-// RUN: %clangxx -O0 %s -o %t
+// RUN: %clangxx -O0 %s -D_FILE_OFFSET_BITS=64 -o %t
 
 // REQUIRES: glibc
 
