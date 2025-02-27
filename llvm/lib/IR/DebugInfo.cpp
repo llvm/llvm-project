@@ -2062,24 +2062,6 @@ std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
   return getAssignmentInfoImpl(DL, AI, SizeInBits);
 }
 
-std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
-                                                    const VPIntrinsic *VPI) {
-  auto *Dest = VPI->getMemoryPointerParam();
-  if (!Dest)
-    return {};
-  // FIXME: It should be possible to deal with strided store and scatter
-  // intrinsics as well, but the existing AssignmentInfo structure cannot
-  // sufficiently describe them.
-  if (VPI->getIntrinsicID() == Intrinsic::experimental_vp_strided_store ||
-      VPI->getIntrinsicID() == Intrinsic::vp_scatter)
-    return {};
-  assert(VPI->getMemoryDataParam() &&
-         "Memory VPIntrinsic missing a data param?");
-  TypeSize SizeInBits =
-      DL.getTypeSizeInBits(VPI->getMemoryDataParam()->getType());
-  return getAssignmentInfoImpl(DL, Dest, SizeInBits);
-}
-
 /// Returns nullptr if the assignment shouldn't be attributed to this variable.
 static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
                           Instruction &StoreLikeInst, const VarRecord &VarRec,

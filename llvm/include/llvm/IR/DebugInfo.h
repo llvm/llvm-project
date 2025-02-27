@@ -355,8 +355,6 @@ std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
                                                 const StoreInst *SI);
 std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
                                                 const AllocaInst *AI);
-std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
-                                                const VPIntrinsic *VPI);
 
 } // end namespace at
 
