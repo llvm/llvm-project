@@ -7268,17 +7268,20 @@ bool DeclarationVisitor::OkToAddComponent(
       std::optional<parser::MessageFixedText> msg;
       std::optional<common::UsageWarning> warning;
       if (context().HasError(*prev)) { // don't pile on
-      } else if (extends) {
-        msg = "Type cannot be extended as it has a component named"
-              " '%s'"_err_en_US;
       } else if (CheckAccessibleSymbol(currScope(), *prev)) {
         // inaccessible component -- redeclaration is ok
-        if (context().ShouldWarn(
-                common::UsageWarning::RedeclaredInaccessibleComponent)) {
+        if (extends) {
+          // The parent type has a component of same name, but it remains
+          // extensible outside its module since that component is PRIVATE.
+        } else if (context().ShouldWarn(
+                       common::UsageWarning::RedeclaredInaccessibleComponent)) {
           msg =
               "Component '%s' is inaccessibly declared in or as a parent of this derived type"_warn_en_US;
           warning = common::UsageWarning::RedeclaredInaccessibleComponent;
         }
+      } else if (extends) {
+        msg =
+            "Type cannot be extended as it has a component named '%s'"_err_en_US;
       } else if (prev->test(Symbol::Flag::ParentComp)) {
         msg =
             "'%s' is a parent type of this type and so cannot be a component"_err_en_US;
