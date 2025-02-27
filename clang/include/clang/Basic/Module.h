@@ -100,6 +100,33 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
   }
 };
 
+/// The set of attributes that can be attached to a module.
+struct ModuleAttributes {
+  /// Whether this is a system module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsSystem : 1;
+
+  /// Whether this is an extern "C" module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExternC : 1;
+
+  /// Whether this is an exhaustive set of configuration macros.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExhaustive : 1;
+
+  /// \brief Whether this is a module who has its swift_names inferred.
+  unsigned IsSwiftInferImportAsMember : 1;
+
+  /// Whether files in this module can only include non-modular headers
+  /// and headers from used modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned NoUndeclaredIncludes : 1;
+
+  ModuleAttributes()
+      : IsSystem(false), IsExternC(false), IsExhaustive(false),
+        NoUndeclaredIncludes(false) {}
+};
+
 /// Required to construct a Module.
 ///
 /// This tag type is only constructible by ModuleMap, guaranteeing it ownership
