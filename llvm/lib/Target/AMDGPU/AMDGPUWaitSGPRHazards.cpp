@@ -171,9 +171,13 @@ public:
   }
 
   unsigned mergeMasks(unsigned Mask1, unsigned Mask2) {
-    //this is enough to clear SA_SDST, VA_VCC, HOLD_CNT, VA_SSRC since they are 1-bit fields
-    unsigned Mask = Mask1 & Mask2;
-
+    unsigned Mask = 0xffff;
+    Mask = AMDGPU::DepCtr::encodeFieldSaSdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldSaSdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaVcc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaVcc(Mask2)));
     Mask = AMDGPU::DepCtr::encodeFieldVmVsrc(
         Mask, std::min(AMDGPU::DepCtr::decodeFieldVmVsrc(Mask1),
                        AMDGPU::DepCtr::decodeFieldVmVsrc(Mask2)));
@@ -183,10 +187,16 @@ public:
     Mask = AMDGPU::DepCtr::encodeFieldVaVdst(
         Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVdst(Mask1),
                        AMDGPU::DepCtr::decodeFieldVaVdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldHoldCnt(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldHoldCnt(Mask1),
+                       AMDGPU::DepCtr::decodeFieldHoldCnt(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaSsrc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSsrc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaSsrc(Mask2)));
     return Mask;
   }
 
-  MachineInstr* getPreviousWaitAlu(MachineBasicBlock::instr_iterator &MI) {
+  MachineInstr *getPreviousWaitAlu(MachineBasicBlock::instr_iterator &MI) {
     auto PrevMI = std::prev(MI);
     while (PrevMI != PrevMI->getParent()->instr_begin() &&
            (PrevMI->isDebugInstr() || PrevMI->isMetaInstruction()))
@@ -393,7 +403,7 @@ public:
           Mask = AMDGPU::DepCtr::encodeFieldVaSdst(Mask, 0);
         }
         if (Emit) {
-          MachineInstr* PrevWaitAlu = nullptr;
+          MachineInstr *PrevWaitAlu = nullptr;
           if (MI != MI->getParent()->begin()) {
             PrevWaitAlu = getPreviousWaitAlu(MI);
           } else {
@@ -405,7 +415,8 @@ public:
             }
           }
 
-          if (PrevWaitAlu != nullptr && PrevWaitAlu->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR){
+          if (PrevWaitAlu != nullptr &&
+              PrevWaitAlu->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
             Mask = mergeMasks(Mask, PrevWaitAlu->getOperand(0).getImm());
             PrevWaitAlu->eraseFromParent();
           }
