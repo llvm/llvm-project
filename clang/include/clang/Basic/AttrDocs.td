@@ -5125,9 +5125,17 @@ def RestrictDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "malloc";
   let Content = [{
-The ``malloc`` attribute indicates that the function acts like a system memory
-allocation function, returning a pointer to allocated storage disjoint from the
-storage for any other object accessible to the caller.
+The ``malloc`` attribute has two forms with different functionality. The first
+is when it is used without arguments, where it marks that a function acts like
+a system memory allocation function, returning a pointer to allocated storage
+that does not alias storage from any other object accessible to the caller.
+
+The second form is when ``malloc`` takes one or two arguments. The first
+argument names a function that should be associated with this function as its
+deallocation function. When this form is used, it enables the compiler to
+diagnose when the incorrect deallocation function is used with this variable.
+However the associated warning, spelled `-Wmismatched-dealloc` in GCC, is not
+yet implemented in clang.
   }];
 }
 
