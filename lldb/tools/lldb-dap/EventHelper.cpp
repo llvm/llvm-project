@@ -8,6 +8,7 @@
 
 #include "EventHelper.h"
 #include "DAP.h"
+#include "DAPLog.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBFileSpec.h"
@@ -20,6 +21,9 @@
 #define PATH_MAX MAX_PATH
 #endif
 #endif
+
+using namespace lldb_dap;
+using namespace lldb_private;
 
 namespace lldb_dap {
 
@@ -178,15 +182,14 @@ void SendThreadStoppedEvent(DAP &dap) {
           SendThreadExitedEvent(dap, tid);
       }
     } else {
-      if (dap.log)
-        *dap.log << "error: SendThreadStoppedEvent() when process"
-                    " isn't stopped ("
-                 << lldb::SBDebugger::StateAsCString(state) << ')' << std::endl;
+      LLDB_LOG(GetLog(DAPLog::Protocol),
+               "error: SendThreadStoppedEvent() when process"
+               " isn't stopped ({0})",
+               lldb::SBDebugger::StateAsCString(state));
     }
   } else {
-    if (dap.log)
-      *dap.log << "error: SendThreadStoppedEvent() invalid process"
-               << std::endl;
+    LLDB_LOG(GetLog(DAPLog::Protocol),
+             "error: SendThreadStoppedEvent() invalid process");
   }
   dap.RunStopCommands();
 }

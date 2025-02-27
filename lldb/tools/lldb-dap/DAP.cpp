@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPLog.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
@@ -19,6 +20,7 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/IOObject.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -50,6 +52,7 @@
 #endif
 
 using namespace lldb_dap;
+using namespace lldb_private;
 
 namespace {
 #ifdef _WIN32
@@ -61,13 +64,12 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-         lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
+DAP::DAP(std::string name, llvm::StringRef path, lldb::IOObjectSP input,
+         lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
-    : name(std::move(name)), debug_adapter_path(path), log(log),
-      input(std::move(input)), output(std::move(output)),
-      broadcaster("lldb-dap"), exception_breakpoints(),
-      pre_init_commands(std::move(pre_init_commands)),
+    : name(std::move(name)), debug_adapter_path(path), input(std::move(input)),
+      output(std::move(output)), broadcaster("lldb-dap"),
+      exception_breakpoints(), pre_init_commands(std::move(pre_init_commands)),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
@@ -245,6 +247,8 @@ void DAP::SendJSON(const std::string &json_str) {
   output.write_full(llvm::utostr(json_str.size()));
   output.write_full("\r\n\r\n");
   output.write_full(json_str);
+
+  LLDB_LOG(GetLog(DAPLog::Transport), "{0} <-- {1}", name, json_str);
 }
 
 // Serialize the JSON value into a string and send the JSON packet to
@@ -256,15 +260,6 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   static std::mutex mutex;
   std::lock_guard<std::mutex> locker(mutex);
   SendJSON(json_str);
-
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} {1} <-- ", now.count(), name).str()
-         << std::endl
-         << "Content-Length: " << json_str.size() << "\r\n\r\n"
-         << llvm::formatv("{0:2}", json).str() << std::endl;
-  }
 }
 
 // Read a JSON packet from the "in" stream.
@@ -273,28 +268,22 @@ std::string DAP::ReadJSON() {
   std::string json_str;
   int length;
 
-  if (!input.read_expected(log, "Content-Length: "))
+  if (!input.read_expected("Content-Length: "))
     return json_str;
 
-  if (!input.read_line(log, length_str))
+  if (!input.read_line(length_str))
     return json_str;
 
   if (!llvm::to_integer(length_str, length))
     return json_str;
 
-  if (!input.read_expected(log, "\r\n"))
+  if (!input.read_expected("\r\n"))
     return json_str;
 
-  if (!input.read_full(log, length, json_str))
+  if (!input.read_full(length, json_str))
     return json_str;
 
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} {1} --> ", now.count(), name).str()
-         << std::endl
-         << "Content-Length: " << length << "\r\n\r\n";
-  }
+  LLDB_LOG(GetLog(DAPLog::Transport), "{0} --> {1}", name, json_str);
   return json_str;
 }
 
@@ -729,24 +718,14 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
   llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
   if (!json_value) {
     auto error = json_value.takeError();
-    if (log) {
-      std::string error_str;
-      llvm::raw_string_ostream strm(error_str);
-      strm << error;
-      *log << "error: failed to parse JSON: " << error_str << std::endl
-           << json << std::endl;
-    }
+    LLDB_LOG_ERROR(GetLog(DAPLog::Protocol), std::move(error),
+                   "failed to parse JSON: {0}");
     return PacketStatus::JSONMalformed;
-  }
-
-  if (log) {
-    *log << llvm::formatv("{0:2}", *json_value).str() << std::endl;
   }
 
   llvm::json::Object *object_ptr = json_value->getAsObject();
   if (!object_ptr) {
-    if (log)
-      *log << "error: json packet isn't a object" << std::endl;
+    LLDB_LOG(GetLog(DAPLog::Protocol), "error: json packet isn't a object");
     return PacketStatus::JSONNotObject;
   }
   object = *object_ptr;
@@ -764,9 +743,8 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       return true; // Success
     }
 
-    if (log)
-      *log << "error: unhandled command \"" << command.data() << "\""
-           << std::endl;
+    LLDB_LOG(GetLog(DAPLog::Protocol), "error: unhandled command '{0}'",
+             command);
     return false; // Fail
   }
 
