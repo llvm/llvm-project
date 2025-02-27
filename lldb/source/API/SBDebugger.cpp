@@ -43,7 +43,6 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/StreamFile.h"
-#include "lldb/Core/Telemetry.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -227,37 +226,6 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   return error;
 }
 
-#if LLVM_ENABLE_TELEMETRY
-#if ENABLE_BACKTRACES
-static void TelemetryHandler(void *) {
-  // TODO: get the bt into the msg?
-  // Also need to pre-alloc the memory for this entry?
-  lldb_private::telemetry::DebuggerInfo entry;
-  entry.exit_desc = {-1, ""};
-  if (auto* instance = lldb_private::telemetry::TelemeryManager::getInstance()) {
-    if (instance->GetConfig()->EnableTelemetry()) {
-      instance->AtDebuggerExit(&entry);
-    }
-  }
-}
-
-static bool RegisterTelemetryHander() {
-  sys::AddSignalHandler(TelemetryHandler, nullptr);
-  return false;
-}
-#endif
-#endif
-
-static void InstallCrashTelemetryReporter() {
-#if LLVM_ENABLE_TELEMETRY
-
-#if ENABLE_BACKTRACES
-  static bool HandlerRegistered = RegisterTelemeryHandler();
-  (void)HandlerRegistered;
-#endif
-#endif
-}
-
 void SBDebugger::PrintStackTraceOnError() {
   LLDB_INSTRUMENT();
 
@@ -265,7 +233,6 @@ void SBDebugger::PrintStackTraceOnError() {
   static std::string executable =
       llvm::sys::fs::getMainExecutable(nullptr, nullptr);
   llvm::sys::PrintStackTraceOnErrorSignal(executable);
-  InstallCrashTelemetryReporter();
 }
 
 static void DumpDiagnostics(void *cookie) {
