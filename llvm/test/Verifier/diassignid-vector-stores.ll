@@ -6,12 +6,12 @@
 ; CHECK-NEXT: @llvm.vp.load.v2i8.p0
 
 define void @f() !dbg !5 {
-  call void @llvm.vp.store.v2i8.p0(<2 x i8> undef, ptr undef, <2 x i1> undef, i32 undef), !DIAssignID !6
-  call void @llvm.vp.scatter.v2i8.v2p0(<2 x i8> undef, <2 x ptr> undef, <2 x i1> undef, i32 undef), !DIAssignID !7
-  call void @llvm.experimental.vp.strided.store.v2i8.i64(<2 x i8> undef, ptr undef, i64 undef, <2 x i1> undef, i32 undef), !DIAssignID !8
-  call void @llvm.masked.store.v2i8.p0(<2 x i8> undef, ptr undef, i32 1, <2 x i1> undef), !DIAssignID !9
-  call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> undef, <2 x ptr> undef, i32 1, <2 x i1> undef), !DIAssignID !10
-  %r = call <2 x i8> @llvm.vp.load.v2i8.p0(ptr undef, <2 x i1> undef, i32 undef), !DIAssignID !11
+  call void @llvm.vp.store.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison, i32 poison), !DIAssignID !6
+  call void @llvm.vp.scatter.v2i8.v2p0(<2 x i8> poison, <2 x ptr> poison, <2 x i1> poison, i32 poison), !DIAssignID !7
+  call void @llvm.experimental.vp.strided.store.v2i8.i64(<2 x i8> poison, ptr poison, i64 poison, <2 x i1> poison, i32 poison), !DIAssignID !8
+  call void @llvm.masked.store.v2i8.p0(<2 x i8> poison, ptr poison, i32 1, <2 x i1> poison), !DIAssignID !9
+  call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> poison, <2 x ptr> poison, i32 1, <2 x i1> poison), !DIAssignID !10
+  %r = call <2 x i8> @llvm.vp.load.v2i8.p0(ptr poison, <2 x i1> poison, i32 poison), !DIAssignID !11
   ret void
 }
 

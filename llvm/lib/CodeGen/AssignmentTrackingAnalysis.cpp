@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
@@ -1621,7 +1622,7 @@ void AssignmentTrackingLowering::processUnknownStoreToVariable(
   if (getLocKind(LiveSet, Var) != LocKind::Mem)
     return;
   // If there is a live debug value for this variable, fall back to using
-  // that
+  // that.
   Assignment DbgAV = LiveSet->getAssignment(BlockInfo::Debug, Var);
   if (DbgAV.Status != Assignment::NoneOrPhi && DbgAV.Source) {
     LLVM_DEBUG(dbgs() << "Switching to fallback debug value: ";
@@ -1635,7 +1636,7 @@ void AssignmentTrackingLowering::processUnknownStoreToVariable(
   auto InsertBefore = getNextNode(&I);
   assert(InsertBefore && "Shouldn't be inserting after a terminator");
 
-  // Get DILocation for this unrecorded assignment.
+  // Get DILocation for this assignment.
   DebugVariable V = FnVarLocs->getVariable(Var);
   DILocation *InlinedAt = const_cast<DILocation *>(V.getInlinedAt());
   const DILocation *DILoc = DILocation::get(
@@ -1666,13 +1667,12 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
   assert(!I.hasMetadata(LLVMContext::MD_DIAssignID));
   auto It = UntaggedStoreVars.find(&I);
   if (It == UntaggedStoreVars.end()) {
-    // It is possible that we have an untagged unknown store, which we do
-    // not currently support - in this case we should undef the stack location
-    // of the variable, as if we had a tagged store that did not match the
-    // current assignment.
-    // FIXME: It should be possible to support unknown stores, but it
-    // would require more extensive changes to our representation of assignments
-    // which assumes a single offset+size.
+    // It is possible that we have an untagged unknown store, i.e. one that
+    // cannot be represented as a simple (base, offset, size) - in this case we
+    // should undef the memory location of the variable, as if we had a tagged
+    // store that did not match the current assignment.
+    // FIXME: It should be possible to support these stores, but it would
+    // require more extensive changes to our representation of assignments.
     if (auto UnhandledStoreIt = UnknownStoreVars.find(&I);
         UnhandledStoreIt != UnknownStoreVars.end()) {
       LLVM_DEBUG(dbgs() << "Processing untagged unknown store " << I << "\n");
@@ -2190,14 +2190,14 @@ AllocaInst *getUnknownStore(const Instruction &I, const DataLayout &Layout) {
   Intrinsic::ID ID = II->getIntrinsicID();
   if (ID != Intrinsic::experimental_vp_strided_store &&
       ID != Intrinsic::masked_store && ID != Intrinsic::vp_scatter &&
-      ID != Intrinsic::masked_scatter)
+      ID != Intrinsic::masked_scatter && ID != Intrinsic::vp_store)
     return nullptr;
   Value *MemOp = II->getArgOperand(1);
-  // We don't actually use the constant offsets for now, but we may in future,
+  // We don't actually use the constant offset for now, but we may in future,
   // and the non-accumulating versions do not support a vector of pointers.
   APInt Offset(Layout.getIndexTypeSizeInBits(MemOp->getType()), 0);
   Value *Base = MemOp->stripAndAccumulateConstantOffsets(Layout, Offset, true);
-  // For Base pointers that are not a single alloca value we don't need to do
+  // For Base pointers that are not an alloca instruction we don't need to do
   // anything, and simply return nullptr.
   return dyn_cast<AllocaInst>(Base);
 }
