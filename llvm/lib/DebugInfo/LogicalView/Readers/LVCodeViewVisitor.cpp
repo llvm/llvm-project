@@ -268,10 +268,9 @@ public:
 
   void add(TypeIndex TI, StringRef String) {
     static uint32_t Index = 0;
-    if (Strings.find(TI) == Strings.end())
-      Strings.emplace(
-          std::piecewise_construct, std::forward_as_tuple(TI),
-          std::forward_as_tuple(++Index, std::string(String), nullptr));
+    auto [It, Inserted] = Strings.try_emplace(TI);
+    if (Inserted)
+      It->second = std::make_tuple(++Index, std::string(String), nullptr);
   }
 
   StringRef find(TypeIndex TI) {
