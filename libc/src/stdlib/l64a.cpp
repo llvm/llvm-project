@@ -39,7 +39,7 @@ constexpr static char b64_int_to_char(uint32_t num) {
   // this tolower is technically unnecessary, but it provides safety if we
   // change the default behavior of int_to_b36_char. Also the compiler
   // completely elides it so there's no performance penalty, see:
-  // https://godbolt.org/z/sfxdhYvYb TODO: UPDATE THIS LINK
+  // https://godbolt.org/z/o5ennv7fc
   return static_cast<char>(
       internal::tolower(internal::int_to_b36_char(num - 2 - 26)));
 }
