@@ -142,13 +142,13 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
       uint64_t ValueInt = 0;
       std::string ValueStr = "";
       if (Type) { // type==1 --> ntbs
-        StringRef Value = De.getCStrRef(Cursor);
+        ValueStr = De.getCStrRef(Cursor);
         if (Sw)
-          Sw->printString(TagName, Value);
+          Sw->printString(TagName, ValueStr);
       } else { // type==0 --> uleb128
-        uint64_t Value = De.getULEB128(Cursor);
+        uint64_t ValueInt = De.getULEB128(Cursor);
         if (Sw)
-          Sw->printNumber(TagName, Value);
+          Sw->printNumber(TagName, ValueInt);
       }
 
       // populate data structure
