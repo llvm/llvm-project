@@ -100,6 +100,34 @@ static cl::opt<bool> ExportToDot("memprof-export-to-dot", cl::init(false),
                                  cl::Hidden,
                                  cl::desc("Export graph to dot files."));
 
+// How much of the graph to export to dot.
+enum DotScope {
+  All,     // The full CCG graph.
+  Alloc,   // Only contexts for the specified allocation.
+  Context, // Only the specified context.
+};
+
+static cl::opt<DotScope> DotGraphScope(
+    "memprof-dot-scope", cl::desc("Scope of graph to export to dot"),
+    cl::Hidden, cl::init(DotScope::All),
+    cl::values(
+        clEnumValN(DotScope::All, "all", "Export full callsite graph"),
+        clEnumValN(DotScope::Alloc, "alloc",
+                   "Export only nodes with contexts feeding given "
+                   "-memprof-dot-alloc-id"),
+        clEnumValN(DotScope::Context, "context",
+                   "Export only nodes with given -memprof-dot-context-id")));
+
+static cl::opt<unsigned>
+    AllocIdForDot("memprof-dot-alloc-id", cl::init(0), cl::Hidden,
+                  cl::desc("Id of alloc to export if -memprof-dot-scope=alloc "
+                           "or to highlight if -memprof-dot-scope=all"));
+
+static cl::opt<unsigned> ContextIdForDot(
+    "memprof-dot-context-id", cl::init(0), cl::Hidden,
+    cl::desc("Id of context to export if -memprof-dot-scope=context or to "
+             "highlight otherwise"));
+
 static cl::opt<bool>
     DumpCCG("memprof-dump-ccg", cl::init(false), cl::Hidden,
             cl::desc("Dump CallingContextGraph to stdout after each stage."));
@@ -530,6 +558,9 @@ protected:
   /// multiple different callee target functions.
   void handleCallsitesWithMultipleTargets();
 
+  /// Mark backedges via the standard DFS based backedge algorithm.
+  void markBackedges();
+
   // Try to partition calls on the given node (already placed into the AllCalls
   // array) by callee function, creating new copies of Node as needed to hold
   // calls with different callees, and moving the callee edges appropriately.
@@ -544,6 +575,10 @@ protected:
 
   /// Map from callsite node to the enclosing caller function.
   std::map<const ContextNode *, const FuncTy *> NodeToCallingFunc;
+
+  // When exporting to dot, and an allocation id is specified, contains the
+  // context ids on that allocation.
+  DenseSet<uint32_t> DotAllocContextIds;
 
 private:
   using EdgeIter = typename std::vector<std::shared_ptr<ContextEdge>>::iterator;
@@ -740,6 +775,7 @@ private:
   void moveCalleeEdgeToNewCaller(const std::shared_ptr<ContextEdge> &Edge,
                                  ContextNode *NewCaller);
 
+  /// Recursive helper for marking backedges via DFS.
   void markBackedges(ContextNode *Node, DenseSet<const ContextNode *> &Visited,
                      DenseSet<const ContextNode *> &CurrentStack);
 
@@ -1320,6 +1356,8 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     assert(ContextIdToAllocationType.count(OldId));
     // The new context has the same allocation type as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
+    if (DotAllocContextIds.contains(OldId))
+      DotAllocContextIds.insert(LastContextId);
   }
   return NewContextIds;
 }
@@ -2080,6 +2118,10 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
                 AllocNode, StackContext, CallsiteContext,
                 getMIBAllocType(MIBMD), ContextSizeInfo);
           }
+          // If exporting the graph to dot and an allocation id of interest was
+          // specified, record all the context ids for this allocation node.
+          if (ExportToDot && AllocNode->OrigStackOrAllocId == AllocIdForDot)
+            DotAllocContextIds = AllocNode->getContextIds();
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Memprof and callsite metadata on memory allocations no longer
           // needed.
@@ -2107,6 +2149,8 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
   updateStackNodes();
 
   handleCallsitesWithMultipleTargets();
+
+  markBackedges();
 
   // Strip off remaining callsite metadata, no longer needed.
   for (auto &FuncEntry : FuncToCallsWithMetadata)
@@ -2170,6 +2214,10 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
                 ContextSizeInfo);
             I++;
           }
+          // If exporting the graph to dot and an allocation id of interest was
+          // specified, record all the context ids for this allocation node.
+          if (ExportToDot && AllocNode->OrigStackOrAllocId == AllocIdForDot)
+            DotAllocContextIds = AllocNode->getContextIds();
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Initialize version 0 on the summary alloc node to the current alloc
           // type, unless it has both types in which case make it default, so
@@ -2204,6 +2252,8 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   updateStackNodes();
 
   handleCallsitesWithMultipleTargets();
+
+  markBackedges();
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -2949,6 +2999,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
           if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
             OS << " marked " << getAllocTypeString((uint8_t)AllocTypeFromCall)
                << " due to cold byte percent";
+          // Print the internal context id to aid debugging and visualization.
+          OS << " (context id " << Id << ")";
           OS << "\n";
         }
       }
@@ -3013,7 +3065,16 @@ struct GraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *> {
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
     : public DefaultDOTGraphTraits {
-  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
+  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {
+    // If the user requested the full graph to be exported, but provided an
+    // allocation id, or if the user gave a context id and requested more than
+    // just a specific context to be exported, note that highlighting is
+    // enabled.
+    DoHighlight =
+        (AllocIdForDot.getNumOccurrences() && DotGraphScope == DotScope::All) ||
+        (ContextIdForDot.getNumOccurrences() &&
+         DotGraphScope != DotScope::Context);
+  }
 
   using GraphType = const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *;
   using GTraits = GraphTraits<GraphType>;
@@ -3041,13 +3102,29 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
     return LabelString;
   }
 
-  static std::string getNodeAttributes(NodeRef Node, GraphType) {
+  static std::string getNodeAttributes(NodeRef Node, GraphType G) {
+    auto ContextIds = Node->getContextIds();
+    // If highlighting enabled, see if this node contains any of the context ids
+    // of interest. If so, it will use a different color and a larger fontsize
+    // (which makes the node larger as well).
+    bool Highlight = false;
+    if (DoHighlight) {
+      assert(ContextIdForDot.getNumOccurrences() ||
+             AllocIdForDot.getNumOccurrences());
+      if (ContextIdForDot.getNumOccurrences())
+        Highlight = ContextIds.contains(ContextIdForDot);
+      else
+        Highlight = set_intersects(ContextIds, G->DotAllocContextIds);
+    }
     std::string AttributeString = (Twine("tooltip=\"") + getNodeId(Node) + " " +
-                                   getContextIds(Node->getContextIds()) + "\"")
+                                   getContextIds(ContextIds) + "\"")
                                       .str();
+    // Default fontsize is 14
+    if (Highlight)
+      AttributeString += ",fontsize=\"30\"";
     AttributeString +=
-        (Twine(",fillcolor=\"") + getColor(Node->AllocTypes) + "\"").str();
-    AttributeString += ",style=\"filled\"";
+        (Twine(",fillcolor=\"") + getColor(Node->AllocTypes, Highlight) + "\"")
+            .str();
     if (Node->CloneOf) {
       AttributeString += ",color=\"blue\"";
       AttributeString += ",style=\"filled,bold,dashed\"";
@@ -3057,17 +3134,48 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
   }
 
   static std::string getEdgeAttributes(NodeRef, ChildIteratorType ChildIter,
-                                       GraphType) {
+                                       GraphType G) {
     auto &Edge = *(ChildIter.getCurrent());
-    return (Twine("tooltip=\"") + getContextIds(Edge->ContextIds) + "\"" +
-            Twine(",fillcolor=\"") + getColor(Edge->AllocTypes) + "\"")
-        .str();
+    // If highlighting enabled, see if this edge contains any of the context ids
+    // of interest. If so, it will use a different color and a heavier arrow
+    // size and weight (the larger weight makes the highlighted path
+    // straighter).
+    bool Highlight = false;
+    if (DoHighlight) {
+      assert(ContextIdForDot.getNumOccurrences() ||
+             AllocIdForDot.getNumOccurrences());
+      if (ContextIdForDot.getNumOccurrences())
+        Highlight = Edge->ContextIds.contains(ContextIdForDot);
+      else
+        Highlight = set_intersects(Edge->ContextIds, G->DotAllocContextIds);
+    }
+    auto Color = getColor(Edge->AllocTypes, Highlight);
+    std::string AttributeString =
+        (Twine("tooltip=\"") + getContextIds(Edge->ContextIds) + "\"" +
+         // fillcolor is the arrow head and color is the line
+         Twine(",fillcolor=\"") + Color + "\"" + Twine(",color=\"") + Color +
+         "\"")
+            .str();
+    if (Edge->IsBackedge)
+      AttributeString += ",style=\"dotted\"";
+    // Default penwidth and weight are both 1.
+    if (Highlight)
+      AttributeString += ",penwidth=\"2.0\",weight=\"2\"";
+    return AttributeString;
   }
 
   // Since the NodeOwners list includes nodes that are no longer connected to
   // the graph, skip them here.
-  static bool isNodeHidden(NodeRef Node, GraphType) {
-    return Node->isRemoved();
+  static bool isNodeHidden(NodeRef Node, GraphType G) {
+    if (Node->isRemoved())
+      return true;
+    // If a scope smaller than the full graph was requested, see if this node
+    // contains any of the context ids of interest.
+    if (DotGraphScope == DotScope::Alloc)
+      return !set_intersects(Node->getContextIds(), G->DotAllocContextIds);
+    if (DotGraphScope == DotScope::Context)
+      return !Node->getContextIds().contains(ContextIdForDot);
+    return false;
   }
 
 private:
@@ -3084,16 +3192,20 @@ private:
     return IdString;
   }
 
-  static std::string getColor(uint8_t AllocTypes) {
+  static std::string getColor(uint8_t AllocTypes, bool Highlight) {
+    // If DoHighlight is not enabled, we want to use the highlight colors for
+    // NotCold and Cold, and the non-highlight color for NotCold+Cold. This is
+    // both compatible with the color scheme before highlighting was supported,
+    // and for the NotCold+Cold color the non-highlight color is a bit more
+    // readable.
     if (AllocTypes == (uint8_t)AllocationType::NotCold)
       // Color "brown1" actually looks like a lighter red.
-      return "brown1";
+      return !DoHighlight || Highlight ? "brown1" : "lightpink";
     if (AllocTypes == (uint8_t)AllocationType::Cold)
-      return "cyan";
+      return !DoHighlight || Highlight ? "cyan" : "lightskyblue";
     if (AllocTypes ==
         ((uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold))
-      // Lighter purple.
-      return "mediumorchid1";
+      return Highlight ? "magenta" : "mediumorchid1";
     return "gray";
   }
 
@@ -3103,7 +3215,16 @@ private:
     std::string Result = SStream.str();
     return Result;
   }
+
+  // True if we should highlight a specific context or allocation's contexts in
+  // the emitted graph.
+  static bool DoHighlight;
 };
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+bool DOTGraphTraits<
+    const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>::DoHighlight =
+    false;
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::exportToDot(
@@ -3403,6 +3524,27 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 
 // This is the standard DFS based backedge discovery algorithm.
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::markBackedges() {
+  // If we are cloning recursive contexts, find and mark backedges from all root
+  // callers, using the typical DFS based backedge analysis.
+  if (!CloneRecursiveContexts)
+    return;
+  DenseSet<const ContextNode *> Visited;
+  DenseSet<const ContextNode *> CurrentStack;
+  for (auto &Entry : NonAllocationCallToContextNodeMap) {
+    auto *Node = Entry.second;
+    if (Node->isRemoved())
+      continue;
+    // It is a root if it doesn't have callers.
+    if (!Node->CallerEdges.empty())
+      continue;
+    markBackedges(Node, Visited, CurrentStack);
+    assert(CurrentStack.empty());
+  }
+}
+
+// Recursive helper for above markBackedges method.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::markBackedges(
     ContextNode *Node, DenseSet<const ContextNode *> &Visited,
     DenseSet<const ContextNode *> &CurrentStack) {
@@ -3427,22 +3569,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::markBackedges(
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones() {
-  // If we are cloning recursive contexts, find and mark backedges from all root
-  // callers, using the typical DFS based backedge analysis.
   DenseSet<const ContextNode *> Visited;
-  if (CloneRecursiveContexts) {
-    DenseSet<const ContextNode *> CurrentStack;
-    for (auto &Entry : NonAllocationCallToContextNodeMap) {
-      auto *Node = Entry.second;
-      if (Node->isRemoved())
-        continue;
-      // It is a root if it doesn't have callers.
-      if (!Node->CallerEdges.empty())
-        continue;
-      markBackedges(Node, Visited, CurrentStack);
-      assert(CurrentStack.empty());
-    }
-  }
   for (auto &Entry : AllocationCallToContextNodeMap) {
     Visited.clear();
     identifyClones(Entry.second, Visited, Entry.second->getContextIds());
@@ -5161,6 +5288,20 @@ bool MemProfContextDisambiguation::processModule(
 MemProfContextDisambiguation::MemProfContextDisambiguation(
     const ModuleSummaryIndex *Summary, bool isSamplePGO)
     : ImportSummary(Summary), isSamplePGO(isSamplePGO) {
+  // Check the dot graph printing options once here, to make sure we have valid
+  // and expected combinations.
+  if (DotGraphScope == DotScope::Alloc && !AllocIdForDot.getNumOccurrences())
+    llvm::report_fatal_error(
+        "-memprof-dot-scope=alloc requires -memprof-dot-alloc-id");
+  if (DotGraphScope == DotScope::Context &&
+      !ContextIdForDot.getNumOccurrences())
+    llvm::report_fatal_error(
+        "-memprof-dot-scope=context requires -memprof-dot-context-id");
+  if (DotGraphScope == DotScope::All && AllocIdForDot.getNumOccurrences() &&
+      ContextIdForDot.getNumOccurrences())
+    llvm::report_fatal_error(
+        "-memprof-dot-scope=all can't have both -memprof-dot-alloc-id and "
+        "-memprof-dot-context-id");
   if (ImportSummary) {
     // The MemProfImportSummary should only be used for testing ThinLTO
     // distributed backend handling via opt, in which case we don't have a

@@ -815,10 +815,9 @@ protected:
         for (const std::string &line : lines) {
           Status error = AppendRegexSubstitution(line, check_only);
           if (error.Fail()) {
-            if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode()) {
-              StreamSP out_stream = GetDebugger().GetAsyncOutputStream();
-              out_stream->Printf("error: %s\n", error.AsCString());
-            }
+            if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode())
+              GetDebugger().GetAsyncOutputStream()->Printf("error: %s\n",
+                                                           error.AsCString());
           }
         }
       }

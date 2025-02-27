@@ -305,6 +305,7 @@ class PrologEpilogSGPRSpillBuilder {
 
       buildEpilogRestore(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MI, DL,
                          TmpVGPR, FI, FrameReg, DwordOff);
+      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), SubReg)
           .addReg(TmpVGPR, RegState::Kill);
       DwordOff += 4;
@@ -1719,11 +1720,12 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
     NumModifiedRegs++;
 
   for (auto &CS : CSI) {
-    if (CS.getReg() == FramePtrReg && SGPRForFPSaveRestoreCopy) {
+    if (CS.getReg() == FramePtrReg.asMCReg() && SGPRForFPSaveRestoreCopy) {
       CS.setDstReg(SGPRForFPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;
-    } else if (CS.getReg() == BasePtrReg && SGPRForBPSaveRestoreCopy) {
+    } else if (CS.getReg() == BasePtrReg.asMCReg() &&
+               SGPRForBPSaveRestoreCopy) {
       CS.setDstReg(SGPRForBPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;

@@ -114,7 +114,7 @@ public:
   bool
   getRegSeqInit(SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Defs,
                 Register UseReg, uint8_t OpTy) const;
-  bool tryToFoldACImm(const MachineOperand &OpToFold, MachineInstr *UseMI,
+  bool tryToFoldACImm(MachineOperand &OpToFold, MachineInstr *UseMI,
                       unsigned UseOpIdx,
                       SmallVectorImpl<FoldCandidate> &FoldList) const;
   void foldOperand(MachineOperand &OpToFold,
@@ -575,11 +575,6 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   return true;
 }
 
-static bool isUseMIInFoldList(ArrayRef<FoldCandidate> FoldList,
-                              const MachineInstr *MI) {
-  return any_of(FoldList, [&](const auto &C) { return C.UseMI == MI; });
-}
-
 static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
                                 MachineInstr *MI, unsigned OpNo,
                                 MachineOperand *FoldOp, bool Commuted = false,
@@ -680,12 +675,6 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       }
     }
 
-    // If we are already folding into another operand of MI, then
-    // we can't commute the instruction, otherwise we risk making the
-    // other fold illegal.
-    if (isUseMIInFoldList(FoldList, MI))
-      return false;
-
     // Operand is not legal, so try to commute the instruction to
     // see if this makes it possible to fold.
     unsigned CommuteOpNo = TargetInstrInfo::CommuteAnyOperandIndex;
@@ -693,11 +682,21 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (!CanCommute)
       return false;
 
+    MachineOperand &Op = MI->getOperand(OpNo);
+    MachineOperand &CommutedOp = MI->getOperand(CommuteOpNo);
+
     // One of operands might be an Imm operand, and OpNo may refer to it after
     // the call of commuteInstruction() below. Such situations are avoided
     // here explicitly as OpNo must be a register operand to be a candidate
     // for memory folding.
-    if (!MI->getOperand(OpNo).isReg() || !MI->getOperand(CommuteOpNo).isReg())
+    if (!Op.isReg() || !CommutedOp.isReg())
+      return false;
+
+    // The same situation with an immediate could reproduce if both inputs are
+    // the same register.
+    if (Op.isReg() && CommutedOp.isReg() &&
+        (Op.getReg() == CommutedOp.getReg() &&
+         Op.getSubReg() == CommutedOp.getSubReg()))
       return false;
 
     if (!TII->commuteInstruction(*MI, false, OpNo, CommuteOpNo))
@@ -816,18 +815,19 @@ bool SIFoldOperandsImpl::getRegSeqInit(
 }
 
 bool SIFoldOperandsImpl::tryToFoldACImm(
-    const MachineOperand &OpToFold, MachineInstr *UseMI, unsigned UseOpIdx,
+    MachineOperand &OpToFold, MachineInstr *UseMI, unsigned UseOpIdx,
     SmallVectorImpl<FoldCandidate> &FoldList) const {
   const MCInstrDesc &Desc = UseMI->getDesc();
   if (UseOpIdx >= Desc.getNumOperands())
     return false;
 
-  if (!AMDGPU::isSISrcInlinableOperand(Desc, UseOpIdx))
+  // Filter out unhandled pseudos.
+  if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
   uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
   if (OpToFold.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &OpToFold)) {
-    UseMI->getOperand(UseOpIdx).ChangeToImmediate(OpToFold.getImm());
+    appendFoldCandidate(FoldList, UseMI, UseOpIdx, &OpToFold);
     return true;
   }
 
@@ -838,16 +838,13 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (!UseReg.isVirtual())
     return false;
 
-  if (isUseMIInFoldList(FoldList, UseMI))
-    return false;
-
   // Maybe it is just a COPY of an immediate itself.
   MachineInstr *Def = MRI->getVRegDef(UseReg);
   MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
   if (!UseOp.getSubReg() && Def && TII->isFoldableCopy(*Def)) {
     MachineOperand &DefOp = Def->getOperand(1);
     if (DefOp.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &DefOp)) {
-      UseMI->getOperand(UseOpIdx).ChangeToImmediate(DefOp.getImm());
+      appendFoldCandidate(FoldList, UseMI, UseOpIdx, &DefOp);
       return true;
     }
   }
@@ -1084,13 +1081,11 @@ void SIFoldOperandsImpl::foldOperand(
           }
 
           if (CopyToVGPR.Reg) {
-            Register Vgpr;
-            if (VGPRCopies.count(CopyToVGPR)) {
-              Vgpr = VGPRCopies[CopyToVGPR];
-            } else {
+            auto [It, Inserted] = VGPRCopies.try_emplace(CopyToVGPR);
+            Register &Vgpr = It->second;
+            if (Inserted) {
               Vgpr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
               BuildMI(MBB, UseMI, DL, TII->get(AMDGPU::COPY), Vgpr).add(*Def);
-              VGPRCopies[CopyToVGPR] = Vgpr;
             }
             auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
             BuildMI(MBB, UseMI, DL,

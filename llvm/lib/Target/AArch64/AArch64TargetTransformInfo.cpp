@@ -3545,19 +3545,58 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       return Cost;
     }
     [[fallthrough]];
-  case ISD::UDIV: {
+  case ISD::UDIV:
+  case ISD::UREM: {
     auto VT = TLI->getValueType(DL, Ty);
-    if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
+    if (Op2Info.isConstant()) {
+      // If the operand is a power of 2 we can use the shift or and cost.
+      if (ISD == ISD::UDIV && Op2Info.isPowerOf2())
+        return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                      Op1Info.getNoProps(),
+                                      Op2Info.getNoProps());
+      if (ISD == ISD::UREM && Op2Info.isPowerOf2())
+        return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
+                                      Op1Info.getNoProps(),
+                                      Op2Info.getNoProps());
+
+      if (ISD == ISD::UDIV || ISD == ISD::UREM) {
+        // Divides by a constant are expanded to MULHU + SUB + SRL + ADD + SRL.
+        // The MULHU will be expanded to UMULL for the types not listed below,
+        // and will become a pair of UMULL+MULL2 for 128bit vectors.
+        bool HasMULH = VT == MVT::i64 || LT.second == MVT::nxv2i64 ||
+                       LT.second == MVT::nxv4i32 || LT.second == MVT::nxv8i16 ||
+                       LT.second == MVT::nxv16i8;
+        bool Is128bit = LT.second.is128BitVector();
+
+        InstructionCost MulCost =
+            getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        InstructionCost AddCost =
+            getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        InstructionCost ShrCost =
+            getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        InstructionCost DivCost = MulCost * (Is128bit ? 2 : 1) + // UMULL/UMULH
+                                  (HasMULH ? 0 : ShrCost) +      // UMULL shift
+                                  AddCost * 2 + ShrCost;
+        return DivCost + (ISD == ISD::UREM ? MulCost + AddCost : 0);
+      }
+
+      // TODO: Fix SDIV and SREM costs, similar to the above.
+      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT) &&
+          Op2Info.isUniform() && !VT.isScalableVector()) {
         // Vector signed division by constant are expanded to the
-        // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
-        // to MULHS + SUB + SRL + ADD + SRL.
-        InstructionCost MulCost = getArithmeticInstrCost(
-            Instruction::Mul, Ty, CostKind, Op1Info.getNoProps(), Op2Info.getNoProps());
-        InstructionCost AddCost = getArithmeticInstrCost(
-            Instruction::Add, Ty, CostKind, Op1Info.getNoProps(), Op2Info.getNoProps());
-        InstructionCost ShrCost = getArithmeticInstrCost(
-            Instruction::AShr, Ty, CostKind, Op1Info.getNoProps(), Op2Info.getNoProps());
+        // sequence MULHS + ADD/SUB + SRA + SRL + ADD.
+        InstructionCost MulCost =
+            getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        InstructionCost AddCost =
+            getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+        InstructionCost ShrCost =
+            getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
         return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
@@ -3570,7 +3609,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     InstructionCost Cost = BaseT::getArithmeticInstrCost(
         Opcode, Ty, CostKind, Op1Info, Op2Info);
-    if (Ty->isVectorTy()) {
+    if (Ty->isVectorTy() && (ISD == ISD::SDIV || ISD == ISD::UDIV)) {
       if (TLI->isOperationLegalOrCustom(ISD, LT.second) && ST->hasSVE()) {
         // SDIV/UDIV operations are lowered using SVE, then we can have less
         // costs.
@@ -4955,6 +4994,12 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
       (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 16) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 32) ||
+       isREVMask(Mask, LT.second.getScalarSizeInBits(),
+                 LT.second.getVectorNumElements(), 64) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))
@@ -5022,9 +5067,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Reverse, MVT::v4f32, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v2f64, 1}, // EXT
         {TTI::SK_Reverse, MVT::v8f16, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v8bf16, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v8i16, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v16i8, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v4f16, 1}, // REV64
+        {TTI::SK_Reverse, MVT::v4bf16, 1}, // REV64
         {TTI::SK_Reverse, MVT::v4i16, 1}, // REV64
         {TTI::SK_Reverse, MVT::v8i8, 1},  // REV64
         // Splice can all be lowered as `ext`.
@@ -5038,8 +5085,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Splice, MVT::v8bf16, 1},
         {TTI::SK_Splice, MVT::v8i16, 1},
         {TTI::SK_Splice, MVT::v16i8, 1},
-        {TTI::SK_Splice, MVT::v4bf16, 1},
         {TTI::SK_Splice, MVT::v4f16, 1},
+        {TTI::SK_Splice, MVT::v4bf16, 1},
         {TTI::SK_Splice, MVT::v4i16, 1},
         {TTI::SK_Splice, MVT::v8i8, 1},
         // Broadcast shuffle kinds for scalable vectors

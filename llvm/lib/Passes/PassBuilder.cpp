@@ -114,6 +114,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -129,6 +130,7 @@
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
@@ -1332,9 +1334,9 @@ Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
   return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
 }
 
-Expected<RegAllocFastPassOptions>
+Expected<RegAllocFastPass::Options>
 parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
-  RegAllocFastPassOptions Opts;
+  RegAllocFastPass::Options Opts;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');

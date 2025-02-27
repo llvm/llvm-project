@@ -201,6 +201,29 @@ static StructType *getResRetType(Type *ElementTy) {
   return getOrCreateStructType(TypeName, FieldTypes, Ctx);
 }
 
+static StructType *getCBufRetType(Type *ElementTy) {
+  LLVMContext &Ctx = ElementTy->getContext();
+  OverloadKind Kind = getOverloadKind(ElementTy);
+  std::string TypeName = constructOverloadTypeName(Kind, "dx.types.CBufRet.");
+
+  // 64-bit types only have two elements
+  if (ElementTy->isDoubleTy() || ElementTy->isIntegerTy(64))
+    return getOrCreateStructType(TypeName, {ElementTy, ElementTy}, Ctx);
+
+  // 16-bit types pack 8 elements and have .8 in their name to differentiate
+  // from min-precision types.
+  if (ElementTy->isHalfTy() || ElementTy->isIntegerTy(16)) {
+    TypeName += ".8";
+    return getOrCreateStructType(TypeName,
+                                 {ElementTy, ElementTy, ElementTy, ElementTy,
+                                  ElementTy, ElementTy, ElementTy, ElementTy},
+                                 Ctx);
+  }
+
+  return getOrCreateStructType(
+      TypeName, {ElementTy, ElementTy, ElementTy, ElementTy}, Ctx);
+}
+
 static StructType *getHandleType(LLVMContext &Ctx) {
   return getOrCreateStructType("dx.types.Handle", PointerType::getUnqual(Ctx),
                                Ctx);
@@ -265,6 +288,18 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResRetType(Type::getInt32Ty(Ctx));
   case OpParamType::ResRetInt64Ty:
     return getResRetType(Type::getInt64Ty(Ctx));
+  case OpParamType::CBufRetHalfTy:
+    return getCBufRetType(Type::getHalfTy(Ctx));
+  case OpParamType::CBufRetFloatTy:
+    return getCBufRetType(Type::getFloatTy(Ctx));
+  case OpParamType::CBufRetDoubleTy:
+    return getCBufRetType(Type::getDoubleTy(Ctx));
+  case OpParamType::CBufRetInt16Ty:
+    return getCBufRetType(Type::getInt16Ty(Ctx));
+  case OpParamType::CBufRetInt32Ty:
+    return getCBufRetType(Type::getInt32Ty(Ctx));
+  case OpParamType::CBufRetInt64Ty:
+    return getCBufRetType(Type::getInt64Ty(Ctx));
   case OpParamType::HandleTy:
     return getHandleType(Ctx);
   case OpParamType::ResBindTy:
@@ -535,8 +570,8 @@ StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
   return ::getResRetType(ElementTy);
 }
 
-StructType *DXILOpBuilder::getSplitDoubleType(LLVMContext &Context) {
-  return ::getSplitDoubleType(Context);
+StructType *DXILOpBuilder::getCBufRetType(Type *ElementTy) {
+  return ::getCBufRetType(ElementTy);
 }
 
 StructType *DXILOpBuilder::getHandleType() {

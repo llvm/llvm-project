@@ -229,8 +229,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType));
       if (GVSum.Aliasee) {
         auto ASum = std::make_unique<AliasSummary>(GVFlags);
-        if (!V.count(*GVSum.Aliasee))
-          V.emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
+        V.try_emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
         ValueInfo AliaseeVI(/*IsAnalysis=*/false, &*V.find(*GVSum.Aliasee));
         // Note: Aliasee cannot be filled until all summaries are loaded.
         // This is done in fixAliaseeLinks() which is called in

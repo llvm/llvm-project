@@ -581,6 +581,23 @@ not_taken:
   ret i1 %control
 }
 
+define void @nonnull_only_ephemeral_use(ptr %p) {
+; DEFAULT-LABEL: @nonnull_only_ephemeral_use(
+; DEFAULT-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[A]], null
+; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @nonnull_only_ephemeral_use(
+; BUNDLES-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[A]]) ]
+; BUNDLES-NEXT:    ret void
+;
+  %a = load ptr, ptr %p
+  %cmp = icmp ne ptr %a, null
+  tail call void @llvm.assume(i1 %cmp)
+  ret void
+}
 
 define void @always_true_assumption() {
 ; CHECK-LABEL: @always_true_assumption(
