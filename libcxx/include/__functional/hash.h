@@ -237,6 +237,14 @@ private:
   }
 };
 
+#if _LIBCPP_AVAILABILITY_HAS_HASH
+[[__gnu__::__pure__]] _LIBCPP_EXPORTED_FROM_ABI size_t __hash_memory(_LIBCPP_NOESCAPE const void*, size_t) _NOEXCEPT;
+#else
+_LIBCPP_HIDE_FROM_ABI inline size_t __hash_memory(const void* __ptr, size_t __size) _NOEXCEPT {
+  return __murmur2_or_cityhash<size_t>()(__ptr, __size);
+}
+#endif
+
 template <class _Tp, size_t = sizeof(_Tp) / sizeof(size_t)>
 struct __scalar_hash;
 
@@ -276,7 +284,7 @@ struct __scalar_hash<_Tp, 2> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(&__u, sizeof(__u));
   }
 };
 
@@ -292,7 +300,7 @@ struct __scalar_hash<_Tp, 3> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(&__u, sizeof(__u));
   }
 };
 
@@ -309,7 +317,7 @@ struct __scalar_hash<_Tp, 4> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(&__u, sizeof(__u));
   }
 };
 
@@ -332,7 +340,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<_Tp*> : public __unary_function<_Tp*, size_t> {
       size_t __a;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(&__u, sizeof(__u));
   }
 };
 
