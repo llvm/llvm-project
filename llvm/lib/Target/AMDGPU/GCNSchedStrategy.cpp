@@ -1099,6 +1099,13 @@ bool PreRARematStage::initGCNSchedStage() {
       DAG.Regions.size() == 1 || !canIncreaseOccupancyOrReduceSpill())
     return false;
 
+  // Map all MIs to their parent region.
+  for (unsigned I = 0, E = DAG.Regions.size(); I < E; ++I) {
+    RegionBoundaries Region = DAG.Regions[I];
+    for (auto MI = Region.first; MI != Region.second; ++MI)
+      MIRegion.insert({&*MI, I});
+  }
+
   // Rematerialize identified instructions and update scheduler's state.
   rematerialize();
   if (GCNTrackers)
@@ -1841,7 +1848,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   // Cache set of registers that are going to be rematerialized.
   DenseSet<unsigned> RematRegs;
 
-  // identify rematerializable instructions in the function.
+  // Identify rematerializable instructions in the function.
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     auto Region = DAG.Regions[I];
     for (auto MI = Region.first; MI != Region.second; ++MI) {
@@ -1885,7 +1892,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
 
       REMAT_DEBUG(dbgs() << "Region " << I << ": remat instruction " << DefMI);
       RematInstruction &Remat =
-          Rematerializations.try_emplace(&DefMI, I, UseMI).first->second;
+          Rematerializations.try_emplace(&DefMI, UseMI).first->second;
 
       bool RematUseful = false;
       if (auto It = OptRegions.find(I); It != OptRegions.end()) {
@@ -1957,6 +1964,7 @@ void PreRARematStage::rematerialize() {
     MachineBasicBlock::iterator InsertPos(Remat.UseMI);
     Register Reg = DefMI->getOperand(0).getReg();
     unsigned SubReg = DefMI->getOperand(0).getSubReg();
+    unsigned DefRegion = MIRegion.at(DefMI);
 
     // Rematerialize DefMI to its use block.
     TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg, SubReg, *DefMI,
@@ -1968,8 +1976,12 @@ void PreRARematStage::rematerialize() {
     // Update region boundaries in regions we sinked from (remove defining MI)
     // and to (insert MI rematerialized in use block). Only then we can erase
     // the original MI.
-    DAG.updateRegionBoundaries(DAG.Regions, DefMI, nullptr);
-    DAG.updateRegionBoundaries(DAG.Regions, InsertPos, Remat.RematMI);
+    DAG.updateRegionBoundaries(DAG.Regions[DefRegion], DefMI, nullptr);
+    auto UseRegion = MIRegion.find(Remat.UseMI);
+    if (UseRegion != MIRegion.end()) {
+      DAG.updateRegionBoundaries(DAG.Regions[UseRegion->second], InsertPos,
+                                 Remat.RematMI);
+    }
     DefMI->eraseFromParent();
     DAG.LIS->RemoveMachineInstrFromMaps(*DefMI);
 
@@ -2024,8 +2036,8 @@ void PreRARematStage::rematerialize() {
     }
     // RP in the region from which the instruction was rematerialized may or may
     // not decrease.
-    ImpactedRegions.insert({Remat.DefRegion, DAG.Pressure[Remat.DefRegion]});
-    RecomputeRP.insert(Remat.DefRegion);
+    ImpactedRegions.insert({DefRegion, DAG.Pressure[DefRegion]});
+    RecomputeRP.insert(DefRegion);
 
     // Update the register's live interval manually. This is aligned with the
     // instruction collection phase in that it assumes a single def and use
@@ -2149,10 +2161,11 @@ void PreRARematStage::finalizeGCNSchedStage() {
       static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
   // Rollback the rematerializations.
-  for (const auto &[_, Remat] : Rematerializations) {
+  for (const auto &[DefMI, Remat] : Rematerializations) {
     MachineInstr &RematMI = *Remat.RematMI;
-    MachineBasicBlock::iterator InsertPos(DAG.Regions[Remat.DefRegion].second);
-    MachineBasicBlock *MBB = getRegionMBB(MF, DAG.Regions[Remat.DefRegion]);
+    unsigned DefRegion = MIRegion.at(DefMI);
+    MachineBasicBlock::iterator InsertPos(DAG.Regions[DefRegion].second);
+    MachineBasicBlock *MBB = getRegionMBB(MF, DAG.Regions[DefRegion]);
     Register Reg = RematMI.getOperand(0).getReg();
     unsigned SubReg = RematMI.getOperand(0).getSubReg();
 
@@ -2163,6 +2176,13 @@ void PreRARematStage::finalizeGCNSchedStage() {
     MachineInstr *NewMI = &*std::prev(InsertPos);
     NewMI->getOperand(0).setSubReg(SubReg);
     DAG.LIS->InsertMachineInstrInMaps(*NewMI);
+
+    auto UseRegion = MIRegion.find(Remat.UseMI);
+    if (UseRegion != MIRegion.end()) {
+      DAG.updateRegionBoundaries(DAG.Regions[UseRegion->second], RematMI,
+                                 nullptr);
+    }
+    DAG.updateRegionBoundaries(DAG.Regions[DefRegion], InsertPos, NewMI);
 
     // Erase rematerialized MI.
     RematMI.eraseFromParent();
@@ -2185,49 +2205,25 @@ void PreRARematStage::finalizeGCNSchedStage() {
 }
 
 void GCNScheduleDAGMILive::updateRegionBoundaries(
-    SmallVectorImpl<RegionBoundaries> &RegionBoundaries,
-    MachineBasicBlock::iterator MI, MachineInstr *NewMI) {
-  unsigned I = 0, E = RegionBoundaries.size();
-  // Search for first region of the block where MI is located. We may encounter
-  // an empty region if all instructions from an initially non-empty region were
-  // removed.
-  while (I != E && RegionBoundaries[I].first != RegionBoundaries[I].second &&
-         MI->getParent() != RegionBoundaries[I].first->getParent())
-    ++I;
+    RegionBoundaries &RegionBounds, MachineBasicBlock::iterator MI,
+    MachineInstr *NewMI) {
+  assert(!NewMI ||
+         NewMI != RegionBounds.second && "cannot remove at region end");
 
-  for (; I != E; ++I) {
-    auto &Bounds = RegionBoundaries[I];
-    assert(MI != Bounds.second && "cannot insert at region end");
-    assert(!NewMI || NewMI != Bounds.second && "cannot remove at region end");
-
-    // We may encounter an empty region if all of the region' instructions were
-    // previously removed.
-    if (Bounds.first == Bounds.second) {
-      if (MI->getParent()->end() != Bounds.second)
-        return;
-      continue;
-    }
-    if (MI->getParent() != Bounds.first->getParent())
-      return;
-
-    // We only care for modifications at the beginning of the region since the
-    // upper region boundary is exclusive.
-    if (MI != Bounds.first)
-      continue;
-    if (!NewMI) {
-      // This is an MI removal, which may leave the region empty; in such cases
-      // set both boundaries to the removed instruction's MBB's end.
-      MachineBasicBlock::iterator NextMI = std::next(MI);
-      if (NextMI != Bounds.second)
-        Bounds.first = NextMI;
-      else
-        Bounds.first = Bounds.second;
-    } else {
-      // This is an MI insertion at the beggining of the region.
-      Bounds.first = NewMI;
-    }
+  if (RegionBounds.first == RegionBounds.second) {
+    assert(NewMI && "cannot remove from an empty region");
+    RegionBounds.first = NewMI;
     return;
   }
+
+  // We only care for modifications at the beginning of a non-empty region since
+  // the upper region boundary is exclusive.
+  if (MI != RegionBounds.first)
+    return;
+  if (!NewMI)
+    RegionBounds.first = std::next(MI); // Removal
+  else
+    RegionBounds.first = NewMI; // Insertion
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
