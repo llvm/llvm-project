@@ -3577,9 +3577,8 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
                          uint64_t EltSize) {
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V)) {
-    if (!checkOffsets(SE, AddRec->getStart(), Param, EltSize))
-      return false;
-    return checkOffsets(SE, AddRec->getStepRecurrence(*SE), Param, EltSize);
+    return checkOffsets(SE, AddRec->getStart(), Param, EltSize) &&
+      checkOffsets(SE, AddRec->getStepRecurrence(*SE), Param, EltSize);
   }
   if (auto *Cst = dyn_cast<SCEVConstant>(V)) {
     APInt C = Cst->getAPInt();
