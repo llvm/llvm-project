@@ -146,7 +146,7 @@ return:                                           ; preds = %cond.end, %if.then3
 ; TEST SCC test returning a pointer value argument
 ;
 ; FNATTR: define ptr @ptr_sink_r0(ptr readnone returned %r)
-; FNATTR: define ptr @ptr_scc_r1(ptr %a, ptr readnone %r, ptr nocapture readnone %b)
+; FNATTR: define ptr @ptr_scc_r1(ptr %a, ptr readnone %r, ptr readnone captures(none) %b)
 ; FNATTR: define ptr @ptr_scc_r2(ptr readnone %a, ptr readnone %b, ptr readnone %r)
 ;
 ;
@@ -248,7 +248,7 @@ entry:
 ;   return *a ? undef : rt1(a);
 ; }
 ;
-; FNATTR:  define noalias ptr @rt1(ptr nocapture readonly %a)
+; FNATTR:  define noalias ptr @rt1(ptr readonly captures(none) %a)
 define ptr @rt1(ptr %a) #0 {
 entry:
   %v = load i32, ptr %a, align 4

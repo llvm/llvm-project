@@ -168,7 +168,8 @@ add_libc_test(
     .strtol_test_support
 )
 
-if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   list(APPEND strfrom_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
@@ -218,6 +219,16 @@ add_libc_test(
     libc.src.stdlib.strfroml
   COMPILE_OPTIONS
     ${strfrom_test_copts}
+)
+
+add_libc_test(
+  a64l_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    a64l_test.cpp
+  DEPENDS
+    libc.src.stdlib.a64l
 )
 
 add_libc_test(

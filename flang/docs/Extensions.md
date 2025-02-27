@@ -141,6 +141,10 @@ end
   This interpretation has usability advantages and is what six other
   Fortran compilers do, but is not conforming now that J3 approved an
   "interp" in June 2024 to the contrary.
+* When an Arm processor raises an `ieee_overflow` or `ieee_underflow`
+  exception, the `ieee_inexact` exception is also raised. This happens
+  for a call to `ieee_set_flag` as well as for floating point expression
+  evaluation.
 * Arm has processors that allow a user to control what happens when an
   arithmetic exception is signaled, as well as processors that do not
   have this capability. An Arm executable will run on either type of
@@ -411,6 +415,8 @@ end
   is accepted before an array specification (`ch*3(2)`) as well
   as afterwards.
 * A zero field width is allowed for logical formatted output (`L0`).
+* `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
+  the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
 
 ### Extensions supported when enabled by options
 
@@ -808,6 +814,14 @@ print *, [(j,j=1,10)]
   F18 follows other widely-used Fortran compilers. Specifically, f18 assumes
   integer overflow never occurs in address calculations and increment of
   do-variable unless the option `-fwrapv` is enabled.
+
+* Two new ieee_round_type values were added in f18 beyond the four values
+  defined in f03 and f08: ieee_away and ieee_other. Contemporary hardware
+  typically does not have support for these rounding modes;
+  ieee_support_rounding calls for these values return false.
+  ieee_set_rounding_mode calls that attempt to set the rounding mode to one
+  of these values in violation of the restriction in f23 clause 17.11.42 set
+  the mode to ieee_nearest.
 
 ## De Facto Standard Features
 

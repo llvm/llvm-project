@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyTargetTransformInfo.h"
+
+#include "llvm/CodeGen/CostTable.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasmtti"
@@ -51,8 +53,7 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
 InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) {
 
   InstructionCost Cost =
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
@@ -78,6 +79,109 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
   return Cost;
 }
 
+InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
+    unsigned Opcode, Type *Dst, Type *Src, TTI::CastContextHint CCH,
+    TTI::TargetCostKind CostKind, const Instruction *I) {
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  auto SrcTy = TLI->getValueType(DL, Src);
+  auto DstTy = TLI->getValueType(DL, Dst);
+
+  if (!SrcTy.isSimple() || !DstTy.isSimple()) {
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+  }
+
+  if (!ST->hasSIMD128()) {
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+  }
+
+  auto DstVT = DstTy.getSimpleVT();
+  auto SrcVT = SrcTy.getSimpleVT();
+
+  if (I && I->hasOneUser()) {
+    auto *SingleUser = cast<Instruction>(*I->user_begin());
+    int UserISD = TLI->InstructionOpcodeToISD(SingleUser->getOpcode());
+
+    // extmul_low support
+    if (UserISD == ISD::MUL &&
+        (ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND)) {
+      // Free low extensions.
+      if ((SrcVT == MVT::v8i8 && DstVT == MVT::v8i16) ||
+          (SrcVT == MVT::v4i16 && DstVT == MVT::v4i32) ||
+          (SrcVT == MVT::v2i32 && DstVT == MVT::v2i64)) {
+        return 0;
+      }
+      // Will require an additional extlow operation for the intermediate
+      // i16/i32 value.
+      if ((SrcVT == MVT::v4i8 && DstVT == MVT::v4i32) ||
+          (SrcVT == MVT::v2i16 && DstVT == MVT::v2i64)) {
+        return 1;
+      }
+    }
+  }
+
+  // extend_low
+  static constexpr TypeConversionCostTblEntry ConversionTbl[] = {
+      {ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i32, 1},
+      {ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i32, 1},
+      {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 1},
+      {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 1},
+      {ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8, 1},
+      {ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8, 1},
+      {ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i16, 2},
+      {ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i16, 2},
+      {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i8, 2},
+      {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i8, 2},
+  };
+
+  if (const auto *Entry =
+          ConvertCostTableLookup(ConversionTbl, ISD, DstVT, SrcVT)) {
+    return Entry->Cost;
+  }
+
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+}
+
+InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
+    unsigned Opcode, Type *Ty, MaybeAlign Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,
+    const Instruction *I) {
+  if (!ST->hasSIMD128() || !isa<FixedVectorType>(Ty)) {
+    return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
+                                  CostKind);
+  }
+
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  if (ISD != ISD::LOAD) {
+    return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
+                                  CostKind);
+  }
+
+  EVT VT = TLI->getValueType(DL, Ty, true);
+  // Type legalization can't handle structs
+  if (VT == MVT::Other)
+    return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
+                                  CostKind);
+
+  auto LT = getTypeLegalizationCost(Ty);
+  if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
+  // 128-bit loads are a single instruction. 32-bit and 64-bit vector loads can
+  // be lowered to load32_zero and load64_zero respectively. Assume SIMD loads
+  // are twice as expensive as scalar.
+  unsigned width = VT.getSizeInBits();
+  switch (width) {
+  default:
+    break;
+  case 32:
+  case 64:
+  case 128:
+    return 2;
+  }
+
+  return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace, CostKind);
+}
+
 InstructionCost
 WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                        TTI::TargetCostKind CostKind,
@@ -90,6 +194,53 @@ WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost + 25 * TargetTransformInfo::TCC_Expensive;
 
   return Cost;
+}
+
+InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend,
+    std::optional<unsigned> BinOp) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+  if (!VF.isFixed() || !ST->hasSIMD128())
+    return Invalid;
+
+  InstructionCost Cost(TTI::TCC_Basic);
+
+  // Possible options:
+  // - i16x8.extadd_pairwise_i8x16_sx
+  // - i32x4.extadd_pairwise_i16x8_sx
+  // - i32x4.dot_i16x8_s
+  // Only try to support dot, for now.
+
+  if (Opcode != Instruction::Add)
+    return Invalid;
+
+  if (!BinOp || *BinOp != Instruction::Mul)
+    return Invalid;
+
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+
+  if (OpAExtend != OpBExtend)
+    return Invalid;
+
+  EVT InputEVT = EVT::getEVT(InputTypeA);
+  EVT AccumEVT = EVT::getEVT(AccumType);
+
+  // TODO: Add i64 accumulator.
+  if (AccumEVT != MVT::i32)
+    return Invalid;
+
+  // Signed inputs can lower to dot
+  if (InputEVT == MVT::i16 && VF.getFixedValue() == 8)
+    return OpAExtend == TTI::PR_SignExtend ? Cost : Cost * 2;
+
+  // Double the size of the lowered sequence.
+  if (InputEVT == MVT::i8 && VF.getFixedValue() == 16)
+    return OpAExtend == TTI::PR_SignExtend ? Cost * 2 : Cost * 4;
+
+  return Invalid;
 }
 
 TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(

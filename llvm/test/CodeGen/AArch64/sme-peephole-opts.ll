@@ -385,8 +385,7 @@ define void @test11(ptr %p) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x19]
+; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart sm
@@ -487,9 +486,8 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    bl callee_farg_fret
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    st1w { z0.s }, p0, [x19]
+; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload

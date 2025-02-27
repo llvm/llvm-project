@@ -43,6 +43,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     case IRMemLocation::InaccessibleMem:
       OS << "InaccessibleMem: ";
       break;
+    case IRMemLocation::ErrnoMem:
+      OS << "ErrnoMem: ";
+      break;
     case IRMemLocation::Other:
       OS << "Other: ";
       break;

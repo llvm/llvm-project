@@ -16,6 +16,7 @@
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -63,7 +64,11 @@ std::optional<unsigned> getClusterDimz(const Function &);
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
 std::optional<unsigned> getMaxNReg(const Function &);
-bool isKernelFunction(const Function &);
+
+inline bool isKernelFunction(const Function &F) {
+  return F.getCallingConv() == CallingConv::PTX_Kernel;
+}
+
 bool isParamGridConstant(const Value &);
 
 MaybeAlign getAlign(const Function &, unsigned);

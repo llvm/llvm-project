@@ -1,9 +1,11 @@
-! RUN: bbc -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL,FAST %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL,RELAXED %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL,RELAXED %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL,PRECISE %s
-! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL,PRECISE %s
+! RUN: %flang_fc1 -emit-hlfir -o - -mllvm -math-runtime=fast %s \
+! RUN: | FileCheck %s --check-prefixes=ALL,FAST%if target=x86_64{{.*}} %{,ALL-KIND10,FAST-KIND10%}
+
+! RUN: %flang_fc1 -emit-hlfir -o - -mllvm -math-runtime=relaxed %s \
+! RUN: | FileCheck %s --check-prefixes=ALL,RELAXED%if target=x86_64{{.*}} %{,ALL-KIND10,RELAXED-KIND10%}
+
+! RUN: %flang_fc1 -emit-hlfir -o - -mllvm -math-runtime=precise %s \
+! RUN: | FileCheck %s --check-prefixes=ALL,PRECISE%if target=x86_64{{.*}} %{,ALL-KIND10,PRECISE-KIND10%}
 
 function test_real4(x)
   real :: x, test_real4
@@ -26,14 +28,15 @@ end function
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f64({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
 function test_real10(x)
-  real(10) :: x, test_real10
+  integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+  real(kind10) :: x, test_real10
   test_real10 = anint(x)
 end function
 
-! ALL-LABEL: @_QPtest_real10
-! FAST: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f80) -> f80
-! RELAXED: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f80) -> f80
-! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f80({{%[A-Za-z0-9._]+}}) {{.*}}: (f80) -> f80
+! ALL-KIND10-LABEL: @_QPtest_real10
+! FAST-KIND10: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f80) -> f80
+! RELAXED-KIND10: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f80) -> f80
+! PRECISE-KIND10: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f80({{%[A-Za-z0-9._]+}}) {{.*}}: (f80) -> f80
 
 ! TODO: wait until fp128 is supported well in llvm.round
 !function test_real16(x)
@@ -43,4 +46,4 @@ end function
 
 ! PRECISE-DAG: func.func private @llvm.round.f32(f32) -> f32 attributes {fir.bindc_name = "llvm.round.f32", fir.runtime}
 ! PRECISE-DAG: func.func private @llvm.round.f64(f64) -> f64 attributes {fir.bindc_name = "llvm.round.f64", fir.runtime}
-! PRECISE-DAG: func.func private @llvm.round.f80(f80) -> f80 attributes {fir.bindc_name = "llvm.round.f80", fir.runtime}
+! PRECISE-KIND10-DAG: func.func private @llvm.round.f80(f80) -> f80 attributes {fir.bindc_name = "llvm.round.f80", fir.runtime}

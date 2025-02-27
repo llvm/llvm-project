@@ -499,7 +499,10 @@ LinkGraphLinkingLayer::LinkGraphLinkingLayer(
 }
 
 LinkGraphLinkingLayer::~LinkGraphLinkingLayer() {
-  assert(Allocs.empty() && "Layer destroyed with resources still attached");
+  assert(Allocs.empty() &&
+         "Layer destroyed with resources still attached "
+         "(ExecutionSession::endSession() must be called prior to "
+         "destruction)");
   getExecutionSession().deregisterResourceManager(*this);
 }
 

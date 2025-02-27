@@ -118,7 +118,7 @@ void DeadLaneDetector::addUsedLanesOnOperand(const MachineOperand &MO,
     UsedLanes = TRI->composeSubRegIndexLaneMask(MOSubReg, UsedLanes);
   UsedLanes &= MRI->getMaxLaneMaskForVReg(MOReg);
 
-  unsigned MORegIdx = Register::virtReg2Index(MOReg);
+  unsigned MORegIdx = MOReg.virtRegIndex();
   DeadLaneDetector::VRegInfo &MORegInfo = VRegInfos[MORegIdx];
   LaneBitmask PrevUsedLanes = MORegInfo.UsedLanes;
   // Any change at all?
@@ -147,7 +147,7 @@ DeadLaneDetector::transferUsedLanes(const MachineInstr &MI,
                                     const MachineOperand &MO) const {
   unsigned OpNum = MO.getOperandNo();
   assert(lowersToCopies(MI) &&
-         DefinedByCopy[Register::virtReg2Index(MI.getOperand(0).getReg())]);
+         DefinedByCopy[MI.getOperand(0).getReg().virtRegIndex()]);
 
   switch (MI.getOpcode()) {
   case TargetOpcode::COPY:
@@ -204,7 +204,7 @@ void DeadLaneDetector::transferDefinedLanesStep(const MachineOperand &Use,
   Register DefReg = Def.getReg();
   if (!DefReg.isVirtual())
     return;
-  unsigned DefRegIdx = Register::virtReg2Index(DefReg);
+  unsigned DefRegIdx = DefReg.virtRegIndex();
   if (!DefinedByCopy.test(DefRegIdx))
     return;
 
@@ -276,7 +276,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(unsigned Reg) {
   if (lowersToCopies(DefMI)) {
     // Start optimisatically with no used or defined lanes for copy
     // instructions. The following dataflow analysis will add more bits.
-    unsigned RegIdx = Register::virtReg2Index(Reg);
+    unsigned RegIdx = Register(Reg).virtRegIndex();
     DefinedByCopy.set(RegIdx);
     PutInWorklist(RegIdx);
 
@@ -433,7 +433,7 @@ bool DetectDeadLanes::isUndefInput(const DeadLaneDetector &DLD,
   Register DefReg = Def.getReg();
   if (!DefReg.isVirtual())
     return false;
-  unsigned DefRegIdx = Register::virtReg2Index(DefReg);
+  unsigned DefRegIdx = DefReg.virtRegIndex();
   if (!DLD.isDefinedByCopy(DefRegIdx))
     return false;
 
@@ -506,7 +506,7 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
         Register Reg = MO.getReg();
         if (!Reg.isVirtual())
           continue;
-        unsigned RegIdx = Register::virtReg2Index(Reg);
+        unsigned RegIdx = Reg.virtRegIndex();
         const DeadLaneDetector::VRegInfo &RegInfo = DLD.getVRegInfo(RegIdx);
         if (MO.isDef() && !MO.isDead() && RegInfo.UsedLanes.none()) {
           LLVM_DEBUG(dbgs()

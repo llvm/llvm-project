@@ -21,7 +21,6 @@ define i1 @shl_i1(i1 %0, i1 %1){
 define i8 @shl_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: shl_i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w0, w0, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -37,7 +36,6 @@ define i8 @shl_i8(i8 %0, i8 %1){
 define i16 @shl_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: shl_i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w0, w0, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -123,7 +121,6 @@ define i8 @ashr_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: ashr_i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sxtb w8, w0
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    asr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -141,7 +138,6 @@ define i16 @ashr_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: ashr_i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sxth w8, w0
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    asr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -230,7 +226,6 @@ define i8 @lshr_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: lshr_i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -248,7 +243,6 @@ define i16 @lshr_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: lshr_i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xffff
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;

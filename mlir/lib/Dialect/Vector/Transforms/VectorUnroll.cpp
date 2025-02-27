@@ -172,7 +172,7 @@ struct UnrollTransferReadPattern
           readOp.getPermutationMapAttr(), readOp.getPadding(), readOp.getMask(),
           readOp.getInBoundsAttr());
 
-      result = rewriter.create<vector::InsertStridedSliceOp>(
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, slicedRead, result, elementOffsets, strides);
     }
     rewriter.replaceOp(readOp, result);
@@ -213,7 +213,7 @@ struct UnrollTransferWritePattern
     Value resultTensor;
     for (SmallVector<int64_t> elementOffsets :
          StaticTileOffsetRange(originalSize, *targetShape, loopOrder)) {
-      Value slicedVector = rewriter.create<vector::ExtractStridedSliceOp>(
+      Value slicedVector = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
           loc, writeOp.getVector(), elementOffsets, *targetShape, strides);
       SmallVector<Value> indices =
           sliceTransferIndices(elementOffsets, originalIndices,
@@ -289,8 +289,9 @@ struct UnrollContractionPattern
         SmallVector<int64_t> operandShape = applyPermutationMap(
             permutationMap, ArrayRef<int64_t>(*targetShape));
         SmallVector<int64_t> operandStrides(operandOffets.size(), 1);
-        slicesOperands[index] = rewriter.create<vector::ExtractStridedSliceOp>(
-            loc, operand, operandOffets, operandShape, operandStrides);
+        slicesOperands[index] =
+            rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+                loc, operand, operandOffets, operandShape, operandStrides);
       };
 
       // Extract the new lhs operand.
@@ -333,7 +334,7 @@ struct UnrollContractionPattern
         loc, dstVecType, rewriter.getZeroAttr(dstVecType));
     for (const auto &it : accCache) {
       SmallVector<int64_t> dstStrides(it.first.size(), 1);
-      result = rewriter.create<vector::InsertStridedSliceOp>(
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, it.second, result, it.first, dstStrides);
     }
     rewriter.replaceOp(contractOp, result);
@@ -371,8 +372,10 @@ struct UnrollMultiReductionPattern
          StaticTileOffsetRange(originalSize, *targetShape)) {
       SmallVector<Value> operands;
       SmallVector<int64_t> operandStrides(offsets.size(), 1);
-      Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, reductionOp.getSource(), offsets, *targetShape, operandStrides);
+      Value slicedOperand =
+          rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+              loc, reductionOp.getSource(), offsets, *targetShape,
+              operandStrides);
       operands.push_back(slicedOperand);
       SmallVector<int64_t> dstShape;
       SmallVector<int64_t> destOffset;
@@ -390,7 +393,7 @@ struct UnrollMultiReductionPattern
       if (accIt != accCache.end())
         acc = accIt->second;
       else
-        acc = rewriter.create<vector::ExtractStridedSliceOp>(
+        acc = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
             loc, reductionOp.getAcc(), destOffset, dstShape, accStrides);
       operands.push_back(acc);
       auto targetType = VectorType::get(
@@ -406,7 +409,7 @@ struct UnrollMultiReductionPattern
         rewriter.getZeroAttr(reductionOp.getDestType()));
     for (const auto &it : accCache) {
       SmallVector<int64_t> dstStrides(it.first.size(), 1);
-      result = rewriter.create<vector::InsertStridedSliceOp>(
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, it.second, result, it.first, dstStrides);
     }
     rewriter.replaceOp(reductionOp, result);
@@ -434,6 +437,12 @@ struct UnrollElementwisePattern : public RewritePattern {
     auto dstVecType = cast<VectorType>(op->getResult(0).getType());
     SmallVector<int64_t> originalSize =
         *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
+    // Bail-out if rank(source) != rank(target). The main limitation here is the
+    // fact that `ExtractStridedSlice` requires the rank for the input and
+    // output to match. If needed, we can relax this later.
+    if (originalSize.size() != targetShape->size())
+      return rewriter.notifyMatchFailure(
+          op, "expected input vector rank to match target shape rank");
     Location loc = op->getLoc();
     // Prepare the result vector.
     Value result = rewriter.create<arith::ConstantOp>(
@@ -453,12 +462,12 @@ struct UnrollElementwisePattern : public RewritePattern {
           continue;
         }
         extractOperands.push_back(
-            rewriter.create<vector::ExtractStridedSliceOp>(
+            rewriter.createOrFold<vector::ExtractStridedSliceOp>(
                 loc, operand.get(), offsets, *targetShape, strides));
       }
       Operation *newOp = cloneOpWithOperandsAndTypes(
           rewriter, loc, op, extractOperands, newVecType);
-      result = rewriter.create<vector::InsertStridedSliceOp>(
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, newOp->getResult(0), result, offsets, strides);
     }
     rewriter.replaceOp(op, result);
@@ -490,8 +499,9 @@ struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalSize, *targetShape)) {
       SmallVector<int64_t> strides(offsets.size(), 1);
-      Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, reductionOp.getVector(), offsets, *targetShape, strides);
+      Value slicedOperand =
+          rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+              loc, reductionOp.getVector(), offsets, *targetShape, strides);
       Operation *newOp = cloneOpWithOperandsAndTypes(
           rewriter, loc, reductionOp, slicedOperand, reductionOp.getType());
       Value result = newOp->getResult(0);
@@ -548,12 +558,13 @@ struct UnrollTransposePattern : public OpRewritePattern<vector::TransposeOp> {
         permutedOffsets[indices.value()] = elementOffsets[indices.index()];
         permutedShape[indices.value()] = (*targetShape)[indices.index()];
       }
-      Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, transposeOp.getVector(), permutedOffsets, permutedShape,
-          strides);
-      Value transposedSlice =
-          rewriter.create<vector::TransposeOp>(loc, slicedOperand, permutation);
-      result = rewriter.create<vector::InsertStridedSliceOp>(
+      Value slicedOperand =
+          rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+              loc, transposeOp.getVector(), permutedOffsets, permutedShape,
+              strides);
+      Value transposedSlice = rewriter.createOrFold<vector::TransposeOp>(
+          loc, slicedOperand, permutation);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, transposedSlice, result, elementOffsets, strides);
     }
     rewriter.replaceOp(transposeOp, result);
@@ -596,17 +607,19 @@ struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
       // To get the unrolled gather, extract the same slice based on the
       // decomposed shape from each of the index, mask, and pass-through
       // vectors.
-      Value indexSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+      Value indexSubVec = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
           loc, gatherOp.getIndexVec(), elementOffsets, *targetShape, strides);
-      Value maskSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+      Value maskSubVec = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
           loc, gatherOp.getMask(), elementOffsets, *targetShape, strides);
-      Value passThruSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, gatherOp.getPassThru(), elementOffsets, *targetShape, strides);
+      Value passThruSubVec =
+          rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+              loc, gatherOp.getPassThru(), elementOffsets, *targetShape,
+              strides);
       auto slicedGather = rewriter.create<vector::GatherOp>(
           loc, targetType, gatherOp.getBase(), gatherOp.getIndices(),
           indexSubVec, maskSubVec, passThruSubVec);
 
-      result = rewriter.create<vector::InsertStridedSliceOp>(
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, slicedGather, result, elementOffsets, strides);
     }
     rewriter.replaceOp(gatherOp, result);

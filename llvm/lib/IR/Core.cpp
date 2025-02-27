@@ -1803,23 +1803,6 @@ LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant,
                                       unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getMul(unwrap<Constant>(LHSConstant),
-                                   unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant,
-                             LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getNSWMul(unwrap<Constant>(LHSConstant),
-                                      unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant,
-                             LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getNUWMul(unwrap<Constant>(LHSConstant),
-                                      unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getXor(unwrap<Constant>(LHSConstant),
                                    unwrap<Constant>(RHSConstant)));

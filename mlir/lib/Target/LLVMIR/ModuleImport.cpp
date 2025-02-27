@@ -647,6 +647,16 @@ LogicalResult ModuleImport::convertGlobals() {
   return success();
 }
 
+LogicalResult ModuleImport::convertAliases() {
+  for (llvm::GlobalAlias &alias : llvmModule->aliases()) {
+    if (failed(convertAlias(&alias))) {
+      return emitError(UnknownLoc::get(context))
+             << "unhandled global alias: " << diag(alias);
+    }
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
   DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
@@ -660,6 +670,11 @@ LogicalResult ModuleImport::convertDataLayout() {
   mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
                       dataLayoutImporter.getDataLayout());
   return success();
+}
+
+void ModuleImport::convertTargetTriple() {
+  mlirModule->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
+                      builder.getStringAttr(llvmModule->getTargetTriple()));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -947,13 +962,46 @@ ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
   return symbolRef;
 }
 
+OpBuilder::InsertionGuard ModuleImport::setGlobalInsertionPoint() {
+  OpBuilder::InsertionGuard guard(builder);
+  if (globalInsertionOp)
+    builder.setInsertionPointAfter(globalInsertionOp);
+  else
+    builder.setInsertionPointToStart(mlirModule.getBody());
+  return guard;
+}
+
+LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
+  // Insert the alias after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
+
+  Type type = convertType(alias->getValueType());
+  AliasOp aliasOp = builder.create<AliasOp>(
+      mlirModule.getLoc(), type, convertLinkageFromLLVM(alias->getLinkage()),
+      alias->getName(),
+      /*dso_local=*/alias->isDSOLocal(),
+      /*thread_local=*/alias->isThreadLocal(),
+      /*attrs=*/ArrayRef<NamedAttribute>());
+  globalInsertionOp = aliasOp;
+
+  clearRegionState();
+  Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
+  setConstantInsertionPointToStart(block);
+  FailureOr<Value> initializer = convertConstantExpr(alias->getAliasee());
+  if (failed(initializer))
+    return failure();
+  builder.create<ReturnOp>(aliasOp.getLoc(), *initializer);
+
+  if (alias->hasAtLeastLocalUnnamedAddr())
+    aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
+  aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Attribute valueAttr;
   if (globalVar->hasInitializer())
@@ -1049,11 +1097,8 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
     priorities.push_back(priority->getValue().getZExtValue());
   }
 
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  // Insert the global after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   if (globalVar->getName() == getGlobalCtorsVarName()) {
     globalInsertionOp = builder.create<LLVM::GlobalCtorsOp>(
@@ -1084,7 +1129,7 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
     llvm::Constant *current = workList.back();
     // References of global objects are just pointers to the object. Avoid
     // walking the elements of these here.
-    if (isa<llvm::GlobalObject>(current)) {
+    if (isa<llvm::GlobalObject>(current) || isa<llvm::GlobalAlias>(current)) {
       orderedSet.insert(current);
       workList.pop_back();
       continue;
@@ -1177,6 +1222,14 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
           getOrCreateNamelessSymbolName(cast<llvm::GlobalVariable>(globalObj));
     else
       symbolRef = FlatSymbolRefAttr::get(context, globalName);
+    return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
+  }
+
+  // Convert global alias accesses.
+  if (auto *globalAliasObj = dyn_cast<llvm::GlobalAlias>(constant)) {
+    Type type = convertType(globalAliasObj->getType());
+    StringRef aliaseeName = globalAliasObj->getName();
+    FlatSymbolRefAttr symbolRef = FlatSymbolRefAttr::get(context, aliaseeName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
@@ -1519,22 +1572,72 @@ ModuleImport::convertCallOperands(llvm::CallBase *callInst,
   return operands;
 }
 
-LLVMFunctionType ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
-  llvm::Value *calledOperand = callInst->getCalledOperand();
-  Type converted = [&] {
-    if (auto callee = dyn_cast<llvm::Function>(calledOperand))
-      return convertType(callee->getFunctionType());
-    return convertType(callInst->getFunctionType());
-  }();
+/// Checks if `callType` and `calleeType` are compatible and can be represented
+/// in MLIR.
+static LogicalResult
+verifyFunctionTypeCompatibility(LLVMFunctionType callType,
+                                LLVMFunctionType calleeType) {
+  if (callType.getReturnType() != calleeType.getReturnType())
+    return failure();
 
-  if (auto funcTy = dyn_cast_or_null<LLVMFunctionType>(converted))
+  if (calleeType.isVarArg()) {
+    // For variadic functions, the call can have more types than the callee
+    // specifies.
+    if (callType.getNumParams() < calleeType.getNumParams())
+      return failure();
+  } else {
+    // For non-variadic functions, the number of parameters needs to be the
+    // same.
+    if (callType.getNumParams() != calleeType.getNumParams())
+      return failure();
+  }
+
+  // Check that all operands match.
+  for (auto [operandType, argumentType] :
+       llvm::zip(callType.getParams(), calleeType.getParams()))
+    if (operandType != argumentType)
+      return failure();
+
+  return success();
+}
+
+FailureOr<LLVMFunctionType>
+ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
+  auto castOrFailure = [](Type convertedType) -> FailureOr<LLVMFunctionType> {
+    auto funcTy = dyn_cast_or_null<LLVMFunctionType>(convertedType);
+    if (!funcTy)
+      return failure();
     return funcTy;
-  return {};
+  };
+
+  llvm::Value *calledOperand = callInst->getCalledOperand();
+  FailureOr<LLVMFunctionType> callType =
+      castOrFailure(convertType(callInst->getFunctionType()));
+  if (failed(callType))
+    return failure();
+  auto *callee = dyn_cast<llvm::Function>(calledOperand);
+  // For indirect calls, return the type of the call itself.
+  if (!callee)
+    return callType;
+
+  FailureOr<LLVMFunctionType> calleeType =
+      castOrFailure(convertType(callee->getFunctionType()));
+  if (failed(calleeType))
+    return failure();
+
+  // Compare the types to avoid constructing illegal call/invoke operations.
+  if (failed(verifyFunctionTypeCompatibility(*callType, *calleeType))) {
+    Location loc = translateLoc(callInst->getDebugLoc());
+    return emitError(loc) << "incompatible call and callee types: " << *callType
+                          << " and " << *calleeType;
+  }
+
+  return calleeType;
 }
 
 FlatSymbolRefAttr ModuleImport::convertCalleeName(llvm::CallBase *callInst) {
   llvm::Value *calledOperand = callInst->getCalledOperand();
-  if (auto callee = dyn_cast<llvm::Function>(calledOperand))
+  if (auto *callee = dyn_cast<llvm::Function>(calledOperand))
     return SymbolRefAttr::get(context, callee->getName());
   return {};
 }
@@ -1620,7 +1723,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::Call) {
-    auto callInst = cast<llvm::CallInst>(inst);
+    auto *callInst = cast<llvm::CallInst>(inst);
     llvm::Value *calledOperand = callInst->getCalledOperand();
 
     FailureOr<SmallVector<Value>> operands =
@@ -1629,7 +1732,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       return failure();
 
     auto callOp = [&]() -> FailureOr<Operation *> {
-      if (auto asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+      if (auto *asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
@@ -1642,17 +1745,18 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
                 /*operand_attrs=*/nullptr)
             .getOperation();
-      } else {
-        LLVMFunctionType funcTy = convertFunctionType(callInst);
-        if (!funcTy)
-          return failure();
-
-        FlatSymbolRefAttr callee = convertCalleeName(callInst);
-        auto callOp = builder.create<CallOp>(loc, funcTy, callee, *operands);
-        if (failed(convertCallAttributes(callInst, callOp)))
-          return failure();
-        return callOp.getOperation();
       }
+      FailureOr<LLVMFunctionType> funcTy = convertFunctionType(callInst);
+      if (failed(funcTy))
+        return failure();
+
+      FlatSymbolRefAttr callee = convertCalleeName(callInst);
+      auto callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
+      if (failed(convertCallAttributes(callInst, callOp)))
+        return failure();
+      // Handle parameter and result attributes.
+      convertParameterAttributes(callInst, callOp, builder);
+      return callOp.getOperation();
     }();
 
     if (failed(callOp))
@@ -1716,8 +1820,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
-    auto funcTy = convertFunctionType(invokeInst);
-    if (!funcTy)
+    FailureOr<LLVMFunctionType> funcTy = convertFunctionType(invokeInst);
+    if (failed(funcTy))
       return failure();
 
     FlatSymbolRefAttr calleeName = convertCalleeName(invokeInst);
@@ -1726,11 +1830,14 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     // added later on to handle the case in which the operation result is
     // included in this list.
     auto invokeOp = builder.create<InvokeOp>(
-        loc, funcTy, calleeName, *operands, directNormalDest, ValueRange(),
+        loc, *funcTy, calleeName, *operands, directNormalDest, ValueRange(),
         lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
 
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
+
+    // Handle parameter and result attributes.
+    convertParameterAttributes(invokeInst, invokeOp, builder);
 
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
@@ -2048,6 +2155,17 @@ ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
     // Skip attributes that are not attached.
     if (!llvmAttr.isValid())
       continue;
+
+    // TODO: Import captures(none) as a nocapture unit attribute until the
+    // LLVM dialect switches to the captures representation.
+    if (llvmAttr.hasKindAsEnum() &&
+        llvmAttr.getKindAsEnum() == llvm::Attribute::Captures) {
+      if (llvm::capturesNothing(llvmAttr.getCaptureInfo()))
+        paramAttrs.push_back(
+            builder.getNamedAttr(mlirName, builder.getUnitAttr()));
+      continue;
+    }
+
     Attribute mlirAttr;
     if (llvmAttr.isTypeAttribute())
       mlirAttr = TypeAttr::get(convertType(llvmAttr.getValueAsType()));
@@ -2082,6 +2200,37 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
     return;
   funcOp.setResAttrsAttr(
       builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
+}
+
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              CallOpInterface callOp,
+                                              OpBuilder &builder) {
+  llvm::AttributeList llvmAttrs = call->getAttributes();
+  SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
+  bool anyArgAttrs = false;
+  for (size_t i = 0, e = call->arg_size(); i < e; ++i) {
+    llvmArgAttrsSet.emplace_back(llvmAttrs.getParamAttrs(i));
+    if (llvmArgAttrsSet.back().hasAttributes())
+      anyArgAttrs = true;
+  }
+  auto getArrayAttr = [&](ArrayRef<DictionaryAttr> dictAttrs) {
+    SmallVector<Attribute> attrs;
+    for (auto &dict : dictAttrs)
+      attrs.push_back(dict ? dict : builder.getDictionaryAttr({}));
+    return builder.getArrayAttr(attrs);
+  };
+  if (anyArgAttrs) {
+    SmallVector<DictionaryAttr> argAttrs;
+    for (auto &llvmArgAttrs : llvmArgAttrsSet)
+      argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
+    callOp.setArgAttrsAttr(getArrayAttr(argAttrs));
+  }
+
+  llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
+  if (!llvmResAttr.hasAttributes())
+    return;
+  DictionaryAttr resAttrs = convertParameterAttribute(llvmResAttr, builder);
+  callOp.setResAttrsAttr(getArrayAttr({resAttrs}));
 }
 
 template <typename Op>
@@ -2128,7 +2277,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
       iface.isConvertibleIntrinsic(func->getIntrinsicID()))
     return success();
 
-  bool dsoLocal = func->hasLocalLinkage();
+  bool dsoLocal = func->isDSOLocal();
   CConv cconv = convertCConvFromLLVM(func->getCallingConv());
 
   // Insert the function at the end of the module.
@@ -2391,6 +2540,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
     return {};
   if (failed(moduleImport.convertFunctions()))
     return {};
-
+  if (failed(moduleImport.convertAliases()))
+    return {};
+  moduleImport.convertTargetTriple();
   return module;
 }

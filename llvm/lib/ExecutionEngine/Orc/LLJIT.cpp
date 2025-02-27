@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1220,12 +1221,45 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
 
-    auto &ES = J.getExecutionSession();
-    if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
-      OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-          ES, std::move(*EHFrameRegistrar)));
-    else
-      return EHFrameRegistrar.takeError();
+    bool UseEHFrames = true;
+
+    // Enable compact-unwind support if possible.
+    if (J.getTargetTriple().isOSDarwin() ||
+        J.getTargetTriple().isOSBinFormatMachO()) {
+
+      // Check if the bootstrap map says that we should force eh-frames:
+      // Older libunwinds require this as they don't have a dynamic
+      // registration API for compact-unwind.
+      std::optional<bool> ForceEHFrames;
+      if (auto Err = J.getExecutionSession().getBootstrapMapValue<bool, bool>(
+              "darwin-use-ehframes-only", ForceEHFrames))
+        return Err;
+      if (ForceEHFrames.has_value())
+        UseEHFrames = *ForceEHFrames;
+      else
+        UseEHFrames = false;
+
+      // If UseEHFrames hasn't been set then we're good to use compact-unwind.
+      if (!UseEHFrames) {
+        if (auto UIRP =
+                UnwindInfoRegistrationPlugin::Create(J.getExecutionSession())) {
+          OLL->addPlugin(std::move(*UIRP));
+          LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
+        } else
+          return UIRP.takeError();
+      }
+    }
+
+    // Otherwise fall back to standard unwind registration.
+    if (UseEHFrames) {
+      auto &ES = J.getExecutionSession();
+      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
+        OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            ES, std::move(*EHFrameRegistrar)));
+        LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
+      } else
+        return EHFrameRegistrar.takeError();
+    }
   }
 
   J.setPlatformSupport(

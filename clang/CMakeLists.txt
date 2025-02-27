@@ -432,18 +432,16 @@ if(NOT LLVM_STATIC_LINK_CXX_STDLIB)
   set(HAVE_CLANG_REPL_SUPPORT ON)
 endif()
 
-option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
+option(CLANG_ENABLE_OBJC_REWRITER "Build the Objective-C rewriter tool" OFF)
+
 option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
-if(NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
-  message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
-endif()
-
-if(CLANG_ENABLE_ARCMT)
-  set(CLANG_ENABLE_OBJC_REWRITER ON)
+if (DEFINED CLANG_ENABLE_ARCMT)
+  set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
+  message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")
 endif()
 
 # This option is a stop-gap, we should commit to removing this as

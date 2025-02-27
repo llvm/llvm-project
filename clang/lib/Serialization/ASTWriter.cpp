@@ -5358,7 +5358,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
-  Sema *SemaPtr = Subject.dyn_cast<Sema *>();
+  Sema *SemaPtr = dyn_cast<Sema *>(Subject);
   Preprocessor &PPRef =
       SemaPtr ? SemaPtr->getPreprocessor() : *cast<Preprocessor *>(Subject);
 
@@ -5539,15 +5539,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
   RegisterPredefDecl(Context.ExternCContext, PREDEF_DECL_EXTERN_C_CONTEXT_ID);
-  RegisterPredefDecl(Context.MakeIntegerSeqDecl,
-                     PREDEF_DECL_MAKE_INTEGER_SEQ_ID);
   RegisterPredefDecl(Context.CFConstantStringTypeDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_ID);
   RegisterPredefDecl(Context.CFConstantStringTagDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID);
-  RegisterPredefDecl(Context.TypePackElementDecl,
-                     PREDEF_DECL_TYPE_PACK_ELEMENT_ID);
-  RegisterPredefDecl(Context.BuiltinCommonTypeDecl, PREDEF_DECL_COMMON_TYPE_ID);
+#define BuiltinTemplate(BTName)                                                \
+  RegisterPredefDecl(Context.Decl##BTName, PREDEF_DECL##BTName##_ID);
+#include "clang/Basic/BuiltinTemplates.inc"
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
 
@@ -6663,14 +6661,6 @@ MacroID ASTWriter::getMacroRef(MacroInfo *MI, const IdentifierInfo *Name) {
     MacroInfosToEmit.push_back(Info);
   }
   return ID;
-}
-
-MacroID ASTWriter::getMacroID(MacroInfo *MI) {
-  if (!MI || MI->isBuiltinMacro())
-    return 0;
-
-  assert(MacroIDs.contains(MI) && "Macro not emitted!");
-  return MacroIDs[MI];
 }
 
 uint32_t ASTWriter::getMacroDirectivesOffset(const IdentifierInfo *Name) {
@@ -7884,6 +7874,9 @@ void OMPClauseWriter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
 
 void OMPClauseWriter::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseWriter::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {}
 
 void OMPClauseWriter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
 

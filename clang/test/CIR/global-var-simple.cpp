@@ -1,4 +1,4 @@
-// Global variables of intergal types
+// Global variables of scalar typees with initial values
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s
 
 char c;
@@ -57,6 +57,9 @@ _BitInt(20) sb20;
 
 unsigned _BitInt(48) ub48;
 // CHECK: cir.global @ub48 : !cir.int<u, 48>
+
+bool boolfalse = false;
+// CHECK: cir.global @boolfalse = #false
 
 _Float16 f16;
 // CHECK: cir.global @f16 : !cir.f16

@@ -1,3 +1,5 @@
+// REQUIRES: target=x86{{.*}}
+
 // RUN: mlir-opt %s \
 // RUN:   -convert-vector-to-llvm="enable-x86vector" -convert-to-llvm \
 // RUN:   -reconcile-unrealized-casts | \

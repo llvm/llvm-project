@@ -1,8 +1,8 @@
 ! FIXME: https://github.com/llvm/llvm-project/issues/123668
 !
 ! DEFINE: %{triple} =
-! DEFINE: %{check-unroll} = %flang_fc1 -emit-llvm -O1 -funroll-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
-! DEFINE: %{check-nounroll} = %flang_fc1 -emit-llvm -O1 -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
+! DEFINE: %{check-unroll} = %flang_fc1 -emit-llvm -O1 -vectorize-loops -funroll-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
+! DEFINE: %{check-nounroll} = %flang_fc1 -emit-llvm -O1 -vectorize-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 !
 ! REDEFINE: %{triple} = aarch64-unknown-linux-gnu
 ! RUN: %if aarch64-registered-target %{ %{check-unroll} %}
@@ -13,7 +13,7 @@
 ! RUN: %if x86-registered-target %{ %{check-nounroll} %}
 !
 ! CHECK-LABEL: @unroll
-! CHECK-SAME: (ptr nocapture writeonly %[[ARG0:.*]])
+! CHECK-SAME: (ptr writeonly captures(none) %[[ARG0:.*]])
 subroutine unroll(a)
   integer(kind=8), intent(out) :: a(1000)
   integer(kind=8) :: i

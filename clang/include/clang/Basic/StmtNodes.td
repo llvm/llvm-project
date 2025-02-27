@@ -230,6 +230,7 @@ def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
 def OMPSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPStripeDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPReverseDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPInterchangeDirective : StmtNode<OMPLoopTransformationDirective>;
@@ -318,6 +319,7 @@ def OpenACCInitConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCShutdownConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCSetConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCUpdateConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCAtomicConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 
 // OpenACC Additional Expressions.
 def OpenACCAsteriskSizeExpr : StmtNode<Expr>;

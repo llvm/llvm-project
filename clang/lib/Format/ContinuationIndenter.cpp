@@ -356,6 +356,16 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return CurrentState.BreakBeforeClosingBrace;
   }
 
+  // Allow breaking before the right parens with block indentation if there was
+  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
+  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
+      Current.is(tok::r_paren)) {
+    return CurrentState.BreakBeforeClosingParen;
+  }
+
+  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser))
+    return CurrentState.BreakBeforeClosingAngle;
+
   // If binary operators are moved to the next line (including commas for some
   // styles of constructor initializers), that's always ok.
   if (!Current.isOneOf(TT_BinaryOperator, tok::comma) &&
@@ -406,6 +416,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
+    return true;
+  if (CurrentState.BreakBeforeClosingAngle && Current.is(TT_TemplateCloser))
     return true;
   if (Style.Language == FormatStyle::LK_ObjC &&
       Style.ObjCBreakBeforeNestedBlockParam &&
@@ -461,9 +473,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       (State.Column + State.Line->Last->TotalLength - Previous.TotalLength >
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&
-      (!Current.isTrailingComment() || Current.NewlinesBefore > 0) &&
-      (Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
-       Style.ColumnLimit > 0 || Current.NewlinesBefore > 0)) {
+      ((!Current.isTrailingComment() && Style.ColumnLimit > 0) ||
+       Current.NewlinesBefore > 0)) {
     return true;
   }
 
@@ -1236,6 +1247,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 
+  if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener))
+    CurrentState.BreakBeforeClosingAngle = Style.BreakBeforeTemplateCloser;
+
   if (CurrentState.AvoidBinPacking) {
     // If we are breaking after '(', '{', '<', or this is the break after a ':'
     // to start a member initializer list in a constructor, this should not
@@ -1369,6 +1383,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       (Current.is(tok::r_paren) ||
        (Current.is(tok::r_brace) && Current.MatchingParen &&
         Current.MatchingParen->is(BK_BracedInit))) &&
+      State.Stack.size() > 1) {
+    return State.Stack[State.Stack.size() - 2].LastSpace;
+  }
+  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser) &&
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }

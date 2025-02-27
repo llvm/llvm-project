@@ -29,8 +29,13 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
+#include "GCNNSAReassign.h"
+#include "GCNPreRALongBranchReg.h"
+#include "GCNPreRAOptimizations.h"
+#include "GCNRewritePartialRegUses.h"
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
@@ -38,6 +43,7 @@
 #include "SIFixSGPRCopies.h"
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
+#include "SIFormMemoryClauses.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
@@ -45,14 +51,18 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "SIOptimizeExecMasking.h"
+#include "SIOptimizeExecMaskingPreRA.h"
 #include "SIOptimizeVGPRLiveRange.h"
 #include "SIPeepholeSDWA.h"
+#include "SIPostRABundler.h"
 #include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
+#include "SIWholeQuadMode.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -65,6 +75,7 @@
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -492,7 +503,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
-  initializeSIOptimizeExecMaskingPreRAPass(*PR);
+  initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
@@ -522,19 +533,19 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
-  initializeAMDGPUInsertDelayAluPass(*PR);
+  initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
-  initializeSIWholeQuadModePass(*PR);
+  initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
-  initializeSIFormMemoryClausesPass(*PR);
-  initializeSIPostRABundlerPass(*PR);
+  initializeSIFormMemoryClausesLegacyPass(*PR);
+  initializeSIPostRABundlerLegacyPass(*PR);
   initializeGCNCreateVOPDPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
@@ -542,12 +553,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
-  initializeGCNNSAReassignPass(*PR);
-  initializeGCNPreRAOptimizationsPass(*PR);
-  initializeGCNPreRALongBranchRegPass(*PR);
-  initializeGCNRewritePartialRegUsesPass(*PR);
+  initializeGCNNSAReassignLegacyPass(*PR);
+  initializeGCNPreRAOptimizationsLegacyPass(*PR);
+  initializeGCNPreRALongBranchRegLegacyPass(*PR);
+  initializeGCNRewritePartialRegUsesLegacyPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
+  initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -726,6 +738,16 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
                           : getTargetFeatureString();
 }
 
+llvm::ScheduleDAGInstrs *
+AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.shouldClusterStores())
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  return DAG;
+}
+
 /// Predicate for Internalize pass.
 static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
@@ -788,7 +810,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineEarlySimplificationEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level,
          ThinOrFullLTOPhase Phase) {
-        PM.addPass(AMDGPUPrintfRuntimeBindingPass());
+        if (!isLTOPreLink(Phase))
+          PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (Level == OptimizationLevel::O0)
           return;
@@ -878,6 +901,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
               Opt.IsClosedWorld = true;
             PM.addPass(AMDGPUAttributorPass(*this, Opt));
           }
+        }
+        if (!NoKernelInfoEndLTO) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter(this));
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
         }
       });
 
@@ -1038,6 +1066,43 @@ Error GCNTargetMachine::buildCodeGenPipeline(
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
+ScheduleDAGInstrs *
+GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
+  if (ST.enableSIScheduler())
+    return createSIMachineScheduler(C);
+
+  Attribute SchedStrategyAttr =
+      C->MF->getFunction().getFnAttribute("amdgpu-sched-strategy");
+  StringRef SchedStrategy = SchedStrategyAttr.isValid()
+                                ? SchedStrategyAttr.getValueAsString()
+                                : AMDGPUSchedStrategy;
+
+  if (SchedStrategy == "max-ilp")
+    return createGCNMaxILPMachineScheduler(C);
+
+  if (SchedStrategy == "max-memory-clause")
+    return createGCNMaxMemoryClauseMachineScheduler(C);
+
+  return createGCNMaxOccupancyMachineScheduler(C);
+}
+
+ScheduleDAGInstrs *
+GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG =
+      new GCNPostScheduleDAGMILive(C, std::make_unique<PostGenericScheduler>(C),
+                                   /*RemoveKillFlags=*/true);
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.shouldClusterStores())
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
+  if ((EnableVOPD.getNumOccurrences() ||
+       getOptLevel() >= CodeGenOptLevel::Less) &&
+      EnableVOPD)
+    DAG->addMutation(createVOPDPairingMutation());
+  return DAG;
+}
 //===----------------------------------------------------------------------===//
 // AMDGPU Legacy Pass Setup
 //===----------------------------------------------------------------------===//
@@ -1061,25 +1126,6 @@ public:
 
   GCNTargetMachine &getGCNTargetMachine() const {
     return getTM<GCNTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override;
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = new GCNPostScheduleDAGMILive(
-        C, std::make_unique<PostGenericScheduler>(C),
-        /*RemoveKillFlags=*/true);
-    const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-    DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-    if (ST.shouldClusterStores())
-      DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-    DAG->addMutation(
-        createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
-    if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
-      DAG->addMutation(createVOPDPairingMutation());
-    return DAG;
   }
 
   bool addPreISel() override;
@@ -1108,6 +1154,7 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+  void addPostBBSections() override;
 };
 
 } // end anonymous namespace
@@ -1308,40 +1355,9 @@ bool AMDGPUPassConfig::addGCPasses() {
   return false;
 }
 
-llvm::ScheduleDAGInstrs *
-AMDGPUPassConfig::createMachineScheduler(MachineSchedContext *C) const {
-  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-  if (ST.shouldClusterStores())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  return DAG;
-}
-
 //===----------------------------------------------------------------------===//
 // GCN Legacy Pass Setup
 //===----------------------------------------------------------------------===//
-
-ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
-  MachineSchedContext *C) const {
-  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  if (ST.enableSIScheduler())
-    return createSIMachineScheduler(C);
-
-  Attribute SchedStrategyAttr =
-      C->MF->getFunction().getFnAttribute("amdgpu-sched-strategy");
-  StringRef SchedStrategy = SchedStrategyAttr.isValid()
-                                ? SchedStrategyAttr.getValueAsString()
-                                : AMDGPUSchedStrategy;
-
-  if (SchedStrategy == "max-ilp")
-    return createGCNMaxILPMachineScheduler(C);
-
-  if (SchedStrategy == "max-memory-clause")
-    return createGCNMaxMemoryClauseMachineScheduler(C);
-
-  return createGCNMaxOccupancyMachineScheduler(C);
-}
 
 bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
@@ -1643,7 +1659,7 @@ void GCNPassConfig::addPostRegAlloc() {
 void GCNPassConfig::addPreSched2() {
   if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createSIShrinkInstructionsLegacyPass());
-  addPass(&SIPostRABundlerID);
+  addPass(&SIPostRABundlerLegacyID);
 }
 
 void GCNPassConfig::addPreEmitPass() {
@@ -1672,10 +1688,17 @@ void GCNPassConfig::addPreEmitPass() {
   // cases.
   addPass(&PostRAHazardRecognizerID);
 
+  addPass(&AMDGPUWaitSGPRHazardsLegacyID);
+
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
+}
+
+void GCNPassConfig::addPostBBSections() {
+  // We run this later to avoid passes like livedebugvalues and BBSections
+  // having to deal with the apparent multi-entry functions we may generate.
   addPass(createAMDGPUPreloadKernArgPrologLegacyPass());
 }
 
@@ -1922,6 +1945,7 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
     GCNTargetMachine &TM, const CGPassBuilderOption &Opts,
     PassInstrumentationCallbacks *PIC)
     : CodeGenPassBuilder(TM, Opts, PIC) {
+  Opt.MISchedPostRA = true;
   Opt.RequiresCodeGenSCCOrder = true;
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.
@@ -2091,6 +2115,12 @@ Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
   return Error::success();
 }
 
+void AMDGPUCodeGenPassBuilder::addPreRewrite(AddMachinePass &addPass) const {
+  if (EnableRegReassign) {
+    addPass(GCNNSAReassignPass());
+  }
+}
+
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
     AddMachinePass &addPass) const {
   Base::addMachineSSAOptimization(addPass);
@@ -2115,6 +2145,46 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(SIOptimizeExecMaskingPass());
   Base::addPostRegAlloc(addPass);
+}
+
+void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
+  if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
+    // TODO: addPass(GCNCreateVOPDPass());
+  }
+  // TODO: addPass(SIMemoryLegalizerPass());
+  // TODO: addPass(SIInsertWaitcntsPass());
+
+  // TODO: addPass(SIModeRegisterPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    // TODO: addPass(SIInsertHardClausesPass());
+  }
+
+  // addPass(SILateBranchLoweringPass());
+  if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less)) {
+    // TODO: addPass(AMDGPUSetWavePriorityPass());
+  }
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    // TODO: addPass(SIPreEmitPeepholePass());
+  }
+
+  // The hazard recognizer that runs as part of the post-ra scheduler does not
+  // guarantee to be able handle all hazards correctly. This is because if there
+  // are multiple scheduling regions in a basic block, the regions are scheduled
+  // bottom up, so when we begin to schedule a region we don't know what
+  // instructions were emitted directly before it.
+  //
+  // Here we add a stand-alone hazard recognizer pass which can handle all
+  // cases.
+  // TODO: addPass(PostRAHazardRecognizerPass());
+  addPass(AMDGPUWaitSGPRHazardsPass());
+
+  if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less)) {
+    addPass(AMDGPUInsertDelayAluPass());
+  }
+
+  // TODO: addPass(BranchRelaxationPass());
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,

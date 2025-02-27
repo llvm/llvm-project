@@ -5,13 +5,12 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_python//python:defs.bzl", "py_binary")
-load("//mlir:tblgen.bzl", "td_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
 load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary", "select_driver_tools")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":targets.bzl", "llvm_targets")
-load(":tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -739,36 +738,36 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "intrinsic_enums_gen",
-    tbl_outs = [("-gen-intrinsic-enums", "include/llvm/IR/IntrinsicEnums.inc")],
+    tbl_outs = [(
+        ["-gen-intrinsic-enums"],
+        "include/llvm/IR/IntrinsicEnums.inc",
+    )],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
-    td_srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/IR/Intrinsics*.td",
-    ]),
+    deps = [":CommonTargetTdFiles"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "intrinsics_impl_gen",
-    tbl_outs = [("-gen-intrinsic-impl", "include/llvm/IR/IntrinsicImpl.inc")],
+    tbl_outs = [(
+        ["-gen-intrinsic-impl"],
+        "include/llvm/IR/IntrinsicImpl.inc",
+    )],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
-    td_srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/IR/Intrinsics*.td",
-    ]),
+    deps = [":CommonTargetTdFiles"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "vt_gen",
-    tbl_outs = [("-gen-vt", "include/llvm/CodeGen/GenVT.inc")],
+    tbl_outs = [(
+        ["-gen-vt"],
+        "include/llvm/CodeGen/GenVT.inc",
+    )],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/CodeGen/ValueTypes.td",
-    td_srcs = [
-        "include/llvm/CodeGen/ValueTypes.td",
-    ],
 )
 
 # Note that the intrinsics are not currently set up so they can be pruned for
@@ -849,27 +848,33 @@ llvm_target_intrinsics_list = [
 ]
 
 [[
-    gentbl(
+    gentbl_cc_library(
         name = "intrinsic_" + target["name"] + "_gen",
+        includes = ["include"],
         tbl_outs = [(
-            "-gen-intrinsic-enums -intrinsic-prefix=" + target["intrinsic_prefix"],
+            [
+                "-gen-intrinsic-enums",
+                "-intrinsic-prefix=" + target["intrinsic_prefix"],
+            ],
             "include/llvm/IR/Intrinsics" + target["name"] + ".h",
         )],
         tblgen = ":llvm-min-tblgen",
         td_file = "include/llvm/IR/Intrinsics.td",
-        td_srcs = glob([
-            "include/llvm/CodeGen/*.td",
-            "include/llvm/IR/*.td",
-        ]),
+        deps = [
+            ":CodegenTdFiles",
+            ":IRTdFiles",
+        ],
     ),
 ] for target in llvm_target_intrinsics_list]
 
-gentbl(
+gentbl_cc_library(
     name = "attributes_gen",
-    tbl_outs = [("-gen-attrs", "include/llvm/IR/Attributes.inc")],
+    tbl_outs = [(
+        ["-gen-attrs"],
+        "include/llvm/IR/Attributes.inc",
+    )],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Attributes.td",
-    td_srcs = ["include/llvm/IR/Attributes.td"],
 )
 
 cc_library(
@@ -1220,6 +1225,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":BinaryFormat",
         ":BitReader",
         ":BitstreamWriter",
         ":Core",
@@ -1268,45 +1274,84 @@ filegroup(
 )
 
 td_library(
+    name = "CodegenTdFiles",
+    srcs = glob(["include/llvm/CodeGen/*.td"]),
+    includes = ["include"],
+)
+
+td_library(
+    name = "IRTdFiles",
+    srcs = glob(["include/llvm/IR/*.td"]),
+    includes = ["include"],
+)
+
+td_library(
     name = "CommonTargetTdFiles",
     srcs = [":common_target_td_sources"],
     includes = ["include"],
 )
 
-gentbl(
-    name = "ARMTargetParserDefGen",
-    tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/ARMTargetParserDef.inc")],
-    tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/ARM/ARM.td",
-    td_srcs = [
-        ":common_target_td_sources",
-    ] + glob([
+td_library(
+    name = "ArmTargetTdFiles",
+    srcs = glob([
         "lib/Target/ARM/**/*.td",
     ]),
 )
 
-gentbl(
-    name = "AArch64TargetParserDefGen",
-    tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/AArch64TargetParserDef.inc")],
+gentbl_cc_library(
+    name = "ARMTargetParserDefGen",
+    tbl_outs = [(
+        ["-gen-arm-target-def"],
+        "include/llvm/TargetParser/ARMTargetParserDef.inc",
+    )],
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AArch64/AArch64.td",
-    td_srcs = [
-        ":common_target_td_sources",
-    ] + glob([
+    td_file = "lib/Target/ARM/ARM.td",
+    deps = [
+        ":ArmTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+td_library(
+    name = "AArch64TargetTdFiles",
+    srcs = glob([
         "lib/Target/AArch64/**/*.td",
     ]),
 )
 
-gentbl(
-    name = "RISCVTargetParserDefGen",
-    tbl_outs = [("-gen-riscv-target-def", "include/llvm/TargetParser/RISCVTargetParserDef.inc")],
+gentbl_cc_library(
+    name = "AArch64TargetParserDefGen",
+    tbl_outs = [(
+        ["-gen-arm-target-def"],
+        "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+    )],
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/RISCV/RISCV.td",
-    td_srcs = [
-        ":common_target_td_sources",
-    ] + glob([
+    td_file = "lib/Target/AArch64/AArch64.td",
+    deps = [
+        ":AArch64TargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+td_library(
+    name = "RISCVTargetTdFiles",
+    srcs = glob([
         "lib/Target/RISCV/**/*.td",
     ]),
+)
+
+gentbl_cc_library(
+    name = "RISCVTargetParserDefGen",
+    tbl_outs = [(
+        ["-gen-riscv-target-def"],
+        "include/llvm/TargetParser/RISCVTargetParserDef.inc",
+    )],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/RISCV/RISCV.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":RISCVTargetTdFiles",
+    ],
 )
 
 cc_library(
@@ -1379,19 +1424,25 @@ cc_library(
     ],
 )
 
-gentbl(
+td_library(
+    name = "AMDGPUTargetTdFiles",
+    srcs = glob([
+        "lib/Target/AMDGPU/**/*.td",
+    ]),
+)
+
+gentbl_cc_library(
     name = "InstCombineTableGen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = [(
-        "-gen-searchable-tables",
+        ["-gen-searchable-tables"],
         "lib/Target/AMDGPU/InstCombineTables.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/InstCombineTables.td",
-    td_srcs = glob([
-        "lib/Target/AMDGPU/*.td",
-    ]) + [
-        ":common_target_td_sources",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
     ],
 )
 
@@ -1593,40 +1644,46 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Object",
+        ":ObjectYAML",
         ":Support",
         ":TargetParser",
         ":TransformUtils",
     ],
 )
 
-filegroup(
-    name = "omp_td_files",
+td_library(
+    name = "OmpTdFiles",
     srcs = glob([
         "include/llvm/Frontend/OpenMP/*.td",
         "include/llvm/Frontend/Directive/*.td",
     ]),
+    includes = ["include"],
 )
 
-gentbl(
+gentbl_filegroup(
     name = "omp_gen",
-    library = False,
     tbl_outs = [
-        ("--gen-directive-decl", "include/llvm/Frontend/OpenMP/OMP.h.inc"),
+        (
+            ["--gen-directive-decl"],
+            "include/llvm/Frontend/OpenMP/OMP.h.inc",
+        ),
     ],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
-    td_srcs = [":omp_td_files"],
+    deps = [":OmpTdFiles"],
 )
 
-gentbl(
+gentbl_filegroup(
     name = "omp_gen_impl",
-    library = False,
     tbl_outs = [
-        ("--gen-directive-impl", "include/llvm/Frontend/OpenMP/OMP.inc"),
+        (
+            ["--gen-directive-impl"],
+            "include/llvm/Frontend/OpenMP/OMP.inc",
+        ),
     ],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
-    td_srcs = [":omp_td_files"],
+    deps = [":OmpTdFiles"],
 )
 
 cc_library(
@@ -1675,34 +1732,39 @@ cc_library(
     ],
 )
 
-filegroup(
-    name = "acc_td_files",
+td_library(
+    name = "AccTdFiles",
     srcs = glob([
         "include/llvm/Frontend/OpenACC/*.td",
         "include/llvm/Frontend/Directive/*.td",
     ]),
+    includes = ["include"],
 )
 
-gentbl(
+gentbl_filegroup(
     name = "acc_gen",
-    library = False,
     tbl_outs = [
-        ("--gen-directive-decl", "include/llvm/Frontend/OpenACC/ACC.h.inc"),
+        (
+            ["--gen-directive-decl"],
+            "include/llvm/Frontend/OpenACC/ACC.h.inc",
+        ),
     ],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
-    td_srcs = [":acc_td_files"],
+    deps = [":AccTdFiles"],
 )
 
-gentbl(
+gentbl_filegroup(
     name = "acc_gen_impl",
-    library = False,
     tbl_outs = [
-        ("--gen-directive-impl", "include/llvm/Frontend/OpenACC/ACC.inc"),
+        (
+            ["--gen-directive-impl"],
+            "include/llvm/Frontend/OpenACC/ACC.inc",
+        ),
     ],
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
-    td_srcs = [":acc_td_files"],
+    deps = [":AccTdFiles"],
 )
 
 cc_library(
@@ -2019,64 +2081,217 @@ llvm_target_lib_list = [lib for lib in [
         "name": "AArch64",
         "short_name": "AArch64",
         "tbl_outs": [
-            ("-gen-register-bank", "lib/Target/AArch64/AArch64GenRegisterBank.inc"),
-            ("-gen-register-info", "lib/Target/AArch64/AArch64GenRegisterInfo.inc"),
-            ("-gen-instr-info", "lib/Target/AArch64/AArch64GenInstrInfo.inc"),
-            ("-gen-emitter", "lib/Target/AArch64/AArch64GenMCCodeEmitter.inc"),
-            ("-gen-pseudo-lowering", "lib/Target/AArch64/AArch64GenMCPseudoLowering.inc"),
-            ("-gen-asm-writer", "lib/Target/AArch64/AArch64GenAsmWriter.inc"),
-            ("-gen-asm-writer -asmwriternum=1", "lib/Target/AArch64/AArch64GenAsmWriter1.inc"),
-            ("-gen-asm-matcher", "lib/Target/AArch64/AArch64GenAsmMatcher.inc"),
-            ("-gen-dag-isel", "lib/Target/AArch64/AArch64GenDAGISel.inc"),
-            ("-gen-fast-isel", "lib/Target/AArch64/AArch64GenFastISel.inc"),
-            ("-gen-global-isel", "lib/Target/AArch64/AArch64GenGlobalISel.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64O0PreLegalizerCombiner", "lib/Target/AArch64/AArch64GenO0PreLegalizeGICombiner.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64PreLegalizerCombiner", "lib/Target/AArch64/AArch64GenPreLegalizeGICombiner.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64PostLegalizerCombiner", "lib/Target/AArch64/AArch64GenPostLegalizeGICombiner.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64PostLegalizerLowering", "lib/Target/AArch64/AArch64GenPostLegalizeGILowering.inc"),
-            ("-gen-callingconv", "lib/Target/AArch64/AArch64GenCallingConv.inc"),
-            ("-gen-subtarget", "lib/Target/AArch64/AArch64GenSubtargetInfo.inc"),
-            ("-gen-disassembler", "lib/Target/AArch64/AArch64GenDisassemblerTables.inc"),
-            ("-gen-searchable-tables", "lib/Target/AArch64/AArch64GenSystemOperands.inc"),
-            ("-gen-exegesis", "lib/Target/AArch64/AArch64GenExegesis.inc"),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/AArch64/AArch64GenRegisterBank.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/AArch64/AArch64GenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/AArch64/AArch64GenInstrInfo.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/AArch64/AArch64GenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-pseudo-lowering"],
+                "lib/Target/AArch64/AArch64GenMCPseudoLowering.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/AArch64/AArch64GenAsmWriter.inc",
+            ),
+            (
+                [
+                    "-gen-asm-writer",
+                    "-asmwriternum=1",
+                ],
+                "lib/Target/AArch64/AArch64GenAsmWriter1.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/AArch64/AArch64GenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/AArch64/AArch64GenDAGISel.inc",
+            ),
+            (
+                ["-gen-fast-isel"],
+                "lib/Target/AArch64/AArch64GenFastISel.inc",
+            ),
+            (
+                ["-gen-global-isel"],
+                "lib/Target/AArch64/AArch64GenGlobalISel.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=AArch64O0PreLegalizerCombiner",
+                ],
+                "lib/Target/AArch64/AArch64GenO0PreLegalizeGICombiner.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=AArch64PreLegalizerCombiner",
+                ],
+                "lib/Target/AArch64/AArch64GenPreLegalizeGICombiner.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=AArch64PostLegalizerCombiner",
+                ],
+                "lib/Target/AArch64/AArch64GenPostLegalizeGICombiner.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=AArch64PostLegalizerLowering",
+                ],
+                "lib/Target/AArch64/AArch64GenPostLegalizeGILowering.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/AArch64/AArch64GenCallingConv.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/AArch64/AArch64GenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/AArch64/AArch64GenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-searchable-tables"],
+                "lib/Target/AArch64/AArch64GenSystemOperands.inc",
+            ),
+            (
+                ["-gen-exegesis"],
+                "lib/Target/AArch64/AArch64GenExegesis.inc",
+            ),
         ],
     },
     {
         "name": "ARM",
         "short_name": "ARM",
         "tbl_outs": [
-            ("-gen-register-bank", "lib/Target/ARM/ARMGenRegisterBank.inc"),
-            ("-gen-register-info", "lib/Target/ARM/ARMGenRegisterInfo.inc"),
-            ("-gen-searchable-tables", "lib/Target/ARM/ARMGenSystemRegister.inc"),
-            ("-gen-instr-info", "lib/Target/ARM/ARMGenInstrInfo.inc"),
-            ("-gen-emitter", "lib/Target/ARM/ARMGenMCCodeEmitter.inc"),
-            ("-gen-pseudo-lowering", "lib/Target/ARM/ARMGenMCPseudoLowering.inc"),
-            ("-gen-asm-writer", "lib/Target/ARM/ARMGenAsmWriter.inc"),
-            ("-gen-asm-matcher", "lib/Target/ARM/ARMGenAsmMatcher.inc"),
-            ("-gen-dag-isel", "lib/Target/ARM/ARMGenDAGISel.inc"),
-            ("-gen-fast-isel", "lib/Target/ARM/ARMGenFastISel.inc"),
-            ("-gen-global-isel", "lib/Target/ARM/ARMGenGlobalISel.inc"),
-            ("-gen-callingconv", "lib/Target/ARM/ARMGenCallingConv.inc"),
-            ("-gen-subtarget", "lib/Target/ARM/ARMGenSubtargetInfo.inc"),
-            ("-gen-disassembler", "lib/Target/ARM/ARMGenDisassemblerTables.inc"),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/ARM/ARMGenRegisterBank.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/ARM/ARMGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-searchable-tables"],
+                "lib/Target/ARM/ARMGenSystemRegister.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/ARM/ARMGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/ARM/ARMGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-pseudo-lowering"],
+                "lib/Target/ARM/ARMGenMCPseudoLowering.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/ARM/ARMGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/ARM/ARMGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/ARM/ARMGenDAGISel.inc",
+            ),
+            (
+                ["-gen-fast-isel"],
+                "lib/Target/ARM/ARMGenFastISel.inc",
+            ),
+            (
+                ["-gen-global-isel"],
+                "lib/Target/ARM/ARMGenGlobalISel.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/ARM/ARMGenCallingConv.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/ARM/ARMGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/ARM/ARMGenDisassemblerTables.inc",
+            ),
         ],
     },
     {
         "name": "AMDGPU",
         "short_name": "AMDGPU",
         "tbl_outs": [
-            ("-gen-register-bank", "lib/Target/AMDGPU/AMDGPUGenRegisterBank.inc"),
-            ("-gen-register-info", "lib/Target/AMDGPU/AMDGPUGenRegisterInfo.inc"),
-            ("-gen-instr-info", "lib/Target/AMDGPU/AMDGPUGenInstrInfo.inc"),
-            ("-gen-emitter", "lib/Target/AMDGPU/AMDGPUGenMCCodeEmitter.inc"),
-            ("-gen-pseudo-lowering", "lib/Target/AMDGPU/AMDGPUGenMCPseudoLowering.inc"),
-            ("-gen-asm-writer", "lib/Target/AMDGPU/AMDGPUGenAsmWriter.inc"),
-            ("-gen-asm-matcher", "lib/Target/AMDGPU/AMDGPUGenAsmMatcher.inc"),
-            ("-gen-dag-isel", "lib/Target/AMDGPU/AMDGPUGenDAGISel.inc"),
-            ("-gen-callingconv", "lib/Target/AMDGPU/AMDGPUGenCallingConv.inc"),
-            ("-gen-subtarget", "lib/Target/AMDGPU/AMDGPUGenSubtargetInfo.inc"),
-            ("-gen-disassembler", "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc"),
-            ("-gen-searchable-tables", "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc"),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/AMDGPU/AMDGPUGenRegisterBank.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/AMDGPU/AMDGPUGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/AMDGPU/AMDGPUGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/AMDGPU/AMDGPUGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-pseudo-lowering"],
+                "lib/Target/AMDGPU/AMDGPUGenMCPseudoLowering.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/AMDGPU/AMDGPUGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/AMDGPU/AMDGPUGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/AMDGPU/AMDGPUGenDAGISel.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/AMDGPU/AMDGPUGenCallingConv.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/AMDGPU/AMDGPUGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-searchable-tables"],
+                "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc",
+            ),
         ],
         "tbl_deps": [
             ":InstCombineTableGen",
@@ -2088,164 +2303,479 @@ llvm_target_lib_list = [lib for lib in [
         "name": "AVR",
         "short_name": "AVR",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/AVR/AVRGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/AVR/AVRGenAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/AVR/AVRGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/AVR/AVRGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/AVR/AVRGenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/AVR/AVRGenMCCodeEmitter.inc"),
-            ("-gen-instr-info", "lib/Target/AVR/AVRGenInstrInfo.inc"),
-            ("-gen-register-info", "lib/Target/AVR/AVRGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/AVR/AVRGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/AVR/AVRGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/AVR/AVRGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/AVR/AVRGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/AVR/AVRGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/AVR/AVRGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/AVR/AVRGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/AVR/AVRGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/AVR/AVRGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/AVR/AVRGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "BPF",
         "short_name": "BPF",
         "tbl_outs": [
-            ("-gen-register-bank", "lib/Target/BPF/BPFGenRegisterBank.inc"),
-            ("-gen-asm-writer", "lib/Target/BPF/BPFGenAsmWriter.inc"),
-            ("-gen-asm-matcher", "lib/Target/BPF/BPFGenAsmMatcher.inc"),
-            ("-gen-callingconv", "lib/Target/BPF/BPFGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/BPF/BPFGenDAGISel.inc"),
-            ("-gen-global-isel", "lib/Target/BPF/BPFGenGlobalISel.inc"),
-            ("-gen-disassembler", "lib/Target/BPF/BPFGenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/BPF/BPFGenMCCodeEmitter.inc"),
-            ("-gen-instr-info", "lib/Target/BPF/BPFGenInstrInfo.inc"),
-            ("-gen-register-info", "lib/Target/BPF/BPFGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/BPF/BPFGenSubtargetInfo.inc"),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/BPF/BPFGenRegisterBank.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/BPF/BPFGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/BPF/BPFGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/BPF/BPFGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/BPF/BPFGenDAGISel.inc",
+            ),
+            (
+                ["-gen-global-isel"],
+                "lib/Target/BPF/BPFGenGlobalISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/BPF/BPFGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/BPF/BPFGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/BPF/BPFGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/BPF/BPFGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/BPF/BPFGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "Hexagon",
         "short_name": "Hexagon",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/Hexagon/HexagonGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/Hexagon/HexagonGenAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/Hexagon/HexagonGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/Hexagon/HexagonGenDAGISel.inc"),
-            ("-gen-dfa-packetizer", "lib/Target/Hexagon/HexagonGenDFAPacketizer.inc"),
-            ("-gen-disassembler", "lib/Target/Hexagon/HexagonGenDisassemblerTables.inc"),
-            ("-gen-instr-info", "lib/Target/Hexagon/HexagonGenInstrInfo.inc"),
-            ("-gen-emitter", "lib/Target/Hexagon/HexagonGenMCCodeEmitter.inc"),
-            ("-gen-register-info", "lib/Target/Hexagon/HexagonGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/Hexagon/HexagonGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/Hexagon/HexagonGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/Hexagon/HexagonGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/Hexagon/HexagonGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/Hexagon/HexagonGenDAGISel.inc",
+            ),
+            (
+                ["-gen-dfa-packetizer"],
+                "lib/Target/Hexagon/HexagonGenDFAPacketizer.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/Hexagon/HexagonGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/Hexagon/HexagonGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/Hexagon/HexagonGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/Hexagon/HexagonGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/Hexagon/HexagonGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "Lanai",
         "short_name": "Lanai",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/Lanai/LanaiGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/Lanai/LanaiGenAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/Lanai/LanaiGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/Lanai/LanaiGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/Lanai/LanaiGenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/Lanai/LanaiGenMCCodeEmitter.inc"),
-            ("-gen-instr-info", "lib/Target/Lanai/LanaiGenInstrInfo.inc"),
-            ("-gen-register-info", "lib/Target/Lanai/LanaiGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/Lanai/LanaiGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/Lanai/LanaiGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/Lanai/LanaiGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/Lanai/LanaiGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/Lanai/LanaiGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/Lanai/LanaiGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/Lanai/LanaiGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/Lanai/LanaiGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/Lanai/LanaiGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/Lanai/LanaiGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "LoongArch",
         "short_name": "LoongArch",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/LoongArch/LoongArchGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/LoongArch/LoongArchGenAsmWriter.inc"),
-            ("-gen-dag-isel", "lib/Target/LoongArch/LoongArchGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/LoongArch/LoongArchGenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/LoongArch/LoongArchGenMCCodeEmitter.inc"),
-            ("-gen-instr-info", "lib/Target/LoongArch/LoongArchGenInstrInfo.inc"),
-            ("-gen-pseudo-lowering", "lib/Target/LoongArch/LoongArchGenMCPseudoLowering.inc"),
-            ("-gen-register-info", "lib/Target/LoongArch/LoongArchGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/LoongArch/LoongArchGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/LoongArch/LoongArchGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/LoongArch/LoongArchGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/LoongArch/LoongArchGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/LoongArch/LoongArchGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/LoongArch/LoongArchGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/LoongArch/LoongArchGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-pseudo-lowering"],
+                "lib/Target/LoongArch/LoongArchGenMCPseudoLowering.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/LoongArch/LoongArchGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/LoongArch/LoongArchGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "Mips",
         "short_name": "Mips",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/Mips/MipsGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/Mips/MipsGenAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/Mips/MipsGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/Mips/MipsGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/Mips/MipsGenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/Mips/MipsGenMCCodeEmitter.inc"),
-            ("-gen-exegesis", "lib/Target/Mips/MipsGenExegesis.inc"),
-            ("-gen-fast-isel", "lib/Target/Mips/MipsGenFastISel.inc"),
-            ("-gen-global-isel", "lib/Target/Mips/MipsGenGlobalISel.inc"),
-            ("-gen-global-isel-combiner -combiners=MipsPostLegalizerCombiner", "lib/Target/Mips/MipsGenPostLegalizeGICombiner.inc"),
-            ("-gen-instr-info", "lib/Target/Mips/MipsGenInstrInfo.inc"),
-            ("-gen-pseudo-lowering", "lib/Target/Mips/MipsGenMCPseudoLowering.inc"),
-            ("-gen-register-bank", "lib/Target/Mips/MipsGenRegisterBank.inc"),
-            ("-gen-register-info", "lib/Target/Mips/MipsGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/Mips/MipsGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/Mips/MipsGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/Mips/MipsGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/Mips/MipsGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/Mips/MipsGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/Mips/MipsGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/Mips/MipsGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-exegesis"],
+                "lib/Target/Mips/MipsGenExegesis.inc",
+            ),
+            (
+                ["-gen-fast-isel"],
+                "lib/Target/Mips/MipsGenFastISel.inc",
+            ),
+            (
+                ["-gen-global-isel"],
+                "lib/Target/Mips/MipsGenGlobalISel.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=MipsPostLegalizerCombiner",
+                ],
+                "lib/Target/Mips/MipsGenPostLegalizeGICombiner.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/Mips/MipsGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-pseudo-lowering"],
+                "lib/Target/Mips/MipsGenMCPseudoLowering.inc",
+            ),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/Mips/MipsGenRegisterBank.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/Mips/MipsGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/Mips/MipsGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "MSP430",
         "short_name": "MSP430",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/MSP430/MSP430GenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/MSP430/MSP430GenAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/MSP430/MSP430GenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/MSP430/MSP430GenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/MSP430/MSP430GenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/MSP430/MSP430GenMCCodeEmitter.inc"),
-            ("-gen-instr-info", "lib/Target/MSP430/MSP430GenInstrInfo.inc"),
-            ("-gen-register-info", "lib/Target/MSP430/MSP430GenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/MSP430/MSP430GenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/MSP430/MSP430GenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/MSP430/MSP430GenAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/MSP430/MSP430GenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/MSP430/MSP430GenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/MSP430/MSP430GenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/MSP430/MSP430GenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/MSP430/MSP430GenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/MSP430/MSP430GenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/MSP430/MSP430GenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "NVPTX",
         "short_name": "NVPTX",
         "tbl_outs": [
-            ("-gen-register-info", "lib/Target/NVPTX/NVPTXGenRegisterInfo.inc"),
-            ("-gen-instr-info", "lib/Target/NVPTX/NVPTXGenInstrInfo.inc"),
-            ("-gen-asm-writer", "lib/Target/NVPTX/NVPTXGenAsmWriter.inc"),
-            ("-gen-dag-isel", "lib/Target/NVPTX/NVPTXGenDAGISel.inc"),
-            ("-gen-subtarget", "lib/Target/NVPTX/NVPTXGenSubtargetInfo.inc"),
+            (
+                ["-gen-register-info"],
+                "lib/Target/NVPTX/NVPTXGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/NVPTX/NVPTXGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/NVPTX/NVPTXGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/NVPTX/NVPTXGenDAGISel.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/NVPTX/NVPTXGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "PowerPC",
         "short_name": "PPC",
         "tbl_outs": [
-            ("-gen-asm-writer", "lib/Target/PowerPC/PPCGenAsmWriter.inc"),
-            ("-gen-asm-matcher", "lib/Target/PowerPC/PPCGenAsmMatcher.inc"),
-            ("-gen-emitter", "lib/Target/PowerPC/PPCGenMCCodeEmitter.inc"),
-            ("-gen-register-info", "lib/Target/PowerPC/PPCGenRegisterInfo.inc"),
-            ("-gen-instr-info", "lib/Target/PowerPC/PPCGenInstrInfo.inc"),
-            ("-gen-dag-isel", "lib/Target/PowerPC/PPCGenDAGISel.inc"),
-            ("-gen-fast-isel", "lib/Target/PowerPC/PPCGenFastISel.inc"),
-            ("-gen-callingconv", "lib/Target/PowerPC/PPCGenCallingConv.inc"),
-            ("-gen-subtarget", "lib/Target/PowerPC/PPCGenSubtargetInfo.inc"),
-            ("-gen-disassembler", "lib/Target/PowerPC/PPCGenDisassemblerTables.inc"),
-            ("-gen-register-bank", "lib/Target/PowerPC/PPCGenRegisterBank.inc"),
-            ("-gen-global-isel", "lib/Target/PowerPC/PPCGenGlobalISel.inc"),
-            ("-gen-exegesis", "lib/Target/PowerPC/PPCGenExegesis.inc"),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/PowerPC/PPCGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/PowerPC/PPCGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/PowerPC/PPCGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/PowerPC/PPCGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/PowerPC/PPCGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/PowerPC/PPCGenDAGISel.inc",
+            ),
+            (
+                ["-gen-fast-isel"],
+                "lib/Target/PowerPC/PPCGenFastISel.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/PowerPC/PPCGenCallingConv.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/PowerPC/PPCGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/PowerPC/PPCGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/PowerPC/PPCGenRegisterBank.inc",
+            ),
+            (
+                ["-gen-global-isel"],
+                "lib/Target/PowerPC/PPCGenGlobalISel.inc",
+            ),
+            (
+                ["-gen-exegesis"],
+                "lib/Target/PowerPC/PPCGenExegesis.inc",
+            ),
         ],
     },
     {
         "name": "RISCV",
         "short_name": "RISCV",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/RISCV/RISCVGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/RISCV/RISCVGenAsmWriter.inc"),
-            ("-gen-compress-inst-emitter", "lib/Target/RISCV/RISCVGenCompressInstEmitter.inc"),
-            ("-gen-dag-isel", "lib/Target/RISCV/RISCVGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/RISCV/RISCVGenDisassemblerTables.inc"),
-            ("-gen-instr-info", "lib/Target/RISCV/RISCVGenInstrInfo.inc"),
-            ("-gen-macro-fusion-pred", "lib/Target/RISCV/RISCVGenMacroFusion.inc"),
-            ("-gen-emitter", "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc"),
-            ("-gen-pseudo-lowering", "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc"),
-            ("-gen-register-bank", "lib/Target/RISCV/RISCVGenRegisterBank.inc"),
-            ("-gen-register-info", "lib/Target/RISCV/RISCVGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/RISCV/RISCVGenSubtargetInfo.inc"),
-            ("-gen-searchable-tables", "lib/Target/RISCV/RISCVGenSearchableTables.inc"),
-            ("-gen-exegesis", "lib/Target/RISCV/RISCVGenExegesis.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/RISCV/RISCVGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/RISCV/RISCVGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-compress-inst-emitter"],
+                "lib/Target/RISCV/RISCVGenCompressInstEmitter.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/RISCV/RISCVGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/RISCV/RISCVGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/RISCV/RISCVGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-macro-fusion-pred"],
+                "lib/Target/RISCV/RISCVGenMacroFusion.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-pseudo-lowering"],
+                "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc",
+            ),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/RISCV/RISCVGenRegisterBank.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/RISCV/RISCVGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/RISCV/RISCVGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-searchable-tables"],
+                "lib/Target/RISCV/RISCVGenSearchableTables.inc",
+            ),
+            (
+                ["-gen-exegesis"],
+                "lib/Target/RISCV/RISCVGenExegesis.inc",
+            ),
         ],
         "tbl_deps": [
             ":riscv_isel_target_gen",
@@ -2255,112 +2785,337 @@ llvm_target_lib_list = [lib for lib in [
         "name": "Sparc",
         "short_name": "Sparc",
         "tbl_outs": [
-            ("-gen-asm-writer", "lib/Target/Sparc/SparcGenAsmWriter.inc"),
-            ("-gen-asm-matcher", "lib/Target/Sparc/SparcGenAsmMatcher.inc"),
-            ("-gen-emitter", "lib/Target/Sparc/SparcGenMCCodeEmitter.inc"),
-            ("-gen-register-info", "lib/Target/Sparc/SparcGenRegisterInfo.inc"),
-            ("-gen-instr-info", "lib/Target/Sparc/SparcGenInstrInfo.inc"),
-            ("-gen-dag-isel", "lib/Target/Sparc/SparcGenDAGISel.inc"),
-            ("-gen-callingconv", "lib/Target/Sparc/SparcGenCallingConv.inc"),
-            ("-gen-subtarget", "lib/Target/Sparc/SparcGenSubtargetInfo.inc"),
-            ("-gen-disassembler", "lib/Target/Sparc/SparcGenDisassemblerTables.inc"),
-            ("-gen-searchable-tables", "lib/Target/Sparc/SparcGenSearchableTables.inc"),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/Sparc/SparcGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/Sparc/SparcGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/Sparc/SparcGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/Sparc/SparcGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/Sparc/SparcGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/Sparc/SparcGenDAGISel.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/Sparc/SparcGenCallingConv.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/Sparc/SparcGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/Sparc/SparcGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-searchable-tables"],
+                "lib/Target/Sparc/SparcGenSearchableTables.inc",
+            ),
         ],
     },
     {
         "name": "SPIRV",
         "short_name": "SPIRV",
         "tbl_outs": [
-            ("-gen-asm-writer", "lib/Target/SPIRV/SPIRVGenAsmWriter.inc"),
-            ("-gen-emitter", "lib/Target/SPIRV/SPIRVGenMCCodeEmitter.inc"),
-            ("-gen-global-isel", "lib/Target/SPIRV/SPIRVGenGlobalISel.inc"),
-            ("-gen-global-isel-combiner -combiners=SPIRVPreLegalizerCombiner", "lib/Target/SPIRV/SPIRVGenPreLegalizeGICombiner.inc"),
-            ("-gen-instr-info", "lib/Target/SPIRV/SPIRVGenInstrInfo.inc"),
-            ("-gen-register-bank", "lib/Target/SPIRV/SPIRVGenRegisterBank.inc"),
-            ("-gen-register-info", "lib/Target/SPIRV/SPIRVGenRegisterInfo.inc"),
-            ("-gen-searchable-tables", "lib/Target/SPIRV/SPIRVGenTables.inc"),
-            ("-gen-subtarget", "lib/Target/SPIRV/SPIRVGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/SPIRV/SPIRVGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/SPIRV/SPIRVGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-global-isel"],
+                "lib/Target/SPIRV/SPIRVGenGlobalISel.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=SPIRVPreLegalizerCombiner",
+                ],
+                "lib/Target/SPIRV/SPIRVGenPreLegalizeGICombiner.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/SPIRV/SPIRVGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/SPIRV/SPIRVGenRegisterBank.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/SPIRV/SPIRVGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-searchable-tables"],
+                "lib/Target/SPIRV/SPIRVGenTables.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/SPIRV/SPIRVGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "SystemZ",
         "short_name": "SystemZ",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/SystemZ/SystemZGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenGNUAsmWriter.inc"),
-            ("-gen-asm-writer -asmwriternum=1", "lib/Target/SystemZ/SystemZGenHLASMAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/SystemZ/SystemZGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/SystemZ/SystemZGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/SystemZ/SystemZGenMCCodeEmitter.inc"),
-            ("-gen-instr-info", "lib/Target/SystemZ/SystemZGenInstrInfo.inc"),
-            ("-gen-register-info", "lib/Target/SystemZ/SystemZGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/SystemZ/SystemZGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/SystemZ/SystemZGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/SystemZ/SystemZGenGNUAsmWriter.inc",
+            ),
+            (
+                [
+                    "-gen-asm-writer",
+                    "-asmwriternum=1",
+                ],
+                "lib/Target/SystemZ/SystemZGenHLASMAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/SystemZ/SystemZGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/SystemZ/SystemZGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/SystemZ/SystemZGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/SystemZ/SystemZGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/SystemZ/SystemZGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/SystemZ/SystemZGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "VE",
         "short_name": "VE",
         "tbl_outs": [
-            ("-gen-asm-matcher", "lib/Target/VE/VEGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/VE/VEGenAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/VE/VEGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/VE/VEGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/VE/VEGenDisassemblerTables.inc"),
-            ("-gen-emitter", "lib/Target/VE/VEGenMCCodeEmitter.inc"),
-            ("-gen-instr-info", "lib/Target/VE/VEGenInstrInfo.inc"),
-            ("-gen-register-info", "lib/Target/VE/VEGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/VE/VEGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/VE/VEGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/VE/VEGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/VE/VEGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/VE/VEGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/VE/VEGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/VE/VEGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/VE/VEGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/VE/VEGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/VE/VEGenSubtargetInfo.inc",
+            ),
         ],
     },
     {
         "name": "WebAssembly",
         "short_name": "WebAssembly",
         "tbl_outs": [
-            ("-gen-disassembler", "lib/Target/WebAssembly/WebAssemblyGenDisassemblerTables.inc"),
-            ("-gen-asm-writer", "lib/Target/WebAssembly/WebAssemblyGenAsmWriter.inc"),
-            ("-gen-instr-info", "lib/Target/WebAssembly/WebAssemblyGenInstrInfo.inc"),
-            ("-gen-dag-isel", "lib/Target/WebAssembly/WebAssemblyGenDAGISel.inc"),
-            ("-gen-fast-isel", "lib/Target/WebAssembly/WebAssemblyGenFastISel.inc"),
-            ("-gen-emitter", "lib/Target/WebAssembly/WebAssemblyGenMCCodeEmitter.inc"),
-            ("-gen-register-info", "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/WebAssembly/WebAssemblyGenSubtargetInfo.inc"),
-            ("-gen-asm-matcher", "lib/Target/WebAssembly/WebAssemblyGenAsmMatcher.inc"),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/WebAssembly/WebAssemblyGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/WebAssembly/WebAssemblyGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/WebAssembly/WebAssemblyGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/WebAssembly/WebAssemblyGenDAGISel.inc",
+            ),
+            (
+                ["-gen-fast-isel"],
+                "lib/Target/WebAssembly/WebAssemblyGenFastISel.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/WebAssembly/WebAssemblyGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/WebAssembly/WebAssemblyGenSubtargetInfo.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/WebAssembly/WebAssemblyGenAsmMatcher.inc",
+            ),
         ],
     },
     {
         "name": "X86",
         "short_name": "X86",
         "tbl_outs": [
-            ("-gen-register-bank", "lib/Target/X86/X86GenRegisterBank.inc"),
-            ("-gen-register-info", "lib/Target/X86/X86GenRegisterInfo.inc"),
-            ("-gen-disassembler", "lib/Target/X86/X86GenDisassemblerTables.inc"),
-            ("-gen-instr-info", "lib/Target/X86/X86GenInstrInfo.inc"),
-            ("-gen-asm-writer", "lib/Target/X86/X86GenAsmWriter.inc"),
-            ("-gen-asm-writer -asmwriternum=1", "lib/Target/X86/X86GenAsmWriter1.inc"),
-            ("-gen-asm-matcher", "lib/Target/X86/X86GenAsmMatcher.inc"),
-            ("-gen-dag-isel", "lib/Target/X86/X86GenDAGISel.inc"),
-            ("-gen-fast-isel", "lib/Target/X86/X86GenFastISel.inc"),
-            ("-gen-global-isel", "lib/Target/X86/X86GenGlobalISel.inc"),
-            ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
-            ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
-            ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
-            ("-gen-x86-instr-mapping", "lib/Target/X86/X86GenInstrMapping.inc"),
-            ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
-            ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
+            (
+                ["-gen-register-bank"],
+                "lib/Target/X86/X86GenRegisterBank.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/X86/X86GenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/X86/X86GenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/X86/X86GenInstrInfo.inc",
+            ),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/X86/X86GenAsmWriter.inc",
+            ),
+            (
+                [
+                    "-gen-asm-writer",
+                    "-asmwriternum=1",
+                ],
+                "lib/Target/X86/X86GenAsmWriter1.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/X86/X86GenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/X86/X86GenDAGISel.inc",
+            ),
+            (
+                ["-gen-fast-isel"],
+                "lib/Target/X86/X86GenFastISel.inc",
+            ),
+            (
+                ["-gen-global-isel"],
+                "lib/Target/X86/X86GenGlobalISel.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/X86/X86GenCallingConv.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/X86/X86GenSubtargetInfo.inc",
+            ),
+            (
+                [
+                    "-gen-x86-fold-tables",
+                    "-asmwriternum=1",
+                ],
+                "lib/Target/X86/X86GenFoldTables.inc",
+            ),
+            (
+                ["-gen-x86-instr-mapping"],
+                "lib/Target/X86/X86GenInstrMapping.inc",
+            ),
+            (
+                ["-gen-exegesis"],
+                "lib/Target/X86/X86GenExegesis.inc",
+            ),
+            (
+                [
+                    "-gen-x86-mnemonic-tables",
+                    "-asmwriternum=1",
+                ],
+                "lib/Target/X86/X86GenMnemonicTables.inc",
+            ),
         ],
     },
     {
         "name": "XCore",
         "short_name": "XCore",
         "tbl_outs": [
-            ("-gen-asm-writer", "lib/Target/XCore/XCoreGenAsmWriter.inc"),
-            ("-gen-callingconv", "lib/Target/XCore/XCoreGenCallingConv.inc"),
-            ("-gen-dag-isel", "lib/Target/XCore/XCoreGenDAGISel.inc"),
-            ("-gen-disassembler", "lib/Target/XCore/XCoreGenDisassemblerTables.inc"),
-            ("-gen-instr-info", "lib/Target/XCore/XCoreGenInstrInfo.inc"),
-            ("-gen-register-info", "lib/Target/XCore/XCoreGenRegisterInfo.inc"),
-            ("-gen-subtarget", "lib/Target/XCore/XCoreGenSubtargetInfo.inc"),
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/XCore/XCoreGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/XCore/XCoreGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/XCore/XCoreGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/XCore/XCoreGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/XCore/XCoreGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                "lib/Target/XCore/XCoreGenRegisterInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/XCore/XCoreGenSubtargetInfo.inc",
+            ),
         ],
     },
 ] if lib["name"] in llvm_targets]
@@ -2370,88 +3125,151 @@ cc_library(
     textual_hdrs = ["lib/Target/X86/X86InstrInfo.h"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = [
-        ("-gen-global-isel", "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc"),
-        ("-gen-global-isel-combiner -combiners=AMDGPUPreLegalizerCombiner", "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=AMDGPUPostLegalizerCombiner", "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=AMDGPURegBankCombiner", "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc"),
+        (
+            ["-gen-global-isel"],
+            "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc",
+        ),
+        (
+            [
+                "-gen-global-isel-combiner",
+                "-combiners=AMDGPUPreLegalizerCombiner",
+            ],
+            "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc",
+        ),
+        (
+            [
+                "-gen-global-isel-combiner",
+                "-combiners=AMDGPUPostLegalizerCombiner",
+            ],
+            "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc",
+        ),
+        (
+            [
+                "-gen-global-isel-combiner",
+                "-combiners=AMDGPURegBankCombiner",
+            ],
+            "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc",
+        ),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/AMDGPUGISel.td",
-    td_srcs = [
-        ":common_target_td_sources",
-    ] + glob([
-        "lib/Target/AMDGPU/*.td",
-    ]),
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "r600_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = [
-        ("-gen-asm-writer", "lib/Target/AMDGPU/R600GenAsmWriter.inc"),
-        ("-gen-callingconv", "lib/Target/AMDGPU/R600GenCallingConv.inc"),
-        ("-gen-dag-isel", "lib/Target/AMDGPU/R600GenDAGISel.inc"),
-        ("-gen-dfa-packetizer", "lib/Target/AMDGPU/R600GenDFAPacketizer.inc"),
-        ("-gen-instr-info", "lib/Target/AMDGPU/R600GenInstrInfo.inc"),
-        ("-gen-emitter", "lib/Target/AMDGPU/R600GenMCCodeEmitter.inc"),
-        ("-gen-register-info", "lib/Target/AMDGPU/R600GenRegisterInfo.inc"),
-        ("-gen-subtarget", "lib/Target/AMDGPU/R600GenSubtargetInfo.inc"),
+        (
+            ["-gen-asm-writer"],
+            "lib/Target/AMDGPU/R600GenAsmWriter.inc",
+        ),
+        (
+            ["-gen-callingconv"],
+            "lib/Target/AMDGPU/R600GenCallingConv.inc",
+        ),
+        (
+            ["-gen-dag-isel"],
+            "lib/Target/AMDGPU/R600GenDAGISel.inc",
+        ),
+        (
+            ["-gen-dfa-packetizer"],
+            "lib/Target/AMDGPU/R600GenDFAPacketizer.inc",
+        ),
+        (
+            ["-gen-instr-info"],
+            "lib/Target/AMDGPU/R600GenInstrInfo.inc",
+        ),
+        (
+            ["-gen-emitter"],
+            "lib/Target/AMDGPU/R600GenMCCodeEmitter.inc",
+        ),
+        (
+            ["-gen-register-info"],
+            "lib/Target/AMDGPU/R600GenRegisterInfo.inc",
+        ),
+        (
+            ["-gen-subtarget"],
+            "lib/Target/AMDGPU/R600GenSubtargetInfo.inc",
+        ),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/R600.td",
-    td_srcs = [
-        ":common_target_td_sources",
-    ] + glob([
-        "lib/Target/AMDGPU/*.td",
-    ]),
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "riscv_isel_target_gen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = [
-        ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
-        ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+        (
+            ["-gen-global-isel"],
+            "lib/Target/RISCV/RISCVGenGlobalISel.inc",
+        ),
+        (
+            [
+                "-gen-global-isel-combiner",
+                "-combiners=RISCVO0PreLegalizerCombiner",
+            ],
+            "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc",
+        ),
+        (
+            [
+                "-gen-global-isel-combiner",
+                "-combiners=RISCVPostLegalizerCombiner",
+            ],
+            "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc",
+        ),
+        (
+            [
+                "-gen-global-isel-combiner",
+                "-combiners=RISCVPreLegalizerCombiner",
+            ],
+            "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc",
+        ),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
-    td_srcs = [
-        ":common_target_td_sources",
-    ] + glob([
-        "lib/Target/RISCV/**/*.td",
-    ]),
+    deps = [
+        ":CommonTargetTdFiles",
+        ":RISCVTargetTdFiles",
+    ],
 )
 
 [[
-    [gentbl(
+    [gentbl_cc_library(
         name = target["name"] + "CommonTableGen",
         strip_include_prefix = "lib/Target/" + target["name"],
-        tbl_outs = target["tbl_outs"],
+        tbl_outs = [(
+            # MSVC isn't happy with long string literals, while other compilers
+            # which support them get significant compile time improvements with
+            # them enabled. Ideally this flag would only be enabled on Windows via
+            # a select() on `@platforms//os:windows,`, but that would
+            # require refactoring gentbl from a macro into a rule.
+            # TODO(#92): Refactor gentbl to support this use
+            args + ["--long-string-literals=0"],
+            out,
+        ) for (args, out) in target["tbl_outs"]],
         tblgen = ":llvm-tblgen",
-        # MSVC isn't happy with long string literals, while other compilers
-        # which support them get significant compile time improvements with
-        # them enabled. Ideally this flag would only be enabled on Windows via
-        # a select() on `@platforms//os:windows,`, but that would
-        # require refactoring gentbl from a macro into a rule.
-        # TODO(#92): Refactor gentbl to support this use
-        tblgen_args = "--long-string-literals=0",
         td_file = "lib/Target/" + target["name"] + "/" + target["short_name"] + ".td",
-        td_srcs = [
-            ":common_target_td_sources",
-        ] + glob(
+        td_srcs = glob(
             [
                 "lib/Target/" + target["name"] + "/*.td",
                 "lib/Target/" + target["name"] + "/GISel/*.td",
             ],
             allow_empty = True,
         ),
-        deps = target.get("tbl_deps", []),
+        deps = target.get("tbl_deps", []) + [":CommonTargetTdFiles"],
     )],
     [cc_library(
         name = target["name"] + "Info",
@@ -2537,7 +3355,7 @@ gentbl(
             ":config",
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "Info",
-        ],
+        ] + target.get("tbl_deps", []),
     )],
     [cc_library(
         name = target["name"] + "CodeGen",
@@ -2582,7 +3400,7 @@ gentbl(
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "Info",
             ":" + target["name"] + "UtilsAndDesc",
-        ],
+        ] + target.get("tbl_deps", []),
     )],
     [cc_library(
         name = target["name"] + "AsmParser",
@@ -2878,16 +3696,16 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "JITLinkTableGen",
     strip_include_prefix = "lib/ExecutionEngine/JITLink",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "lib/ExecutionEngine/JITLink/COFFOptions.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "lib/ExecutionEngine/JITLink/COFFOptions.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3121,16 +3939,16 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "DllOptionsTableGen",
     strip_include_prefix = "lib/ToolDrivers/llvm-dlltool",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "lib/ToolDrivers/llvm-dlltool/Options.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "lib/ToolDrivers/llvm-dlltool/Options.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3147,16 +3965,16 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "LibOptionsTableGen",
     strip_include_prefix = "lib/ToolDrivers/llvm-lib",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "lib/ToolDrivers/llvm-lib/Options.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "lib/ToolDrivers/llvm-lib/Options.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3374,16 +4192,16 @@ cc_library(
 ################################################################################
 # LLVM toolchain and development binaries
 
-gentbl(
+gentbl_cc_library(
     name = "DsymutilTableGen",
     strip_include_prefix = "tools/dsymutil",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/dsymutil/Options.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/dsymutil/Options.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3586,16 +4404,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "CGDataOptsTableGen",
     strip_include_prefix = "tools/llvm-cgdata",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-cgdata/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-cgdata/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3663,16 +4481,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "CvtResTableGen",
     strip_include_prefix = "tools/llvm-cvtres",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-cvtres/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-cvtres/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_binary(
@@ -3721,16 +4539,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "CxxfiltOptsTableGen",
     strip_include_prefix = "tools/llvm-cxxfilt",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-cxxfilt/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-cxxfilt/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3768,16 +4586,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "DebugInfodFindOptsTableGen",
     strip_include_prefix = "tools/llvm-debuginfod-find",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-debuginfod-find/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-debuginfod-find/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3838,16 +4656,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "DwarfutilOptionsTableGen",
     strip_include_prefix = "tools/llvm-dwarfutil",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-dwarfutil/Options.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-dwarfutil/Options.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_binary(
@@ -3876,16 +4694,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "DwpOptionsTableGen",
     strip_include_prefix = "tools/llvm-dwp",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-dwp/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-dwp/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3950,16 +4768,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "GSYMUtilOptionsTableGen",
     strip_include_prefix = "tools/llvm-gsymutil",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-gsymutil/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-gsymutil/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -3987,16 +4805,16 @@ llvm_driver_cc_binary(
     deps = [":llvm-gsymutil-lib"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "IfsOptionsTableGen",
     strip_include_prefix = "tools/llvm-ifs",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-ifs/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-ifs/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4070,16 +4888,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "LibtoolDarwinOptionsTableGen",
     strip_include_prefix = "tools/llvm-libtool-darwin",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-libtool-darwin/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-libtool-darwin/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4131,16 +4949,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "LipoOptsTableGen",
     strip_include_prefix = "tools/llvm-lipo",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-lipo/LipoOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-lipo/LipoOpts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4250,16 +5068,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "MlTableGen",
     strip_include_prefix = "tools/llvm-ml",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-ml/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-ml/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4305,16 +5123,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "MtTableGen",
     strip_include_prefix = "tools/llvm-mt",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-mt/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-mt/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4336,16 +5154,16 @@ llvm_driver_cc_binary(
     deps = [":llvm-mt-lib"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "NmOptsTableGen",
     strip_include_prefix = "tools/llvm-nm",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-nm/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-nm/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4374,63 +5192,68 @@ llvm_driver_cc_binary(
     deps = [":llvm-nm-lib"],
 )
 
-gentbl(
+td_library(
+    name = "LlvmObjcopyCommonOpts",
+    srcs = ["tools/llvm-objcopy/CommonOpts.td"],
+)
+
+gentbl_cc_library(
     name = "llvm-objcopy-opts",
     strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-objcopy/ObjcopyOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/ObjcopyOpts.td",
-    td_srcs = [
-        "include/llvm/Option/OptParser.td",
-        "tools/llvm-objcopy/CommonOpts.td",
+    deps = [
+        ":LlvmObjcopyCommonOpts",
+        ":OptParserTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "llvm-installnametool-opts",
     strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-objcopy/InstallNameToolOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/InstallNameToolOpts.td",
-    td_srcs = [
-        "include/llvm/Option/OptParser.td",
-        "tools/llvm-objcopy/CommonOpts.td",
+    deps = [
+        ":LlvmObjcopyCommonOpts",
+        ":OptParserTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "llvm-strip-opts",
     strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-objcopy/StripOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/StripOpts.td",
-    td_srcs = [
-        "include/llvm/Option/OptParser.td",
-        "tools/llvm-objcopy/CommonOpts.td",
+    deps = [
+        ":LlvmObjcopyCommonOpts",
+        ":OptParserTdFiles",
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "llvm-bitcode-strip-opts",
     strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-objcopy/BitcodeStripOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objcopy/BitcodeStripOpts.td",
-    td_srcs = [
-        "include/llvm/Option/OptParser.td",
-        "tools/llvm-objcopy/CommonOpts.td",
+    deps = [
+        ":LlvmObjcopyCommonOpts",
+        ":OptParserTdFiles",
     ],
 )
 
@@ -4529,16 +5352,16 @@ llvm_driver_cc_binary(
     deps = [":llvm-objdump-lib"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "ObjdumpOptsTableGen",
     strip_include_prefix = "tools/llvm-objdump",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-objdump/ObjdumpOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objdump/ObjdumpOpts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 binary_alias(
@@ -4546,16 +5369,16 @@ binary_alias(
     binary = ":llvm-objdump",
 )
 
-gentbl(
+gentbl_cc_library(
     name = "OtoolOptsTableGen",
     strip_include_prefix = "tools/llvm-objdump",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-objdump/OtoolOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-objdump/OtoolOpts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_binary(
@@ -4638,28 +5461,28 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "RcTableGen",
     strip_include_prefix = "tools/llvm-rc",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-rc/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-rc/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "WindresTableGen",
     strip_include_prefix = "tools/llvm-rc",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-rc/WindresOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-rc/WindresOpts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 # Workaround inability to put `.def` files into `srcs` with a library.
@@ -4698,16 +5521,16 @@ binary_alias(
     binary = ":llvm-rc",
 )
 
-gentbl(
+gentbl_cc_library(
     name = "ReadobjOptsTableGen",
     strip_include_prefix = "tools/llvm-readobj",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-readobj/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-readobj/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4794,16 +5617,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "SizeOptsTableGen",
     strip_include_prefix = "tools/llvm-size",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-size/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-size/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4846,16 +5669,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "StringsOptsTableGen",
     strip_include_prefix = "tools/llvm-strings",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-strings/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-strings/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_binary(
@@ -4873,16 +5696,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "SymbolizerOptsTableGen",
     strip_include_prefix = "tools/llvm-symbolizer",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-symbolizer/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-symbolizer/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -4987,16 +5810,16 @@ cc_binary(
     deps = [":opt-driver"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "SancovOptsTableGen",
     strip_include_prefix = "tools/sancov",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/sancov/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/sancov/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -5379,16 +6202,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "ReadTAPIOptsTableGen",
     strip_include_prefix = "tools/llvm-readtapi",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-readtapi/TapiOpts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-readtapi/TapiOpts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_binary(
@@ -5411,16 +6234,16 @@ cc_binary(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "TLICheckerOptsTableGen",
     strip_include_prefix = "tools/llvm-tli-checker",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "tools/llvm-tli-checker/Opts.inc",
     )],
     tblgen = ":llvm-tblgen",
     td_file = "tools/llvm-tli-checker/Opts.td",
-    td_srcs = ["include/llvm/Option/OptParser.td"],
+    deps = [":OptParserTdFiles"],
 )
 
 cc_binary(

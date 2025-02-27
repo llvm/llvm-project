@@ -86,7 +86,7 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<2xi32>
 ! CHECK-NEXT:    return
-! CHECK-nEXT:  }
+! CHECK-NEXT:  }
 
 ! back argument as .true.
 subroutine minloc_back(a, s)
