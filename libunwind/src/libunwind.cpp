@@ -260,6 +260,40 @@ _LIBUNWIND_HIDDEN int __unw_is_signal_frame(unw_cursor_t *cursor) {
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_is_signal_frame, unw_is_signal_frame)
 
+_LIBUNWIND_HIDDEN const char *__unw_strerror(int error_code) {
+  switch (error_code) {
+  case UNW_ESUCCESS:
+    return "no error";
+  case UNW_EUNSPEC:
+    return "unspecified (general) error";
+  case UNW_ENOMEM:
+    return "out of memory";
+  case UNW_EBADREG:
+    return "bad register number";
+  case UNW_EREADONLYREG:
+    return "attempt to write read-only register";
+  case UNW_ESTOPUNWIND:
+    return "stop unwinding";
+  case UNW_EINVALIDIP:
+    return "invalid IP";
+  case UNW_EBADFRAME:
+    return "bad frame";
+  case UNW_EINVAL:
+    return "unsupported operation or bad value";
+  case UNW_EBADVERSION:
+    return "unwind info has unsupported version";
+  case UNW_ENOINFO:
+    return "no unwind info found";
+#if defined(_LIBUNWIND_TARGET_AARCH64) && !defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  case UNW_ECROSSRASIGNING:
+    return "cross unwind with return address signing";
+#endif
+  default:
+    return "unknown error occurred";
+  }
+}
+_LIBUNWIND_WEAK_ALIAS(__unw_strerror, unw_strerror)
+
 #ifdef _AIX
 _LIBUNWIND_EXPORT uintptr_t __unw_get_data_rel_base(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("unw_get_data_rel_base(cursor=%p)",
