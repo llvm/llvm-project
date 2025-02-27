@@ -28,7 +28,7 @@ protected:
   DataExtractor::Cursor Cursor{0};
 
   // Data structure for holding Extended ELF Build Attribute subsection
-  SmallVector<BuildAttributeSubSection, 64> SubSectionVec;
+  SmallVector<BuildAttributeSubSection, 8> SubSectionVec;
   // Maps SubsectionName + Tag to tags names. Required for printing comments.
   const std::vector<SubsectionAndTagToTagName> TagsNamesMap;
   StringRef getTagName(const StringRef &s, const unsigned i);
