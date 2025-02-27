@@ -1099,6 +1099,23 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @experimental_constrained_fpext
+llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fpext %s ignore : f32 to f64
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained.fpext %s maytrap : f32 to f64
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained.fpext %s strict : f32 to f64
+  // CHECK: call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(
+  // CHECK: metadata !"fpexcept.strict"
+  %5 = llvm.intr.experimental.constrained.fpext %v strict : vector<4xf32> to vector<4xf64>
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0

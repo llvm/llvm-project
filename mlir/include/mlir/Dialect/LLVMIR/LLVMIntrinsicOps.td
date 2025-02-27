@@ -456,6 +456,15 @@ def LLVM_ConstrainedFPTruncIntr
   }];
 }
 
+def LLVM_ConstrainedFPExtIntr
+    : LLVM_ConstrainedIntr<"fpext", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/0> {
+  let assemblyFormat = [{
+    $arg_0 $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+  }];
+}
+
 // Intrinsics with multiple returns.
 
 class LLVM_ArithWithOverflowOp<string mnem>

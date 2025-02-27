@@ -1003,6 +1003,19 @@ define void @experimental_constrained_fptrunc(double %s, <4 x double> %v) {
   ret void
 }
 
+; CHECK-LABEL: experimental_constrained_fpext
+define void @experimental_constrained_fpext(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} ignore : f32 to f64
+  %1 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} maytrap : f32 to f64
+  %2 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.maytrap")
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} strict : f32 to f64
+  %3 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} ignore : vector<4xf32> to vector<4xf64>
+  %6 = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float> %v, metadata !"fpexcept.ignore")
+  ret void
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare float @llvm.fma.f32(float, float, float)
@@ -1243,3 +1256,5 @@ declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x flo
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
+declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
