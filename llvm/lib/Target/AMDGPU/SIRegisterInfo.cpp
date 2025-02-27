@@ -1297,6 +1297,8 @@ static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
   case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
   case AMDGPU::SI_SPILL_WWM_AV32_SAVE:
   case AMDGPU::SI_SPILL_WWM_AV32_RESTORE:
+  case AMDGPU::SI_SPILL_V16_SAVE:
+  case AMDGPU::SI_SPILL_V16_RESTORE:
     return 1;
   default: llvm_unreachable("Invalid spill opcode");
   }
@@ -2403,6 +2405,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V96_SAVE:
     case AMDGPU::SI_SPILL_V64_SAVE:
     case AMDGPU::SI_SPILL_V32_SAVE:
+    case AMDGPU::SI_SPILL_V16_SAVE:
     case AMDGPU::SI_SPILL_A1024_SAVE:
     case AMDGPU::SI_SPILL_A512_SAVE:
     case AMDGPU::SI_SPILL_A384_SAVE:
@@ -2443,11 +2446,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
-      unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
-                         ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
-                     : ST.enableFlatScratch()
-                         ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                         : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+      unsigned Opc;
+      if (MI->getOpcode() == AMDGPU::SI_SPILL_V16_SAVE) {
+        assert(ST.enableFlatScratch() && "Flat Scratch is not enabled!");
+        Opc = AMDGPU::SCRATCH_STORE_SHORT_SADDR_t16;
+      } else {
+        Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
+                       ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
+                   : ST.enableFlatScratch()
+                       ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                       : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+      }
+
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
@@ -2472,6 +2482,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
       LLVM_FALLTHROUGH;
     }
+    case AMDGPU::SI_SPILL_V16_RESTORE:
     case AMDGPU::SI_SPILL_V32_RESTORE:
     case AMDGPU::SI_SPILL_V64_RESTORE:
     case AMDGPU::SI_SPILL_V96_RESTORE:
@@ -2521,11 +2532,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
-      unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
-                         ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
-                     : ST.enableFlatScratch()
-                         ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                         : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+      unsigned Opc;
+      if (MI->getOpcode() == AMDGPU::SI_SPILL_V16_RESTORE) {
+        assert(ST.enableFlatScratch() && "Flat Scratch is not enabled!");
+        Opc = AMDGPU::SCRATCH_LOAD_SHORT_D16_SADDR_t16;
+      } else {
+        Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
+                       ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
+                   : ST.enableFlatScratch()
+                       ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                       : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+      }
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
