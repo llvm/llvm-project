@@ -647,6 +647,30 @@ uses and eviction priority which can be accessed by the '``.level::eviction_prio
 For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
 
+'``llvm.nvvm.applypriority.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void  @llvm.nvvm.applypriority.global.L2.evict.normal(ptr addrspace(1) %global_ptr, i64 %size)
+  declare void  @llvm.nvvm.applypriority.L2.evict.normal(ptr %ptr, i64 %size)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.applypriority.*``'  applies the cache eviction priority specified by the
+.level::eviction_priority qualifier to the address range [a..a+size) in the specified cache 
+level. If no state space is specified then Generic Addressing is used. If the specified address 
+does not fall within the address window of .global state space then the behavior is undefined.
+The operand size is an integer constant that specifies the amount of data, in bytes, in the specified cache
+level on which the priority is to be applied. The only supported value for the size operand is 128.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
