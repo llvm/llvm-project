@@ -410,42 +410,47 @@ struct ConvertUpdateHaloOp
     // local data. Because subviews and halos can have mixed dynamic and static
     // shapes, OpFoldResults are used whenever possible.
 
+    auto haloSizes = getMixedValues(adaptor.getStaticHaloSizes(),
+                                    adaptor.getHaloSizes(), rewriter);
+    if (haloSizes.empty()) {
+      // no halos -> nothing to do
+      rewriter.replaceOp(op, adaptor.getDestination());
+      return success();
+    }
+
     SymbolTableCollection symbolTableCollection;
-    auto loc = op.getLoc();
+    Location loc = op.getLoc();
 
     // convert a OpFoldResult into a Value
     auto toValue = [&rewriter, &loc](OpFoldResult &v) -> Value {
       if (auto value = dyn_cast<Value>(v))
         return value;
-      return rewriter.create<::mlir::arith::ConstantOp>(
+      return rewriter.create<arith::ConstantOp>(
           loc, rewriter.getIndexAttr(
                    cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
     };
 
-    auto dest = op.getDestination();
+    auto dest = adaptor.getDestination();
     auto dstShape = cast<ShapedType>(dest.getType()).getShape();
     Value array = dest;
     if (isa<RankedTensorType>(array.getType())) {
       // If the destination is a memref, we need to cast it to a tensor
       auto tensorType = MemRefType::get(
           dstShape, cast<ShapedType>(array.getType()).getElementType());
-      array = rewriter.create<bufferization::ToMemrefOp>(loc, tensorType, array)
-                  .getResult();
+      array =
+          rewriter.create<bufferization::ToMemrefOp>(loc, tensorType, array);
     }
     auto rank = cast<ShapedType>(array.getType()).getRank();
-    auto opSplitAxes = op.getSplitAxes().getAxes();
-    auto mesh = op.getMesh();
+    auto opSplitAxes = adaptor.getSplitAxes().getAxes();
+    auto mesh = adaptor.getMesh();
     auto meshOp = getMesh(op, symbolTableCollection);
-    auto haloSizes =
-        getMixedValues(op.getStaticHaloSizes(), op.getHaloSizes(), rewriter);
     // subviews need Index values
     for (auto &sz : haloSizes) {
-      if (auto value = dyn_cast<Value>(sz)) {
+      if (auto value = dyn_cast<Value>(sz))
         sz =
             rewriter
                 .create<arith::IndexCastOp>(loc, rewriter.getIndexType(), value)
                 .getResult();
-      }
     }
 
     // most of the offset/size/stride data is the same for all dims
@@ -530,8 +535,8 @@ struct ConvertUpdateHaloOp
                                   : haloSizes[currHaloDim * 2];
         // Check if we need to send and/or receive
         // Processes on the mesh borders have only one neighbor
-        auto to = upperHalo ? neighbourIDs[1] : neighbourIDs[0];
-        auto from = upperHalo ? neighbourIDs[0] : neighbourIDs[1];
+        auto to = upperHalo ? neighbourIDs[0] : neighbourIDs[1];
+        auto from = upperHalo ? neighbourIDs[1] : neighbourIDs[0];
         auto hasFrom = rewriter.create<arith::CmpIOp>(
             loc, arith::CmpIPredicate::sge, from, zero);
         auto hasTo = rewriter.create<arith::CmpIOp>(
@@ -564,8 +569,25 @@ struct ConvertUpdateHaloOp
         offsets[dim] = orgOffset;
       };
 
-      genSendRecv(false);
-      genSendRecv(true);
+      auto get_i32val = [&](OpFoldResult &v) {
+        return isa<Value>(v)
+                   ? cast<Value>(v)
+                   : rewriter.create<arith::ConstantOp>(
+                         loc,
+                         rewriter.getI32IntegerAttr(
+                             cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
+      };
+
+      for (int i = 0; i < 2; ++i) {
+        Value haloSz = get_i32val(haloSizes[currHaloDim * 2 + i]);
+        auto hasSize = rewriter.create<arith::CmpIOp>(
+            loc, arith::CmpIPredicate::sgt, haloSz, zero);
+        rewriter.create<scf::IfOp>(loc, hasSize,
+                                   [&](OpBuilder &builder, Location loc) {
+                                     genSendRecv(i > 0);
+                                     builder.create<scf::YieldOp>(loc);
+                                   });
+      }
 
       // the shape for lower dims include higher dims' halos
       dimSizes[dim] = shape[dim];
@@ -583,7 +605,7 @@ struct ConvertUpdateHaloOp
                                  loc, op.getResult().getType(), array,
                                  /*restrict=*/true, /*writable=*/true));
     }
-    return mlir::success();
+    return success();
   }
 };
 
