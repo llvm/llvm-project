@@ -927,17 +927,43 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
       iteratorTypes[j] = type;
 
   TypeRange resultTypes = ValueRange(outputs).getTypes();
-  auto fusedOp =
-      rewriter.create<GenericOp>(linalgOp.getLoc(), resultTypes,
-                                 /*inputs=*/expandedOpOperands, outputs,
-                                 expandedOpIndexingMaps, iteratorTypes);
-  Region &fusedRegion = fusedOp->getRegion(0);
-  Region &originalRegion = linalgOp->getRegion(0);
-  rewriter.cloneRegionBefore(originalRegion, fusedRegion, fusedRegion.begin());
+  Operation *fusedOp;
 
-  // Update the index accesses after the expansion.
-  updateExpandedGenericOpRegion(rewriter, loc, fusedRegion, expansionInfo);
+  TypeSwitch<Operation *>(linalgOp.getOperation())
+      .Case<GenericOp>([&](GenericOp op) {
+        fusedOp = rewriter.create<GenericOp>(
+            linalgOp.getLoc(), resultTypes, expandedOpOperands, outputs,
+            expandedOpIndexingMaps, iteratorTypes);
+        Region &fusedRegion = fusedOp->getRegion(0);
+        Region &originalRegion = linalgOp->getRegion(0);
+        rewriter.cloneRegionBefore(originalRegion, fusedRegion,
+                                   fusedRegion.begin());
 
+        // Update the index accesses after the expansion.
+        updateExpandedGenericOpRegion(rewriter, loc, fusedRegion,
+                                      expansionInfo);
+      })
+      .Case<TransposeOp>([&](TransposeOp op) {
+        SmallVector<ReassociationIndices> reassociation =
+            isExpanding ? expandingReshapeOp.getReassociationIndices()
+                        : collapsingReshapeOp.getReassociationIndices();
+        applyPermutationToVector(reassociation, op.getPermutation());
+        SmallVector<int64_t> newPerm;
+        for (auto reassoc : reassociation) {
+          for (auto dim : reassoc) {
+            newPerm.push_back(dim);
+          }
+        }
+        fusedOp = rewriter.create<TransposeOp>(
+            linalgOp.getLoc(), expandedOpOperands[0], outputs[0], newPerm);
+      })
+      // All other expandable linalg ops that are not generic or transpose can
+      // be cloned with the expanded input and output operands.
+      .Default([&](Operation *op) {
+        fusedOp = clone(
+            rewriter, linalgOp, resultTypes,
+            llvm::to_vector(llvm::concat<Value>(expandedOpOperands, outputs)));
+      });
   // Reshape the result values to their original shape if this is a collapsing
   // reshape folded into its consumer.
   SmallVector<Value> resultVals;
