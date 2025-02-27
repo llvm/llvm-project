@@ -2,7 +2,7 @@
 ; RUN: llc --mtriple=loongarch64 --mattr=+lsx %s -o - | FileCheck %s
 
 
-define void @load_sext_2i8_to_2i64(ptr%ptr, ptr%dst) {
+define void @load_sext_2i8_to_2i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_2i8_to_2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.h $a0, $a0, 0
@@ -21,7 +21,7 @@ entry:
   ret void
 }
 
-define void @load_sext_4i8_to_4i32(ptr%ptr, ptr%dst) {
+define void @load_sext_4i8_to_4i32(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_4i8_to_4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
@@ -40,7 +40,7 @@ entry:
   ret void
 }
 
-define void @load_sext_8i8_to_8i16(ptr%ptr, ptr%dst) {
+define void @load_sext_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_8i8_to_8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
@@ -57,7 +57,7 @@ entry:
   ret void
 }
 
-define void @load_sext_2i16_to_2i64(ptr%ptr, ptr%dst) {
+define void @load_sext_2i16_to_2i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_2i16_to_2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
@@ -76,7 +76,7 @@ entry:
   ret void
 }
 
-define void @load_sext_4i16_to_4i32(ptr%ptr, ptr%dst) {
+define void @load_sext_4i16_to_4i32(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_4i16_to_4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
@@ -93,7 +93,7 @@ entry:
   ret void
 }
 
-define void @load_sext_2i32_to_2i64(ptr%ptr, ptr%dst) {
+define void @load_sext_2i32_to_2i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_2i32_to_2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
@@ -110,7 +110,7 @@ entry:
   ret void
 }
 
-define void @load_sext_16i8_to_16i16(ptr%ptr, ptr%dst) {
+define void @load_sext_16i8_to_16i16(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_16i8_to_16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
@@ -133,7 +133,7 @@ entry:
   ret void
 }
 
-define void @load_sext_16i8_to_16i32(ptr%ptr, ptr%dst) {
+define void @load_sext_16i8_to_16i32(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_16i8_to_16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
@@ -172,7 +172,7 @@ entry:
   ret void
 }
 
-define void @load_sext_16i8_to_16i64(ptr%ptr, ptr%dst) {
+define void @load_sext_16i8_to_16i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_16i8_to_16i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
@@ -237,7 +237,7 @@ entry:
   ret void
 }
 
-define void @load_sext_8i16_to_8i32(ptr%ptr, ptr%dst) {
+define void @load_sext_8i16_to_8i32(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_8i16_to_8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
@@ -260,7 +260,7 @@ entry:
   ret void
 }
 
-define void @load_sext_8i16_to_8i64(ptr%ptr, ptr%dst) {
+define void @load_sext_8i16_to_8i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_8i16_to_8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
@@ -300,7 +300,7 @@ entry:
   ret void
 }
 
-define void @load_sext_4i32_to_4i64(ptr%ptr, ptr%dst) {
+define void @load_sext_4i32_to_4i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: load_sext_4i32_to_4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
