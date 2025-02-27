@@ -848,7 +848,11 @@ class InterchangeableBinOp {
   // SeenBefore is used to know what operations have been seen before.
   MaskType SeenBefore = 0;
 
-  /// Return a non-nullptr if either operand of I is a ConstantInt.
+  // Return a non-nullptr if either operand of I is a ConstantInt.
+  // The second return value represents the operand position. We check the
+  // right-hand side first (1). If the right hand side is not a ConstantInt and
+  // the instruction is neither Sub, Shl, nor AShr, we then check the left hand
+  // side (0).
   static std::pair<ConstantInt *, unsigned>
   isBinOpWithConstantInt(Instruction *I) {
     unsigned Opcode = I->getOpcode();
@@ -893,6 +897,9 @@ class InterchangeableBinOp {
     llvm_unreachable("Unsupported opcode.");
   }
 
+  // Return false allows getSameOpcode to find an alternate instruction.
+  // Directly setting the mask will destroy the mask state, preventing us from
+  // determining which instruction the MainOp should convert to.
   bool trySet(MaskType X) {
     if (Mask & X) {
       Mask &= X;
@@ -947,6 +954,7 @@ public:
     return trySet(opcodeMask);
   }
   unsigned getOpcode() const {
+    // MainOpBIT is set before SeenBefore. It must be the first one to check.
     if (Mask & MainOpBIT)
       return MainOp->getOpcode();
     MaskType Candidate = Mask & SeenBefore;
