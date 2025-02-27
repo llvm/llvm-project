@@ -173,6 +173,12 @@ static cl::opt<bool> DisableGEPConstOperand(
     "disable-gep-const-evaluation", cl::Hidden, cl::init(false),
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
 
+static cl::opt<unsigned> EphValAssumptionsSzLimit(
+    "inline-ephval-assumptions-limit", cl::Hidden, cl::init(5000),
+    cl::desc("Collection of ephemeral values can be very expensive "
+             "compile-time wise, so don't collect them if the function "
+             "contains more than this many assumptions"));
+
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -2785,7 +2791,15 @@ InlineResult CallAnalyzer::analyze() {
   // the ephemeral values multiple times (and they're completely determined by
   // the callee, so this is purely duplicate work).
   SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F), EphValues);
+  auto &AC = GetAssumptionCache(F);
+  // Don't collect ephemeral values if we have too many assumptions because the
+  // collection can be very expensive. Note that this will increase the cost of
+  // the function, making it less likely to be inlined. But if the function
+  // contains thousands of assumptions, then the chances are that it's too large
+  // to inline anyway.
+  bool TooExpensive = AC.assumptions().size() > EphValAssumptionsSzLimit;
+  if (!TooExpensive)
+    CodeMetrics::collectEphemeralValues(&F, &AC, EphValues);
 
   // The worklist of live basic blocks in the callee *after* inlining. We avoid
   // adding basic blocks of the callee which can be proven to be dead for this
