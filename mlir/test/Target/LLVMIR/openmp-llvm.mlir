@@ -2795,9 +2795,10 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
 // CHECK: call i32 @__kmpc_omp_task({{.*}}, ptr %[[TASK_ALLOC]])
 // CHECK: define internal void @[[task_outlined_fn]](i32 %[[GLOBAL_TID_VAL:.*]], ptr %[[STRUCT_ARG:.*]])
 // CHECK: %[[LOADED_STRUCT_PTR:.*]] = load ptr, ptr %[[STRUCT_ARG]], align 8
-// CHECK: %[[GEP_STRUCTARG:.*]] = getelementptr { ptr, ptr }, ptr %[[LOADED_STRUCT_PTR]], i32 0, i32 0
+// CHECK: %[[GEP_STRUCTARG:.*]] = getelementptr { ptr }, ptr %[[LOADED_STRUCT_PTR]], i32 0, i32 0
 // CHECK: %[[LOADGEP_STRUCTARG:.*]] = load ptr, ptr %[[GEP_STRUCTARG]], align 8
-// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @[[parallel_outlined_fn:.+]], ptr %[[LOADGEP_STRUCTARG]])
+// CHEKC: %[[NEW_STRUCTARG:.*]] = alloca { ptr }, align 8
+// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @[[parallel_outlined_fn:.+]],
 // CHECK: define internal void @[[parallel_outlined_fn]]
 // -----
 
@@ -2825,14 +2826,15 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 // CHECK-LABEL: @task
 // CHECK-SAME:      (ptr %[[ARG:.*]])
 // CHECK:         %[[STRUCT_ARG:.*]] = alloca { ptr }, align 8
-// CHECK:         %[[OMP_PRIVATE_ALLOC:.*]] = alloca i32, align 4
 //                ...
 // CHECK:         br label %omp.private.init
 // CHECK:       omp.private.init:
+// CHECK:         %[[TASK_STRUCT:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[GEP:.*]] = getelementptr { i32 }, ptr %[[TASK_STRUCT:.*]], i32 0, i32 0
 // CHECK:         br label %omp.private.copy1
 // CHECK:       omp.private.copy1:
 // CHECK:         %[[LOADED:.*]] = load i32, ptr %[[ARG]], align 4
-// CHECK:         store i32 %[[LOADED]], ptr %[[OMP_PRIVATE_ALLOC]], align 4
+// CHECK:         store i32 %[[LOADED]], ptr %[[GEP]], align 4
 //                ...
 // CHECK:         br label %omp.task.start
 // CHECK:       omp.task.start:
@@ -2846,12 +2848,13 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 // CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
 // CHECK:         br label %task.body
 // CHECK:       task.body:                                        ; preds = %task.alloca
+// CHECK:         %[[VAL_15:.*]] = getelementptr { i32 }, ptr %[[VAL_14]], i32 0, i32 0
 // CHECK:         br label %omp.task.region
 // CHECK:       omp.task.region:                                  ; preds = %task.body
-// CHECK:         call void @foo(ptr %[[VAL_14]])
+// CHECK:         call void @foo(ptr %[[VAL_15]])
 // CHECK:         br label %omp.region.cont
 // CHECK:       omp.region.cont:                                  ; preds = %omp.task.region
-// CHECK:         call void @destroy(ptr %[[VAL_14]])
+// CHECK:         call void @destroy(ptr %[[VAL_15]])
 // CHECK:         br label %task.exit.exitStub
 // CHECK:       task.exit.exitStub:                               ; preds = %omp.region.cont
 // CHECK:         ret void
