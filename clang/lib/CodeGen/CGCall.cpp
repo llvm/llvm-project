@@ -2442,7 +2442,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleOrArgMemOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     }
-    if (TargetDecl->hasAttr<RestrictAttr>())
+    if (const auto *RA = TargetDecl->getAttr<RestrictAttr>();
+        RA && RA->getDeallocator() == nullptr)
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !CodeGenOpts.NullPointerIsValid)
