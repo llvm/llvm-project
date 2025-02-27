@@ -780,7 +780,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
       size_t __nr = fread((void*)const_cast<char*>(__extbufnext_), 1, __nmemb, __file_);
       if (__nr != 0) {
         if (!__cv_)
-          __throw_bad_cast();
+          std::__throw_bad_cast();
 
         __extbufend_ = __extbufnext_ + __nr;
         char_type* __inext;
@@ -842,7 +842,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
       codecvt_base::result __r;
       do {
         if (!__cv_)
-          __throw_bad_cast();
+          std::__throw_bad_cast();
 
         const char_type* __e;
         __r = __cv_->out(__st_, this->pbase(), this->pptr(), __e, __extbuf_, __extbuf_ + __ebs_, __extbe);
@@ -913,7 +913,7 @@ template <class _CharT, class _Traits>
 typename basic_filebuf<_CharT, _Traits>::pos_type
 basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way, ios_base::openmode) {
   if (!__cv_)
-    __throw_bad_cast();
+    std::__throw_bad_cast();
 
   int __width = __cv_->encoding();
   if (__file_ == nullptr || (__width <= 0 && __off != 0) || sync())
@@ -978,7 +978,7 @@ int basic_filebuf<_CharT, _Traits>::sync() {
   if (__file_ == nullptr)
     return 0;
   if (!__cv_)
-    __throw_bad_cast();
+    std::__throw_bad_cast();
 
   if (__cm_ & ios_base::out) {
     if (this->pptr() != this->pbase())

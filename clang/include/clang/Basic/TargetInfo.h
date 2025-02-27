@@ -199,6 +199,10 @@ protected:
   /// zero length bitfield, regardless of the zero length bitfield type.
   unsigned ZeroLengthBitfieldBoundary;
 
+  /// The largest container size which should be used for an over-sized
+  /// bitfield, in bits.
+  unsigned LargestOverSizedBitfieldContainer;
+
   /// If non-zero, specifies a maximum alignment to truncate alignment
   /// specified in the aligned attribute of a static variable to this value.
   unsigned MaxAlignedAttribute;
@@ -952,6 +956,10 @@ public:
   /// a zero length bitfield.
   unsigned getZeroLengthBitfieldBoundary() const {
     return ZeroLengthBitfieldBoundary;
+  }
+
+  unsigned getLargestOverSizedBitfieldContainer() const {
+    return LargestOverSizedBitfieldContainer;
   }
 
   /// Get the maximum alignment in bits for a static variable with

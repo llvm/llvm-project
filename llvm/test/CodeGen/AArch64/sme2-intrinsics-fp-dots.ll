@@ -49,13 +49,12 @@ entry:
 define void @fdot_multi_za32_f16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zn3,
 ; CHECK-LABEL: fdot_multi_za32_f16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -142,13 +141,12 @@ define void @bfdot_multi_za32_bf16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused,
 define void @fdot_multi_za32_bf16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zn3,
 ; CHECK-LABEL: fdot_multi_za32_bf16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d

@@ -416,10 +416,10 @@ private:
 //      %v = affine.load %0[%i1] : memref<100xf32>    // 'depSinkAccess'
 //    }
 //
-void getComputationSliceState(Operation *depSourceOp, Operation *depSinkOp,
-                              FlatAffineValueConstraints *dependenceConstraints,
-                              unsigned loopDepth, bool isBackwardSlice,
-                              ComputationSliceState *sliceState);
+void getComputationSliceState(
+    Operation *depSourceOp, Operation *depSinkOp,
+    const FlatAffineValueConstraints &dependenceConstraints, unsigned loopDepth,
+    bool isBackwardSlice, ComputationSliceState *sliceState);
 
 /// Return the number of iterations for the `slicetripCountMap` provided.
 uint64_t getSliceIterationCount(

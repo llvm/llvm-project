@@ -577,16 +577,27 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ; SDAG-GFX12-FAKE16-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; SDAG-GFX12-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-GFX12-LABEL: s_test_minmax_f16_ieee_false:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    s_max_num_f16 s0, s0, s1
-; GISEL-GFX12-NEXT:    s_mov_b32 s6, s3
-; GISEL-GFX12-NEXT:    s_mov_b32 s7, s4
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX12-NEXT:    s_min_num_f16 s0, s0, s2
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-GFX12-NEXT:    global_store_b16 v1, v0, s[6:7]
-; GISEL-GFX12-NEXT:    s_endpgm
+; GISEL-GFX12-TRUE16-LABEL: s_test_minmax_f16_ieee_false:
+; GISEL-GFX12-TRUE16:       ; %bb.0:
+; GISEL-GFX12-TRUE16-NEXT:    s_max_num_f16 s0, s0, s1
+; GISEL-GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX12-TRUE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX12-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-GFX12-TRUE16-NEXT:    s_min_num_f16 s0, s0, s2
+; GISEL-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GISEL-GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GISEL-GFX12-FAKE16-LABEL: s_test_minmax_f16_ieee_false:
+; GISEL-GFX12-FAKE16:       ; %bb.0:
+; GISEL-GFX12-FAKE16-NEXT:    s_max_num_f16 s0, s0, s1
+; GISEL-GFX12-FAKE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX12-FAKE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-GFX12-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX12-FAKE16-NEXT:    s_min_num_f16 s0, s0, s2
+; GISEL-GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-FAKE16-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-GFX12-FAKE16-NEXT:    s_endpgm
   %smax = call half @llvm.maxnum.f16(half %a, half %b)
   %sminmax = call half @llvm.minnum.f16(half %smax, half %c)
   store half %sminmax, ptr addrspace(1) %out

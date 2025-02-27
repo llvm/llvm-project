@@ -321,20 +321,10 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
           SetID(1);
           GetThreadList();
           SetPrivateState(eStateStopped);
-          StreamSP async_strm_sp(target.GetDebugger().GetAsyncOutputStream());
-          if (async_strm_sp) {
-            const char *cstr;
-            if ((cstr = m_comm.GetKernelVersion()) != NULL) {
-              async_strm_sp->Printf("Version: %s\n", cstr);
-              async_strm_sp->Flush();
-            }
-            //                      if ((cstr = m_comm.GetImagePath ()) != NULL)
-            //                      {
-            //                          async_strm_sp->Printf ("Image Path:
-            //                          %s\n", cstr);
-            //                          async_strm_sp->Flush();
-            //                      }
-          }
+          const char *cstr;
+          if ((cstr = m_comm.GetKernelVersion()) != NULL)
+            target.GetDebugger().GetAsyncOutputStream()->Printf("Version: %s\n",
+                                                                cstr);
         } else {
           return Status::FromErrorString("KDP_REATTACH failed");
         }

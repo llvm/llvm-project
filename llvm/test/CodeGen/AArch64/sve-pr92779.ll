@@ -14,8 +14,7 @@ define void @main(ptr %0) {
 ; CHECK-NEXT:    smov x9, v1.s[1]
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
 ; CHECK-NEXT:    mov z0.d, p0/m, x9
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
 "entry":
   %1 = bitcast <vscale x 2 x i64> zeroinitializer to <vscale x 4 x i32>

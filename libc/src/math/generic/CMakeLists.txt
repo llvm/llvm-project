@@ -2978,6 +2978,11 @@ add_entrypoint_object(
   HDRS
     ../sqrtf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.sqrt
   )
@@ -4027,6 +4032,26 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
     .inv_trigf_utils
+)
+
+add_entrypoint_object(
+  acosf16
+  SRCS
+    acosf16.cpp
+  HDRS
+    ../acosf16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types  
 )
 
 add_entrypoint_object(

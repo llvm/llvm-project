@@ -252,8 +252,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
       is_integral_v<value_type > && is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
   constexpr auto __allowed_radix_sort = __default_comp && __integral_value;
   if constexpr (__allowed_radix_sort) {
-    if (__len <= __buff_size && __len >= static_cast<difference_type>(__radix_sort_min_bound<value_type>()) &&
-        __len <= static_cast<difference_type>(__radix_sort_max_bound<value_type>())) {
+    if (__len <= __buff_size && __len >= static_cast<difference_type>(std::__radix_sort_min_bound<value_type>()) &&
+        __len <= static_cast<difference_type>(std::__radix_sort_max_bound<value_type>())) {
       if (__libcpp_is_constant_evaluated()) {
         for (auto* __p = __buff; __p < __buff + __buff_size; ++__p) {
           std::__construct_at(__p);

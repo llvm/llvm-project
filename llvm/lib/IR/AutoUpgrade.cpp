@@ -13,10 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -45,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cstdint>
 #include <cstring>
 #include <numeric>
 
@@ -5020,6 +5024,43 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return Modified;
 }
 
+static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
+                                    GlobalValue *GV, const Metadata *V) {
+  Function *F = cast<Function>(GV);
+
+  constexpr StringLiteral DefaultValue = "1";
+  StringRef Vect3[3] = {DefaultValue, DefaultValue, DefaultValue};
+  unsigned Length = 0;
+
+  if (F->hasFnAttribute(Attr)) {
+    // We expect the existing attribute to have the form "x[,y[,z]]". Here we
+    // parse these elements placing them into Vect3
+    StringRef S = F->getFnAttribute(Attr).getValueAsString();
+    for (; Length < 3 && !S.empty(); Length++) {
+      auto [Part, Rest] = S.split(',');
+      Vect3[Length] = Part.trim();
+      S = Rest;
+    }
+  }
+
+  const unsigned Dim = DimC - 'x';
+  assert(Dim >= 0 && Dim < 3 && "Unexpected dim char");
+
+  const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
+
+  // local variable required for StringRef in Vect3 to point to.
+  const std::string VStr = llvm::utostr(VInt);
+  Vect3[Dim] = VStr;
+  Length = std::max(Length, Dim + 1);
+
+  const std::string NewAttr = llvm::join(ArrayRef(Vect3, Length), ",");
+  F->addFnAttr(Attr, NewAttr);
+}
+
+static inline bool isXYZ(StringRef S) {
+  return S == "x" || S == "y" || S == "z";
+}
+
 bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
                                         const Metadata *V) {
   if (K == "kernel") {
@@ -5041,6 +5082,33 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
       return false;
     cast<Function>(GV)->addAttributeAtIndex(
         Idx, Attribute::getWithStackAlignment(GV->getContext(), StackAlign));
+    return true;
+  }
+  if (K == "maxclusterrank" || K == "cluster_max_blocks") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.maxclusterrank", llvm::utostr(CV));
+    return true;
+  }
+  if (K == "minctasm") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.minctasm", llvm::utostr(CV));
+    return true;
+  }
+  if (K == "maxnreg") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.maxnreg", llvm::utostr(CV));
+    return true;
+  }
+  if (K.consume_front("maxntid") && isXYZ(K)) {
+    upgradeNVVMFnVectorAttr("nvvm.maxntid", K[0], GV, V);
+    return true;
+  }
+  if (K.consume_front("reqntid") && isXYZ(K)) {
+    upgradeNVVMFnVectorAttr("nvvm.reqntid", K[0], GV, V);
+    return true;
+  }
+  if (K.consume_front("cluster_dim_") && isXYZ(K)) {
+    upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
     return true;
   }
 

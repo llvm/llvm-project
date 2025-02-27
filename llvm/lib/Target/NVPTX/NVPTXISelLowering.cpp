@@ -42,6 +42,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -49,6 +50,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -997,6 +999,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
 
+  // PTX support for 16-bit CAS is emulated. Only use 32+
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
@@ -1405,6 +1408,19 @@ static bool shouldConvertToIndirectCall(const CallBase *CB,
   return false;
 }
 
+static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
+                                      const DataLayout &DL,
+                                      const TargetLowering &TL) {
+  if (Ptr->getOpcode() == ISD::FrameIndex) {
+    auto Ty = TL.getPointerTy(DL, ADDRESS_SPACE_LOCAL);
+    Ptr = DAG.getAddrSpaceCast(SDLoc(), Ty, Ptr, ADDRESS_SPACE_GENERIC,
+                               ADDRESS_SPACE_LOCAL);
+
+    return MachinePointerInfo(ADDRESS_SPACE_LOCAL);
+  }
+  return MachinePointerInfo();
+}
+
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1564,11 +1580,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       }
 
       if (IsByVal) {
-        auto PtrVT = getPointerTy(DL);
-        SDValue srcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
+        auto MPI = refinePtrAS(StVal, DAG, DL, *this);
+        const EVT PtrVT = StVal.getValueType();
+        SDValue SrcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
                                       DAG.getConstant(CurOffset, dl, PtrVT));
-        StVal = DAG.getLoad(EltVT, dl, TempChain, srcAddr, MachinePointerInfo(),
-                            PartAlign);
+
+        StVal = DAG.getLoad(EltVT, dl, TempChain, SrcAddr, MPI, PartAlign);
       } else if (ExtendIntegerParam) {
         assert(VTs.size() == 1 && "Scalar can't have multiple parts.");
         // zext/sext to i32
@@ -1606,6 +1623,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StoreOperands.push_back(Chain);
         StoreOperands.push_back(
             DAG.getConstant(IsVAArg ? FirstVAArg : ParamCount, dl, MVT::i32));
+
+        if (!IsByVal && IsVAArg) {
+          // Align each part of the variadic argument to their type.
+          VAOffset = alignTo(VAOffset, DL.getABITypeAlign(EltVT.getTypeForEVT(
+                                           *DAG.getContext())));
+        }
 
         StoreOperands.push_back(DAG.getConstant(
             IsByVal ? CurOffset + VAOffset : (IsVAArg ? VAOffset : CurOffset),
@@ -5578,6 +5601,70 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   }
 
   return AtomicExpansionKind::CmpXChg;
+}
+
+bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  // When CAS bitwidth is not supported on the hardware, the CAS is emulated
+  // using a retry loop that uses a higher-bitwidth monotonic CAS. We enforce
+  // the memory order using explicit fences around the retry loop.
+  // The memory order of natively supported CAS operations can be enforced
+  // by lowering to an atom.cas with the right memory synchronizing effect.
+  // However, atom.cas only supports relaxed, acquire, release and acq_rel.
+  // So we also use explicit fences for enforcing memory order for
+  // seq_cast CAS with natively-supported bitwidths.
+  return CI &&
+         (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+              STI.getMinCmpXchgSizeInBits() ||
+          CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent);
+}
+
+AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
+    const Instruction *I) const {
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  bool BitwidthSupportedAndIsSeqCst =
+      CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
+      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
+          STI.getMinCmpXchgSizeInBits();
+  return BitwidthSupportedAndIsSeqCst ? AtomicOrdering::Acquire
+                                      : AtomicOrdering::Monotonic;
+}
+
+Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                   Instruction *Inst,
+                                                   AtomicOrdering Ord) const {
+  if (!isa<AtomicCmpXchgInst>(Inst))
+    return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
+
+  // Specialize for cmpxchg
+  // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
+  if (isReleaseOrStronger(Ord))
+    return Ord == AtomicOrdering::SequentiallyConsistent
+               ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent)
+               : Builder.CreateFence(AtomicOrdering::Release);
+
+  return nullptr;
+}
+
+Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                    Instruction *Inst,
+                                                    AtomicOrdering Ord) const {
+  // Specialize for cmpxchg
+  if (!isa<AtomicCmpXchgInst>(Inst))
+    return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
+
+  auto CASWidth =
+      cast<IntegerType>(
+          dyn_cast<AtomicCmpXchgInst>(Inst)->getCompareOperand()->getType())
+          ->getBitWidth();
+  // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
+  if (isAcquireOrStronger(Ord) &&
+      (Ord != AtomicOrdering::SequentiallyConsistent ||
+       CASWidth < STI.getMinCmpXchgSizeInBits()))
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+
+  return nullptr;
 }
 
 // Pin NVPTXTargetObjectFile's vtables to this file.

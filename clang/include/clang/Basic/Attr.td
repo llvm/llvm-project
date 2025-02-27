@@ -459,6 +459,7 @@ class TargetArch<list<string> arches> : TargetSpec {
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
+def TargetAMDGPU : TargetArch<["amdgcn", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
@@ -469,7 +470,9 @@ def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
 def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
 def TargetX86 : TargetArch<["x86"]>;
+def TargetX86_64 : TargetArch<["x86_64"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
+def TargetSPIRV : TargetArch<["spirv", "spirv32", "spirv64"]>;
 def TargetWebAssembly : TargetArch<["wasm32", "wasm64"]>;
 def TargetNVPTX : TargetArch<["nvptx", "nvptx64"]>;
 def TargetWindows : TargetSpec {
@@ -1831,6 +1834,16 @@ def Format : InheritableAttr {
   let Documentation = [FormatDocs];
 }
 
+def FormatMatches : InheritableAttr {
+  let Spellings = [GCC<"format_matches">];
+  let Args = [IdentifierArgument<"Type">, IntArgument<"FormatIdx">, ExprArgument<"ExpectedFormat">];
+  let AdditionalMembers = [{
+    StringLiteral *getFormatString() const;
+  }];
+  let Subjects = SubjectList<[ObjCMethod, Block, HasFunctionProto]>;
+  let Documentation = [FormatMatchesDocs];
+}
+
 def FormatArg : InheritableAttr {
   let Spellings = [GCC<"format_arg">];
   let Args = [ParamIdxArgument<"FormatIdx">];
@@ -3124,11 +3137,20 @@ def PragmaClangTextSection : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def CodeModel : InheritableAttr, TargetSpecificAttr<TargetLoongArch> {
+// The code model attribute only applies to LoongArch and x86-64, but for NVPTX
+// compilations that share code with the host, we want to ignore the attribute
+// rather than warn on it.
+def CodeModel
+    : InheritableAttr,
+      TargetSpecificAttr<TargetArch<!listconcat(
+          TargetLoongArch.Arches, TargetX86_64.Arches, TargetNVPTX.Arches,
+          TargetAMDGPU.Arches, TargetSPIRV.Arches)>> {
   let Spellings = [GCC<"model">];
-  let Args = [EnumArgument<"Model", "llvm::CodeModel::Model", /*is_string=*/1,
-              ["normal", "medium", "extreme"], ["Small", "Medium", "Large"],
-              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>];
+  let Args = [EnumArgument<
+      "Model", "llvm::CodeModel::Model",
+      /*is_string=*/1, ["small", "normal", "medium", "large", "extreme"],
+      ["Small", "Small", "Medium", "Large", "Large"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>];
   let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
   let Documentation = [CodeModelDocs];
 }

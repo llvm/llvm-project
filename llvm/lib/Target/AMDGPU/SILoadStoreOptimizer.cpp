@@ -228,11 +228,11 @@ private:
   CombineInfo *checkAndPrepareMerge(CombineInfo &CI, CombineInfo &Paired);
 
   void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
-                      MachineBasicBlock::iterator InsertBefore, int OpName,
-                      Register DestReg) const;
+                      MachineBasicBlock::iterator InsertBefore,
+                      AMDGPU::OpName OpName, Register DestReg) const;
   Register copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                            MachineBasicBlock::iterator InsertBefore,
-                           int OpName) const;
+                           AMDGPU::OpName OpName) const;
 
   unsigned read2Opcode(unsigned EltSize) const;
   unsigned read2ST64Opcode(unsigned EltSize) const;
@@ -699,7 +699,7 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   if (TII.isImage(Opc)) {
     int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
     if (VAddr0Idx >= 0) {
-      int RsrcName =
+      AMDGPU::OpName RsrcName =
           TII.isMIMG(Opc) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
       int RsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RsrcName);
       Result.NumVAddrs = RsrcIdx - VAddr0Idx;
@@ -968,11 +968,11 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
     return false;
 
   // Check other optional immediate operands for equality.
-  unsigned OperandsToMatch[] = {AMDGPU::OpName::cpol, AMDGPU::OpName::d16,
-                                AMDGPU::OpName::unorm, AMDGPU::OpName::da,
-                                AMDGPU::OpName::r128, AMDGPU::OpName::a16};
+  AMDGPU::OpName OperandsToMatch[] = {
+      AMDGPU::OpName::cpol, AMDGPU::OpName::d16,  AMDGPU::OpName::unorm,
+      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16};
 
-  for (auto op : OperandsToMatch) {
+  for (AMDGPU::OpName op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);
     if (AMDGPU::getNamedOperandIdx(Paired.I->getOpcode(), op) != Idx)
       return false;
@@ -1256,7 +1256,7 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
 // Paired.
 void SILoadStoreOptimizer::copyToDestRegs(
     CombineInfo &CI, CombineInfo &Paired,
-    MachineBasicBlock::iterator InsertBefore, int OpName,
+    MachineBasicBlock::iterator InsertBefore, AMDGPU::OpName OpName,
     Register DestReg) const {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
@@ -1287,7 +1287,7 @@ void SILoadStoreOptimizer::copyToDestRegs(
 Register
 SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                                       MachineBasicBlock::iterator InsertBefore,
-                                      int OpName) const {
+                                      AMDGPU::OpName OpName) const {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
 

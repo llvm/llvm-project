@@ -1855,7 +1855,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
       if (isa<ArrayType>(CDS->getType()))
         return DAG.getMergeValues(Ops, getCurSDLoc());
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (C->getType()->isStructTy() || C->getType()->isArrayTy()) {
@@ -1898,14 +1898,13 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (VT.isRISCVVectorTuple()) {
       assert(C->isNullValue() && "Can only zero this target type!");
-      return NodeMap[V] = DAG.getNode(
-                 ISD::BITCAST, getCurSDLoc(), VT,
-                 DAG.getNode(
-                     ISD::SPLAT_VECTOR, getCurSDLoc(),
-                     EVT::getVectorVT(*DAG.getContext(), MVT::i8,
-                                      VT.getSizeInBits().getKnownMinValue() / 8,
-                                      true),
-                     DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
+      return DAG.getNode(
+          ISD::BITCAST, getCurSDLoc(), VT,
+          DAG.getNode(
+              ISD::SPLAT_VECTOR, getCurSDLoc(),
+              EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                               VT.getSizeInBits().getKnownMinValue() / 8, true),
+              DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
     VectorType *VecTy = cast<VectorType>(V->getType());
@@ -1918,7 +1917,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       for (unsigned i = 0; i != NumElements; ++i)
         Ops.push_back(getValue(CV->getOperand(i)));
 
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (isa<ConstantAggregateZero>(C)) {
@@ -1931,7 +1930,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       else
         Op = DAG.getConstant(0, getCurSDLoc(), EltVT);
 
-      return NodeMap[V] = DAG.getSplat(VT, getCurSDLoc(), Op);
+      return DAG.getSplat(VT, getCurSDLoc(), Op);
     }
 
     llvm_unreachable("Unknown vector constant");
@@ -3361,16 +3360,28 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
-    case Intrinsic::wasm_rethrow: {
-      // This is usually done in visitTargetIntrinsic, but this intrinsic is
-      // special because it can be invoked, so we manually lower it to a DAG
-      // node here.
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
+    // wasm_throw, wasm_rethrow: This is usually done in visitTargetIntrinsic,
+    // but these intrinsics are special because they can be invoked, so we
+    // manually lower it to a DAG node here.
+    case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      std::array<SDValue, 4> Ops = {
+          getControlRoot(), // inchain for the terminator node
+          DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout())),
+          getValue(I.getArgOperand(0)), // tag
+          getValue(I.getArgOperand(1))  // thrown value
+      };
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    case Intrinsic::wasm_rethrow: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
+                                TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
@@ -6282,15 +6293,6 @@ static unsigned FixedPointIntrinsicToOpcode(unsigned Intrinsic) {
   }
 }
 
-void SelectionDAGBuilder::lowerCallToExternalSymbol(const CallInst &I,
-                                           const char *FunctionName) {
-  assert(FunctionName && "FunctionName must not be nullptr");
-  SDValue Callee = DAG.getExternalSymbol(
-      FunctionName,
-      DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
-  LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
-}
-
 /// Given a @llvm.call.preallocated.setup, return the corresponding
 /// preallocated call.
 static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
@@ -8125,15 +8127,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
-
-    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
-                                         getValue(I.getOperand(0)),
-                                         getValue(I.getOperand(1))));
+    SDValue Acc = getValue(I.getOperand(0));
+    SDValue Input = getValue(I.getOperand(1));
+    setValue(&I,
+             DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, Acc.getValueType(), Acc,
+                         Input, DAG.getConstant(1, sdl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

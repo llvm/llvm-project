@@ -955,6 +955,25 @@ def BlockArgumentNameFromTypeOp
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for op result name when OpAsmOpInterface::getAsmResultNames is the default implementation
+// i.e. does nothing.
+def ResultNameFromTypeInterfaceOp
+ : TEST_Op<"result_name_from_type_interface",
+           [OpAsmOpInterface]> {
+  let results = (outs Variadic<AnyType>:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for block argument name when OpAsmOpInterface::getAsmBlockArgumentNames is the default implementation
+// i.e. does nothing.
+def BlockArgumentNameFromTypeInterfaceOp
+  : TEST_Op<"block_argument_name_from_type_interface",
+      [OpAsmOpInterface]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "regions attr-dict-with-keyword";
+}
+
 // This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
 // operations nested in a region under this op will drop the "test." dialect
 // prefix.
@@ -2945,50 +2964,6 @@ def RecursivelySpeculatableOp : TEST_Op<"recursively_speculatable_op", [
   }];
   let results = (outs I32:$result);
   let regions = (region SizedRegion<1>:$body);
-}
-
-def SpeculatableOpWithReadSideEffect : TEST_Op<"speculatable_op_with_memread",
-    [ConditionallySpeculatable, MemoryEffects<[MemRead]>]> {
-  let description = [{
-    Op used to test LICM conditional speculation.  This op can always be
-    speculatively executed and has only memory read effect.
-  }];
-
-  let arguments = (ins Variadic<AnyType>:$inputs);
-  let results = (outs Variadic<AnyType>:$outputs);
-
-  let extraClassDeclaration = [{
-    ::mlir::Speculation::Speculatability getSpeculatability();
-  }];
-
-  let extraClassDefinition = [{
-    ::mlir::Speculation::Speculatability
-    SpeculatableOpWithReadSideEffect::getSpeculatability() {
-      return ::mlir::Speculation::Speculatable;
-    }
-  }];
-}
-
-def SpeculatableOpWithWriteSideEffect : TEST_Op<"speculatable_op_with_memwrite",
-    [ConditionallySpeculatable, MemoryEffects<[MemWrite]>]> {
-  let description = [{
-    Op used to test LICM conditional speculation.  This op can always be
-    speculatively executed and has only memory read effect.
-  }];
-
-  let arguments = (ins Variadic<AnyType>:$inputs);
-  let results = (outs Variadic<AnyType>:$outputs);
-
-  let extraClassDeclaration = [{
-    ::mlir::Speculation::Speculatability getSpeculatability();
-  }];
-
-  let extraClassDefinition = [{
-    ::mlir::Speculation::Speculatability
-    SpeculatableOpWithWriteSideEffect::getSpeculatability() {
-      return ::mlir::Speculation::Speculatable;
-    }
-  }];
 }
 
 //===---------------------------------------------------------------------===//

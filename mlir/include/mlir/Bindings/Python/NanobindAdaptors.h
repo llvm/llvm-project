@@ -23,8 +23,10 @@
 
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "llvm/ADT/Twine.h"
 
 // Raw CAPI type casters need to be declared before use, so always include them
@@ -349,6 +351,7 @@ public:
     thisClass = metaclass(derivedClassName, nanobind::make_tuple(superClass),
                           attributes);
     scope.attr(derivedClassName) = thisClass;
+    thisClass.attr("__module__") = scope.attr("__name__");
   }
 
   template <typename Func, typename... Extra>
@@ -434,7 +437,7 @@ public:
                           const nanobind::object &superCls,
                           GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -465,10 +468,13 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        "def isinstance(other_attribute: " MAKE_MLIR_PYTHON_QUALNAME(
+            "ir") ".Attribute) -> bool";
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirAttribute other) { return isaFunction(other); },
-        nanobind::arg("other_attribute"));
+        nanobind::arg("other_attribute"), nanobind::sig(kIsinstanceSig));
     def("__repr__", [superCls, captureTypeName](nanobind::object self) {
       return nanobind::repr(superCls(self))
           .attr("replace")(superCls.attr("__name__"), captureTypeName);
@@ -512,7 +518,7 @@ public:
                      const nanobind::object &superCls,
                      GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -542,13 +548,17 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        "def isinstance(other_type: " MAKE_MLIR_PYTHON_QUALNAME(
+            "ir") ".Type) -> bool";
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirType other) { return isaFunction(other); },
-        nanobind::arg("other_type"));
+        nanobind::arg("other_type"), nanobind::sig(kIsinstanceSig));
     def("__repr__", [superCls, captureTypeName](nanobind::object self) {
-      return nanobind::repr(superCls(self))
-          .attr("replace")(superCls.attr("__name__"), captureTypeName);
+      return nanobind::cast<std::string>(
+          nanobind::repr(superCls(self))
+              .attr("replace")(superCls.attr("__name__"), captureTypeName));
     });
     if (getTypeIDFunction) {
       // 'get_static_typeid' method.
@@ -590,7 +600,7 @@ public:
                       IsAFunctionTy isaFunction,
                       const nanobind::object &superCls)
       : pure_subclass(scope, valueClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -620,10 +630,13 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        "def isinstance(other_value: " MAKE_MLIR_PYTHON_QUALNAME(
+            "ir") ".Value) -> bool";
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirValue other) { return isaFunction(other); },
-        nanobind::arg("other_value"));
+        nanobind::arg("other_value"), nanobind::sig(kIsinstanceSig));
   }
 };
 

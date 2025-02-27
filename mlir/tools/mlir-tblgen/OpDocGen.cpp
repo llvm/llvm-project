@@ -44,11 +44,11 @@ using mlir::tblgen::Operator;
 //===----------------------------------------------------------------------===//
 static cl::OptionCategory
     docCat("Options for -gen-(attrdef|typedef|enum|op|dialect)-doc");
-cl::opt<std::string>
+static cl::opt<std::string>
     stripPrefix("strip-prefix",
                 cl::desc("Strip prefix of the fully qualified names"),
                 cl::init("::mlir::"), cl::cat(docCat));
-cl::opt<bool> allowHugoSpecificFeatures(
+static cl::opt<bool> allowHugoSpecificFeatures(
     "allow-hugo-specific-features",
     cl::desc("Allows using features specific to Hugo"), cl::init(false),
     cl::cat(docCat));

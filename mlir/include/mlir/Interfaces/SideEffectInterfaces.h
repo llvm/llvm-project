@@ -433,10 +433,6 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// conditions are satisfied.
 bool isMemoryEffectFree(Operation *op);
 
-/// Returns true if the given operation is free of memory effects or has only
-/// read effect.
-bool isMemoryEffectFreeOrOnlyRead(Operation *op);
-
 /// Returns the side effects of an operation. If the operation has
 /// RecursiveMemoryEffects, include all side effects of child operations.
 ///

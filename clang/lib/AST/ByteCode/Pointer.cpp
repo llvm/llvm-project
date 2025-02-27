@@ -437,28 +437,35 @@ void Pointer::activate() const {
   if (!getInlineDesc()->InUnion)
     return;
 
-  getInlineDesc()->IsActive = true;
+  auto activate = [](Pointer &P) -> void {
+    P.getInlineDesc()->IsActive = true;
+  };
+  auto deactivate = [](Pointer &P) -> void {
+    P.getInlineDesc()->IsActive = false;
+  };
 
-  // Get the union, iterate over its fields and DEactivate all others.
+  // Unions might be nested etc., so find the topmost Pointer that's
+  // not in a union anymore.
   Pointer UnionPtr = getBase();
-  while (!UnionPtr.getFieldDesc()->isUnion())
+  while (!UnionPtr.isRoot() && UnionPtr.inUnion())
     UnionPtr = UnionPtr.getBase();
+
+  assert(UnionPtr.getFieldDesc()->isUnion());
 
   const Record *UnionRecord = UnionPtr.getRecord();
   for (const Record::Field &F : UnionRecord->fields()) {
     Pointer FieldPtr = UnionPtr.atField(F.Offset);
     if (FieldPtr == *this) {
     } else {
-      FieldPtr.getInlineDesc()->IsActive = false;
+      deactivate(FieldPtr);
       // FIXME: Recurse.
     }
   }
 
-  Pointer B = getBase();
-  while (!B.isRoot() && B.inUnion()) {
+  Pointer B = *this;
+  while (B != UnionPtr) {
+    activate(B);
     // FIXME: Need to de-activate other fields of parent records.
-    B.getInlineDesc()->IsActive = true;
-    assert(B.isActive());
     B = B.getBase();
   }
 }

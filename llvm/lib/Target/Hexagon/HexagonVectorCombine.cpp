@@ -1174,8 +1174,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   for (const ByteSpan::Block &B : VSpan) {
     ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
     for (const ByteSpan::Block &S : ASection) {
-      EarliestUser[S.Seg.Val] = std::min(
-          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
+      auto &EU = EarliestUser[S.Seg.Val];
+      EU = std::min(EU, earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
 

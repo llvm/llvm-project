@@ -47,6 +47,7 @@ struct MathPolynomialApproximationOptions {
 
 void populatePolynomialApproximateTanhPattern(RewritePatternSet &patterns);
 void populatePolynomialApproximateErfPattern(RewritePatternSet &patterns);
+void populatePolynomialApproximateErfcPattern(RewritePatternSet &patterns);
 
 // Adds patterns to convert to f32 around math functions for which `predicate`
 // returns true.

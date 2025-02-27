@@ -1600,29 +1600,8 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // If we have "jstopinfo" then we have stop descriptions for all threads
     // that have stop reasons, and if there is no entry for a thread, then it
     // has no stop reason.
-    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
-      // If a thread is stopped at a breakpoint site, set that as the stop
-      // reason even if it hasn't executed the breakpoint instruction yet.
-      // We will silently step over the breakpoint when we resume execution
-      // and miss the fact that this thread hit the breakpoint.
-      const size_t num_thread_ids = m_thread_ids.size();
-      for (size_t i = 0; i < num_thread_ids; i++) {
-        if (m_thread_ids[i] == thread->GetID() && m_thread_pcs.size() > i) {
-          addr_t pc = m_thread_pcs[i];
-          lldb::BreakpointSiteSP bp_site_sp =
-              thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-          if (bp_site_sp) {
-            if (bp_site_sp->ValidForThisThread(*thread)) {
-              thread->SetStopInfo(
-                  StopInfo::CreateStopReasonWithBreakpointSiteID(
-                      *thread, bp_site_sp->GetID()));
-              return true;
-            }
-          }
-        }
-      }
+    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp))
       thread->SetStopInfo(StopInfoSP());
-    }
     return true;
   }
 
@@ -1727,6 +1706,12 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   if (!thread_sp->StopInfoIsUpToDate()) {
     thread_sp->SetStopInfo(StopInfoSP());
 
+    addr_t pc = thread_sp->GetRegisterContext()->GetPC();
+    BreakpointSiteSP bp_site_sp =
+        thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+    if (bp_site_sp && bp_site_sp->IsEnabled())
+      thread_sp->SetThreadStoppedAtUnexecutedBP(pc);
+
     if (exc_type != 0) {
       // For thread plan async interrupt, creating stop info on the
       // original async interrupt request thread instead. If interrupt thread
@@ -1753,26 +1738,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       // to no reason.
       if (!reason.empty() && reason != "none") {
         if (reason == "trace") {
-          addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-          lldb::BreakpointSiteSP bp_site_sp =
-              thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
-                  pc);
-
-          // If the current pc is a breakpoint site then the StopInfo should be
-          // set to Breakpoint Otherwise, it will be set to Trace.
-          if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
-            thread_sp->SetStopInfo(
-                StopInfo::CreateStopReasonWithBreakpointSiteID(
-                    *thread_sp, bp_site_sp->GetID()));
-          } else
-            thread_sp->SetStopInfo(
-                StopInfo::CreateStopReasonToTrace(*thread_sp));
+          thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
           handled = true;
         } else if (reason == "breakpoint") {
-          addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-          lldb::BreakpointSiteSP bp_site_sp =
-              thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
-                  pc);
+          thread_sp->SetThreadHitBreakpointSite();
           if (bp_site_sp) {
             // If the breakpoint is for this thread, then we'll report the hit,
             // but if it is for another thread, we can just report no reason.
@@ -1888,39 +1857,41 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
         }
-      } else if (!signo) {
-        addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-        lldb::BreakpointSiteSP bp_site_sp =
-            thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-
-        // If a thread is stopped at a breakpoint site, set that as the stop
-        // reason even if it hasn't executed the breakpoint instruction yet.
-        // We will silently step over the breakpoint when we resume execution
-        // and miss the fact that this thread hit the breakpoint.
-        if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
-          thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
-              *thread_sp, bp_site_sp->GetID()));
-          handled = true;
-        }
       }
 
       if (!handled && signo && !did_exec) {
         if (signo == SIGTRAP) {
           // Currently we are going to assume SIGTRAP means we are either
           // hitting a breakpoint or hardware single stepping.
+
+          // We can't disambiguate between stepping-to-a-breakpointsite and
+          // hitting-a-breakpointsite.
+          //
+          // A user can instruction-step, and be stopped at a BreakpointSite.
+          // Or a user can be sitting at a BreakpointSite,
+          // instruction-step which hits the breakpoint and the pc does not
+          // advance.
+          //
+          // In both cases, we're at a BreakpointSite when stopped, and
+          // the resume state was eStateStepping.
+
+          // Assume if we're at a BreakpointSite, we hit it.
           handled = true;
           addr_t pc =
               thread_sp->GetRegisterContext()->GetPC() + m_breakpoint_pc_offset;
-          lldb::BreakpointSiteSP bp_site_sp =
+          BreakpointSiteSP bp_site_sp =
               thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
                   pc);
 
+          // We can't know if we hit it or not. So if we are stopped at
+          // a BreakpointSite, assume we hit it, and should step past the
+          // breakpoint when we resume. This is contrary to how we handle
+          // BreakpointSites in any other location, but we can't know for
+          // sure what happened so it's a reasonable default.
           if (bp_site_sp) {
-            // If the breakpoint is for this thread, then we'll report the hit,
-            // but if it is for another thread, we can just report no reason.
-            // We don't need to worry about stepping over the breakpoint here,
-            // that will be taken care of when the thread resumes and notices
-            // that there's a breakpoint under the pc.
+            if (bp_site_sp->IsEnabled())
+              thread_sp->SetThreadHitBreakpointSite();
+
             if (bp_site_sp->ValidForThisThread(*thread_sp)) {
               if (m_breakpoint_pc_offset != 0)
                 thread_sp->GetRegisterContext()->SetPC(pc);
@@ -1934,8 +1905,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           } else {
             // If we were stepping then assume the stop was the result of the
             // trace.  If we were not stepping then report the SIGTRAP.
-            // FIXME: We are still missing the case where we single step over a
-            // trap instruction.
             if (thread_sp->GetTemporaryResumeState() == eStateStepping)
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonToTrace(*thread_sp));
@@ -5526,8 +5495,7 @@ public:
       if (process) {
         StreamSP output_stream_sp = result.GetImmediateOutputStream();
         if (!output_stream_sp)
-          output_stream_sp =
-              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
+          output_stream_sp = m_interpreter.GetDebugger().GetAsyncOutputStream();
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =

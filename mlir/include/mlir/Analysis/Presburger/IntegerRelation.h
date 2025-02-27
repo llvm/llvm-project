@@ -738,6 +738,12 @@ public:
   /// Same as findSymbolicIntegerLexMin but produces lexmax instead of lexmin
   SymbolicLexOpt findSymbolicIntegerLexMax() const;
 
+  /// Searches for a constraint with a non-zero coefficient at `colIdx` in
+  /// equality (isEq=true) or inequality (isEq=false) constraints.
+  /// Returns true and sets row found in search in `rowIdx`, false otherwise.
+  bool findConstraintWithNonZeroAt(unsigned colIdx, bool isEq,
+                                   unsigned *rowIdx) const;
+
   /// Return the set difference of this set and the given set, i.e.,
   /// return `this \ set`.
   PresburgerRelation subtract(const PresburgerRelation &set) const;
@@ -819,12 +825,6 @@ protected:
 
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
-
-  /// Searches for a constraint with a non-zero coefficient at `colIdx` in
-  /// equality (isEq=true) or inequality (isEq=false) constraints.
-  /// Returns true and sets row found in search in `rowIdx`, false otherwise.
-  bool findConstraintWithNonZeroAt(unsigned colIdx, bool isEq,
-                                   unsigned *rowIdx) const;
 
   /// Returns true if the pos^th column is all zero for both inequalities and
   /// equalities.
