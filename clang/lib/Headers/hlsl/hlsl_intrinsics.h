@@ -294,7 +294,7 @@ bool4 and(bool4 x, bool4 y);
 // or builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn bool or(bool x, bbol y)
+/// \fn bool or(bool x, bool y)
 /// \brief Logically ors two boolean vectors elementwise and produces a bool
 /// vector output.
 
