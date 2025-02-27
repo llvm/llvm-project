@@ -30,7 +30,6 @@ struct VXMemOpInfo {
   unsigned BaseInstr;
 };
 
-#define GET_RISCVBaseVXMemOpTable_DECL
 #define GET_RISCVBaseVXMemOpTable_IMPL
 // We need to include the implementation code here because RISCVCustomBehavior
 // is not linked against RISCVCodeGen.
