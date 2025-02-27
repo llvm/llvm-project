@@ -3376,6 +3376,10 @@ def fno_inline_functions : Flag<["-"], "fno-inline-functions">, Group<f_clang_Gr
   Visibility<[ClangOption, CC1Option]>;
 def fno_inline : Flag<["-"], "fno-inline">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>;
+def fpartial_inlining : Flag<["-"], "fpartial-inlining">, Group<f_clang_Group>,
+  Visibility<[ClangOption, CC1Option]>;
+def fno_partial_inlining : Flag<["-"], "fno-partial-inlining">, Group<f_clang_Group>,
+  Visibility<[ClangOption, CC1Option]>;
 def fno_global_isel : Flag<["-"], "fno-global-isel">, Group<f_clang_Group>,
   HelpText<"Disables the global instruction selector">;
 def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_Group>,

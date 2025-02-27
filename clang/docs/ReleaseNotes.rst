@@ -116,6 +116,8 @@ New Compiler Flags
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
 
+- New Options ``-fpartial-inlining`` and ``-fno-partial-inlining`` added to adapt with GCC. 
+
 Deprecated Compiler Flags
 -------------------------
 

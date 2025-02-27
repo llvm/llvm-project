@@ -7370,6 +7370,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_finline_max_stacksize_EQ);
 
+  // Adaptation of partial-inlining option with GCC.
+  if (Arg *A = Args.getLastArg(options::OPT_fno_partial_inlining,
+                               options::OPT_fpartial_inlining)) {
+    if (A->getOption().matches(options::OPT_fno_partial_inlining)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-disable-partial-inlining");
+    } else if (A->getOption().matches(options::OPT_fpartial_inlining)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-enable-partial-inlining");
+    }
+  }
+
   // FIXME: Find a better way to determine whether we are in C++20.
   bool HaveCxx20 =
       Std &&
