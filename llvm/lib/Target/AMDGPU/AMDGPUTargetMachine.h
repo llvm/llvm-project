@@ -16,9 +16,11 @@
 
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include <optional>
 #include <utility>
 
@@ -179,6 +181,7 @@ public:
   Error addInstSelector(AddMachinePass &) const;
   void addPreRewrite(AddMachinePass &) const;
   void addMachineSSAOptimization(AddMachinePass &) const;
+  Error addRegAssignmentOptimized(AddMachinePass &) const;
   void addPostRegAlloc(AddMachinePass &) const;
   void addPreEmitPass(AddMachinePass &) const;
 
@@ -189,6 +192,38 @@ public:
                      CodeGenOptLevel Level = CodeGenOptLevel::Default) const;
   void addEarlyCSEOrGVNPass(AddIRPass &) const;
   void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
+
+private:
+  // /// Dummy structs to represent different phases of register allocation.
+  // struct SGPRPhase{};
+  // struct VGPRPhase{};
+  // struct WWMPhase{};
+  enum class RegAllocPhase { SGPR, VGPR, WWM };
+
+  template <typename RegAllocPassT>
+  typename RegAllocPassT::Options getRAOptionsForPhase(RegAllocPhase) const;
+
+  /// \brief Add register allocation pass to the pass manager.
+  /// This checks for the regalloc type given through
+  /// -{phase}-regalloc-npm={type} cl option. If the option is not specified, it
+  /// uses the preferred regalloc pass type.
+  ///
+  /// \tparam PreferredRegAllocPassT The fallback reg alloc pass type to use if
+  /// cl::opt is unspecified.
+  /// \param Phase The phase of register allocation to add.
+  template <typename PreferredRegAllocPassT>
+  void addRegAlloc(AddMachinePass &, RegAllocPhase Phase) const;
+
+  // instantiate the template for each phase
+  /// Add the register allocation pass for given filter func and type
+  /// (greedy/fast).
+  /// @param Type If RegAllocType::Default, add according to the optimization
+  /// level.
+  // void addRegAllocPass(AddMachinePass &, RegAllocType Type,
+  // RegAllocFilterFunc FilterFunc) const;
+  void addSGPRRegAlloc(AddMachinePass &, bool Optimized) const;
+  void addWWMRegAlloc(AddMachinePass &, bool Optimized) const;
+  void addVGPRRegAlloc(AddMachinePass &, bool Optimized) const;
 };
 
 } // end namespace llvm

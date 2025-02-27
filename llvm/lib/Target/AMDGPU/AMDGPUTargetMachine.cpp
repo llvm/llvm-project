@@ -78,6 +78,7 @@
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -188,6 +189,24 @@ static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
     WWMRegAlloc("wwm-regalloc", cl::Hidden,
                 cl::init(&useDefaultRegisterAllocator),
                 cl::desc("Register allocator to use for WWM registers"));
+
+static cl::opt<RegAllocType, false, RegAllocTypeParser> SGPRRegAllocTypeNPM(
+    "sgpr-regalloc-npm", cl::Hidden,
+    cl::desc("Register allocator to use for SGPRs in new pass "
+             "manager"),
+    cl::init(RegAllocType::Default));
+
+static cl::opt<RegAllocType, false, RegAllocTypeParser> VGPRRegAllocTypeNPM(
+    "vgpr-regalloc-npm", cl::Hidden,
+    cl::desc("Register allocator to use for VGPRs in new pass "
+             "manager"),
+    cl::init(RegAllocType::Default));
+
+static cl::opt<RegAllocType, false, RegAllocTypeParser> WWMRegAllocTypeNPM(
+    "wwm-regalloc-npm", cl::Hidden,
+    cl::desc("Register allocator to use for WWM registers in "
+             "new pass manager"),
+    cl::init(RegAllocType::Default));
 
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
   RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
@@ -2139,6 +2158,214 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   }
   addPass(DeadMachineInstructionElimPass());
   addPass(SIShrinkInstructionsPass());
+}
+
+static const char NPMRegAllocOptNotSupportedMessage[] =
+    "-regalloc-npm not supported with amdgcn. Use -sgpr-regalloc-npm, "
+    "-wwm-regalloc-npm, "
+    "and -vgpr-regalloc-npm";
+
+// void AMDGPUCodeGenPassBuilder::addSGPRRegAlloc(AddMachinePass &addPass,
+// RegAllocType RAType, RegAllocFilterFunc FilterFunc, bool Optimized) const {
+//   RegAllocType RAType = RegAllocTypeNPM;
+//   if (RAType == RegAllocType::Default) {
+//     RAType = Optimized ? RegAllocType::Greedy : RegAllocType::Fast;
+//   }
+
+//   if (RAType == RegAllocType::Greedy) {
+//       addPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
+//       return;
+//   }
+
+//   if (RAType == RegAllocType::Fast) {
+//     addPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}));
+//     return;
+//   }
+//   report_fatal_error("Unsupported SGPR regalloc type", false);
+// }
+
+// template<typename RegAllocPass>
+// void AMDGPUCodeGenPassBuilder::addRegAllocOfType(AddMachinePass &addPass,
+// RegAllocPass::Options Options) {
+//   addPass(RegAllocPass(Options));
+// }
+
+// this is the final method
+// template<typename RegAllocPass>
+// void AMDGPUCodeGenPassBuilder::addRegAllocOfType(AddMachinePass &addPass,
+// RegAllocPhase Phase) {
+// #define RA_OPTIONS(FilterFunc, Name, ClearVirtRegs) \
+//   [&]() { \
+//     if constexpr (std::is_same_v<RegAllocPass, RegAllocFastPass>) { \
+//       return RegAllocFastPass::Options{FilterFunc, Name, ClearVirtRegs}; \
+//     } else { \
+//       return typename RegAllocPass::Options{FilterFunc, Name}; \
+//     } \
+//   }()
+
+//   typename RegAllocPass::Options Options;
+//   RegAllocType RAType;
+
+//   switch (Phase) {
+//   case RegAllocPhase::SGPR:
+//     Options = RA_OPTIONS(onlyAllocateSGPRs, "sgpr", false);
+//     RAType = SGPRRegAllocTypeNPM;
+//     break;
+//   case RegAllocPhase::WWM:
+//     Options = RA_OPTIONS(onlyAllocateWWMRegs, "wwm", false);
+//     RAType = WWMRegAllocTypeNPM;
+//     break;
+//   case RegAllocPhase::VGPR:
+//     Options = RA_OPTIONS(onlyAllocateVGPRs, "vgpr", true);
+//     RAType = VGPRRegAllocTypeNPM;
+//     break;
+//   };
+
+//   switch(RAType) {
+//     case RegAllocType::Greedy:
+//       addPass(RAGreedyPass(Options));
+//       return;
+//     case RegAllocType::Fast:
+//       addPass(RegAllocFastPass(Options));
+//       return;
+//     case RegAllocType::Unset:
+//       addPass(RegAllocPass(Options));
+//   }
+// #undef RA_OPTIONS
+// }
+
+// template<typename RegAllocPass>
+// void AMDGPUCodeGenPassBuilder::addRegAlloc(AddMachinePass &addPass,
+// RegAllocPhase Phase) {
+//   RegAllocType RAType;
+//   switch(Phase) {
+//     case RegAllocPhase::SGPR:
+//       RAType = SGPRRegAllocTypeNPM;
+//       break;
+//     case RegAllocPhase::WWM:
+//       RAType = WWMRegAllocTypeNPM;
+//       break;
+//     case RegAllocPhase::VGPR:
+//       RAType = VGPRRegAllocTypeNPM;
+//       break;
+//   }
+//   switch (RAType) {
+//     case RegAllocType::Greedy:
+//       addRegAllocOfType(addPass, Phase);
+//   }
+//   addRegAllocOfType<RegAllocPass>(addPass, Phase);
+// }
+
+template <typename RegAllocPassT>
+typename RegAllocPassT::Options
+AMDGPUCodeGenPassBuilder::getRAOptionsForPhase(RegAllocPhase Phase) const {
+#define RA_OPTIONS(FilterFunc, Name, ClearVirtRegs)                            \
+  [&]() {                                                                      \
+    if constexpr (std::is_same_v<RegAllocPassT, RegAllocFastPass>) {           \
+      return RegAllocFastPass::Options{FilterFunc, Name, ClearVirtRegs};       \
+    } else {                                                                   \
+      return typename RegAllocPassT::Options{FilterFunc, Name};                \
+    }                                                                          \
+  }()
+
+  switch (Phase) {
+  case RegAllocPhase::SGPR:
+    return RA_OPTIONS(onlyAllocateSGPRs, "sgpr", false);
+  case RegAllocPhase::WWM:
+    return RA_OPTIONS(onlyAllocateWWMRegs, "wwm", false);
+  case RegAllocPhase::VGPR:
+    return RA_OPTIONS(onlyAllocateVGPRs, "vgpr", true);
+  }
+  // static_assert(std::is_same_v<PhaseT, SGPRPhase> ||
+  //               std::is_same_v<PhaseT, WWMPhase> ||
+  //               std::is_same_v<PhaseT, VGPRPhase>,
+  //               "Unsupported phase type");
+
+  // if constexpr(std::is_same_v<PhaseT, SGPRPhase>) {
+  //   return RA_OPTIONS(onlyAllocateSGPRs, "sgpr", false);
+  // } else if constexpr(std::is_same_v<PhaseT, WWMPhase>) {
+  //   return RA_OPTIONS(onlyAllocateWWMRegs, "wwm", false);
+  // } else if constexpr(std::is_same_v<PhaseT, VGPRPhase>) {
+  //   return RA_OPTIONS(onlyAllocateVGPRs, "vgpr", true);
+  // }
+
+#undef RA_OPTIONS
+}
+
+template <typename RegAllocPassT>
+void AMDGPUCodeGenPassBuilder::addRegAlloc(AddMachinePass &addPass,
+                                           RegAllocPhase Phase) const {
+  RegAllocType RAType;
+  // Read the appropriate phase's regalloc type.
+  switch (Phase) {
+  case RegAllocPhase::SGPR:
+    RAType = SGPRRegAllocTypeNPM;
+    break;
+  case RegAllocPhase::WWM:
+    RAType = WWMRegAllocTypeNPM;
+    break;
+  case RegAllocPhase::VGPR:
+    RAType = VGPRRegAllocTypeNPM;
+    break;
+  }
+
+  // Construct the pass with the appropriate options.
+  switch (RAType) {
+  case RegAllocType::Greedy:
+    addPass(RAGreedyPass(getRAOptionsForPhase<RAGreedyPass>(Phase)));
+    return;
+  case RegAllocType::Fast:
+    addPass(RegAllocFastPass(getRAOptionsForPhase<RegAllocFastPass>(Phase)));
+    return;
+  case RegAllocType::Unset:
+    addPass(RegAllocPassT(getRAOptionsForPhase<RegAllocPassT>(Phase)));
+    return;
+  default:
+    report_fatal_error("Unsupported regalloc type", false);
+  }
+}
+
+Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
+    AddMachinePass &addPass) const {
+  if (Opt.RegAlloc != RegAllocType::Unset)
+    return make_error<StringError>(NPMRegAllocOptNotSupportedMessage,
+                                   inconvertibleErrorCode());
+
+  addPass(GCNPreRALongBranchRegPass());
+
+  addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::SGPR);
+
+  // Commit allocated register changes. This is mostly necessary because too
+  // many things rely on the use lists of the physical registers, such as the
+  // verifier. This is only necessary with allocators which use LiveIntervals,
+  // since FastRegAlloc does the replacements itself.
+  // TODO: addPass(VirtRegRewriterPass(false));
+
+  // At this point, the sgpr-regalloc has been done and it is good to have the
+  // stack slot coloring to try to optimize the SGPR spill stack indices before
+  // attempting the custom SGPR spill lowering.
+  addPass(StackSlotColoringPass());
+
+  // Equivalent of PEI for SGPRs.
+  addPass(SILowerSGPRSpillsPass());
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
+  addPass(SIPreAllocateWWMRegsPass());
+
+  // For allocating other wwm register operands.
+  addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::WWM);
+  addPass(SILowerWWMCopiesPass());
+  // TODO: addPass(VirtRegRewriterPass(false));
+  // TODO: addPass(AMDGPUReserveWWMRegsPass());
+
+  // For allocating per-thread VGPRs.
+  addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::VGPR);
+
+  // TODO: addPreRewrite();
+  addPass(VirtRegRewriterPass(false));
+
+  // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
+  return Error::success();
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
