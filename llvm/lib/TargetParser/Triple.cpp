@@ -2165,12 +2165,12 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
 }
 
 Triple::CLayouts Triple::getCLayouts(const StringRef &ABIName) const {
-  Triple::CLayouts Layouts;
-
   // Default to a 32-bit RISC platform
-  Layouts.LongDoubleWidth = 64;
-  Layouts.LongDoubleAlign = 64;
-  Layouts.LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+  Triple::CLayouts Layouts {
+    .LongDoubleWidth = 64,
+    .LongDoubleAlign = 64,
+    .LongDoubleFormat = &llvm::APFloat::IEEEdouble(),
+  };
 
   enum ArchType Arch = getArch();
 

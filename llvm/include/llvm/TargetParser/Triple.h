@@ -1283,7 +1283,7 @@ public:
 
   /// Return true if `long double` and `_Float128` have the same layout.
   bool isLongDoubleF128(const StringRef &ABIName) const {
-    return getCLayouts(ABIName).LongDoubleWidth == 128;
+    return getCLayouts(ABIName).LongDoubleFormat == &APFloatBase::IEEEquad();
   }
 };
 
