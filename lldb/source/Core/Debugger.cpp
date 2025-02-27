@@ -778,7 +778,6 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
     g_debugger_list_ptr->push_back(debugger_sp);
   }
   debugger_sp->InstanceInitialize();
-
   return debugger_sp;
 }
 
@@ -1009,7 +1008,6 @@ void Debugger::Clear() {
               info->exit_desc = {0, ""};
             },
             this);
-
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
