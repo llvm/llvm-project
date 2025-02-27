@@ -3430,8 +3430,7 @@ void CheckHelper::CheckDioDummyIsDerived(const Symbol &subp, const Symbol &arg,
       }
     } else {
       messages_.Say(arg.name(),
-          "Dummy argument '%s' of a defined input/output procedure must have a"
-          " derived type"_err_en_US,
+          "Dummy argument '%s' of a defined input/output procedure must have a derived type"_err_en_US,
           arg.name());
     }
   }
@@ -3447,16 +3446,14 @@ void CheckHelper::CheckDioDummyIsDefaultInteger(
     }
   }
   messages_.Say(arg.name(),
-      "Dummy argument '%s' of a defined input/output procedure"
-      " must be an INTEGER of default KIND"_err_en_US,
+      "Dummy argument '%s' of a defined input/output procedure must be an INTEGER of default KIND"_err_en_US,
       arg.name());
 }
 
 void CheckHelper::CheckDioDummyIsScalar(const Symbol &subp, const Symbol &arg) {
   if (arg.Rank() > 0 || arg.Corank() > 0) {
     messages_.Say(arg.name(),
-        "Dummy argument '%s' of a defined input/output procedure"
-        " must be a scalar"_err_en_US,
+        "Dummy argument '%s' of a defined input/output procedure must be a scalar"_err_en_US,
         arg.name());
   }
 }
@@ -3533,8 +3530,7 @@ void CheckHelper::CheckDioAssumedLenCharacterArg(const Symbol &subp,
                 context_.defaultKinds().GetDefaultKind(
                     TypeCategory::Character))) {
       messages_.Say(arg->name(),
-          "Dummy argument '%s' of a defined input/output procedure"
-          " must be assumed-length CHARACTER of default kind"_err_en_US,
+          "Dummy argument '%s' of a defined input/output procedure must be assumed-length CHARACTER of default kind"_err_en_US,
           arg->name());
     }
   }
@@ -3547,10 +3543,9 @@ void CheckHelper::CheckDioVlistArg(
     CheckDioDummyIsDefaultInteger(subp, *arg);
     CheckDioDummyAttrs(subp, *arg, Attr::INTENT_IN);
     const auto *objectDetails{arg->detailsIf<ObjectEntityDetails>()};
-    if (!objectDetails || !objectDetails->shape().CanBeDeferredShape()) {
+    if (!objectDetails || !objectDetails->shape().CanBeAssumedShape()) {
       messages_.Say(arg->name(),
-          "Dummy argument '%s' of a defined input/output procedure must be"
-          " deferred shape"_err_en_US,
+          "Dummy argument '%s' of a defined input/output procedure must be assumed shape"_err_en_US,
           arg->name());
     }
   }
@@ -3565,8 +3560,7 @@ void CheckHelper::CheckDioArgCount(
               : 4)};
   if (argCount != requiredArgCount) {
     SayWithDeclaration(subp,
-        "Defined input/output procedure '%s' must have"
-        " %d dummy arguments rather than %d"_err_en_US,
+        "Defined input/output procedure '%s' must have %d dummy arguments rather than %d"_err_en_US,
         subp.name(), requiredArgCount, argCount);
     context_.SetError(subp);
   }
@@ -3578,15 +3572,13 @@ void CheckHelper::CheckDioDummyAttrs(
   Attrs attrs{arg.attrs()};
   if (!attrs.test(goodIntent)) {
     messages_.Say(arg.name(),
-        "Dummy argument '%s' of a defined input/output procedure"
-        " must have intent '%s'"_err_en_US,
+        "Dummy argument '%s' of a defined input/output procedure must have intent '%s'"_err_en_US,
         arg.name(), AttrToString(goodIntent));
   }
   attrs = attrs - Attr::INTENT_IN - Attr::INTENT_OUT - Attr::INTENT_INOUT;
   if (!attrs.empty()) {
     messages_.Say(arg.name(),
-        "Dummy argument '%s' of a defined input/output procedure may not have"
-        " any attributes"_err_en_US,
+        "Dummy argument '%s' of a defined input/output procedure may not have any attributes"_err_en_US,
         arg.name());
   }
 }
@@ -3599,8 +3591,8 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
     const auto *binding{ultimate.detailsIf<ProcBindingDetails>()};
     const Symbol &specific{*(binding ? &binding->symbol() : &ultimate)};
     if (ultimate.attrs().test(Attr::NOPASS)) { // C774
-      messages_.Say("Defined input/output procedure '%s' may not have NOPASS "
-                    "attribute"_err_en_US,
+      messages_.Say(
+          "Defined input/output procedure '%s' may not have NOPASS attribute"_err_en_US,
           ultimate.name());
       context_.SetError(ultimate);
     }
