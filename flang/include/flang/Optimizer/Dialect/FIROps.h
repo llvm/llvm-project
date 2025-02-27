@@ -51,6 +51,7 @@ struct DebuggingResource
 };
 
 class CoordinateIndicesAdaptor;
+using IntOrValue = llvm::PointerUnion<mlir::IntegerAttr, mlir::Value>;
 
 } // namespace fir
 
@@ -60,7 +61,6 @@ class CoordinateIndicesAdaptor;
 namespace fir {
 class CoordinateIndicesAdaptor {
 public:
-  using IntOrValue = llvm::PointerUnion<mlir::IntegerAttr, mlir::Value>;
   using value_type = IntOrValue;
 
   CoordinateIndicesAdaptor(mlir::DenseI32ArrayAttr fieldIndices,

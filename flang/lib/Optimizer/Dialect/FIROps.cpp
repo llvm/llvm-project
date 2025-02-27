@@ -1486,6 +1486,33 @@ void fir::CoordinateOp::build(mlir::OpBuilder &builder,
   }
 }
 
+void fir::CoordinateOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result,
+                              mlir::Type resultType, mlir::Value ref,
+                              llvm::ArrayRef<fir::IntOrValue> coor) {
+  llvm::SmallVector<int32_t> fieldIndices;
+  llvm::SmallVector<mlir::Value> dynamicIndices;
+  bool anyField = false;
+  for (fir::IntOrValue index : coor) {
+    llvm::TypeSwitch<fir::IntOrValue>(index)
+        .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
+          fieldIndices.push_back(intAttr.getInt());
+          anyField = true;
+        })
+        .Case<mlir::Value>([&](mlir::Value value) {
+          dynamicIndices.push_back(value);
+          fieldIndices.push_back(fir::CoordinateOp::kDynamicIndex);
+        });
+  }
+  auto typeAttr = mlir::TypeAttr::get(ref.getType());
+  if (anyField) {
+    build(builder, result, resultType, ref, dynamicIndices, typeAttr,
+          builder.getDenseI32ArrayAttr(fieldIndices));
+  } else {
+    build(builder, result, resultType, ref, dynamicIndices, typeAttr, nullptr);
+  }
+}
+
 void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
   p << ' ' << getRef();
   if (!getFieldIndicesAttr()) {
@@ -1494,7 +1521,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
     mlir::Type eleTy = fir::getFortranElementType(getRef().getType());
     for (auto index : getIndices()) {
       p << ", ";
-      llvm::TypeSwitch<fir::CoordinateIndicesAdaptor::IntOrValue>(index)
+      llvm::TypeSwitch<fir::IntOrValue>(index)
           .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
             if (auto recordType = llvm::dyn_cast<fir::RecordType>(eleTy)) {
               int fieldId = intAttr.getInt();
