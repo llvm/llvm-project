@@ -720,3 +720,27 @@ module m27b
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end
 end
+
+module m28
+  type t
+   contains
+    procedure, private :: write1
+    generic :: write(formatted) => write1
+  end type
+  abstract interface
+    subroutine absWrite(dtv, unit, iotype, v_list, iostat, iomsg)
+      import t
+      class(t), intent(in) :: dtv
+      integer, intent(in) :: unit
+      character(*), intent(in) :: iotype
+      integer, intent(in)  :: v_list(:)
+      integer, intent(out) :: iostat
+      character(*), intent(inout) :: iomsg
+    end
+  end interface
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'write(formatted)'
+  procedure(absWrite) write1, write2
+  interface write(formatted)
+    procedure write2
+  end interface
+end

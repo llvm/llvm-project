@@ -165,8 +165,8 @@ private:
   void CheckDioDummyIsDefaultInteger(const Symbol &, const Symbol &);
   void CheckDioDummyIsScalar(const Symbol &, const Symbol &);
   void CheckDioDummyAttrs(const Symbol &, const Symbol &, Attr);
-  void CheckDioDtvArg(
-      const Symbol &, const Symbol *, common::DefinedIo, const Symbol &);
+  void CheckDioDtvArg(const Symbol &proc, const Symbol &subp, const Symbol *arg,
+      common::DefinedIo, const Symbol &generic);
   void CheckGenericVsIntrinsic(const Symbol &, const GenericDetails &);
   void CheckDefaultIntegerArg(const Symbol &, const Symbol *, Attr);
   void CheckDioAssumedLenCharacterArg(
@@ -3429,11 +3429,17 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
     if (auto iter{dtScope->find(generic.name())}; iter != dtScope->end() &&
         IsAccessible(*iter->second, generic.owner())) {
       for (auto specRef : iter->second->get<GenericDetails>().specificProcs()) {
-        const Symbol &specific{specRef->get<ProcBindingDetails>().symbol()};
-        if (specific == proc) {
+        const Symbol *specific{&specRef->get<ProcBindingDetails>().symbol()};
+        if (specific == &proc) {
           continue; // unambiguous, accept
         }
-        if (const auto *specDT{GetDtvArgDerivedType(specific)};
+        if (const auto *peDetails{specific->detailsIf<ProcEntityDetails>()}) {
+          specific = peDetails->procInterface();
+          if (!specific) {
+            continue;
+          }
+        }
+        if (const auto *specDT{GetDtvArgDerivedType(*specific)};
             specDT && evaluate::AreSameDerivedType(derivedType, *specDT)) {
           SayWithDeclaration(*specRef, proc.name(),
               "Derived type '%s' has conflicting type-bound input/output procedure '%s'"_err_en_US,
@@ -3445,11 +3451,11 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
   }
 }
 
-void CheckHelper::CheckDioDummyIsDerived(const Symbol &subp, const Symbol &arg,
+void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
     if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
-      CheckAlreadySeenDefinedIo(*derivedType, ioKind, subp, generic);
+      CheckAlreadySeenDefinedIo(*derivedType, ioKind, proc, generic);
       bool isPolymorphic{type->IsPolymorphic()};
       if (isPolymorphic != IsExtensibleType(derivedType)) {
         messages_.Say(arg.name(),
@@ -3487,11 +3493,11 @@ void CheckHelper::CheckDioDummyIsScalar(const Symbol &subp, const Symbol &arg) {
   }
 }
 
-void CheckHelper::CheckDioDtvArg(const Symbol &subp, const Symbol *arg,
-    common::DefinedIo ioKind, const Symbol &generic) {
+void CheckHelper::CheckDioDtvArg(const Symbol &proc, const Symbol &subp,
+    const Symbol *arg, common::DefinedIo ioKind, const Symbol &generic) {
   // Dtv argument looks like: dtv-type-spec, INTENT(INOUT) :: dtv
   if (CheckDioDummyIsData(subp, arg, 0)) {
-    CheckDioDummyIsDerived(subp, *arg, ioKind, generic);
+    CheckDioDummyIsDerived(proc, *arg, ioKind, generic);
     CheckDioDummyAttrs(subp, *arg,
         ioKind == common::DefinedIo::ReadFormatted ||
                 ioKind == common::DefinedIo::ReadUnformatted
@@ -3618,57 +3624,64 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
   for (auto ref : details.specificProcs()) {
     const Symbol &ultimate{ref->GetUltimate()};
     const auto *binding{ultimate.detailsIf<ProcBindingDetails>()};
-    const Symbol &specific{*(binding ? &binding->symbol() : &ultimate)};
     if (ultimate.attrs().test(Attr::NOPASS)) { // C774
       messages_.Say(
           "Defined input/output procedure '%s' may not have NOPASS attribute"_err_en_US,
           ultimate.name());
       context_.SetError(ultimate);
     }
-    if (const auto *subpDetails{specific.detailsIf<SubprogramDetails>()}) {
+    const Symbol *specificProc{binding ? &binding->symbol() : &ultimate};
+    const Symbol *specificSubp{specificProc};
+    if (const auto *peDetails{specificSubp->detailsIf<ProcEntityDetails>()}) {
+      specificSubp = peDetails->procInterface();
+      if (!specificSubp) {
+        continue;
+      }
+    }
+    if (const auto *subpDetails{specificSubp->detailsIf<SubprogramDetails>()}) {
       const std::vector<Symbol *> &dummyArgs{subpDetails->dummyArgs()};
-      CheckDioArgCount(specific, ioKind, dummyArgs.size());
+      CheckDioArgCount(*specificSubp, ioKind, dummyArgs.size());
       int argCount{0};
       for (auto *arg : dummyArgs) {
         switch (argCount++) {
         case 0:
           // dtv-type-spec, INTENT(INOUT) :: dtv
-          CheckDioDtvArg(specific, arg, ioKind, symbol);
+          CheckDioDtvArg(*specificProc, *specificSubp, arg, ioKind, symbol);
           break;
         case 1:
           // INTEGER, INTENT(IN) :: unit
-          CheckDefaultIntegerArg(specific, arg, Attr::INTENT_IN);
+          CheckDefaultIntegerArg(*specificSubp, arg, Attr::INTENT_IN);
           break;
         case 2:
           if (ioKind == common::DefinedIo::ReadFormatted ||
               ioKind == common::DefinedIo::WriteFormatted) {
             // CHARACTER (LEN=*), INTENT(IN) :: iotype
             CheckDioAssumedLenCharacterArg(
-                specific, arg, argCount, Attr::INTENT_IN);
+                *specificSubp, arg, argCount, Attr::INTENT_IN);
           } else {
             // INTEGER, INTENT(OUT) :: iostat
-            CheckDefaultIntegerArg(specific, arg, Attr::INTENT_OUT);
+            CheckDefaultIntegerArg(*specificSubp, arg, Attr::INTENT_OUT);
           }
           break;
         case 3:
           if (ioKind == common::DefinedIo::ReadFormatted ||
               ioKind == common::DefinedIo::WriteFormatted) {
             // INTEGER, INTENT(IN) :: v_list(:)
-            CheckDioVlistArg(specific, arg, argCount);
+            CheckDioVlistArg(*specificSubp, arg, argCount);
           } else {
             // CHARACTER (LEN=*), INTENT(INOUT) :: iomsg
             CheckDioAssumedLenCharacterArg(
-                specific, arg, argCount, Attr::INTENT_INOUT);
+                *specificSubp, arg, argCount, Attr::INTENT_INOUT);
           }
           break;
         case 4:
           // INTEGER, INTENT(OUT) :: iostat
-          CheckDefaultIntegerArg(specific, arg, Attr::INTENT_OUT);
+          CheckDefaultIntegerArg(*specificSubp, arg, Attr::INTENT_OUT);
           break;
         case 5:
           // CHARACTER (LEN=*), INTENT(INOUT) :: iomsg
           CheckDioAssumedLenCharacterArg(
-              specific, arg, argCount, Attr::INTENT_INOUT);
+              *specificSubp, arg, argCount, Attr::INTENT_INOUT);
           break;
         default:;
         }
