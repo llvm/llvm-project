@@ -1080,7 +1080,7 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
 
   SmallVector<Attribute> funcs;
   SmallVector<int32_t> priorities;
-  if (auto caInit = dyn_cast<llvm::ConstantArray>(initializer)) {
+  if (isa<llvm::ConstantArray>(initializer)) {
     for (llvm::Value *operand : initializer->operands()) {
       auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
       if (!aggregate || aggregate->getNumOperands() != 3)

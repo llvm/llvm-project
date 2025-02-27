@@ -1281,13 +1281,11 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
                        : llvm::zip(dtorOp.getDtors(), dtorOp.getPriorities());
       auto appendGlobalFn =
           ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
-      for (auto symbolAndPriority : range) {
-        llvm::Function *f = lookupFunction(
-            cast<FlatSymbolRefAttr>(std::get<0>(symbolAndPriority)).getValue());
-        appendGlobalFn(
-            *llvmModule, f,
-            cast<IntegerAttr>(std::get<1>(symbolAndPriority)).getInt(),
-            /*Data=*/nullptr);
+      for (const auto &[sym, prio] : range) {
+        llvm::Function *f =
+            lookupFunction(cast<FlatSymbolRefAttr>(sym).getValue());
+        appendGlobalFn(*llvmModule, f, cast<IntegerAttr>(prio).getInt(),
+                       /*Data=*/nullptr);
       }
     }
   }
