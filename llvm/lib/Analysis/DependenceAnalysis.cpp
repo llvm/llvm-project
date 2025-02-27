@@ -3569,11 +3569,11 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
-// Check that memory access offsets in V are multiples of array element size
-// EltSize. Param records the first parametric expression. If the scalar
-// evolution V contains two or more parameters, we check that the subsequent
-// parametric expressions are multiples of the first parametric expression
-// Param.
+/// Check that memory access offsets in V are multiples of array element size
+/// EltSize. Param records the first parametric expression. If the scalar
+/// evolution V contains two or more parameters, we check that the subsequent
+/// parametric expressions are multiples of the first parametric expression
+/// Param.
 static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
                          uint64_t EltSize) {
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V)) {
