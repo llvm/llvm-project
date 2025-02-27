@@ -109,6 +109,8 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
+
 New Compiler Flags
 ------------------
 
