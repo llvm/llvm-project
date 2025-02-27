@@ -266,24 +266,13 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   if (OldFunc->isDeclaration())
     return;
 
-  // When we remap instructions within the same module, we want to avoid
-  // duplicating inlined DISubprograms, so record all subprograms we find as we
-  // duplicate instructions and then freeze them in the MD map. We also record
-  // information about dbg.value and dbg.declare to avoid duplicating the
-  // types.
   DebugInfoFinder DIFinder;
 
-  // Track the subprogram attachment that needs to be cloned to fine-tune the
-  // mapping within the same module.
   if (Changes < CloneFunctionChangeType::DifferentModule) {
-    // Need to find subprograms, types, and compile units.
-
     assert((NewFunc->getParent() == nullptr ||
             NewFunc->getParent() == OldFunc->getParent()) &&
            "Expected NewFunc to have the same parent, or no parent");
   } else {
-    // Need to find all the compile units.
-
     assert((NewFunc->getParent() == nullptr ||
             NewFunc->getParent() != OldFunc->getParent()) &&
            "Expected NewFunc to have different parents, or no parent");
