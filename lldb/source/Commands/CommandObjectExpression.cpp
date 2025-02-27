@@ -12,6 +12,7 @@
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -22,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb;
@@ -434,6 +436,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   }
 
   if (result_valobj_sp) {
+    result.GetValueObjectList().Append(result_valobj_sp);
+
     Format format = m_format_options.GetFormat();
 
     if (result_valobj_sp->GetError().Success()) {
@@ -542,11 +546,10 @@ void CommandObjectExpression::GetMultilineExpression() {
                             1, // Show line numbers starting at 1
                             *this));
 
-  StreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP();
-  if (output_sp) {
-    output_sp->PutCString(
+  if (LockableStreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP()) {
+    LockedStreamFile locked_stream = output_sp->Lock();
+    locked_stream.PutCString(
         "Enter expressions, then terminate with an empty line to evaluate:\n");
-    output_sp->Flush();
   }
   debugger.RunIOHandlerAsync(io_handler_sp);
 }

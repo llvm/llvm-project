@@ -9,6 +9,6 @@
 // RUN:   -ggdb -gz=zlib 2>&1 | FileCheck %s
 
 // CHECK-DAG: {{".*clang.*" .* "--compress-debug-sections=zlib"}}
-// CHECK-DAG: {{".*lld" .* "--compress-debug-sections=zlib"}}
+// CHECK-DAG: {{".*lld.*" .* "--compress-debug-sections=zlib"}}
 // CHECK-DAG: {{".*clang.*" .* "--compress-debug-sections=zlib"}}
 // CHECK: "--compress-debug-sections=zlib"

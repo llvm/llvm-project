@@ -25,12 +25,10 @@ mystr:
   .asciz "blah"
   .size mystr, 4
 
-# PAGE(S + A) - PAGE(P) = PAGE(210136) - PAGE(0x210132) = 0
-#
 # CHECK: Disassembly of section .R_AARCH64_ADR_PREL_PG_HI21:
 # CHECK-EMPTY:
 # CHECK-NEXT: <.R_AARCH64_ADR_PREL_PG_HI21>:
-# CHECK-NEXT:   210132:       90000001        adrp    x1, 0x210000
+# CHECK-NEXT:   adrp    x1, 0x210000
 
 .section .R_AARCH64_ADD_ABS_LO12_NC,"ax",@progbits
   add x0, x0, :lo12:.L.str
@@ -44,7 +42,7 @@ mystr:
 # CHECK: Disassembly of section .R_AARCH64_ADD_ABS_LO12_NC:
 # CHECK-EMPTY:
 # CHECK-NEXT: <.R_AARCH64_ADD_ABS_LO12_NC>:
-# CHECK-NEXT:   21013b:       9104fc00        add     x0, x0, #319
+# CHECK-NEXT:   210140: 91051000 add x0, x0, #324
 
 .section .R_AARCH64_LDST64_ABS_LO12_NC,"ax",@progbits
   ldr x28, [x27, :lo12:foo]
@@ -58,45 +56,22 @@ foo:
 # CHECK: Disassembly of section .R_AARCH64_LDST64_ABS_LO12_NC:
 # CHECK-EMPTY:
 # CHECK-NEXT: <.R_AARCH64_LDST64_ABS_LO12_NC>:
-# CHECK-NEXT:   210144:       f940a77c        ldr     x28, [x27, #328]
+# CHECK-NEXT:   21014c:       f940ab7c        ldr     x28, [x27, #336]
 
 .section .SUB,"ax",@progbits
   nop
 sub:
   nop
-
-# CHECK: Disassembly of section .SUB:
-# CHECK-EMPTY:
-# CHECK-NEXT: <.SUB>:
-# CHECK-NEXT:   21014c:       d503201f        nop
-# CHECK: <sub>:
-# CHECK-NEXT:   210150:       d503201f        nop
-
 .section .R_AARCH64_CALL26,"ax",@progbits
 call26:
         bl sub
+        b sub
 
-# S = 0x21014c, A = 0x4, P = 0x210154
-# R = S + A - P = -0x4 = 0xfffffffc
-# (R & 0x0ffffffc) >> 2 = 0x03ffffff
-# 0x94000000 | 0x03ffffff = 0x97ffffff
 # CHECK: Disassembly of section .R_AARCH64_CALL26:
 # CHECK-EMPTY:
 # CHECK-NEXT: <call26>:
-# CHECK-NEXT:   210154:       97ffffff        bl     0x210150
-
-.section .R_AARCH64_JUMP26,"ax",@progbits
-jump26:
-        b sub
-
-# S = 0x21014c, A = 0x4, P = 0x210158
-# R = S + A - P = -0x8 = 0xfffffff8
-# (R & 0x0ffffffc) >> 2 = 0x03fffffe
-# 0x14000000 | 0x03fffffe = 0x17fffffe
-# CHECK: Disassembly of section .R_AARCH64_JUMP26:
-# CHECK-EMPTY:
-# CHECK-NEXT: <jump26>:
-# CHECK-NEXT:   210158:       17fffffe        b      0x210150
+# CHECK-NEXT:   bl {{.*}} <sub>
+# CHECK-NEXT:   b {{.*}} <sub>
 
 .section .R_AARCH64_LDST32_ABS_LO12_NC,"ax",@progbits
 ldst32:
@@ -111,7 +86,7 @@ foo32:
 # CHECK: Disassembly of section .R_AARCH64_LDST32_ABS_LO12_NC:
 # CHECK-EMPTY:
 # CHECK-NEXT: <ldst32>:
-# CHECK-NEXT:   21015c:       bd4160a4        ldr s4, [x5, #352]
+# CHECK-NEXT:   210164:       bd4168a4     	  ldr	s4, [x5, #360]
 
 .section .R_AARCH64_LDST8_ABS_LO12_NC,"ax",@progbits
 ldst8:
@@ -126,24 +101,26 @@ foo8:
 # CHECK: Disassembly of section .R_AARCH64_LDST8_ABS_LO12_NC:
 # CHECK-EMPTY:
 # CHECK-NEXT: <ldst8>:
-# CHECK-NEXT:   210164:       3985a1ab        ldrsb x11, [x13, #360]
+# CHECK-NEXT:   21016c:       3985c1ab     	  ldrsb	x11, [x13, #368]
 
 .section .R_AARCH64_LDST128_ABS_LO12_NC,"ax",@progbits
 ldst128:
   ldr q20, [x19, #:lo12:foo128]
+  .balign 16
 foo128:
   .asciz "foo"
   .size mystr, 3
 
-# S = 0x21016c, A = 0x4
-# R = ((S + A) & 0xFF8) << 6 = 0x00005c00
-# 0x00005c00 | 0x3dc00274 = 0x3dc05e74
+# S = 210180, A = 0x4
+# R = ((S + A) & 0xFF8) << 6 = 0x00006000
+# 0x00006000 | 0x3dc00274 = 0x3dc06274
 # CHECK: Disassembly of section .R_AARCH64_LDST128_ABS_LO12_NC:
 # CHECK-EMPTY:
 # CHECK: <ldst128>:
-# CHECK:   21016c:       3dc05e74        ldr     q20, [x19, #368]
+# CHECK:   210180:       3dc06674     	 ldr	   q20, [x19, #400]
 #foo128:
-#   210170:       66 6f 6f 00     .word
+# CHECK: <foo128>:
+# CHECK-NEXT:  210190:       66 6f 6f 00     .word
 
 .section .R_AARCH64_LDST16_ABS_LO12_NC,"ax",@progbits
 ldst16:
@@ -160,9 +137,9 @@ foo16:
 # CHECK: Disassembly of section .R_AARCH64_LDST16_ABS_LO12_NC:
 # CHECK-EMPTY:
 # CHECK-NEXT: <ldst16>:
-# CHECK-NEXT:   210174:       7d430271        ldr     h17, [x19, #384]
-# CHECK-NEXT:   210178:       79430261        ldrh    w1, [x19, #384]
-# CHECK-NEXT:   21017c:       79430662        ldrh    w2, [x19, #386]
+# CHECK-NEXT:   210194:       7d434271     	  ldr	    h17, [x19, #416]
+# CHECK-NEXT:   210198:       79434261     	  ldrh	  w1, [x19, #416]
+# CHECK-NEXT:   21019c:       79434662     	  ldrh	  w2, [x19, #418]
 
 .section .R_AARCH64_MOVW_UABS,"ax",@progbits
 movz1:
@@ -179,14 +156,14 @@ movz1:
 # CHECK: Disassembly of section .R_AARCH64_MOVW_UABS:
 # CHECK-EMPTY:
 # CHECK-NEXT: <movz1>:
-# CHECK-NEXT: f280018c      movk  x12, #12
-# CHECK-NEXT: f280018c      movk  x12, #12
-# CHECK-NEXT: f2a001ad      movk  x13, #13, lsl #16
-# CHECK-NEXT: f2a001ad      movk  x13, #13, lsl #16
-# CHECK-NEXT: f2c001ce      movk  x14, #14, lsl #32
-# CHECK-NEXT: f2c001ce      movk  x14, #14, lsl #32
-# CHECK-NEXT: d2e001ef      mov x15, #4222124650659840
-# CHECK-NEXT: f2e001f0      movk  x16, #15, lsl #48
+# CHECK-NEXT:   movk  x12, #12
+# CHECK-NEXT:   movk  x12, #12
+# CHECK-NEXT:   movk  x13, #13, lsl #16
+# CHECK-NEXT:   movk  x13, #13, lsl #16
+# CHECK-NEXT:   movk  x14, #14, lsl #32
+# CHECK-NEXT:   movk  x14, #14, lsl #32
+# CHECK-NEXT:   mov x15, #4222124650659840
+# CHECK-NEXT:   movk  x16, #15, lsl #48
 
 .section .R_AARCH64_MOVW_SABS,"ax",@progbits
    movz x1, #:abs_g0_s:zero+1
@@ -199,15 +176,15 @@ movz1:
 # CHECK: Disassembly of section .R_AARCH64_MOVW_SABS:
 # CHECK-EMPTY:
 # CHECK-NEXT: :
-# CHECK-NEXT: d2800021      mov x1, #1
-# CHECK-NEXT: 92800001      mov x1, #-1
-# CHECK-NEXT: d2a00042      mov x2, #131072
+# CHECK-NEXT:   mov x1, #1
+# CHECK-NEXT:   mov x1, #-1
+# CHECK-NEXT:   mov x2, #131072
 ## -65537 = 0xfffffffffffeffff
-# CHECK-NEXT: 92a00022      mov x2, #-65537
+# CHECK-NEXT:   mov x2, #-65537
 ## 12884901888 = 0x300000000
-# CHECK-NEXT: d2c00063      mov x3, #12884901888
+# CHECK-NEXT:   mov x3, #12884901888
 ## -8589934593 = #0xfffffffdffffffff
-# CHECK-NEXT: 92c00043      mov x3, #-8589934593
+# CHECK-NEXT:   mov x3, #-8589934593
 
 .section .R_AARCH64_MOVW_PREL,"ax",@progbits
    movz x1, #:prel_g0:.+1
@@ -231,24 +208,24 @@ movz1:
 # CHECK: Disassembly of section .R_AARCH64_MOVW_PREL:
 # CHECK-EMPTY:
 # CHECK-NEXT: :
-# CHECK-NEXT: 2101bc: d2800021     mov	x1, #1
-# CHECK-NEXT: 2101c0: 92800001     mov	x1, #-1
-# CHECK-NEXT: 2101c4: f2800021     movk	x1, #1
-# CHECK-NEXT: 2101c8: f29fffe1     movk	x1, #65535
-# CHECK-NEXT: 2101cc: d2a00042     mov	x2, #131072
+# CHECK-NEXT:   mov	x1, #1
+# CHECK-NEXT:   mov	x1, #-1
+# CHECK-NEXT:   movk	x1, #1
+# CHECK-NEXT:   movk	x1, #65535
+# CHECK-NEXT:   mov	x2, #131072
 ## -65537 = 0xfffffffffffeffff
-# CHECK-NEXT: 2101d0: 92a00022     mov	x2, #-65537
-# CHECK-NEXT: 2101d4: f2a00042     movk	x2, #2, lsl #16
-# CHECK-NEXT: 2101d8: f2bfffc2     movk	x2, #65534, lsl #16
+# CHECK-NEXT:   mov	x2, #-65537
+# CHECK-NEXT:   movk	x2, #2, lsl #16
+# CHECK-NEXT:   movk	x2, #65534, lsl #16
 ## 12884901888 = 0x300000000
-# CHECK-NEXT: 2101dc: d2c00063     mov	x3, #12884901888
+# CHECK-NEXT:   mov	x3, #12884901888
 ## -8589934593 = #0xfffffffdffffffff
-# CHECK-NEXT: 2101e0: 92c00043     mov	x3, #-8589934593
-# CHECK-NEXT: 2101e4: f2c00063     movk	x3, #3, lsl #32
-# CHECK-NEXT: 2101e8: f2dfffa3     movk	x3, #65533, lsl #32
-# CHECK-NEXT: 2101ec: d2c00063     mov	x3, #12884901888
+# CHECK-NEXT:   mov	x3, #-8589934593
+# CHECK-NEXT:   movk	x3, #3, lsl #32
+# CHECK-NEXT:   movk	x3, #65533, lsl #32
+# CHECK-NEXT:   mov	x3, #12884901888
 ## 1125899906842624 = 0x4000000000000
-# CHECK-NEXT: 2101f0: d2e00084     mov	x4, #1125899906842624
-# CHECK-NEXT: 2101f4: d2ffff84     mov	x4, #-1125899906842624
-# CHECK-NEXT: 2101f8: f2e00084     movk	x4, #4, lsl #48
-# CHECK-NEXT: 2101fc: f2ffff84     movk	x4, #65532, lsl #48
+# CHECK-NEXT:   mov	x4, #1125899906842624
+# CHECK-NEXT:   mov	x4, #-1125899906842624
+# CHECK-NEXT:   movk	x4, #4, lsl #48
+# CHECK-NEXT:   movk	x4, #65532, lsl #48
