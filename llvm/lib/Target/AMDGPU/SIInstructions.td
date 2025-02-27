@@ -1024,6 +1024,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
   } // End UseNamedOperandTable = 1, Spill = 1, VALU = 1, SchedRW = [WriteVMEM]
 }
 
+defm SI_SPILL_V16  : SI_SPILL_VGPR <VGPR_16>;
 defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
 defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
 defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;

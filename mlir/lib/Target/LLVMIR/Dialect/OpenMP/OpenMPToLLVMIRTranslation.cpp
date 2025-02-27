@@ -1502,20 +1502,19 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                     const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Allocate private vars
-  llvm::BranchInst *allocaTerminator =
-      llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
+  llvm::Instruction *allocaTerminator = allocaIP.getBlock()->getTerminator();
   splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
                                                allocaTerminator->getIterator()),
           true, allocaTerminator->getStableDebugLoc(),
           "omp.region.after_alloca");
 
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
-  // Update the allocaTerminator in case the alloca block was split above.
-  allocaTerminator =
-      llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
+  // Update the allocaTerminator since the alloca block was split above.
+  allocaTerminator = allocaIP.getBlock()->getTerminator();
   builder.SetInsertPoint(allocaTerminator);
+  // The new terminator is an uncondition branch created by the splitBB above.
   assert(allocaTerminator->getNumSuccessors() == 1 &&
-         "This is an unconditional branch created by OpenMPIRBuilder");
+         "This is an unconditional branch created by splitBB");
 
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
