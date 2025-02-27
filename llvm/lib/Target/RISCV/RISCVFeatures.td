@@ -1374,7 +1374,22 @@ def HasVendorXqcilo
       AssemblerPredicate<(all_of FeatureVendorXqcilo),
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
+def FeatureVendorXqccmp
+    : RISCVExperimentalExtension<0, 1,
+                                 "Qualcomm 16-bit Push/Pop and Double Moves",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqccmp : Predicate<"Subtarget->hasVendorXqccmp()">,
+                      AssemblerPredicate<(all_of FeatureVendorXqccmp),
+                        "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+
 // Rivos Extension(s)
+
+def FeatureVendorXRivosVisni
+    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Integer Small New">;
+def HasVendorXRivosVisni
+    : Predicate<"Subtarget->hasVendorXRivosVisni()">,
+      AssemblerPredicate<(all_of FeatureVendorXRivosVisni),
+                         "'XRivosVisni' (Rivos Vector Integer Small New)">;
 
 def FeatureVendorXRivosVizip
     :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;

@@ -622,6 +622,11 @@ void RISCVDisassembler::addSPOperands(MCInst &MI) const {
 #define TRY_TO_DECODE_FEATURE_ANY(FEATURES, DECODER_TABLE, DESC)               \
   TRY_TO_DECODE((STI.getFeatureBits() & (FEATURES)).any(), DECODER_TABLE, DESC)
 
+static constexpr FeatureBitset XRivosFeatureGroup = {
+    RISCV::FeatureVendorXRivosVisni,
+    RISCV::FeatureVendorXRivosVizip,
+};
+
 static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
     RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
@@ -710,12 +715,10 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "CORE-V SIMD extensions");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
                         "CORE-V Immediate Branching");
-
   TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci32,
                             "Qualcomm uC Extensions");
 
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXRivosVizip, DecoderTableXRivos32,
-                        "Rivos");
+  TRY_TO_DECODE_FEATURE_ANY(XRivosFeatureGroup, DecoderTableXRivos32, "Rivos");
 
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32");
 
@@ -745,7 +748,9 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
 
   TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci16,
                             "Qualcomm uC 16bit");
-
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqccmp, DecoderTableXqccmp16,
+      "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)");
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
                            DecoderTableXwchc16, "WCH QingKe XW");
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
