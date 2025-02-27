@@ -22,6 +22,7 @@
 #include "sized_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class Iter, class Container>
 TEST_CONSTEXPR_CXX20 void

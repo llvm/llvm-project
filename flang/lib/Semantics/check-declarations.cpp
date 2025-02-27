@@ -989,9 +989,9 @@ void CheckHelper::CheckObjectEntity(
       }
       break;
     case common::CUDADataAttr::Device:
-      if (isComponent && !IsAllocatable(symbol)) {
+      if (isComponent && !IsAllocatable(symbol) && !IsPointer(symbol)) {
         messages_.Say(
-            "Component '%s' with ATTRIBUTES(DEVICE) must also be allocatable"_err_en_US,
+            "Component '%s' with ATTRIBUTES(DEVICE) must also be allocatable or pointer"_err_en_US,
             symbol.name());
       }
       break;

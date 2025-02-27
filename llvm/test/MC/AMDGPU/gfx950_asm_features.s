@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck --check-prefix=GFX950 --strict-whitespace %s
-// xUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX950,GFX940 --implicit-check-not=error: %s
+// xUN: not llvm-mc -triple=amdgcn -mcpu=gfx942 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX950,GFX942 --implicit-check-not=error: %s
 // xUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefixes=NOT-GFX950,GFX90A --implicit-check-not=error: %s
 // xUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX950,GFX10 --implicit-check-not=error: %s
 

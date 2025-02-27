@@ -84,9 +84,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
-private:
-  typedef allocator<_Tp> __default_allocator_type;
-
 public:
   //
   // Types
@@ -558,7 +555,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
     if (__n > max_size())
-      __throw_length_error();
+      this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(this->__alloc_, __n);
     __begin_          = __allocation.ptr;
     __end_            = __allocation.ptr;

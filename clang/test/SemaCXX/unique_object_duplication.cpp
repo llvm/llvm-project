@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=hidden -Wunique-object-duplication -fvisibility=hidden -Wno-unused-value %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wunique-object-duplication -Wno-unused-value %s
-// The check is currently disabled on windows. The test should fail because we're not getting the expected warnings.
-// XFAIL: target={{.*}}-windows{{.*}}, {{.*}}-ps{{(4|5)(-.+)?}}
+// The check is currently disabled on windows in MSVC-like environments. The test should fail because we're not getting the expected warnings.
+// XFAIL: target={{.*}}-windows-msvc, {{.*}}-ps{{(4|5)(-.+)?}}
 
 #include "unique_object_duplication.h"
 

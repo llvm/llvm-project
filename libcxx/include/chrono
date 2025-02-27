@@ -363,6 +363,33 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const tai_time<Duration>& t);
 
+// [time.clock.gps], class gps_clock
+class gps_clock {                                      // C++20
+public:
+    using rep                       = a signed arithmetic type;
+    using period                    = ratio<unspecified, unspecified>;
+    using duration                  = chrono::duration<rep, period>;
+    using time_point                = chrono::time_point<gps_clock>;
+    static constexpr bool is_steady = unspecified;
+
+    static time_point now();
+
+    template<class Duration>
+      static utc_time<common_type_t<Duration, seconds>>
+        to_utc(const gps_time<Duration>& t);
+    template<class Duration>
+      static gps_time<common_type_t<Duration, seconds>>
+        from_utc(const utc_time<Duration>& t);
+};
+
+template<class Duration>
+using gps_time  = time_point<gps_clock, Duration>;      // C++20
+using gps_seconds = gps_time<seconds>;                  // C++20
+
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const gps_time<Duration>& t);
+
 class file_clock                                        // C++20
 {
 public:
@@ -922,6 +949,8 @@ strong_ordering operator<=>(const time_zone_link& x, const time_zone_link& y);  
 }  // chrono
 
 namespace std {
+  template<class Rep, class Period, class charT>
+    struct formatter<chrono::duration<Rep, Period>, charT>;                       // C++20
   template<class Duration, class charT>
     struct formatter<chrono::sys_time<Duration>, charT>;                          // C++20
   template<class Duration, class charT>
@@ -929,11 +958,11 @@ namespace std {
   template<class Duration, class charT>
     struct formatter<chrono::tai_time<Duration>, charT>;                          // C++20
   template<class Duration, class charT>
-    struct formatter<chrono::filetime<Duration>, charT>;                          // C++20
+    struct formatter<chrono::gps_time<Duration>, charT>;                          // C++20
+  template<class Duration, class charT>
+    struct formatter<chrono::file_time<Duration>, charT>;                         // C++20
   template<class Duration, class charT>
     struct formatter<chrono::local_time<Duration>, charT>;                        // C++20
-  template<class Rep, class Period, class charT>
-    struct formatter<chrono::duration<Rep, Period>, charT>;                       // C++20
   template<class charT> struct formatter<chrono::day, charT>;                     // C++20
   template<class charT> struct formatter<chrono::month, charT>;                   // C++20
   template<class charT> struct formatter<chrono::year, charT>;                    // C++20

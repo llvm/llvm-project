@@ -621,7 +621,7 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
     return;
   }
 
-  // We found an ICmp, do some canonicalizations.
+  // We found an ICmp, do some canonicalization.
 
   // Adjust comparisons to use comparison with 0 if possible.
   if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
@@ -735,7 +735,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
   }
   case TargetOpcode::G_FCONSTANT: {
-    // TODO: Use constant pool for complext constants.
+    // TODO: Use constant pool for complex constants.
     // TODO: Optimize +0.0 to use fcvt.d.w for s64 on rv32.
     Register DstReg = MI.getOperand(0).getReg();
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();

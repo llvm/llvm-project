@@ -144,25 +144,7 @@ fi
 
 # Collect function names
 FF=$(mktemp -t -u --suffix=.txt func-names.XXX)
-nm --defined-only -p $INPUT_BINARY | grep " [TtWw] " | cut -d ' ' -f 2-3 | awk '
-  {
-    if ($1 ~ /[tw]/) {
-      local[$2] += 1
-    } else {
-      globl[$2] = 1
-    }
-  } END {
-    for (sym in local) {
-      if (!sym)
-        continue
-      for (i = 1; i <= local[sym]; i++) {
-        print sym "/" i
-      }
-    }
-    for (sym in globl) {
-      print sym
-    }
-  }' | sort -u > $FF
+nm --defined-only -p $INPUT_BINARY | grep " [TtWw] " | cut -d ' ' -f 3 | egrep -v "\._" | egrep -v '^$' | sort -u > $FF
 
 # Use function names or numbers
 if [[ -z "$MAX_FUNCS" ]] ; then

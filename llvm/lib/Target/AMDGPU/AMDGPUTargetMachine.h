@@ -177,6 +177,7 @@ public:
   void addILPOpts(AddMachinePass &) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
+  void addPreRewrite(AddMachinePass &) const;
   void addMachineSSAOptimization(AddMachinePass &) const;
   void addPostRegAlloc(AddMachinePass &) const;
 

@@ -125,6 +125,7 @@ def ImmZeroAsmOperand : AsmOperandClass {
   let Name = "ImmZero";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "immediate must be zero";
 }
 
 // A parse method for (${gpr}) or 0(${gpr}), where the 0 is be silently ignored.
@@ -323,6 +324,7 @@ def BareSymbol : AsmOperandClass {
   let Name = "BareSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidBareSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseBareSymbol";
 }
 
@@ -335,6 +337,7 @@ def CallSymbol : AsmOperandClass {
   let Name = "CallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidCallSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseCallSymbol";
 }
 
@@ -347,6 +350,7 @@ def PseudoJumpSymbol : AsmOperandClass {
   let Name = "PseudoJumpSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidPseudoJumpSymbol";
+  let DiagnosticString = "operand must be a valid jump target";
   let ParserMethod = "parsePseudoJumpSymbol";
 }
 
@@ -359,6 +363,7 @@ def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTPRelAddSymbol";
+  let DiagnosticString = "operand must be a symbol with %tprel_add modifier";
   let ParserMethod = "parseOperandWithModifier";
 }
 
@@ -1779,6 +1784,7 @@ def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTLSDESCCallSymbol";
+  let DiagnosticString = "operand must be a symbol with %tlsdesc_call modifier";
   let ParserMethod = "parseOperandWithModifier";
 }
 
@@ -2027,6 +2033,12 @@ def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
 def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
 def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 
+// Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
+// $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
+// more power to RISCVOptWInstrs.
+def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+          (ADDIW $rs1, simm12:$imm)>;
+
 /// Loads
 
 def : LdPat<sextloadi32, LW, i64>;
@@ -2142,6 +2154,7 @@ include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXMips.td"
+include "RISCVInstrInfoXRivos.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

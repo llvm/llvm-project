@@ -1760,9 +1760,10 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
   for (MachineInstr *MI : SetInactiveInstrs) {
     if (LowerToCopyInstrs.contains(MI))
       continue;
-    if (Instructions[MI].MarkedStates & StateStrict) {
-      Instructions[MI].Needs |= StateStrictWWM;
-      Instructions[MI].Disabled &= ~StateStrictWWM;
+    auto &Info = Instructions[MI];
+    if (Info.MarkedStates & StateStrict) {
+      Info.Needs |= StateStrictWWM;
+      Info.Disabled &= ~StateStrictWWM;
       Blocks[MI->getParent()].Needs |= StateStrictWWM;
     } else {
       LLVM_DEBUG(dbgs() << "Has no WWM marking: " << *MI);
