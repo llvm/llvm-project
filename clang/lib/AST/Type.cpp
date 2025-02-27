@@ -5132,7 +5132,7 @@ bool Type::isHLSLResourceWrapper() const {
 
   CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
   assert(RD != nullptr &&
-      "all HLSL structs and classes should be CXXRecordDecl");
+         "all HLSL structs and classes should be CXXRecordDecl");
   assert(RD->isCompleteDefinition() && "expecting complete type");
   if (RD->field_empty()) {
     return false;
