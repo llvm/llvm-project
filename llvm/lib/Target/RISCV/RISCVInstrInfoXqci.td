@@ -500,9 +500,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
 let Predicates = [HasVendorXqcisim, IsRV32] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
-  def QC_PSYSCALLI : RVInstI<0b010, OPC_OP_IMM, (outs),
-                                  (ins uimm10:$imm10), "qc.psyscalli",
-                                  "$imm10"> {
+  def QC_PSYSCALLI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm10:$imm10),
+                             "qc.psyscalli", "$imm10"> {
     bits<10> imm10;
 
     let rs1 = 0;
@@ -511,7 +510,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
   }
 
   def QC_PPUTCI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm8:$imm8),
-                               "qc.pputci", "$imm8"> {
+                          "qc.pputci", "$imm8"> {
     bits<8> imm8;
 
     let rs1 = 0;
@@ -530,7 +529,6 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
   def QC_C_PTRACE : RVInst16CI<0b000, 0b10, (outs), (ins), "qc.c.ptrace", ""> {
     let rd = 0;
     let imm = 0;
-    let Inst{6-2} = 0;
   }
 } // mayLoad = 0, mayStore = 0, hasSideEffects = 1
 } // Predicates = [HasVendorXqcisim, IsRV32]
