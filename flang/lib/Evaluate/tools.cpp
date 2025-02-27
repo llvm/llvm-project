@@ -1812,7 +1812,11 @@ bool IsSaved(const Symbol &original) {
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false; // this is a component
   } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true; // explicit SAVE attribute
+    // explicit or implied SAVE attribute
+    // N.B.: semantics sets implied SAVE for main program
+    // local variables whose derived types have coarray
+    // potential subobject components.
+    return true;
   } else if (IsDummy(symbol) || IsFunctionResult(symbol) ||
       IsAutomatic(symbol) || IsNamedConstant(symbol)) {
     return false;

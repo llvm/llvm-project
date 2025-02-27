@@ -85,13 +85,13 @@ subroutine s1()
         type(HasAllocPolyType) :: nonAllocatableWithAllocPoly
 
         ! OK because the declared variable is not allocatable
-        type(HasAllocPolyCoarrayType) :: nonAllocatableWithAllocPolyCoarray
+        type(HasAllocPolyCoarrayType), save :: nonAllocatableWithAllocPolyCoarray
 
         ! Bad because even though the declared the allocatable component is a coarray
         type(HasAllocPolyCoarrayType), allocatable :: allocWithAllocPolyCoarray
 
         ! OK since it has no polymorphic component
-        type(HasAllocCoarrayType) :: nonAllocWithAllocCoarray
+        type(HasAllocCoarrayType), save :: nonAllocWithAllocCoarray
 
         ! OK since it has no component that's polymorphic, oops
         type(HasPointerPolyType), allocatable :: allocatableWithPointerPoly
