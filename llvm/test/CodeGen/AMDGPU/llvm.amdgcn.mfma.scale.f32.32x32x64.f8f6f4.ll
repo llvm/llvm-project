@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -global-isel=0 < %s | FileCheck -check-prefixes=GCN,SDAG %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -global-isel=1 < %s | FileCheck -check-prefixes=GCN,GISEL %s
 
+; REQUIRES: asserts
+
 ; 0 = fp8
 ; 1 = bf8
 ; 2 = fp6
