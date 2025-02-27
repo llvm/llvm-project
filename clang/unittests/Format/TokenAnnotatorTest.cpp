@@ -3677,6 +3677,11 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::pipepipe, TT_BinaryOperator);
 
+  Tokens = annotate("return segment < *this or *this < segment;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::pipepipe, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_UnaryOperator);
+
   Tokens = annotate("a = b or_eq c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::pipeequal, TT_BinaryOperator);
@@ -3689,11 +3694,13 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::caretequal, TT_BinaryOperator);
 
-  Tokens = annotate("xor = foo;");
+  const auto StyleC = getLLVMStyle(FormatStyle::LK_C);
+
+  Tokens = annotate("xor = foo;", StyleC);
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
 
-  Tokens = annotate("int xor = foo;");
+  Tokens = annotate("int xor = foo;", StyleC);
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
 }
