@@ -1,12 +1,15 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-none -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-USELD
-; RUN: llc < %s -mtriple=i686-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-USELD
-; RUN: llc < %s -mtriple=riscv32 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-USELD
+; RUN: llc < %s -mtriple=i686-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-NOTLD
+; RUN: llc < %s -mtriple=powerpc-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-NOTLD
+; RUN: llc < %s -mtriple=powerpc64-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-NOTLD
+; RUN: llc < %s -mtriple=riscv32 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-NOTLD
 ; RUN: llc < %s -mtriple=s390x-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-S390X
-; RUN: llc < %s -mtriple=x86_64-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-USELD
+; RUN: llc < %s -mtriple=x86_64-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-NOTLD
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-NOTLD
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-musl -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-USELD
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-musl -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-NOTLD
 ;
 ; REQUIRES: aarch64-registered-target
+; REQUIRES: powerpc-registered-target
 ; REQUIRES: riscv-registered-target
 ; REQUIRES: systemz-registered-target
 ; REQUIRES: x86-registered-target
