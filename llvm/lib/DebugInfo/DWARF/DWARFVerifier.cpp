@@ -38,7 +38,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 using namespace llvm;
@@ -1227,7 +1226,7 @@ void DWARFVerifier::verifyDebugNamesCULists(const DWARFDebugNames &AccelTable) {
   DenseMap<uint64_t, uint64_t> CUMap;
   CUMap.reserve(DCtx.getNumCompileUnits());
 
-  std::unordered_set<uint64_t> CUOffsets;
+  DenseSet<uint64_t> CUOffsets;
   for (const auto &CU : DCtx.compile_units())
     CUOffsets.insert(CU->getOffset());
 
@@ -1523,8 +1522,7 @@ static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
                                             bool IncludeObjCNames = true,
                                             bool IncludeLinkageName = true) {
   SmallVector<std::string, 3> Result;
-  const char *Str = DIE.getShortName();
-  if (Str) {
+  if (const char *Str = DIE.getShortName()) {
     StringRef Name(Str);
     Result.emplace_back(Name);
     if (IncludeStrippedTemplateNames) {
@@ -1949,8 +1947,8 @@ static void extractCUsTus(DWARFContext &DCtx) {
   for (const auto &CU : DCtx.compile_units()) {
     if (!(CU->getVersion() >= 5 && CU->getDWOId()))
       continue;
-    DWARFUnit *NonSkeletonUnit = CU->getNonSkeletonUnitDIE().getDwarfUnit();
-    DWARFContext &NonSkeletonContext = NonSkeletonUnit->getContext();
+    DWARFContext &NonSkeletonContext =
+        CU->getNonSkeletonUnitDIE().getDwarfUnit()->getContext();
     // Iterates over CUs and TUs.
     for (auto &CUTU : NonSkeletonContext.dwo_units()) {
       CUTU->getUnitDIE();

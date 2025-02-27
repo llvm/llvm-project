@@ -775,7 +775,7 @@ public:
     using value_type = NameTableEntry;
     using difference_type = uint32_t;
     using pointer = NameTableEntry *;
-    using reference = NameTableEntry;
+    using reference = NameTableEntry; // We return entries by value.
 
     /// Creates an iterator whose initial position is name CurrentName in
     /// CurrentIndex.
