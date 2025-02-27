@@ -1277,8 +1277,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // If the readfirstlane reads the result of an operation that exists
     // both in the SALU and VALU, we may be able to hoist it higher in order
     // to scalarize the expression.
-    if (Instruction *Res = hoistReadLaneThroughOperand(IC, II))
-      return Res;
+    if (IID != Intrinsic::amdgcn_permlane64) {
+      if (Instruction *Res = hoistReadLaneThroughOperand(IC, II))
+        return Res;
+    }
 
     return std::nullopt;
   }
