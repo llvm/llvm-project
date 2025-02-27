@@ -108,7 +108,7 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   }
 
   if (T->isMFloat8Type())
-    return llvm::Type::getIntNTy(getLLVMContext(), 8);
+    return llvm::Type::getInt8Ty(getLLVMContext());
 
   llvm::Type *R = ConvertType(T);
 
