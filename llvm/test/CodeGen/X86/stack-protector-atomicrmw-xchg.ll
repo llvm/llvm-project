@@ -4,11 +4,25 @@
 define void @atomicrmw_xchg(ptr %p) sspstrong {
 ; CHECK-LABEL: define void @atomicrmw_xchg(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[STACKGUARDSLOT:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[STACKGUARD:%.*]] = load volatile ptr, ptr addrspace(257) inttoptr (i32 40 to ptr addrspace(257)), align 8
+; CHECK-NEXT:    call void @llvm.stackprotector(ptr [[STACKGUARD]], ptr [[STACKGUARDSLOT]])
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[P]], ptr [[A]] acquire, align 8
+; CHECK-NEXT:    [[STACKGUARD1:%.*]] = load volatile ptr, ptr addrspace(257) inttoptr (i32 40 to ptr addrspace(257)), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load volatile ptr, ptr [[STACKGUARDSLOT]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq ptr [[STACKGUARD1]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[SP_RETURN:.*]], label %[[CALLSTACKCHECKFAILBLK:.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       [[SP_RETURN]]:
 ; CHECK-NEXT:    ret void
+; CHECK:       [[CALLSTACKCHECKFAILBLK]]:
+; CHECK-NEXT:    call void @__stack_chk_fail()
+; CHECK-NEXT:    unreachable
 ;
   %a = alloca i64
   atomicrmw xchg ptr %p, ptr %a acquire
   ret void
 }
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 2147481600, i32 2048}
+;.
