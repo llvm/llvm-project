@@ -26,165 +26,165 @@ namespace Fortran::semantics {
 /// FIXME: This can be improved to dump more information in some cases.
 class DumpEvaluateExpr {
 public:
-  DumpEvaluateExpr() : outs(llvm::errs()) {}
-  DumpEvaluateExpr(llvm::raw_ostream &str) : outs(str) {}
+  DumpEvaluateExpr() : outs_(llvm::errs()) {}
+  DumpEvaluateExpr(llvm::raw_ostream &str) : outs_(str) {}
 
-  template <typename A> static void dump(const A &x) {
-    DumpEvaluateExpr{}.show(x);
+  template <typename A> static void Dump(const A &x) {
+    DumpEvaluateExpr{}.Show(x);
   }
   template <typename A>
-  static void dump(llvm::raw_ostream &stream, const A &x) {
-    DumpEvaluateExpr{stream}.show(x);
+  static void Dump(llvm::raw_ostream &stream, const A &x) {
+    DumpEvaluateExpr{stream}.Show(x);
   }
 
 private:
-  template <typename A, bool C> void show(const common::Indirection<A, C> &x) {
-    show(x.value());
+  template <typename A, bool C> void Show(const common::Indirection<A, C> &x) {
+    Show(x.value());
   }
-  template <typename A> void show(const SymbolRef x) { show(*x); }
-  template <typename A> void show(const std::unique_ptr<A> &x) {
-    show(x.get());
+  template <typename A> void Show(const SymbolRef x) { Show(*x); }
+  template <typename A> void Show(const std::unique_ptr<A> &x) {
+    Show(x.get());
   }
-  template <typename A> void show(const std::shared_ptr<A> &x) {
-    show(x.get());
+  template <typename A> void Show(const std::shared_ptr<A> &x) {
+    Show(x.get());
   }
-  template <typename A> void show(const A *x) {
+  template <typename A> void Show(const A *x) {
     if (x) {
-      show(*x);
+      Show(*x);
       return;
     }
-    print("nullptr");
+    Print("nullptr");
   }
-  template <typename A> void show(const std::optional<A> &x) {
+  template <typename A> void Show(const std::optional<A> &x) {
     if (x) {
-      show(*x);
+      Show(*x);
       return;
     }
-    print("None");
+    Print("None");
   }
-  template <typename... A> void show(const std::variant<A...> &u) {
-    common::visit([&](const auto &v) { show(v); }, u);
+  template <typename... A> void Show(const std::variant<A...> &u) {
+    common::visit([&](const auto &v) { Show(v); }, u);
   }
-  template <typename A> void show(const std::vector<A> &x) {
-    indent("vector");
+  template <typename A> void Show(const std::vector<A> &x) {
+    Indent("vector");
     for (const auto &v : x)
-      show(v);
-    outdent();
+      Show(v);
+    Outdent();
   }
-  void show(const evaluate::BOZLiteralConstant &);
-  void show(const evaluate::NullPointer &);
-  template <typename T> void show(const evaluate::Constant<T> &x) {
+  void Show(const evaluate::BOZLiteralConstant &);
+  void Show(const evaluate::NullPointer &);
+  template <typename T> void Show(const evaluate::Constant<T> &x) {
     if constexpr (T::category == common::TypeCategory::Derived) {
-      indent("derived constant");
+      Indent("derived constant");
       for (const auto &map : x.values())
         for (const auto &pair : map)
-          show(pair.second.value());
-      outdent();
+          Show(pair.second.value());
+      Outdent();
     } else {
-      print("constant");
+      Print("constant");
     }
   }
-  void show(const Symbol &symbol);
-  void show(const evaluate::StaticDataObject &);
-  void show(const evaluate::ImpliedDoIndex &);
-  void show(const evaluate::BaseObject &x);
-  void show(const evaluate::Component &x);
-  void show(const evaluate::NamedEntity &x);
-  void show(const evaluate::TypeParamInquiry &x);
-  void show(const evaluate::Triplet &x);
-  void show(const evaluate::Subscript &x);
-  void show(const evaluate::ArrayRef &x);
-  void show(const evaluate::CoarrayRef &x);
-  void show(const evaluate::DataRef &x);
-  void show(const evaluate::Substring &x);
-  void show(const evaluate::ComplexPart &x);
-  template <typename T> void show(const evaluate::Designator<T> &x) {
-    indent("designator");
-    show(x.u);
-    outdent();
+  void Show(const Symbol &symbol);
+  void Show(const evaluate::StaticDataObject &);
+  void Show(const evaluate::ImpliedDoIndex &);
+  void Show(const evaluate::BaseObject &x);
+  void Show(const evaluate::Component &x);
+  void Show(const evaluate::NamedEntity &x);
+  void Show(const evaluate::TypeParamInquiry &x);
+  void Show(const evaluate::Triplet &x);
+  void Show(const evaluate::Subscript &x);
+  void Show(const evaluate::ArrayRef &x);
+  void Show(const evaluate::CoarrayRef &x);
+  void Show(const evaluate::DataRef &x);
+  void Show(const evaluate::Substring &x);
+  void Show(const evaluate::ComplexPart &x);
+  template <typename T> void Show(const evaluate::Designator<T> &x) {
+    Indent("designator");
+    Show(x.u);
+    Outdent();
   }
-  template <typename T> void show(const evaluate::Variable<T> &x) {
-    indent("variable");
-    show(x.u);
-    outdent();
+  template <typename T> void Show(const evaluate::Variable<T> &x) {
+    Indent("variable");
+    Show(x.u);
+    Outdent();
   }
-  void show(const evaluate::DescriptorInquiry &x);
-  void show(const evaluate::SpecificIntrinsic &);
-  void show(const evaluate::ProcedureDesignator &x);
-  void show(const evaluate::ActualArgument &x);
-  void show(const evaluate::ProcedureRef &x) {
-    indent("procedure ref");
-    show(x.proc());
-    show(x.arguments());
-    outdent();
+  void Show(const evaluate::DescriptorInquiry &x);
+  void Show(const evaluate::SpecificIntrinsic &);
+  void Show(const evaluate::ProcedureDesignator &x);
+  void Show(const evaluate::ActualArgument &x);
+  void Show(const evaluate::ProcedureRef &x) {
+    Indent("procedure ref");
+    Show(x.proc());
+    Show(x.arguments());
+    Outdent();
   }
-  template <typename T> void show(const evaluate::FunctionRef<T> &x) {
-    indent("function ref");
-    show(x.proc());
-    show(x.arguments());
-    outdent();
+  template <typename T> void Show(const evaluate::FunctionRef<T> &x) {
+    Indent("function ref");
+    Show(x.proc());
+    Show(x.arguments());
+    Outdent();
   }
-  template <typename T> void show(const evaluate::ArrayConstructorValue<T> &x) {
-    show(x.u);
+  template <typename T> void Show(const evaluate::ArrayConstructorValue<T> &x) {
+    Show(x.u);
   }
   template <typename T>
-  void show(const evaluate::ArrayConstructorValues<T> &x) {
-    indent("array constructor value");
+  void Show(const evaluate::ArrayConstructorValues<T> &x) {
+    Indent("array constructor value");
     for (auto &v : x)
-      show(v);
-    outdent();
+      Show(v);
+    Outdent();
   }
-  template <typename T> void show(const evaluate::ImpliedDo<T> &x) {
-    indent("implied do");
-    show(x.lower());
-    show(x.upper());
-    show(x.stride());
-    show(x.values());
-    outdent();
+  template <typename T> void Show(const evaluate::ImpliedDo<T> &x) {
+    Indent("implied do");
+    Show(x.lower());
+    Show(x.upper());
+    Show(x.stride());
+    Show(x.values());
+    Outdent();
   }
-  void show(const ParamValue &x);
-  void show(const DerivedTypeSpec::ParameterMapType::value_type &x);
-  void show(const DerivedTypeSpec &x);
-  void show(const evaluate::StructureConstructorValues::value_type &x);
-  void show(const evaluate::StructureConstructor &x);
+  void Show(const ParamValue &x);
+  void Show(const DerivedTypeSpec::ParameterMapType::value_type &x);
+  void Show(const DerivedTypeSpec &x);
+  void Show(const evaluate::StructureConstructorValues::value_type &x);
+  void Show(const evaluate::StructureConstructor &x);
   template <typename D, typename R, typename O>
-  void show(const evaluate::Operation<D, R, O> &op) {
-    indent("unary op");
-    show(op.left());
-    outdent();
+  void Show(const evaluate::Operation<D, R, O> &op) {
+    Indent("unary op");
+    Show(op.left());
+    Outdent();
   }
   template <typename D, typename R, typename LO, typename RO>
-  void show(const evaluate::Operation<D, R, LO, RO> &op) {
-    indent("binary op");
-    show(op.left());
-    show(op.right());
-    outdent();
+  void Show(const evaluate::Operation<D, R, LO, RO> &op) {
+    Indent("binary op");
+    Show(op.left());
+    Show(op.right());
+    Outdent();
   }
-  void show(const evaluate::Relational<evaluate::SomeType> &x);
-  template <typename T> void show(const evaluate::Expr<T> &x) {
-    indent("expr T");
-    show(x.u);
-    outdent();
+  void Show(const evaluate::Relational<evaluate::SomeType> &x);
+  template <typename T> void Show(const evaluate::Expr<T> &x) {
+    Indent("expr T");
+    Show(x.u);
+    Outdent();
   }
 
-  const char *getIndentString() const;
-  void print(llvm::Twine s);
-  void indent(llvm::StringRef s);
-  void outdent();
+  const char *GetIndentString() const;
+  void Print(llvm::Twine s);
+  void Indent(llvm::StringRef s);
+  void Outdent();
 
-  llvm::raw_ostream &outs;
-  unsigned level{0};
+  llvm::raw_ostream &outs_;
+  unsigned level_{0};
 };
 
-LLVM_DUMP_METHOD void dumpEvExpr(const evaluate::Expr<evaluate::SomeType> &x);
-LLVM_DUMP_METHOD void dumpEvExpr(
+LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::Expr<evaluate::SomeType> &x);
+LLVM_DUMP_METHOD void DumpEvExpr(
     const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 4>> &x);
-LLVM_DUMP_METHOD void dumpEvExpr(
+LLVM_DUMP_METHOD void DumpEvExpr(
     const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 8>> &x);
-LLVM_DUMP_METHOD void dumpEvExpr(const evaluate::ArrayRef &x);
-LLVM_DUMP_METHOD void dumpEvExpr(const evaluate::DataRef &x);
-LLVM_DUMP_METHOD void dumpEvExpr(const evaluate::Substring &x);
-LLVM_DUMP_METHOD void dumpEvExpr(
+LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::ArrayRef &x);
+LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::DataRef &x);
+LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::Substring &x);
+LLVM_DUMP_METHOD void DumpEvExpr(
     const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer, 4>>
         &x);
 

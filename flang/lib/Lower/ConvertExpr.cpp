@@ -3925,7 +3925,7 @@ private:
   /// determine the actual number of iterations when slicing triples are
   /// present. Lower these expressions here.
   bool determineShapeWithSlice(const Fortran::lower::SomeExpr &lhs) {
-    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::dump(
+    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::Dump(
         llvm::dbgs() << "determine shape of:\n", lhs));
     // FIXME: We may not want to use ExtractDataRef here since it doesn't deal
     // with substrings, etc.
@@ -5073,7 +5073,7 @@ private:
 
   template <typename A>
   CC genarr(const Fortran::evaluate::Expr<A> &x) {
-    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::dump(llvm::dbgs(), x));
+    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::Dump(llvm::dbgs(), x));
     if (isArray(x) || (explicitSpaceIsActive() && isLeftHandSide()) ||
         isElementalProcWithArrayArgs(x))
       return Fortran::common::visit([&](const auto &e) { return genarr(e); },

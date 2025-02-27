@@ -14,223 +14,223 @@ static constexpr char whiteSpacePadding[]{
     ">>                                               "};
 static constexpr auto whiteSize{sizeof(whiteSpacePadding) - 1};
 
-inline const char *DumpEvaluateExpr::getIndentString() const {
-  auto count{(level * 2 >= whiteSize) ? whiteSize : level * 2};
+inline const char *DumpEvaluateExpr::GetIndentString() const {
+  auto count{(level_ * 2 >= whiteSize) ? whiteSize : level_ * 2};
   return whiteSpacePadding + whiteSize - count;
 }
 
-void DumpEvaluateExpr::show(const evaluate::CoarrayRef &x) {
-  indent("coarray ref");
-  show(x.base());
-  show(x.subscript());
-  show(x.cosubscript());
-  show(x.stat());
-  show(x.team());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::CoarrayRef &x) {
+  Indent("coarray ref");
+  Show(x.base());
+  Show(x.subscript());
+  Show(x.cosubscript());
+  Show(x.stat());
+  Show(x.team());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::BOZLiteralConstant &) {
-  print("BOZ literal constant");
+void DumpEvaluateExpr::Show(const evaluate::BOZLiteralConstant &) {
+  Print("BOZ literal constant");
 }
 
-void DumpEvaluateExpr::show(const evaluate::NullPointer &) {
-  print("null pointer");
+void DumpEvaluateExpr::Show(const evaluate::NullPointer &) {
+  Print("null pointer");
 }
 
-void DumpEvaluateExpr::show(const Symbol &symbol) {
+void DumpEvaluateExpr::Show(const Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
-  print("symbol: "s + symbol.name().ToString());
+  Print("symbol: "s + symbol.name().ToString());
   if (const auto *assoc{ultimate.detailsIf<AssocEntityDetails>()}) {
-    indent("assoc details");
-    show(assoc->expr());
-    outdent();
+    Indent("assoc details");
+    Show(assoc->expr());
+    Outdent();
   }
 }
 
-void DumpEvaluateExpr::show(const evaluate::StaticDataObject &) {
-  print("static data object");
+void DumpEvaluateExpr::Show(const evaluate::StaticDataObject &) {
+  Print("static data object");
 }
 
-void DumpEvaluateExpr::show(const evaluate::ImpliedDoIndex &) {
-  print("implied do index");
+void DumpEvaluateExpr::Show(const evaluate::ImpliedDoIndex &) {
+  Print("implied do index");
 }
 
-void DumpEvaluateExpr::show(const evaluate::BaseObject &x) {
-  indent("base object");
-  show(x.u);
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::BaseObject &x) {
+  Indent("base object");
+  Show(x.u);
+  Outdent();
 }
-void DumpEvaluateExpr::show(const evaluate::Component &x) {
-  indent("component");
-  show(x.base());
-  show(x.GetLastSymbol());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::Component &x) {
+  Indent("component");
+  Show(x.base());
+  Show(x.GetLastSymbol());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::NamedEntity &x) {
-  indent("named entity");
+void DumpEvaluateExpr::Show(const evaluate::NamedEntity &x) {
+  Indent("named entity");
   if (const auto *component{x.UnwrapComponent()})
-    show(*component);
+    Show(*component);
   else
-    show(x.GetFirstSymbol());
-  outdent();
+    Show(x.GetFirstSymbol());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::TypeParamInquiry &x) {
-  indent("type inquiry");
-  show(x.base());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::TypeParamInquiry &x) {
+  Indent("type inquiry");
+  Show(x.base());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::Triplet &x) {
-  indent("triplet");
-  show(x.lower());
-  show(x.upper());
-  show(x.stride());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::Triplet &x) {
+  Indent("triplet");
+  Show(x.lower());
+  Show(x.upper());
+  Show(x.stride());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::Subscript &x) {
-  indent("subscript");
-  show(x.u);
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::Subscript &x) {
+  Indent("subscript");
+  Show(x.u);
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::ArrayRef &x) {
-  indent("array ref");
-  show(x.base());
-  show(x.subscript());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::ArrayRef &x) {
+  Indent("array ref");
+  Show(x.base());
+  Show(x.subscript());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::DataRef &x) {
-  indent("data ref");
-  show(x.u);
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::DataRef &x) {
+  Indent("data ref");
+  Show(x.u);
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::Substring &x) {
-  indent("substring");
-  show(x.parent());
-  show(x.lower());
-  show(x.upper());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::Substring &x) {
+  Indent("substring");
+  Show(x.parent());
+  Show(x.lower());
+  Show(x.upper());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const ParamValue &x) {
-  indent("param value");
-  show(x.GetExplicit());
-  outdent();
+void DumpEvaluateExpr::Show(const ParamValue &x) {
+  Indent("param value");
+  Show(x.GetExplicit());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(
+void DumpEvaluateExpr::Show(
     const DerivedTypeSpec::ParameterMapType::value_type &x) {
-  show(x.second);
+  Show(x.second);
 }
 
-void DumpEvaluateExpr::show(const DerivedTypeSpec &x) {
-  indent("derived type spec");
+void DumpEvaluateExpr::Show(const DerivedTypeSpec &x) {
+  Indent("derived type spec");
   for (auto &v : x.parameters())
-    show(v);
-  outdent();
+    Show(v);
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(
+void DumpEvaluateExpr::Show(
     const evaluate::StructureConstructorValues::value_type &x) {
-  show(x.second);
+  Show(x.second);
 }
 
-void DumpEvaluateExpr::show(const evaluate::StructureConstructor &x) {
-  indent("structure constructor");
-  show(x.derivedTypeSpec());
+void DumpEvaluateExpr::Show(const evaluate::StructureConstructor &x) {
+  Indent("structure constructor");
+  Show(x.derivedTypeSpec());
   for (auto &v : x)
-    show(v);
-  outdent();
+    Show(v);
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::Relational<evaluate::SomeType> &x) {
-  indent("expr some type");
-  show(x.u);
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::Relational<evaluate::SomeType> &x) {
+  Indent("expr some type");
+  Show(x.u);
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::ComplexPart &x) {
-  indent("complex part");
-  show(x.complex());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::ComplexPart &x) {
+  Indent("complex part");
+  Show(x.complex());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::ActualArgument &x) {
-  indent("actual argument");
+void DumpEvaluateExpr::Show(const evaluate::ActualArgument &x) {
+  Indent("actual argument");
   if (const auto *symbol{x.GetAssumedTypeDummy()})
-    show(*symbol);
+    Show(*symbol);
   else
-    show(x.UnwrapExpr());
-  outdent();
+    Show(x.UnwrapExpr());
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::ProcedureDesignator &x) {
-  indent("procedure designator");
+void DumpEvaluateExpr::Show(const evaluate::ProcedureDesignator &x) {
+  Indent("procedure designator");
   if (const auto *component{x.GetComponent()})
-    show(*component);
+    Show(*component);
   else if (const auto *symbol{x.GetSymbol()})
-    show(*symbol);
+    Show(*symbol);
   else
-    show(DEREF(x.GetSpecificIntrinsic()));
-  outdent();
+    Show(DEREF(x.GetSpecificIntrinsic()));
+  Outdent();
 }
 
-void DumpEvaluateExpr::show(const evaluate::SpecificIntrinsic &) {
-  print("specific intrinsic");
+void DumpEvaluateExpr::Show(const evaluate::SpecificIntrinsic &) {
+  Print("specific intrinsic");
 }
 
-void DumpEvaluateExpr::show(const evaluate::DescriptorInquiry &x) {
-  indent("descriptor inquiry");
-  show(x.base());
-  outdent();
+void DumpEvaluateExpr::Show(const evaluate::DescriptorInquiry &x) {
+  Indent("descriptor inquiry");
+  Show(x.base());
+  Outdent();
 }
 
-void DumpEvaluateExpr::print(llvm::Twine twine) {
-  outs << getIndentString() << twine << '\n';
+void DumpEvaluateExpr::Print(llvm::Twine twine) {
+  outs_ << GetIndentString() << twine << '\n';
 }
 
-void DumpEvaluateExpr::indent(llvm::StringRef s) {
-  print(s + " {");
-  level++;
+void DumpEvaluateExpr::Indent(llvm::StringRef s) {
+  Print(s + " {");
+  level_++;
 }
 
-void DumpEvaluateExpr::outdent() {
-  if (level)
-    level--;
-  print("}");
+void DumpEvaluateExpr::Outdent() {
+  if (level_)
+    level_--;
+  Print("}");
 }
 
 //===----------------------------------------------------------------------===//
 // Boilerplate entry points that the debugger can find.
 //===----------------------------------------------------------------------===//
 
-void dumpEvExpr(const SomeExpr &x) { DumpEvaluateExpr::dump(x); }
+void DumpEvExpr(const SomeExpr &x) { DumpEvaluateExpr::Dump(x); }
 
-void dumpEvExpr(
+void DumpEvExpr(
     const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 4>> &x) {
-  DumpEvaluateExpr::dump(x);
+  DumpEvaluateExpr::Dump(x);
 }
 
-void dumpEvExpr(
+void DumpEvExpr(
     const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 8>> &x) {
-  DumpEvaluateExpr::dump(x);
+  DumpEvaluateExpr::Dump(x);
 }
 
-void dumpEvExpr(const evaluate::ArrayRef &x) { DumpEvaluateExpr::dump(x); }
+void DumpEvExpr(const evaluate::ArrayRef &x) { DumpEvaluateExpr::Dump(x); }
 
-void dumpEvExpr(const evaluate::DataRef &x) { DumpEvaluateExpr::dump(x); }
+void DumpEvExpr(const evaluate::DataRef &x) { DumpEvaluateExpr::Dump(x); }
 
-void dumpEvExpr(const evaluate::Substring &x) { DumpEvaluateExpr::dump(x); }
+void DumpEvExpr(const evaluate::Substring &x) { DumpEvaluateExpr::Dump(x); }
 
-void dumpEvExpr(
+void DumpEvExpr(
     const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer, 4>>
         &x) {
-  DumpEvaluateExpr::dump(x);
+  DumpEvaluateExpr::Dump(x);
 }
 
 } // namespace Fortran::semantics
