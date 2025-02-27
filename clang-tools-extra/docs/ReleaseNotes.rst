@@ -114,11 +114,12 @@ Changes in existing checks
   and accessing ``value``. The option `IgnoreSmartPointerDereference` should
   no longer be needed and will be removed.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false positive from const reference accessors to objects containing optional member.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
-- Improved :doc:`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false positive from const reference accessors to objects containing optional member.
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
