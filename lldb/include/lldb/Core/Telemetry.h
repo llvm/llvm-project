@@ -107,10 +107,10 @@ private:
 };
 
 /// Helper RAII class for collecting telemetry.
-template <typename I> struct ScopedDispatcher {
+template <typename Info> struct ScopedDispatcher {
   // The debugger pointer is optional because we may not have a debugger yet.
   // In that case, caller must set the debugger later.
-  ScopedDispatcher(std::function<void(I *info)> callback,
+  ScopedDispatcher(std::function<void(Info *info)> callback,
                    Debugger *debugger = nullptr)
       : m_callback(callback) {
     // Start the timer.
@@ -140,8 +140,8 @@ template <typename I> struct ScopedDispatcher {
 
 private:
   SteadyTimePoint m_start_time;
-  std::function<void(I *info)> m_callback;
-  I m_info;
+  std::function<void(Info *info)> m_callback;
+  Info m_info;
 };
 
 } // namespace telemetry
