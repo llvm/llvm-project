@@ -77,20 +77,7 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// with `inner_dims_pos` rather than the packed tensor.
     SmallVector<int64_t> getTiledOuterDims();
   }];
-  let extraClassDeclaration = commonExtraClassDeclaration # [{
-    ShapedType getInputType() {
-        return cast<ShapedType>(getInput().getType());
-      }
-      ShapedType getOutputType() {
-        return cast<ShapedType>(getOutput().getType());
-      }
-      int64_t getInputRank() {
-        return getInputType().getRank();
-      }
-      int64_t getOutputRank() {
-        return getOutputType().getRank();
-      }
-    }];
+
   let hasVerifier = 1;
 }
 
