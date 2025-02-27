@@ -17,6 +17,7 @@ static_library("Lex") {
     "MacroArgs.cpp",
     "MacroInfo.cpp",
     "ModuleMap.cpp",
+    "ModuleMapFile.cpp",
     "PPCaching.cpp",
     "PPCallbacks.cpp",
     "PPConditionalDirectiveRecord.cpp",
