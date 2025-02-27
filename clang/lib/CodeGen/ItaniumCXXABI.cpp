@@ -5151,7 +5151,7 @@ WebAssemblyCXXABI::emitTerminateForUnexpectedException(CodeGenFunction &CGF,
   // the violating exception to mark it handled, but it is currently hard to do
   // with wasm EH instruction structure with catch/catch_all, we just call
   // std::terminate and ignore the violating exception as in CGCXXABI in Wasm EH
-  // and calls __clang_call_terminate only in Emscripten EH.
+  // and call __clang_call_terminate only in Emscripten EH.
   // TODO Consider code transformation that makes calling __clang_call_terminate
   // in Wasm EH possible.
   if (Exn && !EHPersonality::get(CGF).isWasmPersonality()) {
