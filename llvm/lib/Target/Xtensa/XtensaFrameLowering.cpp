@@ -83,10 +83,11 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
       if (MBBI->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register DstReg = MBBI->getOperand(0).getReg();
         Register Reg = MBBI->getOperand(1).getReg();
-        IsStoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+        IsStoreInst =
+            Info.getDstReg() == DstReg && Info.getReg() == Reg.asMCReg();
       } else {
         Register Reg = TII.isStoreToStackSlot(*MBBI, StoreFI);
-        IsStoreInst = (Reg == Info.getReg()) && (StoreFI == FI);
+        IsStoreInst = Reg.asMCReg() == Info.getReg() && StoreFI == FI;
       }
       assert(IsStoreInst &&
              "Unexpected callee-saved register store instruction");
@@ -168,10 +169,11 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
       if (I->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register Reg = I->getOperand(0).getReg();
         Register DstReg = I->getOperand(1).getReg();
-        IsRestoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+        IsRestoreInst =
+            Info.getDstReg() == DstReg && Info.getReg() == Reg.asMCReg();
       } else {
         Register Reg = TII.isLoadFromStackSlot(*I, LoadFI);
-        IsRestoreInst = (Info.getReg() == Reg) && (LoadFI == FI);
+        IsRestoreInst = Info.getReg() == Reg.asMCReg() && LoadFI == FI;
       }
       assert(IsRestoreInst &&
              "Unexpected callee-saved register restore instruction");

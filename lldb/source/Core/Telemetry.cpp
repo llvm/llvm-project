@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/Config/llvm-config.h"
-
-#ifdef LLVM_BUILD_TELEMETRY
-
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -67,13 +62,15 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 }
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
-TelemetryManager *TelemetryManager::getInstance() { return g_instance.get(); }
+TelemetryManager *TelemetryManager::GetInstance() {
+  if (!Config::BuildTimeEnableTelemetry)
+    return nullptr;
+  return g_instance.get();
+}
 
-void TelemetryManager::setInstance(std::unique_ptr<TelemetryManager> manager) {
+void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
   g_instance = std::move(manager);
 }
 
 } // namespace telemetry
 } // namespace lldb_private
-
-#endif // LLVM_BUILD_TELEMETRY

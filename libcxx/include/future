@@ -865,7 +865,8 @@ void __async_assoc_state<_Rp, _Fp>::__execute() {
 
 template <class _Rp, class _Fp>
 void __async_assoc_state<_Rp, _Fp>::__on_zero_shared() _NOEXCEPT {
-  this->wait();
+  if (base::__state_ & base::__constructed)
+    this->wait();
   base::__on_zero_shared();
 }
 
@@ -902,7 +903,8 @@ void __async_assoc_state<void, _Fp>::__execute() {
 
 template <class _Fp>
 void __async_assoc_state<void, _Fp>::__on_zero_shared() _NOEXCEPT {
-  this->wait();
+  if (base::__state_ & base::__constructed)
+    this->wait();
   base::__on_zero_shared();
 }
 

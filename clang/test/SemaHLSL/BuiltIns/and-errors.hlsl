@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s \
-// RUN:   -emit-llvm -O1 -verify
+// RUN:   dxil-pc-shadermodel6.3-library %s -O1 -verify
 
 bool test_too_few_arg(bool a) {
   return __builtin_hlsl_and(a);

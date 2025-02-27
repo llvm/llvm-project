@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <optional>
-#include <utility>
-
 #include "Globals.h"
 #include "IRModule.h"
 #include "NanobindUtils.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
@@ -19,9 +17,14 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+#include "nanobind/nanobind.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <optional>
+#include <system_error>
+#include <utility>
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -1329,11 +1332,11 @@ void PyOperationBase::print(PyAsmState &state, nb::object fileObject,
                               accum.getUserData());
 }
 
-void PyOperationBase::writeBytecode(const nb::object &fileObject,
+void PyOperationBase::writeBytecode(const nb::object &fileOrStringObject,
                                     std::optional<int64_t> bytecodeVersion) {
   PyOperation &operation = getOperation();
   operation.checkValid();
-  PyFileAccumulator accum(fileObject, /*binary=*/true);
+  PyFileAccumulator accum(fileOrStringObject, /*binary=*/true);
 
   if (!bytecodeVersion.has_value())
     return mlirOperationWriteBytecode(operation, accum.getCallback(),

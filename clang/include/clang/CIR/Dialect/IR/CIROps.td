@@ -365,12 +365,6 @@ def FuncOp : CIR_Op<"func", [
        return getFunctionType().getReturnTypes();
     }
 
-    /// Hook for OpTrait::FunctionOpInterfaceTrait, called after verifying that
-    /// the 'type' attribute is present and checks if it holds a function type.
-    /// Ensures getType, getNumFuncArguments, and getNumFuncResults can be
-    /// called safely.
-    llvm::LogicalResult verifyType();
-
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//

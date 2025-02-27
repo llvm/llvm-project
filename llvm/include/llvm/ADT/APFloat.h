@@ -353,6 +353,7 @@ struct APFloatBase {
   static bool semanticsHasSignedRepr(const fltSemantics &);
   static bool semanticsHasInf(const fltSemantics &);
   static bool semanticsHasNaN(const fltSemantics &);
+  static bool isIEEELikeFP(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
@@ -1542,11 +1543,16 @@ inline APFloat neg(APFloat X) {
   return X;
 }
 
-/// Implements IEEE-754 2019 minimumNumber semantics. Returns the smaller of the
-/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
-/// other argument. -0 is treated as ordered less than +0.
+/// Implements IEEE-754 2008 minNum semantics. Returns the smaller of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// -0 is treated as ordered less than +0.
 LLVM_READONLY
 inline APFloat minnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
     return B;
   if (B.isNaN())
@@ -1556,11 +1562,16 @@ inline APFloat minnum(const APFloat &A, const APFloat &B) {
   return B < A ? B : A;
 }
 
-/// Implements IEEE-754 2019 maximumNumber semantics. Returns the larger of the
-/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
-/// other argument. +0 is treated as ordered greater than -0.
+/// Implements IEEE-754 2008 maxNum semantics. Returns the larger of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// +0 is treated as ordered greater than -0.
 LLVM_READONLY
 inline APFloat maxnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
     return B;
   if (B.isNaN())

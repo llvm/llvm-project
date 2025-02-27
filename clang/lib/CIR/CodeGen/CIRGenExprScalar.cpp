@@ -58,6 +58,13 @@ public:
         cgf.getLoc(e->getExprLoc()), type,
         builder.getAttr<cir::IntAttr>(type, e->getValue()));
   }
+
+  mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
+    mlir::Type type = cgf.convertType(e->getType());
+    return builder.create<cir::ConstantOp>(
+        cgf.getLoc(e->getExprLoc()), type,
+        builder.getCIRBoolAttr(e->getValue()));
+  }
 };
 } // namespace
 

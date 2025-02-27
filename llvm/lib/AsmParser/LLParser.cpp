@@ -1036,9 +1036,10 @@ bool LLParser::parseStandaloneMetadata() {
 
     assert(NumberedMetadata[MetadataID] == Init && "Tracking VH didn't work");
   } else {
-    if (NumberedMetadata.count(MetadataID))
+    auto [It, Inserted] = NumberedMetadata.try_emplace(MetadataID);
+    if (!Inserted)
       return tokError("Metadata id is already used");
-    NumberedMetadata[MetadataID].reset(Init);
+    It->second.reset(Init);
   }
 
   return false;
@@ -5318,6 +5319,50 @@ bool LLParser::parseGenericDINode(MDNode *&Result, bool IsDistinct) {
 
   Result = GET_OR_DISTINCT(GenericDINode,
                            (Context, tag.Val, header.Val, operands.Val));
+  return false;
+}
+
+/// parseDISubrangeType:
+///   ::= !DISubrangeType(name: "whatever", file: !0,
+///                      line: 7, scope: !1, baseType: !2, size: 32,
+///                      align: 32, flags: 0, lowerBound: !3
+///                      upperBound: !4, stride: !5, bias: !6)
+bool LLParser::parseDISubrangeType(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(scope, MDField, );                                                  \
+  OPTIONAL(baseType, MDField, );                                               \
+  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(flags, DIFlagField, );                                              \
+  OPTIONAL(lowerBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(upperBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(stride, MDSignedOrMDField, );                                       \
+  OPTIONAL(bias, MDSignedOrMDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  auto convToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+    if (Bound.isMDSignedField())
+      return ConstantAsMetadata::get(ConstantInt::getSigned(
+          Type::getInt64Ty(Context), Bound.getMDSignedValue()));
+    if (Bound.isMDField())
+      return Bound.getMDFieldValue();
+    return nullptr;
+  };
+
+  Metadata *LowerBound = convToMetadata(lowerBound);
+  Metadata *UpperBound = convToMetadata(upperBound);
+  Metadata *Stride = convToMetadata(stride);
+  Metadata *Bias = convToMetadata(bias);
+
+  Result = GET_OR_DISTINCT(DISubrangeType,
+                           (Context, name.Val, file.Val, line.Val, scope.Val,
+                            size.Val, align.Val, flags.Val, baseType.Val,
+                            LowerBound, UpperBound, Stride, Bias));
+
   return false;
 }
 

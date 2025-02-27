@@ -3668,6 +3668,51 @@ Here are some examples of situations that we warn about as they *might* be poten
       RefCountable* uncounted = counted.get(); // warn
     }
 
+alpha.webkit.UnretainedLocalVarsChecker
+"""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of Retainptr object that backs it.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is EMBEDDED in the scope of retained.
+      {
+        NSObject* unretained = retained.get(); // ok
+      }
+    }
+
+    void foo2(RetainPtr<NSObject> retained_param) {
+      NSObject* unretained = retained_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      NSObject* unretained = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      NSObject* unretained = [[NSObject alloc] init]; // warn
+    }
+
+    NSObject* global_unretained;
+    void foo2() {
+      NSObject* unretained = global_unretained; // warn
+    }
+
+    void foo3() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is not EMBEDDED in the scope of retained.
+      NSObject* unretained = retained.get(); // warn
+    }
+
 Debug Checkers
 ---------------
 
