@@ -12,6 +12,8 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/Support/Casting.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -25,6 +27,14 @@ void emitErrorReport(CheckerContext &C, const BugType &Bug,
     auto Report = std::make_unique<PathSensitiveBugReport>(Bug, Desc, Node);
     C.emitReport(std::move(Report));
   }
+}
+
+inline std::string getMemRegionName(const SVal &Val) {
+  if (auto MemVal = llvm::dyn_cast<loc::MemRegionVal>(Val))
+    return MemVal->getRegion()->getDescriptiveName(false);
+  if (auto ComVal = llvm::dyn_cast<nonloc::LazyCompoundVal>(Val))
+    return ComVal->getRegion()->getDescriptiveName(false);
+  return "";
 }
 
 #define CREATE_EXPR_ENGINE_CHECKER(CHECKER_NAME, CALLBACK, STMT_TYPE,          \
@@ -44,6 +54,21 @@ CREATE_EXPR_ENGINE_CHECKER(ExprEngineVisitPreChecker, PreStmt, GCCAsmStmt,
 CREATE_EXPR_ENGINE_CHECKER(ExprEngineVisitPostChecker, PostStmt, GCCAsmStmt,
                            "GCCAsmStmtBug")
 
+class MemAccessChecker : public Checker<check::Location, check::Bind> {
+public:
+  void checkLocation(const SVal &Loc, bool IsLoad, const Stmt *S,
+                     CheckerContext &C) const {
+    emitErrorReport(C, Bug, "checkLocation: Loc = " + getMemRegionName(Loc));
+  }
+
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
+    emitErrorReport(C, Bug, "checkBind: Loc = " + getMemRegionName(Loc));
+  }
+
+private:
+  const BugType Bug{this, "MemAccess"};
+};
+
 void addExprEngineVisitPreChecker(AnalysisASTConsumer &AnalysisConsumer,
                                   AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"ExprEngineVisitPreChecker", true}};
@@ -59,6 +84,15 @@ void addExprEngineVisitPostChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker<ExprEngineVisitPostChecker>(
         "ExprEngineVisitPostChecker", "Desc", "DocsURI");
+  });
+}
+
+void addMemAccessChecker(AnalysisASTConsumer &AnalysisConsumer,
+                         AnalyzerOptions &AnOpts) {
+  AnOpts.CheckersAndPackages = {{"MemAccessChecker", true}};
+  AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
+    Registry.addChecker<MemAccessChecker>("MemAccessChecker", "Desc",
+                                          "DocsURI");
   });
 }
 
@@ -82,6 +116,26 @@ TEST(ExprEngineVisitTest, checkPostStmtGCCAsmStmt) {
   )",
                                                               Diags));
   EXPECT_EQ(Diags, "ExprEngineVisitPostChecker: checkPostStmt<GCCAsmStmt>\n");
+}
+
+TEST(ExprEngineVisitTest, checkLocationAndBind) {
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCode<addMemAccessChecker>(R"(
+    class MyClass{
+    public:
+      int Value;
+    };
+    extern MyClass MyClassWrite, MyClassRead; 
+    void top() {
+      MyClassWrite = MyClassRead;
+    }
+  )",
+                                                    Diags));
+
+  std::string RHSMsg = "checkLocation: Loc = MyClassRead";
+  std::string LHSMsg = "checkBind: Loc = MyClassWrite";
+  EXPECT_NE(Diags.find(RHSMsg), std::string::npos);
+  EXPECT_NE(Diags.find(LHSMsg), std::string::npos);
 }
 
 } // namespace
