@@ -89,7 +89,22 @@ static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
   if (CPU.empty() || CPU == "generic")
     CPU = TT.isArch64Bit() ? "generic-rv64" : "generic-rv32";
 
-  return createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  MCSubtargetInfo *X =
+      createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  // If the CPU is "help" fill in 64 or 32 bit feature so we can pass
+  // RISCVFeatures::validate.
+  // FIXME: Why does llvm-mc still expect a source file with -mcpu=help?
+  if (CPU == "help") {
+    llvm::FeatureBitset Features = X->getFeatureBits();
+    if (TT.isArch64Bit())
+      Features.set(RISCV::Feature64Bit);
+    else
+      Features.set(RISCV::Feature32Bit);
+    X->setFeatureBits(Features);
+  }
+
+  return X;
 }
 
 static MCInstPrinter *createRISCVMCInstPrinter(const Triple &T,
@@ -324,16 +339,6 @@ private:
 static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
   return new RISCVMCInstrAnalysis(Info);
 }
-
-namespace {
-MCStreamer *createRISCVELFStreamer(const Triple &T, MCContext &Context,
-                                   std::unique_ptr<MCAsmBackend> &&MAB,
-                                   std::unique_ptr<MCObjectWriter> &&MOW,
-                                   std::unique_ptr<MCCodeEmitter> &&MCE) {
-  return createRISCVELFStreamer(Context, std::move(MAB), std::move(MOW),
-                                std::move(MCE));
-}
-} // end anonymous namespace
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
   for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {

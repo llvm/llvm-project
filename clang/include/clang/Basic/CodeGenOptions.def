@@ -221,6 +221,7 @@ AFFECTING_VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option spec
 AFFECTING_VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
 CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
+CODEGENOPT(ContinuousProfileSync, 1, 0) ///< Enable continuous instrumentation profiling
 /// Choose profile instrumenation kind or no instrumentation.
 ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNone)
 /// Choose profile kind for PGO use compilation.

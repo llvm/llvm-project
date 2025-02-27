@@ -872,7 +872,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       llvm::Value *TypeHash =
           llvm::ConstantInt::get(Int64Ty, xxh3_64bits(Out.str()));
 
-      llvm::Type *VPtrTy = llvm::PointerType::get(IntPtrTy, 0);
+      llvm::Type *VPtrTy = llvm::PointerType::get(getLLVMContext(), 0);
       Address VPtrAddr(Ptr, IntPtrTy, getPointerAlign());
       llvm::Value *VPtrVal = GetVTablePtr(VPtrAddr, VPtrTy,
                                           Ty->getAsCXXRecordDecl(),
@@ -3054,7 +3054,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
                                            getContext().getDeclAlign(VD));
         llvm::Type *VarTy = getTypes().ConvertTypeForMem(VD->getType());
         auto *PTy = llvm::PointerType::get(
-            VarTy, getTypes().getTargetAddressSpace(VD->getType()));
+            getLLVMContext(), getTypes().getTargetAddressSpace(VD->getType()));
         Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PTy, VarTy);
       } else {
         // Should we be using the alignment of the constant pointer we emitted?
@@ -5339,6 +5339,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
 
   case CK_Dependent:
@@ -5548,6 +5549,12 @@ CodeGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
 
   assert(e->isUnique() && "RValue for a nonunique OVE hasn't been emitted");
   return EmitAnyExpr(e->getSourceExpr());
+}
+
+bool CodeGenFunction::isOpaqueValueEmitted(const OpaqueValueExpr *E) {
+  if (OpaqueValueMapping::shouldBindAsLValue(E))
+    return OpaqueLValues.contains(E);
+  return OpaqueRValues.contains(E);
 }
 
 RValue CodeGenFunction::EmitRValueForField(LValue LV,

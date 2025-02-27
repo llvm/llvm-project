@@ -49,7 +49,7 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
-      "libFortranRuntime",
+      "libflang_rt.runtime",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
@@ -207,8 +207,8 @@ static StringRef mangle(Twine sym, MachineTypes machine) {
 // This function instantiates wrapper symbols. At this point, they seem
 // like they are not being used at all, so we explicitly set some flags so
 // that LTO won't eliminate them.
-std::vector<WrappedSymbol>
-lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
+void lld::coff::addWrappedSymbols(SymbolTable &symtab,
+                                  opt::InputArgList &args) {
   std::vector<WrappedSymbol> v;
   DenseSet<StringRef> seen;
 
@@ -217,14 +217,14 @@ lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
     if (!seen.insert(name).second)
       continue;
 
-    Symbol *sym = ctx.symtab.findUnderscore(name);
+    Symbol *sym = symtab.findUnderscore(name);
     if (!sym)
       continue;
 
     Symbol *real =
-        ctx.symtab.addUndefined(mangle("__real_" + name, ctx.config.machine));
+        symtab.addUndefined(mangle("__real_" + name, symtab.machine));
     Symbol *wrap =
-        ctx.symtab.addUndefined(mangle("__wrap_" + name, ctx.config.machine));
+        symtab.addUndefined(mangle("__wrap_" + name, symtab.machine));
     v.push_back({sym, real, wrap});
 
     // These symbols may seem undefined initially, but don't bail out
@@ -243,7 +243,7 @@ lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
     if (!isa<Undefined>(wrap))
       wrap->isUsedInRegularObj = true;
   }
-  return v;
+  symtab.wrapped = std::move(v);
 }
 
 // Do renaming for -wrap by updating pointers to symbols.
@@ -251,29 +251,28 @@ lld::coff::addWrappedSymbols(COFFLinkerContext &ctx, opt::InputArgList &args) {
 // When this function is executed, only InputFiles and symbol table
 // contain pointers to symbol objects. We visit them to replace pointers,
 // so that wrapped symbols are swapped as instructed by the command line.
-void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
-                            ArrayRef<WrappedSymbol> wrapped) {
+void lld::coff::wrapSymbols(SymbolTable &symtab) {
   DenseMap<Symbol *, Symbol *> map;
-  for (const WrappedSymbol &w : wrapped) {
+  for (const WrappedSymbol &w : symtab.wrapped) {
     map[w.sym] = w.wrap;
     map[w.real] = w.sym;
     if (Defined *d = dyn_cast<Defined>(w.wrap)) {
-      Symbol *imp = ctx.symtab.find(("__imp_" + w.sym->getName()).str());
+      Symbol *imp = symtab.find(("__imp_" + w.sym->getName()).str());
       // Create a new defined local import for the wrap symbol. If
       // no imp prefixed symbol existed, there's no need for it.
       // (We can't easily distinguish whether any object file actually
       // referenced it or not, though.)
       if (imp) {
         DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
-            ctx, saver().save("__imp_" + w.wrap->getName()), d);
-        ctx.symtab.localImportChunks.push_back(wrapimp->getChunk());
+            symtab.ctx, saver().save("__imp_" + w.wrap->getName()), d);
+        symtab.localImportChunks.push_back(wrapimp->getChunk());
         map[imp] = wrapimp;
       }
     }
   }
 
   // Update pointers in input files.
-  parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
+  parallelForEach(symtab.ctx.objFileInstances, [&](ObjFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (auto &sym : syms)
       if (Symbol *s = map.lookup(sym))

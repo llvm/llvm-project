@@ -207,6 +207,7 @@ template <class charT> class messages_byname;
 #    include <__iterator/ostreambuf_iterator.h>
 #    include <__locale>
 #    include <__locale_dir/pad_and_output.h>
+#    include <__memory/addressof.h>
 #    include <__memory/unique_ptr.h>
 #    include <__new/exceptions.h>
 #    include <__type_traits/make_unsigned.h>
@@ -292,7 +293,7 @@ _LIBCPP_HIDE_FROM_ABI _ForwardIterator __scan_keyword(
   if (__nkw > sizeof(__statbuf)) {
     __status = (unsigned char*)malloc(__nkw);
     if (__status == nullptr)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __stat_hold.reset(__status);
   }
   size_t __n_might_match = __nkw; // At this point, any keyword might match
@@ -1324,7 +1325,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
     else
       __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
     if (__nc == -1)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __nbh.reset(__nb);
   }
   _LIBCPP_DIAGNOSTIC_POP
@@ -1337,7 +1338,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   if (__nb != __nar) {
     __ob = (char_type*)malloc(2 * static_cast<size_t>(__nc) * sizeof(char_type));
     if (__ob == 0)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __obh.reset(__ob);
   }
   char_type* __op; // pad here
@@ -2382,7 +2383,7 @@ _LIBCPP_HIDE_FROM_ABI void __double_or_nothing(unique_ptr<_Tp, void (*)(void*)>&
   size_t __n_off = static_cast<size_t>(__n - __b.get());
   _Tp* __t       = (_Tp*)std::realloc(__owns ? __b.get() : 0, __new_cap);
   if (__t == 0)
-    __throw_bad_alloc();
+    std::__throw_bad_alloc();
   if (__owns)
     __b.release();
   __b = unique_ptr<_Tp, void (*)(void*)>(__t, free);
@@ -2451,14 +2452,14 @@ bool money_get<_CharT, _InputIterator>::__do_get(
         ++__b;
         __neg = false;
         if (__psn.size() > 1)
-          __trailing_sign = &__psn;
+          __trailing_sign = std::addressof(__psn);
         break;
       }
       if (__nsn.size() > 0 && *__b == __nsn[0]) {
         ++__b;
         __neg = true;
         if (__nsn.size() > 1)
-          __trailing_sign = &__nsn;
+          __trailing_sign = std::addressof(__nsn);
         break;
       }
       if (__psn.size() > 0 && __nsn.size() > 0) { // sign is required
@@ -2585,7 +2586,7 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
     if (__wn - __wb.get() > __bz - 2) {
       __h.reset((char*)malloc(static_cast<size_t>(__wn - __wb.get() + 2)));
       if (__h.get() == nullptr)
-        __throw_bad_alloc();
+        std::__throw_bad_alloc();
       __nc = __h.get();
     }
     if (__neg)
@@ -2594,7 +2595,7 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
       *__nc = __src[std::find(__atoms, std::end(__atoms), *__w) - __atoms];
     *__nc = char();
     if (sscanf(__nbuf, "%Lf", &__v) != 1)
-      __throw_runtime_error("money_get error");
+      std::__throw_runtime_error("money_get error");
   }
   if (__b == __e)
     __err |= ios_base::eofbit;
@@ -2859,11 +2860,11 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
   if (static_cast<size_t>(__n) > __bs - 1) {
     __n = __locale::__asprintf(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units);
     if (__n == -1)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __hn.reset(__bb);
     __hd.reset((char_type*)malloc(static_cast<size_t>(__n) * sizeof(char_type)));
     if (__hd == nullptr)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     __db = __hd.get();
   }
   // gather info
@@ -2890,7 +2891,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
     __hw.reset((char_type*)malloc(__exn * sizeof(char_type)));
     __mb = __hw.get();
     if (__mb == 0)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   // format
   char_type* __mi;
@@ -2928,7 +2929,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
     __h.reset((char_type*)malloc(__exn * sizeof(char_type)));
     __mb = __h.get();
     if (__mb == 0)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
   }
   // format
   char_type* __mi;
@@ -3203,7 +3204,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::from_bytes(const char*
   }
 
   if (__wide_err_string_.empty())
-    __throw_range_error("wstring_convert: from_bytes error");
+    std::__throw_range_error("wstring_convert: from_bytes error");
 
   return __wide_err_string_;
 }
@@ -3272,7 +3273,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
   }
 
   if (__byte_err_string_.empty())
-    __throw_range_error("wstring_convert: to_bytes error");
+    std::__throw_range_error("wstring_convert: to_bytes error");
 
   return __byte_err_string_;
 }

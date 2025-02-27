@@ -99,6 +99,8 @@ private:
   void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
                                            bool IsIm2Col = false);
+  void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
+  void SelectTcgen05St(SDNode *N, bool hasOffset = false);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
@@ -107,18 +109,14 @@ private:
   // Match direct address complex pattern.
   bool SelectDirectAddr(SDValue N, SDValue &Address);
 
-  bool SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
+  void SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
                         SDValue &Offset, MVT VT);
   bool SelectADDRri(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
   bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
-  bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT VT);
   bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
-  bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

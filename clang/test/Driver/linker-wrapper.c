@@ -59,7 +59,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --linker-path=/usr/bin/ld.lld --whole-archive %t.a --no-whole-archive \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CPU-LINK
 
-// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -march=native -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared -Wl,--whole-archive {{.*}}.a -Wl,--no-whole-archive
+// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared -Wl,--whole-archive {{.*}}.a -Wl,--no-whole-archive
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -mllvm -openmp-opt-disable \

@@ -73,7 +73,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
 }
@@ -97,7 +97,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
 }
@@ -184,7 +184,7 @@ class CustomSiFiveVFNRCLIP<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 }
 
 let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
-    hasSideEffects = 1, hasNoSchedulingInfo = 1, DecoderNamespace = "XSfvcp" in {
+    hasSideEffects = 1, hasNoSchedulingInfo = 1, DecoderNamespace = "XSfvector" in {
   defm X   : CustomSiFiveVCIX<"x",   VCIX_X,   uimm5, uimm5, GPR>,   Sched<[]>;
   defm I   : CustomSiFiveVCIX<"i",   VCIX_X,   uimm5, uimm5, simm5>, Sched<[]>;
   defm XV  : CustomSiFiveVCIX<"xv",  VCIX_XV,  uimm5, VR,    GPR>,   Sched<[]>;
@@ -201,7 +201,7 @@ let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
   defm FVW : CustomSiFiveVCIX<"fvw", VCIX_XVW, VR,    VR,    FPR32>, Sched<[]>;
 }
 
-let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod",
+let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
     DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
   def VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
   def VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
@@ -209,7 +209,7 @@ let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod",
   def VQMACCSU_2x8x2 : CustomSiFiveVMACC<0b101111, OPMVV, "sf.vqmaccsu.2x8x2">;
 }
 
-let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq",
+let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
     DestEEW = EEWSEWx4, RVVConstraint=WidenV in {
   def VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
   def VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
@@ -217,12 +217,12 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq",
   def VQMACCSU_4x8x4 : CustomSiFiveVMACC<0b111111, OPMVV, "sf.vqmaccsu.4x8x4">;
 }
 
-let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq",
+let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvector",
     DestEEW = EEWSEWx2, RVVConstraint=WidenV in {
   def VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvfnrclipxfqf",
+let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvector",
     Uses = [FRM] in {
   def VFNRCLIP_XU_F_QF : CustomSiFiveVFNRCLIP<0b100010, OPFVF, "sf.vfnrclip.xu.f.qf">;
   def VFNRCLIP_X_F_QF : CustomSiFiveVFNRCLIP<0b100011, OPFVF, "sf.vfnrclip.x.f.qf">;
@@ -836,7 +836,7 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
 
 let Predicates = [HasVendorXSiFivecdiscarddlone] in {
   let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
-      DecoderNamespace = "XSiFivecdiscarddlone" in
+      DecoderNamespace = "XSfsystem" in
   def SF_CDISCARD_D_L1
       : RVInstIUnary<0b111111000010, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
                      "sf.cdiscard.d.l1", "$rs1">, Sched<[]> {
@@ -847,7 +847,7 @@ let Predicates = [HasVendorXSiFivecdiscarddlone] in {
 
 let Predicates = [HasVendorXSiFivecflushdlone] in {
   let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
-      DecoderNamespace = "XSiFivecflushdlone" in
+      DecoderNamespace = "XSfsystem" in
   def SF_CFLUSH_D_L1
       : RVInstIUnary<0b111111000000, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
                      "sf.cflush.d.l1", "$rs1">, Sched<[]> {
@@ -859,9 +859,9 @@ let Predicates = [HasVendorXSiFivecflushdlone] in {
 let Predicates = [HasVendorXSfcease] in {
   let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
       DecoderNamespace = "XSfcease" in
-  def SF_CEASE : RVInstIUnary<0b001100000101, 0b000, OPC_SYSTEM, (outs), (ins),
-                              "sf.cease", "">, Sched<[]> {
-    let rs1 = 0b00000;
+  def SF_CEASE : Priv<"sf.cease", 0b0011000>, Sched<[]> {
     let rd = 0b00000;
+    let rs1 = 0b00000;
+    let rs2 = 0b00101;
 }
 }

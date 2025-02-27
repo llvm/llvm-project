@@ -355,7 +355,7 @@ contains
     class(t), intent(inout) :: dtv
     integer, intent(in) :: unit
     character(len=*), intent(in) :: iotype
-    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be deferred shape
+    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be assumed shape
     integer, intent(in) :: vlist(5)
     integer, intent(out) :: iostat
     character(len=*), intent(inout) :: iomsg
@@ -688,4 +688,35 @@ module m26b
   interface read(unformatted)
     procedure unformattedRead
   end interface
+end
+
+module m27a
+  type t
+    integer c
+   contains
+    procedure ur1
+    generic, private :: read(unformatted) => ur1
+  end type
+ contains
+  subroutine ur1(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end
+end
+module m27b
+  use m27a
+  interface read(unformatted)
+    module procedure ur2 ! ok, t's generic is inaccessible
+  end interface
+ contains
+  subroutine ur2(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end
 end

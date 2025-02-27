@@ -30,6 +30,7 @@ Implementation Status
    sys/mman
    sys/resource
    sys/stat
+   sys/statvfs
    sys/time
    sys/wait
    termios

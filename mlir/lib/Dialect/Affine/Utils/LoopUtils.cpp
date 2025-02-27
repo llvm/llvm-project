@@ -1351,10 +1351,12 @@ static bool checkLoopInterchangeDependences(
 /// nested sequence of loops in 'loops' would violate dependences.
 bool mlir::affine::isValidLoopInterchangePermutation(
     ArrayRef<AffineForOp> loops, ArrayRef<unsigned> loopPermMap) {
+  assert(loopPermMap.size() == loops.size() && "invalid loop perm map");
+  unsigned maxLoopDepth = loops.size();
+  if (maxLoopDepth == 1)
+    return true;
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
-  assert(loopPermMap.size() == loops.size());
-  unsigned maxLoopDepth = loops.size();
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
   getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
@@ -2001,8 +2003,15 @@ static LogicalResult generateCopy(
   }
 
   SmallVector<AffineMap, 4> lbMaps(rank), ubMaps(rank);
-  for (unsigned i = 0; i < rank; ++i)
+  for (unsigned i = 0; i < rank; ++i) {
     region.getLowerAndUpperBound(i, lbMaps[i], ubMaps[i]);
+    if (lbMaps[i].getNumResults() == 0 || ubMaps[i].getNumResults() == 0) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Missing lower or upper bound for region along dimension: "
+                 << i << '\n');
+      return failure();
+    }
+  }
 
   const FlatAffineValueConstraints *cst = region.getConstraints();
   // 'regionSymbols' hold values that this memory region is symbolic/parametric
