@@ -100,11 +100,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (!CSF.Int64Ops)
-    CSF.Int64Ops = I.getType()->isIntegerTy() && I.getType()->getScalarSizeInBits() == 64;
+    CSF.Int64Ops =
+        I.getType()->isIntegerTy() && I.getType()->getScalarSizeInBits() == 64;
 
   if (!CSF.Int64Ops) {
     for (const Value *Op : I.operands()) {
-      if (Op->getType()->isIntegerTy() && Op->getType()->getScalarSizeInBits() == 64) {
+      if (Op->getType()->isIntegerTy() &&
+          Op->getType()->getScalarSizeInBits() == 64) {
         CSF.Int64Ops = true;
         break;
       }
