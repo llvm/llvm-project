@@ -4428,7 +4428,9 @@ bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
   unsigned ClusterIdField = HwregEncoding::encode(ID_IB_STS2, 6, 4);
   Register ClusterId = MRI.createGenericVirtualRegister(S32);
   MRI.setRegClass(ClusterId, &AMDGPU::SReg_32RegClass);
-  B.buildInstr(AMDGPU::S_GETREG_B32).addDef(ClusterId).addImm(ClusterIdField);
+  B.buildInstr(AMDGPU::S_GETREG_B32_const)
+      .addDef(ClusterId)
+      .addImm(ClusterIdField);
   auto One = B.buildConstant(S32, 1);
   auto ClusterSizeXYZ = B.buildAdd(S32, ClusterMaxIdXYZ, One);
   auto GlobalIdXYZ = B.buildAdd(S32, ClusterWorkGroupIdXYZ,
@@ -7479,16 +7481,16 @@ bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeHwRegRead(MachineInstr &MI,
-                                            MachineIRBuilder &B,
-                                            AMDGPU::Hwreg::Id HwReg,
-                                            unsigned LowBit,
-                                            unsigned Width) const {
+bool AMDGPULegalizerInfo::legalizeConstHwRegRead(MachineInstr &MI,
+                                                 MachineIRBuilder &B,
+                                                 AMDGPU::Hwreg::Id HwReg,
+                                                 unsigned LowBit,
+                                                 unsigned Width) const {
   MachineRegisterInfo &MRI = *B.getMRI();
   Register DstReg = MI.getOperand(0).getReg();
   if (!MRI.getRegClassOrNull(DstReg))
     MRI.setRegClass(DstReg, &AMDGPU::SReg_32RegClass);
-  B.buildInstr(AMDGPU::S_GETREG_B32)
+  B.buildInstr(AMDGPU::S_GETREG_B32_const)
       .addDef(DstReg)
       .addImm(AMDGPU::Hwreg::HwregEncoding::encode(HwReg, LowBit, Width));
   MI.eraseFromParent();
@@ -7691,7 +7693,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
     return AMDGPU::isGFX1250(ST) &&
-           legalizeHwRegRead(MI, B, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
+           legalizeConstHwRegRead(MI, B, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(

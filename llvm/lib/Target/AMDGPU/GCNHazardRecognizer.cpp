@@ -77,7 +77,7 @@ static bool isDivFMas(unsigned Opcode) {
 }
 
 static bool isSGetReg(unsigned Opcode) {
-  return Opcode == AMDGPU::S_GETREG_B32;
+  return Opcode == AMDGPU::S_GETREG_B32 || Opcode == AMDGPU::S_GETREG_B32_const;
 }
 
 static bool isSSetReg(unsigned Opcode) {

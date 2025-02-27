@@ -223,9 +223,9 @@ public:
 
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
-  bool legalizeHwRegRead(MachineInstr &MI, MachineIRBuilder &B,
-                         AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
-                         unsigned Width) const;
+  bool legalizeConstHwRegRead(MachineInstr &MI, MachineIRBuilder &B,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
 
   bool legalizeGetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B) const;
