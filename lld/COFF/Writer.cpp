@@ -1758,16 +1758,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  switch (config->machine) {
-  case ARM64EC:
-    coff->Machine = AMD64;
-    break;
-  case ARM64X:
-    coff->Machine = ARM64;
-    break;
-  default:
-    coff->Machine = config->machine;
-  }
+  coff->Machine = ctx.symtab.isEC() ? AMD64 : ctx.symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
   if (config->largeAddressAware)
