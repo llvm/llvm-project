@@ -2588,25 +2588,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 }
 
-// Hook for OpTrait::FunctionLike, called after verifying that the 'type'
-// attribute is present.  This can check for preconditions of the
-// getNumArguments hook not failing.
-LogicalResult cir::FuncOp::verifyType() {
-  auto type = getFunctionType();
-  if (!isa<cir::FuncType>(type))
-    return emitOpError("requires '" + getFunctionTypeAttrName().str() +
-                       "' attribute of function type");
-  if (!getNoProto() && type.isVarArg() && type.getNumInputs() == 0)
-    return emitError()
-           << "prototyped function must have at least one non-variadic input";
-  if (auto rt = type.getReturnTypes();
-      !rt.empty() && mlir::isa<cir::VoidType>(rt.front()))
-    return emitOpError("The return type for a function returning void should "
-                       "be empty instead of an explicit !cir.void");
-
-  return success();
-}
-
 // Verifies linkage types
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage
