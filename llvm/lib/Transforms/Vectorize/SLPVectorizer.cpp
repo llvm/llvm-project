@@ -827,20 +827,21 @@ class InterchangeableBinOp {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
   enum : MaskType {
-    SHL_BIT = 0b1,
-    AShr_BIT = 0b10,
-    Mul_BIT = 0b100,
-    Add_BIT = 0b1000,
-    Sub_BIT = 0b10000,
-    And_BIT = 0b100000,
-    Or_BIT = 0b1000000,
-    Xor_BIT = 0b10000000,
-    MainOp_BIT = 0b100000000
+    ShlBIT = 0b1,
+    AShrBIT = 0b10,
+    MulBIT = 0b100,
+    AddBIT = 0b1000,
+    SubBIT = 0b10000,
+    AndBIT = 0b100000,
+    OrBIT = 0b1000000,
+    XorBIT = 0b10000000,
+    MainOpBIT = 0b100000000,
+    LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
   Instruction *MainOp = nullptr;
   // The bit it sets represents whether MainOp can be converted to.
-  MaskType Mask = MainOp_BIT | Xor_BIT | Or_BIT | And_BIT | Sub_BIT | Add_BIT |
-                  Mul_BIT | AShr_BIT | SHL_BIT;
+  MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
+                  MulBIT | AShrBIT | ShlBIT;
   // We cannot create an interchangeable instruction that does not exist in VL.
   // For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0], but
   // 'shl' does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
@@ -873,21 +874,21 @@ class InterchangeableBinOp {
   static MaskType opcodeToMask(unsigned Opcode) {
     switch (Opcode) {
     case Instruction::Shl:
-      return SHL_BIT;
+      return ShlBIT;
     case Instruction::AShr:
-      return AShr_BIT;
+      return AShrBIT;
     case Instruction::Mul:
-      return Mul_BIT;
+      return MulBIT;
     case Instruction::Add:
-      return Add_BIT;
+      return AddBIT;
     case Instruction::Sub:
-      return Sub_BIT;
+      return SubBIT;
     case Instruction::And:
-      return And_BIT;
+      return AndBIT;
     case Instruction::Or:
-      return Or_BIT;
+      return OrBIT;
     case Instruction::Xor:
-      return Xor_BIT;
+      return XorBIT;
     }
     llvm_unreachable("Unsupported opcode.");
   }
@@ -907,26 +908,26 @@ public:
     assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
     if (!binary_search(SupportedOp, Opcode)) {
       if (MainOp->getOpcode() == Opcode)
-        return trySet(MainOp_BIT);
+        return trySet(MainOpBIT);
       return false;
     }
     MaskType opcodeMask = opcodeToMask(Opcode);
     SeenBefore |= opcodeMask;
     ConstantInt *CI = isBinOpWithConstantInt(I).first;
     if (CI) {
-      constexpr MaskType CanBeAll = Xor_BIT | Or_BIT | And_BIT | Sub_BIT |
-                                    Add_BIT | Mul_BIT | AShr_BIT | SHL_BIT;
+      constexpr MaskType CanBeAll =
+          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
         if (CIValue.isZero())
           return trySet(CanBeAll);
-        return trySet(Mul_BIT | SHL_BIT);
+        return trySet(MulBIT | ShlBIT);
       case Instruction::Mul:
         if (CIValue.isOne())
           return trySet(CanBeAll);
         if (CIValue.isPowerOf2())
-          return trySet(Mul_BIT | SHL_BIT);
+          return trySet(MulBIT | ShlBIT);
         break;
       case Instruction::And:
         if (CIValue.isAllOnes())
@@ -941,24 +942,24 @@ public:
     return trySet(opcodeMask);
   }
   unsigned getOpcode() const {
-    if (Mask & MainOp_BIT)
+    if (Mask & MainOpBIT)
       return MainOp->getOpcode();
     MaskType Candidate = Mask & SeenBefore;
-    if (Candidate & SHL_BIT)
+    if (Candidate & ShlBIT)
       return Instruction::Shl;
-    if (Candidate & AShr_BIT)
+    if (Candidate & AShrBIT)
       return Instruction::AShr;
-    if (Candidate & Mul_BIT)
+    if (Candidate & MulBIT)
       return Instruction::Mul;
-    if (Candidate & Add_BIT)
+    if (Candidate & AddBIT)
       return Instruction::Add;
-    if (Candidate & Sub_BIT)
+    if (Candidate & SubBIT)
       return Instruction::Sub;
-    if (Candidate & And_BIT)
+    if (Candidate & AndBIT)
       return Instruction::And;
-    if (Candidate & Or_BIT)
+    if (Candidate & OrBIT)
       return Instruction::Or;
-    if (Candidate & Xor_BIT)
+    if (Candidate & XorBIT)
       return Instruction::Xor;
     llvm_unreachable("Cannot find interchangeable instruction.");
   }
