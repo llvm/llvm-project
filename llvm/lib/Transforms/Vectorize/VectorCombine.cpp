@@ -1963,7 +1963,6 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   Worklist.pushValue(ShuffleCmp);
   Worklist.pushValue(ShuffleTrue);
   Worklist.pushValue(ShuffleFalse);
-  Worklist.pushValue(NewSel);
   replaceValue(I, *NewSel);
   return true;
 }
