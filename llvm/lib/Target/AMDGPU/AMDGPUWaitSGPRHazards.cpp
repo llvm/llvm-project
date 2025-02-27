@@ -16,7 +16,13 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/ilist_iterator.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/IR/CFG.h"
+#include <iterator>
 
 using namespace llvm;
 
@@ -165,6 +171,7 @@ public:
   }
 
   unsigned mergeMasks(unsigned Mask1, unsigned Mask2) {
+    //this is enough to clear SA_SDST, VA_VCC, HOLD_CNT, VA_SSRC since they are 1-bit fields
     unsigned Mask = Mask1 & Mask2;
 
     Mask = AMDGPU::DepCtr::encodeFieldVmVsrc(
@@ -177,6 +184,15 @@ public:
         Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVdst(Mask1),
                        AMDGPU::DepCtr::decodeFieldVaVdst(Mask2)));
     return Mask;
+  }
+
+  MachineInstr* getPreviousWaitAlu(MachineBasicBlock::instr_iterator &MI) {
+    auto PrevMI = std::prev(MI);
+    while (PrevMI != PrevMI->getParent()->instr_begin() &&
+           (PrevMI->isDebugInstr() || PrevMI->isMetaInstruction()))
+      --PrevMI;
+
+    return &(*PrevMI);
   }
 
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
@@ -377,12 +393,21 @@ public:
           Mask = AMDGPU::DepCtr::encodeFieldVaSdst(Mask, 0);
         }
         if (Emit) {
+          MachineInstr* PrevWaitAlu = nullptr;
           if (MI != MI->getParent()->begin()) {
-            MachineInstr &PrevMI = *std::prev(MI);
-            if (PrevMI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
-              Mask = mergeMasks(Mask, PrevMI.getOperand(0).getImm());
-              PrevMI.eraseFromParent();
+            PrevWaitAlu = getPreviousWaitAlu(MI);
+          } else {
+            auto Preds = MBB.predecessors();
+            if (MBB.pred_size() == 1) {
+              auto &Pred = *Preds.begin();
+              auto PrevMI = Pred->instr_end();
+              PrevWaitAlu = getPreviousWaitAlu(PrevMI);
             }
+          }
+
+          if (PrevWaitAlu != nullptr && PrevWaitAlu->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR){
+            Mask = mergeMasks(Mask, PrevWaitAlu->getOperand(0).getImm());
+            PrevWaitAlu->eraseFromParent();
           }
           auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
                                TII->get(AMDGPU::S_WAITCNT_DEPCTR))
