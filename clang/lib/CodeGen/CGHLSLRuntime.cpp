@@ -191,7 +191,7 @@ createBufferHandleType(const HLSLBufferDecl *BufDecl) {
 // It is not quaranteed that all declarations in a buffer have an annotation.
 // For those where it is not specified a -1 value is added to the Layout
 // vector. In the final layout these declarations will be placed at the end
-// of the HLSL buffer after all of the elements with specified offset.  
+// of the HLSL buffer after all of the elements with specified offset.
 static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
                                  SmallVector<int32_t> &Layout) {
   assert(Layout.empty() && "expected empty vector for layout");

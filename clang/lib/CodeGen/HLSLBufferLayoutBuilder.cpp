@@ -64,7 +64,7 @@ namespace CodeGen {
 // user-specified offsets. Not all elements must have a packoffset/register(c#)
 // annotation though. For those that don't, the Packoffsets array will constain
 // -1 value instead. These elements must be placed at the end of the layout
-// after all of the elements with specific offset.  
+// after all of the elements with specific offset.
 llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
     const RecordType *StructType,
     const llvm::SmallVector<int32_t> *Packoffsets) {

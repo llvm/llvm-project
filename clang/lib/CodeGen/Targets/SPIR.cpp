@@ -52,9 +52,9 @@ public:
 
   unsigned getOpenCLKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
-  llvm::Type *getHLSLType(
-      CodeGenModule &CGM, const Type *Ty,
-      const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+  llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *Ty,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
       llvm::Type *ElementType, llvm::LLVMContext &Ctx) const;

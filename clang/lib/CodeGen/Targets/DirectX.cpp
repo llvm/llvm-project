@@ -29,9 +29,9 @@ public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *getHLSLType(
-      CodeGenModule &CGM, const Type *T,
-      const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+  llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *T,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
 };
 
 llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
