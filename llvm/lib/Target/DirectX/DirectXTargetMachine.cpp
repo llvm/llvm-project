@@ -187,4 +187,7 @@ DirectXTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 DirectXTargetLowering::DirectXTargetLowering(const DirectXTargetMachine &TM,
                                              const DirectXSubtarget &STI)
-    : TargetLowering(TM) {}
+    : TargetLowering(TM) {
+  addRegisterClass(MVT::i32, &dxil::DXILClassRegClass);
+  computeRegisterProperties(STI.getRegisterInfo());
+}
