@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn --passes='regallocfast<filter=sgpr>,regallocfast<filter=wwm>,regallocfast<filter=vgpr>' --print-pipeline-passes --filetype=null %s | FileCheck %s --check-prefix=PASS
 # RUN: not llc -mtriple=amdgcn --passes='regallocfast<filter=bad-filter>' --print-pipeline-passes --filetype=null %s 2>&1 | FileCheck %s --check-prefix=BAD-FILTER
 
-# RUN: llc -mtriple=amdgcn -enable-new-pm -sgpr-regalloc-npm=greedy -vgpr-regalloc-npm=fast -print-pipeline-passes %s | FileCheck %s --check-prefix=NPM-PASS
+# RUN: llc -mtriple=amdgcn -enable-new-pm -sgpr-regalloc-npm=greedy -wwm-regalloc-npm=fast -vgpr-regalloc-npm=fast -print-pipeline-passes %s | FileCheck %s --check-prefix=NPM-PASS
 
 
 # PASS: regallocfast<filter=sgpr>
@@ -11,6 +11,7 @@
 # BAD-FILTER: invalid regallocfast register filter 'bad-filter'
 
 # NPM-PASS: greedy<sgpr>
+# NPM-PASS: regallocfast<filter=wwm;no-clear-vregs>
 # NPM-PASS: regallocfast<filter=vgpr>
 ---
 name: f
