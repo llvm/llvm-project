@@ -33,6 +33,8 @@ using characteristics::DummyProcedure;
 using characteristics::FunctionResult;
 using characteristics::Procedure;
 
+class DistinguishabilityHelper;
+
 class CheckHelper {
 public:
   explicit CheckHelper(SemanticsContext &c) : context_{c} {}
@@ -89,6 +91,8 @@ private:
       const SourceName &, const Symbol &, const Procedure &, std::size_t);
   bool CheckDefinedAssignment(const Symbol &, const Procedure &);
   bool CheckDefinedAssignmentArg(const Symbol &, const DummyArgument &, int);
+  void CollectSpecifics(
+      DistinguishabilityHelper &, const Symbol &, const GenericDetails &);
   void CheckSpecifics(const Symbol &, const GenericDetails &);
   void CheckEquivalenceSet(const EquivalenceSet &);
   void CheckEquivalenceObject(const EquivalenceObject &);
@@ -1857,10 +1861,9 @@ void CheckHelper::CheckGeneric(
 }
 
 // Check that the specifics of this generic are distinguishable from each other
-void CheckHelper::CheckSpecifics(
+void CheckHelper::CollectSpecifics(DistinguishabilityHelper &helper,
     const Symbol &generic, const GenericDetails &details) {
   GenericKind kind{details.kind()};
-  DistinguishabilityHelper helper{context_};
   for (const Symbol &specific : details.specificProcs()) {
     if (specific.attrs().test(Attr::ABSTRACT)) {
       if (auto *msg{messages_.Say(generic.name(),
@@ -1915,6 +1918,23 @@ void CheckHelper::CheckSpecifics(
       }
     }
   }
+  if (const Scope * parent{generic.owner().GetDerivedTypeParent()}) {
+    if (const Symbol * inherited{parent->FindComponent(generic.name())}) {
+      if (IsAccessible(*inherited, generic.owner().parent())) {
+        if (const auto *details{inherited->detailsIf<GenericDetails>()}) {
+          // Include specifics of inherited generic of the same name, too
+          CollectSpecifics(helper, *inherited, *details);
+        }
+      }
+    }
+  }
+}
+
+void CheckHelper::CheckSpecifics(
+    const Symbol &generic, const GenericDetails &details) {
+  GenericKind kind{details.kind()};
+  DistinguishabilityHelper helper{context_};
+  CollectSpecifics(helper, generic, details);
   helper.Check(generic.owner());
 }
 
@@ -3884,10 +3904,11 @@ evaluate::Shape SubprogramMatchHelper::FoldShape(const evaluate::Shape &shape) {
 }
 
 void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
-    const Symbol &ultimateSpecific, const Procedure &procedure) {
-  if (!context_.HasError(ultimateSpecific)) {
+    const Symbol &specific, const Procedure &procedure) {
+  const Symbol &ultimate{specific.GetUltimate()};
+  if (!context_.HasError(ultimate)) {
     nameToSpecifics_[generic.name()].emplace(
-        &ultimateSpecific, ProcedureInfo{kind, procedure});
+        &ultimate, ProcedureInfo{kind, procedure});
   }
 }
 
@@ -3902,6 +3923,18 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
       const auto &[ultimate, procInfo]{*iter1};
       const auto &[kind, proc]{procInfo};
       for (auto iter2{iter1}; ++iter2 != info.end();) {
+        if (&*ultimate == &*iter2->first) {
+          continue; // ok, actually the same procedure
+        } else if (const auto *binding1{
+                       ultimate->detailsIf<ProcBindingDetails>()}) {
+          if (const auto *binding2{
+                  iter2->first->detailsIf<ProcBindingDetails>()}) {
+            if (&binding1->symbol().GetUltimate() ==
+                &binding2->symbol().GetUltimate()) {
+              continue; // ok, bindings resolve identically
+            }
+          }
+        }
         auto distinguishable{kind.IsName()
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
