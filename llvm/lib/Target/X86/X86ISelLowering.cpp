@@ -12207,19 +12207,23 @@ static SDValue lowerShuffleWithSSE4A(const SDLoc &DL, MVT VT, SDValue V1,
   return SDValue();
 }
 
-/// Lower a vector shuffle as a zero or any extension.
+/// Lower a vector shuffle as an any/signed/zero extension.
 ///
 /// Given a specific number of elements, element bit width, and extension
-/// stride, produce either a zero or any extension based on the available
+/// stride, produce either an extension based on the available
 /// features of the subtarget. The extended elements are consecutive and
 /// begin and can start from an offsetted element index in the input; to
 /// avoid excess shuffling the offset must either being in the bottom lane
 /// or at the start of a higher lane. All extended elements must be from
 /// the same lane.
-static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
-    const SDLoc &DL, MVT VT, int Scale, int Offset, bool AnyExt, SDValue InputV,
-    ArrayRef<int> Mask, const X86Subtarget &Subtarget, SelectionDAG &DAG) {
+static SDValue lowerShuffleAsSpecificExtension(const SDLoc &DL, MVT VT,
+                                               int Scale, int Offset,
+                                               unsigned ExtOpc, SDValue InputV,
+                                               ArrayRef<int> Mask,
+                                               const X86Subtarget &Subtarget,
+                                               SelectionDAG &DAG) {
   assert(Scale > 1 && "Need a scale to extend.");
+  assert(ISD::isExtOpcode(ExtOpc) && "Unsupported extension");
   int EltBits = VT.getScalarSizeInBits();
   int NumElements = VT.getVectorNumElements();
   int NumEltsPerLane = 128 / EltBits;
@@ -12260,13 +12264,17 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
                                  NumElements / Scale);
     InputV = DAG.getBitcast(VT, InputV);
     InputV = ShuffleOffset(InputV);
-    InputV = getEXTEND_VECTOR_INREG(AnyExt ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND,
-                                    DL, ExtVT, InputV, DAG);
+    InputV = getEXTEND_VECTOR_INREG(ExtOpc, DL, ExtVT, InputV, DAG);
     return DAG.getBitcast(VT, InputV);
   }
 
   assert(VT.is128BitVector() && "Only 128-bit vectors can be extended.");
   InputV = DAG.getBitcast(VT, InputV);
+  bool AnyExt = ExtOpc == ISD::ANY_EXTEND;
+
+  // TODO: Add pre-SSE41 SIGN_EXTEND_VECTOR_INREG handling.
+  if (ExtOpc == ISD::SIGN_EXTEND)
+    return SDValue();
 
   // For any extends we can cheat for larger element sizes and use shuffle
   // instructions that can fold with a load and/or copy.
@@ -12451,8 +12459,9 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
     if (Offset != 0 && Matches < 2)
       return SDValue();
 
-    return lowerShuffleAsSpecificZeroOrAnyExtend(DL, VT, Scale, Offset, AnyExt,
-                                                 InputV, Mask, Subtarget, DAG);
+    unsigned ExtOpc = AnyExt ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND;
+    return lowerShuffleAsSpecificExtension(DL, VT, Scale, Offset, ExtOpc,
+                                           InputV, Mask, Subtarget, DAG);
   };
 
   // The widest scale possible for extending is to a 64-bit integer.
