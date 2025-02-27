@@ -657,16 +657,6 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
 
   uint32_t Insn = support::endian::read32le(Bytes.data());
 
-  TRY_TO_DECODE(STI.hasFeature(RISCV::FeatureStdExtZdinx) &&
-                    !STI.hasFeature(RISCV::Feature64Bit),
-                DecoderTableRV32Zdinx32,
-                "RV32Zdinx (Double in Integer and rv32)");
-  TRY_TO_DECODE(STI.hasFeature(RISCV::FeatureStdExtZacas) &&
-                    !STI.hasFeature(RISCV::Feature64Bit),
-                DecoderTableRV32Zacas32,
-                "RV32Zacas (Compare-And-Swap and rv32)");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZfinx, DecoderTableRVZfinx32,
-                        "RVZfinx (Float in Integer)");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXVentanaCondOps,
                         DecoderTableXVentana32, "XVentanaCondOps");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBa, DecoderTableXTHeadBa32,
@@ -721,6 +711,11 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE_ANY(XRivosFeatureGroup, DecoderTableXRivos32, "Rivos");
 
   TRY_TO_DECODE(true, DecoderTable32, "RISCV32");
+  TRY_TO_DECODE(true, DecoderTableRV32GPRPair32,
+                "RV32GPRPair (rv32 and GPR pairs)");
+  TRY_TO_DECODE(true, DecoderTableZfinx32, "Zfinx (Float in Integer)");
+  TRY_TO_DECODE(true, DecoderTableZdinxRV32GPRPair32,
+                "ZdinxRV32GPRPair (rv32 and Double in Integer)");
 
   return MCDisassembler::Fail;
 }
@@ -736,15 +731,6 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   Size = 2;
 
   uint32_t Insn = support::endian::read16le(Bytes.data());
-  TRY_TO_DECODE_AND_ADD_SP(!STI.hasFeature(RISCV::Feature64Bit),
-                           DecoderTableRISCV32Only_16,
-                           "RISCV32Only_16 (16-bit Instruction)");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZicfiss, DecoderTableZicfiss16,
-                        "RVZicfiss (Shadow Stack)");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZcmt, DecoderTableRVZcmt16,
-                        "Zcmt (16-bit Table Jump Instructions)");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
-                        "Zcmp (16-bit Push/Pop & Double Move Instructions)");
 
   TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci16,
                             "Qualcomm uC 16bit");
@@ -753,8 +739,16 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
       "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)");
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
                            DecoderTableXwchc16, "WCH QingKe XW");
+
+  // DecoderTableZicfiss16 must be checked before DecoderTable16.
+  TRY_TO_DECODE(true, DecoderTableZicfiss16, "RVZicfiss (Shadow Stack)");
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
                            "RISCV_C (16-bit Instruction)");
+  TRY_TO_DECODE_AND_ADD_SP(true, DecoderTableRISCV32Only_16,
+                           "RISCV32Only_16 (16-bit Instruction)");
+  // Zc* instructions incompatible with Zcf or Zcd.
+  TRY_TO_DECODE(true, DecoderTableZcOverlap16,
+                "ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd)");
 
   return MCDisassembler::Fail;
 }
