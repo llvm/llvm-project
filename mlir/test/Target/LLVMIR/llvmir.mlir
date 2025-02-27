@@ -84,7 +84,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
   llvm.return %0 : i32
 }
 
-// CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
+// CHECK: @int_gep = internal constant ptr getelementptr (i8, ptr @i32_global, i64 8)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
   %_c0 = llvm.mlir.constant(2: i32) : i32
@@ -2347,7 +2347,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none) }
 
 // -----
 
@@ -2355,7 +2355,7 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none) }
 
 // -----
 
@@ -2613,11 +2613,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none)
 
 // -----
 

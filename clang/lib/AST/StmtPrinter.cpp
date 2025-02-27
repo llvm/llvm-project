@@ -764,6 +764,11 @@ void StmtPrinter::VisitOMPTileDirective(OMPTileDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPStripeDirective(OMPStripeDirective *Node) {
+  Indent() << "#pragma omp stripe";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPUnrollDirective(OMPUnrollDirective *Node) {
   Indent() << "#pragma omp unroll";
   PrintOMPExecutableDirective(Node);
@@ -2602,15 +2607,6 @@ void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   OS << "...[";
   PrintExpr(E->getIndexExpr());
   OS << "]";
-}
-
-void StmtPrinter::VisitResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  OS << "<<resolved pack(";
-  llvm::interleave(
-      E->getExprs().begin(), E->getExprs().end(),
-      [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
-  OS << ")>>";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

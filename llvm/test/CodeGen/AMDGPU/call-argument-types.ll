@@ -1147,12 +1147,11 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
 ; VI-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s38, -1
 ; VI-NEXT:    s_mov_b32 s39, 0xe80000
-; VI-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_add_u32 s36, s36, s3
+; VI-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s1, s0
 ; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_addc_u32 s37, s37, 0
 ; VI-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1170,12 +1169,11 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
 ; CI-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; CI-NEXT:    s_mov_b32 s38, -1
 ; CI-NEXT:    s_mov_b32 s39, 0xe8f000
-; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CI-NEXT:    s_mov_b32 s0, 0
 ; CI-NEXT:    s_add_u32 s36, s36, s3
+; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_addc_u32 s37, s37, 0
 ; CI-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1193,12 +1191,11 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GFX9-NEXT:    s_mov_b32 s38, -1
 ; GFX9-NEXT:    s_mov_b32 s39, 0xe00000
-; GFX9-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    s_add_u32 s36, s36, s3
+; GFX9-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    s_mov_b32 s1, s0
 ; GFX9-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX9-NEXT:    s_addc_u32 s37, s37, 0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1212,10 +1209,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
 ;
 ; GFX11-LABEL: test_call_external_void_func_v2i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s6, -1
-; GFX11-NEXT:    s_mov_b32 s5, s4
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
 ; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i64@rel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i64@rel32@hi+12
@@ -1229,11 +1225,10 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_mov_b32 s8, 0
 ; HSA-NEXT:    s_add_u32 s0, s0, s9
+; HSA-NEXT:    s_mov_b64 s[8:9], 0
 ; HSA-NEXT:    s_mov_b32 s11, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s10, -1
-; HSA-NEXT:    s_mov_b32 s9, s8
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
 ; HSA-NEXT:    s_addc_u32 s1, s1, 0
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
@@ -1357,12 +1352,11 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
 ; VI-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s38, -1
 ; VI-NEXT:    s_mov_b32 s39, 0xe80000
-; VI-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_add_u32 s36, s36, s3
+; VI-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s1, s0
 ; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_addc_u32 s37, s37, 0
 ; VI-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1382,12 +1376,11 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
 ; CI-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; CI-NEXT:    s_mov_b32 s38, -1
 ; CI-NEXT:    s_mov_b32 s39, 0xe8f000
-; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CI-NEXT:    s_mov_b32 s0, 0
 ; CI-NEXT:    s_add_u32 s36, s36, s3
+; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_addc_u32 s37, s37, 0
 ; CI-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1407,12 +1400,11 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GFX9-NEXT:    s_mov_b32 s38, -1
 ; GFX9-NEXT:    s_mov_b32 s39, 0xe00000
-; GFX9-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    s_add_u32 s36, s36, s3
+; GFX9-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    s_mov_b32 s1, s0
 ; GFX9-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX9-NEXT:    s_addc_u32 s37, s37, 0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1428,10 +1420,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
 ;
 ; GFX11-LABEL: test_call_external_void_func_v3i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s6, -1
-; GFX11-NEXT:    s_mov_b32 s5, s4
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 1 :: v_dual_mov_b32 v5, 2
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[4:7], 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
@@ -1446,11 +1437,10 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_mov_b32 s8, 0
 ; HSA-NEXT:    s_add_u32 s0, s0, s9
+; HSA-NEXT:    s_mov_b64 s[8:9], 0
 ; HSA-NEXT:    s_mov_b32 s11, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s10, -1
-; HSA-NEXT:    s_mov_b32 s9, s8
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
 ; HSA-NEXT:    s_addc_u32 s1, s1, 0
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
@@ -1477,12 +1467,11 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
 ; VI-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s38, -1
 ; VI-NEXT:    s_mov_b32 s39, 0xe80000
-; VI-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; VI-NEXT:    s_mov_b32 s0, 0
 ; VI-NEXT:    s_add_u32 s36, s36, s3
+; VI-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s1, s0
 ; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_addc_u32 s37, s37, 0
 ; VI-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1504,12 +1493,11 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
 ; CI-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; CI-NEXT:    s_mov_b32 s38, -1
 ; CI-NEXT:    s_mov_b32 s39, 0xe8f000
-; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; CI-NEXT:    s_mov_b32 s0, 0
 ; CI-NEXT:    s_add_u32 s36, s36, s3
+; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_addc_u32 s37, s37, 0
 ; CI-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1531,12 +1519,11 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GFX9-NEXT:    s_mov_b32 s38, -1
 ; GFX9-NEXT:    s_mov_b32 s39, 0xe00000
-; GFX9-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    s_add_u32 s36, s36, s3
+; GFX9-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    s_mov_b32 s1, s0
 ; GFX9-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX9-NEXT:    s_addc_u32 s37, s37, 0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -1554,10 +1541,9 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
 ;
 ; GFX11-LABEL: test_call_external_void_func_v4i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s6, -1
-; GFX11-NEXT:    s_mov_b32 s5, s4
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 1 :: v_dual_mov_b32 v5, 2
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[4:7], 0
 ; GFX11-NEXT:    v_dual_mov_b32 v6, 3 :: v_dual_mov_b32 v7, 4
@@ -1573,11 +1559,10 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
 ; HSA:       ; %bb.0:
 ; HSA-NEXT:    s_add_i32 s6, s6, s9
 ; HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; HSA-NEXT:    s_mov_b32 s8, 0
 ; HSA-NEXT:    s_add_u32 s0, s0, s9
+; HSA-NEXT:    s_mov_b64 s[8:9], 0
 ; HSA-NEXT:    s_mov_b32 s11, 0x1100f000
 ; HSA-NEXT:    s_mov_b32 s10, -1
-; HSA-NEXT:    s_mov_b32 s9, s8
 ; HSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
 ; HSA-NEXT:    s_addc_u32 s1, s1, 0
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7

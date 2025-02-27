@@ -15,6 +15,7 @@
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
@@ -497,6 +498,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
 
     if (!IslandOffset)
       return;
+
+    // Print label if it exists at this offset.
+    if (const BinaryData *BD =
+            BC.getBinaryDataAtAddress(getAddress() + *IslandOffset))
+      OS << BD->getName() << ":\n";
 
     const size_t IslandSize = getSizeOfDataInCodeAt(*IslandOffset);
     BC.printData(OS, BC.extractData(getAddress() + *IslandOffset, IslandSize),
@@ -1066,7 +1072,7 @@ size_t BinaryFunction::getSizeOfDataInCodeAt(uint64_t Offset) const {
   auto Iter = Islands->CodeOffsets.upper_bound(Offset);
   if (Iter != Islands->CodeOffsets.end())
     return *Iter - Offset;
-  return getSize() - Offset;
+  return getMaxSize() - Offset;
 }
 
 std::optional<uint64_t>
@@ -1748,8 +1754,7 @@ void BinaryFunction::postProcessEntryPoints() {
     // In non-relocation mode there's potentially an external undetectable
     // reference to the entry point and hence we cannot move this entry
     // point. Optimizing without moving could be difficult.
-    // In BAT mode, register any known entry points for CFG construction.
-    if (!BC.HasRelocations && !BC.HasBATSection)
+    if (!BC.HasRelocations)
       setSimple(false);
 
     const uint32_t Offset = KV.first;
@@ -2078,7 +2083,7 @@ void BinaryFunction::recomputeLandingPads() {
 Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   auto &MIB = BC.MIB;
 
-  if (!isSimple()) {
+  if (!isSimple() && !opts::AggregateOnly) {
     assert(!BC.HasRelocations &&
            "cannot process file with non-simple function in relocs mode");
     return createNonFatalBOLTError("");
@@ -4254,10 +4259,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
 
   if (BC.HasRelocations || isInjected()) {
     if (hasConstantIsland()) {
-      const auto DataAddress =
-          Linker.lookupSymbol(getFunctionConstantIslandLabel()->getName());
-      assert(DataAddress && "Cannot find function CI symbol");
-      setOutputDataAddress(*DataAddress);
+      const auto IslandLabelSymInfo =
+          Linker.lookupSymbolInfo(getFunctionConstantIslandLabel()->getName());
+      assert(IslandLabelSymInfo && "Cannot find function CI symbol");
+      setOutputDataAddress(IslandLabelSymInfo->Address);
       for (auto It : Islands->Offsets) {
         const uint64_t OldOffset = It.first;
         BinaryData *BD = BC.getBinaryDataAtAddress(getAddress() + OldOffset);
@@ -4265,10 +4270,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
           continue;
 
         MCSymbol *Symbol = It.second;
-        const auto NewAddress = Linker.lookupSymbol(Symbol->getName());
-        assert(NewAddress && "Cannot find CI symbol");
+        const auto SymInfo = Linker.lookupSymbolInfo(Symbol->getName());
+        assert(SymInfo && "Cannot find CI symbol");
         auto &Section = *getCodeSection();
-        const auto NewOffset = *NewAddress - Section.getOutputAddress();
+        const auto NewOffset = SymInfo->Address - Section.getOutputAddress();
         BD->setOutputLocation(Section, NewOffset);
       }
     }
@@ -4293,10 +4298,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
         FF.setAddress(ColdStartSymbolInfo->Address);
         FF.setImageSize(ColdStartSymbolInfo->Size);
         if (hasConstantIsland()) {
-          const auto DataAddress = Linker.lookupSymbol(
+          const auto SymInfo = Linker.lookupSymbolInfo(
               getFunctionColdConstantIslandLabel()->getName());
-          assert(DataAddress && "Cannot find cold CI symbol");
-          setOutputColdDataAddress(*DataAddress);
+          assert(SymInfo && "Cannot find cold CI symbol");
+          setOutputColdDataAddress(SymInfo->Address);
         }
       }
     }

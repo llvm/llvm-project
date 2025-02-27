@@ -400,6 +400,12 @@ TEST(ArchSpecTest, Compatibility) {
     B.MergeFrom(A);
     ASSERT_TRUE(B.IsExactMatch(C));
   }
+  {
+    ArchSpec A("x86_64-apple-driverkit19.0");
+    ArchSpec B("x86_64-apple-macosx10.15.0");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+  }
 }
 
 TEST(ArchSpecTest, OperatorBool) {

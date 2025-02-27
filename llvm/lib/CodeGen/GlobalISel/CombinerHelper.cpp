@@ -5641,6 +5641,7 @@ bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   Register RHS = MI.getOperand(2).getReg();
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
+  LLT RHSTy = MRI.getType(RHS);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   auto MatchPow2ExceptOne = [&](const Constant *C) {
     if (auto *CI = dyn_cast<ConstantInt>(C))
@@ -5649,7 +5650,10 @@ bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   };
   if (!matchUnaryPredicate(MRI, RHS, MatchPow2ExceptOne, false))
     return false;
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}});
+  // We need to check both G_LSHR and G_CTLZ because the combine uses G_CTLZ to
+  // get log base 2, and it is not always legal for on a target.
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}}) &&
+         isLegalOrBeforeLegalizer({TargetOpcode::G_CTLZ, {RHSTy, RHSTy}});
 }
 
 void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) const {

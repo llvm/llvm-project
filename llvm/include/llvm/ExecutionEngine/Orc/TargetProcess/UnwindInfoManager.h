@@ -15,14 +15,13 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_UNWINDINFOMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <mutex>
 
 namespace llvm::orc {
 
-class UnwindInfoManager : public ExecutorBootstrapService {
+class UnwindInfoManager {
 public:
   // This struct's layout should match the unw_dynamic_unwind_sections struct
   // from libunwind/src/libunwid_ext.h.
@@ -34,43 +33,40 @@ public:
     size_t compact_unwind_section_length;
   };
 
+  UnwindInfoManager(UnwindInfoManager &&) = delete;
+  UnwindInfoManager &operator=(UnwindInfoManager &&) = delete;
+  ~UnwindInfoManager();
+
   /// If the libunwind find-dynamic-unwind-info callback registration APIs are
-  /// available then this method will return an UnwindInfoManager instance,
-  /// otherwise it will return nullptr.
-  static std::unique_ptr<UnwindInfoManager> TryCreate();
+  /// available then this method will instantiate a global UnwindInfoManager
+  /// instance suitable for the process and return true. Otherwise it will
+  /// return false.
+  static bool TryEnable();
 
-  Error shutdown() override;
-  void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
+  static void addBootstrapSymbols(StringMap<ExecutorAddr> &M);
 
-  Error enable(void *FindDynamicUnwindSections);
-  Error disable(void);
+  static Error registerSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges,
+                                orc::ExecutorAddr DSOBase,
+                                orc::ExecutorAddrRange DWARFEHFrame,
+                                orc::ExecutorAddrRange CompactUnwind);
 
-  Error registerSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges,
-                         orc::ExecutorAddr DSOBase,
-                         orc::ExecutorAddrRange DWARFEHFrame,
-                         orc::ExecutorAddrRange CompactUnwind);
-
-  Error deregisterSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges);
-
-  int findSections(uintptr_t Addr, UnwindSections *Info);
+  static Error deregisterSections(ArrayRef<orc::ExecutorAddrRange> CodeRanges);
 
 private:
-  UnwindInfoManager(int (*AddFindDynamicUnwindSections)(void *),
-                    int (*RemoveFindDynamicUnwindSections)(void *))
-      : AddFindDynamicUnwindSections(AddFindDynamicUnwindSections),
-        RemoveFindDynamicUnwindSections(RemoveFindDynamicUnwindSections) {}
+  UnwindInfoManager() = default;
 
-  static int findSectionsHelper(UnwindInfoManager *Instance, uintptr_t Addr,
-                                UnwindSections *Info);
+  int findSectionsImpl(uintptr_t Addr, UnwindSections *Info);
+  static int findSections(uintptr_t Addr, UnwindSections *Info);
+
+  Error registerSectionsImpl(ArrayRef<orc::ExecutorAddrRange> CodeRanges,
+                             orc::ExecutorAddr DSOBase,
+                             orc::ExecutorAddrRange DWARFEHFrame,
+                             orc::ExecutorAddrRange CompactUnwind);
+
+  Error deregisterSectionsImpl(ArrayRef<orc::ExecutorAddrRange> CodeRanges);
 
   std::mutex M;
   std::map<uintptr_t, UnwindSections> UWSecs;
-
-  int (*AddFindDynamicUnwindSections)(void *) = nullptr;
-  int (*RemoveFindDynamicUnwindSections)(void *) = nullptr;
-  void *FindDynamicUnwindSections = nullptr;
-
-  static const char *AddFnName, *RemoveFnName;
 };
 
 } // namespace llvm::orc

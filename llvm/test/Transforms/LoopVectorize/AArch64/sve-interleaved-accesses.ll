@@ -396,8 +396,8 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
-; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP10]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP10]])
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP11]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <vscale x 4 x i32> [[REVERSE]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub nsw <vscale x 4 x i32> [[REVERSE1]], [[VEC_IND]]
@@ -1492,9 +1492,9 @@ define void @PR34743(ptr %a, ptr %b, i64 %n) #1 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[VECTOR_MEMCHECK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ], [ [[DOTPRE]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP33:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[LOAD2:%.*]], [[LOOP]] ]
@@ -1548,5 +1548,263 @@ end:
   ret void
 }
 
+; Check vectorization on an interleaved load/store groups of factor 4
+
+; for (int i = 0; i < 1024; ++i) {
+;   dst[i].x = a[i].x + b[i].x;
+;   dst[i].y = a[i].y - b[i].y;
+;   dst[i].z = a[i].z << b[i].z;
+;   dst[i].t = a[i].t >> b[i].t;
+; }
+%struct.xyzt = type { i32, i32, i32, i32 }
+
+define void @interleave_deinterleave(ptr writeonly noalias %dst, ptr readonly %a, ptr readonly %b) {
+; CHECK-LABEL: @interleave_deinterleave(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i64 [[TMP1]], 1024
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 1024, [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 2
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_XYZT:%.*]], ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i32>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[STRIDED_VEC7:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC6]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC7]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC6]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC7]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_XYZT]], ptr [[B:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_VEC8:%.*]] = load <vscale x 16 x i32>, ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC9:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> [[WIDE_VEC8]])
+; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[STRIDED_VEC9]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[STRIDED_VEC9]], 1
+; CHECK-NEXT:    [[STRIDED_VEC10:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP14]])
+; CHECK-NEXT:    [[STRIDED_VEC11:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC10]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC11]], 0
+; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC10]], 1
+; CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC11]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = add nsw <vscale x 4 x i32> [[TMP16]], [[TMP9]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_XYZT]], ptr [[DST:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sub nsw <vscale x 4 x i32> [[TMP10]], [[TMP17]]
+; CHECK-NEXT:    [[TMP23:%.*]] = shl <vscale x 4 x i32> [[TMP11]], [[TMP18]]
+; CHECK-NEXT:    [[TMP24:%.*]] = ashr <vscale x 4 x i32> [[TMP12]], [[TMP19]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[TMP20]], <vscale x 4 x i32> [[TMP23]])
+; CHECK-NEXT:    [[INTERLEAVED_VEC12:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[TMP22]], <vscale x 4 x i32> [[TMP24]])
+; CHECK-NEXT:    [[INTERLEAVED_VEC13:%.*]] = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> [[INTERLEAVED_VEC]], <vscale x 8 x i32> [[INTERLEAVED_VEC12]])
+; CHECK-NEXT:    store <vscale x 16 x i32> [[INTERLEAVED_VEC13]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [[STRUCT_XYZT]], ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [[STRUCT_XYZT]], ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP27]], [[TMP26]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw [[STRUCT_XYZT]], ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 4
+; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    [[Y11:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX2]], i64 4
+; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[Y11]], align 4
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP28]], [[TMP29]]
+; CHECK-NEXT:    [[Y14:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX5]], i64 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[Y14]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 8
+; CHECK-NEXT:    [[TMP30:%.*]] = load i32, ptr [[Z]], align 4
+; CHECK-NEXT:    [[Z19:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX2]], i64 8
+; CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr [[Z19]], align 4
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP30]], [[TMP31]]
+; CHECK-NEXT:    [[Z22:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX5]], i64 8
+; CHECK-NEXT:    store i32 [[SHL]], ptr [[Z22]], align 4
+; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 12
+; CHECK-NEXT:    [[TMP32:%.*]] = load i32, ptr [[T]], align 4
+; CHECK-NEXT:    [[T27:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX2]], i64 12
+; CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[T27]], align 4
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[TMP32]], [[TMP33]]
+; CHECK-NEXT:    [[T30:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX5]], i64 12
+; CHECK-NEXT:    store i32 [[SHR]], ptr [[T30]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds %struct.xyzt, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds %struct.xyzt, ptr %b, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx2, align 4
+  %add = add nsw i32 %1, %0
+  %arrayidx5 = getelementptr inbounds %struct.xyzt, ptr %dst, i64 %indvars.iv
+  store i32 %add, ptr %arrayidx5, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i64 4
+  %2 = load i32, ptr %y, align 4
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx2, i64 4
+  %3 = load i32, ptr %y11, align 4
+  %sub = sub nsw i32 %2, %3
+  %y14 = getelementptr inbounds nuw i8, ptr %arrayidx5, i64 4
+  store i32 %sub, ptr %y14, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i64 8
+  %4 = load i32, ptr %z, align 4
+  %z19 = getelementptr inbounds nuw i8, ptr %arrayidx2, i64 8
+  %5 = load i32, ptr %z19, align 4
+  %shl = shl i32 %4, %5
+  %z22 = getelementptr inbounds nuw i8, ptr %arrayidx5, i64 8
+  store i32 %shl, ptr %z22, align 4
+  %t = getelementptr inbounds nuw i8, ptr %arrayidx, i64 12
+  %6 = load i32, ptr %t, align 4
+  %t27 = getelementptr inbounds nuw i8, ptr %arrayidx2, i64 12
+  %7 = load i32, ptr %t27, align 4
+  %shr = ashr i32 %6, %7
+  %t30 = getelementptr inbounds nuw i8, ptr %arrayidx5, i64 12
+  store i32 %shr, ptr %t30, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; Check vectorization on a reverse interleaved load/store groups of factor 4
+
+; for (int i = 1023; i >= 0; i--) {
+;   int a = A[i].x + i;
+;   int b = A[i].y - i;
+;   int c = A[i].z * i;
+;   int d = A[i].t << i;
+;   B[i].x = a;
+;   B[i].y = b;
+;   B[i].z = c;
+;   B[i].t = d;
+; }
+
+define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, ptr noalias nocapture %B) #1{
+; CHECK-LABEL: @interleave_deinterleave_reverse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+; CHECK-NEXT:    [[INDUCTION:%.*]] = sub <vscale x 4 x i32> splat (i32 1023), [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw i32 0, [[TMP3]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP4]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_XYZT:%.*]], ptr [[A:%.*]], i64 [[OFFSET_IDX]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i32 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw i32 4, [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 [[TMP9]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i32>, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP11]])
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[TMP12]])
+; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC1]], 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC1]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 1
+; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP13]])
+; CHECK-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP14]])
+; CHECK-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP15]])
+; CHECK-NEXT:    [[REVERSE5:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP16]])
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <vscale x 4 x i32> [[REVERSE]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sub nsw <vscale x 4 x i32> [[REVERSE3]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP19:%.*]] = mul nsw <vscale x 4 x i32> [[REVERSE4]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shl nuw nsw <vscale x 4 x i32> [[REVERSE5]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_XYZT]], ptr [[B:%.*]], i64 [[OFFSET_IDX]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw i32 [[TMP22]], 4
+; CHECK-NEXT:    [[TMP24:%.*]] = sub nsw i32 4, [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = sext i32 [[TMP24]] to i64
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i64 [[TMP25]]
+; CHECK-NEXT:    [[REVERSE6:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP17]])
+; CHECK-NEXT:    [[REVERSE7:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP18]])
+; CHECK-NEXT:    [[REVERSE8:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP19]])
+; CHECK-NEXT:    [[REVERSE9:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP20]])
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[REVERSE6]], <vscale x 4 x i32> [[REVERSE8]])
+; CHECK-NEXT:    [[INTERLEAVED_VEC10:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[REVERSE7]], <vscale x 4 x i32> [[REVERSE9]])
+; CHECK-NEXT:    [[INTERLEAVED_VEC11:%.*]] = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> [[INTERLEAVED_VEC]], <vscale x 8 x i32> [[INTERLEAVED_VEC10]])
+; CHECK-NEXT:    store <vscale x 16 x i32> [[INTERLEAVED_VEC11]], ptr [[TMP26]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP43:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 poison, label [[FOR_BODY]], label [[FOR_COND_CLEANUP]], !llvm.loop [[LOOP44:![0-9]+]]
+;
+entry:
+  br label %for.body
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
+  %x = getelementptr inbounds %struct.xyzt, ptr %A, i64 %indvars.iv, i32 0
+  %load1 = load i32, ptr %x, align 4
+  %trunc = trunc i64 %indvars.iv to i32
+  %add = add nsw i32 %load1, %trunc
+  %y = getelementptr inbounds %struct.xyzt, ptr %A, i64 %indvars.iv, i32 1
+  %load2 = load i32, ptr %y, align 4
+  %sub = sub nsw i32 %load2, %trunc
+  %z = getelementptr inbounds %struct.xyzt, ptr %A, i64 %indvars.iv, i32 2
+  %load3 = load i32, ptr %z, align 4
+  %mul = mul nsw i32 %load3, %trunc
+  %t = getelementptr inbounds %struct.xyzt, ptr %A, i64 %indvars.iv, i32 3
+  %load4 = load i32, ptr %t, align 4
+  %shl = shl nuw nsw i32 %load4, %trunc
+  %x5 = getelementptr inbounds %struct.xyzt, ptr %B, i64 %indvars.iv, i32 0
+  store i32 %add, ptr %x5, align 4
+  %y8 = getelementptr inbounds %struct.xyzt, ptr %B, i64 %indvars.iv, i32 1
+  store i32 %sub, ptr %y8, align 4
+  %z5 = getelementptr inbounds %struct.xyzt, ptr %B, i64 %indvars.iv, i32 2
+  store i32 %mul, ptr %z5, align 4
+  %t8 = getelementptr inbounds %struct.xyzt, ptr %B, i64 %indvars.iv, i32 3
+  store i32 %shl, ptr %t8, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %cmp = icmp sgt i64 %indvars.iv, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+}
 attributes #1 = { "target-features"="+sve" vscale_range(1, 16) }
 attributes #0 = { "unsafe-fp-math"="true" "target-features"="+sve" vscale_range(1, 16) }

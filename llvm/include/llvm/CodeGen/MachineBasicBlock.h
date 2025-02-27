@@ -34,6 +34,7 @@ namespace llvm {
 class BasicBlock;
 class MachineDomTreeUpdater;
 class MachineFunction;
+class MachineLoopInfo;
 class MCSymbol;
 class ModuleSlotTracker;
 class Pass;
@@ -42,6 +43,7 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class LiveIntervals;
+class LiveVariables;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -971,6 +973,13 @@ public:
   ///
   /// This function updates LiveVariables, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
+  struct SplitCriticalEdgeAnalyses {
+    LiveIntervals *LIS;
+    SlotIndexes *SI;
+    LiveVariables *LV;
+    MachineLoopInfo *MLI;
+  };
+
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
                     std::vector<SparseBitVector<>> *LiveInSets = nullptr,
@@ -987,6 +996,10 @@ public:
   }
 
   // Helper method for new pass manager migration.
+  MachineBasicBlock *SplitCriticalEdge(
+      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
+      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+
   MachineBasicBlock *SplitCriticalEdge(
       MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
       std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
