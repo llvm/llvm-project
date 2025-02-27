@@ -1279,11 +1279,11 @@ public:
 
   /// Provide default layouts relevant to C. Frontends may override these
   /// values.
-  CLayouts getCLayouts(const StringRef &ABIName) const;
+  CLayouts getCLayouts() const;
 
   /// Return true if `long double` and `_Float128` have the same layout.
-  bool isLongDoubleF128(const StringRef &ABIName) const {
-    return getCLayouts(ABIName).LongDoubleFormat == &APFloatBase::IEEEquad();
+  bool isLongDoubleF128() const {
+    return getCLayouts().LongDoubleFormat == &APFloatBase::IEEEquad();
   }
 };
 

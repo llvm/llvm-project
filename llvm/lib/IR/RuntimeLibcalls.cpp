@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace RTLIB;
@@ -24,55 +25,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   // Initialize calling conventions to their default.
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
-
-  // The long double version of library functions is more common than the
-  // f128-specific version. Use these if that is the long double type on the
-  // platform, or if the frontend specifies.
-  if (TT.isLongDoubleF128(""))  {
-    setLibcallName(RTLIB::ACOS_F128, "acosl");
-    setLibcallName(RTLIB::ASIN_F128, "asinl");
-    setLibcallName(RTLIB::ATAN2_F128,"atan2l");
-    setLibcallName(RTLIB::ATAN_F128,"atanl");
-    setLibcallName(RTLIB::CBRT_F128, "cbrtl");
-    setLibcallName(RTLIB::CEIL_F128, "ceill");
-    setLibcallName(RTLIB::COPYSIGN_F128, "copysignl");
-    setLibcallName(RTLIB::COSH_F128, "coshl");
-    setLibcallName(RTLIB::COS_F128, "cosl");
-    setLibcallName(RTLIB::EXP10_F128, "exp10l");
-    setLibcallName(RTLIB::EXP2_F128, "exp2l");
-    setLibcallName(RTLIB::EXP_F128, "expl");
-    setLibcallName(RTLIB::FLOOR_F128, "floorl");
-    setLibcallName(RTLIB::FMAXIMUMNUM_F128, "fmaximum_numl");
-    setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximuml");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxl");
-    setLibcallName(RTLIB::FMA_F128, "fmal");
-    setLibcallName(RTLIB::FMINIMUMNUM_F128, "fminimum_numl");
-    setLibcallName(RTLIB::FMINIMUM_F128, "fminimuml");
-    setLibcallName(RTLIB::FMIN_F128, "fminl");
-    setLibcallName(RTLIB::FREXP_F128, "frexpl");
-    setLibcallName(RTLIB::LDEXP_F128, "ldexpl");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintl");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundl");
-    setLibcallName(RTLIB::LOG10_F128, "log10l");
-    setLibcallName(RTLIB::LOG2_F128, "log2l");
-    setLibcallName(RTLIB::LOG_F128, "logl");
-    setLibcallName(RTLIB::LRINT_F128, "lrintl");
-    setLibcallName(RTLIB::LROUND_F128, "lroundl");
-    setLibcallName(RTLIB::MODF_F128, "modfl");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintl");
-    setLibcallName(RTLIB::POW_F128, "powl");
-    setLibcallName(RTLIB::REM_F128, "fmodl");
-    setLibcallName(RTLIB::RINT_F128, "rintl");
-    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenl");
-    setLibcallName(RTLIB::ROUND_F128, "roundl");
-    setLibcallName(RTLIB::SINCOSPI_F128, "sincospil");
-    setLibcallName(RTLIB::SINH_F128, "sinhl");
-    setLibcallName(RTLIB::SIN_F128, "sinl");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtl");
-    setLibcallName(RTLIB::TANH_F128,"tanhl");
-    setLibcallName(RTLIB::TAN_F128,"tanl");
-    setLibcallName(RTLIB::TRUNC_F128, "truncl");
-  }
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
   if (TT.isPPC()) {
@@ -251,5 +203,60 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallName(RTLIB::MULO_I64, nullptr);
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+}
+
+void RuntimeLibcallsInfo::adjustLibcalls(const TargetMachine &TM,
+                                         const fltSemantics *LongDoubleFormat) {
+
+  const Triple &TT = TM.getTargetTriple();
+
+  // The long double version of library functions is more common than the
+  // f128-specific version. Use these if that is the long double type on the
+  // platform, or if the frontend specifies.
+  if (TT.isLongDoubleF128()) {
+    setLibcallName(RTLIB::ACOS_F128, "acosl");
+    setLibcallName(RTLIB::ASIN_F128, "asinl");
+    setLibcallName(RTLIB::ATAN2_F128, "atan2l");
+    setLibcallName(RTLIB::ATAN_F128, "atanl");
+    setLibcallName(RTLIB::CBRT_F128, "cbrtl");
+    setLibcallName(RTLIB::CEIL_F128, "ceill");
+    setLibcallName(RTLIB::COPYSIGN_F128, "copysignl");
+    setLibcallName(RTLIB::COSH_F128, "coshl");
+    setLibcallName(RTLIB::COS_F128, "cosl");
+    setLibcallName(RTLIB::EXP10_F128, "exp10l");
+    setLibcallName(RTLIB::EXP2_F128, "exp2l");
+    setLibcallName(RTLIB::EXP_F128, "expl");
+    setLibcallName(RTLIB::FLOOR_F128, "floorl");
+    setLibcallName(RTLIB::FMAXIMUMNUM_F128, "fmaximum_numl");
+    setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximuml");
+    setLibcallName(RTLIB::FMAX_F128, "fmaxl");
+    setLibcallName(RTLIB::FMA_F128, "fmal");
+    setLibcallName(RTLIB::FMINIMUMNUM_F128, "fminimum_numl");
+    setLibcallName(RTLIB::FMINIMUM_F128, "fminimuml");
+    setLibcallName(RTLIB::FMIN_F128, "fminl");
+    setLibcallName(RTLIB::FREXP_F128, "frexpl");
+    setLibcallName(RTLIB::LDEXP_F128, "ldexpl");
+    setLibcallName(RTLIB::LLRINT_F128, "llrintl");
+    setLibcallName(RTLIB::LLROUND_F128, "llroundl");
+    setLibcallName(RTLIB::LOG10_F128, "log10l");
+    setLibcallName(RTLIB::LOG2_F128, "log2l");
+    setLibcallName(RTLIB::LOG_F128, "logl");
+    setLibcallName(RTLIB::LRINT_F128, "lrintl");
+    setLibcallName(RTLIB::LROUND_F128, "lroundl");
+    setLibcallName(RTLIB::MODF_F128, "modfl");
+    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintl");
+    setLibcallName(RTLIB::POW_F128, "powl");
+    setLibcallName(RTLIB::REM_F128, "fmodl");
+    setLibcallName(RTLIB::RINT_F128, "rintl");
+    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenl");
+    setLibcallName(RTLIB::ROUND_F128, "roundl");
+    setLibcallName(RTLIB::SINCOSPI_F128, "sincospil");
+    setLibcallName(RTLIB::SINH_F128, "sinhl");
+    setLibcallName(RTLIB::SIN_F128, "sinl");
+    setLibcallName(RTLIB::SQRT_F128, "sqrtl");
+    setLibcallName(RTLIB::TANH_F128, "tanhl");
+    setLibcallName(RTLIB::TAN_F128, "tanl");
+    setLibcallName(RTLIB::TRUNC_F128, "truncl");
   }
 }

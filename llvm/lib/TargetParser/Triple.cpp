@@ -2164,7 +2164,11 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
   }
 }
 
-Triple::CLayouts Triple::getCLayouts(const StringRef &ABIName) const {
+// TODO: should this move to TargetMachine so it can account for ABI info?
+// Leaning toward yes. RuntimeLicallsInfo can still provide a default,
+// adjustLibcalls will just be required to get the exact behavior on some
+// platforms.
+Triple::CLayouts Triple::getCLayouts() const {
   // Default to a 32-bit RISC platform
   Triple::CLayouts Layouts {
     .LongDoubleWidth = 64,

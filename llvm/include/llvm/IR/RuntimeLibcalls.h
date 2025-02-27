@@ -14,9 +14,11 @@
 #ifndef LLVM_IR_RUNTIME_LIBCALLS_H
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -38,9 +40,24 @@ enum Libcall {
 
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
+  /// Default libcalls for the triple. Note that `fixupLibcalls` should also be
+  /// called in order to apply machine-specific and configurable behavior.
   explicit RuntimeLibcallsInfo(const Triple &TT) {
     initLibcalls(TT);
   }
+
+  /// Apply nondefault overrides to libcalls based on machine configuration.
+  ///
+  /// @param[in] TM               Used to account for ABI-secific affects on
+  ///                             libcalls.
+  /// @param[in] LongDoubleFormat If set, override the platform default.
+  // TODO: maybe make the option an enum
+  //     enum Fp128LibcallFormat {
+  //         AsF128; // always lower to f128 versions (probably what Rust will do)
+  //         AsLongDouble; // always lower f128 as long double (probably what Clang should do)
+  //         AsPlatformDefault; // don't change anything
+  //     }
+  void adjustLibcalls(const TargetMachine &TM, const fltSemantics *LongDoubleFormat);
 
   /// Rename the default libcall routine name for the specified libcall.
   void setLibcallName(RTLIB::Libcall Call, const char *Name) {
