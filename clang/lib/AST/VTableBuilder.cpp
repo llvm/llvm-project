@@ -2657,10 +2657,11 @@ private:
       MethodVFTableLocation Loc(MI.VBTableIndex, WhichVFPtr.getVBaseWithVPtr(),
                                 WhichVFPtr.NonVirtualOffset, MI.VFTableIndex);
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
-          MethodVFTableLocations[GlobalDecl(DD, Dtor_Deleting)] = Loc;
-        else
-          MethodVFTableLocations[GlobalDecl(DD, Dtor_VectorDeleting)] = Loc;
+        // In Microsoft ABI vftable always references vector deleting dtor.
+        CXXDtorType DtorTy = Context.getTargetInfo().getCXXABI().isMicrosoft()
+                                 ? Dtor_VectorDeleting
+                                 : Dtor_Deleting;
+        MethodVFTableLocations[GlobalDecl(DD, DtorTy)] = Loc;
       } else {
         MethodVFTableLocations[MD] = Loc;
       }
