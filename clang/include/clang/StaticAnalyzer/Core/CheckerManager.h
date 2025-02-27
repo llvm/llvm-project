@@ -460,9 +460,9 @@ public:
                                     unsigned int Space = 0,
                                     bool IsDot = false) const;
 
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
   // Internal registration functions for AST traversing.
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
 
   // Functions used by the registration mechanism, checkers should not touch
   // these directly.
@@ -476,9 +476,9 @@ public:
 
   void _registerForBody(CheckDeclFunc checkfn);
 
-//===----------------------------------------------------------------------===//
-// Internal registration functions for path-sensitive checking.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Internal registration functions for path-sensitive checking.
+  //===--------------------------------------------------------------------===//
 
   using CheckStmtFunc = CheckerFn<void (const Stmt *, CheckerContext &)>;
 
@@ -580,9 +580,9 @@ public:
 
   void _registerForEndOfTranslationUnit(CheckEndOfTranslationUnit checkfn);
 
-//===----------------------------------------------------------------------===//
-// Internal registration functions for events.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Internal registration functions for events.
+  //===--------------------------------------------------------------------===//
 
   using EventTag = void *;
   using CheckEventFunc = CheckerFn<void (const void *event)>;
@@ -609,9 +609,9 @@ public:
       Checker(&event);
   }
 
-//===----------------------------------------------------------------------===//
-// Implementation details.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Implementation details.
+  //===--------------------------------------------------------------------===//
 
 private:
   template <typename T>
