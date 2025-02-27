@@ -47,12 +47,13 @@ ELFExtendedAttrParser::getAttributeString(StringRef BuildAttrSubsectionName,
   return std::nullopt;
 }
 
-StringRef ELFExtendedAttrParser::getTagName(const StringRef &s,
-                                            const unsigned i) {
-  for (const auto &entry : TagsNamesMap) {
-    if (s == entry.SubsectionName) {
-      if (i == entry.Tag) {
-        return entry.TagName;
+StringRef
+ELFExtendedAttrParser::getTagName(const StringRef &BuildAttrSubsectionName,
+                                  const unsigned Tag) {
+  for (const auto &Entry : TagsNamesMap) {
+    if (BuildAttrSubsectionName == Entry.SubsectionName) {
+      if (Tag == Entry.Tag) {
+        return Entry.TagName;
       }
     }
   }

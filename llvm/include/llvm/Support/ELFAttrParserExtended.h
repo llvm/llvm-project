@@ -31,7 +31,8 @@ protected:
   SmallVector<BuildAttributeSubSection, 8> SubSectionVec;
   // Maps SubsectionName + Tag to tags names. Required for printing comments.
   const std::vector<SubsectionAndTagToTagName> TagsNamesMap;
-  StringRef getTagName(const StringRef &s, const unsigned i);
+  StringRef getTagName(const StringRef &BuildAttrSubsectionName,
+                       const unsigned Tag);
 
 public:
   Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) override;
