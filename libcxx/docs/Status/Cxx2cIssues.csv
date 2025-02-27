@@ -68,7 +68,7 @@
 "`LWG4071 <https://wg21.link/LWG4071>`__","``reference_wrapper`` comparisons are not SFINAE-friendly","2024-06 (St. Louis)","|Complete|","19",""
 "`LWG4074 <https://wg21.link/LWG4074>`__","``compatible-joinable-ranges`` is underconstrained","2024-06 (St. Louis)","","",""
 "`LWG4076 <https://wg21.link/LWG4076>`__","``concat_view`` should be freestanding","2024-06 (St. Louis)","","",""
-"`LWG4079 <https://wg21.link/LWG4079>`__","Missing Preconditions in ``concat_view::iterator``\`s conversion constructor","2024-06 (St. Louis)","","",""
+"`LWG4079 <https://wg21.link/LWG4079>`__","Missing Preconditions in ``concat_view::iterator``\`s conversion constructor","2024-06 (St. Louis)","|Complete|","21",""
 "`LWG4082 <https://wg21.link/LWG4082>`__","``views::concat(r)`` is well-formed when ``r`` is an ``output_range``","2024-06 (St. Louis)","|Complete|","21",""
 "`LWG4083 <https://wg21.link/LWG4083>`__","``views::as_rvalue`` should reject non-input ranges","2024-06 (St. Louis)","","",""
 "`LWG4096 <https://wg21.link/LWG4096>`__","``views::iota(views::iota(0))`` should be rejected","2024-06 (St. Louis)","","",""
