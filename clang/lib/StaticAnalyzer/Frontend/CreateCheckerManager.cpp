@@ -1,4 +1,4 @@
-//===- CheckerManager.h - Static Analyzer Checker Manager -------*- C++ -*-===//
+//===- CreateCheckerManager.cpp - Checker Manager constructor ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the Static Analyzer Checker Manager.
+// Defines the constructors and the destructor of the Static Analyzer Checker
+// Manager which cannot be placed under 'Core' because they depend on the
+// CheckerRegistry.
 //
 //===----------------------------------------------------------------------===//
 
