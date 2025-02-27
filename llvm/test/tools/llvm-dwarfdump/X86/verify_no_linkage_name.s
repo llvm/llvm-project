@@ -1,6 +1,8 @@
 # This test generates a DW_TAG_structure_type with a linkage name. This linkage
 # name will not be part of the accelerator table and the verifier should not
 # complain about this.
+# Technically speaking this test is invalid because .debug_names is a DWARF 5 feature.
+# In this test the accelerator table is referencing DWARF4.
 #
 # DW_TAG_structure_type
 #   DW_AT_name    ("C")
@@ -9,7 +11,7 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-unknown-linux-gnu -o %t.o
 # RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
 # RUN: llvm-dwarfdump -debug-names %t.o | FileCheck %s --check-prefix ACCEL
-# RUN: llvm-dwarfdump -verify -debug-names %t.o
+# RUN: llvm-dwarfdump -verify --verify-num-threads 1 -debug-names %t.o
 
 # CHECK: DW_AT_name    ("Bool")
 # CHECK-NEXT: DW_AT_linkage_name    ("$SSbD")
