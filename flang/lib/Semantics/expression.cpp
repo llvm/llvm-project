@@ -78,8 +78,10 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             const semantics::CharacterTypeSpec &cts{
                 typeSpec->characterTypeSpec()};
             const semantics::ParamValue &len{cts.length()};
-            // N.B. CHARACTER(LEN=*) is allowed in type-specs in ALLOCATE() &
-            // type guards, but not in array constructors.
+            if (len.isAssumed() || len.isDeferred()) {
+              context.messages().Say(
+                  "A length specifier of '*' or ':' may not appear in the type of an array constructor"_err_en_US);
+            }
             DynamicTypeWithLength type{DynamicType{kind, len}};
             if (auto lenExpr{type.LEN()}) {
               type.length = Fold(context,
