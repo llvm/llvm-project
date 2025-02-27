@@ -7,13 +7,52 @@ target triple = "aarch64-unknown-linux-gnu"
 
 declare void @init_mem(ptr, i64);
 
-define i64 @same_exit_block_pre_inc_use1() #1 {
-; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
+define i64 @same_exit_block_pre_inc_use1_sve() #1 {
+; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_sve'
 ; CHECK: LV: Selecting VF: vscale x 16
 ; CHECK: Calculating cost of work in vector early exit block:
 ; CHECK-NEXT: Cost of 6 for VF vscale x 16: EMIT vp<{{.*}}> = extract-first-active
 ; CHECK-NEXT: Cost of 6 for VF vscale x 16: EMIT vp<{{.*}}> = extract-first-active
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:32
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %index2 = phi i64 [ %index2.next, %loop.inc ], [ 15, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %index2.next = add i64 %index2, 2
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %val1 = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  %val2 = phi i64 [ %index2, %loop ], [ 98, %loop.inc ]
+  %retval = add i64 %val1, %val2
+  ret i64 %retval
+}
+
+define i64 @same_exit_block_pre_inc_use1_nosve() {
+; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_nosve'
+; CHECK: LV: Selecting VF: 16
+; CHECK: Calculating cost of work in vector early exit block:
+; CHECK-NEXT: Cost of 50 for VF 16: EMIT vp<{{.*}}> = extract-first-active
+; CHECK-NEXT: Cost of 50 for VF 16: EMIT vp<{{.*}}> = extract-first-active
+; CHECK: LV: Minimum required TC for runtime checks to be profitable:176
+; CHECK-NEXT: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (64 < 176)
+; CHECK-NEXT: LV: Too many memory checks needed.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
