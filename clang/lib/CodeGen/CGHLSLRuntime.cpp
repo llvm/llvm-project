@@ -70,7 +70,7 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
 
 llvm::Type *
 CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
-                                       SmallVector<unsigned> *Packoffsets) {
+                                       SmallVector<int32_t> *Packoffsets) {
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
@@ -179,21 +179,45 @@ createBufferHandleType(const HLSLBufferDecl *BufDecl) {
   return cast<HLSLAttributedResourceType>(QT.getTypePtr());
 }
 
+// Iterates over all declarations in the HLSL buffer and based on the
+// packoffset or register(c#) annotations it fills outs the Layout
+// vector with the user-specified layout offsets.
+// The buffer offsets can be specified 2 ways:
+// 1. declarations in cbuffer {} block can have a packoffset annotation
+//    (translates to HLSLPackOffsetAttr)
+// 2. default constant buffer declarations at global scope can have
+//    register(c#) annotations (translates to HLSLResourceBindingAttr with
+//    RegisterType::C)
+// It is not quaranteed that all declarations in a buffer have an annotation.
+// For those where it is not specified a -1 value is added to the Layout
+// vector. In the final layout these declarations will be placed at the end
+// of the HLSL buffer after all of the elements with specified offset.  
 static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
-                                 SmallVector<unsigned> &Layout) {
+                                 SmallVector<int32_t> &Layout) {
   assert(Layout.empty() && "expected empty vector for layout");
   assert(BufDecl->hasValidPackoffset());
 
-  for (Decl *D : BufDecl->decls()) {
+  for (Decl *D : BufDecl->buffer_decls()) {
     if (isa<CXXRecordDecl, EmptyDecl>(D) || isa<FunctionDecl>(D)) {
       continue;
     }
     VarDecl *VD = dyn_cast<VarDecl>(D);
     if (!VD || VD->getType().getAddressSpace() != LangAS::hlsl_constant)
       continue;
-    assert(VD->hasAttr<HLSLPackOffsetAttr>() &&
-           "expected packoffset attribute on every declaration");
-    size_t Offset = VD->getAttr<HLSLPackOffsetAttr>()->getOffsetInBytes();
+    size_t Offset = -1;
+    if (VD->hasAttrs()) {
+      for (auto *Attr : VD->getAttrs()) {
+        if (auto *POA = dyn_cast<HLSLPackOffsetAttr>(Attr)) {
+          Offset = POA->getOffsetInBytes();
+        } else if (auto *RBA = dyn_cast<HLSLResourceBindingAttr>(Attr)) {
+          if (RBA->getRegisterType() ==
+              HLSLResourceBindingAttr::RegisterType::C) {
+            // size of constant buffer row is 16 bytes
+            Offset = RBA->getSlotNumber() * 16U;
+          }
+        }
+      }
+    }
     Layout.push_back(Offset);
   }
 }
@@ -212,7 +236,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
     return;
 
   // create global variable for the constant buffer
-  SmallVector<unsigned> Layout;
+  SmallVector<int32_t> Layout;
   if (BufDecl->hasValidPackoffset())
     fillPackoffsetLayout(BufDecl, Layout);
 
