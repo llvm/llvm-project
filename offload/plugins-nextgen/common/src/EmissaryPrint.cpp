@@ -24,20 +24,19 @@
 #include "../../../DeviceRTL/include/EmissaryIds.h"
 #include "Emissary.h"
 
-static service_rc emissary_printf(char *buf, size_t bufsz, uint32_t *rc);
-static service_rc emissary_fprintf(char *buf, size_t bufsz, uint32_t *rc);
+static service_rc emissary_printf(uint *rc, emisArgBuf_t *ab);
+static service_rc emissary_fprintf(uint *rc, emisArgBuf_t *ab);
 
-extern "C" emis_return_t _emissary_execute_print(uint32_t emis_func_id,
-                                                 void *data, uint32_t sz) {
+extern "C" emis_return_t EmissaryPrint(char *data, emisArgBuf_t *ab) {
   uint32_t return_value;
   service_rc rc;
-  switch (emis_func_id) {
+  switch (ab->emisfnid) {
   case _printf_idx: {
-    rc = emissary_printf((char *)data, (size_t)sz, &return_value);
+    rc = emissary_printf(&return_value, ab);
     break;
   }
   case _fprintf_idx: {
-    rc = emissary_fprintf((char *)data, (size_t)sz, &return_value);
+    rc = emissary_fprintf(&return_value, ab);
     break;
   }
   case _ockl_asan_report_idx: {
@@ -49,7 +48,7 @@ extern "C" emis_return_t _emissary_execute_print(uint32_t emis_func_id,
   case _print_INVALID:
   default: {
     fprintf(stderr, " INVALID emissary function id (%d) for PRINT API \n",
-            emis_func_id);
+            ab->emisfnid);
     return_value = 0;
     rc = _RC_STATUS_ERROR;
     break;
@@ -87,8 +86,6 @@ struct emissary_ValistExt {
   size_t overflow_size;
 } __attribute__((packed));
 typedef struct emissary_ValistExt emissary_ValistExt_t;
-
-// helper functions for emissary_printf service
 
 // Handle overflow when building the va_list for vprintf
 static service_rc emissary_pfGetOverflow(emissary_ValistExt_t *valist,
@@ -184,7 +181,7 @@ static service_rc emissary_pfAddString(emissary_ValistExt_t *valist, char *val,
 static service_rc emissary_pfAddFloat(emissary_ValistExt_t *valist,
                                       char *numdata, size_t valsize,
                                       size_t *stacksize) {
-  // FIXME, we can used load because doubles are now aligned
+  // we could use load because doubles are now aligned
   double dval;
   if (valsize == 4) {
     float fval;
@@ -331,57 +328,45 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
 
 /*
  *  The buffer to pack arguments for all vargs functions has thes 4 sections:
- *  1. Header        datalen 4 bytes
- *                   numargs 4 bytes
- *  2. Keys          A 4-byte key for each arg including string args
- *                   Each 4-byte key contains llvmID and numbits to
- *                   describe the datatype.
- *  3. args_data     Ths data values for each argument.
- *                   Each arg is aligned according to its size.
- *                   If the field is a string
- *                   the dataptr contains the string length.
- *  4. strings_data  Exection time string values
+ *  1. Header  datalen 4 bytes
+ *             numargs 4 bytes
+ *  2. keyptr  A 4-byte key for each arg including string args
+ *             Each 4-byte key contains llvmID and numbits to
+ *             describe the datatype.
+ *  3. argptr  Ths data values for each argument.
+ *             Each arg is aligned according to its size.
+ *             If the field is a string
+ *             the dataptr contains the string length.
+ *  4. strptr  Exection time string values
  */
-static service_rc emissary_fprintf(char *buf, size_t bufsz, uint *rc) {
+static service_rc emissary_fprintf(uint *rc, emisArgBuf_t *ab) {
 
-  int *datalen = (int *)buf;
-  int NumArgs = *((int *)(buf + sizeof(int)));
-  char *keyptr = buf + (2 * sizeof(int));
-  char *dataptr = keyptr + (NumArgs * sizeof(int));
-  char *strptr = buf + (size_t)*datalen;
+  if (ab->DataLen == 0)
+    return _RC_SUCCESS;
 
-  // Skip past the emissary ids
-  dataptr += 8;
-  size_t fillerNeeded = ((size_t)dataptr) % 8;
-  if (fillerNeeded)
-    dataptr += fillerNeeded; // dataptr is now aligned on 8 byte
-  keyptr += 4;               // skip key for emis_ids
+  char *fmtstr = ab->strptr;
+  FILE *fileptr = (FILE *)*((size_t *)ab->argptr);
 
-  // Skip past the file pointer and format string argument
-  fillerNeeded = ((size_t)dataptr) % 8;
-  if (fillerNeeded)
-    dataptr += fillerNeeded; // dataptr is now aligned on 8 byte
-  // Cannot convert directly to FILE*, so convert to 8-byte size_t first
-  FILE *fileptr = (FILE *)*((size_t *)dataptr);
-  dataptr += sizeof(FILE *); // skip past file ptr
-  NumArgs = NumArgs - 3;     // emis_id, FILE, and format string
-  keyptr += 8;               // All keys are 4 bytes
-  size_t strsz = (size_t)*(unsigned int *)dataptr;
-  dataptr += 4; //  for strings the data value is the size, not a key
-  char *fmtstr = strptr;
-  strptr += strsz;
+  // Skip past the file pointer
+  ab->NumArgs--;
+  ab->keyptr += 4;
+  ab->argptr += sizeof(FILE *);
+  ab->data_not_used -= sizeof(FILE *);
 
-  // 16 = sizeof (FILE*) + sizeof(emisid)
-  // 6 x 4-byte = 2 header + 3 keys + 1 strsz
-  size_t data_not_used =
-      (size_t)(*datalen) - (((size_t)(6 + NumArgs) * sizeof(int)) + 16);
+  // Skip past the format string
+  ab->NumArgs--;
+  ab->keyptr += 4;
+  size_t abstrsz = (size_t)*(unsigned int *)ab->argptr;
+  ab->strptr += abstrsz;
+  ab->argptr += 4;
+  ab->data_not_used -= 4;
 
   emissary_ValistExt_t valist;
   va_list *real_va_list;
   real_va_list = (va_list *)&valist;
 
-  if (emissary_pfBuildValist(&valist, NumArgs, keyptr, dataptr, strptr,
-                             &data_not_used) != _RC_SUCCESS)
+  if (emissary_pfBuildValist(&valist, ab->NumArgs, ab->keyptr, ab->argptr,
+                             ab->strptr, &ab->data_not_used) != _RC_SUCCESS)
     return _RC_ERROR_INVALID_REQUEST;
 
   // Roll back offsets and save stack pointer
@@ -399,47 +384,26 @@ static service_rc emissary_fprintf(char *buf, size_t bufsz, uint *rc) {
   return _RC_SUCCESS;
 }
 
-static service_rc emissary_printf(char *buf, size_t bufsz, uint *rc) {
-  if (bufsz == 0)
+static service_rc emissary_printf(uint *rc, emisArgBuf_t *ab) {
+  if (ab->DataLen == 0)
     return _RC_SUCCESS;
 
-  // Get 5 values needed to unpack the buffer
-  int *datalen = (int *)buf;
-  int NumArgs = *((int *)(buf + sizeof(int)));
-  char *keyptr = buf + (2 * sizeof(int));
-  char *dataptr = keyptr + (NumArgs * sizeof(int));
-  char *strptr = buf + (size_t)*datalen;
+  char *fmtstr = ab->strptr;
 
-  if (NumArgs <= 0)
-    return _RC_ERROR_INVALID_REQUEST;
-
-  // Skip past the emissary ids
-  dataptr += 8;
-  size_t fillerNeeded = ((size_t)dataptr) % 8;
-  if (fillerNeeded)
-    dataptr += fillerNeeded; // dataptr is now aligned on 8 byte
-  keyptr += 4;               // skip key for emis_ids
-
-  // Skip past the format string argument
-  char *fmtstr = strptr;
-  NumArgs -= 2;
-  keyptr += 4;
-  size_t strsz = (size_t)*(unsigned int *)dataptr;
-  dataptr += 4; // for strings the data value is the size, not a real pointer
-  strptr += strsz;
-
-  // calculate data_not_used before BuildValist for error checking
-  // 12 = sizeof(emisid) + sizeof(strlen)
-  // 4  4-byte = 2 header + 2 keys
-  size_t data_not_used =
-      (size_t)(*datalen) - (((size_t)(4 + NumArgs) * sizeof(int)) + 12);
+  // Skip past the format string
+  ab->NumArgs--;
+  ab->keyptr += 4;
+  size_t abstrsz = (size_t)*(unsigned int *)ab->argptr;
+  ab->strptr += abstrsz;
+  ab->argptr += 4;
+  ab->data_not_used -= 4;
 
   emissary_ValistExt_t valist;
   va_list *real_va_list;
   real_va_list = (va_list *)&valist;
 
-  if (emissary_pfBuildValist(&valist, NumArgs, keyptr, dataptr, strptr,
-                             &data_not_used) != _RC_SUCCESS)
+  if (emissary_pfBuildValist(&valist, ab->NumArgs, ab->keyptr, ab->argptr,
+                             ab->strptr, &ab->data_not_used) != _RC_SUCCESS)
     return _RC_ERROR_INVALID_REQUEST;
 
   // Roll back offsets and save stack pointer for
