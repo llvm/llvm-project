@@ -4267,6 +4267,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // recorded callsite Call.
               if (Callee == Clone || !Callee->hasCall())
                 continue;
+              // Skip direct recursive calls. We don't need/want to clone the
+              // caller node again, and this loop will not behave as expected if
+              // we tried.
+              if (Callee == CalleeEdge->Caller)
+                continue;
               ContextNode *NewClone = moveEdgeToNewCalleeClone(CalleeEdge);
               removeNoneTypeCalleeEdges(NewClone);
               // Moving the edge may have resulted in some none type
