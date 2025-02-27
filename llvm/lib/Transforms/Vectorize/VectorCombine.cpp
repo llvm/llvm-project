@@ -1915,7 +1915,7 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
   auto *C1VecTy = dyn_cast<FixedVectorType>(C1->getType());
   auto *C2VecTy = dyn_cast<FixedVectorType>(C2->getType());
-  if (!C1VecTy || !C2VecTy)
+  if (!C1VecTy || !C2VecTy || C1VecTy != C2VecTy)
     return false;
 
   // SelectInsts must have the same FMF.
