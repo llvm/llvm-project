@@ -13,8 +13,8 @@
 // by logical SPIR-V.
 //
 // This pass relies on the assign_ptr_type intrinsic to deduce the type of the
-// pointed values, must replace all occurences of `ptrcast`. This is why
-// unhandled cases are reported as unreachable: we MUST cover all cases.
+// pointee. All occurrences of `ptrcast` must be replaced because the lead to
+// invalid SPIR-V. Unhandled cases result in an error.
 //
 // 1. Loading the first element of an array
 //
