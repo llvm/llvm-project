@@ -141,6 +141,10 @@ static cl::opt<bool> ShouldStartVectorizeHorAtStore(
     cl::desc(
         "Attempt to vectorize horizontal reductions feeding into a store"));
 
+static cl::opt<bool> SplitAlternateInstructions(
+    "slp-split-alternate-instructions", cl::init(true), cl::Hidden,
+    cl::desc("Improve the code quality by splitting alternate instructions"));
+
 static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -1418,9 +1422,10 @@ public:
   /// Vectorize the tree but with the list of externally used values \p
   /// ExternallyUsedValues. Values in this MapVector can be replaced but the
   /// generated extractvalue instructions.
-  Value *
-  vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
-                Instruction *ReductionRoot = nullptr);
+  Value *vectorizeTree(
+      const ExtraValueToDebugLocsMap &ExternallyUsedValues,
+      Instruction *ReductionRoot = nullptr,
+      ArrayRef<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales = {});
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -2879,11 +2884,13 @@ public:
   /// Remove instructions from the parent function and clear the operands of \p
   /// DeadVals instructions, marking for deletion trivially dead operands.
   template <typename T>
-  void removeInstructionsAndOperands(ArrayRef<T *> DeadVals) {
+  void removeInstructionsAndOperands(
+      ArrayRef<T *> DeadVals,
+      ArrayRef<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales) {
     SmallVector<WeakTrackingVH> DeadInsts;
     for (T *V : DeadVals) {
       auto *I = cast<Instruction>(V);
-      DeletedInstructions.insert(I);
+      eraseInstruction(I);
     }
     DenseSet<Value *> Processed;
     for (T *V : DeadVals) {
@@ -2945,12 +2952,17 @@ public:
         // loop iteration.
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
+              (!OpI->getType()->isVectorTy() ||
+               none_of(VectorValuesAndScales,
+                       [&](const std::tuple<Value *, unsigned, bool> &V) {
+                         return std::get<0>(V) == OpI;
+                       })) &&
               isInstructionTriviallyDead(OpI, TLI))
             DeadInsts.push_back(OpI);
       }
 
       VI->removeFromParent();
-      DeletedInstructions.insert(VI);
+      eraseInstruction(VI);
       SE->forgetValue(VI);
     }
   }
@@ -8732,7 +8744,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   constexpr unsigned SmallNodeSize = 4;
   auto TrySplitNode = [&, &TTI = *TTI](unsigned SmallNodeSize,
                                        const InstructionsState &LocalState) {
-    if (VL.size() <= SmallNodeSize || TTI.preferAlternateOpcodeVectorization())
+    if (VL.size() <= SmallNodeSize ||
+        TTI.preferAlternateOpcodeVectorization() || !SplitAlternateInstructions)
       return false;
 
     // Any value is used in split node already - just gather.
@@ -13842,6 +13855,14 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       return EdgeInfo(const_cast<TreeEntry *>(TE), 0);
     return TE->UserTreeIndex;
   };
+  auto HasGatherUser = [&](const TreeEntry *TE) {
+    while (TE->Idx != 0 && TE->UserTreeIndex) {
+      if (TE->UserTreeIndex.EdgeIdx == UINT_MAX)
+        return true;
+      TE = TE->UserTreeIndex.UserTE;
+    }
+    return false;
+  };
   const EdgeInfo TEUseEI = GetUserEntry(TE);
   if (!TEUseEI)
     return std::nullopt;
@@ -13942,7 +13963,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         // If the user instruction is used for some reason in different
         // vectorized nodes - make it depend on index.
         if (TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->Idx < UseEI.UserTE->Idx)
+            (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
+             HasGatherUser(TEUseEI.UserTE)))
           continue;
       }
 
@@ -17049,9 +17071,10 @@ Value *BoUpSLP::vectorizeTree() {
   return vectorizeTree(ExternallyUsedValues);
 }
 
-Value *
-BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
-                       Instruction *ReductionRoot) {
+Value *BoUpSLP::vectorizeTree(
+    const ExtraValueToDebugLocsMap &ExternallyUsedValues,
+    Instruction *ReductionRoot,
+    ArrayRef<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales) {
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules) {
     scheduleBlock(BSIter.second.get());
@@ -17661,7 +17684,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // cache correctness.
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
-  removeInstructionsAndOperands(ArrayRef(RemovedInsts));
+  removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
 
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
@@ -21042,8 +21065,8 @@ public:
           InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
 
         // Vectorize a tree.
-        Value *VectorizedRoot =
-            V.vectorizeTree(LocalExternallyUsedValues, InsertPt);
+        Value *VectorizedRoot = V.vectorizeTree(
+            LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
         // Update TrackedToOrig mapping, since the tracked values might be
         // updated.
         for (Value *RdxVal : Candidates) {
@@ -21271,7 +21294,7 @@ public:
             Ignore->replaceAllUsesWith(P);
           }
         }
-        V.removeInstructionsAndOperands(RdxOps);
+        V.removeInstructionsAndOperands(RdxOps, VectorValuesAndScales);
       }
     } else if (!CheckForReusedReductionOps) {
       for (ReductionOpsType &RdxOps : ReductionOps)
