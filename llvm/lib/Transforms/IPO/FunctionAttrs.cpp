@@ -1379,7 +1379,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     // TODO(captures): Ignore address-only captures.
     if (capturesAnything(CC)) {
       // As the pointer may be captured, determine the pointer attributes
-      // looking at each argument invidivually.
+      // looking at each argument individually.
       for (ArgumentGraphNode *N : ArgumentSCC) {
         if (DetermineAccessAttrsForSingleton(N->Definition))
           Changed.insert(N->Definition->getParent());
@@ -1487,7 +1487,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
         return false; // Did not come from an allocation.
       }
 
-    if (PointerMayBeCaptured(RetVal, false, /*StoreCaptures=*/false))
+    if (PointerMayBeCaptured(RetVal, /*ReturnCaptures=*/false))
       return false;
   }
 

@@ -623,8 +623,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!Call || Call == Object)
     return ModRefInfo::ModRef;
 
-  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
-                                 /* StoreCaptures */ true, I, DT,
+  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true, I, DT,
                                  /* include Object */ true))
     return ModRefInfo::ModRef;
 
@@ -636,7 +635,13 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // Only look at the no-capture or byval pointer arguments.  If this
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
-    if (!(*CI)->getType()->isPointerTy() || !Call->doesNotCapture(ArgNo))
+    if (!(*CI)->getType()->isPointerTy())
+      continue;
+
+    // Make sure we still check captures(ret: address, provenance) arguments,
+    // as these wouldn't be treated as a capture at the call-site.
+    CaptureInfo Captures = Call->getCaptureInfo(ArgNo);
+    if (!capturesNothing(Captures.getOtherComponents()))
       continue;
 
     AliasResult AR =

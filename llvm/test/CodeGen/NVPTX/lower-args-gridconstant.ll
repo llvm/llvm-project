@@ -29,7 +29,7 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
 ; PTX-NEXT:    .reg .b32 %r<11>;
-; PTX-NEXT:    .reg .b64 %rd<9>;
+; PTX-NEXT:    .reg .b64 %rd<10>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.u64 %SPL, __local_depot0;
@@ -37,23 +37,24 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ; PTX-NEXT:    ld.param.u8 %rs1, [non_kernel_function_param_1];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
 ; PTX-NEXT:    setp.eq.b16 %p1, %rs2, 1;
-; PTX-NEXT:    ld.param.s32 %rd1, [non_kernel_function_param_2];
-; PTX-NEXT:    ld.param.u64 %rd2, [non_kernel_function_param_0+8];
-; PTX-NEXT:    st.u64 [%SP+8], %rd2;
-; PTX-NEXT:    ld.param.u64 %rd3, [non_kernel_function_param_0];
-; PTX-NEXT:    st.u64 [%SP], %rd3;
-; PTX-NEXT:    mov.u64 %rd4, gi;
-; PTX-NEXT:    cvta.global.u64 %rd5, %rd4;
-; PTX-NEXT:    add.u64 %rd6, %SP, 0;
-; PTX-NEXT:    selp.b64 %rd7, %rd6, %rd5, %p1;
-; PTX-NEXT:    add.s64 %rd8, %rd7, %rd1;
-; PTX-NEXT:    ld.u8 %r1, [%rd8];
-; PTX-NEXT:    ld.u8 %r2, [%rd8+1];
+; PTX-NEXT:    add.u64 %rd1, %SP, 0;
+; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
+; PTX-NEXT:    ld.param.s32 %rd3, [non_kernel_function_param_2];
+; PTX-NEXT:    ld.param.u64 %rd4, [non_kernel_function_param_0+8];
+; PTX-NEXT:    st.local.u64 [%rd2+8], %rd4;
+; PTX-NEXT:    ld.param.u64 %rd5, [non_kernel_function_param_0];
+; PTX-NEXT:    st.local.u64 [%rd2], %rd5;
+; PTX-NEXT:    mov.u64 %rd6, gi;
+; PTX-NEXT:    cvta.global.u64 %rd7, %rd6;
+; PTX-NEXT:    selp.b64 %rd8, %rd1, %rd7, %p1;
+; PTX-NEXT:    add.s64 %rd9, %rd8, %rd3;
+; PTX-NEXT:    ld.u8 %r1, [%rd9];
+; PTX-NEXT:    ld.u8 %r2, [%rd9+1];
 ; PTX-NEXT:    shl.b32 %r3, %r2, 8;
 ; PTX-NEXT:    or.b32 %r4, %r3, %r1;
-; PTX-NEXT:    ld.u8 %r5, [%rd8+2];
+; PTX-NEXT:    ld.u8 %r5, [%rd9+2];
 ; PTX-NEXT:    shl.b32 %r6, %r5, 16;
-; PTX-NEXT:    ld.u8 %r7, [%rd8+3];
+; PTX-NEXT:    ld.u8 %r7, [%rd9+3];
 ; PTX-NEXT:    shl.b32 %r8, %r7, 24;
 ; PTX-NEXT:    or.b32 %r9, %r8, %r6;
 ; PTX-NEXT:    or.b32 %r10, %r9, %r4;

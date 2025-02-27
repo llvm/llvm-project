@@ -526,7 +526,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _ValueType 
                 "or a CopyConstructible type");
   auto __tmp = std::any_cast<add_const_t<_RawValueType>>(&__v);
   if (__tmp == nullptr)
-    __throw_bad_any_cast();
+    std::__throw_bad_any_cast();
   return static_cast<_ValueType>(*__tmp);
 }
 
@@ -538,7 +538,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _ValueType 
                 "or a CopyConstructible type");
   auto __tmp = std::any_cast<_RawValueType>(&__v);
   if (__tmp == nullptr)
-    __throw_bad_any_cast();
+    std::__throw_bad_any_cast();
   return static_cast<_ValueType>(*__tmp);
 }
 
@@ -550,7 +550,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _ValueType 
                 "or a CopyConstructible type");
   auto __tmp = std::any_cast<_RawValueType>(&__v);
   if (__tmp == nullptr)
-    __throw_bad_any_cast();
+    std::__throw_bad_any_cast();
   return static_cast<_ValueType>(std::move(*__tmp));
 }
 

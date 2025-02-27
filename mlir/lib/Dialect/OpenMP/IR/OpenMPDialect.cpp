@@ -32,7 +32,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
-#include "llvm/Support/Casting.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>

@@ -286,10 +286,10 @@ class SiFiveP600VSHA2MSCycles<string mx, int sew> {
 
 // SiFiveP600 machine model for scheduling and other instruction cost heuristics.
 def SiFiveP600Model : SchedMachineModel {
-  let IssueWidth = 4;         // 4 micro-ops are dispatched per cycle.
-  let MicroOpBufferSize = 160; // Max micro-ops that can be buffered.
-  let LoadLatency = 4;        // Cycles for loads to access the cache.
-  let MispredictPenalty = 9;  // Extra cycles for a mispredicted branch.
+  let IssueWidth = 4;          // 4 micro-ops are dispatched per cycle.
+  let MicroOpBufferSize = 192; // Max micro-ops that can be buffered.
+  let LoadLatency = 4;         // Cycles for loads to access the cache.
+  let MispredictPenalty = 9;   // Extra cycles for a mispredicted branch.
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZknd, HasStdExtZkne, HasStdExtZknh,
                              HasStdExtZksed, HasStdExtZksh, HasStdExtZkr,

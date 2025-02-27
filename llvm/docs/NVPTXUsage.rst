@@ -74,6 +74,23 @@ Function Attributes
     This attribute indicates the maximum number of registers to be used for the
     kernel function.
 
+``"nvvm.maxntid"="<x>[,<y>[,<z>]]"``
+    This attribute declares the maximum number of threads in the thread block
+    (CTA). The maximum number of threads is the product of the maximum extent in
+    each dimension. Exceeding the maximum number of threads results in a runtime
+    error or kernel launch failure.
+
+``"nvvm.reqntid"="<x>[,<y>[,<z>]]"``
+    This attribute declares the exact number of threads in the thread block
+    (CTA). The number of threads is the product of the value in each dimension.
+    Specifying a different CTA dimension at launch will result in a runtime 
+    error or kernel launch failure.
+
+``"nvvm.cluster_dim"="<x>[,<y>[,<z>]]"``
+    This attribute declares the number of thread blocks (CTAs) in the cluster.
+    The total number of CTAs is the product of the number of CTAs in each 
+    dimension. Specifying a different cluster dimension at launch will result in
+    a runtime error or kernel launch failure. Only supported for Hopper+.
 
 .. _address_spaces:
 
@@ -1270,6 +1287,101 @@ For more information on the decompression schemes, refer to the PTX ISA
 
 For more information on the tcgen05.cp instruction, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`_.
+
+'``llvm.nvvm.tcgen05.ld.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.<shape>.<num>(ptr addrspace(6) %tmem_addr, i1 %pack)
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.16x32bx2.<num>(ptr addrspace(6) %tmem_addr, i64 %offset, i1 %pack)
+
+Overview:
+"""""""""
+
+This group of intrinsics asynchronously load data from the Tensor Memory at the location specified
+by the 32-bit address operand `tmem_addr` into the destination registers, collectively across all threads
+of the warps.
+
+All the threads in the warp must specify the same value of `tmem_addr`, which must be the base address
+of the collective load operation. Otherwise, the behavior is undefined.
+
+The `shape` qualifier and the `num` qualifier together determines the total dimension of the data ('n') which
+is loaded from the Tensor Memory. The `shape` qualifier indicates the base dimension of data. The `num` qualifier
+indicates the repeat factor on the base dimension resulting in the total dimension of the data that is accessed.
+
+Allowed values for the 'num' are `x1, x2, x4, x8, x16, x32, x64, x128`.
+
+Allowed values for the 'shape' in the first intrinsic are `16x64b, 16x128b, 16x256b, 32x32b`.
+
+Allowed value for the 'shape' in the second intrinsic is `16x32bx2`.
+
+The result of the intrinsic is a vector consisting of one or more 32-bit registers derived from `shape` and
+`num` as shown below.
+
+=========== =========================  ==========  ==========
+ num/shape     16x32bx2/16x64b/32x32b    16x128b    16x256b
+=========== =========================  ==========  ==========
+ x1                 1                      2           4
+ x2                 2                      4           8
+ x4                 4                      8           16
+ x8                 8                      16          32
+ x16                16                     32          64
+ x32                32                     64          128
+ x64                64                     128         NA
+ x128               128                    NA          NA
+=========== =========================  ==========  ==========
+
+The last argument `i1 %pack` is a compile-time constant which when set, indicates that the adjacent columns are packed into a single 32-bit element during the load
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld>`__.
+
+
+'``llvm.nvvm.tcgen05.st.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.st.<shape>.<num>(ptr addrspace(6) %tmem_addr, <n x i32> %args, i1 %unpack)
+
+  declare void @llvm.nvvm.tcgen05.st.16x32bx2.<num>(ptr addrspace(6) %tmem_addr, <n x i32> %args, i64 %offset, i1 %unpack)
+
+Overview:
+"""""""""
+
+This group of intrinsics asynchronously store data from the source vector into the Tensor Memory at the location
+specified by the 32-bit address operand 'tmem_addr` collectively across all threads of the warps.
+
+All the threads in the warp must specify the same value of `tmem_addr`, which must be the base address of the
+collective load operation. Otherwise, the behavior is undefined.
+
+The `shape` qualifier and the `num` qualifier together determines the total dimension of the data ('n') which
+is loaded from the Tensor Memory. The `shape` qualifier indicates the base dimension of data. The `num` qualifier
+indicates the repeat factor on the base dimension resulting in the total dimension of the data that is accessed.
+
+Allowed values for the 'num' are `x1, x2, x4, x8, x16, x32, x64, x128`.
+
+Allowed values for the 'shape' in the first intrinsic are `16x64b, 16x128b, 16x256b, 32x32b`.
+
+Allowed value for the 'shape' in the second intrinsic is `16x32bx2`.
+
+`args` argument is a vector consisting of one or more 32-bit registers derived from `shape` and
+`num` as listed in the table listed in the `tcgen05.ld` section.
+
+Each shape support an `unpack` mode to allow a 32-bit element in the register to be unpacked into two 16-bit elements and store them in adjacent columns. `unpack` mode can be enabled by setting the `%unpack` operand to 1 and can be disabled by setting it to 0.
+
+The last argument `i1 %unpack` is a compile-time constant which when set, indicates that a 32-bit element in the register to be unpacked into two 16-bit elements and store them in adjacent columns.
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
 
 Other Intrinsics
 ----------------
