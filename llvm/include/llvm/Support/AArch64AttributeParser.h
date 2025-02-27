@@ -15,7 +15,7 @@
 namespace llvm {
 
 class AArch64AttributeParser : public ELFExtendedAttrParser {
-  static const std::vector<SubsectionAndTagToTagName> returnTagsNamesMap();
+  static std::vector<SubsectionAndTagToTagName> returnTagsNamesMap();
 
 public:
   AArch64AttributeParser(ScopedPrinter *Sw)
