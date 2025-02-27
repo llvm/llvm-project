@@ -1482,7 +1482,7 @@ public:
     return false;
   }
 
-  bool Pre(const parser::OmpReductionInitializerProc &x) {
+  bool Pre(const parser::OmpInitializerProc &x) {
     auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
     auto &name = std::get<parser::Name>(procDes.u);
     auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
@@ -1500,9 +1500,7 @@ public:
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
         emptyList);
-    auto &init =
-        std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t);
-    Walk(init);
+    Walk(std::get<parser::OmpClauseList>(x.t));
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
