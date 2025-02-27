@@ -1002,7 +1002,8 @@ void Debugger::Clear() {
     lldb_private::telemetry::ScopedDispatcher<
         lldb_private::telemetry::DebuggerInfo>
         helper(
-            [](lldb_private::telemetry::DebuggerInfo *info) {
+            [this](lldb_private::telemetry::DebuggerInfo *info) {
+              assert(this == info->debugger);
               // If we are here, then there was no error.
               // Any abnormal exit will be reported by the crash-handler.
               info->exit_desc = {0, ""};
