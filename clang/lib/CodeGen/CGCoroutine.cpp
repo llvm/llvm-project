@@ -709,7 +709,8 @@ struct GetReturnObjectManager {
     auto *GroAlloca = dyn_cast_or_null<llvm::AllocaInst>(
         GroEmission.getOriginalAllocatedAddress().getPointer());
     assert(GroAlloca && "expected alloca to be emitted");
-    Builder.CreateCall(CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_outside_frame), {GroAlloca});
+    GroAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                           llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
 
     // Remember the top of EHStack before emitting the cleanup.
     auto old_top = CGF.EHStack.stable_begin();
@@ -858,8 +859,10 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       // If the original param is in an alloca, exclude it from the coroutine
       // frame. The parameter copy will be part of the frame.
       Address ParmAddr = GetAddrOfLocalVar(Parm);
-      if (auto *ParmAlloca = dyn_cast<llvm::AllocaInst>(ParmAddr.getBasePointer())) {
-        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::coro_outside_frame), {ParmAlloca});
+      if (auto *ParmAlloca =
+              dyn_cast<llvm::AllocaInst>(ParmAddr.getBasePointer())) {
+        ParmAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                                llvm::MDNode::get(CGM.getLLVMContext(), {}));
       }
     }
     for (auto *PM : S.getParamMoves()) {

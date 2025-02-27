@@ -286,9 +286,6 @@ void coro::Shape::analyze(Function &F,
           }
         }
         break;
-      case Intrinsic::coro_outside_frame:
-        OutsideFrames.push_back(cast<CoroOutsideFrameInst>(II));
-        break;
       }
     }
   }

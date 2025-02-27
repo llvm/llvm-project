@@ -1778,8 +1778,6 @@ def int_coro_alloca_alloc : Intrinsic<[llvm_token_ty],
                                       [llvm_anyint_ty, llvm_i32_ty], []>;
 def int_coro_alloca_get : Intrinsic<[llvm_ptr_ty], [llvm_token_ty], []>;
 def int_coro_alloca_free : Intrinsic<[], [llvm_token_ty], []>;
-def int_coro_outside_frame : Intrinsic<[], [llvm_ptr_ty],
-                                       [IntrNoMem, NoCapture<ArgIndex<0>>]>;
 
 // Coroutine Manipulation Intrinsics.
 

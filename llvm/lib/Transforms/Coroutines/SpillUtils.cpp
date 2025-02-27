@@ -426,16 +426,10 @@ static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
   if (AI == Shape.SwitchLowering.PromiseAlloca)
     return;
 
-  // TODO: Deprecate/remove.
   // The __coro_gro alloca should outlive the promise, make sure we
   // keep it outside the frame.
   if (AI->hasMetadata(LLVMContext::MD_coro_outside_frame))
     return;
-
-  for (const CoroOutsideFrameInst *I : Shape.OutsideFrames) {
-    if (I->getPtr() == AI)
-      return;
-  }
 
   // The code that uses lifetime.start intrinsic does not work for functions
   // with loops without exit. Disable it on ABIs we know to generate such

@@ -796,22 +796,6 @@ public:
   }
 };
 
-/// This represents the llvm.coro.outside.frame instruction.
-class CoroOutsideFrameInst : public IntrinsicInst {
-  enum { PtrArg };
-
-public:
-  Value *getPtr() const { return getArgOperand(PtrArg); } // XXX: Could we require it to be an alloca?
-
-  // Methods to support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::coro_outside_frame;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
 } // End namespace llvm.
 
 #endif // LLVM_TRANSFORMS_COROUTINES_COROINSTR_H
