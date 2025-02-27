@@ -1516,15 +1516,14 @@ void DWARFVerifier::verifyNameIndexAbbrevs(
   }
 }
 
-SmallVector<std::string, 3>
-DWARFVerifier::getNames(const DWARFDie &DIE, bool IncludeStrippedTemplateNames,
-                        bool IncludeObjCNames, bool IncludeLinkageName) {
+/// Constructs a full name for a DIE. Potentially it does recursive lookup on
+/// DIEs. This can lead to extraction of DIEs in a different CU or TU.
+static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
+                                            bool IncludeStrippedTemplateNames,
+                                            bool IncludeObjCNames = true,
+                                            bool IncludeLinkageName = true) {
   SmallVector<std::string, 3> Result;
-  const char *Str = nullptr;
-  {
-    std::lock_guard<std::mutex> Lock(AccessMutex);
-    Str = DIE.getShortName();
-  }
+  const char *Str = DIE.getShortName();
   if (Str) {
     StringRef Name(Str);
     Result.emplace_back(Name);
@@ -1703,7 +1702,6 @@ void DWARFVerifier::verifyNameIndexEntries(
       // any entries from type units that don't match the one that made it into
       // the .dwp file.
       if (NonSkeletonDCtx.isDWP()) {
-        std::lock_guard<std::mutex> Lock(AccessMutex);
         DWARFDie NonSkeletonUnitDie = NonSkeletonUnit->getUnitDIE(true);
         StringRef DUDwoName = dwarf::toStringRef(
             UnitDie.find({DW_AT_dwo_name, DW_AT_GNU_dwo_name}));
@@ -1726,22 +1724,6 @@ void DWARFVerifier::verifyNameIndexEntries(
                            NextUnitOffset);
       });
       continue;
-    }
-    {
-      // TODO: Right now getDIEForOffset extracts everything into a DIE.
-      // Ideally we want another API that extracts only specfic DIE.
-      // Alternatively foreach NameIndex we can iterate over
-      // NameTableEntries/Entries, and put Entries into buckets based on CUs
-      // they access. Then extract all the DIEs for that CUs. For ThinLTO and
-      // BOLT there could be multiple CUs in NameIndex.
-      // This way we can remove the lock, and reduce memory foot print by
-      // releasing DIEs memory in CU after we are done.
-      std::lock_guard<std::mutex> Lock(AccessMutex);
-      if (Error E = NonSkeletonUnit->tryExtractDIEsIfNeeded(false)) {
-        std::string Msg = toString(std::move(E));
-        ErrorCategory.Report("Accelerator Table Error",
-                             [&]() { error() << Msg << '\n'; });
-      }
     }
     DWARFDie DIE = NonSkeletonUnit->getDIEForOffset(DIEOffset);
     if (!DIE) {
@@ -1838,7 +1820,8 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
 }
 
 void DWARFVerifier::verifyNameIndexCompleteness(
-    const DWARFDie &Die, const DWARFDebugNames::NameIndex &NI) {
+    const DWARFDie &Die, const DWARFDebugNames::NameIndex &NI,
+    const StringMap<DenseSet<uint64_t>> &NamesToDieOffsets) {
 
   // First check, if the Die should be indexed. The code follows the DWARF v5
   // wording as closely as possible.
@@ -1930,9 +1913,8 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   // that's the case.
   uint64_t DieUnitOffset = Die.getOffset() - Die.getDwarfUnit()->getOffset();
   for (StringRef Name : EntryNames) {
-    if (none_of(NI.equal_range(Name), [&](const DWARFDebugNames::Entry &E) {
-          return E.getDIEUnitOffset() == DieUnitOffset;
-        })) {
+    auto iter = NamesToDieOffsets.find(Name);
+    if (iter == NamesToDieOffsets.end() || !iter->second.count(DieUnitOffset)) {
       ErrorCategory.Report(
           "Name Index DIE entry missing name",
           llvm::dwarf::TagString(Die.getTag()), [&]() {
@@ -1942,6 +1924,45 @@ void DWARFVerifier::verifyNameIndexCompleteness(
                 NI.getUnitOffset(), Die.getOffset(), Die.getTag(), Name);
           });
     }
+  }
+}
+
+/// Extracts all the data for CU/TUs so we can access it in parallel without
+/// locks.
+static void extractCUsTus(DWARFContext &DCtx) {
+  // Abbrev DeclSet is shared beween the units.
+  for (auto &CUTU : DCtx.normal_units()) {
+    if (CUTU->getVersion() < 5)
+      continue;
+    CUTU->getUnitDIE();
+    CUTU->getBaseAddress();
+  }
+  parallelForEach(DCtx.normal_units(), [&](const auto &CUTU) {
+    if (CUTU->getVersion() < 5)
+      return;
+    if (Error E = CUTU->tryExtractDIEsIfNeeded(false))
+      DCtx.getRecoverableErrorHandler()(std::move(E));
+  });
+
+  // Invoking getNonSkeletonUnitDIE() sets up all the base pointers for DWO
+  // Units. This is needed for getBaseAddress().
+  for (const auto &CU : DCtx.compile_units()) {
+    if (!(CU->getVersion() >= 5 && CU->getDWOId()))
+      continue;
+    DWARFUnit *NonSkeletonUnit = CU->getNonSkeletonUnitDIE().getDwarfUnit();
+    DWARFContext &NonSkeletonContext = NonSkeletonUnit->getContext();
+    // Iterates over CUs and TUs.
+    for (auto &CUTU : NonSkeletonContext.dwo_units()) {
+      CUTU->getUnitDIE();
+      CUTU->getBaseAddress();
+    }
+    parallelForEach(NonSkeletonContext.dwo_units(), [&](const auto &CUTU) {
+      if (Error E = CUTU->tryExtractDIEsIfNeeded(false))
+        DCtx.getRecoverableErrorHandler()(std::move(E));
+    });
+    // If context is for DWP we only need to extract once.
+    if (NonSkeletonContext.isDWP())
+      break;
   }
 }
 
@@ -1974,24 +1995,61 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
     return;
   DenseMap<uint64_t, DWARFUnit *> CUOffsetsToDUMap;
   for (const auto &CU : DCtx.compile_units()) {
-    if (CU->getDWOId()) {
-      CUOffsetsToDUMap[CU->getOffset()] =
-          CU->getNonSkeletonUnitDIE().getDwarfUnit();
-      DWARFContext &Context =
-          CU->getNonSkeletonUnitDIE().getDwarfUnit()->getContext();
-      Context.getDWARFObj();
-    }
+    if (!(CU->getVersion() >= 5 && CU->getDWOId()))
+      continue;
+    CUOffsetsToDUMap[CU->getOffset()] =
+        CU->getNonSkeletonUnitDIE().getDwarfUnit();
   }
+  extractCUsTus(DCtx);
   for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
     parallelForEach(NI, [&](DWARFDebugNames::NameTableEntry NTE) {
       verifyNameIndexEntries(NI, NTE, CUOffsetsToDUMap);
     });
   }
 
-  for (const std::unique_ptr<DWARFUnit> &U : DCtx.info_section_units()) {
-    if (const DWARFDebugNames::NameIndex *NI =
-            AccelTable.getCUOrTUNameIndex(U->getOffset())) {
-      DWARFCompileUnit *CU = dyn_cast<DWARFCompileUnit>(U.get());
+  auto populateNameToOffset =
+      [&](const DWARFDebugNames::NameIndex &NI,
+          StringMap<DenseSet<uint64_t>> &NamesToDieOffsets) {
+        for (DWARFDebugNames::NameTableEntry NTE : NI) {
+          const std::string Name = NTE.getString();
+          uint64_t EntryID = NTE.getEntryOffset();
+          Expected<DWARFDebugNames::Entry> EntryOr = NI.getEntry(&EntryID);
+          auto Iter = NamesToDieOffsets.insert({Name, DenseSet<uint64_t>(3)});
+          for (; EntryOr; EntryOr = NI.getEntry(&EntryID)) {
+            if (std::optional<uint64_t> DieOffset = EntryOr->getDIEUnitOffset())
+              Iter.first->second.insert(*DieOffset);
+          }
+          handleAllErrors(
+              EntryOr.takeError(),
+              [&](const DWARFDebugNames::SentinelError &) {
+                if (!NamesToDieOffsets.empty())
+                  return;
+                ErrorCategory.Report(
+                    "NameIndex Name is not associated with any entries", [&]() {
+                      error()
+                          << formatv("Name Index @ {0:x}: Name {1} ({2}) is "
+                                     "not associated with any entries.\n",
+                                     NI.getUnitOffset(), NTE.getIndex(), Name);
+                    });
+              },
+              [&](const ErrorInfoBase &Info) {
+                ErrorCategory.Report("Uncategorized NameIndex error", [&]() {
+                  error() << formatv(
+                      "Name Index @ {0:x}: Name {1} ({2}): {3}\n",
+                      NI.getUnitOffset(), NTE.getIndex(), Name, Info.message());
+                });
+              });
+        }
+      };
+  // NameIndex can have multiple CUs. For example if it was created by BOLT.
+  // So better to iterate over NI, and then over CUs in it.
+  for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
+    StringMap<DenseSet<uint64_t>> NamesToDieOffsets(NI.getNameCount());
+    populateNameToOffset(NI, NamesToDieOffsets);
+    for (uint32_t i = 0, iEnd = NI.getCUCount(); i < iEnd; ++i) {
+      const uint64_t CUOffset = NI.getCUOffset(i);
+      DWARFUnit *U = DCtx.getUnitForOffset(CUOffset);
+      DWARFCompileUnit *CU = dyn_cast<DWARFCompileUnit>(U);
       if (CU) {
         if (CU->getDWOId()) {
           DWARFDie CUDie = CU->getUnitDIE(true);
@@ -2002,12 +2060,14 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
                 NonSkeletonUnitDie.getDwarfUnit()->dies(),
                 [&](const DWARFDebugInfoEntry &Die) {
                   verifyNameIndexCompleteness(
-                      DWARFDie(NonSkeletonUnitDie.getDwarfUnit(), &Die), *NI);
+                      DWARFDie(NonSkeletonUnitDie.getDwarfUnit(), &Die), NI,
+                      NamesToDieOffsets);
                 });
           }
         } else {
           parallelForEach(CU->dies(), [&](const DWARFDebugInfoEntry &Die) {
-            verifyNameIndexCompleteness(DWARFDie(CU, &Die), *NI);
+            verifyNameIndexCompleteness(DWARFDie(CU, &Die), NI,
+                                        NamesToDieOffsets);
           });
         }
       }

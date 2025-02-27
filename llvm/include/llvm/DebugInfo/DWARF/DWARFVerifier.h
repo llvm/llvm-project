@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
@@ -294,8 +295,9 @@ private:
       const DWARFDebugNames::NameIndex &NI,
       const DWARFDebugNames::NameTableEntry &NTE,
       const DenseMap<uint64_t, DWARFUnit *> &CUOffsetsToDUMap);
-  void verifyNameIndexCompleteness(const DWARFDie &Die,
-                                   const DWARFDebugNames::NameIndex &NI);
+  void verifyNameIndexCompleteness(
+      const DWARFDie &Die, const DWARFDebugNames::NameIndex &NI,
+      const StringMap<DenseSet<uint64_t>> &NamesToDieOffsets);
 
   /// Verify that the DWARF v5 accelerator table is valid.
   ///
@@ -316,13 +318,6 @@ private:
   /// \returns The number of errors occurred during verification
   void verifyDebugNames(const DWARFSection &AccelSection,
                         const DataExtractor &StrData);
-
-  /// Constructs a full name for a DIE. Potentially it does recursive lookup on
-  /// DIEs. This can lead to extraction of DIEs in a different CU or TU.
-  SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
-                                       bool IncludeStrippedTemplateNames,
-                                       bool IncludeObjCNames = true,
-                                       bool IncludeLinkageName = true);
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,
