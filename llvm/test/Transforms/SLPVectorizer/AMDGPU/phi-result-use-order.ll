@@ -95,12 +95,27 @@ bb1:
 define <4 x i8> @phisi8(i1 %cmp1, <4 x i8> %in1, <4 x i8> %in2)  {
 ; CHECK-LABEL: @phisi8(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i8> [[IN1:%.*]], i64 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i8> [[IN1]], i64 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i8> [[IN1]], i64 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i8> [[IN1]], i64 3
 ; CHECK-NEXT:    br i1 [[CMP1:%.*]], label [[BB1:%.*]], label [[BB0:%.*]]
 ; CHECK:       bb0:
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x i8> [[IN2:%.*]], i64 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x i8> [[IN2]], i64 1
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x i8> [[IN2]], i64 2
+; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x i8> [[IN2]], i64 3
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ [[IN1:%.*]], [[ENTRY:%.*]] ], [ [[IN2:%.*]], [[BB0]] ]
-; CHECK-NEXT:    ret <4 x i8> [[TMP0]]
+; CHECK-NEXT:    [[C0:%.*]] = phi i8 [ [[A0]], [[ENTRY:%.*]] ], [ [[B0]], [[BB0]] ]
+; CHECK-NEXT:    [[C1:%.*]] = phi i8 [ [[A1]], [[ENTRY]] ], [ [[B1]], [[BB0]] ]
+; CHECK-NEXT:    [[C2:%.*]] = phi i8 [ [[A2]], [[ENTRY]] ], [ [[B2]], [[BB0]] ]
+; CHECK-NEXT:    [[C3:%.*]] = phi i8 [ [[A3]], [[ENTRY]] ], [ [[B3]], [[BB0]] ]
+; CHECK-NEXT:    [[O0:%.*]] = insertelement <4 x i8> undef, i8 [[C0]], i64 0
+; CHECK-NEXT:    [[O1:%.*]] = insertelement <4 x i8> [[O0]], i8 [[C1]], i64 1
+; CHECK-NEXT:    [[O2:%.*]] = insertelement <4 x i8> [[O1]], i8 [[C2]], i64 2
+; CHECK-NEXT:    [[O3:%.*]] = insertelement <4 x i8> [[O2]], i8 [[C3]], i64 3
+; CHECK-NEXT:    ret <4 x i8> [[O3]]
 ;
 entry:
   %a0 = extractelement <4 x i8> %in1, i64 0
@@ -132,12 +147,27 @@ bb1:
 define <4 x i8> @phisi8_reverse(i1 %cmp1, <4 x i8> %in1, <4 x i8> %in2)  {
 ; CHECK-LABEL: @phisi8_reverse(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i8> [[IN1:%.*]], i64 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i8> [[IN1]], i64 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i8> [[IN1]], i64 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i8> [[IN1]], i64 3
 ; CHECK-NEXT:    br i1 [[CMP1:%.*]], label [[BB1:%.*]], label [[BB0:%.*]]
 ; CHECK:       bb0:
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x i8> [[IN2:%.*]], i64 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x i8> [[IN2]], i64 1
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x i8> [[IN2]], i64 2
+; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x i8> [[IN2]], i64 3
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ [[IN1:%.*]], [[ENTRY:%.*]] ], [ [[IN2:%.*]], [[BB0]] ]
-; CHECK-NEXT:    ret <4 x i8> [[TMP0]]
+; CHECK-NEXT:    [[C3:%.*]] = phi i8 [ [[A3]], [[ENTRY:%.*]] ], [ [[B3]], [[BB0]] ]
+; CHECK-NEXT:    [[C2:%.*]] = phi i8 [ [[A2]], [[ENTRY]] ], [ [[B2]], [[BB0]] ]
+; CHECK-NEXT:    [[C1:%.*]] = phi i8 [ [[A1]], [[ENTRY]] ], [ [[B1]], [[BB0]] ]
+; CHECK-NEXT:    [[C0:%.*]] = phi i8 [ [[A0]], [[ENTRY]] ], [ [[B0]], [[BB0]] ]
+; CHECK-NEXT:    [[O0:%.*]] = insertelement <4 x i8> undef, i8 [[C0]], i64 0
+; CHECK-NEXT:    [[O1:%.*]] = insertelement <4 x i8> [[O0]], i8 [[C1]], i64 1
+; CHECK-NEXT:    [[O2:%.*]] = insertelement <4 x i8> [[O1]], i8 [[C2]], i64 2
+; CHECK-NEXT:    [[O3:%.*]] = insertelement <4 x i8> [[O2]], i8 [[C3]], i64 3
+; CHECK-NEXT:    ret <4 x i8> [[O3]]
 ;
 entry:
   %a0 = extractelement <4 x i8> %in1, i64 0

@@ -321,7 +321,8 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) {
   // queries (e.g. get*InstrCost) to decide the proper handling
   // of 8 bit vectors.
   if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(Tp)) {
-    if (DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
+    if (ST->shouldCoerceIllegalTypes() &&
+        DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
       unsigned ElCount = VTy->getElementCount().getFixedValue();
       return PowerOf2Ceil(ElCount / 4);
     }
@@ -362,10 +363,10 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
 
-  return (ElemWidth == 8)                              ? 4
-         : (ElemWidth == 16)                           ? 2
-         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-                                                       : 1;
+  return (ST->shouldCoerceIllegalTypes() && ElemWidth == 8) ? 4
+         : (ElemWidth == 16)                                ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops())      ? 2
+                                                            : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -1175,7 +1176,8 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   unsigned ScalarSize = DL.getTypeSizeInBits(VT->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      (ScalarSize == 16 || ScalarSize == 8)) {
+      (ScalarSize == 16 ||
+       (ScalarSize == 8 && ST->shouldCoerceIllegalTypes()))) {
     // Larger vector widths may require additional instructions, but are
     // typically cheaper than scalarized versions.
     unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
