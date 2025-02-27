@@ -1443,12 +1443,13 @@ void AccessAnalysis::processMemAccesses() {
                     UnderlyingObj->getType()->getPointerAddressSpace()))
               continue;
 
-            UnderlyingObjToAccessMap::iterator Prev =
-                ObjToLastAccess.find(UnderlyingObj);
-            if (Prev != ObjToLastAccess.end())
-              DepCands.unionSets(Access, Prev->second);
+            auto [It, Inserted] =
+                ObjToLastAccess.try_emplace(UnderlyingObj, Access);
+            if (!Inserted) {
+              DepCands.unionSets(Access, It->second);
+              It->second = Access;
+            }
 
-            ObjToLastAccess[UnderlyingObj] = Access;
             LLVM_DEBUG(dbgs() << "  " << *UnderlyingObj << "\n");
           }
         }

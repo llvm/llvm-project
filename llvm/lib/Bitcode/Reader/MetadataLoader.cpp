@@ -539,9 +539,9 @@ class MetadataLoader::MetadataLoaderImpl {
       if (!Visited.insert(S).second)
         break;
     }
-    ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
 
-    return ParentSubprogram[InitialScope];
+    return ParentSubprogram[InitialScope] =
+               llvm::dyn_cast_or_null<DISubprogram>(S);
   }
 
   /// Move local imports from DICompileUnit's 'imports' field to
@@ -1595,6 +1595,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                          getDITypeRefOrNull(Record[6]), Record[7], Record[8],
                          Record[9], DWARFAddressSpace, PtrAuthData, Flags,
                          getDITypeRefOrNull(Record[11]), Annotations)),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_SUBRANGE_TYPE: {
+    if (Record.size() != 13)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[7]);
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DISubrangeType,
+                        (Context, getMDString(Record[1]),
+                         getMDOrNull(Record[2]), Record[3],
+                         getMDOrNull(Record[4]), Record[5], Record[6], Flags,
+                         getDITypeRefOrNull(Record[8]), getMDOrNull(Record[9]),
+                         getMDOrNull(Record[10]), getMDOrNull(Record[11]),
+                         getMDOrNull(Record[12]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;
