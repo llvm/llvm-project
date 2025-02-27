@@ -81,7 +81,7 @@ TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // Assign the manager_id, and debugger_id, if available, to this entry.
   LLDBBaseTelemetryInfo *lldb_entry =
-      llvm::dyn_cast<LLDBBaseTelemetryInfo>(entry);
+      llvm::cast<LLDBBaseTelemetryInfo>(entry);
   lldb_entry->SessionId = m_id;
   if (Debugger *debugger = lldb_entry->debugger)
     lldb_entry->debugger_id = debugger->GetID();
