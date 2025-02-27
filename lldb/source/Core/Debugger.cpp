@@ -53,6 +53,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 
 #if defined(_WIN32)
@@ -764,20 +765,13 @@ void Debugger::InstanceInitialize() {
 
 DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
                                     void *baton) {
-  lldb_private::telemetry::ScopeTelemetryCollector helper;
+  lldb_private::telemetry::ScopedDispatcher<
+      lldb_private::telemetry::DebuggerInfo>
+      helper([](lldb_private::telemetry::DebuggerInfo *entry) {
+        entry->lldb_version = lldb_private::GetVersion();
+      });
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
-
-  if (helper.TelemetryEnabled()) {
-    helper.RunAtScopeExit([&]() {
-      lldb_private::telemetry::TelemetryManager *manager =
-          lldb_private::telemetry::TelemetryManager::GetInstance();
-      lldb_private::telemetry::DebuggerInfo entry;
-      entry.debugger = debugger_sp.get();
-      entry.start_time = helper.GetStartTime();
-      entry.end_time = helper.GetCurrentTime();
-      manager->AtDebuggerStartup(&entry);
-    });
-  }
+  helper.SetDebugger(debugger_sp.get());
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
@@ -1005,20 +999,16 @@ void Debugger::Clear() {
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
   llvm::call_once(m_clear_once, [this]() {
-    lldb_private::telemetry::ScopeTelemetryCollector helper;
-    if (helper.TelemetryEnabled()) {
-      // TBD: We *may* have to send off the log BEFORE the ClearIOHanders()?
-      helper.RunAtScopeExit([&helper, this]() {
-        lldb_private::telemetry::TelemetryManager *manager =
-            lldb_private::telemetry::TelemetryManager::GetInstance();
-        lldb_private::telemetry::DebuggerInfo entry;
-        entry.debugger = this;
-        entry.exit_desc = {0, ""}; // If we are here, there was no error.
-        entry.start_time = helper.GetStartTime();
-        entry.end_time = helper.GetCurrentTime();
-        manager->AtDebuggerExit(&entry);
-      });
-    }
+    lldb_private::telemetry::ScopedDispatcher<
+        lldb_private::telemetry::DebuggerInfo>
+        helper(
+            [](lldb_private::telemetry::DebuggerInfo *info) {
+              // If we are here, then there was no error.
+              // Any abnormal exit will be reported by the crash-handler.
+              info->exit_desc = {0, ""};
+            },
+            this);
+
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();

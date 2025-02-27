@@ -11,6 +11,7 @@
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/DenseMap.h"
@@ -111,37 +112,41 @@ private:
 };
 
 /// Helper RAII class for collecting telemetry.
-class ScopeTelemetryCollector {
-public:
-  ScopeTelemetryCollector() {
-    if (TelemetryEnabled())
-      m_start = std::chrono::steady_clock::now();
+template <typename I> struct ScopedDispatcher {
+  // The debugger pointer is optional because we may not have a debugger yet.
+  // In that case, caller must set the debugger later.
+  ScopedDispatcher(std::function<void(I *info)> callback,
+                   Debugger *debugger = nullptr)
+      : m_callback(callback) {
+    // Start the timer.
+    m_start_time = std::chrono::steady_clock::now();
+    m_info.debugger = debugger;
   }
 
-  ~ScopeTelemetryCollector() {
-    while (!m_exit_funcs.empty()) {
-      (m_exit_funcs.top())();
-      m_exit_funcs.pop();
+  void SetDebugger(Debugger *debugger) { m_info.debugger = debugger; }
+
+  ~ScopedDispatcher() {
+    TelemetryManager *manager = TelemetryManager::GetInstance();
+    // If Telemetry is disabled (either at buildtime or runtime),
+    // then don't do anything.
+    if (!manager || !manager->GetConfig()->EnableTelemetry)
+      return;
+    m_info.start_time = m_start_time;
+    // Populate common fields that we can only set now.
+    m_info.end_time = std::chrono::steady_clock::now();
+    // The callback will set the remaining fields.
+    m_callback(&m_info);
+    // And then we dispatch.
+    if (llvm::Error er = manager->dispatch(&m_info)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                     "Failed to dispatch entry of type: {0}", m_info.getKind());
     }
   }
 
-  bool TelemetryEnabled() {
-    TelemetryManager *instance = TelemetryManager::GetInstance();
-    return instance != nullptr && instance->GetConfig()->EnableTelemetry;
-  }
-
-  SteadyTimePoint GetStartTime() { return m_start; }
-  SteadyTimePoint GetCurrentTime() { return std::chrono::steady_clock::now(); }
-
-  template <typename Fp> void RunAtScopeExit(Fp &&F) {
-    assert(llvm::telemetry::Config::BuildTimeEnableTelemetry &&
-           "Telemetry should have been enabled");
-    m_exit_funcs.push(std::forward<Fp>(F));
-  }
-
 private:
-  SteadyTimePoint m_start;
-  std::stack<std::function<void()>> m_exit_funcs;
+  SteadyTimePoint m_start_time;
+  std::function<void(I *info)> m_callback;
+  I m_info;
 };
 
 } // namespace telemetry
