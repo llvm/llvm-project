@@ -305,7 +305,8 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
     // TODO: Verify this works fine when modulemap for module A is eagerly
     // loaded from A.pcm, and module map passed on the command line contains
     // definition of a submodule: "explicit module A.Private { ... }".
-    if (EagerLoadModules && DepModuleMapFiles.contains(*ModuleMapEntry))
+    if (Service.shouldEagerLoadModules() &&
+        DepModuleMapFiles.contains(*ModuleMapEntry))
       continue;
 
     // Don't report module map file of the current module unless it also
@@ -359,7 +360,7 @@ llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
 
 void ModuleDepCollector::addModuleMapFiles(
     CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
-  if (EagerLoadModules)
+  if (Service.shouldEagerLoadModules())
     return; // Only pcm is needed for eager load.
 
   for (const ModuleID &MID : ClangModuleDeps) {
@@ -381,7 +382,7 @@ void ModuleDepCollector::addModuleFiles(
       CI.getFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
                                                         *MD->ModuleCacheKey);
 
-    if (EagerLoadModules)
+    if (Service.shouldEagerLoadModules())
       CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
@@ -401,7 +402,7 @@ void ModuleDepCollector::addModuleFiles(
       CI.getMutFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
                                                            *MD->ModuleCacheKey);
 
-    if (EagerLoadModules)
+    if (Service.shouldEagerLoadModules())
       CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getMutHeaderSearchOpts().PrebuiltModuleFiles.insert(
@@ -621,8 +622,8 @@ static void checkCompileCacheKeyMatch(cas::ObjectStore &CAS,
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, bool IgnoreCWD, ModuleDeps &Deps) {
   Deps.ID.ContextHash =
-      getModuleContextHash(Deps, CI, EagerLoadModules, IgnoreCWD,
-                           ScanInstance.getVirtualFileSystem());
+      getModuleContextHash(Deps, CI, Service.shouldEagerLoadModules(),
+                           IgnoreCWD, ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
@@ -727,7 +728,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
-  if (MDC.IsStdModuleP1689Format)
+  if (MDC.Service.getFormat() == ScanningOutputFormat::P1689)
     MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
         MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
 
@@ -830,21 +831,23 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (any(MDC.OptimizeArgs & (ScanningOptimizations::HeaderSearch |
-                                        ScanningOptimizations::VFS)))
+            if (any(MDC.Service.getOptimizeArgs() &
+                    (ScanningOptimizations::HeaderSearch |
+                     ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF,
                                        MDC.PrebuiltModuleVFSMap,
-                                       MDC.OptimizeArgs);
+                                       MDC.Service.getOptimizeArgs());
 
-            if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
+            if (any(MDC.Service.getOptimizeArgs() &
+                    ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
                   BuildInvocation.getMutDiagnosticOpts(),
                   BuildInvocation.getFrontendOpts().IsSystemModule);
 
-            IgnoreCWD =
-                any(MDC.OptimizeArgs & ScanningOptimizations::IgnoreCWD) &&
-                isSafeToIgnoreCWD(BuildInvocation);
+            IgnoreCWD = any(MDC.Service.getOptimizeArgs() &
+                            ScanningOptimizations::IgnoreCWD) &&
+                        isSafeToIgnoreCWD(BuildInvocation);
             if (IgnoreCWD) {
               llvm::ErrorOr<std::string> CWD =
                   MDC.ScanInstance.getVirtualFileSystem()
@@ -969,19 +972,17 @@ void ModuleDepCollectorPP::addAffectingClangModule(
 }
 
 ModuleDepCollector::ModuleDepCollector(
+    DependencyScanningService &Service,
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
-    ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
-    bool IsStdModuleP1689Format)
-    : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
+    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap)
+    : Service(Service), ScanInstance(ScanInstance), Consumer(C),
+      Controller(Controller),
       PrebuiltModuleVFSMap(std::move(PrebuiltModuleVFSMap)),
       Opts(std::move(Opts)),
       CommonInvocation(
-          makeCommonInvocationForModuleBuild(std::move(OriginalCI))),
-      OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules),
-      IsStdModuleP1689Format(IsStdModuleP1689Format) {}
+          makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));
@@ -1013,7 +1014,7 @@ static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
 }
 
 void ModuleDepCollector::addFileDep(StringRef Path) {
-  if (IsStdModuleP1689Format) {
+  if (Service.getFormat() == ScanningOutputFormat::P1689) {
     // Within P1689 format, we don't want all the paths to be absolute path
     // since it may violate the traditional make style dependencies info.
     FileDeps.emplace_back(Path);

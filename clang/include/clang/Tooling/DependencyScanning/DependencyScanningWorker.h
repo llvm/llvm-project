@@ -121,6 +121,10 @@ public:
 /// using the regular processing run.
 class DependencyScanningWorker {
 public:
+  /// Construct a dependency scanning worker.
+  ///
+  /// @param Service The parent service. Must outlive the worker.
+  /// @param FS The filesystem for the worker to use.
   DependencyScanningWorker(DependencyScanningService &Service,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
@@ -182,7 +186,7 @@ public:
       DependencyActionController &Controller, DiagnosticConsumer &DiagsConsumer,
       raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
 
-  ScanningOutputFormat getScanningFormat() const { return Format; }
+  ScanningOutputFormat getScanningFormat() const { return Service.getFormat(); }
 
   CachingOnDiskFileSystemPtr getCASFS() { return CacheFS; }
   const CASOptions &getCASOpts() const { return CASOpts; }
@@ -193,11 +197,11 @@ public:
   /// each invocation.
   llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const;
 
-  bool shouldEagerLoadModules() const { return EagerLoadModules; }
-
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 
 private:
+  /// The parent dependency scanning service.
+  DependencyScanningService &Service;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   /// The file system to be used during the scan.
   /// This is either \c FS passed in the constructor (when performing canonical
@@ -207,11 +211,6 @@ private:
   /// dependency-directives-extracting) filesystem overlaid on top of \c FS
   /// (passed in the constructor).
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  ScanningOutputFormat Format;
-  /// Whether to optimize the modules' command-line arguments.
-  ScanningOptimizations OptimizeArgs;
-  /// Whether to set up command-lines to load PCM files eagerly.
-  bool EagerLoadModules;
 
   /// The caching file system.
   CachingOnDiskFileSystemPtr CacheFS;

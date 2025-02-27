@@ -394,30 +394,22 @@ private:
 class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
-      StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      DependencyActionController &Controller,
+      DependencyScanningService &Service, StringRef WorkingDirectory,
+      DependencyConsumer &Consumer, DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
       llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS,
-      ScanningOutputFormat Format, ScanningOptimizations OptimizeArgs,
-      bool EagerLoadModules, bool DisableFree, bool EmitDependencyFile,
+      bool DisableFree, bool EmitDependencyFile,
       bool DiagGenerationAsCompilation, const CASOptions &CASOpts,
       std::optional<StringRef> ModuleName = std::nullopt,
       raw_ostream *VerboseOS = nullptr)
-      : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
+      : Service(Service), WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         Controller(Controller), DepFS(std::move(DepFS)),
         DepCASFS(std::move(DepCASFS)), CacheFS(std::move(CacheFS)),
-        Format(Format), OptimizeArgs(OptimizeArgs),
-        EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
+        DisableFree(DisableFree),
         CASOpts(CASOpts), EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
-        ModuleName(ModuleName), VerboseOS(VerboseOS) {
-    // The FullIncludeTree output format completely subsumes header search and
-    // VFS optimizations due to how it works. Disable these optimizations so
-    // we're not doing unneeded work.
-    if (Format == ScanningOutputFormat::FullIncludeTree)
-      this->OptimizeArgs &= ~ScanningOptimizations::FullIncludeTreeIrrelevant;
-  }
+        ModuleName(ModuleName), VerboseOS(VerboseOS) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *DriverFileMgr,
@@ -427,7 +419,7 @@ public:
     CompilerInvocation OriginalInvocation(*Invocation);
     // Restore the value of DisableFree, which may be modified by Tooling.
     OriginalInvocation.getFrontendOpts().DisableFree = DisableFree;
-    if (any(OptimizeArgs & ScanningOptimizations::Macros))
+    if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
       canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
     if (Scanned) {
@@ -484,7 +476,7 @@ public:
       ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
-        any(OptimizeArgs & ScanningOptimizations::VFS);
+        any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
 
     // Support for virtual file system overlays.
     auto FS = createVFSFromCompilerInvocation(
@@ -549,7 +541,7 @@ public:
       Opts->Targets = {
           deduceDepTarget(ScanInstance.getFrontendOpts().OutputFile,
                           ScanInstance.getFrontendOpts().Inputs)};
-    if (Format == ScanningOutputFormat::Make) {
+    if (Service.getFormat() == ScanningOutputFormat::Make) {
       // Only 'Make' scanning needs to force this because that mode depends on
       // getting the dependencies directly from \p DependencyFileGenerator.
       Opts->IncludeSystemHeaders = true;
@@ -569,7 +561,7 @@ public:
     // \p DependencyScanningAction, and have the callers pass in a
     // “DependencyCollector factory” so the connection of collector<->consumer
     // is explicit in each \p DependencyScanningTool function.
-    switch (Format) {
+    switch (Service.getFormat()) {
     case ScanningOutputFormat::Make:
     case ScanningOutputFormat::Tree:
       ScanInstance.addDependencyCollector(
@@ -590,9 +582,8 @@ public:
       }
 
       MDC = std::make_shared<ModuleDepCollector>(
-          std::move(Opts), ScanInstance, Consumer, Controller,
-          OriginalInvocation, std::move(PrebuiltModuleVFSMap), OptimizeArgs,
-          EagerLoadModules, Format == ScanningOutputFormat::P1689);
+          Service, std::move(Opts), ScanInstance, Consumer, Controller,
+          OriginalInvocation, std::move(PrebuiltModuleVFSMap));
       ScanInstance.addDependencyCollector(MDC);
       ScanInstance.setGenModuleActionWrapper(
           [&Controller = Controller](const FrontendOptions &Opts,
@@ -620,7 +611,7 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (Format == ScanningOutputFormat::P1689)
+    if (Service.getFormat() == ScanningOutputFormat::P1689)
       Action = std::make_unique<PreprocessOnlyAction>();
     else if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
@@ -696,16 +687,13 @@ public:
     return nullptr;
   }
 
-private:
+  DependencyScanningService &Service;
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
-  ScanningOutputFormat Format;
-  ScanningOptimizations OptimizeArgs;
-  bool EagerLoadModules;
   bool DisableFree;
   const CASOptions &CASOpts;
   bool EmitDependencyFile = false;
@@ -725,8 +713,7 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Format(Service.getFormat()), OptimizeArgs(Service.getOptimizeArgs()),
-      EagerLoadModules(Service.shouldEagerLoadModules()),
+    : Service(Service),
       CASOpts(Service.getCASOpts()), CAS(Service.getCAS()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -897,9 +884,8 @@ bool DependencyScanningWorker::scanDependencies(
   // in-process; preserve the original value, which is
   // always true for a driver invocation.
   bool DisableFree = true;
-  DependencyScanningAction Action(WorkingDirectory, Consumer, Controller, DepFS,
+  DependencyScanningAction Action(Service, WorkingDirectory, Consumer, Controller, DepFS,
                                   DepCASFS, CacheFS,
-                                  Format, OptimizeArgs, EagerLoadModules,
                                   DisableFree,
                                   /*EmitDependencyFile=*/false,
                                   /*DiagGenerationAsCompilation=*/false, getCASOpts(),
@@ -1059,13 +1045,12 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
 
   // FIXME: EmitDependencyFile should only be set when it's for a real
   // compilation.
-  DependencyScanningAction Action(
-      WorkingDirectory, DepsConsumer, Controller, DepFS, DepCASFS, CacheFS,
-      Format,
-      ScanningOptimizations::Default, /*DisableFree=*/false, EagerLoadModules,
-      /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
-      getCASOpts(),
-      /*ModuleName=*/std::nullopt, VerboseOS);
+  DependencyScanningAction Action(Service, WorkingDirectory, DepsConsumer,
+                                  Controller, DepFS, DepCASFS, CacheFS,
+                                  /*DisableFree=*/false,
+                                  /*EmitDependencyFile=*/!DepFile.empty(),
+                                  DiagGenerationAsCompilation, getCASOpts(),
+                                  /*ModuleName=*/std::nullopt, VerboseOS);
 
   // Ignore result; we're just collecting dependencies.
   //
