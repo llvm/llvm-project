@@ -116,12 +116,10 @@ bool RISCVExegesisPostprocessing::processWriteFRM(MachineInstr &MI,
                                                   MachineRegisterInfo &MRI) {
   // The virtual register will be the first operand in both SwapFRMImm and
   // WriteFRM.
-  if (MI.getOperand(0).isReg()) {
-    Register DestReg = MI.getOperand(0).getReg();
-    if (DestReg.isVirtual()) {
-      MRI.replaceRegWith(DestReg, allocateGPRRegister(*MI.getMF(), MRI));
-      return true;
-    }
+  Register DestReg = MI.getOperand(0).getReg();
+  if (DestReg.isVirtual()) {
+    MRI.replaceRegWith(DestReg, allocateGPRRegister(*MI.getMF(), MRI));
+    return true;
   }
   return false;
 }
