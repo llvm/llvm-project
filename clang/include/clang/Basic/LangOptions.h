@@ -653,6 +653,12 @@ public:
   // WebAssembly target.
   bool NoWasmOpt = false;
 
+  /// Atomic code-generation options.
+  /// These flags are set directly from the command-line options.
+  bool AtomicRemoteMemory = false;
+  bool AtomicFineGrainedMemory = false;
+  bool AtomicIgnoreDenormalMode = false;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -1161,6 +1167,66 @@ inline FPOptionsOverride FPOptions::getChangesFrom(const FPOptions &Base) const 
 inline void FPOptions::applyChanges(FPOptionsOverride FPO) {
   *this = FPO.applyOverrides(*this);
 }
+
+// The three atomic code-generation options.
+// The canonical (positive) names are:
+//   "remote_memory", "fine_grained_memory", and "ignore_denormal_mode".
+// In attribute or command-line parsing, a token prefixed with "no_" inverts its
+// value.
+enum class AtomicOptionKind {
+  RemoteMemory,       // enable remote memory.
+  FineGrainedMemory,  // enable fine-grained memory.
+  IgnoreDenormalMode, // ignore floating-point denormals.
+  LANGOPT_ATOMIC_OPTION_LAST = IgnoreDenormalMode,
+};
+
+struct AtomicOptions {
+  // Bitfields for each option.
+  unsigned remote_memory : 1;
+  unsigned fine_grained_memory : 1;
+  unsigned ignore_denormal_mode : 1;
+
+  AtomicOptions()
+      : remote_memory(0), fine_grained_memory(0), ignore_denormal_mode(0) {}
+
+  AtomicOptions(const LangOptions &LO)
+      : remote_memory(LO.AtomicRemoteMemory),
+        fine_grained_memory(LO.AtomicFineGrainedMemory),
+        ignore_denormal_mode(LO.AtomicIgnoreDenormalMode) {}
+
+  bool getOption(AtomicOptionKind Kind) const {
+    switch (Kind) {
+    case AtomicOptionKind::RemoteMemory:
+      return remote_memory;
+    case AtomicOptionKind::FineGrainedMemory:
+      return fine_grained_memory;
+    case AtomicOptionKind::IgnoreDenormalMode:
+      return ignore_denormal_mode;
+    }
+    llvm_unreachable("Invalid AtomicOptionKind");
+  }
+
+  void setOption(AtomicOptionKind Kind, bool Value) {
+    switch (Kind) {
+    case AtomicOptionKind::RemoteMemory:
+      remote_memory = Value;
+      return;
+    case AtomicOptionKind::FineGrainedMemory:
+      fine_grained_memory = Value;
+      return;
+    case AtomicOptionKind::IgnoreDenormalMode:
+      ignore_denormal_mode = Value;
+      return;
+    }
+    llvm_unreachable("Invalid AtomicOptionKind");
+  }
+
+  LLVM_DUMP_METHOD void dump() const {
+    llvm::errs() << "\n remote_memory: " << remote_memory
+                 << "\n fine_grained_memory: " << fine_grained_memory
+                 << "\n ignore_denormal_mode: " << ignore_denormal_mode << "\n";
+  }
+};
 
 /// Describes the kind of translation unit being processed.
 enum TranslationUnitKind {
