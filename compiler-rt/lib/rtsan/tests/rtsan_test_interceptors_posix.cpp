@@ -887,6 +887,17 @@ TEST_F(RtsanOpenedFileTest, FtruncateDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if _FILE_OFFSET_BITS == 64 && SANITIZER_LINUX
+TEST_F(RtsanOpenedFileTest, CopyfilerangeDiesWhenRealtime) {
+  off_t in = 0, out = 1;
+  auto Func = [this, &in, &out]() {
+    copy_file_range(GetOpenFd(), &in, GetOpenFd(), &out, 1, 0);
+  };
+  ExpectRealtimeDeath(Func, "copy_file_range");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST_F(RtsanFileTest, FcloseDiesWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
