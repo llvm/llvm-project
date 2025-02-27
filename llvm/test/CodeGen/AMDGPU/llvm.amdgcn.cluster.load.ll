@@ -7,23 +7,15 @@ declare <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1), i32 %
 declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32 %cpol, i32 %mask)
 
 define amdgpu_ps void @cluster_load_b32_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
-; GFX1250-SDAG-LABEL: cluster_load_b32_vaddr:
-; GFX1250-SDAG:       ; %bb.0: ; %entry
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1250-SDAG-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32 th:TH_LOAD_NT
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX1250-SDAG-NEXT:    s_endpgm
-;
-; GFX1250-GISEL-LABEL: cluster_load_b32_vaddr:
-; GFX1250-GISEL:       ; %bb.0: ; %entry
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 m0, v4
-; GFX1250-GISEL-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32 th:TH_LOAD_NT
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX1250-GISEL-NEXT:    s_endpgm
+; GFX1250-LABEL: cluster_load_b32_vaddr:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_mov_b32 m0, s0
+; GFX1250-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32 th:TH_LOAD_NT
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX1250-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
   %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 1, i32 %mask)
@@ -79,23 +71,15 @@ entry:
 }
 
 define amdgpu_ps void @cluster_load_b64_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
-; GFX1250-SDAG-LABEL: cluster_load_b64_vaddr:
-; GFX1250-SDAG:       ; %bb.0: ; %entry
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1250-SDAG-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32 th:TH_LOAD_NT
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GFX1250-SDAG-NEXT:    s_endpgm
-;
-; GFX1250-GISEL-LABEL: cluster_load_b64_vaddr:
-; GFX1250-GISEL:       ; %bb.0: ; %entry
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 m0, v4
-; GFX1250-GISEL-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32 th:TH_LOAD_NT
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GFX1250-GISEL-NEXT:    s_endpgm
+; GFX1250-LABEL: cluster_load_b64_vaddr:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_mov_b32 m0, s0
+; GFX1250-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32 th:TH_LOAD_NT
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX1250-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
   %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 1, i32 %mask)
@@ -151,23 +135,15 @@ entry:
 }
 
 define amdgpu_ps void @cluster_load_b128_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
-; GFX1250-SDAG-LABEL: cluster_load_b128_vaddr:
-; GFX1250-SDAG:       ; %bb.0: ; %entry
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1250-SDAG-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32 th:TH_LOAD_NT
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off
-; GFX1250-SDAG-NEXT:    s_endpgm
-;
-; GFX1250-GISEL-LABEL: cluster_load_b128_vaddr:
-; GFX1250-GISEL:       ; %bb.0: ; %entry
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 m0, v4
-; GFX1250-GISEL-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32 th:TH_LOAD_NT
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
-; GFX1250-GISEL-NEXT:    s_endpgm
+; GFX1250-LABEL: cluster_load_b128_vaddr:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_mov_b32 m0, s0
+; GFX1250-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32 th:TH_LOAD_NT
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX1250-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
   %val = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1) %gep, i32 1, i32 %mask)
@@ -205,3 +181,6 @@ entry:
   store <4 x i32> %val, ptr addrspace(1) %use
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX1250-GISEL: {{.*}}
+; GFX1250-SDAG: {{.*}}

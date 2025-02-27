@@ -346,28 +346,28 @@ define void @sdiv_const() {
 define void @udiv_const() {
 ; CHECK-LABEL: 'udiv_const'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = udiv i128 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = udiv i32 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i32 = udiv <2 x i32> undef, <i32 4, i32 5>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = udiv <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = udiv i16 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i16 = udiv <2 x i16> undef, <i16 4, i16 5>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i16 = udiv <4 x i16> undef, <i16 4, i16 5, i16 6, i16 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i16 = udiv <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V16i16 = udiv <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 352 for instruction: %V32i16 = udiv <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = udiv i8 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i8 = udiv <2 x i8> undef, <i8 4, i8 5>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i8 = udiv <4 x i8> undef, <i8 4, i8 5, i8 6, i8 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i8 = udiv <8 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %V16i8 = udiv <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 336 for instruction: %V32i8 = udiv <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V64i8 = udiv <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = udiv i64 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8i64 = udiv <8 x i64> undef, <i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = udiv i32 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i32 = udiv <2 x i32> undef, <i32 4, i32 5>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8i32 = udiv <8 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16i32 = udiv <16 x i32> undef, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I16 = udiv i16 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i16 = udiv <2 x i16> undef, <i16 4, i16 5>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i16 = udiv <4 x i16> undef, <i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i16 = udiv <8 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16i16 = udiv <16 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32i16 = udiv <32 x i16> undef, <i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I8 = udiv i8 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i8 = udiv <2 x i8> undef, <i8 4, i8 5>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i8 = udiv <4 x i8> undef, <i8 4, i8 5, i8 6, i8 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i8 = udiv <8 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i8 = udiv <16 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32i8 = udiv <32 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64i8 = udiv <64 x i8> undef, <i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 
@@ -463,28 +463,28 @@ define void @sdiv_uniformconst() {
 define void @udiv_uniformconst() {
 ; CHECK-LABEL: 'udiv_uniformconst'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = udiv i128 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = udiv <2 x i64> undef, splat (i64 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = udiv i32 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i32 = udiv <2 x i32> undef, splat (i32 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4i32 = udiv <4 x i32> undef, splat (i32 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i32 = udiv <8 x i32> undef, splat (i32 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16i32 = udiv <16 x i32> undef, splat (i32 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = udiv i16 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i16 = udiv <2 x i16> undef, splat (i16 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i16 = udiv <4 x i16> undef, splat (i16 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i16 = udiv <8 x i16> undef, splat (i16 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16i16 = udiv <16 x i16> undef, splat (i16 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %V32i16 = udiv <32 x i16> undef, splat (i16 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = udiv i8 undef, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i8 = udiv <2 x i8> undef, splat (i8 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i8 = udiv <4 x i8> undef, splat (i8 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i8 = udiv <8 x i8> undef, splat (i8 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16i8 = udiv <16 x i8> undef, splat (i8 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %V32i8 = udiv <32 x i8> undef, splat (i8 7)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %V64i8 = udiv <64 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = udiv i64 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2i64 = udiv <2 x i64> undef, splat (i64 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8i64 = udiv <8 x i64> undef, splat (i64 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = udiv i32 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i32 = udiv <2 x i32> undef, splat (i32 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i32 = udiv <4 x i32> undef, splat (i32 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8i32 = udiv <8 x i32> undef, splat (i32 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16i32 = udiv <16 x i32> undef, splat (i32 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I16 = udiv i16 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i16 = udiv <2 x i16> undef, splat (i16 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i16 = udiv <4 x i16> undef, splat (i16 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i16 = udiv <8 x i16> undef, splat (i16 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16i16 = udiv <16 x i16> undef, splat (i16 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32i16 = udiv <32 x i16> undef, splat (i16 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I8 = udiv i8 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i8 = udiv <2 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i8 = udiv <4 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i8 = udiv <8 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i8 = udiv <16 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32i8 = udiv <32 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64i8 = udiv <64 x i8> undef, splat (i8 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %I128 = udiv i128 undef, 7
@@ -578,29 +578,29 @@ define void @sdiv_constpow2() {
 
 define void @udiv_constpow2() {
 ; CHECK-LABEL: 'udiv_constpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = udiv i128 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 8, i64 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8i64 = udiv <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = udiv i64 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 8, i64 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i64 = udiv <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = udiv i32 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i32 = udiv <2 x i32> undef, <i32 2, i32 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8i32 = udiv <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = udiv <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = udiv <2 x i32> undef, <i32 2, i32 4>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i32 = udiv <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = udiv <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = udiv i16 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i16 = udiv <2 x i16> undef, <i16 2, i16 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i16 = udiv <4 x i16> undef, <i16 2, i16 4, i16 8, i16 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i16 = udiv <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V16i16 = udiv <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 352 for instruction: %V32i16 = udiv <32 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = udiv <2 x i16> undef, <i16 2, i16 4>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = udiv <4 x i16> undef, <i16 2, i16 4, i16 8, i16 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = udiv <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i16 = udiv <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32i16 = udiv <32 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = udiv i8 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i8 = udiv <2 x i8> undef, <i8 2, i8 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i8 = udiv <4 x i8> undef, <i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i8 = udiv <8 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %V16i8 = udiv <16 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 336 for instruction: %V32i8 = udiv <32 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V64i8 = udiv <64 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i8 = udiv <2 x i8> undef, <i8 2, i8 4>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i8 = udiv <4 x i8> undef, <i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i8 = udiv <8 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i8 = udiv <16 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32i8 = udiv <32 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64i8 = udiv <64 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %I128 = udiv i128 undef, 16
@@ -694,29 +694,29 @@ define void @sdiv_uniformconstpow2() {
 
 define void @udiv_uniformconstpow2() {
 ; CHECK-LABEL: 'udiv_uniformconstpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = udiv i128 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = udiv <2 x i64> undef, splat (i64 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = udiv <4 x i64> undef, splat (i64 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i64 = udiv <8 x i64> undef, splat (i64 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I128 = udiv i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = udiv i64 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = udiv <2 x i64> undef, splat (i64 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i64 = udiv <4 x i64> undef, splat (i64 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i64 = udiv <8 x i64> undef, splat (i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = udiv i32 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i32 = udiv <2 x i32> undef, splat (i32 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4i32 = udiv <4 x i32> undef, splat (i32 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i32 = udiv <8 x i32> undef, splat (i32 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16i32 = udiv <16 x i32> undef, splat (i32 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = udiv <2 x i32> undef, splat (i32 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = udiv <4 x i32> undef, splat (i32 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i32 = udiv <8 x i32> undef, splat (i32 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = udiv <16 x i32> undef, splat (i32 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = udiv i16 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i16 = udiv <2 x i16> undef, splat (i16 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i16 = udiv <4 x i16> undef, splat (i16 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i16 = udiv <8 x i16> undef, splat (i16 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16i16 = udiv <16 x i16> undef, splat (i16 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %V32i16 = udiv <32 x i16> undef, splat (i16 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = udiv <2 x i16> undef, splat (i16 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = udiv <4 x i16> undef, splat (i16 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = udiv <8 x i16> undef, splat (i16 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i16 = udiv <16 x i16> undef, splat (i16 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32i16 = udiv <32 x i16> undef, splat (i16 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = udiv i8 undef, 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i8 = udiv <2 x i8> undef, splat (i8 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i8 = udiv <4 x i8> undef, splat (i8 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i8 = udiv <8 x i8> undef, splat (i8 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16i8 = udiv <16 x i8> undef, splat (i8 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %V32i8 = udiv <32 x i8> undef, splat (i8 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %V64i8 = udiv <64 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i8 = udiv <2 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i8 = udiv <4 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i8 = udiv <8 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i8 = udiv <16 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32i8 = udiv <32 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64i8 = udiv <64 x i8> undef, splat (i8 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %I128 = udiv i128 undef, 16
@@ -811,28 +811,28 @@ define void @sdiv_constnegpow2() {
 define void @udiv_constnegpow2() {
 ; CHECK-LABEL: 'udiv_constnegpow2'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = udiv i128 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = udiv i32 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i32 = udiv <2 x i32> undef, <i32 -2, i32 -4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = udiv <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = udiv i16 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i16 = udiv <2 x i16> undef, <i16 -2, i16 -4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i16 = udiv <4 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i16 = udiv <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V16i16 = udiv <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 352 for instruction: %V32i16 = udiv <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = udiv i8 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2i8 = udiv <2 x i8> undef, <i8 -2, i8 -4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i8 = udiv <4 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i8 = udiv <8 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %V16i8 = udiv <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 336 for instruction: %V32i8 = udiv <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %V64i8 = udiv <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = udiv i64 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8i64 = udiv <8 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16, i64 -32, i64 -64, i64 -128, i64 -256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = udiv i32 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i32 = udiv <2 x i32> undef, <i32 -2, i32 -4>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8i32 = udiv <8 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16i32 = udiv <16 x i32> undef, <i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256, i32 -2, i32 -4, i32 -8, i32 -16, i32 -32, i32 -64, i32 -128, i32 -256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I16 = udiv i16 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i16 = udiv <2 x i16> undef, <i16 -2, i16 -4>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i16 = udiv <4 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i16 = udiv <8 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16i16 = udiv <16 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32i16 = udiv <32 x i16> undef, <i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256, i16 -2, i16 -4, i16 -8, i16 -16, i16 -32, i16 -64, i16 -128, i16 -256>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I8 = udiv i8 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i8 = udiv <2 x i8> undef, <i8 -2, i8 -4>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i8 = udiv <4 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i8 = udiv <8 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i8 = udiv <16 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32i8 = udiv <32 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64i8 = udiv <64 x i8> undef, <i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16, i8 -2, i8 -4, i8 -8, i8 -16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %I128 = udiv i128 undef, -16
@@ -927,28 +927,28 @@ define void @sdiv_uniformconstnegpow2() {
 define void @udiv_uniformconstnegpow2() {
 ; CHECK-LABEL: 'udiv_uniformconstnegpow2'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = udiv i128 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = udiv i64 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = udiv <2 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = udiv i32 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i32 = udiv <2 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4i32 = udiv <4 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i32 = udiv <8 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16i32 = udiv <16 x i32> undef, splat (i32 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = udiv i16 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i16 = udiv <2 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i16 = udiv <4 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i16 = udiv <8 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16i16 = udiv <16 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %V32i16 = udiv <32 x i16> undef, splat (i16 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = udiv i8 undef, -16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i8 = udiv <2 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4i8 = udiv <4 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8i8 = udiv <8 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16i8 = udiv <16 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %V32i8 = udiv <32 x i8> undef, splat (i8 -16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %V64i8 = udiv <64 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = udiv i64 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2i64 = udiv <2 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8i64 = udiv <8 x i64> undef, splat (i64 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I32 = udiv i32 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i32 = udiv <2 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i32 = udiv <4 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8i32 = udiv <8 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16i32 = udiv <16 x i32> undef, splat (i32 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I16 = udiv i16 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i16 = udiv <2 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i16 = udiv <4 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i16 = udiv <8 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16i16 = udiv <16 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32i16 = udiv <32 x i16> undef, splat (i16 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I8 = udiv i8 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2i8 = udiv <2 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4i8 = udiv <4 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i8 = udiv <8 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i8 = udiv <16 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32i8 = udiv <32 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64i8 = udiv <64 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %I128 = udiv i128 undef, -16
