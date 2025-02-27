@@ -25,6 +25,13 @@ static cl::opt<bool>
                           "emit new instructions (*very* expensive)."));
 #endif // NDEBUG
 
+static constexpr const unsigned long StopAtDisabled =
+    std::numeric_limits<unsigned long>::max();
+static cl::opt<unsigned long>
+    StopAt("sbvec-stop-at", cl::init(StopAtDisabled), cl::Hidden,
+           cl::desc("Vectorize if the invocation count is < than this. 0 "
+                    "disables vectorization."));
+
 namespace sandboxir {
 
 static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
@@ -456,6 +463,9 @@ Value *BottomUpVec::emitVectors() {
 
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   Change = false;
+  if (LLVM_UNLIKELY(BottomUpInvocationCnt++ >= StopAt &&
+                    StopAt != StopAtDisabled))
+    return false;
   DeadInstrCandidates.clear();
   Legality->clear();
   Actions.clear();
