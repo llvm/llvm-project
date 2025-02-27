@@ -6127,32 +6127,6 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
               "POINTER or ALLOCATABLE"_err_en_US);
         }
       }
-      // TODO: This would be more appropriate in CheckDerivedType()
-      if (auto it{FindCoarrayUltimateComponent(*derived)}) { // C748
-        std::string ultimateName{it.BuildResultDesignatorName()};
-        // Strip off the leading "%"
-        if (ultimateName.length() > 1) {
-          ultimateName.erase(0, 1);
-          if (attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
-            evaluate::AttachDeclaration(
-                Say(name.source,
-                    "A component with a POINTER or ALLOCATABLE attribute may "
-                    "not "
-                    "be of a type with a coarray ultimate component (named "
-                    "'%s')"_err_en_US,
-                    ultimateName),
-                derived->typeSymbol());
-          }
-          if (!arraySpec().empty() || !coarraySpec().empty()) {
-            evaluate::AttachDeclaration(
-                Say(name.source,
-                    "An array or coarray component may not be of a type with a "
-                    "coarray ultimate component (named '%s')"_err_en_US,
-                    ultimateName),
-                derived->typeSymbol());
-          }
-        }
-      }
     }
   }
   if (OkToAddComponent(name)) {
@@ -9887,6 +9861,21 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
           (IsDummy(symbol) || object->IsArray())) {
         // Implicitly set device attribute if none is set in device context.
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
+    }
+    // Main program local objects usually don't have an implied SAVE attribute,
+    // as one might think, but in the exceptional case of a derived type
+    // local object that contains a coarray, we have to mark it as an
+    // implied SAVE so that evaluate::IsSaved() will return true.
+    if (node.scope()->kind() == Scope::Kind::MainProgram) {
+      if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (const DeclTypeSpec * type{object->type()}) {
+          if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+            if (!IsSaved(symbol) && FindCoarrayPotentialComponent(*derived)) {
+              SetImplicitAttr(symbol, Attr::SAVE);
+            }
+          }
+        }
       }
     }
   }
