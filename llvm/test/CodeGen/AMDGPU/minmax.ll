@@ -749,16 +749,27 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ; SDAG-GFX12-FAKE16-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; SDAG-GFX12-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-GFX12-LABEL: s_test_minmax_f16_ieee_false:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    s_max_num_f16 s0, s0, s1
-; GISEL-GFX12-NEXT:    s_mov_b32 s6, s3
-; GISEL-GFX12-NEXT:    s_mov_b32 s7, s4
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX12-NEXT:    s_min_num_f16 s0, s0, s2
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-GFX12-NEXT:    global_store_b16 v1, v0, s[6:7]
-; GISEL-GFX12-NEXT:    s_endpgm
+; GISEL-GFX12-TRUE16-LABEL: s_test_minmax_f16_ieee_false:
+; GISEL-GFX12-TRUE16:       ; %bb.0:
+; GISEL-GFX12-TRUE16-NEXT:    s_max_num_f16 s0, s0, s1
+; GISEL-GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX12-TRUE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX12-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-GFX12-TRUE16-NEXT:    s_min_num_f16 s0, s0, s2
+; GISEL-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GISEL-GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GISEL-GFX12-FAKE16-LABEL: s_test_minmax_f16_ieee_false:
+; GISEL-GFX12-FAKE16:       ; %bb.0:
+; GISEL-GFX12-FAKE16-NEXT:    s_max_num_f16 s0, s0, s1
+; GISEL-GFX12-FAKE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX12-FAKE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-GFX12-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX12-FAKE16-NEXT:    s_min_num_f16 s0, s0, s2
+; GISEL-GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-FAKE16-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-GFX12-FAKE16-NEXT:    s_endpgm
 ;
 ; SDAG-GFX1250-TRUE16-LABEL: s_test_minmax_f16_ieee_false:
 ; SDAG-GFX1250-TRUE16:       ; %bb.0:
@@ -767,7 +778,7 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ; SDAG-GFX1250-TRUE16-NEXT:    s_mov_b32 s5, s4
 ; SDAG-GFX1250-TRUE16-NEXT:    s_mov_b32 s4, s3
 ; SDAG-GFX1250-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, s0, s1, v0.l
-; SDAG-GFX1250-TRUE16-NEXT:    global_store_b16 v1, v0, s[4:5]
+; SDAG-GFX1250-TRUE16-NEXT:    flat_store_b16 v1, v0, s[4:5]
 ; SDAG-GFX1250-TRUE16-NEXT:    s_endpgm
 ;
 ; SDAG-GFX1250-FAKE16-LABEL: s_test_minmax_f16_ieee_false:
@@ -779,16 +790,27 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ; SDAG-GFX1250-FAKE16-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; SDAG-GFX1250-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: s_test_minmax_f16_ieee_false:
-; GISEL-GFX1250:       ; %bb.0:
-; GISEL-GFX1250-NEXT:    s_max_num_f16 s0, s0, s1
-; GISEL-GFX1250-NEXT:    s_mov_b32 s6, s3
-; GISEL-GFX1250-NEXT:    s_mov_b32 s7, s4
-; GISEL-GFX1250-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-GFX1250-NEXT:    s_min_num_f16 s0, s0, s2
-; GISEL-GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-GFX1250-NEXT:    global_store_b16 v1, v0, s[6:7]
-; GISEL-GFX1250-NEXT:    s_endpgm
+; GISEL-GFX1250-TRUE16-LABEL: s_test_minmax_f16_ieee_false:
+; GISEL-GFX1250-TRUE16:       ; %bb.0:
+; GISEL-GFX1250-TRUE16-NEXT:    s_max_num_f16 s0, s0, s1
+; GISEL-GFX1250-TRUE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX1250-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX1250-TRUE16-NEXT:    s_min_num_f16 s0, s0, s2
+; GISEL-GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX1250-TRUE16-NEXT:    flat_store_b16 v1, v0, s[6:7]
+; GISEL-GFX1250-TRUE16-NEXT:    s_endpgm
+;
+; GISEL-GFX1250-FAKE16-LABEL: s_test_minmax_f16_ieee_false:
+; GISEL-GFX1250-FAKE16:       ; %bb.0:
+; GISEL-GFX1250-FAKE16-NEXT:    s_max_num_f16 s0, s0, s1
+; GISEL-GFX1250-FAKE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-GFX1250-FAKE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX1250-FAKE16-NEXT:    s_min_num_f16 s0, s0, s2
+; GISEL-GFX1250-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX1250-FAKE16-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-GFX1250-FAKE16-NEXT:    s_endpgm
   %smax = call half @llvm.maxnum.f16(half %a, half %b)
   %sminmax = call half @llvm.minnum.f16(half %smax, half %c)
   store half %sminmax, ptr addrspace(1) %out
@@ -1222,7 +1244,7 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; SDAG-GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
 ; SDAG-GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; SDAG-GFX1250-TRUE16-NEXT:    v_med3_num_f16 v2.l, v2.l, v2.h, v3.l
-; SDAG-GFX1250-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
+; SDAG-GFX1250-TRUE16-NEXT:    flat_store_b16 v[0:1], v2
 ; SDAG-GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; SDAG-GFX1250-FAKE16-LABEL: test_med3_f16:
@@ -1238,7 +1260,7 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; GISEL-GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-GFX1250-TRUE16-NEXT:    v_med3_num_f16 v2.l, v2.l, v3.l, v4.l
-; GISEL-GFX1250-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GISEL-GFX1250-TRUE16-NEXT:    flat_store_b16 v[0:1], v2
 ; GISEL-GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GISEL-GFX1250-FAKE16-LABEL: test_med3_f16:

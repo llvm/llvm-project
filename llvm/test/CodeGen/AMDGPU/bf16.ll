@@ -60,13 +60,21 @@ define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_load_store:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_load_store:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_load_store:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = load bfloat, ptr addrspace(1) %in
   store bfloat %val, ptr addrspace(1) %out
   ret void
@@ -2127,14 +2135,23 @@ define void @test_store_fpimm(ptr addrspace(1) %ptr0, ptr addrspace(1) %ptr1) {
 ; GFX10-NEXT:    global_store_short v[2:3], v5, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_store_fpimm:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0x3f80
-; GFX11-NEXT:    v_mov_b32_e32 v5, 0x4228
-; GFX11-NEXT:    global_store_b16 v[0:1], v4, off
-; GFX11-NEXT:    global_store_b16 v[2:3], v5, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_store_fpimm:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x3f80
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0x4228
+; GFX11TRUE16-NEXT:    global_store_b16 v[0:1], v4, off
+; GFX11TRUE16-NEXT:    global_store_d16_hi_b16 v[2:3], v4, off
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_store_fpimm:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    v_mov_b32_e32 v4, 0x3f80
+; GFX11FAKE16-NEXT:    v_mov_b32_e32 v5, 0x4228
+; GFX11FAKE16-NEXT:    global_store_b16 v[0:1], v4, off
+; GFX11FAKE16-NEXT:    global_store_b16 v[2:3], v5, off
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store bfloat 1.0, ptr addrspace(1) %ptr0
   store bfloat 42.0, ptr addrspace(1) %ptr1
   ret void
@@ -3330,12 +3347,19 @@ define amdgpu_gfx void @test_inreg_arg_store(bfloat inreg %in, ptr addrspace(1) 
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_inreg_arg_store:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v2, s4
-; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_inreg_arg_store:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v2.l, s4
+; GFX11TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_inreg_arg_store:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    v_mov_b32_e32 v2, s4
+; GFX11FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store bfloat %in, ptr addrspace(1) %out
   ret void
 }
@@ -3379,11 +3403,18 @@ define bfloat @test_byval(ptr addrspace(5) byval(bfloat) %bv, bfloat %val) {
 ; GFX10-NEXT:    buffer_store_short v0, off, s[0:3], s32
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_byval:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, s32
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_byval:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
+; GFX11TRUE16-NEXT:    scratch_store_b16 off, v1, s32
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_byval:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    scratch_store_b16 off, v0, s32
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store bfloat %val, ptr addrspace(5) %bv
   %retval = load bfloat, ptr addrspace(5) %bv
   ret bfloat %retval
@@ -3490,13 +3521,21 @@ define void @test_bitcast_from_bfloat(ptr addrspace(1) %in, ptr addrspace(1) %ou
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_bitcast_from_bfloat:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_bitcast_from_bfloat:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11TRUE16-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_bitcast_from_bfloat:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = load bfloat, ptr addrspace(1) %in
   %val_int = bitcast bfloat %val to i16
   store i16 %val_int, ptr addrspace(1) %out
@@ -3556,13 +3595,21 @@ define void @test_bitcast_to_bfloat(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_bitcast_to_bfloat:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v2, v[2:3], off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_bitcast_to_bfloat:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    global_load_d16_b16 v2, v[2:3], off
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_bitcast_to_bfloat:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    global_load_u16 v2, v[2:3], off
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %val = load i16, ptr addrspace(1) %in
   %val_fp = bitcast i16 %val to bfloat
   store bfloat %val_fp, ptr addrspace(1) %out
@@ -5309,14 +5356,23 @@ define bfloat @test_alloca_load_store_ret(bfloat %in) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_alloca_load_store_ret:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, s32 dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_alloca_load_store_ret:
+; GFX11TRUE16:       ; %bb.0: ; %entry
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
+; GFX11TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 glc dlc
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_alloca_load_store_ret:
+; GFX11FAKE16:       ; %bb.0: ; %entry
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    scratch_store_b16 off, v0, s32 dlc
+; GFX11FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11FAKE16-NEXT:    scratch_load_u16 v0, off, s32 glc dlc
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %in.addr = alloca bfloat, align 2, addrspace(5)
   store volatile bfloat %in, ptr addrspace(5) %in.addr, align 2
@@ -5667,26 +5723,48 @@ define { <32 x i32>, bfloat } @test_overflow_stack(bfloat %a, <32 x i32> %b) {
 ; GFX10-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen offset:128
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: test_overflow_stack:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    scratch_load_b32 v33, off, s32 offset:8
-; GFX11-NEXT:    scratch_load_b32 v32, off, s32 offset:4
-; GFX11-NEXT:    scratch_load_b32 v31, off, s32
-; GFX11-NEXT:    s_clause 0x5
-; GFX11-NEXT:    scratch_store_b128 v0, v[22:25], off offset:80
-; GFX11-NEXT:    scratch_store_b128 v0, v[18:21], off offset:64
-; GFX11-NEXT:    scratch_store_b128 v0, v[14:17], off offset:48
-; GFX11-NEXT:    scratch_store_b128 v0, v[10:13], off offset:32
-; GFX11-NEXT:    scratch_store_b128 v0, v[6:9], off offset:16
-; GFX11-NEXT:    scratch_store_b128 v0, v[2:5], off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    scratch_store_b128 v0, v[30:33], off offset:112
-; GFX11-NEXT:    scratch_store_b128 v0, v[26:29], off offset:96
-; GFX11-NEXT:    scratch_store_b16 v0, v1, off offset:128
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11TRUE16-LABEL: test_overflow_stack:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11TRUE16-NEXT:    s_clause 0x2
+; GFX11TRUE16-NEXT:    scratch_load_b32 v33, off, s32 offset:8
+; GFX11TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
+; GFX11TRUE16-NEXT:    scratch_load_b32 v31, off, s32
+; GFX11TRUE16-NEXT:    s_clause 0x3
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[22:25], off offset:80
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[18:21], off offset:64
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[14:17], off offset:48
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[10:13], off offset:32
+; GFX11TRUE16-NEXT:    s_clause 0x1
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[6:9], off offset:16
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[2:5], off
+; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11TRUE16-NEXT:    s_clause 0x2
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[30:33], off offset:112
+; GFX11TRUE16-NEXT:    scratch_store_b128 v0, v[26:29], off offset:96
+; GFX11TRUE16-NEXT:    scratch_store_b16 v0, v1, off offset:128
+; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11FAKE16-LABEL: test_overflow_stack:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11FAKE16-NEXT:    s_clause 0x2
+; GFX11FAKE16-NEXT:    scratch_load_b32 v33, off, s32 offset:8
+; GFX11FAKE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
+; GFX11FAKE16-NEXT:    scratch_load_b32 v31, off, s32
+; GFX11FAKE16-NEXT:    s_clause 0x5
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[22:25], off offset:80
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[18:21], off offset:64
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[14:17], off offset:48
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[10:13], off offset:32
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[6:9], off offset:16
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[2:5], off
+; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11FAKE16-NEXT:    s_clause 0x2
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[30:33], off offset:112
+; GFX11FAKE16-NEXT:    scratch_store_b128 v0, v[26:29], off offset:96
+; GFX11FAKE16-NEXT:    scratch_store_b16 v0, v1, off offset:128
+; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %ins.0 = insertvalue { <32 x i32>, bfloat } poison, <32 x i32> %b, 0
   %ins.1 = insertvalue { <32 x i32>, bfloat } %ins.0 ,bfloat %a, 1
   ret { <32 x i32>, bfloat } %ins.1
@@ -42699,7 +42777,7 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11TRUE16:       ; %bb.0:
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11TRUE16-NEXT:    s_clause 0x1f
-; GFX11TRUE16-NEXT:    scratch_load_u16 v31, off, s32
+; GFX11TRUE16-NEXT:    scratch_load_d16_b16 v31, off, s32
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:64
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v33, off, s32 offset:128
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v34, off, s32 offset:60
@@ -42732,9 +42810,9 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v85, off, s32 offset:72
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v86, off, s32 offset:4
 ; GFX11TRUE16-NEXT:    scratch_load_b32 v87, off, s32 offset:68
+; GFX11TRUE16-NEXT:    v_and_b32_e32 v16, 1, v16
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v14, 1, v14
-; GFX11TRUE16-NEXT:    v_and_b32_e32 v16, 1, v16
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v18, 1, v18
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v20, 1, v20
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v22, 1, v22
@@ -42742,6 +42820,7 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v26, 1, v26
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v28, 1, v28
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v30, 1, v30
+; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s15, 1, v16
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v3, 1, v3
@@ -42765,7 +42844,6 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11TRUE16-NEXT:    v_and_b32_e32 v29, 1, v29
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s13, 1, v14
-; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s15, 1, v16
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s17, 1, v18
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s19, 1, v20
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s21, 1, v22
@@ -42795,7 +42873,7 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s26, 1, v27
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s29, 1, v29
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(32)
-; GFX11TRUE16-NEXT:    v_and_b32_e32 v16, 1, v31
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v16.l, v31.l
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(31)
 ; GFX11TRUE16-NEXT:    v_lshrrev_b32_e32 v17, 16, v32
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(30)
@@ -42803,6 +42881,7 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11TRUE16-NEXT:    v_cndmask_b16 v15.l, v33.l, v32.l, s28
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(29)
 ; GFX11TRUE16-NEXT:    v_lshrrev_b32_e32 v19, 16, v34
+; GFX11TRUE16-NEXT:    v_and_b32_e32 v16, 1, v16
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(28)
 ; GFX11TRUE16-NEXT:    v_lshrrev_b32_e32 v20, 16, v35
 ; GFX11TRUE16-NEXT:    v_cndmask_b16 v14.l, v35.l, v34.l, s27
