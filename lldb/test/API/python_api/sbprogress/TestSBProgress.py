@@ -37,11 +37,18 @@ class SBProgressTestCase(TestBase):
     def test_with_external_bit_set(self):
         """Test SBProgress can handle null events."""
 
-        progress = lldb.SBProgress("Test SBProgress", "Test progress", self.dbg)
+        progress = lldb.SBProgress("Test SBProgress", "Test progress", 3, self.dbg)
         listener = lldb.SBListener("Test listener")
         broadcaster = self.dbg.GetBroadcaster()
         broadcaster.AddListener(listener, lldb.eBroadcastBitExternalProgress)
         event = lldb.SBEvent()
 
         progress.Increment(1, None)
-        self.assertTrue(listener.PeekAtNextEvent(event))
+        self.assertTrue(listener.GetNextEvent(event))
+        progress.Increment(1, "")
+        self.assertTrue(listener.GetNextEvent(event))
+        progress.Increment(1, "Step 3")
+        self.assertTrue(listener.GetNextEvent(event))
+        stream = lldb.SBStream()
+        event.GetDescription(stream)
+        self.assertIn("Step 3", stream.GetData())
