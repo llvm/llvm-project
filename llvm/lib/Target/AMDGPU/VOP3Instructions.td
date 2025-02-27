@@ -762,7 +762,7 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
-let SubtargetPredicate = isGFX940Plus in {
+let SubtargetPredicate = HasLShlAddB64 in {
 // TODO: Canonicalize these in the target specific CombinerHelper?
 def : GCNPat<
   (ptradd (shl i64:$src0, i32:$shift), i64:$src1),
@@ -778,17 +778,16 @@ def : GCNPat<
   (ptradd i64:$src0, i64:$src1),
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, (i32 0), VSrc_b64:$src1)
 >;
-}
 
-def : GCNPat<
- (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
- (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
-
-let SubtargetPredicate = isGFX940Plus in
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
 >;
+} // End SubtargetPredicate = HasLShlAddB64
+
+def : GCNPat<
+ (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
+ (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
 
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;

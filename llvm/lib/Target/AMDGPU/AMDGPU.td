@@ -2520,6 +2520,8 @@ def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
 
+def HasLShlAddB64 : Predicate<"Subtarget->hasLshlAddB64()">;
+
 // Include AMDGPU TD files
 include "SISchedule.td"
 include "GCNProcessors.td"
