@@ -1562,6 +1562,14 @@ void CheckHelper::CheckSubprogram(
       messages_.Say(details.result().name(),
           "A function interface may not declare an assumed-length CHARACTER(*) result"_err_en_US);
     }
+    if (symbol.attrs().test(Attr::ABSTRACT) &&
+        (symbol.name() == "integer" || symbol.name() == "unsigned" ||
+            symbol.name() == "real" || symbol.name() == "complex" ||
+            symbol.name() == "character" ||
+            symbol.name() == "logical")) { // F'2023 C1503
+      messages_.Say(
+          "An ABSTRACT interface may not have the same name as an intrinsic type"_err_en_US);
+    }
   }
   CheckExternal(symbol);
   CheckModuleProcedureDef(symbol);
