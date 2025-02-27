@@ -67,7 +67,7 @@ static Status ReadExpected(IOObjectSP &descriptor, llvm::StringRef expected) {
   if (status.Fail())
     return status;
   if (expected != result) {
-    return Status::FromErrorStringWithFormatv("expected %s, got %s", expected,
+    return Status::FromErrorStringWithFormatv("expected {0}, got {1}", expected,
                                               result);
   }
   return Status();

@@ -116,6 +116,7 @@ public:
 static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
+  dap.RegisterRequest<CancelRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
   dap.RegisterRequest<ConfigurationDoneRequestHandler>();
   dap.RegisterRequest<ContinueRequestHandler>();

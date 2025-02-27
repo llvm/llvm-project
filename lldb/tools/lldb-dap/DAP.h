@@ -391,6 +391,11 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
+
+private:
+  void Send(const protocol::Message &M);
+
+  std::atomic<int64_t> active_seq;
 };
 
 template <typename Body>

@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <cstdarg>
 #include <cstdio>
 #include <fstream>
@@ -256,7 +257,27 @@ void DAP::SendJSON(const llvm::json::Value &json) {
     }
     return;
   }
-  auto status = transport.Write(log, M);
+  Send(M);
+}
+
+void DAP::Send(const protocol::Message &M) {
+  lldb_private::Status status;
+  // If the debugger was interrupted while handling a response, mark the
+  // response as cancelled since it may contain partial information.
+  if (const auto *resp = std::get_if<protocol::Response>(&M);
+      debugger.InterruptRequested()) {
+    status = transport.Write(
+        log, protocol::Response{
+                 /*request_seq=*/resp->request_seq,
+                 /*command=*/resp->command,
+                 /*success=*/false,
+                 /*message=*/protocol::Response::Message::cancelled,
+                 /*rawBody=*/std::nullopt,
+             });
+  } else {
+    status = transport.Write(log, M);
+  }
+
   if (status.Fail() && log)
     *log << llvm::formatv("failed to send {0}: {1}\n", llvm::json::Value(M),
                           status.AsCString())
@@ -798,22 +819,112 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
   return error;
 }
 
+template <typename T>
+static std::optional<T> getArgumentsIfRequest(const protocol::Message &pm,
+                                              llvm::StringLiteral command) {
+  auto *const req = std::get_if<protocol::Request>(&pm);
+  if (!req || req->command != command)
+    return std::nullopt;
+
+  T args;
+  llvm::json::Path::Root root;
+  if (!fromJSON(req->rawArguments, args, root)) {
+    return std::nullopt;
+  }
+
+  return std::move(args);
+}
+
 llvm::Error DAP::Loop() {
-  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
+  std::deque<protocol::Message> queue;
+  std::condition_variable queue_cv;
+  std::mutex queue_mutex;
+  std::thread queue_reader([&]() {
+    auto cleanup = llvm::make_scope_exit([&]() {
+      // Ensure we're marked as disconnecting when the reader exits.
+      disconnecting = true;
+      queue_cv.notify_all();
+    });
+    while (!disconnecting) {
+      protocol::Message next;
+      auto status = transport.Read(log, next);
+      if (status.Fail()) {
+        if (status.GetError() != Transport::kEOF && log)
+          *log << "DAP transport failure: " << status.AsCString() << std::endl;
+        break;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(queue_mutex);
+
+        // If a cancel is requested for the active request, make a best
+        // effort attempt to interrupt.
+        if (const auto args = getArgumentsIfRequest<protocol::CancelArguments>(
+                next, "cancel");
+            args && active_seq == args->requestId)
+          debugger.RequestInterrupt();
+
+        queue.push_back(std::move(next));
+      }
+      queue_cv.notify_one();
+    }
+  });
+
+  auto cleanup = llvm::make_scope_exit([&]() {
+    StopEventHandlers();
+    queue_reader.join();
+  });
+
   while (!disconnecting) {
     protocol::Message next;
-    auto status = transport.Read(log, next);
-    if (status.Fail()) {
-      // On EOF, simply break out of the loop.
-      if (status.GetError() == Transport::kEOF)
+    {
+      std::unique_lock<std::mutex> lock(queue_mutex);
+      queue_cv.wait(lock, [&] { return disconnecting || !queue.empty(); });
+
+      if (queue.empty())
         break;
-      return status.takeError();
+
+      next = queue.front();
+      queue.pop_front();
+
+      if (protocol::Request *req = std::get_if<protocol::Request>(&next)) {
+        active_seq = req->seq;
+
+        // Check if we should preempt this request from a queued cancel.
+        bool cancelled = false;
+        for (const auto &message : queue) {
+          if (const auto args =
+                  getArgumentsIfRequest<protocol::CancelArguments>(message,
+                                                                   "cancel");
+              args && args->requestId == req->seq) {
+            cancelled = true;
+            break;
+          }
+        }
+
+        // Preempt the request and immeidately respond with cancelled.
+        if (cancelled) {
+          Send(protocol::Response{
+              /*request_seq=*/req->seq,
+              /*command=*/req->command,
+              /*success=*/false,
+              /*message=*/protocol::Response::Message::cancelled,
+              /*rawBody=*/std::nullopt,
+          });
+          continue;
+        }
+      } else
+        active_seq = 0;
     }
 
     if (!HandleObject(next)) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "unhandled packet");
     }
+
+    // Clear interrupt marker prior to handling the next request.
+    if (debugger.InterruptRequested())
+      debugger.CancelInterruptRequest();
   }
 
   return llvm::Error::success();

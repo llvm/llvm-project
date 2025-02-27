@@ -21,6 +21,7 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
 
 #include "llvm/Support/JSON.h"
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -151,6 +152,8 @@ struct Response {
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);
+
+using VoidResponseBody = std::nullptr_t;
 
 // "Message": {
 //   "type": "object",
@@ -347,6 +350,71 @@ struct ExitedEventBody {
 llvm::json::Value toJSON(const ExitedEventBody &);
 
 // MARK: Requests
+
+// "CancelRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "The `cancel` request is used by the client in two
+//     situations:\n- to indicate that it is no longer interested in the result
+//     produced by a specific request issued earlier\n- to cancel a progress
+//     sequence.\nClients should only call this request if the corresponding
+//     capability `supportsCancelRequest` is true.\nThis request has a hint
+//     characteristic: a debug adapter can only be expected to make a 'best
+//     effort' in honoring this request but there are no guarantees.\nThe
+//     `cancel` request may return an error if it could not cancel an operation
+//     but a client should refrain from presenting this error to end users.\nThe
+//     request that got cancelled still needs to send a response back. This can
+//     either be a normal result (`success` attribute true) or an error response
+//     (`success` attribute false and the `message` set to
+//     `cancelled`).\nReturning partial results from a cancelled request is
+//     possible but please note that a client has no generic way for detecting
+//     that a response is partial or not.\nThe progress that got cancelled still
+//     needs to send a `progressEnd` event back.\n A client should not assume
+//     that progress just got cancelled after sending the `cancel` request.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "cancel" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/CancelArguments"
+//       }
+//     },
+//     "required": [ "command" ]
+//   }]
+// },
+// "CancelArguments": {
+//   "type": "object",
+//   "description": "Arguments for `cancel` request.",
+//   "properties": {
+//     "requestId": {
+//       "type": "integer",
+//       "description": "The ID (attribute `seq`) of the request to cancel. If
+//       missing no request is cancelled.\nBoth a `requestId` and a `progressId`
+//       can be specified in one request."
+//     },
+//     "progressId": {
+//       "type": "string",
+//       "description": "The ID (attribute `progressId`) of the progress to
+//       cancel. If missing no progress is cancelled.\nBoth a `requestId` and a
+//       `progressId` can be specified in one request."
+//     }
+//   }
+// },
+struct CancelArguments {
+  std::optional<int64_t> requestId;
+  std::optional<int64_t> progressId;
+};
+bool fromJSON(const llvm::json::Value &, CancelArguments &, llvm::json::Path);
+
+// "CancelResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `cancel` request. This is just an
+//     acknowledgement, so no body field is required."
+//   }]
+// },
+using CancelResponseBody = VoidResponseBody;
 
 // "SourceArguments": {
 //   "type": "object",

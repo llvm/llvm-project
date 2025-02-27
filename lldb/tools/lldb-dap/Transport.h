@@ -42,9 +42,6 @@ public:
   /// Reads the next Debug Adater Protocol message from the input stream.
   lldb_private::Status Read(std::ofstream *log, protocol::Message &M);
 
-  /// Closes the transport.
-  void CloseOutput();
-
 private:
   llvm::StringRef m_client_name;
   lldb::IOObjectSP m_input;
