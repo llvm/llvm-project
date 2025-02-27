@@ -719,7 +719,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   SmallVector<int> SrcMask;
   if (NeedLenChg) {
     SrcMask.assign(NumDstElts, PoisonMaskElem);
-    SrcMask[(ExtIdx % NumDstElts)] = ExtIdx;
+    SrcMask[ExtIdx % NumDstElts] = ExtIdx;
     NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                   SrcVecTy, SrcMask, CostKind);
   }
