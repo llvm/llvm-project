@@ -3623,7 +3623,6 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
-
   // Expand checks into:
   //   (Check1 || !allow_ubsan_check) && (Check2 || !allow_ubsan_check) ...
   // We need separate allow_ubsan_check intrinsics because they have separately
@@ -3933,6 +3932,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     TrapBBs.resize(CheckHandlerID + 1);
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
+
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
