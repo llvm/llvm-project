@@ -18071,6 +18071,12 @@ bool BoUpSLP::collectValuesToDemote(
           (void)for_each(E.Scalars, std::bind(IsPotentiallyTruncated, _1,
                                               std::ref(BitWidth)));
         } else {
+          // Several vectorized uses? Check if we can truncate it, otherwise -
+          // exit.
+          if (any_of(E.Scalars, [&](Value *V) {
+                return !V->hasOneUse() && !IsPotentiallyTruncated(V, BitWidth);
+              }))
+            return false;
           bool NeedToExit = false;
           if (Checker && !AttemptCheckBitwidth(Checker, NeedToExit))
             return false;
