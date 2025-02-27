@@ -50,10 +50,10 @@ struct CreatorOpShardingInterface
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
-    auto shardType = cast<ShapedType>(mesh::shardType(
-        op->getResult(0).getType(),
-        mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable),
-        resultShardings[0]));
+    auto mesh =
+        mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable);
+    auto shardType = cast<ShapedType>(
+        mesh::shardType(op->getResult(0).getType(), mesh, resultShardings[0]));
     Operation *newOp = nullptr;
     // if the sharding introduces a new dynamic dimension, we take it from
     // the dynamic sharding info. For now bail out if it's not
@@ -66,18 +66,19 @@ struct CreatorOpShardingInterface
       assert(oldType.getRank() == shardType.getRank());
       int currOldOprndNum = -1;
       mesh::ShardShapeOp shapeForDevice;
-      Value device;
+      ValueRange device;
       Operation *newSharding = nullptr;
       for (auto i = 0; i < oldType.getRank(); ++i) {
         if (!oldType.isDynamicDim(i) && shardType.isDynamicDim(i)) {
           if (!newSharding) {
             newSharding =
                 builder.create<ShardingOp>(op->getLoc(), resultShardings[0]);
-            device = builder.create<mesh::ProcessLinearIndexOp>(
-                op->getLoc(), resultShardings[0].getMesh());
+            device =
+                builder.create<mesh::ProcessMultiIndexOp>(op->getLoc(), mesh)
+                    .getResults();
             shapeForDevice = builder.create<mesh::ShardShapeOp>(
-                op->getLoc(), oldType.getShape(), newSharding->getResult(0),
-                device);
+                op->getLoc(), oldType.getShape(), spmdizedOperands,
+                newSharding->getResult(0), device);
           }
           newOperands.emplace_back(shapeForDevice.getResult()[i]);
         } else if (oldType.isDynamicDim(i)) {

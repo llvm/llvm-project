@@ -10,8 +10,9 @@ func.func @tensor_empty_static_sharded_dims_offsets() -> () {
   %sharding = mesh.sharding @mesh_1d_4 split_axes = [[0]] sharded_dims_offsets = [0, 1, 4, 7, 8] : !mesh.sharding
   %sharded= mesh.shard %b to %sharding : tensor<8x16xf32>
   // CHECK:  %[[sharding:.*]] = mesh.sharding @mesh_1d_4 split_axes = {{\[\[}}0]] sharded_dims_offsets = [0, 1, 4, 7, 8] : !mesh.sharding
-  // CHECK:  %[[proc_linear_idx:.*]] = mesh.process_linear_index on @mesh_1d_4 : index
-  // CHECK:  %[[V0:.*]]:2 = mesh.shard_shape 8x16 %[[sharding]] %[[proc_linear_idx]] : index, index
+  // CHECK:  %[[proc_multi_idx:.*]] = mesh.process_multi_index on @mesh_1d_4 : index
+  // CHECK:  %[[V0:.*]]:2 = mesh.shard_shape dims = [8, 16] sharding = %[[sharding]] device = [%[[proc_multi_idx]]
+  // CHECK-SAME: ] : index, index
   // CHECK:  tensor.empty(%[[V0]]#0) : tensor<?x16xf32>
 
   return
@@ -24,8 +25,10 @@ func.func @tensor_empty_dynamic_sharded_dims_offsets(%arg0 : index) -> () {
   %sharding = mesh.sharding @mesh_1d_4 split_axes = [[0]] sharded_dims_offsets = [0, 1, 4, 7, 8] : !mesh.sharding
   %sharded= mesh.shard %b to %sharding : tensor<8x?xf32>
   // CHECK:  %[[sharding:.*]] = mesh.sharding @mesh_1d_4 split_axes = {{\[\[}}0]] sharded_dims_offsets = [0, 1, 4, 7, 8] : !mesh.sharding
-  // CHECK:  %[[proc_linear_idx:.*]] = mesh.process_linear_index on @mesh_1d_4 : index
-  // CHECK:  %[[V0:.*]]:2 = mesh.shard_shape 8x? %[[sharding]] %[[proc_linear_idx]] : index, index
+  // CHECK:  %[[proc_multi_idx:.*]] = mesh.process_multi_index on @mesh_1d_4 : index
+  // CHECK:  %[[V0:.*]]:2 = mesh.shard_shape dims = [8, %[[A0]]
+  // CHECK-SAME: ] sharding = %[[sharding]] device = [%[[proc_multi_idx]]
+  // CHECK-SAME: ] : index, index
   // CHECK:  tensor.empty(%[[V0]]#0, %[[A0]]) : tensor<?x?xf32>
 
   return
