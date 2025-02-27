@@ -2582,6 +2582,14 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
     argTypes.push_back(vTy);
     break;
   }
+  case NEON::BI__builtin_neon_vrnd64z_f32:
+  case NEON::BI__builtin_neon_vrnd64zq_f32:
+  case NEON::BI__builtin_neon_vrnd64z_f64:
+  case NEON::BI__builtin_neon_vrnd64zq_f64: {
+    intrincsName = "aarch64.neon.frint64z";
+    argTypes.push_back(vTy);
+    break;
+  }
   case NEON::BI__builtin_neon_vshl_v:
   case NEON::BI__builtin_neon_vshlq_v: {
     return builder.create<cir::ShiftOp>(
