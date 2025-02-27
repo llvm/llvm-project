@@ -2502,11 +2502,11 @@ public:
 /// A recipe for generating conditional branches on the bits of a mask.
 class VPBranchOnMaskRecipe : public VPRecipeBase {
 public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask)
-      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {BlockInMask}) {}
+  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {BlockInMask}, DL) {}
 
   VPBranchOnMaskRecipe *clone() override {
-    return new VPBranchOnMaskRecipe(getOperand(0));
+    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBranchOnMaskSC)
