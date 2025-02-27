@@ -215,11 +215,11 @@ namespace {
 /// ```
 ///    %flattened_a = vector.shape_cast %a
 ///    %flattened_b = vector.shape_cast %b
-///    %flattened_d = vector.matmul %flattened_a, %flattened_b
+///    %flattened_d = vector.matrix_multiply %flattened_a, %flattened_b
 ///    %d = vector.shape_cast %%flattened_d
 ///    %e = add %c, %d
 /// ```
-/// `vector.matmul` later lowers to `llvm.matrix.multiply`.
+/// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
 //
 /// This only kicks in when vectorContractLowering is set to Matmul and
 /// the vector.contract op is a row-major matrix multiply.
@@ -1271,12 +1271,12 @@ public:
 ///    %mtb = maybe_transpose
 ///    %flattened_a = vector.shape_cast %mta
 ///    %flattened_b = vector.shape_cast %mtb
-///    %flattened_d = vector.matmul %flattened_a, %flattened_b
+///    %flattened_d = vector.matrix_multiply %flattened_a, %flattened_b
 ///    %mtd = vector.shape_cast %flattened_d
 ///    %d = maybe_untranspose %mtd
 ///    %e = add %c, %d
 /// ```
-/// `vector.matmul` later lowers to `llvm.matrix.multiply`.
+/// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
 //
 /// This only kicks in when vectorContractLowering is set to `Matmul`.
 /// vector.transpose operations are inserted if the vector.contract op is not a
