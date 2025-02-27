@@ -2478,7 +2478,6 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_bf8(__m128h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///
 ///    A 128-bit vector of [6 x bf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
@@ -2514,7 +2513,6 @@ _mm_mask_cvtph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///
 ///    A 128-bit vector of [6 x bf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
@@ -2870,7 +2868,6 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_hf8(__m128h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///
 ///    A 128-bit vector of [6 x hf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
@@ -2906,7 +2903,6 @@ _mm_mask_cvtph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///
 ///    A 128-bit vector of [6 x hf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
