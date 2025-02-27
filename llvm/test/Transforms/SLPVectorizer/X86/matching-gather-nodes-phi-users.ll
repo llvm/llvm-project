@@ -10,7 +10,7 @@
 ; YAML:   - String:          'Stores SLP vectorized with cost '
 ; YAML:   - Cost:            '-6'
 ; YAML:   - String:          ' and with tree size '
-; YAML:   - TreeSize:        '14'
+; YAML:   - TreeSize:        '16'
 ; YAML: ...
 
 ; Test that SLP cost modeling is able to match gathering tree

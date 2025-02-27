@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_UCHAR_H
-#define _LIBCPP_UCHAR_H
+#ifndef _LIBCPP___CXX03_UCHAR_H
+#define _LIBCPP___CXX03_UCHAR_H
 
 /*
     uchar.h synopsis // since C++11
@@ -53,4 +53,4 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 
 #endif // _LIBCPP_CXX03_LANG
 
-#endif // _LIBCPP_UCHAR_H
+#endif // _LIBCPP___CXX03_UCHAR_H

@@ -411,6 +411,12 @@ let Predicates = [FeatureFPExtension] in {
   def : Pat<(any_ftrunc FP64:$src),  (FIDBRA 5, FP64:$src,  4)>;
   def : Pat<(any_ftrunc FP128:$src), (FIXBRA 5, FP128:$src, 4)>;
 
+  // Same idea for roundeven, where mode 4 is round towards nearest
+  // with ties to even.
+  def : Pat<(any_froundeven FP32:$src),  (FIEBRA 4, FP32:$src,  4)>;
+  def : Pat<(any_froundeven FP64:$src),  (FIDBRA 4, FP64:$src,  4)>;
+  def : Pat<(any_froundeven FP128:$src), (FIXBRA 4, FP128:$src, 4)>;
+
   // Same idea for round, where mode 1 is round towards nearest with
   // ties away from zero.
   def : Pat<(any_fround FP32:$src),  (FIEBRA 1, FP32:$src,  4)>;

@@ -348,7 +348,7 @@ acc.attach.recipe @attach_ref :
      %offset : index,
      %size : index):
   fir.call _FortranAOpenACCAttachDescriptor(%aug_ptr, %base_addr_val, %offset, %size) :
-      (!fir.ref<none>, !fir.ref<!fir.box<none>>, index, index) -> none
+      (!fir.ref<none>, !fir.ref<!fir.box<none>>, index, index) -> ()
   acc.yield
 }
 
@@ -427,7 +427,7 @@ The implementation's behavior may be described as (OpenACC 2.7.2):
 
 All the "is-present" checks and the data actions for the auxiliary pointers must be performed atomically with regards to the present counters bookkeeping.
 
-The API relies on the primitives provided by `liboffload`, so it is provided by a new F18 runtime library, e.g. `FortranOffloadRuntime`, that depends on `FortranRuntime` and `liboffload`.  The F18 driver adds `FortranOffloadRuntime` for linking under `-fopenacc`/`-fopenmp` (and maybe additional switches like `-fopenmp-targets`).
+The API relies on the primitives provided by `liboffload`, so it is provided by a new F18 runtime library, e.g. `FortranOffloadRuntime`, that depends on `flang_rt.runtime` and `liboffload`.  The F18 driver adds `FortranOffloadRuntime` for linking under `-fopenacc`/`-fopenmp` (and maybe additional switches like `-fopenmp-targets`).
 
 ## TODOs:
 

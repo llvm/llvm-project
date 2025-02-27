@@ -559,7 +559,7 @@ declare void @f.param.sret(ptr sret(i8))
 declare void @f.param.noalias(ptr noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(ptr nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(ptr nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare ptr @f.param.returned(ptr returned)
@@ -1139,6 +1139,48 @@ define void @fastMathFlagsForStructCalls() {
   %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
   ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
 
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fpext(
+define void @fastmathflags_fpext(float %op1) {
+  %f.nnan = fpext nnan float %op1 to double
+  ; CHECK: %f.nnan = fpext nnan float %op1 to double
+  %f.ninf = fpext ninf float %op1 to double
+  ; CHECK: %f.ninf = fpext ninf float %op1 to double
+  %f.nsz = fpext nsz float %op1 to double
+  ; CHECK: %f.nsz = fpext nsz float %op1 to double
+  %f.arcp = fpext arcp float %op1 to double
+  ; CHECK: %f.arcp = fpext arcp float %op1 to double
+  %f.contract = fpext contract float %op1 to double
+  ; CHECK: %f.contract = fpext contract float %op1 to double
+  %f.afn = fpext afn float %op1 to double
+  ; CHECK: %f.afn = fpext afn float %op1 to double
+  %f.reassoc = fpext reassoc float %op1 to double
+  ; CHECK: %f.reassoc = fpext reassoc float %op1 to double
+  %f.fast = fpext fast float %op1 to double
+  ; CHECK: %f.fast = fpext fast float %op1 to double
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fptrunc(
+define void @fastmathflags_fptrunc(float %op1) {
+  %f.nnan = fptrunc nnan float %op1 to half
+  ; CHECK: %f.nnan = fptrunc nnan float %op1 to half
+  %f.ninf = fptrunc ninf float %op1 to half
+  ; CHECK: %f.ninf = fptrunc ninf float %op1 to half
+  %f.nsz = fptrunc nsz float %op1 to half
+  ; CHECK: %f.nsz = fptrunc nsz float %op1 to half
+  %f.arcp = fptrunc arcp float %op1 to half
+  ; CHECK: %f.arcp = fptrunc arcp float %op1 to half
+  %f.contract = fptrunc contract float %op1 to half
+  ; CHECK: %f.contract = fptrunc contract float %op1 to half
+  %f.afn = fptrunc afn float %op1 to half
+  ; CHECK: %f.afn = fptrunc afn float %op1 to half
+  %f.reassoc = fptrunc reassoc float %op1 to half
+  ; CHECK: %f.reassoc = fptrunc reassoc float %op1 to half
+  %f.fast = fptrunc fast float %op1 to half
+  ; CHECK: %f.fast = fptrunc fast float %op1 to half
   ret void
 }
 

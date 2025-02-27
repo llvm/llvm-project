@@ -385,19 +385,11 @@ entry:
 }
 
 define <8 x i16> @concat_high_high_v8i16(<8 x i16> %a_vec, <8 x i16> %b_vec) {
-; CHECK-SD-LABEL: concat_high_high_v8i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_high_high_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_high_high_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v1.d[0], v0.d[1]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i3 = shufflevector <8 x i16> %a_vec, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %shuffle.i = shufflevector <8 x i16> %b_vec, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -406,19 +398,11 @@ entry:
 }
 
 define <8 x half> @concat_high_high_v8f16(<8 x half> %a_vec, <8 x half> %b_vec) {
-; CHECK-SD-LABEL: concat_high_high_v8f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_high_high_v8f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_high_high_v8f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v1.d[0], v0.d[1]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i3 = shufflevector <8 x half> %a_vec, <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %shuffle.i = shufflevector <8 x half> %b_vec, <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -427,19 +411,11 @@ entry:
 }
 
 define <8 x bfloat> @concat_high_high_v8bf16(<8 x bfloat> %a_vec, <8 x bfloat> %b_vec) {
-; CHECK-SD-LABEL: concat_high_high_v8bf16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_high_high_v8bf16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_high_high_v8bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v1.d[0], v0.d[1]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i3 = shufflevector <8 x bfloat> %a_vec, <8 x bfloat> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %shuffle.i = shufflevector <8 x bfloat> %b_vec, <8 x bfloat> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -455,9 +431,8 @@ define <4 x i32> @concat_high_high_v4i32(<4 x i32> %a_vec, <4 x i32> %b_vec) {
 ;
 ; CHECK-GI-LABEL: concat_high_high_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v0.d[1]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i3 = shufflevector <4 x i32> %a_vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
@@ -474,9 +449,8 @@ define <4 x float> @concat_high_high_v4f32(<4 x float> %a_vec, <4 x float> %b_ve
 ;
 ; CHECK-GI-LABEL: concat_high_high_v4f32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v0.d[1]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i3 = shufflevector <4 x float> %a_vec, <4 x float> poison, <2 x i32> <i32 2, i32 3>
@@ -486,19 +460,11 @@ entry:
 }
 
 define <16 x i8> @concat_high_high_v16i8(<16 x i8> %a_vec, <16 x i8> %b_vec) {
-; CHECK-SD-LABEL: concat_high_high_v16i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_high_high_v16i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_high_high_v16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v1.d[0], v0.d[1]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i3 = shufflevector <16 x i8> %a_vec, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %shuffle.i = shufflevector <16 x i8> %b_vec, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

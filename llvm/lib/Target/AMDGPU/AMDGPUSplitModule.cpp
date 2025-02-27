@@ -158,13 +158,12 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
 /// Non-copyable functions cannot be cloned into multiple partitions, and only
 /// one copy of the function can be present across all partitions.
 ///
-/// External functions fall into this category. If we were to clone them, we
-/// would end up with multiple symbol definitions and a very unhappy linker.
+/// Kernel functions and external functions fall into this category. If we were
+/// to clone them, we would end up with multiple symbol definitions and a very
+/// unhappy linker.
 static bool isNonCopyable(const Function &F) {
-  assert(AMDGPU::isEntryFunctionCC(F.getCallingConv())
-             ? F.hasExternalLinkage()
-             : true && "Kernel w/o external linkage?");
-  return F.hasExternalLinkage() || !F.isDefinitionExact();
+  return F.hasExternalLinkage() || !F.isDefinitionExact() ||
+         AMDGPU::isEntryFunctionCC(F.getCallingConv());
 }
 
 /// If \p GV has local linkage, make it external + hidden.

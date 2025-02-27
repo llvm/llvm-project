@@ -45,6 +45,24 @@ entry:
   ret i64 %0
 }
 
+define i32 @PR125324(float %x) {
+; SSE-LABEL: PR125324:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvtss2si %xmm0, %rax
+; SSE-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR125324:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvtss2si %xmm0, %rax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.lrint.i64.f32(float %x)
+  %1 = trunc i64 %0 to i32
+  ret i32 %1
+}
+
 declare i64 @llvm.lrint.i64.f32(float) nounwind readnone
 declare i64 @llvm.lrint.i64.f64(double) nounwind readnone
 declare i64 @llvm.lrint.i64.f80(x86_fp80) nounwind readnone

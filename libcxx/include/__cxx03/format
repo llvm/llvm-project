@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FORMAT
-#define _LIBCPP_FORMAT
+#ifndef _LIBCPP___CXX03_FORMAT
+#define _LIBCPP___CXX03_FORMAT
 
 /*
 
@@ -254,4 +254,4 @@ namespace std {
 #  endif
 #endif
 
-#endif // _LIBCPP_FORMAT
+#endif // _LIBCPP___CXX03_FORMAT

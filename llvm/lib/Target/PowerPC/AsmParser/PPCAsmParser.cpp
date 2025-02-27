@@ -8,8 +8,8 @@
 
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "MCTargetDesc/PPCTargetStreamer.h"
 #include "PPCInstrInfo.h"
-#include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
@@ -1320,7 +1320,10 @@ MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
   if (!getParser().getTok().is(AsmToken::Identifier))
     return MCRegister();
 
-  StringRef Name = getParser().getTok().getString();
+  // MatchRegisterName() expects lower-case registers, but we want to support
+  // case-insensitive spelling.
+  std::string NameBuf = getParser().getTok().getString().lower();
+  StringRef Name(NameBuf);
   MCRegister RegNo = MatchRegisterName(Name);
   if (!RegNo)
     return RegNo;
@@ -1329,15 +1332,15 @@ MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
 
   // MatchRegisterName doesn't seem to have special handling for 64bit vs 32bit
   // register types.
-  if (Name.equals_insensitive("lr")) {
+  if (Name == "lr") {
     RegNo = isPPC64() ? PPC::LR8 : PPC::LR;
     IntVal = 8;
-  } else if (Name.equals_insensitive("ctr")) {
+  } else if (Name == "ctr") {
     RegNo = isPPC64() ? PPC::CTR8 : PPC::CTR;
     IntVal = 9;
-  } else if (Name.equals_insensitive("vrsave"))
+  } else if (Name == "vrsave")
     IntVal = 256;
-  else if (Name.starts_with_insensitive("r"))
+  else if (Name.starts_with("r"))
     RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
 
   getParser().Lex();

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -21,13 +22,14 @@ namespace bufferization {
 } // namespace mlir
 
 using namespace mlir;
+using AllocationFn = bufferization::BufferResultsToOutParamsOpts::AllocationFn;
 using MemCpyFn = bufferization::BufferResultsToOutParamsOpts::MemCpyFn;
 
 /// Return `true` if the given MemRef type has a fully dynamic layout.
 static bool hasFullyDynamicLayoutMap(MemRefType type) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(type, strides, offset)))
+  if (failed(type.getStridesAndOffset(strides, offset)))
     return false;
   if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;
@@ -105,10 +107,9 @@ updateFuncOp(func::FuncOp func,
 // Updates all ReturnOps in the scope of the given func::FuncOp by either
 // keeping them as return values or copying the associated buffer contents into
 // the given out-params.
-static LogicalResult updateReturnOps(func::FuncOp func,
-                                     ArrayRef<BlockArgument> appendedEntryArgs,
-                                     MemCpyFn memCpyFn,
-                                     bool hoistStaticAllocs) {
+static LogicalResult
+updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
+                const bufferization::BufferResultsToOutParamsOpts &options) {
   auto res = func.walk([&](func::ReturnOp op) {
     SmallVector<Value, 6> copyIntoOutParams;
     SmallVector<Value, 6> keepAsReturnOperands;
@@ -120,13 +121,14 @@ static LogicalResult updateReturnOps(func::FuncOp func,
     }
     OpBuilder builder(op);
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
-      if (hoistStaticAllocs &&
-          isa_and_nonnull<memref::AllocOp>(orig.getDefiningOp()) &&
+      if (options.hoistStaticAllocs &&
+          isa_and_nonnull<bufferization::AllocationOpInterface>(
+              orig.getDefiningOp()) &&
           mlir::cast<MemRefType>(orig.getType()).hasStaticShape()) {
         orig.replaceAllUsesWith(arg);
         orig.getDefiningOp()->erase();
       } else {
-        if (failed(memCpyFn(builder, op.getLoc(), orig, arg)))
+        if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
           return WalkResult::interrupt();
       }
     }
@@ -175,7 +177,14 @@ updateCalls(ModuleOp module,
       auto allocType =
           MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
                           AffineMap(), memrefType.getMemorySpace());
-      Value outParam = builder.create<memref::AllocOp>(op.getLoc(), allocType);
+      auto maybeOutParam =
+          options.allocationFn(builder, op.getLoc(), allocType);
+      if (failed(maybeOutParam)) {
+        op.emitError() << "failed to create allocation op";
+        didFail = true;
+        return;
+      }
+      Value outParam = maybeOutParam.value();
       if (!hasStaticIdentityLayout(memrefType)) {
         // Layout maps are already checked in `updateFuncOp`.
         assert(hasFullyDynamicLayoutMap(memrefType) &&
@@ -213,14 +222,7 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
       return failure();
     if (func.isExternal())
       continue;
-    auto defaultMemCpyFn = [](OpBuilder &builder, Location loc, Value from,
-                              Value to) {
-      builder.create<memref::CopyOp>(loc, from, to);
-      return success();
-    };
-    if (failed(updateReturnOps(func, appendedEntryArgs,
-                               options.memCpyFn.value_or(defaultMemCpyFn),
-                               options.hoistStaticAllocs))) {
+    if (failed(updateReturnOps(func, appendedEntryArgs, options))) {
       return failure();
     }
   }

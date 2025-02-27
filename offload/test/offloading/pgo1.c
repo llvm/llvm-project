@@ -1,11 +1,16 @@
-// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
-// RUN:     -Xclang "-fprofile-instrument=clang"
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic \
-// RUN:     --check-prefix="CLANG-PGO"
 // RUN: %libomptarget-compile-generic -fprofile-generate \
 // RUN:     -Xclang "-fprofile-instrument=llvm"
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic \
+// RUN: env LLVM_PROFILE_FILE=llvm.profraw %libomptarget-run-generic 2>&1
+// RUN: %profdata show --all-functions --counts \
+// RUN:     %target_triple.llvm.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-PGO"
+
+// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
+// RUN:     -Xclang "-fprofile-instrument=clang"
+// RUN: env LLVM_PROFILE_FILE=clang.profraw %libomptarget-run-generic 2>&1
+// RUN: %profdata show --all-functions --counts \
+// RUN:     %target_triple.clang.profraw | %fcheck-generic \
+// RUN:     --check-prefix="CLANG-PGO"
 
 // REQUIRES: gpu
 // REQUIRES: pgo
@@ -27,48 +32,35 @@ int main() {
     }
   }
 }
+// LLVM-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
+// LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// LLVM-PGO: Counters: 4
+// LLVM-PGO: Block counts: [20, 10, 2, 1]
 
-// CLANG-PGO: ======== Counters =========
-// CLANG-PGO-NEXT: [ 0 11 20 ]
-// CLANG-PGO-NEXT: [ 10 ]
-// CLANG-PGO-NEXT: [ 20 ]
-// CLANG-PGO-NEXT: ========== Data ===========
-// CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CLANG-PGO-NEXT: ======== Functions ========
-// CLANG-PGO-NEXT: pgo1.c:
-// CLANG-PGO-SAME: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}
-// CLANG-PGO-NEXT: test1
-// CLANG-PGO-NEXT: test2
+// LLVM-PGO-LABEL: test1:
+// LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// LLVM-PGO: Counters: 1
+// LLVM-PGO: Block counts: [10]
 
-// LLVM-PGO: ======== Counters =========
-// LLVM-PGO-NEXT: [ 20 10 2 1 ]
-// LLVM-PGO-NEXT: [ 10 ]
-// LLVM-PGO-NEXT: [ 20 ]
-// LLVM-PGO-NEXT: ========== Data ===========
-// LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// LLVM-PGO-NEXT: ======== Functions ========
-// LLVM-PGO-NEXT: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}
-// LLVM-PGO-NEXT: test1
-// LLVM-PGO-NEXT: test2
+// LLVM-PGO-LABEL: test2:
+// LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// LLVM-PGO: Counters: 1
+// LLVM-PGO: Block counts: [20]
+
+// CLANG-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
+// CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// CLANG-PGO: Counters: 3
+// CLANG-PGO: Function count: 0
+// CLANG-PGO: Block counts: [11, 20]
+
+// CLANG-PGO-LABEL: test1:
+// CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// CLANG-PGO: Counters: 1
+// CLANG-PGO: Function count: 10
+// CLANG-PGO: Block counts: []
+
+// CLANG-PGO-LABEL: test2:
+// CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// CLANG-PGO: Counters: 1
+// CLANG-PGO: Function count: 20
+// CLANG-PGO: Block counts: []

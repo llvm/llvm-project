@@ -88,12 +88,12 @@ def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
 
 // Ops related to OIList primitive
 def OIListTrivialProperties : TEST_Op<"oilist_with_keywords_only_properties"> {
-  let arguments = (ins UnitProperty:$keyword, UnitProperty:$otherKeyword,
-                       UnitProperty:$diffNameUnitPropertyKeyword);
+  let arguments = (ins UnitProp:$keyword, UnitProp:$otherKeyword,
+                       UnitProp:$diffNameUnitPropKeyword);
   let assemblyFormat = [{
     oilist( `keyword` $keyword
           | `otherKeyword` $otherKeyword
-          | `thirdKeyword` $diffNameUnitPropertyKeyword) attr-dict
+          | `thirdKeyword` $diffNameUnitPropKeyword) attr-dict
   }];
 }
 
@@ -404,13 +404,13 @@ def FormatOptionalUnitAttrNoElide
 }
 
 def FormatOptionalUnitProperty : TEST_Op<"format_optional_unit_property"> {
-  let arguments = (ins UnitProperty:$is_optional);
+  let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
 }
 
 def FormatOptionalUnitPropertyNoElide
     : TEST_Op<"format_optional_unit_property_no_elide"> {
-  let arguments = (ins UnitProperty:$is_optional);
+  let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 
@@ -429,6 +429,13 @@ def FormatOptionalDefaultAttrs : TEST_Op<"format_optional_default_attrs"> {
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
+}
+
+def FormatOptionalPropDict : TEST_Op<"format_optional_prop_dict"> {
+  let arguments = (ins
+    OptionalProp<StringProp>:$a,
+    DefaultValuedProp<I32Prop, "1">:$b);
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
@@ -758,6 +765,11 @@ def FormatInferTypeVariadicOperandsOp
       return ::mlir::success();
     }
   }];
+}
+
+def VariadicArgsTypesSplit : TEST_Op<"variadic_args_types_split"> {
+  let arguments = (ins StrAttr:$str, Variadic<AnyType>:$args);
+  let assemblyFormat = "$str (`,` $args^)? attr-dict (`:` type($args)^)?";
 }
 
 #endif  // TEST_OPS_SYNTAX

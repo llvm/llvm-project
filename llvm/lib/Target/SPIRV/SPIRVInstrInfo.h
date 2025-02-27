@@ -30,6 +30,7 @@ public:
   const SPIRVRegisterInfo &getRegisterInfo() const { return RI; }
   bool isHeaderInstr(const MachineInstr &MI) const;
   bool isConstantInstr(const MachineInstr &MI) const;
+  bool isSpecConstantInstr(const MachineInstr &MI) const;
   bool isInlineAsmDefInstr(const MachineInstr &MI) const;
   bool isTypeDeclInstr(const MachineInstr &MI) const;
   bool isDecorationInstr(const MachineInstr &MI) const;
@@ -50,7 +51,7 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
   bool expandPostRAPseudo(MachineInstr &MI) const override;

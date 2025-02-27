@@ -159,8 +159,9 @@ void Parsing::EmitPreprocessedSource(
         // which signifies a comment (directive) in both source forms.
         inDirective = true;
       }
-      if (inDirective && directive.size() < directiveNameLength &&
-          IsLetter(ch)) {
+      bool inDirectiveSentinel{
+          inDirective && directive.size() < directiveNameLength};
+      if (inDirectiveSentinel && IsLetter(ch)) {
         directive += getOriginalChar(ch);
       }
 
@@ -211,7 +212,8 @@ void Parsing::EmitPreprocessedSource(
           out << ' ';
         }
       }
-      if (!inContinuation && position && position->column <= 72 && ch != ' ') {
+      if (!inContinuation && !inDirectiveSentinel && position &&
+          position->column <= 72 && ch != ' ') {
         // Preserve original indentation
         for (; column < position->column; ++column) {
           out << ' ';

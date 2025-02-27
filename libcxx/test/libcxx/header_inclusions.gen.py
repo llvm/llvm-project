@@ -10,6 +10,7 @@
 # prescribed by the Standard.
 
 # RUN: %{python} %s %{libcxx-dir}/utils
+# END.
 
 import sys
 
@@ -45,6 +46,8 @@ for header in public_headers:
     print(
         f"""\
 //--- {header}.compile.pass.cpp
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 

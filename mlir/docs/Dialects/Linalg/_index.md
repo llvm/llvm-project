@@ -695,3 +695,4 @@ the same IR.
 ## Operations
 
 [include "Dialects/LinalgOps.md"]
+[include "Dialects/LinalgRelayoutOps.td"]

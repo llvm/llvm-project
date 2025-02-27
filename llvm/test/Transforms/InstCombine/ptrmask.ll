@@ -411,7 +411,7 @@ define ptr @ptrmask_to_modified_gep_zero_argument() {
 define ptr @ptrmask_to_preserves_inbounds(ptr align 16 %p) {
 ; CHECK-LABEL: define ptr @ptrmask_to_preserves_inbounds
 ; CHECK-SAME: (ptr align 16 [[P:%.*]]) {
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 28
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 28
 ; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep = getelementptr inbounds i8, ptr %p, i32 31

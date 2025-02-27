@@ -83,10 +83,11 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
       if (MBBI->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register DstReg = MBBI->getOperand(0).getReg();
         Register Reg = MBBI->getOperand(1).getReg();
-        IsStoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+        IsStoreInst =
+            Info.getDstReg() == DstReg && Info.getReg() == Reg.asMCReg();
       } else {
         Register Reg = TII.isStoreToStackSlot(*MBBI, StoreFI);
-        IsStoreInst = (Reg == Info.getReg()) && (StoreFI == FI);
+        IsStoreInst = Reg.asMCReg() == Info.getReg() && StoreFI == FI;
       }
       assert(IsStoreInst &&
              "Unexpected callee-saved register store instruction");
@@ -98,7 +99,7 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // directives.
     for (const auto &I : CSI) {
       int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
 
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
@@ -168,10 +169,11 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
       if (I->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register Reg = I->getOperand(0).getReg();
         Register DstReg = I->getOperand(1).getReg();
-        IsRestoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+        IsRestoreInst =
+            Info.getDstReg() == DstReg && Info.getReg() == Reg.asMCReg();
       } else {
         Register Reg = TII.isLoadFromStackSlot(*I, LoadFI);
-        IsRestoreInst = (Info.getReg() == Reg) && (LoadFI == FI);
+        IsRestoreInst = Info.getReg() == Reg.asMCReg() && LoadFI == FI;
       }
       assert(IsRestoreInst &&
              "Unexpected callee-saved register restore instruction");
@@ -203,7 +205,7 @@ bool XtensaFrameLowering::spillCalleeSavedRegisters(
     // method XtensaTargetLowering::LowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    Register Reg = CSI[i].getReg();
+    MCRegister Reg = CSI[i].getReg();
     bool IsA0AndRetAddrIsTaken =
         (Reg == Xtensa::A0) && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsA0AndRetAddrIsTaken)
@@ -276,7 +278,7 @@ void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
   for (unsigned I = 0; I < ScavSlotsNum; I++) {
-    int FI = MFI.CreateStackObject(Size, Alignment, false);
+    int FI = MFI.CreateSpillStackObject(Size, Alignment);
     RS->addScavengingFrameIndex(FI);
 
     if (IsLargeFunction &&

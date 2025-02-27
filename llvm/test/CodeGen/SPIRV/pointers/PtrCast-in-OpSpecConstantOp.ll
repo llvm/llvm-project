@@ -15,7 +15,7 @@
 ; CHECK-DAG: %[[GenPtrChar:.*]] = OpTypePointer Generic %[[Char]]
 ; CHECK-DAG: %[[CWPtrChar:.*]] = OpTypePointer CrossWorkgroup %[[Char]]
 ; CHECK-DAG: %[[Arr1:.*]] = OpTypeArray %[[CWPtrChar]] %[[#]]
-; CHECK-DAG: %[[Struct1:.*]] = OpTypeStruct %8
+; CHECK-DAG: %[[Struct1:.*]] = OpTypeStruct %[[Arr1]]
 ; CHECK-DAG: %[[Arr2:.*]] = OpTypeArray %[[GenPtrChar]] %[[#]]
 ; CHECK-DAG: %[[Struct2:.*]] = OpTypeStruct %[[Arr2]]
 ; CHECK-DAG: %[[GenPtr:.*]] = OpTypePointer Generic %[[Int]]

@@ -155,6 +155,7 @@ public:
   bool isBranchProtectionSupportedArch(StringRef Arch) const override;
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   // FIXME: This should be based on Arch attributes, not CPU names.
@@ -196,7 +197,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
@@ -227,7 +228,7 @@ public:
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
-    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
+    return std::make_pair(64, 64);
   }
 };
 
@@ -298,6 +299,17 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOARMTargetInfo
+    : public AppleMachOTargetInfo<ARMleTargetInfo> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
+
+public:
+  AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                          const TargetOptions &Opts);
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinARMTargetInfo

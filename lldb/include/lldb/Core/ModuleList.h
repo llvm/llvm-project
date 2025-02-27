@@ -326,11 +326,11 @@ public:
   void FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                            VariableList &variable_list) const;
 
-  /// Finds the first module whose file specification matches \a file_spec.
+  /// Finds modules whose file specification matches \a module_spec.
   ///
   /// \param[in] module_spec
   ///     A file specification object to match against the Module's
-  ///     file specifications. If \a file_spec does not have
+  ///     file specifications. If \a module_spec does not have
   ///     directory information, matches will occur by matching only
   ///     the basename of any modules in this list. If this value is
   ///     NULL, then file specifications won't be compared when
@@ -351,6 +351,7 @@ public:
   // UUID values is very efficient and accurate.
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 
+  /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
   void FindSymbolsWithNameAndType(ConstString name,
@@ -521,14 +522,13 @@ protected:
   Notifier *m_notifier = nullptr;
 
 public:
-  typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter,
-                                 std::recursive_mutex>
+  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
       ModuleIterable;
   ModuleIterable Modules() const {
     return ModuleIterable(m_modules, GetMutex());
   }
 
-  typedef AdaptedIterable<collection, lldb::ModuleSP, vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       ModuleIterableNoLocking;
   ModuleIterableNoLocking ModulesNoLocking() const {
     return ModuleIterableNoLocking(m_modules);

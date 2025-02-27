@@ -37,6 +37,7 @@ static_assert(arr4[1][0] == 0, "");
 static_assert(arr4[1][0] == 0, "");
 static_assert(arr4[1][0] == 0, "");
 
+constexpr VI4 B = __extension__(A);
 
 /// From constant-expression-cxx11.cpp
 namespace Vector {

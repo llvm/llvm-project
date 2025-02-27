@@ -175,7 +175,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
         }
 
         OpInfo.SubOpNames[j] = SubArgName;
-        SubOpAliases[SubArgName] = std::pair(i, j);
+        SubOpAliases[SubArgName] = {i, j};
       }
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
@@ -276,7 +276,7 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
                           Op + "'");
 
     // Otherwise, return the operand.
-    return std::pair(OpIdx, 0U);
+    return {OpIdx, 0U};
   }
 
   // Find the suboperand number involved.
@@ -289,13 +289,13 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
   // Find the operand with the right name.
   for (unsigned i = 0, e = MIOpInfo->getNumArgs(); i != e; ++i)
     if (MIOpInfo->getArgNameStr(i) == SubOpName)
-      return std::pair(OpIdx, i);
+      return {OpIdx, i};
 
   // Otherwise, didn't find it!
   PrintFatalError(TheDef->getLoc(), TheDef->getName() +
                                         ": unknown suboperand name in '" + Op +
                                         "'");
-  return std::pair(0U, 0U);
+  return {0U, 0U};
 }
 
 static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,

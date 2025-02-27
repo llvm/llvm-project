@@ -70,7 +70,6 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
-  typedef llvm::ImmutableSet<llvm::APSInt*>                IntSetTy;
   typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
 
 private:
@@ -127,6 +126,7 @@ private:
   /// makeWithStore - Return a ProgramState with the same values as the current
   ///  state with the exception of using the specified Store.
   ProgramStateRef makeWithStore(const StoreRef &store) const;
+  ProgramStateRef makeWithStore(const BindResult &BindRes) const;
 
   void setStore(const StoreRef &storeRef);
 

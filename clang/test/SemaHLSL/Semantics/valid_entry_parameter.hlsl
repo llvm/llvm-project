@@ -49,3 +49,28 @@ void CSMain3_GID(uint3 : SV_GroupID) {
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:24 'uint3'
 // CHECK-NEXT: HLSLSV_GroupIDAttr
 }
+
+[numthreads(8,8,1)]
+void CSMain_GThreadID(uint ID : SV_GroupThreadID) {
+// CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain_GThreadID 'void (uint)'
+// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:28 ID 'uint'
+// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+}
+[numthreads(8,8,1)]
+void CSMain1_GThreadID(uint2 ID : SV_GroupThreadID) {
+// CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain1_GThreadID 'void (uint2)'
+// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:30 ID 'uint2'
+// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+}
+[numthreads(8,8,1)]
+void CSMain2_GThreadID(uint3 ID : SV_GroupThreadID) {
+// CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain2_GThreadID 'void (uint3)'
+// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:30 ID 'uint3'
+// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+}
+[numthreads(8,8,1)]
+void CSMain3_GThreadID(uint3 : SV_GroupThreadID) {
+// CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain3_GThreadID 'void (uint3)'
+// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:30 'uint3'
+// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+}

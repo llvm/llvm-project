@@ -8,19 +8,15 @@
 define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: pack_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    slli a1, a1, 16
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    slliw a1, a1, 16
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: pack_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    zext.h a0, a0
-; RV64ZBKB-NEXT:    slliw a1, a1, 16
-; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %shl = and i32 %a, 65535
   %shl1 = shl i32 %b, 16
@@ -39,9 +35,7 @@ define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 ;
 ; RV64ZBKB-LABEL: pack_i32_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a1, a1, 16
-; RV64ZBKB-NEXT:    or a0, a1, a0
-; RV64ZBKB-NEXT:    sext.w a0, a0
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %zexta = zext i16 %a to i32
   %zextb = zext i16 %b to i32
@@ -62,8 +56,7 @@ define signext i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 signext %2) {
 ;
 ; RV64ZBKB-LABEL: pack_i32_3:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 16
-; RV64ZBKB-NEXT:    or a0, a0, a1
+; RV64ZBKB-NEXT:    packw a0, a1, a0
 ; RV64ZBKB-NEXT:    addw a0, a0, a2
 ; RV64ZBKB-NEXT:    ret
   %4 = zext i16 %0 to i32
@@ -334,9 +327,8 @@ define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroe
 ; RV64I-LABEL: pack_i32_allWUsers:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    slli a0, a0, 16
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sext.w a0, a0
@@ -346,9 +338,7 @@ define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroe
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    add a0, a1, a0
 ; RV64ZBKB-NEXT:    zext.h a0, a0
-; RV64ZBKB-NEXT:    slli a0, a0, 16
-; RV64ZBKB-NEXT:    or a0, a0, a2
-; RV64ZBKB-NEXT:    sext.w a0, a0
+; RV64ZBKB-NEXT:    packw a0, a2, a0
 ; RV64ZBKB-NEXT:    ret
   %4 = add i16 %1, %0
   %5 = zext i16 %4 to i32
@@ -382,9 +372,8 @@ define i64 @pack_i64_imm() {
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV64I-LABEL: zexth_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: zexth_i32:
@@ -398,9 +387,8 @@ define i32 @zexth_i32(i32 %a) nounwind {
 define i64 @zexth_i64(i64 %a) nounwind {
 ; RV64I-LABEL: zexth_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: zexth_i64:
@@ -414,9 +402,8 @@ define i64 @zexth_i64(i64 %a) nounwind {
 define i32 @zext_i16_to_i32(i16 %a) nounwind {
 ; RV64I-LABEL: zext_i16_to_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: zext_i16_to_i32:
@@ -430,9 +417,8 @@ define i32 @zext_i16_to_i32(i16 %a) nounwind {
 define i64 @zext_i16_to_i64(i16 %a) nounwind {
 ; RV64I-LABEL: zext_i16_to_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: zext_i16_to_i64:
@@ -441,4 +427,71 @@ define i64 @zext_i16_to_i64(i16 %a) nounwind {
 ; RV64ZBKB-NEXT:    ret
   %1 = zext i16 %a to i64
   ret i64 %1
+}
+
+; This creates a i16->i32 G_ZEXT that we need to be able to select
+define i32 @zext_i16_i32_2(i1 %z, ptr %x, i32 %y) {
+; RV64I-LABEL: zext_i16_i32_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a3, a0, 1
+; RV64I-NEXT:    bnez a3, .LBB20_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB20_2:
+; RV64I-NEXT:    lh a0, 0(a1)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: zext_i16_i32_2:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    andi a3, a0, 1
+; RV64ZBKB-NEXT:    bnez a3, .LBB20_2
+; RV64ZBKB-NEXT:  # %bb.1:
+; RV64ZBKB-NEXT:    mv a0, a2
+; RV64ZBKB-NEXT:    ret
+; RV64ZBKB-NEXT:  .LBB20_2:
+; RV64ZBKB-NEXT:    lh a0, 0(a1)
+; RV64ZBKB-NEXT:    zext.h a0, a0
+; RV64ZBKB-NEXT:    ret
+  %w = load i16, ptr %x
+  %a = freeze i16 %w
+  %b = zext i16 %a to i32
+  %c = select i1 %z, i32 %b, i32 %y
+  ret i32 %c
+}
+
+; This creates a i16->i32 G_SEXT that we need to be able to select
+define i32 @sext_i16_i32(i1 %z, ptr %x, i32 %y) {
+; RV64I-LABEL: sext_i16_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a3, a0, 1
+; RV64I-NEXT:    bnez a3, .LBB21_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB21_2:
+; RV64I-NEXT:    lh a0, 0(a1)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: sext_i16_i32:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    andi a3, a0, 1
+; RV64ZBKB-NEXT:    bnez a3, .LBB21_2
+; RV64ZBKB-NEXT:  # %bb.1:
+; RV64ZBKB-NEXT:    mv a0, a2
+; RV64ZBKB-NEXT:    ret
+; RV64ZBKB-NEXT:  .LBB21_2:
+; RV64ZBKB-NEXT:    lh a0, 0(a1)
+; RV64ZBKB-NEXT:    slli a0, a0, 48
+; RV64ZBKB-NEXT:    srai a0, a0, 48
+; RV64ZBKB-NEXT:    ret
+  %w = load i16, ptr %x
+  %a = freeze i16 %w
+  %b = sext i16 %a to i32
+  %c = select i1 %z, i32 %b, i32 %y
+  ret i32 %c
 }

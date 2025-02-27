@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H
-#define _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ITERATOR_H
+#define _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ITERATOR_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -148,4 +148,4 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ITERATOR_H

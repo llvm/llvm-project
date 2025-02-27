@@ -31,7 +31,7 @@ def uimm2_lsb0 : RISCVOp,
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
-  let DecoderMethod = "decodeUImmOperand<8>";
+  let DecoderMethod = "decodeUImmOperandGE<8, 32>";
   let OperandType = "OPERAND_UIMM8_GE32";
 }
 
@@ -39,6 +39,7 @@ def RlistAsmOperand : AsmOperandClass {
   let Name = "Rlist";
   let ParserMethod = "parseReglist";
   let DiagnosticType = "InvalidRlist";
+  let DiagnosticString = "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}";
 }
 
 def StackAdjAsmOperand : AsmOperandClass {
@@ -186,7 +187,7 @@ def C_ZEXT_B  : RVZcArith_r<0b11000 , "c.zext.b">,
                 Sched<[WriteIALU, ReadIALU]>;
 
 let Predicates = [HasStdExtZcb, HasStdExtZmmul] in
-def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul", GPRC>,
+def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul">,
                 Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 
 let Predicates = [HasStdExtZcb] in {

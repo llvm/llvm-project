@@ -149,7 +149,6 @@ void InlinerPass::runOnOperation() {
   // Run the inlining.
   if (failed(inliner.doInlining()))
     signalPassFailure();
-  return;
 }
 
 LogicalResult InlinerPass::initializeOptions(

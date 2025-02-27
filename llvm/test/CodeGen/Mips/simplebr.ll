@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mips16-hard-float -mattr=+soft-float -relocation-model=static < %s | FileCheck %s -check-prefix=CHECK-STATIC16
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mips16-hard-float -mattr=+soft-float -relocation-model=static < %s | FileCheck %s -check-prefix=CHECK-STATIC16
 
 ; ModuleID = 'simplebr.c'
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S64"

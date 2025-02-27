@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_CMP_H
-#define _LIBCPP___UTILITY_CMP_H
+#ifndef _LIBCPP___CXX03___UTILITY_CMP_H
+#define _LIBCPP___CXX03___UTILITY_CMP_H
 
 #include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
@@ -78,4 +78,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_CMP_H
+#endif // _LIBCPP___CXX03___UTILITY_CMP_H

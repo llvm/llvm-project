@@ -461,13 +461,6 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
 
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
-  // Compute isPreemptible early. We may add more symbols later, so this loop
-  // cannot be merged with the later computeIsPreemptible() pass which is used
-  // by scanRelocations().
-  if (ctx.arg.hasDynSymTab)
-    for (Symbol *sym : ctx.symtab->getSymbols())
-      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
-
   // Two text sections may have identical content and relocations but different
   // LSDA, e.g. the two functions may have catch blocks of different types. If a
   // text section is referenced by a .eh_frame FDE with LSDA, it is not

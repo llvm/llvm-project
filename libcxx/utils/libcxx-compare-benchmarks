@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+set -e
+
+PROGNAME="$(basename "${0}")"
+MONOREPO_ROOT="$(realpath $(dirname "${PROGNAME}"))"
+function usage() {
+cat <<EOF
+Usage:
+${PROGNAME} [-h|--help] <baseline-build> <candidate-build> benchmarks... [-- gbench-args...]
+
+Compare the given benchmarks between the baseline and the candidate build directories.
+
+This requires those benchmarks to have already been generated in both build directories.
+
+<baseline-build>     The path to the build directory considered the baseline.
+<candidate-build>    The path to the build directory considered the candidate.
+benchmarks...        Paths of the benchmarks to compare. Those paths are relative to '<monorepo-root>'.
+[-- gbench-args...]  Any arguments provided after '--' will be passed as-is to GoogleBenchmark's compare.py tool.
+
+Example
+=======
+$ libcxx-lit build1/ -sv libcxx/test/benchmarks/algorithms/for_each.bench.cpp
+$ libcxx-lit build2/ -sv libcxx/test/benchmarks/algorithms/for_each.bench.cpp
+$ ${PROGNAME} build1/ build2/ libcxx/test/benchmarks/algorithms/for_each.bench.cpp
+EOF
+}
+
+if [[ "${1}" == "-h" || "${1}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+baseline="${1}"
+candidate="${2}"
+shift; shift
+
+GBENCH="${MONOREPO_ROOT}/third-party/benchmark"
+
+python3 -m venv /tmp/libcxx-compare-benchmarks-venv
+source /tmp/libcxx-compare-benchmarks-venv/bin/activate
+pip3 install -r ${GBENCH}/tools/requirements.txt
+
+benchmarks=""
+while [[ $# -gt 0 ]]; do
+    if [[ "${1}" == "--" ]]; then
+        shift
+        break
+    fi
+    benchmarks+=" ${1}"
+    shift
+done
+
+for benchmark in ${benchmarks}; do
+    base="$(${MONOREPO_ROOT}/libcxx/utils/libcxx-benchmark-json ${baseline} ${benchmark})"
+    cand="$(${MONOREPO_ROOT}/libcxx/utils/libcxx-benchmark-json ${candidate} ${benchmark})"
+
+    if [[ ! -e "${base}" ]]; then
+        echo "Benchmark ${benchmark} does not exist in the baseline"
+        continue
+    fi
+    if [[ ! -e "${cand}" ]]; then
+        echo "Benchmark ${benchmark} does not exist in the candidate"
+        continue
+    fi
+
+    "${GBENCH}/tools/compare.py" benchmarks "${base}" "${cand}" ${@}
+done

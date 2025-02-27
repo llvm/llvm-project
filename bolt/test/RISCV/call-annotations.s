@@ -16,13 +16,13 @@ f:
 
 // CHECK-LABEL: Binary Function "_start" after building cfg {
 // CHECK:      auipc ra, f
-// CHECK-NEXT: jalr ra, -0x4(ra) # Offset: 4
-// CHECK-NEXT: jal ra, f # Offset: 8
-// CHECK-NEXT: jal zero, f # TAILCALL  # Offset: 12
+// CHECK-NEXT: jalr -0x4(ra) # Offset: 4
+// CHECK-NEXT: jal f # Offset: 8
+// CHECK-NEXT: j f # TAILCALL  # Offset: 12
 
 // CHECK-LABEL: Binary Function "long_tail" after building cfg {
 // CHECK:      auipc t1, f
-// CHECK-NEXT: jalr zero, -0x18(t1) # TAILCALL  # Offset: 8
+// CHECK-NEXT: jr -0x18(t1) # TAILCALL  # Offset: 8
 
 // CHECK-LABEL: Binary Function "compressed_tail" after building cfg {
 // CHECK:      jr a0 # TAILCALL  # Offset: 0

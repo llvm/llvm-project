@@ -225,9 +225,10 @@ define <4 x i64> @vwsll_vx_i8_v4i64_zext(<4 x i32> %a, i8 %b) {
 define <4 x i64> @vwsll_vi_v4i64(<4 x i32> %a) {
 ; CHECK-LABEL: vwsll_vi_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v4i64:
@@ -434,9 +435,10 @@ define <8 x i32> @vwsll_vx_i8_v8i32_zext(<8 x i16> %a, i8 %b) {
 define <8 x i32> @vwsll_vi_v8i32(<8 x i16> %a) {
 ; CHECK-LABEL: vwsll_vi_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v8i32:
@@ -654,9 +656,10 @@ define <16 x i16> @vwsll_vx_i8_v16i16_zext(<16 x i8> %a, i8 %b) {
 define <16 x i16> @vwsll_vi_v16i16(<16 x i8> %a) {
 ; CHECK-LABEL: vwsll_vi_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v16i16:

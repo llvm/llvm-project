@@ -17,10 +17,12 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace llvm {
@@ -129,6 +131,8 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 // Add an OpName instruction for the given target register.
 void buildOpName(Register Target, const StringRef &Name,
                  MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -147,6 +151,10 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.
 MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
+
+// Return a valid position for the instruction at the end of the block before
+// terminators and debug instructions.
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB);
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
@@ -170,8 +178,12 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 6;
   case SPIRV::StorageClass::Input:
     return 7;
+  case SPIRV::StorageClass::Output:
+    return 8;
   case SPIRV::StorageClass::CodeSectionINTEL:
     return 9;
+  case SPIRV::StorageClass::Private:
+    return 10;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -225,6 +237,10 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // dominators. This should match both the SPIR-V and the MIR requirements.
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
+
+inline bool hasInitializer(const GlobalVariable *GV) {
+  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+}
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {
@@ -367,13 +383,37 @@ inline const Type *unifyPtrType(const Type *Ty) {
   return toTypedPointer(const_cast<Type *>(Ty));
 }
 
+inline bool isVector1(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  return FVTy && FVTy->getNumElements() == 1;
+}
+
+// Modify an LLVM type to conform with future transformations in IRTranslator.
+// At the moment use cases comprise only a <1 x Type> vector. To extend when/if
+// needed.
+inline Type *normalizeType(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  if (!FVTy || FVTy->getNumElements() != 1)
+    return Ty;
+  // If it's a <1 x Type> vector type, replace it by the element type, because
+  // it's not a legal vector type in LLT and IRTranslator will represent it as
+  // the scalar eventually.
+  return normalizeType(FVTy->getElementType());
+}
+
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
+  return PoisonValue::get(normalizeType(Ty));
+}
+
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
-                     MachineIRBuilder &MIRBuilder, bool Force = false);
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force = false);
 void setRegClassType(Register Reg, const MachineInstr *SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
@@ -384,11 +424,25 @@ Register createVirtualRegister(const MachineInstr *SpvType,
 Register createVirtualRegister(const MachineInstr *SpvType,
                                SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
-Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
-                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR);
 
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty);
+
+enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
+
+inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
+  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+      {"rte", FPDecorationId::RTE},
+      {"rtz", FPDecorationId::RTZ},
+      {"rtp", FPDecorationId::RTP},
+      {"rtn", FPDecorationId::RTN},
+      {"sat", FPDecorationId::SAT}};
+  auto It = Mapping.find(S);
+  return It == Mapping.end() ? FPDecorationId::NONE : It->second;
+}
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

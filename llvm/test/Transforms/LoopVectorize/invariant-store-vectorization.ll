@@ -56,7 +56,7 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[I3:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I1]], align 8
 ; CHECK-NEXT:    [[I3]] = add i32 [[I0]], [[I2]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4
@@ -126,7 +126,7 @@ define void @inv_val_store_to_inv_address(ptr %a, i64 %n, ptr %b) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[I1]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -182,17 +182,17 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775804
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[K:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[K:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE10:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META16:![0-9]+]], !noalias [[META19:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT4]], ptr [[TMP1]], align 4, !alias.scope [[META16]], !noalias [[META19]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 4, !alias.scope [[META16]], !noalias [[META19]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -228,7 +228,7 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I1]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I2]], [[K]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[I1]], align 4
@@ -282,7 +282,7 @@ define void @inv_val_store_to_inv_address_conditional_diff_values(ptr %a, i64 %n
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i32, ptr [[B:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I1]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I2]], [[K:%.*]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[I1]], align 4
@@ -356,7 +356,7 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[CMP218:%.*]] = icmp ult i32 [[J_022]], [[ITR]]
 ; CHECK-NEXT:    br i1 [[CMP218]], label [[FOR_BODY3_LR_PH:%.*]], label [[FOR_INC8]]
 ; CHECK:       for.body3.lr.ph:
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[VAR1]], i64 [[INDVARS_IV23]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR1]], i64 [[INDVARS_IV23]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[J_022]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[J_022]], -1
@@ -401,8 +401,8 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_INC8_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[TMP4]], [[FOR_BODY3_LR_PH]] ], [ [[TMP4]], [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], [[MIDDLE_BLOCK]] ], [ [[ARRAYIDX5_PROMOTED]], [[FOR_BODY3_LR_PH]] ], [ [[ARRAYIDX5_PROMOTED]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[TMP4]], [[FOR_BODY3_LR_PH]] ], [ [[TMP4]], [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[TMP20:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP22:%.*]], [[FOR_BODY3]] ]
@@ -487,14 +487,14 @@ define i32 @multiple_uniform_stores_conditional(ptr nocapture %var1, ptr nocaptu
 ; CHECK-NEXT:    [[CMP218:%.*]] = icmp ult i32 [[J_022]], [[ITR]]
 ; CHECK-NEXT:    br i1 [[CMP218]], label [[FOR_BODY3_LR_PH:%.*]], label [[FOR_INC8]]
 ; CHECK:       for.body3.lr.ph:
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[VAR1:%.*]], i64 [[INDVARS_IV23]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR1:%.*]], i64 [[INDVARS_IV23]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[J_022]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[ARRAYIDX5_PROMOTED]], [[FOR_BODY3_LR_PH]] ], [ [[TMP5:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY3_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VAR2:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR2:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[ADD]], 42
@@ -591,12 +591,12 @@ define void @unsafe_dep_uniform_load_store(i32 %arg, i32 %arg1, i64 %arg2, ptr %
 ; CHECK-NEXT:    [[I15:%.*]] = trunc i64 [[I8]] to i32
 ; CHECK-NEXT:    [[I16:%.*]] = add i32 [[ARG:%.*]], [[I15]]
 ; CHECK-NEXT:    [[I17:%.*]] = zext i32 [[I16]] to i64
-; CHECK-NEXT:    [[I18:%.*]] = getelementptr inbounds i16, ptr [[I6]], i64 [[I17]]
+; CHECK-NEXT:    [[I18:%.*]] = getelementptr inbounds nuw i16, ptr [[I6]], i64 [[I17]]
 ; CHECK-NEXT:    store i16 [[I14]], ptr [[I18]], align 2
 ; CHECK-NEXT:    [[I19:%.*]] = add i32 [[I13]], [[I9]]
 ; CHECK-NEXT:    [[I20:%.*]] = trunc i32 [[I19]] to i16
 ; CHECK-NEXT:    [[I21:%.*]] = and i16 [[I20]], 255
-; CHECK-NEXT:    [[I22:%.*]] = getelementptr inbounds i16, ptr [[ARG3]], i64 [[I17]]
+; CHECK-NEXT:    [[I22:%.*]] = getelementptr inbounds nuw i16, ptr [[ARG3]], i64 [[I17]]
 ; CHECK-NEXT:    store i16 [[I21]], ptr [[I22]], align 2
 ; CHECK-NEXT:    [[I23]] = add nsw i32 [[I9]], 1
 ; CHECK-NEXT:    [[I24]] = add nuw nsw i64 [[I8]], 1

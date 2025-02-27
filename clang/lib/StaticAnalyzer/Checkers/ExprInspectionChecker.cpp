@@ -227,10 +227,11 @@ void ExprInspectionChecker::analyzerWarnIfReached(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerNumTimesReached(const CallExpr *CE,
                                                     CheckerContext &C) const {
-  ++ReachedStats[CE].NumTimesReached;
-  if (!ReachedStats[CE].ExampleNode) {
+  ReachedStat &Stat = ReachedStats[CE];
+  ++Stat.NumTimesReached;
+  if (!Stat.ExampleNode) {
     // Later, in checkEndAnalysis, we'd throw a report against it.
-    ReachedStats[CE].ExampleNode = C.generateNonFatalErrorNode();
+    Stat.ExampleNode = C.generateNonFatalErrorNode();
   }
 }
 
@@ -256,7 +257,7 @@ void ExprInspectionChecker::analyzerExplain(const CallExpr *CE,
     return;
 
   SVal V = C.getSVal(Arg);
-  SValExplainer Ex(C.getASTContext());
+  SValExplainer Ex(C.getASTContext(), C.getState());
   reportBug(Ex.Visit(V), C);
 }
 
@@ -486,8 +487,8 @@ public:
       return Str;
     if (std::optional<std::string> Str = Visit(S->getLHS()))
       return (*Str + " " + BinaryOperator::getOpcodeStr(S->getOpcode()) + " " +
-              std::to_string(S->getRHS().getLimitedValue()) +
-              (S->getRHS().isUnsigned() ? "U" : ""))
+              std::to_string(S->getRHS()->getLimitedValue()) +
+              (S->getRHS()->isUnsigned() ? "U" : ""))
           .str();
     return std::nullopt;
   }

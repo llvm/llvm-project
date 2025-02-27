@@ -523,8 +523,7 @@ struct OuterProductFusionPass
     RewritePatternSet patterns(&getContext());
     populateOuterProductFusionPatterns(patterns);
 
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       signalPassFailure();
   }
 };

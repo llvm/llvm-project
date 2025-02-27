@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_RANGES
-#define _LIBCPP_RANGES
+#ifndef _LIBCPP___CXX03_RANGES
+#define _LIBCPP___CXX03_RANGES
 
 /*
 
@@ -460,4 +460,4 @@ namespace std {
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_RANGES
+#endif // _LIBCPP___CXX03_RANGES

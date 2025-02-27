@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___OSTREAM_PRINT_H
-#define _LIBCPP___OSTREAM_PRINT_H
+#ifndef _LIBCPP___CXX03___OSTREAM_PRINT_H
+#define _LIBCPP___CXX03___OSTREAM_PRINT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/ostream.h>
@@ -176,4 +176,4 @@ _LIBCPP_HIDE_FROM_ABI inline void println(ostream& __os) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___OSTREAM_PRINT_H
+#endif // _LIBCPP___CXX03___OSTREAM_PRINT_H

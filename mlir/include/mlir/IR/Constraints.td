@@ -93,6 +93,12 @@ class Or<list<Pred> children> : CombinedPred<PredCombinerOr, children>;
 // A predicate that holds if its child does not.
 class Neg<Pred child> : CombinedPred<PredCombinerNot, [child]>;
 
+// A predicate that is always true.
+defvar TruePred = And<[]>;
+
+// A predicate that is always false.
+defvar False = Or<[]>;
+
 // A predicate that substitutes "pat" with "repl" in predicate calls of the
 // leaves of the predicate tree (i.e., not CombinedPred).
 //

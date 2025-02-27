@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_PARTITION_COPY_H
-#define _LIBCPP___ALGORITHM_RANGES_PARTITION_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_COPY_H
 
 #include <__cxx03/__algorithm/in_out_out_result.h>
 #include <__cxx03/__config>
@@ -107,4 +107,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_PARTITION_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_COPY_H

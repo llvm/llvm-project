@@ -198,8 +198,7 @@ public:
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
     populateAffineExpandIndexOpsPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

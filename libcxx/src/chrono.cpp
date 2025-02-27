@@ -31,6 +31,10 @@
 #  include <sys/time.h> // for gettimeofday and timeval
 #endif
 
+#if defined(__LLVM_LIBC__)
+#  define _LIBCPP_HAS_TIMESPEC_GET
+#endif
+
 // OpenBSD and GPU do not have a fully conformant suite of POSIX timers, but
 // it does have clock_gettime and CLOCK_MONOTONIC which is all we need.
 #if defined(__APPLE__) || defined(__gnu_hurd__) || defined(__OpenBSD__) || defined(__AMDGPU__) ||                      \
@@ -115,12 +119,21 @@ static system_clock::time_point __libcpp_system_clock_now() {
   return system_clock::time_point(duration_cast<system_clock::duration>(d - nt_to_unix_epoch));
 }
 
+#elif defined(_LIBCPP_HAS_TIMESPEC_GET)
+
+static system_clock::time_point __libcpp_system_clock_now() {
+  struct timespec ts;
+  if (timespec_get(&ts, TIME_UTC) != TIME_UTC)
+    std::__throw_system_error(errno, "timespec_get(TIME_UTC) failed");
+  return system_clock::time_point(seconds(ts.tv_sec) + microseconds(ts.tv_nsec / 1000));
+}
+
 #elif defined(_LIBCPP_HAS_CLOCK_GETTIME)
 
 static system_clock::time_point __libcpp_system_clock_now() {
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_REALTIME, &tp))
-    __throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
+    std::__throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
   return system_clock::time_point(seconds(tp.tv_sec) + microseconds(tp.tv_nsec / 1000));
 }
 
@@ -167,7 +180,7 @@ system_clock::time_point system_clock::from_time_t(time_t t) noexcept { return s
 static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &tp))
-    __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC_RAW) failed");
+    std::__throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC_RAW) failed");
   return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
@@ -200,7 +213,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
 static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec64 ts;
   if (0 != gettimeofdayMonotonic(&ts))
-    __throw_system_error(errno, "failed to obtain time of day");
+    std::__throw_system_error(errno, "failed to obtain time of day");
 
   return steady_clock::time_point(seconds(ts.tv_sec) + nanoseconds(ts.tv_nsec));
 }
@@ -216,12 +229,21 @@ static steady_clock::time_point __libcpp_steady_clock_now() noexcept {
   return steady_clock::time_point(nanoseconds(_zx_clock_get_monotonic()));
 }
 
+#  elif defined(_LIBCPP_HAS_TIMESPEC_GET)
+
+static steady_clock::time_point __libcpp_steady_clock_now() {
+  struct timespec ts;
+  if (timespec_get(&ts, TIME_MONOTONIC) != TIME_MONOTONIC)
+    std::__throw_system_error(errno, "timespec_get(TIME_MONOTONIC) failed");
+  return steady_clock::time_point(seconds(ts.tv_sec) + microseconds(ts.tv_nsec / 1000));
+}
+
 #  elif defined(_LIBCPP_HAS_CLOCK_GETTIME)
 
 static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_MONOTONIC, &tp))
-    __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
+    std::__throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
   return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 

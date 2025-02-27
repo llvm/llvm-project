@@ -1,12 +1,11 @@
 # UNSUPPORTED: system-windows
-# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=CHECK,ASM,ABINAME
-# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v -M numeric --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=CHECK,ASM,ARCHNAME
+# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=ASM,ABINAME
+# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v -M numeric --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=ASM,ARCHNAME
 
-# CHECK:	.text
 # Registers and immediates
 0x03 0xe0 0x40 0x00
-# ABINAME-NEXT:	lwu	[0;36mzero[0m, [0;31m4[0m([0;36mra[0m)
-# ARCHNAME-NEXT:	lwu	[0;36mx0[0m, [0;31m4[0m([0;36mx1[0m)
+# ABINAME:	lwu	[0;36mzero[0m, [0;31m4[0m([0;36mra[0m)
+# ARCHNAME:	lwu	[0;36mx0[0m, [0;31m4[0m([0;36mx1[0m)
 
 # Branch targets
 0x63 0x00 0xb5 0x04

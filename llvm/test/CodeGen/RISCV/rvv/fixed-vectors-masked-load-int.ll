@@ -318,6 +318,7 @@ define <128 x i16> @masked_load_v128i16(ptr %a, <128 x i1> %mask) {
 define <256 x i8> @masked_load_v256i8(ptr %a, <256 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v256i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v16, v8
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma

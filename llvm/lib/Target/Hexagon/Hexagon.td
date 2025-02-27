@@ -67,6 +67,18 @@ def ExtensionHVXV73: SubtargetFeature<"hvxv73", "HexagonHVXVersion",
       [ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66,
        ExtensionHVXV67, ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71]>;
 
+def ExtensionHVXV75: SubtargetFeature<"hvxv75", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V75", "Hexagon HVX instructions",
+      [ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66,
+       ExtensionHVXV67, ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73]>;
+
+def ExtensionHVXV79: SubtargetFeature<"hvxv79", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V79", "Hexagon HVX instructions",
+      [ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66,
+       ExtensionHVXV67, ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73, ExtensionHVXV75]>;
+
 def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
       "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
 def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
@@ -137,6 +149,10 @@ def UseHVXV71          : Predicate<"HST->useHVXV71Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV71)>;
 def UseHVXV73          : Predicate<"HST->useHVXV73Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV73)>;
+def UseHVXV75          : Predicate<"HST->useHVXV75Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV75)>;
+def UseHVXV79          : Predicate<"HST->useHVXV79Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV79)>;
 def UseAudio           : Predicate<"HST->useAudioOps()">,
                          AssemblerPredicate<(all_of ExtensionAudio)>;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
@@ -462,6 +478,17 @@ def : Proc<"hexagonv73", HexagonModelV73,
             ArchV68, ArchV69, ArchV71, ArchV73,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv75", HexagonModelV75,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+           ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, FeatureCompound,
+           FeatureDuplex, FeatureMemNoShuf, FeatureMemops, FeatureNVJ,
+           FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv79", HexagonModelV79,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+           ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79,
+           FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+           FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+
 // Need to update the correct features for tiny core.
 // Disable NewValueJumps since the packetizer is unable to handle a packet with
 // a new value jump and another SLOT0 instruction.

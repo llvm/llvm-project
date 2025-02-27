@@ -27,6 +27,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -548,6 +549,22 @@ public:
 
   virtual bool isReturn(const MCInst &Inst) const {
     return Analysis->isReturn(Inst);
+  }
+
+  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  virtual bool isAuthenticationOfReg(const MCInst &Inst,
+                                     MCPhysReg AuthenticatedReg) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
   }
 
   virtual bool isTerminator(const MCInst &Inst) const;
@@ -1204,6 +1221,11 @@ public:
   /// Get instruction size specified via annotation.
   std::optional<uint32_t> getSize(const MCInst &Inst) const;
 
+  /// Get target-specific instruction size.
+  virtual std::optional<uint32_t> getInstructionSize(const MCInst &Inst) const {
+    return std::nullopt;
+  }
+
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
@@ -1421,11 +1443,12 @@ public:
   }
 
   /// Creates an indirect call to the function within the \p DirectCall PLT
-  /// stub. The function's memory location is pointed by the \p TargetLocation
+  /// stub. The function's address location is pointed by the \p TargetLocation
   /// symbol.
+  /// Move instruction annotations from \p DirectCall to the indirect call.
   virtual InstructionListType
-  createIndirectPltCall(const MCInst &DirectCall,
-                        const MCSymbol *TargetLocation, MCContext *Ctx) {
+  createIndirectPLTCall(MCInst &&DirectCall, const MCSymbol *TargetLocation,
+                        MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return {};
   }

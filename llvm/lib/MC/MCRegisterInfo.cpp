@@ -220,3 +220,10 @@ bool MCRegisterInfo::regsOverlap(MCRegister RegA, MCRegister RegB) const {
   } while (*IA < *IB ? ++IA != EA : ++IB != EB);
   return false;
 }
+
+bool MCRegisterInfo::isArtificialRegUnit(unsigned Unit) const {
+  for (MCRegUnitRootIterator Root(Unit, this); Root.isValid(); ++Root)
+    if (isArtificial(*Root))
+      return true;
+  return false;
+}

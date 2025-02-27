@@ -217,3 +217,27 @@ body:             |
     %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
     $q0 = COPY %large(<2 x s64>)
     $d0 = COPY %bv(<2 x s32>)
+...
+---
+name:            test_undef_ptrtoint
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_undef_ptrtoint
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $q0 = COPY [[DEF]](<2 x s64>)
+    %0:_(<2 x p0>) = G_IMPLICIT_DEF
+    %1:_(<2 x s64>) = G_PTRTOINT %0(<2 x p0>)
+    $q0 = COPY %1(<2 x s64>)
+...
+---
+name:            test_undef_inttoptr
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_undef_inttoptr
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x p0>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $q0 = COPY [[DEF]](<2 x p0>)
+    %0:_(<2 x s64>) = G_IMPLICIT_DEF
+    %1:_(<2 x p0>) = G_INTTOPTR %0(<2 x s64>)
+    $q0 = COPY %1(<2 x p0>)

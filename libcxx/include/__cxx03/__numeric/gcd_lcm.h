@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_GCD_LCM_H
-#define _LIBCPP___NUMERIC_GCD_LCM_H
+#ifndef _LIBCPP___CXX03___NUMERIC_GCD_LCM_H
+#define _LIBCPP___CXX03___NUMERIC_GCD_LCM_H
 
 #include <__cxx03/__algorithm/min.h>
 #include <__cxx03/__assert>
@@ -129,4 +129,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_GCD_LCM_H
+#endif // _LIBCPP___CXX03___NUMERIC_GCD_LCM_H

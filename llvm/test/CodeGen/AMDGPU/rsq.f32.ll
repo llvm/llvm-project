@@ -2006,14 +2006,12 @@ define float @v_rsq_f32(float %val) {
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4b800000
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, 0, 24, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x45800000
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, 0, 12, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
   %div = fdiv contract float 1.0, %sqrt, !fpmath !1
@@ -2296,10 +2294,9 @@ define float @v_rsq_f32_contractable_user(float %val0, float %val1) {
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x45800000
 ; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
@@ -2331,10 +2328,9 @@ define float @v_rsq_f32_contractable_user_missing_contract0(float %val0, float %
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x45800000
 ; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
@@ -2366,14 +2362,12 @@ define float @v_rsq_f32_contractable_user_missing_contract1(float %val0, float %
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x45800000
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 12, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GCN-IEEE-SAFE-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract float @llvm.sqrt.f32(float %val0), !fpmath !1
@@ -2416,14 +2410,12 @@ define float @v_rsq_f32_known_never_posdenormal(float nofpclass(psub) %val) {
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4b800000
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, 0, 24, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x45800000
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, 0, 12, vcc
+; GCN-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
   %div = fdiv contract float 1.0, %sqrt, !fpmath !1

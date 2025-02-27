@@ -288,6 +288,10 @@ Attribute Attribute::getWithNoFPClass(LLVMContext &Context,
   return get(Context, NoFPClass, ClassMask);
 }
 
+Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
+  return get(Context, Captures, CI.toIntValue());
+}
+
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const std::optional<unsigned> &NumElemsArg) {
@@ -487,6 +491,12 @@ MemoryEffects Attribute::getMemoryEffects() const {
   return MemoryEffects::createFromIntValue(pImpl->getValueAsInt());
 }
 
+CaptureInfo Attribute::getCaptureInfo() const {
+  assert(hasAttribute(Attribute::Captures) &&
+         "Can only call getCaptureInfo() on captures attribute");
+  return CaptureInfo::createFromIntValue(pImpl->getValueAsInt());
+}
+
 FPClassTest Attribute::getNoFPClass() const {
   assert(hasAttribute(Attribute::NoFPClass) &&
          "Can only call getNoFPClass() on nofpclass attribute");
@@ -637,6 +647,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       case IRMemLocation::InaccessibleMem:
         OS << "inaccessiblemem: ";
         break;
+      case IRMemLocation::ErrnoMem:
+        OS << "errnomem: ";
+        break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
       }
@@ -644,6 +657,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     }
     OS << ")";
     OS.flush();
+    return Result;
+  }
+
+  if (hasAttribute(Attribute::Captures)) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    OS << getCaptureInfo();
     return Result;
   }
 
@@ -1050,6 +1070,10 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
         Intersected.addMemoryAttr(Attr0.getMemoryEffects() |
                                   Attr1.getMemoryEffects());
         break;
+      case Attribute::Captures:
+        Intersected.addCapturesAttr(Attr0.getCaptureInfo() |
+                                    Attr1.getCaptureInfo());
+        break;
       case Attribute::NoFPClass:
         Intersected.addNoFPClassAttr(Attr0.getNoFPClass() &
                                      Attr1.getNoFPClass());
@@ -1168,6 +1192,10 @@ AllocFnKind AttributeSet::getAllocKind() const {
 
 MemoryEffects AttributeSet::getMemoryEffects() const {
   return SetNode ? SetNode->getMemoryEffects() : MemoryEffects::unknown();
+}
+
+CaptureInfo AttributeSet::getCaptureInfo() const {
+  return SetNode ? SetNode->getCaptureInfo() : CaptureInfo::all();
 }
 
 FPClassTest AttributeSet::getNoFPClass() const {
@@ -1356,6 +1384,12 @@ MemoryEffects AttributeSetNode::getMemoryEffects() const {
   if (auto A = findEnumAttribute(Attribute::Memory))
     return A->getMemoryEffects();
   return MemoryEffects::unknown();
+}
+
+CaptureInfo AttributeSetNode::getCaptureInfo() const {
+  if (auto A = findEnumAttribute(Attribute::Captures))
+    return A->getCaptureInfo();
+  return CaptureInfo::all();
 }
 
 FPClassTest AttributeSetNode::getNoFPClass() const {
@@ -2190,6 +2224,10 @@ AttrBuilder &AttrBuilder::addMemoryAttr(MemoryEffects ME) {
   return addRawIntAttr(Attribute::Memory, ME.toIntValue());
 }
 
+AttrBuilder &AttrBuilder::addCapturesAttr(CaptureInfo CI) {
+  return addRawIntAttr(Attribute::Captures, CI.toIntValue());
+}
+
 AttrBuilder &AttrBuilder::addNoFPClassAttr(FPClassTest Mask) {
   if (Mask == fcNone)
     return *this;
@@ -2342,7 +2380,6 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
     // Attributes that only apply to pointers.
     if (ASK & ASK_SAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::NoAlias)
-          .addAttribute(Attribute::NoCapture)
           .addAttribute(Attribute::NonNull)
           .addAttribute(Attribute::ReadNone)
           .addAttribute(Attribute::ReadOnly)
@@ -2350,7 +2387,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
           .addAttribute(Attribute::DereferenceableOrNull)
           .addAttribute(Attribute::Writable)
           .addAttribute(Attribute::DeadOnUnwind)
-          .addAttribute(Attribute::Initializes);
+          .addAttribute(Attribute::Initializes)
+          .addAttribute(Attribute::Captures);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)

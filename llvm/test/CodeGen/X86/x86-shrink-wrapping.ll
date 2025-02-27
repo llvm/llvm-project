@@ -821,12 +821,12 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    movq %rsp, %rcx
 ; ENABLE-NEXT:    addq $-16, %rcx
 ; ENABLE-NEXT:    movq %rcx, %rsp
-; ENABLE-NEXT:    ## InlineAsm Start
-; ENABLE-NEXT:    movl $1, %edx
-; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB10_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
+; ENABLE-NEXT:    ## InlineAsm Start
+; ENABLE-NEXT:    movl $1, %edx
+; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    addl %edx, %eax
 ; ENABLE-NEXT:    movl %eax, (%rcx)
 ; ENABLE-NEXT:    jmp LBB10_2
@@ -853,12 +853,12 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    movq %rsp, %rcx
 ; DISABLE-NEXT:    addq $-16, %rcx
 ; DISABLE-NEXT:    movq %rcx, %rsp
-; DISABLE-NEXT:    ## InlineAsm Start
-; DISABLE-NEXT:    movl $1, %edx
-; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB10_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
+; DISABLE-NEXT:    ## InlineAsm Start
+; DISABLE-NEXT:    movl $1, %edx
+; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    addl %edx, %eax
 ; DISABLE-NEXT:    movl %eax, (%rcx)
 ; DISABLE-NEXT:    jmp LBB10_2
@@ -868,7 +868,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 poison, label %if.then, label %if.end
 
 if.then:
   %ptr = alloca i32, i32 4
@@ -983,7 +983,7 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 poison, label %if.then, label %if.end
 
 if.then:
   %ptr = alloca i32, i32 4
@@ -994,7 +994,7 @@ for.body:                                         ; preds = %for.body, %entry
   %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.03
   store i32 %add, ptr %ptr
-  br i1 undef, label %body1, label %body2
+  br i1 poison, label %body1, label %body2
 
 body1:
   tail call void asm sideeffect "nop", "~{ebx}"()
@@ -1074,10 +1074,10 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:  LBB12_7: ## %end
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %loop2a, label %body
+  br i1 poison, label %loop2a, label %body
 
 body:                                             ; preds = %entry
-  br i1 undef, label %loop2a, label %end
+  br i1 poison, label %loop2a, label %end
 
 loop1:                                            ; preds = %loop2a, %loop2b
   %var.phi = phi ptr [ %next.phi, %loop2b ], [ %var, %loop2a ]

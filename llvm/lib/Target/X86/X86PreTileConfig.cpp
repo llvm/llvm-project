@@ -122,10 +122,10 @@ class X86PreTileConfig : public MachineFunctionPass {
     case X86::PTILESTOREDV:
     case X86::PTCVTROWD2PSrreV:
     case X86::PTCVTROWD2PSrriV:
-    case X86::PTCVTROWPS2PBF16HrreV:
-    case X86::PTCVTROWPS2PBF16HrriV:
-    case X86::PTCVTROWPS2PBF16LrreV:
-    case X86::PTCVTROWPS2PBF16LrriV:
+    case X86::PTCVTROWPS2BF16HrreV:
+    case X86::PTCVTROWPS2BF16HrriV:
+    case X86::PTCVTROWPS2BF16LrreV:
+    case X86::PTCVTROWPS2BF16LrriV:
     case X86::PTCVTROWPS2PHHrreV:
     case X86::PTCVTROWPS2PHHrriV:
     case X86::PTCVTROWPS2PHLrreV:
@@ -234,9 +234,10 @@ INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
 void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
   auto RecordShape = [&](MachineInstr *MI, MachineBasicBlock *MBB) {
     MIRef MIR(MI, MBB);
-    auto I = llvm::lower_bound(ShapeBBs[MBB], MIR);
-    if (I == ShapeBBs[MBB].end() || *I != MIR)
-      ShapeBBs[MBB].insert(I, MIR);
+    auto &Refs = ShapeBBs[MBB];
+    auto I = llvm::lower_bound(Refs, MIR);
+    if (I == Refs.end() || *I != MIR)
+      Refs.insert(I, MIR);
   };
 
   // All shapes have same row in multi-tile operand.

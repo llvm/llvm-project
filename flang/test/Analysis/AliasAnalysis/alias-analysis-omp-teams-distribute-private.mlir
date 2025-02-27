@@ -21,26 +21,10 @@
 // CHECK-DAG: tmp_private_array#0 <-> unnamed_array#0: NoAlias
 // CHECK-DAG: tmp_private_array#1 <-> unnamed_array#0: NoAlias
 
-omp.private {type = private} @_QFEi_private_ref_i32 : !fir.ref<i32> alloc {
-^bb0(%arg0: !fir.ref<i32>):
-  %0 = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFEi"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  omp.yield(%1#0 : !fir.ref<i32>)
-}
-omp.private {type = private} @_QFEj_private_ref_i32 : !fir.ref<i32> alloc {
-^bb0(%arg0: !fir.ref<i32>):
-  %0 = fir.alloca i32 {bindc_name = "j", pinned, uniq_name = "_QFEj"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  omp.yield(%1#0 : !fir.ref<i32>)
-}
-omp.private {type = private} @_QFEtmp_private_ref_2xi32 : !fir.ref<!fir.array<2xi32>> alloc {
-^bb0(%arg0: !fir.ref<!fir.array<2xi32>>):
-  %c2 = arith.constant 2 : index
-  %0 = fir.alloca !fir.array<2xi32> {bindc_name = "tmp", pinned, uniq_name = "_QFEtmp"}
-  %1 = fir.shape %c2 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %0(%1) {uniq_name = "_QFEtmp"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
-  omp.yield(%2#0 : !fir.ref<!fir.array<2xi32>>)
-}
+omp.private {type = private} @_QFEi_private_ref_i32 : i32
+omp.private {type = private} @_QFEj_private_ref_i32 : i32
+omp.private {type = private} @_QFEtmp_private_ref_2xi32 : !fir.array<2xi32>
+
 func.func @_QQmain() attributes {fir.bindc_name = "main"} {
   %0 = fir.address_of(@_QFEarraya) : !fir.ref<!fir.array<10x10xi32>>
   %c10 = arith.constant 10 : index

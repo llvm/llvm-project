@@ -358,10 +358,10 @@ which point the driver finishes.
 
 This driver comes in two fashions:
 
-*   `applyPatternsAndFoldGreedily` ("region-based driver") applies patterns to
+*   `applyPatternsGreedily` ("region-based driver") applies patterns to
     all ops in a given region or a given container op (but not the container op
     itself). I.e., the worklist is initialized with all containing ops.
-*   `applyOpPatternsAndFold` ("op-based driver") applies patterns to the
+*   `applyOpPatternsGreedily` ("op-based driver") applies patterns to the
     provided list of operations. I.e., the worklist is initialized with the
     specified list of ops.
 
@@ -464,7 +464,7 @@ Passes that utilize rewrite patterns should aim to provide a common set of
 options and toggles to simplify the debugging experience when switching between
 different passes/projects/etc. To aid in this endeavor, MLIR provides a common
 set of utilities that can be easily included when defining a custom pass. These
-are defined in `mlir/RewritePassUtil.td`; an example usage is shown below:
+are defined in `mlir/Rewrite/PassUtil.td`; an example usage is shown below:
 
 ```tablegen
 def MyRewritePass : Pass<"..."> {

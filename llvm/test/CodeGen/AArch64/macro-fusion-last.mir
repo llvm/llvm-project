@@ -1,5 +1,7 @@
 # RUN: llc -o - %s -mtriple=aarch64-- -mattr=+arith-bcc-fusion -run-pass postmisched | FileCheck %s --check-prefixes=CHECK,FUSION
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=+arith-bcc-fusion -passes=postmisched | FileCheck %s --check-prefixes=CHECK,FUSION
 # RUN: llc -o - %s -mtriple=aarch64-- -mattr=-arith-bcc-fusion -run-pass postmisched | FileCheck %s --check-prefixes=CHECK,NOFUSION
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=-arith-bcc-fusion -passes=postmisched | FileCheck %s --check-prefixes=CHECK,NOFUSION
 # Make sure the last instruction is correctly macro-fused when scheduling
 # top-down (post-ra).
 ---

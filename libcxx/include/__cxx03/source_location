@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SOURCE_LOCATION
-#define _LIBCPP_SOURCE_LOCATION
+#ifndef _LIBCPP___CXX03_SOURCE_LOCATION
+#define _LIBCPP___CXX03_SOURCE_LOCATION
 
 /* source_location synopsis
 
@@ -82,4 +82,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_SOURCE_LOCATION
+#endif // _LIBCPP___CXX03_SOURCE_LOCATION

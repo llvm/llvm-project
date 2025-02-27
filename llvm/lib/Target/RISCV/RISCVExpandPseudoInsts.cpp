@@ -341,15 +341,15 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
                 .addImm(MBBI->getOperand(2).getImm() + 4);
   }
 
-  if (!MBBI->memoperands_empty()) {
-    assert(MBBI->hasOneMemOperand() && "Expected mem operand");
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-    MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
-    MIBLo.setMemRefs(MMOLo);
-    MIBHi.setMemRefs(MMOHi);
+  MachineFunction *MF = MBB.getParent();
+  SmallVector<MachineMemOperand *> NewLoMMOs;
+  SmallVector<MachineMemOperand *> NewHiMMOs;
+  for (const MachineMemOperand *MMO : MBBI->memoperands()) {
+    NewLoMMOs.push_back(MF->getMachineMemOperand(MMO, 0, 4));
+    NewHiMMOs.push_back(MF->getMachineMemOperand(MMO, 4, 4));
   }
+  MIBLo.setMemRefs(NewLoMMOs);
+  MIBHi.setMemRefs(NewHiMMOs);
 
   MBBI->eraseFromParent();
   return true;
@@ -401,15 +401,15 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
                 .add(MBBI->getOperand(2));
   }
 
-  if (!MBBI->memoperands_empty()) {
-    assert(MBBI->hasOneMemOperand() && "Expected mem operand");
-    MachineMemOperand *OldMMO = MBBI->memoperands().front();
-    MachineFunction *MF = MBB.getParent();
-    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-    MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
-    MIBLo.setMemRefs(MMOLo);
-    MIBHi.setMemRefs(MMOHi);
+  MachineFunction *MF = MBB.getParent();
+  SmallVector<MachineMemOperand *> NewLoMMOs;
+  SmallVector<MachineMemOperand *> NewHiMMOs;
+  for (const MachineMemOperand *MMO : MBBI->memoperands()) {
+    NewLoMMOs.push_back(MF->getMachineMemOperand(MMO, 0, 4));
+    NewHiMMOs.push_back(MF->getMachineMemOperand(MMO, 4, 4));
   }
+  MIBLo.setMemRefs(NewLoMMOs);
+  MIBHi.setMemRefs(NewHiMMOs);
 
   MBBI->eraseFromParent();
   return true;

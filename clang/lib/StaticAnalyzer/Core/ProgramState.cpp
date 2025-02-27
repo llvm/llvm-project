@@ -116,13 +116,14 @@ ProgramStateRef ProgramState::bindLoc(Loc LV,
                                       const LocationContext *LCtx,
                                       bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
-  ProgramStateRef newState = makeWithStore(Mgr.StoreMgr->Bind(getStore(),
-                                                             LV, V));
+  ExprEngine &Eng = Mgr.getOwningEngine();
+  ProgramStateRef State = makeWithStore(Mgr.StoreMgr->Bind(getStore(), LV, V));
   const MemRegion *MR = LV.getAsRegion();
-  if (MR && notifyChanges)
-    return Mgr.getOwningEngine().processRegionChange(newState, MR, LCtx);
 
-  return newState;
+  if (MR && notifyChanges)
+    return Eng.processRegionChange(State, MR, LCtx);
+
+  return State;
 }
 
 ProgramStateRef
@@ -130,18 +131,18 @@ ProgramState::bindDefaultInitial(SVal loc, SVal V,
                                  const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
-  ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
+  BindResult BindRes = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
+  ProgramStateRef State = makeWithStore(BindRes);
+  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
 ProgramStateRef
 ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
-  ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
+  BindResult BindRes = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
+  ProgramStateRef State = makeWithStore(BindRes);
+  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
 typedef ArrayRef<const MemRegion *> RegionList;
@@ -232,9 +233,8 @@ SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
                               const StackFrameContext *CalleeCtx) const {
-  const StoreRef &NewStore =
-    getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx);
-  return makeWithStore(NewStore);
+  return makeWithStore(
+      getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx));
 }
 
 SVal ProgramState::getSelfSVal(const LocationContext *LCtx) const {
@@ -288,12 +288,10 @@ SVal ProgramState::getSVal(Loc location, QualType T) const {
         //  The symbolic value stored to 'x' is actually the conjured
         //  symbol for the call to foo(); the type of that symbol is 'char',
         //  not unsigned.
-        const llvm::APSInt &NewV = getBasicVals().Convert(T, *Int);
-
+        APSIntPtr NewV = getBasicVals().Convert(T, *Int);
         if (V.getAs<Loc>())
           return loc::ConcreteInt(NewV);
-        else
-          return nonloc::ConcreteInt(NewV);
+        return nonloc::ConcreteInt(NewV);
       }
     }
   }
@@ -437,6 +435,18 @@ ProgramStateRef ProgramState::makeWithStore(const StoreRef &store) const {
   ProgramState NewSt(*this);
   NewSt.setStore(store);
   return getStateManager().getPersistentState(NewSt);
+}
+
+ProgramStateRef ProgramState::makeWithStore(const BindResult &BindRes) const {
+  ExprEngine &Eng = getStateManager().getOwningEngine();
+  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
+
+  // We must always notify the checkers for failing binds because otherwise they
+  // may keep stale traits for these symbols.
+  // Eg., Malloc checker may report leaks if we failed to bind that symbol.
+  if (BindRes.FailedToBindValues.empty())
+    return State;
+  return Eng.escapeValues(State, BindRes.FailedToBindValues, PSK_EscapeOnBind);
 }
 
 ProgramStateRef ProgramState::cloneAsPosteriorlyOverconstrained() const {

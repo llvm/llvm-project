@@ -358,6 +358,9 @@ bool Constant::containsUndefElement() const {
 }
 
 bool Constant::containsConstantExpression() const {
+  if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
+    return false;
+
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
       if (isa<ConstantExpr>(getAggregateElement(i)))
@@ -446,6 +449,13 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
                        ->getElementCount()
                        .getKnownMinValue()
                ? ConstantInt::get(getContext(), CI->getValue())
+               : nullptr;
+
+  if (const auto *CFP = dyn_cast<ConstantFP>(this))
+    return Elt < cast<VectorType>(getType())
+                       ->getElementCount()
+                       .getKnownMinValue()
+               ? ConstantFP::get(getContext(), CFP->getValue())
                : nullptr;
 
   // FIXME: getNumElements() will fail for non-fixed vector types.
@@ -2385,10 +2395,10 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::LShr:
   case Instruction::AShr:
   case Instruction::Shl:
+  case Instruction::Mul:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
-  case Instruction::Mul:
   case Instruction::Xor:
     return true;
   default:
@@ -2412,10 +2422,10 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::LShr:
   case Instruction::AShr:
   case Instruction::Shl:
+  case Instruction::Mul:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
-  case Instruction::Mul:
   case Instruction::Xor:
     return true;
   default:
@@ -2472,7 +2482,8 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Constant *GEPIdx = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *GEP = getGetElementPtr(
-      Ty, Constant::getNullValue(PointerType::getUnqual(Ty)), GEPIdx);
+      Ty, Constant::getNullValue(PointerType::getUnqual(Ty->getContext())),
+      GEPIdx);
   return getPtrToInt(GEP,
                      Type::getInt64Ty(Ty->getContext()));
 }
@@ -2636,13 +2647,6 @@ Constant *ConstantExpr::getSub(Constant *C1, Constant *C2,
   unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
                    (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
   return get(Instruction::Sub, C1, C2, Flags);
-}
-
-Constant *ConstantExpr::getMul(Constant *C1, Constant *C2,
-                               bool HasNUW, bool HasNSW) {
-  unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
-                   (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
-  return get(Instruction::Mul, C1, C2, Flags);
 }
 
 Constant *ConstantExpr::getXor(Constant *C1, Constant *C2) {

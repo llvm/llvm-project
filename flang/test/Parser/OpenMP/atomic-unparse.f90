@@ -165,6 +165,20 @@ program main
       i = j
    end if
 
+
+!$omp atomic compare fail(relaxed)
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic fail(relaxed) compare
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic fail(relaxed) compare acquire
+   if (i .eq. k) then
+      i = j
+   end if
+   
 !ATOMIC
 !$omp atomic
    i = j
@@ -262,6 +276,9 @@ end program main
 !CHECK: !$OMP ATOMIC COMPARE ACQUIRE
 !CHECK: !$OMP ATOMIC RELAXED COMPARE
 !CHECK: !$OMP ATOMIC COMPARE RELAXED
+!CHECK: !$OMP ATOMIC COMPARE FAIL(RELAXED)
+!CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE
+!CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE ACQUIRE
 
 !ATOMIC
 !CHECK: !$OMP ATOMIC
@@ -270,3 +287,5 @@ end program main
 !CHECK: !$OMP ATOMIC ACQ_REL
 !CHECK: !$OMP ATOMIC ACQUIRE
 !CHECK: !$OMP ATOMIC RELAXED
+
+

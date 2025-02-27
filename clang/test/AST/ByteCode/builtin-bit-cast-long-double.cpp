@@ -6,7 +6,10 @@
 // RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s -fexperimental-new-constant-interpreter
 
+#if !__x86_64
 // both-no-diagnostics
+#endif
+
 
 typedef decltype(nullptr) nullptr_t;
 typedef __INTPTR_TYPE__ intptr_t;
@@ -35,6 +38,7 @@ constexpr Init round_trip(const Init &init) {
 
 namespace test_long_double {
 #if __x86_64
+/// FIXME: We could enable this, but since it aborts, it causes the usual mempory leak.
 #if 0
 constexpr __int128_t test_cast_to_int128 = bit_cast<__int128_t>((long double)0); // expected-error{{must be initialized by a constant expression}}\
                                                                                  // expected-note{{in call}}
@@ -49,7 +53,13 @@ static_assert(round_trip<bytes>(ld), "");
 
 static_assert(round_trip<long double>(10.0L));
 
-#if 0
+constexpr long double foo() {
+  bytes A = __builtin_bit_cast(bytes, ld);
+  long double ld = __builtin_bit_cast(long double, A);
+  return ld;
+}
+static_assert(foo() == ld);
+
 constexpr bool f(bool read_uninit) {
   bytes b = bit_cast<bytes>(ld);
   unsigned char ld_bytes[10] = {
@@ -61,16 +71,15 @@ constexpr bool f(bool read_uninit) {
     if (ld_bytes[i] != b.d[i])
       return false;
 
-  if (read_uninit && b.d[10]) // expected-note{{read of uninitialized object is not allowed in a constant expression}}
+  if (read_uninit && b.d[10]) // both-note{{read of uninitialized object is not allowed in a constant expression}}
     return false;
 
   return true;
 }
 
 static_assert(f(/*read_uninit=*/false), "");
-static_assert(f(/*read_uninit=*/true), ""); // expected-error{{static assertion expression is not an integral constant expression}} \
-                                            // expected-note{{in call to 'f(true)'}}
-#endif
+static_assert(f(/*read_uninit=*/true), ""); // both-error{{static assertion expression is not an integral constant expression}} \
+                                            // both-note{{in call to 'f(true)'}}
 constexpr bytes ld539 = {
   0x0, 0x0,  0x0,  0x0,
   0x0, 0x0,  0xc0, 0x86,

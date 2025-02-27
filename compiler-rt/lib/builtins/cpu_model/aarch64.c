@@ -80,6 +80,8 @@ struct {
 #include "aarch64/fmv/getauxval.inc"
 #elif defined(_WIN32)
 #include "aarch64/fmv/windows.inc"
+#elif defined(ENABLE_BAREMETAL_AARCH64_FMV)
+#include "aarch64/fmv/baremetal.inc"
 #else
 #include "aarch64/fmv/unimplemented.inc"
 #endif

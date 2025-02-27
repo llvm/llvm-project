@@ -37,6 +37,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -74,6 +75,7 @@ enum ClassKind {
   ClassI,     // generic integer instruction, e.g., "i8" suffix
   ClassS,     // signed/unsigned/poly, e.g., "s8", "u8" or "p8" suffix
   ClassW,     // width-specific instruction, e.g., "8" suffix
+  ClassV,     // void-suffix instruction, no suffix
   ClassB,     // bitcast arguments with enum argument to specify type
   ClassL,     // Logical instructions which are op instructions
               // but we need to not emit any suffix for in our
@@ -102,7 +104,7 @@ enum EltType {
   Float32,
   Float64,
   BFloat16,
-  MFloat8 // Not used by Sema or CodeGen in Clang
+  MFloat8
 };
 
 } // end namespace NeonTypeFlags
@@ -144,7 +146,7 @@ class Type {
 private:
   TypeSpec TS;
 
-  enum TypeKind { Void, Float, SInt, UInt, Poly, BFloat16, MFloat8 };
+  enum TypeKind { Void, Float, SInt, UInt, Poly, BFloat16, MFloat8, FPM };
   TypeKind Kind;
   bool Immediate, Constant, Pointer;
   // ScalarForMangling and NoManglingQ are really not suited to live here as
@@ -198,6 +200,7 @@ public:
   bool isVoid() const { return Kind == Void; }
   bool isBFloat16() const { return Kind == BFloat16; }
   bool isMFloat8() const { return Kind == MFloat8; }
+  bool isFPM() const { return Kind == FPM; }
   unsigned getNumElements() const { return Bitwidth / ElementBitwidth; }
   unsigned getSizeInBits() const { return Bitwidth; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
@@ -600,6 +603,7 @@ public:
     const Record *SI = R.getClass("SInst");
     const Record *II = R.getClass("IInst");
     const Record *WI = R.getClass("WInst");
+    const Record *VI = R.getClass("VInst");
     const Record *SOpI = R.getClass("SOpInst");
     const Record *IOpI = R.getClass("IOpInst");
     const Record *WOpI = R.getClass("WOpInst");
@@ -609,6 +613,7 @@ public:
     ClassMap[SI] = ClassS;
     ClassMap[II] = ClassI;
     ClassMap[WI] = ClassW;
+    ClassMap[VI] = ClassV;
     ClassMap[SOpI] = ClassS;
     ClassMap[IOpI] = ClassI;
     ClassMap[WOpI] = ClassW;
@@ -641,6 +646,9 @@ public:
 std::string Type::str() const {
   if (isVoid())
     return "void";
+  if (isFPM())
+    return "fpm_t";
+
   std::string S;
 
   if (isInteger() && !isSigned())
@@ -699,6 +707,8 @@ std::string Type::builtin_str() const {
   } else if (isMFloat8()) {
     assert(ElementBitwidth == 8 && "MFloat8 can only be 8 bits");
     S += "m";
+  } else if (isFPM()) {
+    S += "UWi";
   } else
     switch (ElementBitwidth) {
     case 16: S += "h"; break;
@@ -925,6 +935,13 @@ void Type::applyModifiers(StringRef Mods) {
     case 'P':
       Kind = Poly;
       break;
+    case 'V':
+      Kind = FPM;
+      Bitwidth = ElementBitwidth = 64;
+      NumVectors = 0;
+      Immediate = Constant = Pointer = false;
+      ScalarForMangling = NoManglingQ = true;
+      break;
     case '>':
       assert(ElementBitwidth < 128);
       ElementBitwidth *= 2;
@@ -1000,11 +1017,14 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
   if (CK == ClassB && TargetGuard == "neon")
     return "";
 
+  if (this->CK == ClassV)
+    return "";
+
   if (T.isBFloat16())
     return "bf16";
 
   if (T.isMFloat8())
-    return "mfp8";
+    return "mf8";
 
   if (T.isPoly())
     typeCode = 'p';
@@ -1592,24 +1612,10 @@ Intrinsic::DagEmitter::emitDagCast(const DagInit *DI, bool IsBitCast) {
   }
 
   std::string S;
-  if (IsBitCast) {
-    // Emit a reinterpret cast. The second operand must be an lvalue, so create
-    // a temporary.
-    std::string N = "reint";
-    unsigned I = 0;
-    while (Intr.Variables.find(N) != Intr.Variables.end())
-      N = "reint" + utostr(++I);
-    Intr.Variables[N] = Variable(R.first, N + Intr.VariablePostfix);
-
-    Intr.OS << R.first.str() << " " << Intr.Variables[N].getName() << " = "
-            << R.second << ";";
-    Intr.emitNewLine();
-
-    S = "*(" + castToType.str() + " *) &" + Intr.Variables[N].getName() + "";
-  } else {
-    // Emit a normal (static) cast.
+  if (IsBitCast)
+    S = "__builtin_bit_cast(" + castToType.str() + ", " + R.second + ")";
+  else
     S = "(" + castToType.str() + ")(" + R.second + ")";
-  }
 
   return std::make_pair(castToType, S);
 }
@@ -2056,40 +2062,51 @@ void NeonEmitter::createIntrinsic(const Record *R,
   CurrentRecord = nullptr;
 }
 
-/// genBuiltinsDef: Generate the BuiltinsARM.def and  BuiltinsAArch64.def
-/// declaration of builtins, checking for unique builtin declarations.
+/// genBuiltinsDef: Generate the builtin infos, checking for unique builtin
+/// declarations.
 void NeonEmitter::genBuiltinsDef(raw_ostream &OS,
                                  SmallVectorImpl<Intrinsic *> &Defs) {
-  OS << "#ifdef GET_NEON_BUILTINS\n";
+  // We only want to emit a builtin once, and in order of its name.
+  std::map<std::string, Intrinsic *> Builtins;
 
-  // We only want to emit a builtin once, and we want to emit them in
-  // alphabetical order, so use a std::set.
-  std::set<std::pair<std::string, std::string>> Builtins;
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("");
+  Table.GetOrAddStringOffset("n");
 
   for (auto *Def : Defs) {
     if (Def->hasBody())
       continue;
 
-    std::string S = "__builtin_neon_" + Def->getMangledName() + ", \"";
-    S += Def->getBuiltinTypeStr();
-    S += "\", \"n\"";
-
-    Builtins.emplace(S, Def->getTargetGuard());
+    if (Builtins.insert({Def->getMangledName(), Def}).second) {
+      Table.GetOrAddStringOffset(Def->getMangledName());
+      Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
+      Table.GetOrAddStringOffset(Def->getTargetGuard());
+    }
   }
 
-  for (auto &S : Builtins) {
-    if (S.second == "")
-      OS << "BUILTIN(";
-    else
-      OS << "TARGET_BUILTIN(";
-    OS << S.first;
-    if (S.second == "")
-      OS << ")\n";
-    else
-      OS << ", \"" << S.second << "\")\n";
+  OS << "#ifdef GET_NEON_BUILTIN_ENUMERATORS\n";
+  for (const auto &[Name, Def] : Builtins) {
+    OS << "  BI__builtin_neon_" << Name << ",\n";
   }
+  OS << "#endif // GET_NEON_BUILTIN_ENUMERATORS\n\n";
 
-  OS << "#endif\n\n";
+  OS << "#ifdef GET_NEON_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_NEON_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_NEON_BUILTIN_INFOS\n";
+  for (const auto &[Name, Def] : Builtins) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Def->getMangledName()) << " /* "
+       << Def->getMangledName() << " */, ";
+    OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
+       << Def->getBuiltinTypeStr() << " */, ";
+    OS << Table.GetStringOffset("n") << " /* n */, ";
+    OS << Table.GetStringOffset(Def->getTargetGuard()) << " /* "
+       << Def->getTargetGuard() << " */}, ";
+    OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
+  }
+  OS << "#endif // GET_NEON_BUILTIN_INFOS\n\n";
 }
 
 void NeonEmitter::genStreamingSVECompatibleList(
@@ -2295,9 +2312,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
       InIfdef = true;
     }
 
-    if (T.isMFloat8())
-      OS << "typedef __MFloat8x";
-    else if (T.isPoly())
+    if (T.isPoly())
       OS << "typedef __attribute__((neon_polyvector_type(";
     else
       OS << "typedef __attribute__((neon_vector_type(";
@@ -2305,10 +2320,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
     Type T2 = T;
     T2.makeScalar();
     OS << T.getNumElements();
-    if (T.isMFloat8())
-      OS << "_t ";
-    else
-      OS << "))) " << T2.str();
+    OS << "))) " << T2.str();
     OS << " " << T.str() << ";\n";
   }
   if (InIfdef)

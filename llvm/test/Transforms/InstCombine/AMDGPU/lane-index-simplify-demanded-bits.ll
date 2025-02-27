@@ -18,30 +18,45 @@ define i32 @readlane_31(i32 %arg) #0 {
 }
 
 define i32 @readlane_32(i32 %arg) #0 {
-; CHECK-LABEL: define i32 @readlane_32(
-; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 32)
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @readlane_32(
+; WAVE64-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 32)
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @readlane_32(
+; WAVE32-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 0)
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.readlane.i32(i32 %arg, i32 32)
   ret i32 %res
 }
 
 define i32 @readlane_33(i32 %arg) #0 {
-; CHECK-LABEL: define i32 @readlane_33(
-; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 33)
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @readlane_33(
+; WAVE64-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 33)
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @readlane_33(
+; WAVE32-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 1)
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.readlane.i32(i32 %arg, i32 33)
   ret i32 %res
 }
 
 define i32 @readlane_63(i32 %arg) #0 {
-; CHECK-LABEL: define i32 @readlane_63(
-; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 63)
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @readlane_63(
+; WAVE64-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 63)
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @readlane_63(
+; WAVE32-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 31)
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.readlane.i32(i32 %arg, i32 63)
   ret i32 %res
@@ -50,7 +65,7 @@ define i32 @readlane_63(i32 %arg) #0 {
 define i32 @readlane_64(i32 %arg) #0 {
 ; CHECK-LABEL: define i32 @readlane_64(
 ; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 64)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 0)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.readlane.i32(i32 %arg, i32 64)
@@ -58,11 +73,16 @@ define i32 @readlane_64(i32 %arg) #0 {
 }
 
 define i32 @readlane_and_31(i32 %arg, i32 %idx) #0 {
-; CHECK-LABEL: define i32 @readlane_and_31(
-; CHECK-SAME: i32 [[ARG:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[IDX_CLAMP:%.*]] = and i32 [[IDX]], 31
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[IDX_CLAMP]])
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @readlane_and_31(
+; WAVE64-SAME: i32 [[ARG:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[IDX_CLAMP:%.*]] = and i32 [[IDX]], 31
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[IDX_CLAMP]])
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @readlane_and_31(
+; WAVE32-SAME: i32 [[ARG:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[IDX]])
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %idx.clamp = and i32 %idx, 31
   %res = call i32 @llvm.amdgcn.readlane.i32(i32 %arg, i32 %idx.clamp)
@@ -72,8 +92,7 @@ define i32 @readlane_and_31(i32 %arg, i32 %idx) #0 {
 define i32 @readlane_and_63(i32 %arg, i32 %idx) #0 {
 ; CHECK-LABEL: define i32 @readlane_and_63(
 ; CHECK-SAME: i32 [[ARG:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[IDX_CLAMP:%.*]] = and i32 [[IDX]], 63
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[IDX_CLAMP]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[IDX]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %idx.clamp = and i32 %idx, 63
@@ -92,10 +111,15 @@ define i32 @readlane_poison(i32 %arg) #0 {
 }
 
 define float @readlane_f32_63(float %arg) #0 {
-; CHECK-LABEL: define float @readlane_f32_63(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[ARG]], i32 63)
-; CHECK-NEXT:    ret float [[RES]]
+; WAVE64-LABEL: define float @readlane_f32_63(
+; WAVE64-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[ARG]], i32 63)
+; WAVE64-NEXT:    ret float [[RES]]
+;
+; WAVE32-LABEL: define float @readlane_f32_63(
+; WAVE32-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[ARG]], i32 31)
+; WAVE32-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.amdgcn.readlane.f32(float %arg, i32 63)
   ret float %res
@@ -116,30 +140,45 @@ define i32 @writelane_31(i32 %arg0, i32 %arg1) #0 {
 }
 
 define i32 @writelane_32(i32 %arg0, i32 %arg1) #0 {
-; CHECK-LABEL: define i32 @writelane_32(
-; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 32, i32 [[ARG1]])
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @writelane_32(
+; WAVE64-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 32, i32 [[ARG1]])
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @writelane_32(
+; WAVE32-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 0, i32 [[ARG1]])
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.writelane.i32(i32 %arg0, i32 32, i32 %arg1)
   ret i32 %res
 }
 
 define i32 @writelane_33(i32 %arg0, i32 %arg1) #0 {
-; CHECK-LABEL: define i32 @writelane_33(
-; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 33, i32 [[ARG1]])
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @writelane_33(
+; WAVE64-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 33, i32 [[ARG1]])
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @writelane_33(
+; WAVE32-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 1, i32 [[ARG1]])
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.writelane.i32(i32 %arg0, i32 33, i32 %arg1)
   ret i32 %res
 }
 
 define i32 @writelane_63(i32 %arg0, i32 %arg1) #0 {
-; CHECK-LABEL: define i32 @writelane_63(
-; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 63, i32 [[ARG1]])
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @writelane_63(
+; WAVE64-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 63, i32 [[ARG1]])
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @writelane_63(
+; WAVE32-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 31, i32 [[ARG1]])
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.writelane.i32(i32 %arg0, i32 63, i32 %arg1)
   ret i32 %res
@@ -148,7 +187,7 @@ define i32 @writelane_63(i32 %arg0, i32 %arg1) #0 {
 define i32 @writelane_64(i32 %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define i32 @writelane_64(
 ; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 64, i32 [[ARG1]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 0, i32 [[ARG1]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.writelane.i32(i32 %arg0, i32 64, i32 %arg1)
@@ -156,11 +195,16 @@ define i32 @writelane_64(i32 %arg0, i32 %arg1) #0 {
 }
 
 define i32 @writelane_and_31(i32 %arg0, i32 %arg1, i32 %idx) #0 {
-; CHECK-LABEL: define i32 @writelane_and_31(
-; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[IDX_CLAMP:%.*]] = and i32 [[IDX]], 31
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 [[IDX_CLAMP]], i32 [[ARG1]])
-; CHECK-NEXT:    ret i32 [[RES]]
+; WAVE64-LABEL: define i32 @writelane_and_31(
+; WAVE64-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[IDX_CLAMP:%.*]] = and i32 [[IDX]], 31
+; WAVE64-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 [[IDX_CLAMP]], i32 [[ARG1]])
+; WAVE64-NEXT:    ret i32 [[RES]]
+;
+; WAVE32-LABEL: define i32 @writelane_and_31(
+; WAVE32-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 [[IDX]], i32 [[ARG1]])
+; WAVE32-NEXT:    ret i32 [[RES]]
 ;
   %idx.clamp = and i32 %idx, 31
   %res = call i32 @llvm.amdgcn.writelane.i32(i32 %arg0, i32 %idx.clamp, i32 %arg1)
@@ -170,8 +214,7 @@ define i32 @writelane_and_31(i32 %arg0, i32 %arg1, i32 %idx) #0 {
 define i32 @writelane_and_63(i32 %arg0, i32 %arg1, i32 %idx) #0 {
 ; CHECK-LABEL: define i32 @writelane_and_63(
 ; CHECK-SAME: i32 [[ARG0:%.*]], i32 [[ARG1:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[IDX_CLAMP:%.*]] = and i32 [[IDX]], 63
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 [[IDX_CLAMP]], i32 [[ARG1]])
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.writelane.i32(i32 [[ARG0]], i32 [[IDX]], i32 [[ARG1]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %idx.clamp = and i32 %idx, 63
@@ -190,16 +233,18 @@ define i32 @writelane_poison(i32 %arg0, i32 %arg1) #0 {
 }
 
 define float @writelane_f32_63(float %arg0, float %arg1) #0 {
-; CHECK-LABEL: define float @writelane_f32_63(
-; CHECK-SAME: float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.writelane.f32(float [[ARG0]], i32 63, float [[ARG1]])
-; CHECK-NEXT:    ret float [[RES]]
+; WAVE64-LABEL: define float @writelane_f32_63(
+; WAVE64-SAME: float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE64-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.writelane.f32(float [[ARG0]], i32 63, float [[ARG1]])
+; WAVE64-NEXT:    ret float [[RES]]
+;
+; WAVE32-LABEL: define float @writelane_f32_63(
+; WAVE32-SAME: float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; WAVE32-NEXT:    [[RES:%.*]] = call float @llvm.amdgcn.writelane.f32(float [[ARG0]], i32 31, float [[ARG1]])
+; WAVE32-NEXT:    ret float [[RES]]
 ;
   %res = call float @llvm.amdgcn.writelane.f32(float %arg0, i32 63, float %arg1)
   ret float %res
 }
 
 attributes #0 = { nounwind }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; WAVE32: {{.*}}
-; WAVE64: {{.*}}

@@ -112,13 +112,6 @@ namespace Intrinsic {
   Function *getDeclarationIfExists(Module *M, ID id, ArrayRef<Type *> Tys,
                                    FunctionType *FT = nullptr);
 
-  /// Looks up Name in NameTable via binary search. NameTable must be sorted
-  /// and all entries must start with "llvm.".  If NameTable contains an exact
-  /// match for Name or a prefix of Name followed by a dot, its index in
-  /// NameTable is returned. Otherwise, -1 is returned.
-  int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                StringRef Name, StringRef Target = "");
-
   /// Map a Clang builtin name to an intrinsic ID.
   ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
 
@@ -155,6 +148,9 @@ namespace Intrinsic {
       ExtendArgument,
       TruncArgument,
       HalfVecArgument,
+      OneThirdVecArgument,
+      OneFifthVecArgument,
+      OneSeventhVecArgument,
       SameVecWidthArgument,
       VecOfAnyPtrsToElt,
       VecElementArgument,
@@ -166,6 +162,9 @@ namespace Intrinsic {
       AArch64Svcount,
     } Kind;
 
+    // These three have to be contiguous.
+    static_assert(OneFifthVecArgument == OneThirdVecArgument + 1 &&
+                  OneSeventhVecArgument == OneFifthVecArgument + 1);
     union {
       unsigned Integer_Width;
       unsigned Float_Width;
@@ -185,15 +184,17 @@ namespace Intrinsic {
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == VecElementArgument ||
-             Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
-             Kind == VecOfBitcastsToInt);
+             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
+             Kind == VecElementArgument || Kind == Subdivide2Argument ||
+             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument ||
+             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return (ArgKind)(Argument_Info & 7);

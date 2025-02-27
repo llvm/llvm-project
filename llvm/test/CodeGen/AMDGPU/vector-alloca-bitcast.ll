@@ -15,14 +15,11 @@ target datalayout = "A5"
 ; GCN-ALLOCA:         buffer_load_dword
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-PROMOTE: s_cselect_b64 [[CC1:[^,]+]], -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND1:s[0-9]+]], 1, 0
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], [[IND1]], 2
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], vcc
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], vcc
+; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
 ; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_read_alloca_bitcast(ptr addrspace(1) %out, i32 %index) {
@@ -51,7 +48,7 @@ entry:
 ; GCN-ALLOCA-COUNT-5: buffer_store_dword
 ; GCN-ALLOCA:         buffer_load_dword
 
-; GCN-PROMOTE-COUNT-7: v_cndmask
+; GCN-PROMOTE-COUNT-7: s_cselect_b32
 
 ; GCN-PROMOTE: ScratchSize: 0
 
@@ -292,14 +289,11 @@ entry:
 ; GCN-ALLOCA:         buffer_load_dword
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-PROMOTE: s_cselect_b64 [[CC1:[^,]+]], -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND1:s[0-9]+]], 1, 0
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
+; GCN-PROMOTE: s_cselect_b32 [[IND2:s[0-9]+]], [[IND1]], 2
 ; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], vcc
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], vcc
+; GCN-PROMOTE: s_cselect_b32 [[IND3:s[0-9]+]], [[IND2]], 3
 
 ; GCN-PROMOTE: ScratchSize: 0
 
@@ -368,11 +362,11 @@ define amdgpu_kernel void @vector_bitcast_from_alloca_array(ptr addrspace(1) %ou
 ; OPT-LABEL: @vector_bitcast_to_array_from_alloca_array(
 ; OPT-NOT:   alloca
 ; OPT-NEXT: store i32 1, ptr addrspace(1) %out, align 4
-; OPT-NEXT: %out.repack1 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 4
+; OPT-NEXT: %out.repack1 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 4
 ; OPT-NEXT: store i32 2, ptr addrspace(1) %out.repack1, align 4
-; OPT-NEXT: %out.repack2 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 8
+; OPT-NEXT: %out.repack2 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 8
 ; OPT-NEXT: store i32 3, ptr addrspace(1) %out.repack2, align 4
-; OPT-NEXT: %out.repack3 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 12
+; OPT-NEXT: %out.repack3 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 12
 ; OPT-NEXT: store i32 4, ptr addrspace(1) %out.repack3, align 4
 
 ; GCN-LABEL: {{^}}vector_bitcast_to_array_from_alloca_array:
@@ -394,11 +388,11 @@ define amdgpu_kernel void @vector_bitcast_to_array_from_alloca_array(ptr addrspa
 ; OPT-LABEL: @vector_bitcast_to_struct_from_alloca_array(
 ; OPT-NOT:   alloca
 ; OPT-NEXT: store i32 1, ptr addrspace(1) %out, align 4
-; OPT-NEXT: %out.repack1 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 4
+; OPT-NEXT: %out.repack1 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 4
 ; OPT-NEXT: store i32 2, ptr addrspace(1) %out.repack1, align 4
-; OPT-NEXT: %out.repack2 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 8
+; OPT-NEXT: %out.repack2 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 8
 ; OPT-NEXT: store i32 3, ptr addrspace(1) %out.repack2, align 4
-; OPT-NEXT: %out.repack3 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 12
+; OPT-NEXT: %out.repack3 = getelementptr inbounds nuw i8, ptr addrspace(1) %out, i64 12
 ; OPT-NEXT: store i32 4, ptr addrspace(1) %out.repack3, align 4
 
 ; GCN-LABEL: {{^}}vector_bitcast_to_struct_from_alloca_array:

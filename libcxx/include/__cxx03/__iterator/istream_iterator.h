@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ISTREAM_ITERATOR_H
-#define _LIBCPP___ITERATOR_ISTREAM_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ISTREAM_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_ISTREAM_ITERATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/istream.h>
@@ -98,4 +98,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const istream_iterator<_Tp, _CharT,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ISTREAM_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_ISTREAM_ITERATOR_H

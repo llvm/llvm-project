@@ -117,11 +117,11 @@ define <vscale x 16 x iXLen> @lrint_nxv16f32(<vscale x 16 x float> %x, <vscale x
 ;
 ; RV64-i64-LABEL: lrint_nxv16f32:
 ; RV64-i64:       # %bb.0:
+; RV64-i64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV64-i64-NEXT:    vmv1r.v v24, v0
 ; RV64-i64-NEXT:    csrr a1, vlenb
 ; RV64-i64-NEXT:    srli a2, a1, 3
 ; RV64-i64-NEXT:    sub a3, a0, a1
-; RV64-i64-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
 ; RV64-i64-NEXT:    vslidedown.vx v0, v0, a2
 ; RV64-i64-NEXT:    sltu a2, a0, a3
 ; RV64-i64-NEXT:    addi a2, a2, -1

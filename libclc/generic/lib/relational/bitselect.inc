@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE bitselect(__CLC_GENTYPE x, __CLC_GENTYPE y, __CLC_GENTYPE z) {
-  return ((x) ^ ((z) & ((y) ^ (x))));
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE bitselect(__CLC_GENTYPE x, __CLC_GENTYPE y,
+                                               __CLC_GENTYPE z) {
+  return __clc_bitselect(x, y, z);
 }

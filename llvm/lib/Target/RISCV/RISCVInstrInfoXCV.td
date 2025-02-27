@@ -514,6 +514,7 @@ def CVrrAsmOperand : AsmOperandClass {
   let Name = "RegReg";
   let ParserMethod = "parseRegReg";
   let DiagnosticType = "InvalidRegReg";
+  let DiagnosticString = "operands must be register and register";
 }
 
 def CVrr : Operand<i32>,
@@ -698,7 +699,7 @@ let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
   def : CVStriPat<post_store, CV_SW_ri_inc>;
 
   def : CVStrriPat<post_truncsti8, CV_SB_rr_inc>;
-  def : CVStrriPat<post_truncsti16, CV_SH_ri_inc>;
+  def : CVStrriPat<post_truncsti16, CV_SH_rr_inc>;
   def : CVStrriPat<post_store, CV_SW_rr_inc>;
 
   def : CVStrrPat<truncstorei8, CV_SB_rr>;

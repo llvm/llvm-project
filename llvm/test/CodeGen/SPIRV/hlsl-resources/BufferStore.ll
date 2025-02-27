@@ -20,15 +20,16 @@ declare <4 x i32> @get_data() #1
 ; CHECK: {{%[0-9]+}} = OpFunction {{%[0-9]+}} DontInline {{%[0-9]+}}
 ; CHECK-NEXT: OpLabel
 define void @RWBufferStore_Vec4_I32() #0 {
-; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_i32_5_2_0_0_2_24(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image_i32_5_2_0_0_2_24(
           i32 16, i32 7, i32 1, i32 0, i1 false)
 
 ; CHECK: [[data:%[0-9]+]] = OpFunctionCall
   %data = call <4 x i32> @get_data()
+
+; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
 ; CHECK: OpImageWrite [[buffer]] [[zero]] [[data]]
-  call void @llvm.spv.typedBufferStore(target("spirv.Image", i32, 5, 2, 0, 0, 2, 24) %buffer0, i32 0, <4 x i32> %data)
+  call void @llvm.spv.resource.store.typedbuffer(target("spirv.Image", i32, 5, 2, 0, 0, 2, 24) %buffer0, i32 0, <4 x i32> %data)
 
   ret void
 }

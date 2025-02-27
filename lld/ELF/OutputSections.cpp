@@ -42,7 +42,10 @@ using namespace lld::elf;
 
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
-  if (ctx.arg.emachine != EM_ARM || !(flags & SHF_ARM_PURECODE))
+  bool purecode =
+      (ctx.arg.emachine == EM_ARM && (flags & SHF_ARM_PURECODE)) ||
+      (ctx.arg.emachine == EM_AARCH64 && (flags & SHF_AARCH64_PURECODE));
+  if (!purecode)
     ret |= PF_R;
   if (flags & SHF_WRITE)
     ret |= PF_W;
@@ -161,8 +164,11 @@ void OutputSection::commitSection(InputSection *isec) {
   }
 
   isec->parent = this;
-  uint64_t andMask =
-      ctx.arg.emachine == EM_ARM ? (uint64_t)SHF_ARM_PURECODE : 0;
+  uint64_t andMask = 0;
+  if (ctx.arg.emachine == EM_ARM)
+    andMask |= (uint64_t)SHF_ARM_PURECODE;
+  if (ctx.arg.emachine == EM_AARCH64)
+    andMask |= (uint64_t)SHF_AARCH64_PURECODE;
   uint64_t orMask = ~andMask;
   uint64_t andFlags = (flags & isec->flags) & andMask;
   uint64_t orFlags = (flags | isec->flags) & orMask;
@@ -253,8 +259,20 @@ void OutputSection::finalizeInputSections() {
     for (InputSection *s : isd->sections)
       commitSection(s);
   }
-  for (auto *ms : mergeSections)
+  for (auto *ms : mergeSections) {
+    // Merging may have increased the alignment of a spillable section. Update
+    // the alignment of potential spill sections and their containing output
+    // sections.
+    if (auto it = script->potentialSpillLists.find(ms);
+        it != script->potentialSpillLists.end()) {
+      for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
+        s->addralign = std::max(s->addralign, ms->addralign);
+        s->parent->addralign = std::max(s->parent->addralign, s->addralign);
+      }
+    }
+
     ms->finalizeContents();
+  }
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,

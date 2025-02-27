@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_IBM_GETTOD_ZOS_H
-#define _LIBCPP___SUPPORT_IBM_GETTOD_ZOS_H
+#ifndef _LIBCPP___CXX03___SUPPORT_IBM_GETTOD_ZOS_H
+#define _LIBCPP___CXX03___SUPPORT_IBM_GETTOD_ZOS_H
 
 #include <__cxx03/time.h>
 
@@ -49,4 +49,4 @@ inline _LIBCPP_HIDE_FROM_ABI int gettimeofdayMonotonic(struct timespec64* Output
   return 0;
 }
 
-#endif // _LIBCPP___SUPPORT_IBM_GETTOD_ZOS_H
+#endif // _LIBCPP___CXX03___SUPPORT_IBM_GETTOD_ZOS_H

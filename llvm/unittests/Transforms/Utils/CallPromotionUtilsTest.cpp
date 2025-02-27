@@ -18,7 +18,6 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -547,7 +546,7 @@ define i32 @f4() !guid !3 {
     raw_fd_stream Out(ProfileFile.path(), EC);
     ASSERT_FALSE(EC);
     // "False" means no error.
-    ASSERT_FALSE(llvm::createCtxProfFromJSON(Profile, Out));
+    ASSERT_FALSE(llvm::createCtxProfFromYAML(Profile, Out));
   }
 
   ModuleAnalysisManager MAM;
@@ -572,43 +571,34 @@ define i32 @f4() !guid !3 {
   raw_string_ostream OS(Str);
   CtxProfAnalysisPrinterPass Printer(OS);
   Printer.run(*M, MAM);
-  const char *Expected = R"json(
-  [
-  {
-    "Guid": 1000,
-    "Counters": [1, 11, 22],
-    "Callsites": [
-      [{ "Guid": 1001,
-          "Counters": [10]}, 
-        { "Guid": 1003,
-          "Counters": [12]
-        }], 
-        [{ "Guid": 1002,
-          "Counters": [11],
-          "Callsites": [
-          [{ "Guid": 1004,
-            "Counters": [13] }]]}]]
-  },
-  {
-    "Guid": 1005,
-    "Counters": [2],
-    "Callsites": [
-      [{ "Guid": 1000,
-         "Counters": [1, 102, 204],
-         "Callsites": [
-            [{ "Guid": 1001,
-               "Counters": [101]}, 
-             { "Guid": 1003,
-               "Counters": [103]}],
-            [{ "Guid": 1002,
-               "Counters": [102],
-               "Callsites": [
-            [{ "Guid": 1004,
-               "Counters": [104]}]]}]]}]]}
-])json";
-  auto ExpectedJSON = json::parse(Expected);
-  ASSERT_TRUE(!!ExpectedJSON);
-  auto ProducedJSON = json::parse(Str);
-  ASSERT_TRUE(!!ProducedJSON);
-  EXPECT_EQ(*ProducedJSON, *ExpectedJSON);
+  const char *Expected = R"yaml(
+- Guid:            1000
+  Counters:        [ 1, 11, 22 ]
+  Callsites:
+    - - Guid:            1001
+        Counters:        [ 10 ]
+      - Guid:            1003
+        Counters:        [ 12 ]
+    - - Guid:            1002
+        Counters:        [ 11 ]
+        Callsites:
+          - - Guid:            1004
+              Counters:        [ 13 ]
+- Guid:            1005
+  Counters:        [ 2 ]
+  Callsites:
+    - - Guid:            1000
+        Counters:        [ 1, 102, 204 ]
+        Callsites:
+          - - Guid:            1001
+              Counters:        [ 101 ]
+            - Guid:            1003
+              Counters:        [ 103 ]
+          - - Guid:            1002
+              Counters:        [ 102 ]
+              Callsites:
+                - - Guid:            1004
+                    Counters:        [ 104 ]
+)yaml";
+  EXPECT_EQ(Expected, Str);
 }

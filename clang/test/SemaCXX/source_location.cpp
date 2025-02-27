@@ -1012,3 +1012,21 @@ int h = Var<int>;
 
 
 }
+
+namespace GH119129 {
+struct X{
+  constexpr int foo(std::source_location loc = std::source_location::current()) {
+    return loc.line();
+  }
+};
+static_assert(X{}.foo() == __LINE__);
+static_assert(X{}.
+                foo() == __LINE__);
+static_assert(X{}.
+
+
+                foo() == __LINE__);
+#line 10000
+static_assert(X{}.
+                foo() == 10001);
+}

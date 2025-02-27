@@ -857,7 +857,7 @@ PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
 }
 
 PointerType *Type::getPointerTo(unsigned AddrSpace) const {
-  return PointerType::get(const_cast<Type*>(this), AddrSpace);
+  return PointerType::get(getContext(), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {
@@ -990,7 +990,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
         Ty->getIntParameter(0);
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),
-        TargetExtType::CanBeLocal);
+        TargetExtType::CanBeLocal, TargetExtType::HasZeroInit);
   }
 
   // DirectX resources

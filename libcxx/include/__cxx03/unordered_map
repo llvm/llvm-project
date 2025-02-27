@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_UNORDERED_MAP
-#define _LIBCPP_UNORDERED_MAP
+#ifndef _LIBCPP___CXX03_UNORDERED_MAP
+#define _LIBCPP___CXX03_UNORDERED_MAP
 
 /*
 
@@ -2538,4 +2538,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_UNORDERED_MAP
+#endif // _LIBCPP___CXX03_UNORDERED_MAP

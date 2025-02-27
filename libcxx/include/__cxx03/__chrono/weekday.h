@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_WEEKDAY_H
-#define _LIBCPP___CHRONO_WEEKDAY_H
+#ifndef _LIBCPP___CXX03___CHRONO_WEEKDAY_H
+#define _LIBCPP___CXX03___CHRONO_WEEKDAY_H
 
 #include <__cxx03/__chrono/calendar.h>
 #include <__cxx03/__chrono/duration.h>
@@ -78,25 +78,6 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr unsigned char weekday::__weekday_from_day
 _LIBCPP_HIDE_FROM_ABI inline constexpr bool operator==(const weekday& __lhs, const weekday& __rhs) noexcept {
   return __lhs.c_encoding() == __rhs.c_encoding();
 }
-
-// TODO(LLVM 20): Remove the escape hatch
-#  ifdef _LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator<(const weekday& __lhs, const weekday& __rhs) noexcept {
-  return __lhs.c_encoding() < __rhs.c_encoding();
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator>(const weekday& __lhs, const weekday& __rhs) noexcept {
-  return __rhs < __lhs;
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator<=(const weekday& __lhs, const weekday& __rhs) noexcept {
-  return !(__rhs < __lhs);
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator>=(const weekday& __lhs, const weekday& __rhs) noexcept {
-  return !(__lhs < __rhs);
-}
-#  endif // _LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr weekday operator+(const weekday& __lhs, const days& __rhs) noexcept {
   auto const __mu = static_cast<long long>(__lhs.c_encoding()) + __rhs.count();
@@ -183,4 +164,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___CHRONO_WEEKDAY_H
+#endif // _LIBCPP___CXX03___CHRONO_WEEKDAY_H

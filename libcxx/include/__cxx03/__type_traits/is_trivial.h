@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIAL_H
-#define _LIBCPP___TYPE_TRAITS_IS_TRIVIAL_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIAL_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIAL_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ inline constexpr bool is_trivial_v = __is_trivial(_Tp);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_TRIVIAL_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIAL_H

@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize="test-convergence" %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize="test-convergence top-down=0" %s | FileCheck %s
 
 // CHECK-LABEL: func @f
 func.func @f(%arg0: tensor<2x3x4xf32>) -> tensor<3xindex> {
@@ -130,6 +131,21 @@ func.func @all_but_one_empty(%arg0 : !shape.shape) -> !shape.shape {
   %2 = shape.broadcast %0, %arg0, %1, %0 : !shape.shape, !shape.shape,
       tensor<0xindex>, !shape.shape -> !shape.shape
   return %2 : !shape.shape
+}
+
+// -----
+
+// All operands are known empty shapes.
+// CHECK-LABEL: @all_empty
+// CHECK-SAME:  (%[[ARG_0:.*]]: tensor<f32>, %[[ARG_1:.*]]: tensor<i1>)
+func.func @all_empty(%arg0: tensor<f32>, %arg1: tensor<i1>) -> tensor<0xindex> {
+  // CHECK: %[[CST:.*]] = shape.const_shape [] : tensor<0xindex>
+  // CHECK: return %[[CST]] : tensor<0xindex>
+  %1 = shape.shape_of %arg0 : tensor<f32> -> tensor<0xindex>
+  %2 = shape.shape_of %arg1 : tensor<i1> -> tensor<0xindex>
+  %3 = shape.const_shape [] : tensor<0xindex>
+  %4 = shape.broadcast %1, %2, %3 : tensor<0xindex>, tensor<0xindex>, tensor<0xindex> -> tensor<0xindex>
+  return %4 : tensor<0xindex>
 }
 
 // -----

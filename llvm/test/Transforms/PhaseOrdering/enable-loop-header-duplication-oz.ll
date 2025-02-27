@@ -19,7 +19,7 @@ define void @test(i8* noalias nonnull align 1 %start, i8* %end) unnamed_addr {
 ; NOROTATION-NEXT:    [[_12_I:%.*]] = icmp eq ptr [[PTR_IV]], [[END]]
 ; NOROTATION-NEXT:    br i1 [[_12_I]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; NOROTATION:       loop.latch:
-; NOROTATION-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i8, ptr [[PTR_IV]], i64 1
+; NOROTATION-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 1
 ; NOROTATION-NEXT:    store i8 1, ptr [[PTR_IV]], align 1
 ; NOROTATION-NEXT:    br label [[LOOP_HEADER]]
 ; NOROTATION:       exit:

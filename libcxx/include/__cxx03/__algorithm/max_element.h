@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MAX_ELEMENT_H
-#define _LIBCPP___ALGORITHM_MAX_ELEMENT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MAX_ELEMENT_H
+#define _LIBCPP___CXX03___ALGORITHM_MAX_ELEMENT_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -48,4 +48,4 @@ max_element(_ForwardIterator __first, _ForwardIterator __last) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_MAX_ELEMENT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MAX_ELEMENT_H

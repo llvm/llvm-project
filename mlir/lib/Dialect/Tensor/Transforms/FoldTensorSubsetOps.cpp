@@ -277,7 +277,7 @@ struct FoldTensorSubsetOpsPass final
 void FoldTensorSubsetOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<Pass> tensor::createFoldTensorSubsetOpsPass() {

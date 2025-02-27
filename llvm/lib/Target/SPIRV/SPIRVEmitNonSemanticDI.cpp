@@ -193,7 +193,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     };
 
     const SPIRVType *VoidTy =
-        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder);
+        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
 
     const auto EmitDIInstruction =
         [&](SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
@@ -217,7 +218,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         };
 
     const SPIRVType *I32Ty =
-        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder);
+        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
 
     const Register DwarfVersionReg =
         GR->buildConstantInt(DwarfVersion, MIRBuilder, I32Ty, false);
@@ -268,7 +270,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     // We aren't extracting any DebugInfoFlags now so we
     // emitting zero to use as <id>Flags argument for DebugBasicType
     const Register I32ZeroReg =
-        GR->buildConstantInt(0, MIRBuilder, I32Ty, false);
+        GR->buildConstantInt(0, MIRBuilder, I32Ty, false, false);
 
     // We need to store pairs because further instructions reference
     // the DIBasicTypes and size will be always small so there isn't

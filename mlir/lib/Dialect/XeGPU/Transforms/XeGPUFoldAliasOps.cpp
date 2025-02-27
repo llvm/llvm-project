@@ -78,5 +78,5 @@ struct XeGPUFoldAliasOpsPass final
 void XeGPUFoldAliasOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUFoldAliasOpsPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }

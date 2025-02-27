@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_CONCEPTS_H
-#define _LIBCPP___FORMAT_CONCEPTS_H
+#ifndef _LIBCPP___CXX03___FORMAT_CONCEPTS_H
+#define _LIBCPP___CXX03___FORMAT_CONCEPTS_H
 
 #include <__cxx03/__concepts/same_as.h>
 #include <__cxx03/__concepts/semiregular.h>
@@ -80,4 +80,4 @@ concept __fmt_pair_like =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_CONCEPTS_H
+#endif // _LIBCPP___CXX03___FORMAT_CONCEPTS_H

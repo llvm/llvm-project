@@ -41,17 +41,9 @@ void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
 HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
   std::vector<const Record *> Modes = R->getValueAsListOfDefs("Modes");
   std::vector<const Record *> Objects = R->getValueAsListOfDefs("Objects");
-  if (Modes.size() != Objects.size()) {
-    PrintError(
-        R->getLoc(),
-        "in record " + R->getName() +
-            " derived from HwModeSelect: the lists Modes and Objects should "
-            "have the same size");
-    report_fatal_error("error in target description.");
-  }
   for (auto [Mode, Object] : zip_equal(Modes, Objects)) {
     unsigned ModeId = CGH.getHwModeId(Mode);
-    Items.push_back(std::pair(ModeId, Object));
+    Items.emplace_back(ModeId, Object);
   }
 }
 
@@ -70,13 +62,13 @@ CodeGenHwModes::CodeGenHwModes(const RecordKeeper &RK) : Records(RK) {
     if (R->getName() == DefaultModeName)
       continue;
     Modes.emplace_back(R);
-    ModeIds.insert(std::pair(R, Modes.size()));
+    ModeIds.try_emplace(R, Modes.size());
   }
 
   assert(Modes.size() <= 32 && "number of HwModes exceeds maximum of 32");
 
   for (const Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
-    auto P = ModeSelects.emplace(std::pair(R, HwModeSelect(R, *this)));
+    auto P = ModeSelects.emplace(R, HwModeSelect(R, *this));
     assert(P.second);
     (void)P;
   }

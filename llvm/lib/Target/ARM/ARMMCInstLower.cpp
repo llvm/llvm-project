@@ -183,11 +183,15 @@ void llvm::LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
 
 void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
 {
-  if (MI.getParent()->getParent()->getInfo<ARMFunctionInfo>()
-    ->isThumbFunction())
-  {
-    MI.emitError("An attempt to perform XRay instrumentation for a"
-      " Thumb function (not supported). Detected when emitting a sled.");
+  const MachineFunction *MF = MI.getParent()->getParent();
+  if (MF->getInfo<ARMFunctionInfo>()->isThumbFunction()) {
+    const Function &Fn = MF->getFunction();
+    DiagnosticInfoUnsupported Unsupported(
+        Fn,
+        "An attempt to perform XRay instrumentation for a"
+        " Thumb function (not supported). Detected when emitting a sled.",
+        MI.getDebugLoc());
+    Fn.getContext().diagnose(Unsupported);
     return;
   }
   static const int8_t NoopsInSledCount = 6;

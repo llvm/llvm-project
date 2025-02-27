@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_CLASS_OR_ENUM_H
-#define _LIBCPP___CONCEPTS_CLASS_OR_ENUM_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_CLASS_OR_ENUM_H
+#define _LIBCPP___CXX03___CONCEPTS_CLASS_OR_ENUM_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_class.h>
@@ -32,4 +32,4 @@ concept __class_or_enum = is_class_v<_Tp> || is_union_v<_Tp> || is_enum_v<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_CLASS_OR_ENUM_H
+#endif // _LIBCPP___CXX03___CONCEPTS_CLASS_OR_ENUM_H

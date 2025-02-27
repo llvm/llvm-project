@@ -65,7 +65,8 @@ CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
 
 bool VETargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   CCAssignFn *RetCC = getReturnCC(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
@@ -1215,8 +1216,9 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue NewVal = prepareTS1AM(Op, DAG, Flag, Bits);
 
     SDValue Ptr = N->getOperand(1);
-    SDValue Aligned = DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
-                                  {Ptr, DAG.getConstant(-4, DL, MVT::i64)});
+    SDValue Aligned =
+        DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
+                    {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
     SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
                                   DAG.getVTList(Op.getNode()->getValueType(0),
                                                 Op.getNode()->getValueType(1)),
@@ -1234,8 +1236,9 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue NewVal = prepareTS1AM(Op, DAG, Flag, Bits);
 
     SDValue Ptr = N->getOperand(1);
-    SDValue Aligned = DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
-                                  {Ptr, DAG.getConstant(-4, DL, MVT::i64)});
+    SDValue Aligned =
+        DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
+                    {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
     SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
                                   DAG.getVTList(Op.getNode()->getValueType(0),
                                                 Op.getNode()->getValueType(1)),
@@ -1600,7 +1603,7 @@ SDValue VETargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
     VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
                          DAG.getConstant(Align - 1, DL, PtrVT));
     VAList = DAG.getNode(ISD::AND, DL, PtrVT, VAList,
-                         DAG.getConstant(-Align, DL, PtrVT));
+                         DAG.getSignedConstant(-Align, DL, PtrVT));
     // Increment the pointer, VAList, by 16 to the next vaarg.
     NextPtr =
         DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getIntPtrConstant(16, DL));
@@ -2951,7 +2954,7 @@ static bool isI32Insn(const SDNode *User, const SDNode *N) {
 static bool isI32InsnAllUses(const SDNode *User, const SDNode *N) {
   // Check all use of User node.  If all of them are safe, optimize
   // truncate to extract_subreg.
-  for (const SDNode *U : User->uses()) {
+  for (const SDNode *U : User->users()) {
     switch (U->getOpcode()) {
     default:
       // If the use is an instruction which treats the source operand as i32,
@@ -3002,7 +3005,7 @@ SDValue VETargetLowering::combineTRUNCATE(SDNode *N,
     return SDValue();
 
   // Check all use of this TRUNCATE.
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     // Make sure that we're not going to replace TRUNCATE for non i32
     // instructions.
     //

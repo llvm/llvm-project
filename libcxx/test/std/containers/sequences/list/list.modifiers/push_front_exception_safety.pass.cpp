@@ -21,14 +21,23 @@
 static bool gCopyConstructorShouldThrow = false;
 
 class CMyClass {
-    public: CMyClass();
-    public: CMyClass(const CMyClass& iOther);
-    public: ~CMyClass();
+public:
+  CMyClass();
 
-    private: int fMagicValue;
+public:
+  CMyClass(const CMyClass& iOther);
 
-    private: static int kStartedConstructionMagicValue;
-    private: static int kFinishedConstructionMagicValue;
+public:
+  ~CMyClass();
+
+private:
+  int fMagicValue;
+
+private:
+  static int kStartedConstructionMagicValue;
+
+private:
+  static int kFinishedConstructionMagicValue;
 };
 
 // Value for fMagicValue when the constructor has started running, but not yet finished
@@ -36,42 +45,36 @@ int CMyClass::kStartedConstructionMagicValue = 0;
 // Value for fMagicValue when the constructor has finished running
 int CMyClass::kFinishedConstructionMagicValue = 12345;
 
-CMyClass::CMyClass() :
-    fMagicValue(kStartedConstructionMagicValue)
-{
-    // Signal that the constructor has finished running
-    fMagicValue = kFinishedConstructionMagicValue;
+CMyClass::CMyClass() : fMagicValue(kStartedConstructionMagicValue) {
+  // Signal that the constructor has finished running
+  fMagicValue = kFinishedConstructionMagicValue;
 }
 
-CMyClass::CMyClass(const CMyClass& /*iOther*/) :
-    fMagicValue(kStartedConstructionMagicValue)
-{
-    // If requested, throw an exception _before_ setting fMagicValue to kFinishedConstructionMagicValue
-    if (gCopyConstructorShouldThrow) {
-      throw std::exception();
-    }
-    // Signal that the constructor has finished running
-    fMagicValue = kFinishedConstructionMagicValue;
+CMyClass::CMyClass(const CMyClass& /*iOther*/) : fMagicValue(kStartedConstructionMagicValue) {
+  // If requested, throw an exception _before_ setting fMagicValue to kFinishedConstructionMagicValue
+  if (gCopyConstructorShouldThrow) {
+    throw std::exception();
+  }
+  // Signal that the constructor has finished running
+  fMagicValue = kFinishedConstructionMagicValue;
 }
 
 CMyClass::~CMyClass() {
-    // Only instances for which the constructor has finished running should be destructed
-    assert(fMagicValue == kFinishedConstructionMagicValue);
+  // Only instances for which the constructor has finished running should be destructed
+  assert(fMagicValue == kFinishedConstructionMagicValue);
 }
 
-int main(int, char**)
-{
-    CMyClass instance;
-    std::list<CMyClass> vec;
+int main(int, char**) {
+  CMyClass instance;
+  std::list<CMyClass> vec;
 
+  vec.push_front(instance);
+
+  gCopyConstructorShouldThrow = true;
+  try {
     vec.push_front(instance);
-
-    gCopyConstructorShouldThrow = true;
-    try {
-        vec.push_front(instance);
-    }
-    catch (...) {
-    }
+  } catch (...) {
+  }
 
   return 0;
 }
