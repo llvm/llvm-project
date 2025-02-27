@@ -3286,6 +3286,10 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def err_attribute_invalid_atomic_argument : Error<
+  "invalid argument '%0' to atomic attribute; valid options are: "
+  "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
+  "prefixed with 'no_')">;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
