@@ -942,6 +942,9 @@ __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
         }
     }
 
+    __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global");
+    __builtin_amdgcn_s_barrier();
+
     if (lid == 0) {
         __global heap_t *thp = (__global heap_t *)hp;
         AS(&thp->initial_slabs, sp, memory_order_relaxed);
