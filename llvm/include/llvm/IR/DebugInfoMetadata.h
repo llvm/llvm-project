@@ -3077,14 +3077,14 @@ protected:
   }
 
   std::optional<Type *> getType(DIOp::BitOffset Op, ArrayRef<StackEntry> Ins) {
-    if (!Ins[0].ResultType->isIntegerTy())
+    if (!Ins[1].ResultType->isIntegerTy())
       return getTypeError(
           "DIOpBitOffset requires first input be integer typed");
     return Op.getResultType();
   }
 
   std::optional<Type *> getType(DIOp::ByteOffset Op, ArrayRef<StackEntry> Ins) {
-    if (!Ins[0].ResultType->isIntegerTy())
+    if (!Ins[1].ResultType->isIntegerTy())
       return getTypeError(
           "DIOpByteOffset requires first input be integer typed");
     return Op.getResultType();
@@ -3107,13 +3107,13 @@ protected:
   }
 
   std::optional<Type *> getType(DIOp::Select Op, ArrayRef<StackEntry> Ins) {
-    if (Ins[0].ResultType != Ins[1].ResultType)
+    if (Ins[1].ResultType != Ins[2].ResultType)
       return getTypeError(
           "DIOpSelect requires first two inputs have same type");
-    if (!Ins[0].ResultType->isVectorTy())
+    if (!Ins[1].ResultType->isVectorTy())
       return getTypeError(
           "DIOpSelect requires first two inputs to be vector typed");
-    return Ins[0].ResultType;
+    return Ins[1].ResultType;
   }
 
   std::optional<Type *> getType(DIOp::AddrOf Op, ArrayRef<StackEntry>) {
