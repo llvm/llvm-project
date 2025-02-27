@@ -483,7 +483,7 @@ parseGranularityClause(OpAsmParser &parser, ClauseTypeAttr &prescriptiveness,
   if (succeeded(parser.parseOptionalKeyword(&enumStr))) {
     if (std::optional<ClauseType> enumValue = symbolizeClause(enumStr)) {
       prescriptiveness = ClauseTypeAttr::get(parser.getContext(), *enumValue);
-      if (parser.parseColon())
+      if (parser.parseComma())
         return failure();
     } else {
       return parser.emitError(parser.getCurrentLocation())
@@ -516,7 +516,7 @@ printGranularityClause(OpAsmPrinter &p, Operation *op,
                        StringRef (*stringifyClauseType)(ClauseType)) {
 
   if (prescriptiveness)
-    p << stringifyClauseType(prescriptiveness.getValue()) << ": ";
+    p << stringifyClauseType(prescriptiveness.getValue()) << ", ";
 
   if (operand)
     p << operand << ": " << operandType;
