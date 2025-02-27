@@ -100,6 +100,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false positive from const reference accessors to objects containing optional member.
 
 Removed checks
 ^^^^^^^^^^^^^^
