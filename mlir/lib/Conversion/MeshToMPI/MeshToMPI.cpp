@@ -284,32 +284,33 @@ struct ConvertProcessMultiIndexOp
     }
 
     rewriter.replaceOp(op, mIdx);
-    return mlir::success();
+    return success();
   }
 };
 
-struct ConvertProcessLinearIndexOp
-    : public mlir::OpRewritePattern<mlir::mesh::ProcessLinearIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+class ConvertProcessLinearIndexOp
+    : public OpConversionPattern<ProcessLinearIndexOp> {
+  int64_t worldRank; // rank in MPI_COMM_WORLD if available, else < 0
 
-  mlir::LogicalResult
-  matchAndRewrite(mlir::mesh::ProcessLinearIndexOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+public:
+  using OpConversionPattern::OpConversionPattern;
 
-    // Finds a global named "static_mpi_rank" it will use that splat value.
-    // Otherwise it defaults to mpi.comm_rank.
+  // Constructor accepting worldRank
+  ConvertProcessLinearIndexOp(const TypeConverter &typeConverter,
+                              MLIRContext *context, int64_t worldRank_ = -1)
+      : OpConversionPattern(typeConverter, context), worldRank(worldRank_) {}
 
-    auto loc = op.getLoc();
-    auto rankOpName = StringAttr::get(op->getContext(), "static_mpi_rank");
-    if (auto globalOp = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
-            op, rankOpName)) {
-      if (auto initTnsr = globalOp.getInitialValueAttr()) {
-        auto val = cast<DenseElementsAttr>(initTnsr).getSplatValue<int64_t>();
-        rewriter.replaceOp(op,
-                           rewriter.create<arith::ConstantIndexOp>(loc, val));
-        return mlir::success();
-      }
+  LogicalResult
+  matchAndRewrite(ProcessLinearIndexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Location loc = op.getLoc();
+    if (worldRank >= 0) { // if rank in MPI_COMM_WORLD is known -> use it
+      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, worldRank);
+      return success();
     }
+
+    // Otherwise call create mpi::CommRankOp
     auto rank =
         rewriter
             .create<mpi::CommRankOp>(

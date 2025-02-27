@@ -60,23 +60,24 @@ func.func @neighbors_dim2(%arg0 : tensor<120x120x120xi8>) -> (index, index) {
 
 // -----
 // CHECK: mesh.mesh @mesh0
-mesh.mesh @mesh0(shape = 3x4x5)
-memref.global constant @static_mpi_rank : memref<index> = dense<24>
-func.func @process_multi_index() -> (index, index, index) {
-  // CHECK-DAG: %[[c4:.*]] = arith.constant 4 : index
-  // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
-  %0:3 = mesh.process_multi_index on @mesh0 axes = [] : index, index, index
-  // CHECK: return %[[c1]], %[[c0]], %[[c4]] : index, index, index
-  return %0#0, %0#1, %0#2 : index, index, index
-}
+module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
+  mesh.mesh @mesh0(shape = 3x4x5)
+  func.func @process_multi_index() -> (index, index, index) {
+    // CHECK-DAG: %[[c4:.*]] = arith.constant 4 : index
+    // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+    %0:3 = mesh.process_multi_index on @mesh0 axes = [] : index, index, index
+    // CHECK: return %[[c1]], %[[c0]], %[[c4]] : index, index, index
+    return %0#0, %0#1, %0#2 : index, index, index
+  }
 
-// CHECK-LABEL: func @process_linear_index
-func.func @process_linear_index() -> index {
-  // CHECK: %[[c24:.*]] = arith.constant 24 : index
-  %0 = mesh.process_linear_index on @mesh0 : index
-  // CHECK: return %[[c24]] : index
-  return %0 : index
+  // CHECK-LABEL: func @process_linear_index
+  func.func @process_linear_index() -> index {
+    // CHECK: %[[c24:.*]] = arith.constant 24 : index
+    %0 = mesh.process_linear_index on @mesh0 : index
+    // CHECK: return %[[c24]] : index
+    return %0 : index
+  }
 }
 
 // -----
