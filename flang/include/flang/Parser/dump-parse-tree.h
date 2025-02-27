@@ -663,7 +663,6 @@ public:
   NODE_ENUM(OmpOrderingModifier, Value)
   NODE(parser, OmpSectionBlocks)
   NODE(parser, OmpSectionsDirective)
-  NODE(parser, OmpSimpleStandaloneDirective)
   NODE(parser, OmpToClause)
   NODE(OmpToClause, Modifier)
   NODE(parser, Only)
