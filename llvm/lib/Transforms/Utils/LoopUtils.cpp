@@ -820,7 +820,7 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
 
 /// Return the estimated trip count for any exiting branch which dominates
 /// the loop latch.
-static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
+static std::optional<unsigned> getEstimatedTripCount(BranchInst *ExitingBranch,
                                                      Loop *L,
                                                      uint64_t &OrigExitWeight) {
   // To estimate the number of times the loop body was executed, we want to
@@ -842,6 +842,11 @@ static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
   // Estimated exit count is a ratio of the loop weight by the weight of the
   // edge exiting the loop, rounded to nearest.
   uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
+
+  // When ExitCount + 1 would wrap in unsigned, return std::nullopt instead.
+  if (ExitCount >= std::numeric_limits<unsigned>::max())
+    return std::nullopt;
+
   // Estimated trip count is one plus estimated exit count.
   return ExitCount + 1;
 }
