@@ -11,7 +11,7 @@ module {
 
 // CHECK: module {
 // CHECK: func @foo() {
-// CHECK:    = memref.alloca() {alignment = 16 : i64} : memref<memref<10xi32>>
+// CHECK:    = memref.alloca() {alignment = 16 : i64} : memref<10xi32>
 // CHECK:    return
 // CHECK:  }
 // CHECK: }
