@@ -90,6 +90,9 @@ public:
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
   }
+  std::unordered_set<std::string> getCompilerDirectiveSentinels() {
+    return compilerDirectiveSentinels_;
+  }
 
 private:
   struct LineClassification {

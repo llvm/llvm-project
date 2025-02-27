@@ -106,6 +106,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.showColors) {
     allSources.setShowColors(/*showColors=*/true);
   }
+  compilerDirectiveSentinels_ = prescanner.getCompilerDirectiveSentinels();
   return sourceFile;
 }
 
@@ -153,7 +154,8 @@ void Parsing::EmitPreprocessedSource(
         return ch;
       }};
 
-      if (ch == '!' && lineWasBlankBefore) {
+      if (ch == '!' && lineWasBlankBefore &&
+          IsCompilerDirectiveSentinel((const char *)&atChar + 1, 4)) {
         // Other comment markers (C, *, D) in original fixed form source
         // input card column 1 will have been deleted or normalized to !,
         // which signifies a comment (directive) in both source forms.
@@ -256,6 +258,12 @@ void Parsing::Parse(llvm::raw_ostream &out) {
   consumedWholeFile_ = parseState.IsAtEnd();
   messages_.Annex(std::move(parseState.messages()));
   finalRestingPlace_ = parseState.GetLocation();
+}
+
+const char *Parsing::IsCompilerDirectiveSentinel(
+    const char *sentinel, std::size_t len) const {
+  const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, len))};
+  return iter == compilerDirectiveSentinels_.end() ? nullptr : iter->c_str();
 }
 
 void Parsing::ClearLog() { log_.clear(); }

@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -66,6 +67,7 @@ public:
   void DumpProvenance(llvm::raw_ostream &) const;
   void DumpParsingLog(llvm::raw_ostream &) const;
   void Parse(llvm::raw_ostream &debugOutput);
+  const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   void ClearLog();
 
   void EmitMessage(llvm::raw_ostream &o, const char *at,
@@ -87,6 +89,7 @@ private:
   std::optional<Program> parseTree_;
   ParsingLog log_;
   Preprocessor preprocessor_{allCooked_.allSources()};
+  std::unordered_set<std::string> compilerDirectiveSentinels_;
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PARSING_H_
