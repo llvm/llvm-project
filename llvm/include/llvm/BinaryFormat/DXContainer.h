@@ -568,13 +568,9 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
 struct RootDescriptor {
-  //   shader register
-  // i32: register space
-  uint32_t ShaderRegistry = 0;
-  uint32_t ShaderSpace = 0;
-  dxbc::RootDescriptorFlag DescriptorFlag = dxbc::RootDescriptorFlag::None;
-
-  RootDescriptor() = default;
+  uint32_t ShaderRegistry;
+  uint32_t ShaderSpace;
+  dxbc::RootDescriptorFlag DescriptorFlag;
 
   void swapBytes() {
     sys::swapByteOrder(ShaderRegistry);

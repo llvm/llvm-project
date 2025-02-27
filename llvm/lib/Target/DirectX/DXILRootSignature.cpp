@@ -50,8 +50,8 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 
   auto *ShaderVisibility =
       mdconst::extract<ConstantInt>(RootConstNode->getOperand(1));
-  dxbc::ShaderVisibilityFlag SvFlag =
-      (dxbc::ShaderVisibilityFlag)ShaderVisibility->getZExtValue();
+  dxbc::ShaderVisibility SvFlag =
+      (dxbc::ShaderVisibility)ShaderVisibility->getZExtValue();
   if (!dxbc::RootSignatureValidations::isValidShaderVisibility(SvFlag))
     return reportError(
         Ctx, "Invalid shader visibility flag value in root constant.");
@@ -267,6 +267,10 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
            << " \n";
         Space--;
       } break;
+      case dxbc::RootParameterType::CBV:
+      case dxbc::RootParameterType::SRV:
+      case dxbc::RootParameterType::UAV:
+        break;
       case dxbc::RootParameterType::Empty:
         break;
       }
