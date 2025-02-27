@@ -133,7 +133,7 @@ private:
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   /// Whether to optimize the modules' command-line arguments.
-  const ScanningOptimizations OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   const bool EagerLoadModules;
   /// Whether to trace VFS accesses.

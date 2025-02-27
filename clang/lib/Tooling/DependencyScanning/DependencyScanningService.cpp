@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -28,6 +29,12 @@ DependencyScanningService::DependencyScanningService(
       SharedFS(std::move(SharedFS)) {
   if (!this->SharedFS)
     SharedCache.emplace();
+
+  // The FullIncludeTree output format completely subsumes header search and
+  // VFS optimizations due to how it works. Disable these optimizations so
+  // we're not doing unneeded work.
+  if (Format == ScanningOutputFormat::FullIncludeTree)
+    this->OptimizeArgs &= ~ScanningOptimizations::FullIncludeTreeIrrelevant;
 
   // Initialize targets for object file support.
   llvm::InitializeAllTargets();

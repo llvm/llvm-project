@@ -237,13 +237,12 @@ private:
 /// \c ModuleDepCollectorPP to the preprocessor.
 class ModuleDepCollector final : public DependencyCollector {
 public:
-  ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
+  ModuleDepCollector(DependencyScanningService &Service,
+                     std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
-                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
-                     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
-                     bool IsStdModuleP1689Format);
+                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -255,6 +254,8 @@ public:
 private:
   friend ModuleDepCollectorPP;
 
+  /// The parent dependency scanning service.
+  DependencyScanningService &Service;
   /// The compiler instance for scanning the current translation unit.
   CompilerInstance &ScanInstance;
   /// The consumer of collected dependency information.
@@ -286,13 +287,6 @@ private:
   /// a discovered modular dependency. Note that this still needs to be adjusted
   /// for each individual module.
   CowCompilerInvocation CommonInvocation;
-  /// Whether to optimize the modules' command-line arguments.
-  ScanningOptimizations OptimizeArgs;
-  /// Whether to set up command-lines to load PCM files eagerly.
-  bool EagerLoadModules;
-  /// If we're generating dependency output in P1689 format
-  /// for standard C++ modules.
-  bool IsStdModuleP1689Format;
 
   std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
   std::vector<P1689ModuleInfo> RequiredStdCXXModules;
