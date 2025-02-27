@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx90a %s | FileCheck %s --check-prefixes=CHECK,GFX9
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx90a %s | FileCheck %s --check-prefixes=CHECK,GFX90A
 // RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx1030 %s | FileCheck %s --check-prefixes=CHECK,GFX10
 // RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx1100 %s | FileCheck %s --check-prefixes=CHECK,GFX11
 // RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx1200 %s | FileCheck %s --check-prefixes=CHECK,GFX12
@@ -14,16 +14,16 @@ func.func @atomic_fmax(%val: f32, %buffer: memref<?xf32>, %idx: i32) {
 // GFX10: amdgpu.raw_buffer_atomic_fmax {foo, indexOffset = 4 : i32} [[val]] -> [[buffer]][[[idx]]]
 // GFX11: amdgpu.raw_buffer_atomic_fmax {foo, indexOffset = 4 : i32} [[val]] -> [[buffer]][[[idx]]]
 // GFX12: amdgpu.raw_buffer_atomic_fmax {foo, indexOffset = 4 : i32} [[val]] -> [[buffer]][[[idx]]]
-// GFX9:  [[ld:%.+]] = amdgpu.raw_buffer_load {foo, indexOffset = 4 : i32} [[buffer]][[[idx]]]
-// GFX9:  cf.br [[loop:\^.+]]([[ld]] : f32)
-// GFX9:  [[loop]]([[arg:%.+]]: f32):
-// GFX9:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
-// GFX9:  [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap {foo, indexOffset = 4 : i32} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
-// GFX9:  [[argCast:%.+]] = arith.bitcast [[arg]] : f32 to i32
-// GFX9:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f32 to i32
-// GFX9:  [[test:%.+]] = arith.cmpi eq, [[resCast]], [[argCast]]
-// GFX9:  cf.cond_br [[test]], [[post:\^.+]], [[loop]]([[atomicRes]] : f32)
-// GFX9:  [[post]]:
+// GFX90A:  [[ld:%.+]] = amdgpu.raw_buffer_load {foo, indexOffset = 4 : i32} [[buffer]][[[idx]]]
+// GFX90A:  cf.br [[loop:\^.+]]([[ld]] : f32)
+// GFX90A:  [[loop]]([[arg:%.+]]: f32):
+// GFX90A:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
+// GFX90A:  [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap {foo, indexOffset = 4 : i32} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
+// GFX90A:  [[argCast:%.+]] = arith.bitcast [[arg]] : f32 to i32
+// GFX90A:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f32 to i32
+// GFX90A:  [[test:%.+]] = arith.cmpi eq, [[resCast]], [[argCast]]
+// GFX90A:  cf.cond_br [[test]], [[post:\^.+]], [[loop]]([[atomicRes]] : f32)
+// GFX90A:  [[post]]:
 // GFX942:  [[ld:%.+]] = amdgpu.raw_buffer_load {foo, indexOffset = 4 : i32} [[buffer]][[[idx]]]
 // GFX942:  cf.br [[loop:\^.+]]([[ld]] : f32)
 // GFX942:  [[loop]]([[arg:%.+]]: f32):
@@ -57,7 +57,7 @@ func.func @atomic_fmax_f64(%val: f64, %buffer: memref<?xf64>, %idx: i32) {
 // CHECK: func @atomic_fmax_f64
 // CHECK-SAME: ([[val:%.+]]: f64, [[buffer:%.+]]: memref<?xf64>, [[idx:%.+]]: i32)
 // CHECK: gpu.printf "Begin\0A"
-// GFX9:  amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
+// GFX90A:  amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
 // GFX10: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
 // GFX11: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
 // GFX12: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
@@ -74,7 +74,7 @@ func.func @atomic_fmax_f64(%val: f64, %buffer: memref<?xf64>, %idx: i32) {
 
 func.func @atomic_fadd(%val: f32, %buffer: memref<?xf32>, %idx: i32) {
 // CHECK: func @atomic_fadd
-// GFX9:  amdgpu.raw_buffer_atomic_fadd
+// GFX90A:  amdgpu.raw_buffer_atomic_fadd
 // GFX10: amdgpu.raw_buffer_load
 // GFX10: amdgpu.raw_buffer_atomic_cmpswap
 // GFX11: amdgpu.raw_buffer_atomic_fadd
@@ -87,7 +87,7 @@ func.func @atomic_fadd(%val: f32, %buffer: memref<?xf32>, %idx: i32) {
 
 // CHECK: func @atomic_fadd_v2f16
 func.func @atomic_fadd_v2f16(%val: vector<2xf16>, %buffer: memref<?xf16>, %idx: i32) {
-// GFX9:  amdgpu.raw_buffer_atomic_fadd
+// GFX90A:  amdgpu.raw_buffer_atomic_fadd
 // GFX10: amdgpu.raw_buffer_load
 // GFX10: amdgpu.raw_buffer_atomic_cmpswap
 // Note: the atomic operation itself will be done over i32, and then we use bitcasts
@@ -108,8 +108,8 @@ func.func @atomic_fadd_v2f16(%val: vector<2xf16>, %buffer: memref<?xf16>, %idx: 
 
 // CHECK: func @atomic_fadd_v2bf16
 func.func @atomic_fadd_v2bf16(%val: vector<2xbf16>, %buffer: memref<?xbf16>, %idx: i32) {
-// GFX9: amdgpu.raw_buffer_load
-// GFX9: amdgpu.raw_buffer_atomic_cmpswap
+// GFX90A: amdgpu.raw_buffer_load
+// GFX90A: amdgpu.raw_buffer_atomic_cmpswap
 // GFX10: amdgpu.raw_buffer_load
 // GFX10: amdgpu.raw_buffer_atomic_cmpswap
 // GFX11: amdgpu.raw_buffer_load
