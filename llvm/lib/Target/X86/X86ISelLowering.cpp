@@ -6145,6 +6145,13 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
     uint64_t InsertIdx = N.getConstantOperandVal(2);
+    // Subvector isn't demanded - just return the base vector.
+    if (DemandedElts.extractBits(NumSubElts, InsertIdx) == 0) {
+      Mask.resize(NumElts, SM_SentinelUndef);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      Ops.push_back(Src);
+      return true;
+    }
     // Handle CONCAT(SUB0, SUB1).
     // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
     if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
