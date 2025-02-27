@@ -47,6 +47,12 @@ void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 /// Pass to flatten arrays into a one dimensional DXIL legal form
 ModulePass *createDXILFlattenArraysLegacyPass();
 
+/// Initializer I8 legalizationPass
+void initializeLegalizeI8LegacyPass(PassRegistry &);
+
+/// Pass to remove i8 truncations
+FunctionPass *createLegalizeI8LegacyPass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 
