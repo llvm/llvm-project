@@ -5034,11 +5034,10 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
 
   if (VT.isScalableVector()) {
     if (InVT.getVectorElementType() == MVT::i1) {
-      // We can't directly extend an SVE predicate; extend it first.
-      unsigned CastOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      EVT CastVT = getPromotedVTForPredicate(InVT);
-      In = DAG.getNode(CastOpc, dl, CastVT, In);
-      return DAG.getNode(Opc, dl, VT, In);
+      SDValue FalseVal = DAG.getConstantFP(0.0, dl, VT);
+      SDValue TrueVal = IsSigned ? DAG.getConstantFP(-1.0, dl, VT)
+                                 : DAG.getConstantFP(1.0, dl, VT);
+      return DAG.getNode(ISD::VSELECT, dl, VT, In, TrueVal, FalseVal);
     }
 
     unsigned Opcode = IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
