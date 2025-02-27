@@ -2006,7 +2006,6 @@ void CheckHelper::CollectSpecifics(DistinguishabilityHelper &helper,
 
 void CheckHelper::CheckSpecifics(
     const Symbol &generic, const GenericDetails &details) {
-  GenericKind kind{details.kind()};
   DistinguishabilityHelper helper{context_};
   CollectSpecifics(helper, generic, details);
   helper.Check(generic.owner());
