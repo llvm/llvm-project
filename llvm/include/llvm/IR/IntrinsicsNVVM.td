@@ -5072,6 +5072,16 @@ def int_nvvm_prefetch_global_L2_evict_last: Intrinsic<[], [llvm_global_ptr_ty],
 def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
+def int_nvvm_applypriority_global_L2_evict_normal
+  : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty, llvm_i64_ty],
+    [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>]>;
+
+def int_nvvm_applypriority_L2_evict_normal
+  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
+    [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>]>;
+
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
 // From Global to Shared Cluster
