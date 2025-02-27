@@ -12183,7 +12183,7 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
   return BuildStdClassTemplate(*this, StdInitializerList, Element, Loc);
 }
 
-QualType Sema::TryBuildStdTypeIdentity(QualType Type, SourceLocation Loc) {
+QualType Sema::tryBuildStdTypeIdentity(QualType Type, SourceLocation Loc) {
   if (!StdTypeIdentity) {
     StdTypeIdentity = LookupStdClassTemplate(*this, Loc, "type_identity",
                                              /* WasMalformed */ nullptr);
@@ -16339,7 +16339,7 @@ Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
       return nullptr;
   }
 
-  QualType SpecializedTypeIdentity = TryBuildStdTypeIdentity(DeallocType, Loc);
+  QualType SpecializedTypeIdentity = tryBuildStdTypeIdentity(DeallocType, Loc);
   if (SpecializedTypeIdentity.isNull())
     return nullptr;
 

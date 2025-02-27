@@ -4890,7 +4890,7 @@ public:
   ///
   /// \returns The instantiated template, or null if std::type_identity is not
   /// declared
-  QualType TryBuildStdTypeIdentity(QualType Type, SourceLocation Loc);
+  QualType tryBuildStdTypeIdentity(QualType Type, SourceLocation Loc);
 
   /// Determine whether Ctor is an initializer-list constructor, as
   /// defined in [dcl.init.list]p2.

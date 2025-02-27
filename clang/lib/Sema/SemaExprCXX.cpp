@@ -1811,7 +1811,7 @@ namespace {
         }
         QualType TypeIdentityTag = FD->getParamDecl(0)->getType();
         QualType ExpectedTypeIdentityTag =
-            S.TryBuildStdTypeIdentity(AllocType, Loc);
+            S.tryBuildStdTypeIdentity(AllocType, Loc);
         if (ExpectedTypeIdentityTag.isNull()) {
           FD = nullptr;
           return;
@@ -2957,7 +2957,7 @@ bool Sema::FindAllocationFunctions(
   QualType TypeIdentity = Context.getSizeType();
   if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
     QualType SpecializedTypeIdentity =
-        TryBuildStdTypeIdentity(IAP.Type, StartLoc);
+        tryBuildStdTypeIdentity(IAP.Type, StartLoc);
     if (!SpecializedTypeIdentity.isNull()) {
       TypeIdentity = SpecializedTypeIdentity;
       if (RequireCompleteType(StartLoc, TypeIdentity,
