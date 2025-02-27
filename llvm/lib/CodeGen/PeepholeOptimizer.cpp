@@ -1991,10 +1991,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
   // If we did not find an exact match, see if we can do a composition to
   // extract a sub-subregister.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
-    // We don't check if the resulting class supports the subregister index
-    // yet. This will occur before any rewrite when looking for an eligible
-    // source.
-
     LaneBitmask DefMask = TRI->getSubRegIndexLaneMask(DefSubReg);
     LaneBitmask ThisOpRegMask = TRI->getSubRegIndexLaneMask(RegSeqInput.SubIdx);
 
@@ -2012,6 +2008,17 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 
     unsigned ComposedDefInSrcReg1 =
         TRI->composeSubRegIndices(RegSeqInput.SubReg, ReverseDefCompose);
+
+    // TODO: We should be able to defer checking if the result register class
+    // supports the index to continue looking for a rewritable source.
+    //
+    // TODO: Should we modify the register class to support the index?
+    const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
+    const TargetRegisterClass *SrcWithSubRC =
+        TRI->getSubClassWithSubReg(SrcRC, ComposedDefInSrcReg1);
+    if (SrcRC != SrcWithSubRC)
+      return ValueTrackerResult();
+
     return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
   }
 
@@ -2117,11 +2124,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
 ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
   assert(Def->isPHI() && "Invalid definition");
   ValueTrackerResult Res;
-
-  // If we look for a different subreg, bail as we do not support composing
-  // subregs yet.
-  if (Def->getOperand(0).getSubReg() != DefSubReg)
-    return ValueTrackerResult();
 
   // Return all register sources for PHI instructions.
   for (unsigned i = 1, e = Def->getNumOperands(); i < e; i += 2) {

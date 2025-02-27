@@ -575,13 +575,14 @@ unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
 void NVPTXTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
-  std::optional<unsigned> Val;
-  if ((Val = getMaxClusterRank(F)))
+  if (const auto Val = getMaxClusterRank(F))
     LB.push_back({"maxclusterrank", *Val});
-  if ((Val = getMaxNTIDx(F)))
-    LB.push_back({"maxntidx", *Val});
-  if ((Val = getMaxNTIDy(F)))
-    LB.push_back({"maxntidy", *Val});
-  if ((Val = getMaxNTIDz(F)))
-    LB.push_back({"maxntidz", *Val});
+
+  const auto MaxNTID = getMaxNTID(F);
+  if (MaxNTID.size() > 0)
+    LB.push_back({"maxntidx", MaxNTID[0]});
+  if (MaxNTID.size() > 1)
+    LB.push_back({"maxntidy", MaxNTID[1]});
+  if (MaxNTID.size() > 2)
+    LB.push_back({"maxntidz", MaxNTID[2]});
 }
