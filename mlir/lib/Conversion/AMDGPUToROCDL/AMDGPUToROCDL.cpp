@@ -454,14 +454,14 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
                              ? (Type)rewriter.getIntegerType(numBits)
                              : (Type)VectorType::get(numBits / 32, i32);
   auto llvmIntrinsicInType = typeConverter->convertType(intrinsicInType);
-  Value result = rewriter.createOrFold<LLVM::BitcastOp>(
+  Value castInput = rewriter.createOrFold<LLVM::BitcastOp>(
       loc, llvmIntrinsicInType, llvmInput);
   // The wave64-mode 16x16x16 intrinsics that take 4-bit integers only need
   // (256 / 64) * 4 = 16 bits of input (on gfx12+) but take i32 arguments.
   // Add in the zeros here.
   if (numBits < 32)
-    result = rewriter.create<LLVM::ZExtOp>(loc, i32, result);
-  operands.push_back(result);
+    castInput = rewriter.create<LLVM::ZExtOp>(loc, i32, castInput);
+  operands.push_back(castInput);
 }
 
 /// Push the output operand. For many cases this is only pushing the output in
