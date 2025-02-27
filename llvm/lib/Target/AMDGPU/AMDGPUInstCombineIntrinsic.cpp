@@ -481,6 +481,59 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   return false;
 }
 
+Instruction *GCNTTIImpl::hoistReadLaneThroughOperand(InstCombiner &IC,
+                                                     IntrinsicInst &II) const {
+  Instruction *Op = dyn_cast<Instruction>(II.getOperand(0));
+
+  // Only do this if both instructions are in the same block
+  // (so the exec mask won't change) and the readlane is the only user of its
+  // operand.
+  if (!Op || !Op->hasOneUser() || Op->getParent() != II.getParent())
+    return nullptr;
+
+  const bool IsReadLane = (II.getIntrinsicID() == Intrinsic::amdgcn_readlane);
+
+  // If this is a readlane, check that the second operand is a constant, or is
+  // defined before Op so we know it's safe to move this intrinsic higher.
+  Value *LaneID = nullptr;
+  if (IsReadLane) {
+    LaneID = II.getOperand(1);
+    if (!isa<Constant>(LaneID) && !(isa<Instruction>(LaneID) &&
+                                    cast<Instruction>(LaneID)->comesBefore(Op)))
+      return nullptr;
+  }
+
+  const auto DoIt = [&](unsigned OpIdx) -> Instruction * {
+    SmallVector<Value *, 2> Ops{Op->getOperand(OpIdx)};
+    if (IsReadLane)
+      Ops.push_back(LaneID);
+
+    Instruction *NewII =
+        IC.Builder.CreateIntrinsic(II.getType(), II.getIntrinsicID(), Ops);
+
+    Instruction &NewOp = *Op->clone();
+    NewOp.setOperand(OpIdx, NewII);
+    return &NewOp;
+  };
+
+  // TODO: Are any operations more expensive on the SALU than VALU, and thus
+  //       need to be excluded here?
+
+  if (isa<UnaryOperator>(Op))
+    return DoIt(0);
+
+  if (isa<BinaryOperator>(Op)) {
+    // FIXME: If we had access to UniformityInfo here we could just check
+    // if the operand is uniform.
+    if (isTriviallyUniform(Op->getOperandUse(0)))
+      return DoIt(1);
+    if (isTriviallyUniform(Op->getOperandUse(1)))
+      return DoIt(0);
+  }
+
+  return nullptr;
+}
+
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -1213,6 +1266,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         return &II;
       }
     }
+
+    // If the readfirstlane reads the result of an operation that exists
+    // both in the SALU and VALU, we may be able to hoist it higher in order
+    // to scalarize the expression.
+    if (Instruction *Res = hoistReadLaneThroughOperand(IC, II))
+      return Res;
 
     return std::nullopt;
   }

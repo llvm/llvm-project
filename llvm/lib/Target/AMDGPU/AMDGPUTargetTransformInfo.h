@@ -236,6 +236,9 @@ public:
                                              const APInt &DemandedElts,
                                              APInt &UndefElts) const;
 
+  Instruction *hoistReadLaneThroughOperand(InstCombiner &IC,
+                                           IntrinsicInst &II) const;
+
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
