@@ -784,6 +784,27 @@ bool SIFoldOperandsImpl::isUseSafeToFold(const MachineInstr &MI,
   return !TII->isSDWA(MI);
 }
 
+static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
+                                       const MachineRegisterInfo &MRI,
+                                       Register SrcReg) {
+  MachineOperand *Sub = nullptr;
+  for (MachineInstr *SubDef = MRI.getVRegDef(SrcReg);
+       SubDef && TII.isFoldableCopy(*SubDef);
+       SubDef = MRI.getVRegDef(Sub->getReg())) {
+    MachineOperand &SrcOp = SubDef->getOperand(1);
+    if (SrcOp.isImm())
+      return &SrcOp;
+    if (!SrcOp.isReg() || SrcOp.getReg().isPhysical())
+      break;
+    Sub = &SrcOp;
+    // TODO: Support compose
+    if (SrcOp.getSubReg())
+      break;
+  }
+
+  return Sub;
+}
+
 // Find a def of the UseReg, check if it is a reg_sequence and find initializers
 // for each subreg, tracking it to foldable inline immediate if possible.
 // Returns true on success.
@@ -794,26 +815,24 @@ bool SIFoldOperandsImpl::getRegSeqInit(
   if (!Def || !Def->isRegSequence())
     return false;
 
-  for (unsigned I = 1, E = Def->getNumExplicitOperands(); I < E; I += 2) {
-    MachineOperand *Sub = &Def->getOperand(I);
-    assert(Sub->isReg());
+  for (unsigned I = 1, E = Def->getNumExplicitOperands(); I != E; I += 2) {
+    MachineOperand &SrcOp = Def->getOperand(I);
+    unsigned SubRegIdx = Def->getOperand(I + 1).getImm();
 
-    for (MachineInstr *SubDef = MRI->getVRegDef(Sub->getReg());
-         SubDef && Sub->isReg() && Sub->getReg().isVirtual() &&
-         !Sub->getSubReg() && TII->isFoldableCopy(*SubDef);
-         SubDef = MRI->getVRegDef(Sub->getReg())) {
-      MachineOperand *Op = &SubDef->getOperand(1);
-      if (Op->isImm()) {
-        if (TII->isInlineConstant(*Op, OpTy))
-          Sub = Op;
-        break;
-      }
-      if (!Op->isReg() || Op->getReg().isPhysical())
-        break;
-      Sub = Op;
+    if (SrcOp.getSubReg()) {
+      // TODO: Handle subregister compose
+      Defs.emplace_back(&SrcOp, SubRegIdx);
+      continue;
     }
 
-    Defs.emplace_back(Sub, Def->getOperand(I + 1).getImm());
+    MachineOperand *DefSrc = lookUpCopyChain(*TII, *MRI, SrcOp.getReg());
+    if (DefSrc && (DefSrc->isReg() ||
+                   (DefSrc->isImm() && TII->isInlineConstant(*DefSrc, OpTy)))) {
+      Defs.emplace_back(DefSrc, SubRegIdx);
+      continue;
+    }
+
+    Defs.emplace_back(&SrcOp, SubRegIdx);
   }
 
   return true;
