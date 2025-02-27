@@ -26,8 +26,14 @@ public:
   getAttributeValue(StringRef BuildAttrSubsectionName, unsigned Tag) const {
     return std::nullopt;
   }
+  virtual std::optional<unsigned> getAttributeValue(unsigned Tag) const {
+    return std::nullopt;
+  }
   virtual std::optional<StringRef>
   getAttributeString(StringRef BuildAttrSubsectionName, unsigned Tag) const {
+    return std::nullopt;
+  }
+  virtual std::optional<StringRef> getAttributeString(unsigned Tag) const {
     return std::nullopt;
   }
 };

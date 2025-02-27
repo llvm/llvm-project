@@ -107,7 +107,7 @@ static ELFKind getELFKind(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName) {
 static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
                              const InputFile *f) {
   std::optional<unsigned> attr =
-      attributes.getAttributeValue("", ARMBuildAttrs::ABI_VFP_args);
+      attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
   if (!attr)
     // If an ABI tag isn't present then it is implicitly given the value of 0
     // which maps to ARMBuildAttrs::BaseAAPCS. However many assembler files,
@@ -155,7 +155,7 @@ static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
 static void updateSupportedARMFeatures(Ctx &ctx,
                                        const ARMAttributeParser &attributes) {
   std::optional<unsigned> attr =
-      attributes.getAttributeValue("", ARMBuildAttrs::CPU_arch);
+      attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (!attr)
     return;
   auto arch = *attr;
@@ -189,7 +189,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 
   // Only ARMv8-M or later architectures have CMSE support.
   std::optional<unsigned> profile =
-      attributes.getAttributeValue("", ARMBuildAttrs::CPU_arch_profile);
+      attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
   if (!profile)
     return;
   if (arch >= ARMBuildAttrs::CPUArch::v8_M_Base &&
@@ -200,9 +200,9 @@ static void updateSupportedARMFeatures(Ctx &ctx,
   // For now, let's limit it to ones where ARM isn't available and we know have
   // Thumb2.
   std::optional<unsigned> armISA =
-      attributes.getAttributeValue("", ARMBuildAttrs::ARM_ISA_use);
+      attributes.getAttributeValue(ARMBuildAttrs::ARM_ISA_use);
   std::optional<unsigned> thumb =
-      attributes.getAttributeValue("", ARMBuildAttrs::THUMB_ISA_use);
+      attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
   ctx.arg.armHasArmISA |= armISA && *armISA >= ARMBuildAttrs::Allowed;
   ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
 }

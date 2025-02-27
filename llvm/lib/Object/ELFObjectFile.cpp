@@ -168,11 +168,11 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   // both ARMv7-M and R have to support thumb hardware div
   bool isV7 = false;
   std::optional<unsigned> Attr =
-      Attributes.getAttributeValue("", ARMBuildAttrs::CPU_arch);
+      Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (Attr)
     isV7 = *Attr == ARMBuildAttrs::v7;
 
-  Attr = Attributes.getAttributeValue("", ARMBuildAttrs::CPU_arch_profile);
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
   if (Attr) {
     switch (*Attr) {
     case ARMBuildAttrs::ApplicationProfile:
@@ -191,7 +191,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  Attr = Attributes.getAttributeValue("", ARMBuildAttrs::THUMB_ISA_use);
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
   if (Attr) {
     switch (*Attr) {
     default:
@@ -206,7 +206,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  Attr = Attributes.getAttributeValue("", ARMBuildAttrs::FP_arch);
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::FP_arch);
   if (Attr) {
     switch (*Attr) {
     default:
@@ -230,7 +230,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  Attr = Attributes.getAttributeValue("", ARMBuildAttrs::Advanced_SIMD_arch);
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::Advanced_SIMD_arch);
   if (Attr) {
     switch (*Attr) {
     default:
@@ -249,7 +249,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  Attr = Attributes.getAttributeValue("", ARMBuildAttrs::MVE_arch);
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::MVE_arch);
   if (Attr) {
     switch (*Attr) {
     default:
@@ -268,7 +268,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
     }
   }
 
-  Attr = Attributes.getAttributeValue("", ARMBuildAttrs::DIV_use);
+  Attr = Attributes.getAttributeValue(ARMBuildAttrs::DIV_use);
   if (Attr) {
     switch (*Attr) {
     default:
@@ -327,13 +327,13 @@ SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
   }
   std::optional<unsigned> Attr;
 
-  if ((Attr = Parser.getAttributeValue("", HexagonAttrs::ARCH))) {
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ARCH))) {
     if (std::optional<std::string> FeatureString =
             hexagonAttrToFeatureString(*Attr))
       Features.AddFeature(*FeatureString);
   }
 
-  if ((Attr = Parser.getAttributeValue("", HexagonAttrs::HVXARCH))) {
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXARCH))) {
     std::optional<std::string> FeatureString =
         hexagonAttrToFeatureString(*Attr);
     // There is no corresponding hvx arch for v5 and v55.
@@ -341,23 +341,23 @@ SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
       Features.AddFeature("hvx" + *FeatureString);
   }
 
-  if ((Attr = Parser.getAttributeValue("", HexagonAttrs::HVXIEEEFP)))
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXIEEEFP)))
     if (*Attr)
       Features.AddFeature("hvx-ieee-fp");
 
-  if ((Attr = Parser.getAttributeValue("", HexagonAttrs::HVXQFLOAT)))
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXQFLOAT)))
     if (*Attr)
       Features.AddFeature("hvx-qfloat");
 
-  if ((Attr = Parser.getAttributeValue("", HexagonAttrs::ZREG)))
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ZREG)))
     if (*Attr)
       Features.AddFeature("zreg");
 
-  if ((Attr = Parser.getAttributeValue("", HexagonAttrs::AUDIO)))
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::AUDIO)))
     if (*Attr)
       Features.AddFeature("audio");
 
-  if ((Attr = Parser.getAttributeValue("", HexagonAttrs::CABAC)))
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::CABAC)))
     if (*Attr)
       Features.AddFeature("cabac");
 
@@ -378,7 +378,7 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
   }
 
   std::optional<StringRef> Attr =
-      Attributes.getAttributeString("", RISCVAttrs::ARCH);
+      Attributes.getAttributeString(RISCVAttrs::ARCH);
   if (Attr) {
     auto ParseResult = RISCVISAInfo::parseNormalizedArchString(*Attr);
     if (!ParseResult)
@@ -703,7 +703,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     Triple = "arm";
 
   std::optional<unsigned> Attr =
-      Attributes.getAttributeValue("", ARMBuildAttrs::CPU_arch);
+      Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (Attr) {
     switch (*Attr) {
     case ARMBuildAttrs::v4:
@@ -735,7 +735,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
       break;
     case ARMBuildAttrs::v7: {
       std::optional<unsigned> ArchProfileAttr =
-          Attributes.getAttributeValue("", ARMBuildAttrs::CPU_arch_profile);
+          Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
       if (ArchProfileAttr &&
           *ArchProfileAttr == ARMBuildAttrs::MicroControllerProfile)
         Triple += "v7m";

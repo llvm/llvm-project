@@ -60,21 +60,31 @@ public:
 
   Error parse(ArrayRef<uint8_t> section, llvm::endianness endian) override;
 
+  std::optional<unsigned> getAttributeValue(unsigned tag) const override {
+    auto I = attributes.find(tag);
+    if (I == attributes.end())
+      return std::nullopt;
+    return I->second;
+  }
   std::optional<unsigned>
   getAttributeValue(StringRef buildAttributeSubsectionName,
                     unsigned tag) const override {
-    auto I = attributes.find(tag);
-    if (I == attributes.end())
+    assert("" == buildAttributeSubsectionName &&
+           "buildAttributeSubsectionName must be an empty string");
+    return getAttributeValue(tag);
+  }
+  std::optional<StringRef> getAttributeString(unsigned tag) const override {
+    auto I = attributesStr.find(tag);
+    if (I == attributesStr.end())
       return std::nullopt;
     return I->second;
   }
   std::optional<StringRef>
   getAttributeString(StringRef buildAttributeSubsectionName,
                      unsigned tag) const override {
-    auto I = attributesStr.find(tag);
-    if (I == attributesStr.end())
-      return std::nullopt;
-    return I->second;
+    assert("" == buildAttributeSubsectionName &&
+           "buildAttributeSubsectionName must be an empty string");
+    return getAttributeString(tag);
   }
 };
 
