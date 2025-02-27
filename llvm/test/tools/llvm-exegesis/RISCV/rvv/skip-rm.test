@@ -8,5 +8,5 @@
 # VX-NOT: VXRM: {{(rne|rdn|rod)}}
 
 # FP: PseudoVFADD_VFPR16_M1_E16
-# FP: FRM: rne
-# FP-NOT: FRM: {{(rtz|rdn|rup|rmm|dyn)}}
+# FP: FRM: dyn
+# FP-NOT: FRM: {{(rtz|rdn|rup|rmm|rne)}}

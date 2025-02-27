@@ -159,7 +159,7 @@ public:
     ELEN = STI.checkFeatures("+zve64x") ? 64 : 32;
 
     std::string ZvlQuery;
-    for (unsigned I = 5U, Size = (1 << I); I < 17U; ++I, Size <<= 1) {
+    for (unsigned Size = 32; Size <= 65536; Size *= 2) {
       ZvlQuery = "+zvl";
       raw_string_ostream SS(ZvlQuery);
       SS << Size << "b";
@@ -460,15 +460,21 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
   if (HasRMOp) {
     VTypeOperands.insert(&Instr.Operands[RISCVII::getVLOpNum(MIDesc) - 1]);
 
-    // If we're not enumerating all rounding modes,
-    // use zero (rne in FRM and rnu in VXRM) as the default
-    // mode.
-    RoundingModes = {0U};
-    if (EnumerateRoundingModes) {
-      RoundingModes.append({1, 2, 3});
-      if (!UsesVXRM)
-        // FRM values 5 and 6 are currently reserved.
-        RoundingModes.append({4, 7});
+    if (UsesVXRM) {
+      // Use RNU as the default VXRM.
+      RoundingModes = {RISCVVXRndMode::RNU};
+      if (EnumerateRoundingModes)
+        RoundingModes.append(
+            {RISCVVXRndMode::RNE, RISCVVXRndMode::RDN, RISCVVXRndMode::ROD});
+    } else {
+      if (EnumerateRoundingModes)
+        RoundingModes = {RISCVFPRndMode::RNE, RISCVFPRndMode::RTZ,
+                         RISCVFPRndMode::RDN, RISCVFPRndMode::RUP,
+                         RISCVFPRndMode::RMM};
+      else
+        // If we're not enumerating FRM, use DYN to instruct
+        // RISCVInsertReadWriteCSRPass to insert nothing.
+        RoundingModes = {RISCVFPRndMode::DYN};
     }
   } else {
     RoundingModes = {std::nullopt};
@@ -647,12 +653,12 @@ static std::vector<MCInst> loadFP64RegBits32(const MCSubtargetInfo &STI,
   return Instrs;
 }
 
-// NOTE: Alternatively, we can use BitVector here, but the number of RVV MC
-// opcodes is just a small portion of the entire opcode space, so I thought it
-// would be a waste of space to use BitVector.
-static SmallSet<unsigned, 16> RVVMCOpcodesWithPseudos;
-
 class ExegesisRISCVTarget : public ExegesisTarget {
+  // NOTE: Alternatively, we can use BitVector here, but the number of RVV MC
+  // opcodes is just a small portion of the entire opcode space, so I thought it
+  // would be a waste of space to use BitVector.
+  mutable SmallSet<unsigned, 16> RVVMCOpcodesWithPseudos;
+
 public:
   ExegesisRISCVTarget();
 
