@@ -10,8 +10,8 @@ define float @hoist_fneg_f32(float %arg, i32 %lane) {
 ; CHECK-LABEL: define float @hoist_fneg_f32(
 ; CHECK-SAME: float [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = fneg float [[ARG]]
-; CHECK-NEXT:    [[RFL:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = fneg float [[TMP0]]
 ; CHECK-NEXT:    ret float [[RFL]]
 ;
 bb:
@@ -24,8 +24,8 @@ define double @hoist_fneg_f64(double %arg, i32 %lane) {
 ; CHECK-LABEL: define double @hoist_fneg_f64(
 ; CHECK-SAME: double [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = fneg double [[ARG]]
-; CHECK-NEXT:    [[RFL:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = fneg double [[TMP0]]
 ; CHECK-NEXT:    ret double [[RFL]]
 ;
 bb:
@@ -40,8 +40,8 @@ define i32 @hoist_add_i32(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: define i32 @hoist_add_i32(
 ; CHECK-SAME: i32 [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[ARG]], 16777215
-; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = add i32 [[TMP0]], 16777215
 ; CHECK-NEXT:    ret i32 [[RFL]]
 ;
 bb:
@@ -54,8 +54,8 @@ define float @hoist_fadd_f32(float %arg, i32 %lane) {
 ; CHECK-LABEL: define float @hoist_fadd_f32(
 ; CHECK-SAME: float [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = fadd float [[ARG]], 1.280000e+02
-; CHECK-NEXT:    [[RFL:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = fadd float [[TMP0]], 1.280000e+02
 ; CHECK-NEXT:    ret float [[RFL]]
 ;
 bb:
@@ -70,8 +70,8 @@ define i64 @hoist_and_i64(i64 %arg, i32 %lane) {
 ; CHECK-LABEL: define i64 @hoist_and_i64(
 ; CHECK-SAME: i64 [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = and i64 [[ARG]], 16777215
-; CHECK-NEXT:    [[RFL:%.*]] = call i64 @llvm.amdgcn.readlane.i64(i64 [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.readlane.i64(i64 [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = and i64 [[TMP0]], 16777215
 ; CHECK-NEXT:    ret i64 [[RFL]]
 ;
 bb:
@@ -84,8 +84,8 @@ define double @hoist_fadd_f64(double %arg, i32 %lane) {
 ; CHECK-LABEL: define double @hoist_fadd_f64(
 ; CHECK-SAME: double [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = fadd double [[ARG]], 1.280000e+02
-; CHECK-NEXT:    [[RFL:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = fadd double [[TMP0]], 1.280000e+02
 ; CHECK-NEXT:    ret double [[RFL]]
 ;
 bb:
@@ -100,8 +100,8 @@ define i32 @hoist_sub_i32_lhs(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: define i32 @hoist_sub_i32_lhs(
 ; CHECK-SAME: i32 [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = sub i32 16777215, [[ARG]]
-; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = sub i32 16777215, [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[RFL]]
 ;
 bb:
@@ -114,8 +114,8 @@ define float @hoist_fsub_f32_lhs(float %arg, i32 %lane) {
 ; CHECK-LABEL: define float @hoist_fsub_f32_lhs(
 ; CHECK-SAME: float [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[VAL:%.*]] = fsub float 1.280000e+02, [[ARG]]
-; CHECK-NEXT:    [[RFL:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[VAL]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.amdgcn.readlane.f32(float [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = fsub float 1.280000e+02, [[TMP0]]
 ; CHECK-NEXT:    ret float [[RFL]]
 ;
 bb:
@@ -140,4 +140,62 @@ bb:
   %lane = add i32 %base, 2
   %rfl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
   ret float %rfl
+}
+
+define i32 @readlane_lane_op_in_other_block(i1 %cond, i32 %arg, i32 %base) {
+; CHECK-LABEL: define i32 @readlane_lane_op_in_other_block(
+; CHECK-SAME: i1 [[COND:%.*]], i32 [[ARG:%.*]], i32 [[BASE:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[LANE:%.*]] = add i32 [[BASE]], 2
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[END:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[RFL:%.*]] = add i32 [[TMP0]], 16777215
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[RFL]], %[[THEN]] ], [ [[LANE]], %[[BB]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+bb:
+  %lane = add i32 %base, 2
+  br i1 %cond, label %then, label %end
+
+then:
+  %val = add i32 %arg, 16777215
+  %rfl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
+  br label %end
+
+end:
+  %res = phi i32 [%rfl, %then], [%lane, %bb]
+  ret i32 %res
+}
+
+; test that convergence tokens are preserved
+
+define i32 @hoist_preserves_convergence_token(i1 %cond, i32 %arg, i32 %lane) convergent {
+; CHECK-LABEL: define i32 @hoist_preserves_convergence_token(
+; CHECK-SAME: i1 [[COND:%.*]], i32 [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[ENTRY:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[END:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[LANE]]) [ "convergencectrl"(token [[ENTRY]]) ]
+; CHECK-NEXT:    [[RFL:%.*]] = add i32 [[TMP0]], 16777215
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[RFL]], %[[THEN]] ], [ [[ARG]], %[[BB]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+bb:
+  %entry = call token @llvm.experimental.convergence.entry()
+  br i1 %cond, label %then, label %end
+
+then:
+  %val = add i32 %arg, 16777215
+  %rfl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane) [ "convergencectrl"(token %entry)]
+  br label %end
+
+end:
+  %res = phi i32 [%rfl, %then], [%arg, %bb]
+  ret i32 %res
 }

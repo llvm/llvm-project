@@ -459,3 +459,33 @@ bb:
   %rfl = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %val)
   ret i32 %rfl
 }
+
+; test that convergence tokens are preserved
+
+define i32 @hoist_preserves_convergence_token(i1 %cond, i32 %arg) convergent {
+; CHECK-LABEL: define i32 @hoist_preserves_convergence_token(
+; CHECK-SAME: i1 [[COND:%.*]], i32 [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[ENTRY:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[END:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG]]) [ "convergencectrl"(token [[ENTRY]]) ]
+; CHECK-NEXT:    [[RFL:%.*]] = add i32 [[TMP0]], 16777215
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[RFL]], %[[THEN]] ], [ [[ARG]], %[[BB]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+bb:
+  %entry = call token @llvm.experimental.convergence.entry()
+  br i1 %cond, label %then, label %end
+
+then:
+  %val = add i32 %arg, 16777215
+  %rfl = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %val) [ "convergencectrl"(token %entry)]
+  br label %end
+
+end:
+  %res = phi i32 [%rfl, %then], [%arg, %bb]
+  ret i32 %res
+}
