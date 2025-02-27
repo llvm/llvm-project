@@ -3547,7 +3547,8 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3555,14 +3556,16 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         fastMathFlags,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::Type resultType, mlir::StringAttr intrin,
                             mlir::ValueRange args) {
   build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3570,7 +3573,8 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, resultTypes, intrin, args, fastMathFlags,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
 }
 
 ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
@@ -3616,6 +3620,9 @@ ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
   if (parseCallTypeAndResolveOperands(parser, result, /*isDirect=*/true,
                                       operands, argAttrs, resultAttrs))
     return failure();
+  call_interface_impl::addArgAndResultAttrs(
+      parser.getBuilder(), result, argAttrs, resultAttrs,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 
   // TODO: In CallOp, the attr dict happens *before* the call type.
   // CallIntrinsicOp should mimic that, allowing most of this function to be
@@ -3656,15 +3663,15 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
   p << " : ";
 
   // Reconstruct the MLIR function type from operand and result types.
-  ArrayAttr argAttrsAttr, resAttrsAttr; // TODO: add support for arg/ret attrs.
-  call_interface_impl::printFunctionSignature(p, args.getTypes(), argAttrsAttr,
-                                              /*isVariadic=*/false,
-                                              getResultTypes(), resAttrsAttr);
+  call_interface_impl::printFunctionSignature(
+      p, args.getTypes(), getArgAttrsAttr(),
+      /*isVariadic=*/false, getResultTypes(), getResAttrsAttr());
 
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
                           {getOperandSegmentSizesAttrName(),
                            getOpBundleSizesAttrName(), getIntrinAttrName(),
-                           getOpBundleTagsAttrName()});
+                           getOpBundleTagsAttrName(), getArgAttrsAttrName(),
+                           getResAttrsAttrName()});
 }
 
 //===----------------------------------------------------------------------===//

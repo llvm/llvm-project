@@ -2107,7 +2107,9 @@ def LLVM_CallIntrinsicOp
                        VariadicOfVariadic<LLVM_Type,
                                           "op_bundle_sizes">:$op_bundle_operands,
                        DenseI32ArrayAttr:$op_bundle_sizes,
-                       OptionalAttr<ArrayAttr>:$op_bundle_tags);
+                       OptionalAttr<ArrayAttr>:$op_bundle_tags,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs);
   let results = (outs Optional<LLVM_Type>:$results);
   let llvmBuilder = [{
     return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);

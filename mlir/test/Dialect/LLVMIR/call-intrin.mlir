@@ -105,3 +105,12 @@ llvm.func @bad_args() {
   %res = llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%1, %1, %0) : (vector<4xf32>, vector<4xf32>, i64) -> vector<4xf32> {fastmathFlags = #llvm.fastmath<reassoc>}
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: intrinsic_call_arg_attrs
+llvm.func @intrinsic_call_arg_attrs(%arg0: i32) -> i32 {
+  // CHECK: call i32 @llvm.riscv.sha256sig0(i32 signext %{{.*}})
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) : (i32 {llvm.signext}) -> (i32)
+  llvm.return %0 : i32
+}
