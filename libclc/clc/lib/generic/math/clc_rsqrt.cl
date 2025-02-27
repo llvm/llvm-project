@@ -21,7 +21,6 @@
  */
 
 #include <clc/internal/clc.h>
-#include <clc/math/clc_sqrt.h>
 
 #define __CLC_BODY <clc_rsqrt.inc>
 #include <clc/math/gentype.inc>
