@@ -25,6 +25,7 @@ using namespace clang::targets;
 void ARMTargetInfo::setABIAAPCS() {
   IsAAPCS = true;
 
+  fprintf(stderr, "setabiaapcs");
   DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
   BFloat16Width = BFloat16Align = 16;
   BFloat16Format = &llvm::APFloat::BFloat();
@@ -75,6 +76,7 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
 
   IsAAPCS = false;
 
+  fprintf(stderr, "is aapcs16 %d\n", IsAAPCS);
   if (IsAAPCS16)
     DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
   else
