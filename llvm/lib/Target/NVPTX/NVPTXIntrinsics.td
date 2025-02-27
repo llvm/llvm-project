@@ -789,6 +789,17 @@ def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
 
 def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
+//Applypriority intrinsics
+class APPLYPRIORITY_L2_INTRS<string addr> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$size),
+          StrJoin<".", ["applypriority", addr , "L2::evict_normal"]>.ret # " [$addr], $size;",
+          [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_applypriority", addr , "L2_evict_normal"]>.ret)
+          i64:$addr, i64:$size)]>,
+          Requires<[hasPTX<74>, hasSM<80>]>;
+
+def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"">;
+def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"global">;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
@@ -7719,3 +7730,89 @@ def tcgen05_fence_after_thread_sync: NVPTXInst<(outs), (ins),
   Requires<[hasTcgen05Instructions]>;
 
 } // hasSideEffects
+
+// name class for tcgen05.{ld, st}
+class TCGEN05_LDST_INST_NAME<string Op, string shape, int lg2Count, bit packOrUnpack> {
+  string name = "TCGEN05_" # Op
+                # "_" # shape
+                # "_x" # !shl(1, lg2Count)
+                # !if(!eq(packOrUnpack, 1), !if(!eq(Op, "LD"), "_PACK", "_UNPACK"), "");
+}
+
+// reginfo class tcgen05.{ld, st}
+class TCGEN05_LDST_REGINFO<int Veclen> {
+  // create a list of types for load/store operands
+  list<NVPTXRegClass> regs = !listsplat(Int32Regs, Veclen);
+  // generate list of regnames for load/store operands
+  list<string> reg_names = !foreach(x, !range(0, Veclen), "r" # x);
+  string regstring = "{{" # !interleave(!foreach(n, !range(0, Veclen), "$r" # n), ", ") # "}}";
+  dag Ins = !dag(ins, regs, reg_names);
+  dag Outs = !dag(outs, regs, reg_names);
+}
+
+//
+// tcgen05.ld.sync.aligned.shape.x[1, 2, 4, 8, 16, 32, 64, 128][|.pack::16b].[b32]
+//
+
+class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
+        NVPTXInst<(outs), (ins), "?", []>,
+        Requires<[hasTcgen05Instructions]> {
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
+                                NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
+
+  let InOperandList = !con((ins Int32Regs:$taddr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)));
+  let OutOperandList = Info.Outs;
+  let AsmString = "tcgen05.ld.sync.aligned"
+                  # "." # Shape
+                  # ".x" # !shl(1, Num)
+                  # !if(!eq(Pack, 1), ".pack::16b", "")
+                  # ".b32 "
+                  # Info.regstring # ", "
+                  # "[$taddr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ";";
+}
+
+//
+// tcgen05.st.sync.aligned.shape.x[1, 2, 4, 8, 16, 32, 64, 128][|.unpack::16b].[b32]
+//
+
+class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
+        NVPTXInst<(outs), (ins), "?", []>,
+        Requires<[hasTcgen05Instructions]> {
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
+                                NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
+
+  let InOperandList = !con((ins Int32Regs:$taddr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)),
+                           Info.Ins);
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.st.sync.aligned"
+                  # "." # Shape
+                  # ".x" # !shl(1, Num)
+                  # !if(!eq(Unpack, 1), ".unpack::16b", "")
+                  # ".b32 [$taddr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ", " # Info.regstring
+                  # ";";
+}
+
+let isConvergent = true in {
+
+foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
+  foreach num = !range(0, 8) in {
+    foreach packOrUnpack = [false, true] in {
+      if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
+        def TCGEN05_LDST_INST_NAME<"LD", shape, num, packOrUnpack>.name :
+              TCGEN05_LD_INST<shape, num, packOrUnpack>;
+        def TCGEN05_LDST_INST_NAME<"ST", shape, num, packOrUnpack>.name :
+              TCGEN05_ST_INST<shape, num, packOrUnpack>;
+      }
+    }
+  }
+}
+
+} // isConvergent

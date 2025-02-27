@@ -206,6 +206,109 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   SelectCode(N);
 }
 
+#define TCGEN05_LD_OPCODE(SHAPE, NUM)                                          \
+  (enablePack ? NVPTX::TCGEN05_LD_##SHAPE##_##NUM##_PACK                       \
+              : NVPTX::TCGEN05_LD_##SHAPE##_##NUM)
+
+static unsigned getTcgen05LdOpcode(unsigned IID, bool enablePack) {
+  switch (IID) {
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
+    return TCGEN05_LD_OPCODE(16x64b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+    return TCGEN05_LD_OPCODE(16x64b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+    return TCGEN05_LD_OPCODE(16x64b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+    return TCGEN05_LD_OPCODE(16x64b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+    return TCGEN05_LD_OPCODE(16x64b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+    return TCGEN05_LD_OPCODE(16x64b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+    return TCGEN05_LD_OPCODE(16x64b, x64);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+    return TCGEN05_LD_OPCODE(16x64b, x128);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+    return TCGEN05_LD_OPCODE(16x128b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+    return TCGEN05_LD_OPCODE(16x128b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+    return TCGEN05_LD_OPCODE(16x128b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+    return TCGEN05_LD_OPCODE(16x128b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+    return TCGEN05_LD_OPCODE(16x128b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+    return TCGEN05_LD_OPCODE(16x128b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+    return TCGEN05_LD_OPCODE(16x128b, x64);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+    return TCGEN05_LD_OPCODE(16x256b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+    return TCGEN05_LD_OPCODE(16x256b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+    return TCGEN05_LD_OPCODE(16x256b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+    return TCGEN05_LD_OPCODE(16x256b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+    return TCGEN05_LD_OPCODE(16x256b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+    return TCGEN05_LD_OPCODE(16x256b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1:
+    return TCGEN05_LD_OPCODE(16x32bx2, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+    return TCGEN05_LD_OPCODE(16x32bx2, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+    return TCGEN05_LD_OPCODE(16x32bx2, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+    return TCGEN05_LD_OPCODE(16x32bx2, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+    return TCGEN05_LD_OPCODE(16x32bx2, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+    return TCGEN05_LD_OPCODE(16x32bx2, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+    return TCGEN05_LD_OPCODE(16x32bx2, x64);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
+    return TCGEN05_LD_OPCODE(16x32bx2, x128);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
+    return TCGEN05_LD_OPCODE(32x32b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+    return TCGEN05_LD_OPCODE(32x32b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+    return TCGEN05_LD_OPCODE(32x32b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+    return TCGEN05_LD_OPCODE(32x32b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+    return TCGEN05_LD_OPCODE(32x32b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+    return TCGEN05_LD_OPCODE(32x32b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+    return TCGEN05_LD_OPCODE(32x32b, x64);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+    return TCGEN05_LD_OPCODE(32x32b, x128);
+  }
+  llvm_unreachable("unhandled tcgen05.ld lowering");
+}
+
+void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
+  SDLoc DL(N);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+
+  if (hasOffset) {
+    bool enablePack = cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
+    auto OffsetNode = CurDAG->getTargetConstant(
+        cast<ConstantSDNode>(N->getOperand(3))->getZExtValue(), DL, MVT::i32);
+    ReplaceNode(N, CurDAG->getMachineNode(
+                       getTcgen05LdOpcode(IID, enablePack), DL, N->getVTList(),
+                       {N->getOperand(2), OffsetNode, N->getOperand(0)}));
+  } else {
+    bool enablePack = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+    ReplaceNode(N, CurDAG->getMachineNode(
+                       getTcgen05LdOpcode(IID, enablePack), DL, N->getVTList(),
+                       {N->getOperand(2), N->getOperand(0)}));
+  }
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   switch (IID) {
@@ -215,6 +318,51 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_p:
     return tryLDGLDU(N);
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128: {
+    SelectTcgen05Ld(N);
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
+    SelectTcgen05Ld(N, /* hasOffset */ true);
+    return true;
+  }
   }
 }
 
@@ -2897,6 +3045,115 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
+#define TCGEN05_ST_OPCODE(SHAPE, NUM)                                          \
+  (enableUnpack ? NVPTX::TCGEN05_ST_##SHAPE##_##NUM##_UNPACK                   \
+                : NVPTX::TCGEN05_ST_##SHAPE##_##NUM)
+
+static unsigned getTcgen05StOpcode(unsigned IID, bool enableUnpack) {
+  switch (IID) {
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+    return TCGEN05_ST_OPCODE(16x64b, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+    return TCGEN05_ST_OPCODE(16x64b, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+    return TCGEN05_ST_OPCODE(16x64b, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+    return TCGEN05_ST_OPCODE(16x64b, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+    return TCGEN05_ST_OPCODE(16x64b, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+    return TCGEN05_ST_OPCODE(16x64b, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+    return TCGEN05_ST_OPCODE(16x64b, x64);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+    return TCGEN05_ST_OPCODE(16x64b, x128);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+    return TCGEN05_ST_OPCODE(16x128b, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+    return TCGEN05_ST_OPCODE(16x128b, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+    return TCGEN05_ST_OPCODE(16x128b, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+    return TCGEN05_ST_OPCODE(16x128b, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+    return TCGEN05_ST_OPCODE(16x128b, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+    return TCGEN05_ST_OPCODE(16x128b, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+    return TCGEN05_ST_OPCODE(16x128b, x64);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+    return TCGEN05_ST_OPCODE(16x256b, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+    return TCGEN05_ST_OPCODE(16x256b, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+    return TCGEN05_ST_OPCODE(16x256b, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+    return TCGEN05_ST_OPCODE(16x256b, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+    return TCGEN05_ST_OPCODE(16x256b, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+    return TCGEN05_ST_OPCODE(16x256b, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
+    return TCGEN05_ST_OPCODE(16x32bx2, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+    return TCGEN05_ST_OPCODE(16x32bx2, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+    return TCGEN05_ST_OPCODE(16x32bx2, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+    return TCGEN05_ST_OPCODE(16x32bx2, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+    return TCGEN05_ST_OPCODE(16x32bx2, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+    return TCGEN05_ST_OPCODE(16x32bx2, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+    return TCGEN05_ST_OPCODE(16x32bx2, x64);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+    return TCGEN05_ST_OPCODE(16x32bx2, x128);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+    return TCGEN05_ST_OPCODE(32x32b, x1);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+    return TCGEN05_ST_OPCODE(32x32b, x2);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+    return TCGEN05_ST_OPCODE(32x32b, x4);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+    return TCGEN05_ST_OPCODE(32x32b, x8);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+    return TCGEN05_ST_OPCODE(32x32b, x16);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+    return TCGEN05_ST_OPCODE(32x32b, x32);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+    return TCGEN05_ST_OPCODE(32x32b, x64);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+    return TCGEN05_ST_OPCODE(32x32b, x128);
+  }
+  llvm_unreachable("unhandled tcgen05.st lowering");
+}
+
+void NVPTXDAGToDAGISel::SelectTcgen05St(SDNode *N, bool hasOffset) {
+  SDLoc DL(N);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+
+  SmallVector<SDValue, 128> Operands = {
+      N->getOperand(2) // taddr
+  };
+
+  if (hasOffset)
+    Operands.push_back(CurDAG->getTargetConstant(
+        cast<ConstantSDNode>(N->getOperand(3))->getZExtValue(), DL,
+        MVT::i32)); // Offset
+
+  for (unsigned I = hasOffset ? 4 : 3; I < (N->getNumOperands() - 1); I++)
+    Operands.push_back(N->getOperand(I));
+
+  bool enableUnpack =
+      cast<ConstantSDNode>(N->getOperand(N->getNumOperands() - 1))
+          ->getZExtValue();
+
+  Operands.push_back(N->getOperand(0)); // Chain
+  ReplaceNode(N, CurDAG->getMachineNode(getTcgen05StOpcode(IID, enableUnpack),
+                                        DL, N->getVTList(), Operands));
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   using TMARedTy = llvm::nvvm::TMAReductionOp;
@@ -3053,5 +3310,50 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     SelectCpAsyncBulkTensorReduceCommon(N, CastTy(TMARedTy::XOR),
                                         /*IsIm2Col=*/true);
     return true;
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32: {
+    SelectTcgen05St(N);
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128: {
+    SelectTcgen05St(N, /*  hasOffset */ true);
+    return true;
+  }
   }
 }
