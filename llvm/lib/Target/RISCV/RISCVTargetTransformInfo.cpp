@@ -481,7 +481,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              ArrayRef<const Value *> Args,
                                              const Instruction *CxtI) {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
-
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
   // First, handle cases where having a fixed length vector enables us to
@@ -889,11 +888,12 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   if (Opcode == Instruction::Load) {
     InstructionCost Cost = MemCost;
     for (unsigned Index : Indices) {
-      FixedVectorType *SubVecTy =
+      FixedVectorType *VecTy =
           FixedVectorType::get(FVTy->getElementType(), VF * Factor);
       auto Mask = createStrideMask(Index, Factor, VF);
+      Mask.resize(VF * Factor, -1);
       InstructionCost ShuffleCost =
-          getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, SubVecTy, Mask,
+          getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, VecTy, Mask,
                          CostKind, 0, nullptr, {});
       Cost += ShuffleCost;
     }
