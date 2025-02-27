@@ -1055,10 +1055,10 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
   if (isa<tosa::ReduceSumOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(elementTy, 0);
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<FloatType>(elementTy))
+  if (isa<tosa::ReduceProductOp>(op) && isa<FloatType>(elementTy))
     return rewriter.getFloatAttr(elementTy, 1.0);
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<IntegerType>(elementTy))
+  if (isa<tosa::ReduceProductOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(elementTy, 1);
 
   if (isa<tosa::ReduceMinOp>(op) && isa<FloatType>(elementTy))
@@ -1112,11 +1112,11 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
     return rewriter.create<arith::AddIOp>(loc, args);
   }
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<FloatType>(elementTy)) {
+  if (isa<tosa::ReduceProductOp>(op) && isa<FloatType>(elementTy)) {
     return rewriter.create<arith::MulFOp>(loc, args);
   }
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<IntegerType>(elementTy)) {
+  if (isa<tosa::ReduceProductOp>(op) && isa<IntegerType>(elementTy)) {
     return rewriter.create<arith::MulIOp>(loc, args);
   }
 
@@ -2874,7 +2874,7 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>,
       ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProdOp>,
+      ReduceConverter<tosa::ReduceProductOp>,
       ArgMaxConverter,
       GatherConverter,
       RescaleConverter,
