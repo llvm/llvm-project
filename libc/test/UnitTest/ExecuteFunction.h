@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 #define LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/CPP/limits.h"
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
