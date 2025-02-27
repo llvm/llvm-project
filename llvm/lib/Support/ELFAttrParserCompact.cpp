@@ -131,8 +131,9 @@ Error ELFCompactAttrParser::parseSubsection(uint32_t length) {
   }
 
   // Handle a subsection with an unrecognized vendor-name by skipping
-  // over it to the next subsection. vendor attribute sections must not
-  // affect compatibility, so this should always be safe.
+  // over it to the next subsection. ADDENDA32 in the Arm ABI defines
+  // that vendor attribute sections must not affect compatibility, so
+  // this should always be safe.
   if (vendorName.lower() != vendor) {
     cursor.seek(end);
     return Error::success();
