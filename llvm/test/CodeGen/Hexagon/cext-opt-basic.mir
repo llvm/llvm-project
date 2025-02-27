@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-cext-opt -hexagon-cext-threshold=3 %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt -hexagon-cext-threshold=3 %s -o - | FileCheck %s
 
 --- |
   define void @test0() { ret void }

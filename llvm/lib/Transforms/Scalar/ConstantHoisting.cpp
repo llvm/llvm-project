@@ -43,6 +43,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -62,9 +63,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
 #include <tuple>
 #include <utility>
@@ -162,27 +161,27 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
 
 void ConstantHoistingPass::collectMatInsertPts(
     const RebasedConstantListType &RebasedConstants,
-    SmallVectorImpl<Instruction *> &MatInsertPts) const {
+    SmallVectorImpl<BasicBlock::iterator> &MatInsertPts) const {
   for (const RebasedConstantInfo &RCI : RebasedConstants)
     for (const ConstantUser &U : RCI.Uses)
       MatInsertPts.emplace_back(findMatInsertPt(U.Inst, U.OpndIdx));
 }
 
 /// Find the constant materialization insertion point.
-Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
-                                                   unsigned Idx) const {
+BasicBlock::iterator ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
+                                                           unsigned Idx) const {
   // If the operand is a cast instruction, then we have to materialize the
   // constant before the cast instruction.
   if (Idx != ~0U) {
     Value *Opnd = Inst->getOperand(Idx);
     if (auto CastInst = dyn_cast<Instruction>(Opnd))
       if (CastInst->isCast())
-        return CastInst;
+        return CastInst->getIterator();
   }
 
   // The simple and common case. This also includes constant expressions.
   if (!isa<PHINode>(Inst) && !Inst->isEHPad())
-    return Inst;
+    return Inst->getIterator();
 
   // We can't insert directly before a phi node or an eh pad. Insert before
   // the terminator of the incoming or dominating block.
@@ -191,7 +190,7 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
   if (Idx != ~0U && isa<PHINode>(Inst)) {
     InsertionBlock = cast<PHINode>(Inst)->getIncomingBlock(Idx);
     if (!InsertionBlock->isEHPad()) {
-      return InsertionBlock->getTerminator();
+      return InsertionBlock->getTerminator()->getIterator();
     }
   } else {
     InsertionBlock = Inst->getParent();
@@ -206,7 +205,7 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
     IDom = IDom->getIDom();
   }
 
-  return IDom->getBlock()->getTerminator();
+  return IDom->getBlock()->getTerminator()->getIterator();
 }
 
 /// Given \p BBs as input, find another set of BBs which collectively
@@ -275,8 +274,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   InsertPtsMap.reserve(Orders.size() + 1);
   for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
-    auto &InsertPts = InsertPtsMap[Node].first;
-    BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
+    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap[Node];
 
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
@@ -314,26 +312,27 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
 }
 
 /// Find an insertion point that dominates all uses.
-SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
+SetVector<BasicBlock::iterator>
+ConstantHoistingPass::findConstantInsertionPoint(
     const ConstantInfo &ConstInfo,
-    const ArrayRef<Instruction *> MatInsertPts) const {
+    const ArrayRef<BasicBlock::iterator> MatInsertPts) const {
   assert(!ConstInfo.RebasedConstants.empty() && "Invalid constant info entry.");
   // Collect all basic blocks.
   SetVector<BasicBlock *> BBs;
-  SetVector<Instruction *> InsertPts;
+  SetVector<BasicBlock::iterator> InsertPts;
 
-  for (Instruction *MatInsertPt : MatInsertPts)
+  for (BasicBlock::iterator MatInsertPt : MatInsertPts)
     BBs.insert(MatInsertPt->getParent());
 
   if (BBs.count(Entry)) {
-    InsertPts.insert(&Entry->front());
+    InsertPts.insert(Entry->begin());
     return InsertPts;
   }
 
   if (BFI) {
     findBestInsertionSet(*DT, *BFI, Entry, BBs);
     for (BasicBlock *BB : BBs)
-      InsertPts.insert(&*BB->getFirstInsertionPt());
+      InsertPts.insert(BB->getFirstInsertionPt());
     return InsertPts;
   }
 
@@ -343,7 +342,7 @@ SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
     BB2 = BBs.pop_back_val();
     BB = DT->findNearestCommonDominator(BB1, BB2);
     if (BB == Entry) {
-      InsertPts.insert(&Entry->front());
+      InsertPts.insert(Entry->begin());
       return InsertPts;
     }
     BBs.insert(BB);
@@ -363,6 +362,9 @@ SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
 void ConstantHoistingPass::collectConstantCandidates(
     ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx,
     ConstantInt *ConstInt) {
+  if (ConstInt->getType()->isVectorTy())
+    return;
+
   InstructionCost Cost;
   // Ask the target about the cost of materializing the constant for the given
   // instruction and operand index.
@@ -523,27 +525,9 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
     if (!DT->isReachableFromEntry(&BB))
       continue;
     for (Instruction &Inst : BB)
-      collectConstantCandidates(ConstCandMap, &Inst);
+      if (!TTI->preferToKeepConstantsAttached(Inst, Fn))
+        collectConstantCandidates(ConstCandMap, &Inst);
   }
-}
-
-// This helper function is necessary to deal with values that have different
-// bit widths (APInt Operator- does not like that). If the value cannot be
-// represented in uint64 we return an "empty" APInt. This is then interpreted
-// as the value is not in range.
-static std::optional<APInt> calculateOffsetDiff(const APInt &V1,
-                                                const APInt &V2) {
-  std::optional<APInt> Res;
-  unsigned BW = V1.getBitWidth() > V2.getBitWidth() ?
-                V1.getBitWidth() : V2.getBitWidth();
-  uint64_t LimVal1 = V1.getLimitedValue();
-  uint64_t LimVal2 = V2.getLimitedValue();
-
-  if (LimVal1 == ~0ULL || LimVal2 == ~0ULL)
-    return Res;
-
-  uint64_t Diff = LimVal1 - LimVal2;
-  return APInt(BW, Diff, true);
 }
 
 // From a list of constants, one needs to picked as the base and the other
@@ -575,9 +559,6 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                            ConstCandVecType::iterator &MaxCostItr) {
   unsigned NumUses = 0;
 
-  bool OptForSize = Entry->getParent()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(Entry->getParent(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
   if (!OptForSize || std::distance(S,E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
@@ -605,16 +586,13 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
       LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
-        std::optional<APInt> Diff = calculateOffsetDiff(
-            C2->ConstInt->getValue(), ConstCand->ConstInt->getValue());
-        if (Diff) {
-          const InstructionCost ImmCosts =
-              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, *Diff, Ty);
-          Cost -= ImmCosts;
-          LLVM_DEBUG(dbgs() << "Offset " << *Diff << " "
-                            << "has penalty: " << ImmCosts << "\n"
-                            << "Adjusted cost: " << Cost << "\n");
-        }
+        APInt Diff = C2->ConstInt->getValue() - ConstCand->ConstInt->getValue();
+        const InstructionCost ImmCosts =
+            TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff, Ty);
+        Cost -= ImmCosts;
+        LLVM_DEBUG(dbgs() << "Offset " << Diff << " "
+                          << "has penalty: " << ImmCosts << "\n"
+                          << "Adjusted cost: " << Cost << "\n");
       }
     }
     LLVM_DEBUG(dbgs() << "Cumulative cost: " << Cost << "\n");
@@ -673,8 +651,7 @@ void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
   llvm::stable_sort(ConstCandVec, [](const ConstantCandidate &LHS,
                                      const ConstantCandidate &RHS) {
     if (LHS.ConstInt->getType() != RHS.ConstInt->getType())
-      return LHS.ConstInt->getType()->getBitWidth() <
-             RHS.ConstInt->getType()->getBitWidth();
+      return LHS.ConstInt->getBitWidth() < RHS.ConstInt->getBitWidth();
     return LHS.ConstInt->getValue().ult(RHS.ConstInt->getValue());
   });
 
@@ -764,11 +741,13 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
       Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base, Adj->Offset,
                                       "mat_gep", Adj->MatInsertPt);
       // Hide it behind a bitcast.
-      Mat = new BitCastInst(Mat, Adj->Ty, "mat_bitcast", Adj->MatInsertPt);
+      Mat = new BitCastInst(Mat, Adj->Ty, "mat_bitcast",
+                            Adj->MatInsertPt->getIterator());
     } else
       // Constant being rebased is a ConstantInt.
-      Mat = BinaryOperator::Create(Instruction::Add, Base, Adj->Offset,
-                                   "const_mat", Adj->MatInsertPt);
+      Mat =
+          BinaryOperator::Create(Instruction::Add, Base, Adj->Offset,
+                                 "const_mat", Adj->MatInsertPt->getIterator());
 
     LLVM_DEBUG(dbgs() << "Materialize constant (" << *Base->getOperand(0)
                       << " + " << *Adj->Offset << ") in BB "
@@ -796,7 +775,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
     if (!ClonedCastInst) {
       ClonedCastInst = CastInst->clone();
       ClonedCastInst->setOperand(0, Mat);
-      ClonedCastInst->insertAfter(CastInst);
+      ClonedCastInst->insertAfter(CastInst->getIterator());
       // Use the same debug location as the original cast instruction.
       ClonedCastInst->setDebugLoc(CastInst->getDebugLoc());
       LLVM_DEBUG(dbgs() << "Clone instruction: " << *CastInst << '\n'
@@ -819,7 +798,8 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 
     // Aside from constant GEPs, only constant cast expressions are collected.
     assert(ConstExpr->isCast() && "ConstExpr should be a cast");
-    Instruction *ConstExprInst = ConstExpr->getAsInstruction(Adj->MatInsertPt);
+    Instruction *ConstExprInst = ConstExpr->getAsInstruction();
+    ConstExprInst->insertBefore(Adj->MatInsertPt);
     ConstExprInst->setOperand(0, Mat);
 
     // Use the same debug location as the instruction we are about to update.
@@ -845,9 +825,9 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
   SmallVectorImpl<consthoist::ConstantInfo> &ConstInfoVec =
       BaseGV ? ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
   for (const consthoist::ConstantInfo &ConstInfo : ConstInfoVec) {
-    SmallVector<Instruction *, 4> MatInsertPts;
+    SmallVector<BasicBlock::iterator, 4> MatInsertPts;
     collectMatInsertPts(ConstInfo.RebasedConstants, MatInsertPts);
-    SetVector<Instruction *> IPSet =
+    SetVector<BasicBlock::iterator> IPSet =
         findConstantInsertionPoint(ConstInfo, MatInsertPts);
     // We can have an empty set if the function contains unreachable blocks.
     if (IPSet.empty())
@@ -856,7 +836,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
     unsigned UsesNum = 0;
     unsigned ReBasesNum = 0;
     unsigned NotRebasedNum = 0;
-    for (Instruction *IP : IPSet) {
+    for (const BasicBlock::iterator &IP : IPSet) {
       // First, collect constants depending on this IP of the base.
       UsesNum = 0;
       SmallVector<UserAdjustment, 4> ToBeRebased;
@@ -864,7 +844,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
       for (auto const &RCI : ConstInfo.RebasedConstants) {
         UsesNum += RCI.Uses.size();
         for (auto const &U : RCI.Uses) {
-          Instruction *MatInsertPt = MatInsertPts[MatCtr++];
+          const BasicBlock::iterator &MatInsertPt = MatInsertPts[MatCtr++];
           BasicBlock *OrigMatInsertBB = MatInsertPt->getParent();
           // If Base constant is to be inserted in multiple places,
           // generate rebase for U using the Base dominating U.
@@ -889,7 +869,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
         Type *Ty = ConstInfo.BaseExpr->getType();
         Base = new BitCastInst(ConstInfo.BaseExpr, Ty, "const", IP);
       } else {
-        IntegerType *Ty = ConstInfo.BaseInt->getType();
+        IntegerType *Ty = ConstInfo.BaseInt->getIntegerType();
         Base = new BitCastInst(ConstInfo.BaseInt, Ty, "const", IP);
       }
 
@@ -944,10 +924,13 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
-  this->DL = &Fn.getParent()->getDataLayout();
+  this->DL = &Fn.getDataLayout();
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;
+  this->OptForSize = llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
+                                                 PGSOQueryType::IRPass);
+
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 

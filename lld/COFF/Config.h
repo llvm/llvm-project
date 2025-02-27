@@ -9,6 +9,7 @@
 #ifndef LLD_COFF_CONFIG_H
 #define LLD_COFF_CONFIG_H
 
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +28,7 @@ namespace lld::coff {
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::WindowsSubsystem;
 using llvm::StringRef;
+class COFFLinkerContext;
 class DefinedAbsolute;
 class StringChunk;
 class Symbol;
@@ -54,7 +56,8 @@ enum class EmitKind { Obj, LLVM, ASM };
 struct Export {
   StringRef name;       // N in /export:N or /export:E=N
   StringRef extName;    // E in /export:E=N
-  StringRef aliasTarget; // GNU specific: N in "alias == N"
+  StringRef exportAs;   // E in /export:N,EXPORTAS,E
+  StringRef importName; // GNU specific: N in "othername == N"
   Symbol *sym = nullptr;
   uint16_t ordinal = 0;
   bool noname = false;
@@ -73,10 +76,9 @@ struct Export {
   StringRef exportName; // Name in DLL
 
   bool operator==(const Export &e) const {
-    return (name == e.name && extName == e.extName &&
-            aliasTarget == e.aliasTarget &&
-            ordinal == e.ordinal && noname == e.noname &&
-            data == e.data && isPrivate == e.isPrivate);
+    return (name == e.name && extName == e.extName && exportAs == e.exportAs &&
+            importName == e.importName && ordinal == e.ordinal &&
+            noname == e.noname && data == e.data && isPrivate == e.isPrivate);
   }
 };
 
@@ -102,16 +104,23 @@ enum class ICFLevel {
         // behavior.
 };
 
+enum class BuildIDHash {
+  None,
+  PDB,
+  Binary,
+};
+
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
   bool is64() const { return llvm::COFF::is64Bit(machine); }
 
+  std::unique_ptr<MemoryBuffer> dosStub;
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+  bool machineInferred = false;
   size_t wordsize;
   bool verbose = false;
   WindowsSubsystem subsystem = llvm::COFF::IMAGE_SUBSYSTEM_UNKNOWN;
-  Symbol *entry = nullptr;
   bool noEntry = false;
   std::string outputFile;
   std::string importName;
@@ -124,9 +133,9 @@ struct Configuration {
   bool forceMultipleRes = false;
   bool forceUnresolved = false;
   bool debug = false;
-  bool debugDwarf = false;
+  bool includeDwarfChunks = false;
   bool debugGHashes = false;
-  bool debugSymtab = false;
+  bool writeSymtab = false;
   bool driver = false;
   bool driverUponly = false;
   bool driverWdm = false;
@@ -153,13 +162,11 @@ struct Configuration {
   bool dll = false;
   StringRef implib;
   bool noimplib = false;
-  std::vector<Export> exports;
-  bool hadExplicitExports;
   std::set<std::string> delayLoads;
   std::map<std::string, int> dllOrder;
-  Symbol *delayLoadHelper = nullptr;
+  Symbol *arm64ECIcallHelper = nullptr;
 
-  bool saveTemps = false;
+  llvm::DenseSet<llvm::StringRef> saveTempsArgs;
 
   // /guard:cf
   int guardCF = GuardCFLevel::Off;
@@ -180,9 +187,9 @@ struct Configuration {
   // Used for /opt:lldltopartitions=N
   unsigned ltoPartitions = 1;
 
-  // Used for /opt:lldltocache=path
+  // Used for /lldltocache=path
   StringRef ltoCache;
-  // Used for /opt:lldltocachepolicy=policy
+  // Used for /lldltocachepolicy=policy
   llvm::CachePruningPolicy ltoCachePolicy;
 
   // Used for /opt:[no]ltodebugpassmanager
@@ -212,9 +219,6 @@ struct Configuration {
 
   // Used for /failifmismatch.
   std::map<StringRef, std::pair<StringRef, InputFile *>> mustMatch;
-
-  // Used for /alternatename.
-  std::map<StringRef, StringRef> alternateNames;
 
   // Used for /order.
   llvm::StringMap<int> order;
@@ -256,6 +260,9 @@ struct Configuration {
 
   // Used for /lto-pgo-warn-mismatch:
   bool ltoPGOWarnMismatch = true;
+
+  // Used for /lto-sample-profile:
+  llvm::StringRef ltoSampleProfileName;
 
   // Used for /call-graph-ordering-file:
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,
@@ -318,7 +325,50 @@ struct Configuration {
   bool writeCheckSum = false;
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
+  BuildIDHash buildIDHash = BuildIDHash::None;
 };
+
+struct COFFSyncStream : SyncStream {
+  COFFLinkerContext &ctx;
+  COFFSyncStream(COFFLinkerContext &ctx, DiagLevel level);
+};
+
+template <typename T>
+std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>,
+                 const COFFSyncStream &>
+operator<<(const COFFSyncStream &s, T &&v) {
+  s.os << std::forward<T>(v);
+  return s;
+}
+
+inline const COFFSyncStream &operator<<(const COFFSyncStream &s,
+                                        const char *v) {
+  s.os << v;
+  return s;
+}
+
+inline const COFFSyncStream &operator<<(const COFFSyncStream &s, Error v) {
+  s.os << llvm::toString(std::move(v));
+  return s;
+}
+
+// Report a log if -verbose is specified.
+COFFSyncStream Log(COFFLinkerContext &ctx);
+
+// Print a message to stdout.
+COFFSyncStream Msg(COFFLinkerContext &ctx);
+
+// Report a warning. Upgraded to an error if /WX is specified.
+COFFSyncStream Warn(COFFLinkerContext &ctx);
+
+// Report an error that will suppress the output file generation.
+COFFSyncStream Err(COFFLinkerContext &ctx);
+
+// Report a fatal error that exits immediately. This should generally be avoided
+// in favor of Err.
+COFFSyncStream Fatal(COFFLinkerContext &ctx);
+
+uint64_t errCount(COFFLinkerContext &ctx);
 
 } // namespace lld::coff
 

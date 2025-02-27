@@ -15,6 +15,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/ProcessTrace.h"
 #include "lldb/Target/Target.h"
 #include <optional>
 
@@ -71,7 +72,7 @@ Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
   root.printErrorContext(value, os);
   return createStringError(
       std::errc::invalid_argument, "%s\n\nContext:\n%s\n\nSchema:\n%s",
-      toString(root.getError()).c_str(), os.str().c_str(), GetSchema().data());
+      toString(root.getError()).c_str(), err.c_str(), GetSchema().data());
 }
 
 ThreadPostMortemTraceSP
@@ -103,11 +104,11 @@ TraceIntelPTBundleLoader::CreateEmptyProcess(lldb::pid_t pid,
   ParsedProcess parsed_process;
   parsed_process.target_sp = target_sp;
 
-  // This should instead try to directly create an instance of ProcessTrace.
-  // ProcessSP process_sp = target_sp->CreateProcess(
-  //    /*listener*/ nullptr, "trace",
-  //    /*crash_file*/ nullptr,
-  //    /*can_connect*/ false);
+  ProcessTrace::Initialize();
+  ProcessSP process_sp = target_sp->CreateProcess(
+      /*listener*/ nullptr, "trace",
+      /*crash_file*/ nullptr,
+      /*can_connect*/ false);
 
   process_sp->SetID(static_cast<lldb::pid_t>(pid));
 
@@ -344,7 +345,7 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
     if (indexed_threads[proc->second].count(tid))
       return;
     indexed_threads[proc->second].insert(tid);
-    proc->second->threads.push_back({tid, /*ipt_trace=*/None});
+    proc->second->threads.push_back({tid, /*ipt_trace=*/std::nullopt});
   };
 
   for (const JSONCpu &cpu : *bundle_description.cpus) {

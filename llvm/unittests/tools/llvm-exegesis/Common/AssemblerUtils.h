@@ -20,6 +20,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -60,7 +61,7 @@ protected:
   }
 
 private:
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+  std::unique_ptr<TargetMachine> createTargetMachine() {
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     EXPECT_TRUE(TheTarget) << Error << " " << TT;
@@ -68,8 +69,7 @@ private:
     TargetMachine *TM = TheTarget->createTargetMachine(TT, CpuName, "", Options,
                                                        Reloc::Model::Static);
     EXPECT_TRUE(TM) << TT << " " << CpuName;
-    return std::unique_ptr<LLVMTargetMachine>(
-        static_cast<LLVMTargetMachine *>(TM));
+    return std::unique_ptr<TargetMachine>(TM);
   }
 
   ExecutableFunction
@@ -80,10 +80,14 @@ private:
     BenchmarkKey Key;
     Key.RegisterInitialValues = RegisterInitialValues;
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
-                                  RegisterInitialValues, Fill, AsmStream, Key,
-                                  false));
-    return ExecutableFunction(createTargetMachine(),
-                              getObjectFromBuffer(AsmStream.str()));
+                                  Fill, AsmStream, Key, false));
+    Expected<ExecutableFunction> ExecFunc = ExecutableFunction::create(
+        createTargetMachine(), getObjectFromBuffer(AsmStream.str()));
+
+    // We can't use ASSERT_THAT_EXPECTED here as it doesn't work inside of
+    // non-void functions.
+    EXPECT_TRUE(detail::TakeExpected(ExecFunc).Success());
+    return std::move(*ExecFunc);
   }
 
   const std::string TT;

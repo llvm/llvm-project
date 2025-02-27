@@ -26,8 +26,8 @@
 ; CHECK-DAG: @__omp_outlined__1_wrapper.ID = private constant i8 undef
 ; CHECK-DAG: @__omp_outlined__2_wrapper.ID = private constant i8 undef
 
-; CHECK-DAG:   icmp eq ptr %worker.work_fn.addr_cast, @__omp_outlined__1_wrapper.ID
-; CHECK-DAG:   icmp eq ptr %worker.work_fn.addr_cast, @__omp_outlined__2_wrapper.ID
+; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__1_wrapper.ID
+; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__2_wrapper.ID
 
 
 ; CHECK-DAG:   call void @__kmpc_parallel_51(ptr @1, i32 %{{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr %{{.*}}, i64 0)
@@ -44,7 +44,7 @@
 @2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @0 }, align 8
 @__omp_offloading_10301_87b2c_foo_l7_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
-define weak void @__omp_offloading_10301_87b2c_foo_l7() "kernel" {
+define weak ptx_kernel void @__omp_offloading_10301_87b2c_foo_l7() "kernel" {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -173,10 +173,8 @@ entry:
 }
 
 !omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
 !llvm.module.flags = !{!2, !3}
 
 !0 = !{i32 0, i32 66305, i32 555956, !"foo", i32 7, i32 0}
-!1 = !{ptr @__omp_offloading_10301_87b2c_foo_l7, !"kernel", i32 1}
 !2 = !{i32 7, !"openmp", i32 50}
 !3 = !{i32 7, !"openmp-device", i32 50}

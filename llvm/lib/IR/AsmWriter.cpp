@@ -74,7 +74,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -286,14 +285,14 @@ static const Module *getModuleFromVal(const Value *V) {
   return nullptr;
 }
 
-static const Module *getModuleFromDPI(const DPMarker *Marker) {
+static const Module *getModuleFromDPI(const DbgMarker *Marker) {
   const Function *M =
       Marker->getParent() ? Marker->getParent()->getParent() : nullptr;
   return M ? M->getParent() : nullptr;
 }
 
-static const Module *getModuleFromDPI(const DPValue *DPV) {
-  return getModuleFromDPI(DPV->getMarker());
+static const Module *getModuleFromDPI(const DbgRecord *DR) {
+  return DR->getMarker() ? getModuleFromDPI(DR->getMarker()) : nullptr;
 }
 
 static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
@@ -304,6 +303,7 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AnyReg:        Out << "anyregcc"; break;
   case CallingConv::PreserveMost:  Out << "preserve_mostcc"; break;
   case CallingConv::PreserveAll:   Out << "preserve_allcc"; break;
+  case CallingConv::PreserveNone:  Out << "preserve_nonecc"; break;
   case CallingConv::CXX_FAST_TLS:  Out << "cxx_fast_tlscc"; break;
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::Tail:          Out << "tailcc"; break;
@@ -324,6 +324,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
     break;
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
     Out << "aarch64_sme_preservemost_from_x0";
+    break;
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
+    Out << "aarch64_sme_preservemost_from_x1";
     break;
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
     Out << "aarch64_sme_preservemost_from_x2";
@@ -362,6 +365,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
   case CallingConv::AMDGPU_Gfx:    Out << "amdgpu_gfx"; break;
   case CallingConv::M68k_RTD:      Out << "m68k_rtdcc"; break;
+  case CallingConv::RISCV_VectorCall:
+    Out << "riscv_vector_cc";
+    break;
   }
 }
 
@@ -566,8 +572,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::FP128TyID:     OS << "fp128"; return;
   case Type::PPC_FP128TyID: OS << "ppc_fp128"; return;
   case Type::LabelTyID:     OS << "label"; return;
-  case Type::MetadataTyID:  OS << "metadata"; return;
-  case Type::X86_MMXTyID:   OS << "x86_mmx"; return;
+  case Type::MetadataTyID:
+    OS << "metadata";
+    return;
   case Type::X86_AMXTyID:   OS << "x86_amx"; return;
   case Type::TokenTyID:     OS << "token"; return;
   case Type::IntegerTyID:
@@ -642,8 +649,10 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     OS << "target(\"";
     printEscapedString(Ty->getTargetExtName(), OS);
     OS << "\"";
-    for (Type *Inner : TETy->type_params())
-      OS << ", " << *Inner;
+    for (Type *Inner : TETy->type_params()) {
+      OS << ", ";
+      Inner->print(OS, /*IsForDebug=*/false, /*NoDetails=*/true);
+    }
     for (unsigned IntParam : TETy->int_params())
       OS << ", " << IntParam;
     OS << ")";
@@ -736,6 +745,11 @@ private:
   StringMap<unsigned> TypeIdMap;
   unsigned TypeIdNext = 0;
 
+  /// TypeIdCompatibleVtableMap - The slot map for type compatible vtable ids
+  /// used in the summary index.
+  StringMap<unsigned> TypeIdCompatibleVtableMap;
+  unsigned TypeIdCompatibleVtableNext = 0;
+
 public:
   /// Construct from a module.
   ///
@@ -779,6 +793,7 @@ public:
   int getModulePathSlot(StringRef Path);
   int getGUIDSlot(GlobalValue::GUID GUID);
   int getTypeIdSlot(StringRef Id);
+  int getTypeIdCompatibleVtableSlot(StringRef Id);
 
   /// If you'd like to deal with a function instead of just a module, use
   /// this method to get its data into the SlotTracker.
@@ -834,6 +849,7 @@ private:
   inline void CreateModulePathSlot(StringRef Path);
   void CreateGUIDSlot(GlobalValue::GUID GUID);
   void CreateTypeIdSlot(StringRef Id);
+  void CreateTypeIdCompatibleVtableSlot(StringRef Id);
 
   /// Add all of the module level global variables (and their initializers)
   /// and function declarations, but not the contents of those functions.
@@ -852,6 +868,9 @@ private:
 
   /// Add all of the metadata from an instruction.
   void processInstructionMetadata(const Instruction &I);
+
+  /// Add all of the metadata from a DbgRecord.
+  void processDbgRecordMetadata(const DbgRecord &DVR);
 };
 
 } // end namespace llvm
@@ -1004,8 +1023,8 @@ void SlotTracker::processModule() {
 
   // Add metadata used by named metadata.
   for (const NamedMDNode &NMD : TheModule->named_metadata()) {
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      CreateMetadataSlot(NMD.getOperand(i));
+    for (const MDNode *N : NMD.operands())
+      CreateMetadataSlot(N);
   }
 
   for (const Function &F : *TheModule) {
@@ -1095,11 +1114,13 @@ int SlotTracker::processIndex() {
   for (auto &GlobalList : *TheIndex)
     CreateGUIDSlot(GlobalList.first);
 
+  // Start numbering the TypeIdCompatibleVtables after the GUIDs.
+  TypeIdCompatibleVtableNext = GUIDNext;
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap())
-    CreateGUIDSlot(GlobalValue::getGUID(TId.first));
+    CreateTypeIdCompatibleVtableSlot(TId.first);
 
-  // Start numbering the TypeIds after the GUIDs.
-  TypeIdNext = GUIDNext;
+  // Start numbering the TypeIds after the TypeIdCompatibleVtables.
+  TypeIdNext = TypeIdCompatibleVtableNext;
   for (const auto &TID : TheIndex->typeIds())
     CreateTypeIdSlot(TID.second.first);
 
@@ -1117,9 +1138,34 @@ void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
 void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
-    for (auto &I : BB)
+    for (auto &I : BB) {
+      for (const DbgRecord &DR : I.getDbgRecordRange())
+        processDbgRecordMetadata(DR);
       processInstructionMetadata(I);
+    }
   }
+}
+
+void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
+  if (const DbgVariableRecord *DVR = dyn_cast<const DbgVariableRecord>(&DR)) {
+    // Process metadata used by DbgRecords; we only specifically care about the
+    // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
+    // Expression fields should only be printed inline and so do not use a slot.
+    // Note: The above doesn't apply for empty-metadata operands.
+    if (auto *Empty = dyn_cast<MDNode>(DVR->getRawLocation()))
+      CreateMetadataSlot(Empty);
+    CreateMetadataSlot(DVR->getRawVariable());
+    if (DVR->isDbgAssign()) {
+      CreateMetadataSlot(cast<MDNode>(DVR->getRawAssignID()));
+      if (auto *Empty = dyn_cast<MDNode>(DVR->getRawAddress()))
+        CreateMetadataSlot(Empty);
+    }
+  } else if (const DbgLabelRecord *DLR = dyn_cast<const DbgLabelRecord>(&DR)) {
+    CreateMetadataSlot(DLR->getRawLabel());
+  } else {
+    llvm_unreachable("unsupported DbgRecord kind");
+  }
+  CreateMetadataSlot(DR.getDebugLoc().getAsMDNode());
 }
 
 void SlotTracker::processInstructionMetadata(const Instruction &I) {
@@ -1232,6 +1278,15 @@ int SlotTracker::getTypeIdSlot(StringRef Id) {
   return I == TypeIdMap.end() ? -1 : (int)I->second;
 }
 
+int SlotTracker::getTypeIdCompatibleVtableSlot(StringRef Id) {
+  // Check for uninitialized state and do lazy initialization.
+  initializeIndexIfNeeded();
+
+  // Find the TypeIdCompatibleVtable string in the map
+  auto I = TypeIdCompatibleVtableMap.find(Id);
+  return I == TypeIdCompatibleVtableMap.end() ? -1 : (int)I->second;
+}
+
 /// CreateModuleSlot - Insert the specified GlobalValue* into the slot table.
 void SlotTracker::CreateModuleSlot(const GlobalValue *V) {
   assert(V && "Can't insert a null Value into SlotTracker!");
@@ -1284,12 +1339,8 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
 void SlotTracker::CreateAttributeSetSlot(AttributeSet AS) {
   assert(AS.hasAttributes() && "Doesn't need a slot!");
 
-  as_iterator I = asMap.find(AS);
-  if (I != asMap.end())
-    return;
-
-  unsigned DestSlot = asNext++;
-  asMap[AS] = DestSlot;
+  if (asMap.try_emplace(AS, asNext).second)
+    ++asNext;
 }
 
 /// Create a new slot for the specified Module
@@ -1305,6 +1356,11 @@ void SlotTracker::CreateGUIDSlot(GlobalValue::GUID GUID) {
 /// Create a new slot for the specified Id
 void SlotTracker::CreateTypeIdSlot(StringRef Id) {
   TypeIdMap[Id] = TypeIdNext++;
+}
+
+/// Create a new slot for the specified Id
+void SlotTracker::CreateTypeIdCompatibleVtableSlot(StringRef Id) {
+  TypeIdCompatibleVtableMap[Id] = TypeIdCompatibleVtableNext++;
 }
 
 namespace {
@@ -1355,115 +1411,164 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
                dyn_cast<PossiblyExactOperator>(U)) {
     if (Div->isExact())
       Out << " exact";
+  } else if (const PossiblyDisjointInst *PDI =
+                 dyn_cast<PossiblyDisjointInst>(U)) {
+    if (PDI->isDisjoint())
+      Out << " disjoint";
   } else if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
     if (GEP->isInBounds())
       Out << " inbounds";
+    else if (GEP->hasNoUnsignedSignedWrap())
+      Out << " nusw";
+    if (GEP->hasNoUnsignedWrap())
+      Out << " nuw";
+    if (auto InRange = GEP->getInRange()) {
+      Out << " inrange(" << InRange->getLower() << ", " << InRange->getUpper()
+          << ")";
+    }
   } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(U)) {
     if (NNI->hasNonNeg())
       Out << " nneg";
+  } else if (const auto *TI = dyn_cast<TruncInst>(U)) {
+    if (TI->hasNoUnsignedWrap())
+      Out << " nuw";
+    if (TI->hasNoSignedWrap())
+      Out << " nsw";
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(U)) {
+    if (ICmp->hasSameSign())
+      Out << " samesign";
   }
+}
+
+static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
+  if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
+      &APF.getSemantics() == &APFloat::IEEEdouble()) {
+    // We would like to output the FP constant value in exponential notation,
+    // but we cannot do this if doing so will lose precision.  Check here to
+    // make sure that we only output it in exponential format if we can parse
+    // the value back and get the same value.
+    //
+    bool ignored;
+    bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
+    bool isInf = APF.isInfinity();
+    bool isNaN = APF.isNaN();
+
+    if (!isInf && !isNaN) {
+      double Val = APF.convertToDouble();
+      SmallString<128> StrVal;
+      APF.toString(StrVal, 6, 0, false);
+      // Check to make sure that the stringized number is not some string like
+      // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
+      // that the string matches the "[-+]?[0-9]" regex.
+      //
+      assert((isDigit(StrVal[0]) ||
+              ((StrVal[0] == '-' || StrVal[0] == '+') && isDigit(StrVal[1]))) &&
+             "[-+]?[0-9] regex does not match!");
+      // Reparse stringized version!
+      if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
+        Out << StrVal;
+        return;
+      }
+    }
+
+    // Otherwise we could not reparse it to exactly the same value, so we must
+    // output the string in hexadecimal format!  Note that loading and storing
+    // floating point types changes the bits of NaNs on some hosts, notably
+    // x86, so we must not use these types.
+    static_assert(sizeof(double) == sizeof(uint64_t),
+                  "assuming that double is 64 bits!");
+    APFloat apf = APF;
+
+    // Floats are represented in ASCII IR as double, convert.
+    // FIXME: We should allow 32-bit hex float and remove this.
+    if (!isDouble) {
+      // A signaling NaN is quieted on conversion, so we need to recreate the
+      // expected value after convert (quiet bit of the payload is clear).
+      bool IsSNAN = apf.isSignaling();
+      apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &ignored);
+      if (IsSNAN) {
+        APInt Payload = apf.bitcastToAPInt();
+        apf =
+            APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(), &Payload);
+      }
+    }
+
+    Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
+    return;
+  }
+
+  // Either half, bfloat or some form of long double.
+  // These appear as a magic letter identifying the type, then a
+  // fixed number of hex digits.
+  Out << "0x";
+  APInt API = APF.bitcastToAPInt();
+  if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
+    Out << 'K';
+    Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
+    Out << 'L';
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
+    Out << 'M';
+    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
+    Out << 'H';
+    Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::BFloat()) {
+    Out << 'R';
+    Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else
+    llvm_unreachable("Unsupported floating point type");
 }
 
 static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
                                   AsmWriterContext &WriterCtx) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    if (CI->getType()->isIntegerTy(1)) {
-      Out << (CI->getZExtValue() ? "true" : "false");
-      return;
+    Type *Ty = CI->getType();
+
+    if (Ty->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
+      Out << " ";
     }
-    Out << CI->getValue();
+
+    if (Ty->getScalarType()->isIntegerTy(1))
+      Out << (CI->getZExtValue() ? "true" : "false");
+    else
+      Out << CI->getValue();
+
+    if (Ty->isVectorTy())
+      Out << ")";
+
     return;
   }
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
-    const APFloat &APF = CFP->getValueAPF();
-    if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
-        &APF.getSemantics() == &APFloat::IEEEdouble()) {
-      // We would like to output the FP constant value in exponential notation,
-      // but we cannot do this if doing so will lose precision.  Check here to
-      // make sure that we only output it in exponential format if we can parse
-      // the value back and get the same value.
-      //
-      bool ignored;
-      bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
-      bool isInf = APF.isInfinity();
-      bool isNaN = APF.isNaN();
-      if (!isInf && !isNaN) {
-        double Val = APF.convertToDouble();
-        SmallString<128> StrVal;
-        APF.toString(StrVal, 6, 0, false);
-        // Check to make sure that the stringized number is not some string like
-        // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
-        // that the string matches the "[-+]?[0-9]" regex.
-        //
-        assert((isDigit(StrVal[0]) || ((StrVal[0] == '-' || StrVal[0] == '+') &&
-                                       isDigit(StrVal[1]))) &&
-               "[-+]?[0-9] regex does not match!");
-        // Reparse stringized version!
-        if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
-          Out << StrVal;
-          return;
-        }
-      }
-      // Otherwise we could not reparse it to exactly the same value, so we must
-      // output the string in hexadecimal format!  Note that loading and storing
-      // floating point types changes the bits of NaNs on some hosts, notably
-      // x86, so we must not use these types.
-      static_assert(sizeof(double) == sizeof(uint64_t),
-                    "assuming that double is 64 bits!");
-      APFloat apf = APF;
-      // Floats are represented in ASCII IR as double, convert.
-      // FIXME: We should allow 32-bit hex float and remove this.
-      if (!isDouble) {
-        // A signaling NaN is quieted on conversion, so we need to recreate the
-        // expected value after convert (quiet bit of the payload is clear).
-        bool IsSNAN = apf.isSignaling();
-        apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                    &ignored);
-        if (IsSNAN) {
-          APInt Payload = apf.bitcastToAPInt();
-          apf = APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(),
-                                 &Payload);
-        }
-      }
-      Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
-      return;
+    Type *Ty = CFP->getType();
+
+    if (Ty->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
+      Out << " ";
     }
 
-    // Either half, bfloat or some form of long double.
-    // These appear as a magic letter identifying the type, then a
-    // fixed number of hex digits.
-    Out << "0x";
-    APInt API = APF.bitcastToAPInt();
-    if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
-      Out << 'K';
-      Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      return;
-    } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
-      Out << 'L';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
-      Out << 'M';
-      Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-      Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
-      Out << 'H';
-      Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                  /*Upper=*/true);
-    } else if (&APF.getSemantics() == &APFloat::BFloat()) {
-      Out << 'R';
-      Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                  /*Upper=*/true);
-    } else
-      llvm_unreachable("Unsupported floating point type");
+    WriteAPFloatInternal(Out, CFP->getValueAPF());
+
+    if (Ty->isVectorTy())
+      Out << ")";
+
     return;
   }
 
@@ -1490,6 +1595,27 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   if (const auto *NC = dyn_cast<NoCFIValue>(CV)) {
     Out << "no_cfi ";
     WriteAsOperandInternal(Out, NC->getGlobalValue(), WriterCtx);
+    return;
+  }
+
+  if (const ConstantPtrAuth *CPA = dyn_cast<ConstantPtrAuth>(CV)) {
+    Out << "ptrauth (";
+
+    // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)
+    unsigned NumOpsToWrite = 2;
+    if (!CPA->getOperand(2)->isNullValue())
+      NumOpsToWrite = 3;
+    if (!CPA->getOperand(3)->isNullValue())
+      NumOpsToWrite = 4;
+
+    ListSeparator LS;
+    for (unsigned i = 0, e = NumOpsToWrite; i != e; ++i) {
+      Out << LS;
+      WriterCtx.TypePrinter->print(CPA->getOperand(i)->getType(), Out);
+      Out << ' ';
+      WriteAsOperandInternal(Out, CPA->getOperand(i), WriterCtx);
+    }
+    Out << ')';
     return;
   }
 
@@ -1565,6 +1691,23 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
     auto *CVVTy = cast<FixedVectorType>(CV->getType());
     Type *ETy = CVVTy->getElementType();
+
+    // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
+    // permitted on IR input to reduce the output changes when enabling
+    // UseConstant{Int,FP}ForFixedLengthSplat.
+    // TODO: Remove this block when the UseConstant{Int,FP}ForFixedLengthSplat
+    // options are removed.
+    if (auto *SplatVal = CV->getSplatValue()) {
+      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+        Out << "splat (";
+        WriterCtx.TypePrinter->print(ETy, Out);
+        Out << ' ';
+        WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+        Out << ')';
+        return;
+      }
+    }
+
     Out << '<';
     WriterCtx.TypePrinter->print(ETy, Out);
     Out << ' ';
@@ -1600,24 +1743,35 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
+    // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
+    // permitted on IR input to reduce the output changes when enabling
+    // UseConstant{Int,FP}ForScalableSplat.
+    // TODO: Remove this block when the UseConstant{Int,FP}ForScalableSplat
+    // options are removed.
+    if (CE->getOpcode() == Instruction::ShuffleVector) {
+      if (auto *SplatVal = CE->getSplatValue()) {
+        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+          Out << "splat (";
+          WriterCtx.TypePrinter->print(SplatVal->getType(), Out);
+          Out << ' ';
+          WriteAsOperandInternal(Out, SplatVal, WriterCtx);
+          Out << ')';
+          return;
+        }
+      }
+    }
+
     Out << CE->getOpcodeName();
     WriteOptimizationInfo(Out, CE);
-    if (CE->isCompare())
-      Out << ' ' << static_cast<CmpInst::Predicate>(CE->getPredicate());
     Out << " (";
 
-    std::optional<unsigned> InRangeOp;
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(CE)) {
       WriterCtx.TypePrinter->print(GEP->getSourceElementType(), Out);
       Out << ", ";
-      InRangeOp = GEP->getInRangeIndex();
-      if (InRangeOp)
-        ++*InRangeOp;
     }
 
-    for (User::const_op_iterator OI=CE->op_begin(); OI != CE->op_end(); ++OI) {
-      if (InRangeOp && unsigned(OI - CE->op_begin()) == *InRangeOp)
-        Out << "inrange ";
+    for (User::const_op_iterator OI = CE->op_begin(); OI != CE->op_end();
+         ++OI) {
       WriterCtx.TypePrinter->print((*OI)->getType(), Out);
       Out << ' ';
       WriteAsOperandInternal(Out, *OI, WriterCtx);
@@ -1850,7 +2004,7 @@ void MDFieldPrinter::printNameTableKind(StringRef Name,
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
-  if (!Value)
+  if (ShouldSkipZero && !Value)
     return;
 
   Out << FS << Name << ": ";
@@ -2014,6 +2168,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
@@ -2056,6 +2211,36 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto PtrAuthData = N->getPtrAuthData()) {
+    Printer.printInt("ptrAuthKey", PtrAuthData->key());
+    Printer.printBool("ptrAuthIsAddressDiscriminated",
+                      PtrAuthData->isAddressDiscriminated());
+    Printer.printInt("ptrAuthExtraDiscriminator",
+                     PtrAuthData->extraDiscriminator());
+    Printer.printBool("ptrAuthIsaPointer", PtrAuthData->isaPointer());
+    Printer.printBool("ptrAuthAuthenticatesNullValues",
+                      PtrAuthData->authenticatesNullValues());
+  }
+  Out << ")";
+}
+
+static void writeDISubrangeType(raw_ostream &Out, const DISubrangeType *N,
+                                AsmWriterContext &WriterCtx) {
+  Out << "!DISubrangeType(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printInt("size", N->getSizeInBits());
+  Printer.printInt("align", N->getAlignInBits());
+  Printer.printDIFlags("flags", N->getFlags());
+  Printer.printMetadata("baseType", N->getRawBaseType(),
+                        /* ShouldSkipNull */ false);
+  Printer.printMetadata("lowerBound", N->getRawLowerBound());
+  Printer.printMetadata("upperBound", N->getRawUpperBound());
+  Printer.printMetadata("stride", N->getRawStride());
+  Printer.printMetadata("bias", N->getRawBias());
   Out << ")";
 }
 
@@ -2072,6 +2257,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printInt("size", N->getSizeInBits());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("offset", N->getOffsetInBits());
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("elements", N->getRawElements());
   Printer.printDwarfEnum("runtimeLang", N->getRuntimeLang(),
@@ -2089,6 +2275,13 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   else
     Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto *Specification = N->getRawSpecification())
+    Printer.printMetadata("specification", Specification);
+
+  if (auto EnumKind = N->getEnumKind())
+    Printer.printDwarfEnum("enumKind", *EnumKind, dwarf::EnumKindString,
+                           /*ShouldSkipZero=*/false);
+
   Out << ")";
 }
 
@@ -2623,8 +2816,11 @@ public:
   void printBasicBlock(const BasicBlock *BB);
   void printInstructionLine(const Instruction &I);
   void printInstruction(const Instruction &I);
-  void printDPMarker(const DPMarker &DPI);
-  void printDPValue(const DPValue &DPI);
+  void printDbgMarker(const DbgMarker &DPI);
+  void printDbgVariableRecord(const DbgVariableRecord &DVR);
+  void printDbgLabelRecord(const DbgLabelRecord &DLR);
+  void printDbgRecord(const DbgRecord &DR);
+  void printDbgRecordLine(const DbgRecord &DR);
 
   void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
   void printUseLists(const Function *F);
@@ -2951,7 +3147,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // Print the TypeIdCompatibleVtableMap entries.
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
     auto GUID = GlobalValue::getGUID(TId.first);
-    Out << "^" << Machine.getGUIDSlot(GUID)
+    Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
         << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);
     Out << ") ; guid = " << GUID << "\n";
@@ -3201,6 +3397,16 @@ static const char *getVisibilityName(GlobalValue::VisibilityTypes Vis) {
   llvm_unreachable("invalid visibility");
 }
 
+static const char *getImportTypeName(GlobalValueSummary::ImportKind IK) {
+  switch (IK) {
+  case GlobalValueSummary::Definition:
+    return "definition";
+  case GlobalValueSummary::Declaration:
+    return "declaration";
+  }
+  llvm_unreachable("invalid import kind");
+}
+
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
   Out << ", insts: " << FS->instCount();
   if (FS->fflags().anyFlagSet())
@@ -3216,6 +3422,10 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
         Out << ", hotness: " << getHotnessName(Call.second.getHotness());
       else if (Call.second.RelBlockFreq)
         Out << ", relbf: " << Call.second.RelBlockFreq;
+      // Follow the convention of emitting flags as a boolean value, but only
+      // emit if true to avoid unnecessary verbosity and test churn.
+      if (Call.second.HasTailCall)
+        Out << ", tail: 1";
       Out << ")";
     }
     Out << ")";
@@ -3342,9 +3552,9 @@ void AssemblyWriter::printTypeIdInfo(
         continue;
       }
       // Print all type id that correspond to this GUID.
-      for (auto It = TidIter.first; It != TidIter.second; ++It) {
+      for (const auto &[GUID, TypeIdPair] : make_range(TidIter)) {
         Out << FS;
-        auto Slot = Machine.getTypeIdSlot(It->second.first);
+        auto Slot = Machine.getTypeIdSlot(TypeIdPair.first);
         assert(Slot != -1);
         Out << "^" << Slot;
       }
@@ -3383,10 +3593,10 @@ void AssemblyWriter::printVFuncId(const FunctionSummary::VFuncId VFId) {
   }
   // Print all type id that correspond to this GUID.
   FieldSeparator FS;
-  for (auto It = TidIter.first; It != TidIter.second; ++It) {
+  for (const auto &[GUID, TypeIdPair] : make_range(TidIter)) {
     Out << FS;
     Out << "vFuncId: (";
-    auto Slot = Machine.getTypeIdSlot(It->second.first);
+    auto Slot = Machine.getTypeIdSlot(TypeIdPair.first);
     assert(Slot != -1);
     Out << "^" << Slot;
     Out << ", offset: " << VFId.Offset;
@@ -3436,6 +3646,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", live: " << GVFlags.Live;
   Out << ", dsoLocal: " << GVFlags.DSOLocal;
   Out << ", canAutoHide: " << GVFlags.CanAutoHide;
+  Out << ", importType: "
+      << getImportTypeName(GlobalValueSummary::ImportKind(GVFlags.ImportType));
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)
@@ -3465,7 +3677,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
 
 void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
   Out << "^" << Slot << " = gv: (";
-  if (!VI.name().empty())
+  if (VI.hasName() && !VI.name().empty())
     Out << "name: \"" << VI.name() << "\"";
   else
     Out << "guid: " << VI.getGUID();
@@ -3479,7 +3691,7 @@ void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
     Out << ")";
   }
   Out << ")";
-  if (!VI.name().empty())
+  if (VI.hasName() && !VI.name().empty())
     Out << " ; guid = " << VI.getGUID();
   Out << "\n";
 }
@@ -3489,15 +3701,15 @@ static void printMetadataIdentifier(StringRef Name,
   if (Name.empty()) {
     Out << "<empty name> ";
   } else {
-    if (isalpha(static_cast<unsigned char>(Name[0])) || Name[0] == '-' ||
-        Name[0] == '$' || Name[0] == '.' || Name[0] == '_')
-      Out << Name[0];
+    unsigned char FirstC = static_cast<unsigned char>(Name[0]);
+    if (isalpha(FirstC) || FirstC == '-' || FirstC == '$' || FirstC == '.' ||
+        FirstC == '_')
+      Out << FirstC;
     else
-      Out << '\\' << hexdigit(Name[0] >> 4) << hexdigit(Name[0] & 0x0F);
+      Out << '\\' << hexdigit(FirstC >> 4) << hexdigit(FirstC & 0x0F);
     for (unsigned i = 1, e = Name.size(); i != e; ++i) {
       unsigned char C = Name[i];
-      if (isalnum(static_cast<unsigned char>(C)) || C == '-' || C == '$' ||
-          C == '.' || C == '_')
+      if (isalnum(C) || C == '-' || C == '$' || C == '.' || C == '_')
         Out << C;
       else
         Out << '\\' << hexdigit(C >> 4) << hexdigit(C & 0x0F);
@@ -3645,6 +3857,27 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
     printEscapedString(GV->getPartition(), Out);
     Out << '"';
   }
+  if (auto CM = GV->getCodeModel()) {
+    Out << ", code_model \"";
+    switch (*CM) {
+    case CodeModel::Tiny:
+      Out << "tiny";
+      break;
+    case CodeModel::Small:
+      Out << "small";
+      break;
+    case CodeModel::Kernel:
+      Out << "kernel";
+      break;
+    case CodeModel::Medium:
+      Out << "medium";
+      break;
+    case CodeModel::Large:
+      Out << "large";
+      break;
+    }
+    Out << '"';
+  }
 
   using SanitizerMetadata = llvm::GlobalValue::SanitizerMetadata;
   if (GV->hasSanitizerMetadata()) {
@@ -3782,9 +4015,6 @@ void AssemblyWriter::printTypeIdentities() {
 
 /// printFunction - Print all aspects of a function.
 void AssemblyWriter::printFunction(const Function *F) {
-  bool ConvertBack = F->IsNewDbgInfoFormat;
-  if (ConvertBack)
-    const_cast<Function *>(F)->convertFromNewDbgValues();
   if (AnnotationWriter) AnnotationWriter->emitFunctionAnnot(F, Out);
 
   if (F->isMaterializable())
@@ -3927,8 +4157,6 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << "}\n";
   }
 
-  if (ConvertBack)
-    const_cast<Function *>(F)->convertToNewDbgValues();
   Machine.purgeFunction();
 }
 
@@ -3995,6 +4223,8 @@ void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
 
   // Output all of the instructions in the basic block...
   for (const Instruction &I : *BB) {
+    for (const DbgRecord &DR : I.getDbgRecordRange())
+      printDbgRecordLine(DR);
     printInstructionLine(I);
   }
 
@@ -4025,12 +4255,6 @@ void AssemblyWriter::printInfoComment(const Value &V) {
 
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
-  } else if (const Instruction *I = dyn_cast<Instruction>(&V)) {
-    if (I->DbgMarker) {
-      // In the new, experimental DPValue representation of debug-info, print
-      // out which instructions have DPMarkers and where they are.
-      Out << "; dbgmarker @ " << I->DbgMarker;
-    }
   }
 }
 
@@ -4491,34 +4715,80 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   printInfoComment(I);
 }
 
-void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
-  // There's no formal representation of a DPMarker -- print purely as a
+void AssemblyWriter::printDbgMarker(const DbgMarker &Marker) {
+  // There's no formal representation of a DbgMarker -- print purely as a
   // debugging aid.
-  for (const DPValue &DPI2 : Marker.StoredDPValues) {
-    printDPValue(DPI2);
+  for (const DbgRecord &DPR : Marker.StoredDbgRecords) {
+    printDbgRecord(DPR);
     Out << "\n";
   }
 
-  Out << "  DPMarker -> { ";
+  Out << "  DbgMarker -> { ";
   printInstruction(*Marker.MarkedInstr);
   Out << " }";
-  return;
 }
 
-void AssemblyWriter::printDPValue(const DPValue &Value) {
-  // There's no formal representation of a DPValue -- print purely as a
-  // debugging aid.
-  Out << "  DPValue { ";
+void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
+  if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
+    printDbgVariableRecord(*DVR);
+  else if (auto *DLR = dyn_cast<DbgLabelRecord>(&DR))
+    printDbgLabelRecord(*DLR);
+  else
+    llvm_unreachable("Unexpected DbgRecord kind");
+}
+
+void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
   auto WriterCtx = getContext();
-  WriteAsOperandInternal(Out, Value.getRawLocation(), WriterCtx, true);
+  Out << "#dbg_";
+  switch (DVR.getType()) {
+  case DbgVariableRecord::LocationType::Value:
+    Out << "value";
+    break;
+  case DbgVariableRecord::LocationType::Declare:
+    Out << "declare";
+    break;
+  case DbgVariableRecord::LocationType::Assign:
+    Out << "assign";
+    break;
+  default:
+    llvm_unreachable(
+        "Tried to print a DbgVariableRecord with an invalid LocationType!");
+  }
+  Out << "(";
+  WriteAsOperandInternal(Out, DVR.getRawLocation(), WriterCtx, true);
   Out << ", ";
-  WriteAsOperandInternal(Out, Value.getVariable(), WriterCtx, true);
+  WriteAsOperandInternal(Out, DVR.getRawVariable(), WriterCtx, true);
   Out << ", ";
-  WriteAsOperandInternal(Out, Value.getExpression(), WriterCtx, true);
+  WriteAsOperandInternal(Out, DVR.getRawExpression(), WriterCtx, true);
   Out << ", ";
-  WriteAsOperandInternal(Out, Value.getDebugLoc().get(), WriterCtx, true);
-  Out << " marker @" << Value.getMarker();
-  Out << " }";
+  if (DVR.isDbgAssign()) {
+    WriteAsOperandInternal(Out, DVR.getRawAssignID(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, DVR.getRawAddress(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, DVR.getRawAddressExpression(), WriterCtx, true);
+    Out << ", ";
+  }
+  WriteAsOperandInternal(Out, DVR.getDebugLoc().getAsMDNode(), WriterCtx, true);
+  Out << ")";
+}
+
+/// printDbgRecordLine - Print a DbgRecord with indentation and a newline
+/// character.
+void AssemblyWriter::printDbgRecordLine(const DbgRecord &DR) {
+  // Print lengthier indentation to bring out-of-line with instructions.
+  Out << "    ";
+  printDbgRecord(DR);
+  Out << '\n';
+}
+
+void AssemblyWriter::printDbgLabelRecord(const DbgLabelRecord &Label) {
+  auto WriterCtx = getContext();
+  Out << "#dbg_label(";
+  WriteAsOperandInternal(Out, Label.getRawLabel(), WriterCtx, true);
+  Out << ", ";
+  WriteAsOperandInternal(Out, Label.getDebugLoc(), WriterCtx, true);
+  Out << ")";
 }
 
 void AssemblyWriter::printMetadataAttachments(
@@ -4666,19 +4936,11 @@ void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    bool ShouldPreserveUseListOrder, bool IsForDebug) const {
-  // RemoveDIs: always print with debug-info in intrinsic format.
-  bool ConvertAfter = IsNewDbgInfoFormat;
-  if (IsNewDbgInfoFormat)
-    const_cast<Module *>(this)->convertFromNewDbgValues();
-
   SlotTracker SlotTable(this);
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this, AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printModule(this);
-
-  if (ConvertAfter)
-    const_cast<Module *>(this)->convertToNewDbgValues();
 }
 
 void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
@@ -4755,22 +5017,20 @@ static bool isReferencingMDNode(const Instruction &I) {
   return false;
 }
 
-void DPMarker::print(raw_ostream &ROS, bool IsForDebug) const {
+void DbgMarker::print(raw_ostream &ROS, bool IsForDebug) const {
 
   ModuleSlotTracker MST(getModuleFromDPI(this), true);
   print(ROS, MST, IsForDebug);
 }
 
-void DPValue::print(raw_ostream &ROS, bool IsForDebug) const {
+void DbgVariableRecord::print(raw_ostream &ROS, bool IsForDebug) const {
 
   ModuleSlotTracker MST(getModuleFromDPI(this), true);
   print(ROS, MST, IsForDebug);
 }
 
-void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
-                     bool IsForDebug) const {
-  // There's no formal representation of a DPMarker -- print purely as a
-  // debugging aid.
+void DbgMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                      bool IsForDebug) const {
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =
@@ -4781,13 +5041,34 @@ void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   };
   incorporateFunction(getParent() ? getParent()->getParent() : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
-  W.printDPMarker(*this);
+  W.printDbgMarker(*this);
 }
 
-void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
-                    bool IsForDebug) const {
-  // There's no formal representation of a DPValue -- print purely as a
-  // debugging aid.
+void DbgLabelRecord::print(raw_ostream &ROS, bool IsForDebug) const {
+
+  ModuleSlotTracker MST(getModuleFromDPI(this), true);
+  print(ROS, MST, IsForDebug);
+}
+
+void DbgVariableRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                              bool IsForDebug) const {
+  formatted_raw_ostream OS(ROS);
+  SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
+  SlotTracker &SlotTable =
+      MST.getMachine() ? *MST.getMachine() : EmptySlotTable;
+  auto incorporateFunction = [&](const Function *F) {
+    if (F)
+      MST.incorporateFunction(*F);
+  };
+  incorporateFunction(Marker && Marker->getParent()
+                          ? Marker->getParent()->getParent()
+                          : nullptr);
+  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  W.printDbgVariableRecord(*this);
+}
+
+void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                           bool IsForDebug) const {
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =
@@ -4799,7 +5080,7 @@ void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
                                           : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
-  W.printDPValue(*this);
+  W.printDbgLabelRecord(*this);
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
@@ -5049,11 +5330,14 @@ void Value::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
 
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
-void DPMarker::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+void DbgMarker::dump() const {
+  print(dbgs(), /*IsForDebug=*/true);
+  dbgs() << '\n';
+}
 
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
-void DPValue::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+void DbgRecord::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
 
 // Type::dump - allow easy printing of Types from the debugger.
 LLVM_DUMP_METHOD

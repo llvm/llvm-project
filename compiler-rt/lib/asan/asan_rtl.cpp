@@ -71,16 +71,16 @@ static void CheckUnwind() {
 }
 
 // -------------------------- Globals --------------------- {{{1
-static int asan_inited = 0;
-static int asan_init_is_running = 0;
+static StaticSpinMutex asan_inited_mutex;
+static atomic_uint8_t asan_inited = {0};
 
-void SetAsanInited(u32 val) { asan_inited = val; }
+static void SetAsanInited() {
+  atomic_store(&asan_inited, 1, memory_order_release);
+}
 
-void SetAsanInitIsRunning(u32 val) { asan_init_is_running = val; }
-
-bool AsanInited() { return asan_inited == 1; }
-
-bool AsanInitIsRunning() { return asan_init_is_running == 1; }
+bool AsanInited() {
+  return atomic_load(&asan_inited, memory_order_acquire) == 1;
+}
 
 bool replace_intrin_cached;
 
@@ -382,7 +382,7 @@ void PrintAddressSpaceLayout() {
 
   Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
-  Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)ASAN_SHADOW_OFFSET);
+  Printf("SHADOW_OFFSET: %p\n", (void *)ASAN_SHADOW_OFFSET);
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
@@ -390,12 +390,10 @@ void PrintAddressSpaceLayout() {
           kHighShadowBeg > kMidMemEnd);
 }
 
-static void AsanInitInternal() {
+static bool AsanInitInternal() {
   if (LIKELY(AsanInited()))
-    return;
+    return true;
   SanitizerToolName = "AddressSanitizer";
-  CHECK(!AsanInitIsRunning() && "ASan init calls itself!");
-  SetAsanInitIsRunning(1);
 
   CacheBinaryName();
 
@@ -408,11 +406,12 @@ static void AsanInitInternal() {
   // Stop performing init at this point if we are being loaded via
   // dlopen() and the platform supports it.
   if (SANITIZER_SUPPORTS_INIT_FOR_DLOPEN && UNLIKELY(HandleDlopenInit())) {
-    SetAsanInitIsRunning(0);
     VReport(1, "AddressSanitizer init is being performed for dlopen().\n");
-    return;
+    return false;
   }
 
+  // Make sure we are not statically linked.
+  __interception::DoesNotSupportStaticLinking();
   AsanCheckIncompatibleRT();
   AsanCheckDynamicRTPrereqs();
   AvoidCVE_2016_2143();
@@ -423,9 +422,6 @@ static void AsanInitInternal() {
   InitializePlatformExceptionHandlers();
 
   InitializeHighMemEnd();
-
-  // Make sure we are not statically linked.
-  AsanDoesNotSupportStaticLinkage();
 
   // Install tool-specific callbacks in sanitizer_common.
   AddDieCallback(AsanDie);
@@ -470,8 +466,7 @@ static void AsanInitInternal() {
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.
   replace_intrin_cached = flags()->replace_intrin;
-  SetAsanInited(1);
-  SetAsanInitIsRunning(0);
+  SetAsanInited();
 
   if (flags()->atexit)
     Atexit(asan_atexit);
@@ -483,9 +478,6 @@ static void AsanInitInternal() {
   if (flags()->start_deactivated)
     AsanDeactivate();
 
-  // interceptors
-  InitTlsSize();
-
   // Create main thread.
   AsanThread *main_thread = CreateMainThread();
   CHECK_EQ(0, main_thread->tid());
@@ -496,6 +488,8 @@ static void AsanInitInternal() {
     __lsan::InitCommonLsan();
     InstallAtExitCheckLeaks();
   }
+
+  InstallAtForkHandler();
 
 #if CAN_SANITIZE_UB
   __ubsan::InitAsPlugin();
@@ -515,12 +509,27 @@ static void AsanInitInternal() {
   VReport(1, "AddressSanitizer Init done\n");
 
   WaitForDebugger(flags()->sleep_after_init, "after init");
+
+  return true;
 }
 
 // Initialize as requested from some part of ASan runtime library (interceptors,
 // allocator, etc).
 void AsanInitFromRtl() {
+  if (LIKELY(AsanInited()))
+    return;
+  SpinMutexLock lock(&asan_inited_mutex);
   AsanInitInternal();
+}
+
+bool TryAsanInitFromRtl() {
+  if (LIKELY(AsanInited()))
+    return true;
+  if (!asan_inited_mutex.TryLock())
+    return false;
+  bool result = AsanInitInternal();
+  asan_inited_mutex.Unlock();
+  return result;
 }
 
 #if ASAN_DYNAMIC
@@ -568,10 +577,8 @@ static void UnpoisonDefaultStack() {
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.
-    uptr tls_addr, tls_size, stack_size;
-    GetThreadStackAndTls(/*main=*/false, &bottom, &stack_size, &tls_addr,
-                         &tls_size);
-    top = bottom + stack_size;
+    uptr tls_begin, tls_end;
+    GetThreadStackAndTls(/*main=*/false, &bottom, &top, &tls_begin, &tls_end);
   }
 
   UnpoisonStack(bottom, top, "default");
@@ -593,7 +600,7 @@ static void UnpoisonFakeStack() {
 using namespace __asan;
 
 void NOINLINE __asan_handle_no_return() {
-  if (AsanInitIsRunning())
+  if (UNLIKELY(!AsanInited()))
     return;
 
   if (!PlatformUnpoisonStacks())
@@ -623,7 +630,7 @@ void NOINLINE __asan_set_death_callback(void (*callback)(void)) {
 // We use this call as a trigger to wake up ASan from deactivated state.
 void __asan_init() {
   AsanActivate();
-  AsanInitInternal();
+  AsanInitFromRtl();
 }
 
 void __asan_version_mismatch_check() {

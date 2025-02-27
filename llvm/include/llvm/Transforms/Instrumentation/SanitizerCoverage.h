@@ -18,7 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 
 namespace llvm {
 class Module;

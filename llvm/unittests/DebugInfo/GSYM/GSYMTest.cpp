@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
+#include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/DataExtractor.h"
@@ -213,10 +214,10 @@ TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
   FW.writeU32(1); // InfoType::LineTableInfo.
   TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
       "0x0000000c: missing FunctionInfo InfoType length");
-  FW.fixup32(4, FixupOffset); // Write an invalid InfoType enumeration value
+  FW.fixup32(7, FixupOffset); // Write an invalid InfoType enumeration value
   FW.writeU32(0); // LineTableInfo InfoType data length.
   TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000008: unsupported InfoType 4");
+                              "0x00000008: unsupported InfoType 7");
 }
 
 static void TestFunctionInfoEncodeError(llvm::endianness ByteOrder,
@@ -971,9 +972,10 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
                              "GsymCreator wasn't finalized prior to encoding");
   std::string finalizeIssues;
   raw_string_ostream OS(finalizeIssues);
-  llvm::Error finalizeErr = GC.finalize(OS);
+  OutputAggregator Agg(&OS);
+  llvm::Error finalizeErr = GC.finalize(Agg);
   ASSERT_FALSE(bool(finalizeErr));
-  finalizeErr = GC.finalize(OS);
+  finalizeErr = GC.finalize(Agg);
   ASSERT_TRUE(bool(finalizeErr));
   checkError("already finalized", std::move(finalizeErr));
   // Verify we get an error trying to encode a GsymCreator with a UUID that is
@@ -1043,7 +1045,8 @@ TEST(GSYMTest, TestGsymCreator1ByteAddrOffsets) {
   const uint32_t Func2Name = GC.insertString("bar");
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x00, 0x10, Func1Name));
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x20, 0x10, Func2Name));
-  Error Err = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
   TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
@@ -1065,7 +1068,8 @@ TEST(GSYMTest, TestGsymCreator2ByteAddrOffsets) {
   const uint32_t Func2Name = GC.insertString("bar");
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x000, 0x100, Func1Name));
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x200, 0x100, Func2Name));
-  Error Err = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
   TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
@@ -1087,7 +1091,8 @@ TEST(GSYMTest, TestGsymCreator4ByteAddrOffsets) {
   const uint32_t Func2Name = GC.insertString("bar");
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x000, 0x100, Func1Name));
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x20000, 0x100, Func2Name));
-  Error Err = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
   TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
@@ -1109,7 +1114,8 @@ TEST(GSYMTest, TestGsymCreator8ByteAddrOffsets) {
   const uint32_t Func2Name = GC.insertString("bar");
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x000, 0x100, Func1Name));
   GC.addFunctionInfo(FunctionInfo(BaseAddr+0x100000000, 0x100, Func2Name));
-  Error Err = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
   TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
@@ -1148,7 +1154,8 @@ TEST(GSYMTest, TestGsymReader) {
   const auto ByteOrder = llvm::endianness::native;
   GC.addFunctionInfo(FunctionInfo(Func1Addr, FuncSize, Func1Name));
   GC.addFunctionInfo(FunctionInfo(Func2Addr, FuncSize, Func2Name));
-  Error FinalizeErr = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error FinalizeErr = GC.finalize(Null);
   ASSERT_FALSE(FinalizeErr);
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -1213,7 +1220,8 @@ TEST(GSYMTest, TestGsymLookups) {
   Inline3.Ranges.insert(AddressRange(0x1016, 0x1018));
   FI.Inline->Children.emplace_back(Inline3);
   GC.addFunctionInfo(std::move(FI));
-  Error FinalizeErr = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error FinalizeErr = GC.finalize(Null);
   ASSERT_FALSE(FinalizeErr);
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -1329,11 +1337,12 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
       DWARFContext::create(*ErrOrSections, 8);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -1406,11 +1415,12 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
       DWARFContext::create(*ErrOrSections, 8);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -1513,11 +1523,12 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
       DWARFContext::create(*ErrOrSections, 8);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -1613,6 +1624,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
       DWARFContext::create(*ErrOrSections, 8);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   // Only allow addresses between [0x1000 - 0x2000) to be linked into the
@@ -1621,8 +1633,8 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   TextRanges.insert(AddressRange(0x1000, 0x2000));
   GC.SetValidTextRanges(TextRanges);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -1650,8 +1662,8 @@ TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
   TextRanges.insert(AddressRange(0x1000, 0x2000));
   GC.SetValidTextRanges(TextRanges);
   GC.addFunctionInfo(FunctionInfo(0x1500, 0, GC.insertString("symbol")));
-  auto &OS = llvm::nulls();
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OutputAggregator Null(nullptr);
+  ASSERT_THAT_ERROR(GC.finalize(Null), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -1816,11 +1828,12 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
       DWARFContext::create(*ErrOrSections, 8);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -2076,11 +2089,12 @@ TEST(GSYMTest, TestDWARFNoLines) {
       DWARFContext::create(*ErrOrSections, 8);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -2255,11 +2269,12 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
       DWARFContext::create(*ErrOrSections, 4);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -2395,11 +2410,12 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
       DWARFContext::create(*ErrOrSections, 8);
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -2430,7 +2446,8 @@ TEST(GSYMTest, TestGsymCreatorMultipleSymbolsWithNoSize) {
   const uint32_t Func2Name = GC.insertString("bar");
   GC.addFunctionInfo(FunctionInfo(BaseAddr, 0, Func1Name));
   GC.addFunctionInfo(FunctionInfo(BaseAddr, 0, Func2Name));
-  Error Err = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
   TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION, AddrOffSize,
                    BaseAddr,
@@ -2485,7 +2502,8 @@ static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
 // Finalize a GsymCreator, encode it and decode it and return the error or
 // GsymReader that was successfully decoded.
 static Expected<GsymReader> FinalizeEncodeAndDecode(GsymCreator &GC) {
-  Error FinalizeErr = GC.finalize(llvm::nulls());
+  OutputAggregator Null(nullptr);
+  Error FinalizeErr = GC.finalize(Null);
   if (FinalizeErr)
     return std::move(FinalizeErr);
   SmallString<1024> Str;
@@ -3033,11 +3051,12 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -3260,11 +3279,12 @@ TEST(GSYMTest, TestDWARFEmptyInline) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -3496,11 +3516,12 @@ TEST(GSYMTest, TestFinalizeForLineTables) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -3775,12 +3796,12 @@ TEST(GSYMTest, TestRangeWarnings) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
-  OS.flush();
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -3977,12 +3998,12 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
-  OS.flush();
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4129,12 +4150,12 @@ TEST(GSYMTest, TestEmptyLinkageName) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
-  OS.flush();
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4290,12 +4311,12 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
-  OS.flush();
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4610,12 +4631,12 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
-  OS.flush();
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4825,12 +4846,12 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   ASSERT_TRUE(DwarfContext.get() != nullptr);
   std::string errors;
   raw_string_ostream OS(errors);
+  OutputAggregator OSAgg(&OS);
   GsymCreator GC;
   DwarfTransformer DT(*DwarfContext, GC);
   const uint32_t ThreadCount = 1;
-  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
-  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
-  OS.flush();
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;

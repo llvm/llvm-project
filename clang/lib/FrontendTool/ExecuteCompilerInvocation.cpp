@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ARCMigrate/ARCMTActions.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Options.h"
@@ -31,6 +30,11 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
+
+#if CLANG_ENABLE_CIR
+#include "clang/CIR/FrontendAction/CIRGenAction.h"
+#endif
+
 using namespace clang;
 using namespace llvm::opt;
 
@@ -42,6 +46,13 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   StringRef Action("unknown");
   (void)Action;
 
+  unsigned UseCIR = CI.getFrontendOpts().UseClangIRPipeline;
+  frontend::ActionKind Act = CI.getFrontendOpts().ProgramAction;
+  bool EmitsCIR = Act == EmitCIR;
+
+  if (!UseCIR && EmitsCIR)
+    llvm::report_fatal_error("-emit-cir and only valid when using -fclangir");
+
   switch (CI.getFrontendOpts().ProgramAction) {
   case ASTDeclList:            return std::make_unique<ASTDeclListAction>();
   case ASTDump:                return std::make_unique<ASTDumpAction>();
@@ -51,13 +62,40 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<DumpCompilerOptionsAction>();
   case DumpRawTokens:          return std::make_unique<DumpRawTokensAction>();
   case DumpTokens:             return std::make_unique<DumpTokensAction>();
-  case EmitAssembly:           return std::make_unique<EmitAssemblyAction>();
-  case EmitBC:                 return std::make_unique<EmitBCAction>();
+  case EmitAssembly:
+#if CLANG_ENABLE_CIR
+    if (UseCIR)
+      return std::make_unique<cir::EmitAssemblyAction>();
+#endif
+    return std::make_unique<EmitAssemblyAction>();
+  case EmitBC:
+#if CLANG_ENABLE_CIR
+    if (UseCIR)
+      return std::make_unique<cir::EmitBCAction>();
+#endif
+    return std::make_unique<EmitBCAction>();
+  case EmitCIR:
+#if CLANG_ENABLE_CIR
+    return std::make_unique<cir::EmitCIRAction>();
+#else
+    llvm_unreachable("CIR suppport not built into clang");
+#endif
   case EmitHTML:               return std::make_unique<HTMLPrintAction>();
-  case EmitLLVM:               return std::make_unique<EmitLLVMAction>();
+  case EmitLLVM: {
+#if CLANG_ENABLE_CIR
+    if (UseCIR)
+      return std::make_unique<cir::EmitLLVMAction>();
+#endif
+    return std::make_unique<EmitLLVMAction>();
+  }
   case EmitLLVMOnly:           return std::make_unique<EmitLLVMOnlyAction>();
   case EmitCodeGenOnly:        return std::make_unique<EmitCodeGenOnlyAction>();
-  case EmitObj:                return std::make_unique<EmitObjAction>();
+  case EmitObj:
+#if CLANG_ENABLE_CIR
+    if (UseCIR)
+      return std::make_unique<cir::EmitObjAction>();
+#endif
+    return std::make_unique<EmitObjAction>();
   case ExtractAPI:
     return std::make_unique<ExtractAPIAction>();
   case FixIt:                  return std::make_unique<FixItAction>();
@@ -65,6 +103,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<GenerateModuleFromModuleMapAction>();
   case GenerateModuleInterface:
     return std::make_unique<GenerateModuleInterfaceAction>();
+  case GenerateReducedModuleInterface:
+    return std::make_unique<GenerateReducedModuleInterfaceAction>();
   case GenerateHeaderUnit:
     return std::make_unique<GenerateHeaderUnitAction>();
   case GeneratePCH:            return std::make_unique<GeneratePCHAction>();
@@ -111,12 +151,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #else
   case RewriteObjC:            Action = "RewriteObjC"; break;
 #endif
-#if CLANG_ENABLE_ARCMT
-  case MigrateSource:
-    return std::make_unique<arcmt::MigrateSourceAction>();
-#else
-  case MigrateSource:          Action = "MigrateSource"; break;
-#endif
 #if CLANG_ENABLE_STATIC_ANALYZER
   case RunAnalysis:            return std::make_unique<ento::AnalysisAction>();
 #else
@@ -127,8 +161,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<PrintDependencyDirectivesSourceMinimizerAction>();
   }
 
-#if !CLANG_ENABLE_ARCMT || !CLANG_ENABLE_STATIC_ANALYZER \
-  || !CLANG_ENABLE_OBJC_REWRITER
+#if !CLANG_ENABLE_STATIC_ANALYZER || !CLANG_ENABLE_OBJC_REWRITER
   CI.getDiagnostics().Report(diag::err_fe_action_not_available) << Action;
   return 0;
 #else
@@ -149,39 +182,14 @@ CreateFrontendAction(CompilerInstance &CI) {
     Act = std::make_unique<FixItRecompile>(std::move(Act));
   }
 
-#if CLANG_ENABLE_ARCMT
-  if (CI.getFrontendOpts().ProgramAction != frontend::MigrateSource &&
-      CI.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
-    // Potentially wrap the base FE action in an ARC Migrate Tool action.
-    switch (FEOpts.ARCMTAction) {
-    case FrontendOptions::ARCMT_None:
-      break;
-    case FrontendOptions::ARCMT_Check:
-      Act = std::make_unique<arcmt::CheckAction>(std::move(Act));
-      break;
-    case FrontendOptions::ARCMT_Modify:
-      Act = std::make_unique<arcmt::ModifyAction>(std::move(Act));
-      break;
-    case FrontendOptions::ARCMT_Migrate:
-      Act = std::make_unique<arcmt::MigrateAction>(std::move(Act),
-                                     FEOpts.MTMigrateDir,
-                                     FEOpts.ARCMTMigrateReportOut,
-                                     FEOpts.ARCMTMigrateEmitARCErrors);
-      break;
-    }
-
-    if (FEOpts.ObjCMTAction != FrontendOptions::ObjCMT_None) {
-      Act = std::make_unique<arcmt::ObjCMigrateAction>(std::move(Act),
-                                                        FEOpts.MTMigrateDir,
-                                                        FEOpts.ObjCMTAction);
-    }
-  }
-#endif
-
   // Wrap the base FE action in an extract api action to generate
-  // symbol graph as a biproduct of comilation ( enabled with
-  // --emit-symbol-graph option )
-  if (!FEOpts.SymbolGraphOutputDir.empty()) {
+  // symbol graph as a biproduct of compilation (enabled with
+  // --emit-symbol-graph option)
+  if (FEOpts.EmitSymbolGraph) {
+    if (FEOpts.SymbolGraphOutputDir.empty()) {
+      CI.getDiagnostics().Report(diag::warn_missing_symbol_graph_dir);
+      CI.getFrontendOpts().SymbolGraphOutputDir = ".";
+    }
     CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     Act = std::make_unique<WrappingExtractAPIAction>(std::move(Act));
   }

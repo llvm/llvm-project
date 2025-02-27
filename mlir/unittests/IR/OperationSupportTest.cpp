@@ -8,6 +8,7 @@
 
 #include "mlir/IR/OperationSupport.h"
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"
@@ -295,9 +296,9 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   MLIRContext context;
   context.getOrLoadDialect<test::TestDialect>();
 
-  auto op1 = createOp(&context);
+  auto *op1 = createOp(&context);
   // `op1` has an unknown loc.
-  auto op2 = createOp(&context);
+  auto *op2 = createOp(&context);
   op2->setLoc(NameLoc::get(StringAttr::get(&context, "foo")));
   auto getHash = [](Operation *op, OperationEquivalence::Flags flags) {
     return OperationEquivalence::computeHash(

@@ -32,19 +32,20 @@ define i32 @caller(<16 x i32> %A) nounwind {
 ; RV32-NEXT:    lw a5, 20(a0)
 ; RV32-NEXT:    lw a6, 24(a0)
 ; RV32-NEXT:    lw a7, 28(a0)
-; RV32-NEXT:    lw t2, 32(a0)
-; RV32-NEXT:    lw t3, 36(a0)
-; RV32-NEXT:    lw t4, 40(a0)
-; RV32-NEXT:    lw t5, 44(a0)
-; RV32-NEXT:    lw t6, 48(a0)
-; RV32-NEXT:    lw t1, 52(a0)
+; RV32-NEXT:    lw t3, 32(a0)
+; RV32-NEXT:    lw t4, 36(a0)
+; RV32-NEXT:    lw t5, 40(a0)
+; RV32-NEXT:    lw t6, 44(a0)
+; RV32-NEXT:    lw t1, 48(a0)
+; RV32-NEXT:    lw t2, 52(a0)
 ; RV32-NEXT:    lw s0, 56(a0)
 ; RV32-NEXT:    lw a0, 60(a0)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw s0, 4(sp)
 ; RV32-NEXT:    sw t1, 0(sp)
+; RV32-NEXT:    sw t2, 4(sp)
+; RV32-NEXT:    sw s0, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    mv a0, t0
-; RV32-NEXT:    call callee@plt
+; RV32-NEXT:    call callee
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
@@ -63,19 +64,20 @@ define i32 @caller(<16 x i32> %A) nounwind {
 ; RV64-NEXT:    ld a5, 40(a0)
 ; RV64-NEXT:    ld a6, 48(a0)
 ; RV64-NEXT:    ld a7, 56(a0)
-; RV64-NEXT:    ld t2, 64(a0)
-; RV64-NEXT:    ld t3, 72(a0)
-; RV64-NEXT:    ld t4, 80(a0)
-; RV64-NEXT:    ld t5, 88(a0)
-; RV64-NEXT:    ld t6, 96(a0)
-; RV64-NEXT:    ld t1, 104(a0)
+; RV64-NEXT:    ld t3, 64(a0)
+; RV64-NEXT:    ld t4, 72(a0)
+; RV64-NEXT:    ld t5, 80(a0)
+; RV64-NEXT:    ld t6, 88(a0)
+; RV64-NEXT:    ld t1, 96(a0)
+; RV64-NEXT:    ld t2, 104(a0)
 ; RV64-NEXT:    ld s0, 112(a0)
 ; RV64-NEXT:    ld a0, 120(a0)
-; RV64-NEXT:    sd a0, 16(sp)
-; RV64-NEXT:    sd s0, 8(sp)
 ; RV64-NEXT:    sd t1, 0(sp)
+; RV64-NEXT:    sd t2, 8(sp)
+; RV64-NEXT:    sd s0, 16(sp)
+; RV64-NEXT:    sd a0, 24(sp)
 ; RV64-NEXT:    mv a0, t0
-; RV64-NEXT:    call callee@plt
+; RV64-NEXT:    call callee
 ; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 48

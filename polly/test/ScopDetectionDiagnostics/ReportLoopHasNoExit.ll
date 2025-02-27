@@ -1,11 +1,11 @@
 ; XFAIL: *
 
 ; The test case stopped making sense after r310940 that added infinite loops to
-; the PostDominatorTree. Infinite loops are postdominated ony by the virtual
+; the PostDominatorTree. Infinite loops are postdominated only by the virtual
 ; root, which causes them not to appear in regions in ScopDetection anymore.
 
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops=false -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops=false '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; void func (int param0, int N, int *A)
 ; {

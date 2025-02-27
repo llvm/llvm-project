@@ -106,12 +106,12 @@ struct S {
 void critical_ref(S &s) {
   // ALL: [[S_ADDR:%.+]] = alloca ptr,
   // ALL: [[S_REF:%.+]] = load ptr, ptr [[S_ADDR]],
-  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, ptr [[S_REF]], i32 0, i32 0
+  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_REF]], i32 0, i32 0
   ++s.a;
   // ALL: call void @__kmpc_critical(
 #pragma omp critical
   // ALL: [[S_REF:%.+]] = load ptr, ptr [[S_ADDR]],
-  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, ptr [[S_REF]], i32 0, i32 0
+  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_REF]], i32 0, i32 0
   ++s.a;
   // ALL: call void @__kmpc_end_critical(
 }

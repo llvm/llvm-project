@@ -18,7 +18,6 @@
 #define LLVM_CODEGEN_MACHINEFUNCTION_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +33,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Target/TargetOptions.h"
+#include <bitset>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -54,12 +54,11 @@ class DILocation;
 class Function;
 class GISelChangeObserver;
 class GlobalValue;
-class LLVMTargetMachine;
+class TargetMachine;
 class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
 class MachineJumpTableInfo;
-class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
@@ -87,6 +86,15 @@ template <> struct ilist_callback_traits<MachineBasicBlock> {
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
     assert(this == &OldList && "never transfer MBBs between functions");
   }
+};
+
+// The hotness of static data tracked by a MachineFunction and not represented
+// as a global object in the module IR / MIR. Typical examples are
+// MachineJumpTableInfo and MachineConstantPool.
+enum class MachineFunctionDataHotness {
+  Unknown,
+  Cold,
+  Hot,
 };
 
 /// MachineFunctionInfo - This class can be derived from and used by targets to
@@ -187,6 +195,7 @@ public:
     Selected,
     TiedOpsRewritten,
     FailsVerification,
+    FailedRegAlloc,
     TracksDebugUserValues,
     LastProperty = TracksDebugUserValues,
   };
@@ -217,22 +226,21 @@ public:
   }
 
   MachineFunctionProperties &reset(const MachineFunctionProperties &MFP) {
-    Properties.reset(MFP.Properties);
+    Properties &= ~MFP.Properties;
     return *this;
   }
 
   // Returns true if all properties set in V (i.e. required by a pass) are set
   // in this.
   bool verifyRequiredProperties(const MachineFunctionProperties &V) const {
-    return !V.Properties.test(Properties);
+    return (Properties | ~V.Properties).all();
   }
 
   /// Print the MachineFunctionProperties in human-readable form.
   void print(raw_ostream &OS) const;
 
 private:
-  BitVector Properties =
-      BitVector(static_cast<unsigned>(Property::LastProperty)+1);
+  std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
 };
 
 struct SEHHandler {
@@ -256,12 +264,11 @@ struct LandingPadInfo {
       : LandingPadBlock(MBB) {}
 };
 
-class LLVM_EXTERNAL_VISIBILITY MachineFunction {
+class LLVM_ABI MachineFunction {
   Function &F;
-  const LLVMTargetMachine &Target;
+  const TargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
-  MachineModuleInfo &MMI;
 
   // RegInfo - Information about each register in use in the function.
   MachineRegisterInfo *RegInfo;
@@ -295,6 +302,10 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // MachineBasicBlock is inserted into a MachineFunction is it automatically
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
+
+  // MBBNumbering epoch, incremented after renumbering to detect use of old
+  // block numbers.
+  unsigned MBBNumberingEpoch = 0;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -375,6 +386,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool HasFakeUses = false;
   bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
@@ -396,15 +408,15 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
 
   /// \}
 
-  /// Clear all the members of this MachineFunction, but the ones used
-  /// to initialize again the MachineFunction.
-  /// More specifically, this deallocates all the dynamically allocated
-  /// objects and get rid of all the XXXInfo data structure, but keep
-  /// unchanged the references to Fn, Target, MMI, and FunctionNumber.
+  /// Clear all the members of this MachineFunction, but the ones used to
+  /// initialize again the MachineFunction.  More specifically, this deallocates
+  /// all the dynamically allocated objects and get rids of all the XXXInfo data
+  /// structure, but keeps unchanged the references to Fn, Target, and
+  /// FunctionNumber.
   void clear();
   /// Allocate and initialize the different members.
   /// In particular, the XXXInfo data structure.
-  /// \pre Fn, Target, MMI, and FunctionNumber are properly set.
+  /// \pre Fn, Target, and FunctionNumber are properly set.
   void init();
 
 public:
@@ -466,7 +478,6 @@ public:
     /// Callback before changing MCInstrDesc. This should not modify the MI
     /// directly.
     virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
-      return;
     }
   };
 
@@ -481,9 +492,16 @@ public:
       assert(Arg < (1 << 16) && "Arg out of range");
     }
   };
-  /// Vector of call argument and its forwarding register.
-  using CallSiteInfo = SmallVector<ArgRegPair, 1>;
-  using CallSiteInfoImpl = SmallVectorImpl<ArgRegPair>;
+
+  struct CallSiteInfo {
+    /// Vector of call argument and its forwarding register.
+    SmallVector<ArgRegPair, 1> ArgRegPairs;
+  };
+
+  struct CalledGlobalInfo {
+    const GlobalValue *Callee;
+    unsigned TargetFlags;
+  };
 
 private:
   Delegate *TheDelegate = nullptr;
@@ -496,6 +514,11 @@ private:
   /// A helper function that returns call site info for a give call
   /// instruction if debug entry value support is enabled.
   CallSiteInfoMap::iterator getCallSiteInfo(const MachineInstr *MI);
+
+  using CalledGlobalsMap = DenseMap<const MachineInstr *, CalledGlobalInfo>;
+  /// Mapping of call instruction to the global value and target flags that it
+  /// calls, if applicable.
+  CalledGlobalsMap CalledGlobalsInfo;
 
   // Callbacks for insertion and removal.
   void handleInsertion(MachineInstr &MI);
@@ -630,9 +653,9 @@ public:
   /// for instructions that have a stack spill fused into them.
   const static unsigned int DebugOperandMemNumber;
 
-  MachineFunction(Function &F, const LLVMTargetMachine &Target,
-                  const TargetSubtargetInfo &STI, unsigned FunctionNum,
-                  MachineModuleInfo &MMI);
+  MachineFunction(Function &F, const TargetMachine &Target,
+                  const TargetSubtargetInfo &STI, MCContext &Ctx,
+                  unsigned FunctionNum);
   MachineFunction(const MachineFunction &) = delete;
   MachineFunction &operator=(const MachineFunction &) = delete;
   ~MachineFunction();
@@ -664,7 +687,6 @@ public:
 
   GISelChangeObserver *getObserver() const { return Observer; }
 
-  MachineModuleInfo &getMMI() const { return MMI; }
   MCContext &getContext() const { return Ctx; }
 
   /// Returns the Section this function belongs to.
@@ -697,11 +719,6 @@ public:
             BBSectionsType == BasicBlockSection::Preset);
   }
 
-  /// Returns true if basic block labels are to be generated for this function.
-  bool hasBBLabels() const {
-    return BBSectionsType == BasicBlockSection::Labels;
-  }
-
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
@@ -709,7 +726,7 @@ public:
   void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
-  const LLVMTargetMachine &getTarget() const { return Target; }
+  const TargetMachine &getTarget() const { return Target; }
 
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.
@@ -858,12 +875,21 @@ public:
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 
+  /// Return the numbering "epoch" of block numbers, incremented after each
+  /// numbering. Intended for asserting that no renumbering was performed when
+  /// used by, e.g., preserved analyses.
+  unsigned getBlockNumberEpoch() const { return MBBNumberingEpoch; }
+
   /// RenumberBlocks - This discards all of the MachineBasicBlock numbers and
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
   /// dense, and match the ordering of the blocks within the function.  If a
   /// specific MachineBasicBlock is specified, only that block and those after
   /// it are renumbered.
   void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
+
+  /// Return an estimate of the function's code size,
+  /// taking into account block and function alignment
+  int64_t estimateFunctionSizeInBytes();
 
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
@@ -890,13 +916,22 @@ public:
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
+              raw_ostream *OS = nullptr, bool AbortOnError = true) const;
+
+  /// For New Pass Manager: Run the current MachineFunction through the machine
+  /// code verifier, useful for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(MachineFunctionAnalysisManager &MFAM,
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
               bool AbortOnError = true) const;
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
+  /// TODO: Add the param for LiveStacks analysis.
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
-              const char *Banner = nullptr, bool AbortOnError = true) const;
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
 
   // Provide accessors for the MachineBasicBlock list...
   using iterator = BasicBlockListType::iterator;
@@ -1003,7 +1038,7 @@ public:
   /// into \p MBB before \p InsertBefore.
   ///
   /// Note: Does not perform target specific adjustments; consider using
-  /// TargetInstrInfo::duplicate() intead.
+  /// TargetInstrInfo::duplicate() instead.
   MachineInstr &
   cloneMachineInstrBundle(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertBefore,
@@ -1026,18 +1061,27 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
-      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
-
-  MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
       Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
       const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
+    return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
+                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                FailureOrdering);
+  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, adjusting by an offset and using the given size.
@@ -1046,9 +1090,17 @@ public:
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
-                                          int64_t Offset, uint64_t Size) {
+                                          int64_t Offset, LocationSize Size) {
     return getMachineMemOperand(
-        MMO, Offset, Size == ~UINT64_C(0) ? LLT() : LLT::scalar(8 * Size));
+        MMO, Offset,
+        !Size.hasValue() ? LLT()
+        : Size.isScalable()
+            ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
+            : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
+  }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          int64_t Offset, uint64_t Size) {
+    return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
@@ -1057,10 +1109,15 @@ public:
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
-                                          uint64_t Size);
+                                          LocationSize Size);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
                                           LLT Ty);
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          const MachinePointerInfo &PtrInfo,
+                                          uint64_t Size) {
+    return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
+  }
 
   /// Allocate a new MachineMemOperand by copying an existing one,
   /// replacing only AliasAnalysis information. MachineMemOperands are owned
@@ -1101,7 +1158,8 @@ public:
   MachineInstr::ExtraInfo *createMIExtraInfo(
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
       MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
-      MDNode *PCSections = nullptr, uint32_t CFIType = 0);
+      MDNode *PCSections = nullptr, uint32_t CFIType = 0,
+      MDNode *MMRAs = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -1151,6 +1209,24 @@ public:
     CatchretTargets.push_back(Target);
   }
 
+  /// Tries to get the global and target flags for a call site, if the
+  /// instruction is a call to a global.
+  CalledGlobalInfo tryGetCalledGlobal(const MachineInstr *MI) const {
+    return CalledGlobalsInfo.lookup(MI);
+  }
+
+  /// Notes the global and target flags for a call site.
+  void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
+    assert(MI && "MI must not be null");
+    assert(Details.Callee && "Global must not be null");
+    CalledGlobalsInfo.insert({MI, Details});
+  }
+
+  /// Iterates over the full set of call sites and their associated globals.
+  auto getCalledGlobals() const {
+    return llvm::make_range(CalledGlobalsInfo.begin(), CalledGlobalsInfo.end());
+  }
+
   /// \name Exception Handling
   /// \{
 
@@ -1168,6 +1244,9 @@ public:
 
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
+
+  bool hasFakeUses() const { return HasFakeUses; }
+  void setHasFakeUses(bool V) { HasFakeUses = V; }
 
   bool isOutlined() const { return IsOutlined; }
   void setIsOutlined(bool V) { IsOutlined = V; }
@@ -1323,9 +1402,8 @@ public:
   }
 
   /// Start tracking the arguments passed to the call \p CallI.
-  void addCallArgsForwardingRegs(const MachineInstr *CallI,
-                                 CallSiteInfoImpl &&CallInfo) {
-    assert(CallI->isCandidateForCallSiteEntry());
+  void addCallSiteInfo(const MachineInstr *CallI, CallSiteInfo &&CallInfo) {
+    assert(CallI->isCandidateForAdditionalCallInfo());
     bool Inserted =
         CallSitesInfo.try_emplace(CallI, std::move(CallInfo)).second;
     (void)Inserted;
@@ -1341,18 +1419,16 @@ public:
 
   /// Erase the call site info for \p MI. It is used to remove a call
   /// instruction from the instruction stream.
-  void eraseCallSiteInfo(const MachineInstr *MI);
+  void eraseAdditionalCallInfo(const MachineInstr *MI);
   /// Copy the call site info from \p Old to \ New. Its usage is when we are
   /// making a copy of the instruction that will be inserted at different point
   /// of the instruction stream.
-  void copyCallSiteInfo(const MachineInstr *Old,
-                        const MachineInstr *New);
+  void copyAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
 
   /// Move the call site info from \p Old to \New call site info. This function
   /// is used when we are replacing one call instruction with another one to
   /// the same callee.
-  void moveCallSiteInfo(const MachineInstr *Old,
-                        const MachineInstr *New);
+  void moveAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
 
   unsigned getNewDebugInstrNum() {
     return ++DebugInstrNumberingCount;
@@ -1384,6 +1460,13 @@ template <> struct GraphTraits<MachineFunction*> :
   }
 
   static unsigned       size       (MachineFunction *F) { return F->size(); }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
@@ -1403,6 +1486,13 @@ template <> struct GraphTraits<const MachineFunction*> :
   static unsigned       size       (const MachineFunction *F)  {
     return F->size();
   }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 // Provide specializations of GraphTraits to be able to treat a function as a
@@ -1415,17 +1505,29 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
   static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
+
+  static unsigned getMaxNumber(MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   public GraphTraits<Inverse<const MachineBasicBlock*>> {
   static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
   }
+
+  static unsigned getMaxNumber(const MachineFunction *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const MachineFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
-class MachineFunctionAnalysisManager;
-void verifyMachineFunction(MachineFunctionAnalysisManager *,
-                           const std::string &Banner,
+void verifyMachineFunction(const std::string &Banner,
                            const MachineFunction &MF);
 
 } // end namespace llvm

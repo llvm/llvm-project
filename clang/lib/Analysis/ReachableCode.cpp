@@ -13,6 +13,7 @@
 
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -453,26 +454,70 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
   return isDeadRoot;
 }
 
-static bool isValidDeadStmt(const Stmt *S) {
+// Check if the given `DeadStmt` is a coroutine statement and is a substmt of
+// the coroutine statement. `Block` is the CFGBlock containing the `DeadStmt`.
+static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
+  // The coroutine statement, co_return, co_await, or co_yield.
+  const Stmt *CoroStmt = nullptr;
+  // Find the first coroutine statement after the DeadStmt in the block.
+  bool AfterDeadStmt = false;
+  for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
+       ++I)
+    if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
+      const Stmt *S = CS->getStmt();
+      if (S == DeadStmt)
+        AfterDeadStmt = true;
+      if (AfterDeadStmt &&
+          // For simplicity, we only check simple coroutine statements.
+          (llvm::isa<CoreturnStmt>(S) || llvm::isa<CoroutineSuspendExpr>(S))) {
+        CoroStmt = S;
+        break;
+      }
+    }
+  if (!CoroStmt)
+    return false;
+  struct Checker : DynamicRecursiveASTVisitor {
+    const Stmt *DeadStmt;
+    bool CoroutineSubStmt = false;
+    Checker(const Stmt *S) : DeadStmt(S) {
+      // Statements captured in the CFG can be implicit.
+      ShouldVisitImplicitCode = true;
+    }
+
+    bool VisitStmt(Stmt *S) override {
+      if (S == DeadStmt)
+        CoroutineSubStmt = true;
+      return true;
+    }
+  };
+  Checker checker(DeadStmt);
+  checker.TraverseStmt(const_cast<Stmt *>(CoroStmt));
+  return checker.CoroutineSubStmt;
+}
+
+static bool isValidDeadStmt(const Stmt *S, const clang::CFGBlock *Block) {
   if (S->getBeginLoc().isInvalid())
     return false;
   if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(S))
     return BO->getOpcode() != BO_Comma;
-  return true;
+  // Coroutine statements are never considered dead statements, because removing
+  // them may change the function semantic if it is the only coroutine statement
+  // of the coroutine.
+  return !isInCoroutineStmt(S, Block);
 }
 
 const Stmt *DeadCodeScan::findDeadCode(const clang::CFGBlock *Block) {
   for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I!=E; ++I)
     if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
       const Stmt *S = CS->getStmt();
-      if (isValidDeadStmt(S))
+      if (isValidDeadStmt(S, Block))
         return S;
     }
 
   CFGTerminator T = Block->getTerminator();
   if (T.isStmtBranch()) {
     const Stmt *S = T.getStmt();
-    if (S && isValidDeadStmt(S))
+    if (S && isValidDeadStmt(S, Block))
       return S;
   }
 

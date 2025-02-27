@@ -157,17 +157,17 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
   for (const auto &N : I.Params) {
     if (!First)
       Stream << ", ";
-    Stream << N.Type.Name + " " + N.Name;
+    Stream << N.Type.QualName + " " + N.Name;
     First = false;
   }
   writeHeader(I.Name, 3, OS);
   std::string Access = getAccessSpelling(I.Access).str();
   if (Access != "")
-    writeLine(genItalic(Access + " " + I.ReturnType.Type.Name + " " + I.Name +
-                        "(" + Stream.str() + ")"),
+    writeLine(genItalic(Access + " " + I.ReturnType.Type.QualName + " " +
+                        I.Name + "(" + Stream.str() + ")"),
               OS);
   else
-    writeLine(genItalic(I.ReturnType.Type.Name + " " + I.Name + "(" +
+    writeLine(genItalic(I.ReturnType.Type.QualName + " " + I.Name + "(" +
                         Stream.str() + ")"),
               OS);
   if (I.DefLoc)
@@ -300,7 +300,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
   llvm::sys::path::append(FilePath, "all_files.md");
-  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating index file: " +
@@ -323,7 +323,7 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
   llvm::sys::path::append(FilePath, "index.md");
-  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating index file: " +
@@ -407,7 +407,7 @@ MDGenerator::generateDocs(StringRef RootDir,
   for (const auto &Group : FileToInfos) {
     std::error_code FileErr;
     llvm::raw_fd_ostream InfoOS(Group.getKey(), FileErr,
-                                llvm::sys::fs::OF_None);
+                                llvm::sys::fs::OF_Text);
     if (FileErr) {
       return llvm::createStringError(FileErr, "Error opening file '%s'",
                                      Group.getKey().str().c_str());

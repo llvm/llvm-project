@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -45,11 +46,23 @@ public:
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
-  ABIArgInfo classifyArgumentType(QualType Ty, unsigned &NumRegsLeft) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, bool Variadic,
+                                  unsigned &NumRegsLeft) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
+
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                             const LangOptions &Opt) const override {
+    // We have legal instructions for 96-bit so 3x32 can be supported.
+    // FIXME: This check should be a subtarget feature as technically SI doesn't
+    // support it.
+    if (T->getNumElements() == 3 && getDataLayout().getTypeSizeInBits(T) == 96)
+      return T;
+    return DefaultABIInfo::getOptimalVectorMemoryType(T, Opt);
+  }
 };
 
 bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -103,19 +116,27 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
+  unsigned ArgumentIndex = 0;
+  const unsigned numFixedArguments = FI.getNumRequiredArgs();
+
   unsigned NumRegsLeft = MaxNumRegsForArgsRet;
   for (auto &Arg : FI.arguments()) {
     if (CC == llvm::CallingConv::AMDGPU_KERNEL) {
       Arg.info = classifyKernelArgumentType(Arg.type);
     } else {
-      Arg.info = classifyArgumentType(Arg.type, NumRegsLeft);
+      bool FixedArgument = ArgumentIndex++ < numFixedArguments;
+      Arg.info = classifyArgumentType(Arg.type, !FixedArgument, NumRegsLeft);
     }
   }
 }
 
-Address AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                 QualType Ty) const {
-  llvm_unreachable("AMDGPU does not support varargs");
+RValue AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty, AggValueSlot Slot) const {
+  const bool IsIndirect = false;
+  const bool AllowHigherAlign = false;
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
+                          getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(4), AllowHigherAlign, Slot);
 }
 
 ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
@@ -197,17 +218,26 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
   return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
 }
 
-ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty,
+ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
                                                unsigned &NumRegsLeft) const {
   assert(NumRegsLeft <= MaxNumRegsForArgsRet && "register estimate underflow");
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
+  if (Variadic) {
+    return ABIArgInfo::getDirect(/*T=*/nullptr,
+                                 /*Offset=*/0,
+                                 /*Padding=*/nullptr,
+                                 /*CanBeFlattened=*/false,
+                                 /*Align=*/0);
+  }
+
   if (isAggregateTypeForABI(Ty)) {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))
@@ -294,6 +324,9 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::Instruction &AtomicInst,
+                               const AtomicExpr *Expr = nullptr) const override;
   llvm::Value *createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                          llvm::Function *BlockInvokeFunc,
                                          llvm::Type *BlockTy) const override;
@@ -356,6 +389,29 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
+
+  if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
+    uint32_t X = Attr->getMaxNumWorkGroupsX()
+                     ->EvaluateKnownConstInt(M.getContext())
+                     .getExtValue();
+    // Y and Z dimensions default to 1 if not specified
+    uint32_t Y = Attr->getMaxNumWorkGroupsY()
+                     ? Attr->getMaxNumWorkGroupsY()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+    uint32_t Z = Attr->getMaxNumWorkGroupsZ()
+                     ? Attr->getMaxNumWorkGroupsZ()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+
+    F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
+  }
 }
 
 /// Emits control constants used to change per-architecture behaviour in the
@@ -368,7 +424,7 @@ void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     return;
 
   if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
-      clang::TargetOptions::COV_None)
+      llvm::CodeObjectVersionKind::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
@@ -409,9 +465,6 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
-
-  if (M.getContext().getTargetInfo().allowAMDGPUUnsafeFPAtomics())
-    F->addFnAttr("amdgpu-unsafe-fp-atomics", "true");
 
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
@@ -471,27 +524,36 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   std::string Name;
   switch (Scope) {
   case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
     Name = "singlethread";
     break;
   case SyncScope::HIPWavefront:
   case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
     Name = "wavefront";
     break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
     Name = "workgroup";
     break;
   case SyncScope::HIPAgent:
   case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
     Name = "agent";
     break;
+  case SyncScope::SystemScope:
   case SyncScope::HIPSystem:
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";
     break;
   }
 
-  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
+  // OpenCL assumes by default that atomic scopes are per-address space for
+  // non-sequentially consistent operations.
+  if (Scope >= SyncScope::OpenCLWorkGroup &&
+      Scope <= SyncScope::OpenCLSubGroup &&
+      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
     if (!Name.empty())
       Name = Twine(Twine(Name) + Twine("-")).str();
 
@@ -499,6 +561,43 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   }
 
   return Ctx.getOrInsertSyncScopeID(Name);
+}
+
+void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::Instruction &AtomicInst,
+    const AtomicExpr *AE) const {
+  auto *RMW = dyn_cast<llvm::AtomicRMWInst>(&AtomicInst);
+  auto *CmpX = dyn_cast<llvm::AtomicCmpXchgInst>(&AtomicInst);
+
+  // OpenCL and old style HIP atomics consider atomics targeting thread private
+  // memory to be undefined.
+  //
+  // TODO: This is probably undefined for atomic load/store, but there's not
+  // much direct codegen benefit to knowing this.
+  if (((RMW && RMW->getPointerAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS) ||
+       (CmpX &&
+        CmpX->getPointerAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
+      AE && AE->threadPrivateMemoryAtomicsAreUndefined()) {
+    llvm::MDBuilder MDHelper(CGF.getLLVMContext());
+    llvm::MDNode *ASRange = MDHelper.createRange(
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+    AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
+  }
+
+  if (!RMW || !CGF.getTarget().allowAMDGPUUnsafeFPAtomics())
+    return;
+
+  // TODO: Introduce new, more controlled options that also work for integers,
+  // and deprecate allowAMDGPUUnsafeFPAtomics.
+  llvm::AtomicRMWInst::BinOp RMWOp = RMW->getOperation();
+  if (llvm::AtomicRMWInst::isFPOperation(RMWOp)) {
+    llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
+
+    if (RMWOp == llvm::AtomicRMWInst::FAdd && RMW->getType()->isFloatTy())
+      RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {

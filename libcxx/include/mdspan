@@ -20,10 +20,14 @@ namespace std {
   template<class IndexType, size_t Rank>
     using dextents = see below;
 
+  // [mdspan.extents.dims], alias template dims
+  template<size_t Rank, class IndexType = size_t>
+    using dims = see below; // since C++26
+
   // [mdspan.layout], layout mapping
   struct layout_left;
   struct layout_right;
-  struct layout_stride; // not implemented yet
+  struct layout_stride;
 
   // [mdspan.accessor.default], class template default_accessor
   template<class ElementType>
@@ -334,11 +338,12 @@ namespace std {
     constexpr const mapping_type& mapping() const noexcept { return map_; }
     constexpr const accessor_type& accessor() const noexcept { return acc_; }
 
-    static constexpr bool is_always_unique()
+    // per LWG-4021 "mdspan::is_always_meow() should be noexcept"
+    static constexpr bool is_always_unique() noexcept
       { return mapping_type::is_always_unique(); }
-    static constexpr bool is_always_exhaustive()
+    static constexpr bool is_always_exhaustive() noexcept
       { return mapping_type::is_always_exhaustive(); }
-    static constexpr bool is_always_strided()
+    static constexpr bool is_always_strided() noexcept
       { return mapping_type::is_always_strided(); }
 
     constexpr bool is_unique() const
@@ -369,7 +374,11 @@ namespace std {
   template<class ElementType, class... Integrals>
     requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
     explicit mdspan(ElementType*, Integrals...)
-      -> mdspan<ElementType, dextents<size_t, sizeof...(Integrals)>>;
+      -> mdspan<ElementType, dextents<size_t, sizeof...(Integrals)>>;            // until C++26
+  template<class ElementType, class... Integrals>
+    requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
+    explicit mdspan(ElementType*, Integrals...)
+      -> mdspan<ElementType, extents<size_t, maybe-static-ext<Integrals>...>>;  // since C++26
 
   template<class ElementType, class OtherIndexType, size_t N>
     mdspan(ElementType*, span<OtherIndexType, N>)
@@ -399,18 +408,26 @@ namespace std {
 #ifndef _LIBCPP_MDSPAN
 #define _LIBCPP_MDSPAN
 
-#include <__config>
-#include <__fwd/mdspan.h>
-#include <__mdspan/default_accessor.h>
-#include <__mdspan/extents.h>
-#include <__mdspan/layout_left.h>
-#include <__mdspan/layout_right.h>
-#include <__mdspan/layout_stride.h>
-#include <__mdspan/mdspan.h>
-#include <version>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/mdspan>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if _LIBCPP_STD_VER >= 23
+#    include <__fwd/mdspan.h>
+#    include <__mdspan/default_accessor.h>
+#    include <__mdspan/extents.h>
+#    include <__mdspan/layout_left.h>
+#    include <__mdspan/layout_right.h>
+#    include <__mdspan/layout_stride.h>
+#    include <__mdspan/mdspan.h>
+#  endif
+
+#  include <version>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_MDSPAN

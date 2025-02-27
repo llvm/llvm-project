@@ -1,0 +1,99 @@
+# In certain cases CodeGenPrepare folds a return instruction into
+# the return block's predecessor blocks and subsequently deletes the return block.
+# The purpose of this is to enable tail call optimization in the predecessor blocks.
+# Removal of the return block also removes fake use instructions that were present
+# in the return block, potentially causing debug information to be lost.
+#
+# The fix is to clone any fake use instructions that are not dominated by definitions
+# in the return block itself into the predecessor blocks. This test enures that we do so.
+#
+# Generated from the following source with
+# clang -fextend-variable-liveness -S -emit-llvm -O2 -mllvm -stop-before=codegenprepare -o test.mir test.c
+#
+# extern int f0();
+# extern int f1();
+#
+# int foo(int i) {
+#   int temp = i;
+#   if (temp == 0)
+#     temp = f0();
+#   else
+#     temp = f1();
+#   return temp;
+# }
+#
+# RUN: llc -run-pass=codegenprepare -mtriple=x86_64-unknown-linux -o - %s | FileCheck %s
+#
+# CHECK:      define{{.*}}foo
+# CHECK:      if.then:
+# CHECK-NEXT: call{{.*}}fake.use(i32 %i)
+# CHECK-NEXT: tail call i32{{.*}}@f0
+# CHECK-NEXT: ret
+# CHECK:      if.else:
+# CHECK-NEXT: call{{.*}}fake.use(i32 %i)
+# CHECK-NEXT: tail call i32{{.*}}@f1
+# CHECK-NEXT: ret
+
+--- |
+  define hidden i32 @foo(i32 %i) local_unnamed_addr optdebug {
+  entry:
+    %cmp = icmp eq i32 %i, 0
+    br i1 %cmp, label %if.then, label %if.else
+
+  if.then:
+    %call = tail call i32 (...) @f0()
+    br label %if.end
+
+  if.else:
+    %call1 = tail call i32 (...) @f1()
+    br label %if.end
+
+  if.end:
+    %temp.0 = phi i32 [ %call, %if.then ], [ %call1, %if.else ]
+    notail call void (...) @llvm.fake.use(i32 %temp.0)
+    notail call void (...) @llvm.fake.use(i32 %i)
+    ret i32 %temp.0
+  }
+  declare i32 @f0(...) local_unnamed_addr
+  declare i32 @f1(...) local_unnamed_addr
+
+...
+---
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+
+...

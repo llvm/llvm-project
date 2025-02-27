@@ -68,6 +68,7 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
     }
     Print("Creating  : ");
   }
+  ClearShadowForThreadStackAndTLS();
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,
@@ -217,6 +218,11 @@ void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
   __hwasan::hwasanThreadArgRetval().GetAllPtrsLocked(ptrs);
 }
 
-void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
+  // TODO: implement.
+}
+void PrintThreads() {
+  // TODO: implement.
+}
 
 }  // namespace __lsan

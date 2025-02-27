@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/clock_t.h"
 #include "src/time/clock.h"
 #include "test/UnitTest/Test.h"
-
-#include <limits.h>
-#include <time.h>
 
 TEST(LlvmLibcClockTest, SmokeTest) {
   clock_t c1 = LIBC_NAMESPACE::clock();

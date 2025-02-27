@@ -17,7 +17,6 @@ define ptr @nest_receiver(ptr nest %arg) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a0, t2
 ; RV64I-NEXT:    ret
-;
   ret ptr %arg
 }
 
@@ -27,7 +26,7 @@ define ptr @nest_caller(ptr %arg) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv t2, a0
-; RV32I-NEXT:    call nest_receiver@plt
+; RV32I-NEXT:    call nest_receiver
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -37,11 +36,10 @@ define ptr @nest_caller(ptr %arg) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv t2, a0
-; RV64I-NEXT:    call nest_receiver@plt
+; RV64I-NEXT:    call nest_receiver
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-;
   %result = call ptr @nest_receiver(ptr nest %arg)
   ret ptr %result
 }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
@@ -254,6 +254,7 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step) {
     %c1 = arith.constant 1 : index
+    scf.reduce
   }
   return
 }
@@ -347,7 +348,7 @@ func.func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   // CHECK:   return %[[ITER_ARG]]
   %0 = scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) init(%arg3) -> f32 {
     %cst = arith.constant 42.0 : f32
-    scf.reduce(%cst) : f32 {
+    scf.reduce(%cst : f32) {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = arith.mulf %lhs, %rhs : f32
       scf.reduce.return %1 : f32
@@ -383,14 +384,12 @@ func.func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   %0:2 = scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                        step (%arg4, %step) init(%arg5, %init) -> (f32, i64) {
     %cf = arith.constant 42.0 : f32
-    scf.reduce(%cf) : f32 {
+    %2 = func.call @generate() : () -> i64
+    scf.reduce(%cf, %2 : f32, i64) {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = arith.addf %lhs, %rhs : f32
       scf.reduce.return %1 : f32
-    }
-
-    %2 = func.call @generate() : () -> i64
-    scf.reduce(%2) : i64 {
+    }, {
     ^bb0(%lhs: i64, %rhs: i64):
       %3 = arith.ori %lhs, %rhs : i64
       scf.reduce.return %3 : i64
@@ -580,7 +579,7 @@ func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, 
         scf.yield %2 : index
       }
     }
-    scf.yield
+    scf.reduce
   }
 
   // CHECK: ^[[LOOP_CONT]]:
@@ -674,5 +673,27 @@ func.func @forall(%num_threads: index) {
     scf.forall.in_parallel {
     }
   }
+  return
+}
+
+// -----
+
+//      CHECK: #loop_unroll = #llvm.loop_unroll<disable = true>
+// CHECK-NEXT: #loop_unroll1 = #llvm.loop_unroll<full = true>
+// CHECK-NEXT: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #loop_unroll>
+// CHECK-NEXT: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #loop_unroll1>
+//      CHECK: cf.cond_br %{{.*}}, ^bb2, ^bb6 {llvm.loop_annotation = #[[NO_UNROLL]]}
+//      CHECK: cf.cond_br %{{.*}}, ^bb4, ^bb5 {llvm.loop_annotation = #[[FULL_UNROLL]]}
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+#full_unroll = #llvm.loop_annotation<unroll = <full = true>>
+func.func @simple_std_for_loops_annotation(%arg0 : index, %arg1 : index, %arg2 : index) {
+  scf.for %i0 = %arg0 to %arg1 step %arg2 {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    scf.for %i1 = %c0 to %c4 step %c1 {
+      %c1_0 = arith.constant 1 : index
+    } {llvm.loop_annotation = #full_unroll}
+  } {llvm.loop_annotation = #no_unroll}
   return
 }

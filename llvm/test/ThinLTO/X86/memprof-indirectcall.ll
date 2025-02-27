@@ -202,7 +202,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 6
 
 ; DUMP: Node [[AX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 6	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 6	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
@@ -225,7 +225,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAR]] to Caller: [[MAIN6:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 5
 
 ; DUMP: Node [[MAIN3]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 4	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 4	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -233,7 +233,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN4]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 5	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 5	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -241,7 +241,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN1]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 0	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 0	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 3
 ; DUMP: 	CalleeEdges:
@@ -249,7 +249,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[BX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 7	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 7	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 4 5
 ; DUMP: 	CalleeEdges:
@@ -258,7 +258,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BX]] to Caller: [[BAR]] AllocTypes: NotColdCold ContextIds: 4 5
 
 ; DUMP: Node [[MAIN5]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 2	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 2	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 4
 ; DUMP: 	CalleeEdges:
@@ -266,7 +266,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN6]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 3	(clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 3	(clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 5
 ; DUMP: 	CalleeEdges:
@@ -274,7 +274,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 1	(clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 1	(clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 6
 ; DUMP: 	CalleeEdges:
@@ -302,7 +302,7 @@ attributes #0 = { noinline optnone }
 ; DUMP:		Clones: [[FOO2:0x[a-z0-9]+]]
 
 ; DUMP: Node [[AX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 6    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 6    (clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
@@ -324,7 +324,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAR]] to Caller: [[MAIN6]] AllocTypes: NotCold ContextIds: 5
 
 ; DUMP: Node [[MAIN3]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 4   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 4   (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
@@ -332,7 +332,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN4]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 5   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 5   (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
@@ -340,7 +340,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN1]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 0    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 0    (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 3
 ; DUMP: 	CalleeEdges:
@@ -348,7 +348,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[BX]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 7    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 7    (clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 4 5
 ; DUMP: 	CalleeEdges:
@@ -357,7 +357,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BX]] to Caller: [[BAR]] AllocTypes: NotColdCold ContextIds: 4 5
 
 ; DUMP: Node [[MAIN5]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 2   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 2   (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 4
 ; DUMP: 	CalleeEdges:
@@ -365,7 +365,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN6]]
-; DUMP: 	Callee: 4095956691517954349 (_Z3barP1A) Clones: 0 StackIds: 3   (clone 0)
+; DUMP: 	Callee: 2040285415115148168 (_Z3barP1A) Clones: 0 StackIds: 3   (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 5
 ; DUMP: 	CalleeEdges:
@@ -373,7 +373,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
-; DUMP: 	Callee: 12914368124089294956 (_Z3foov) Clones: 0 StackIds: 1    (clone 0)
+; DUMP: 	Callee: 15844184524768596045 (_Z3foov) Clones: 0 StackIds: 1    (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 6
 ; DUMP: 	CalleeEdges:
@@ -434,50 +434,50 @@ attributes #0 = { noinline optnone }
 
 ; DOT: digraph "postbuild" {
 ; DOT: 	label="postbuild";
-; DOT: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 1 2 3 4 5 6",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z3foov -\> alloc}"];
-; DOT: 	Node[[AX:0x[a-z0-9]+]] [shape=record,tooltip="N[[AX]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: 8256774051149711748\n_ZN1A1xEv -\> _Z3foov}"];
-; DOT: 	Node[[AX]] -> Node[[FOO]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"];
-; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2 4 5",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: 13626499562959447861\nnull call (external)}"];
-; DOT: 	Node[[BAR]] -> Node[[AX]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"];
-; DOT: 	Node[[BAR]] -> Node[[BX:0x[a-z0-9]+]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"];
-; DOT: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 748269490701775343\nmain -\> _Z3barP1A}"];
-; DOT: 	Node[[MAIN1]] -> Node[[BAR]][tooltip="ContextIds: 1",fillcolor="brown1"];
-; DOT: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 12699492813229484831\nmain -\> _Z3barP1A}"];
-; DOT: 	Node[[MAIN2]] -> Node[[BAR]][tooltip="ContextIds: 2",fillcolor="cyan"];
-; DOT: 	Node[[MAIN3:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN3]] ContextIds: 3",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
-; DOT: 	Node[[MAIN3]] -> Node[[FOO]][tooltip="ContextIds: 3",fillcolor="brown1"];
-; DOT: 	Node[[BX]] [shape=record,tooltip="N[[BX]] ContextIds: 4 5",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: 13614864978754796978\n_ZN1B1xEv -\> _Z3foov}"];
-; DOT: 	Node[[BX]] -> Node[[FOO]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"];
-; DOT: 	Node[[MAIN4:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN4]] ContextIds: 4",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 6792096022461663180\nmain -\> _Z3barP1A}"];
-; DOT: 	Node[[MAIN4]] -> Node[[BAR]][tooltip="ContextIds: 4",fillcolor="cyan"];
-; DOT: 	Node[[MAIN5:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN5]] ContextIds: 5",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 15737101490731057601\nmain -\> _Z3barP1A}"];
-; DOT: 	Node[[MAIN5]] -> Node[[BAR]][tooltip="ContextIds: 5",fillcolor="brown1"];
-; DOT: 	Node[[MAIN6:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN6]] ContextIds: 6",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
-; DOT: 	Node[[MAIN6]] -> Node[[FOO]][tooltip="ContextIds: 6",fillcolor="cyan"];
+; DOT: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 1 2 3 4 5 6",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc0\n_Z3foov -\> alloc}"];
+; DOT: 	Node[[AX:0x[a-z0-9]+]] [shape=record,tooltip="N[[AX]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 8256774051149711748\n_ZN1A1xEv -\> _Z3foov}"];
+; DOT: 	Node[[AX]] -> Node[[FOO]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"
+; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2 4 5",fillcolor="mediumorchid1",style="filled",label="{OrigId: 13626499562959447861\nnull call (external)}"];
+; DOT: 	Node[[BAR]] -> Node[[AX]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"
+; DOT: 	Node[[BAR]] -> Node[[BX:0x[a-z0-9]+]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"
+; DOT: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 748269490701775343\nmain -\> _Z3barP1A}"];
+; DOT: 	Node[[MAIN1]] -> Node[[BAR]][tooltip="ContextIds: 1",fillcolor="brown1"
+; DOT: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",label="{OrigId: 12699492813229484831\nmain -\> _Z3barP1A}"];
+; DOT: 	Node[[MAIN2]] -> Node[[BAR]][tooltip="ContextIds: 2",fillcolor="cyan"
+; DOT: 	Node[[MAIN3:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN3]] ContextIds: 3",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
+; DOT: 	Node[[MAIN3]] -> Node[[FOO]][tooltip="ContextIds: 3",fillcolor="brown1"
+; DOT: 	Node[[BX]] [shape=record,tooltip="N[[BX]] ContextIds: 4 5",fillcolor="mediumorchid1",style="filled",label="{OrigId: 13614864978754796978\n_ZN1B1xEv -\> _Z3foov}"];
+; DOT: 	Node[[BX]] -> Node[[FOO]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"
+; DOT: 	Node[[MAIN4:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN4]] ContextIds: 4",fillcolor="cyan",style="filled",label="{OrigId: 6792096022461663180\nmain -\> _Z3barP1A}"];
+; DOT: 	Node[[MAIN4]] -> Node[[BAR]][tooltip="ContextIds: 4",fillcolor="cyan"
+; DOT: 	Node[[MAIN5:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN5]] ContextIds: 5",fillcolor="brown1",style="filled",label="{OrigId: 15737101490731057601\nmain -\> _Z3barP1A}"];
+; DOT: 	Node[[MAIN5]] -> Node[[BAR]][tooltip="ContextIds: 5",fillcolor="brown1"
+; DOT: 	Node[[MAIN6:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN6]] ContextIds: 6",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
+; DOT: 	Node[[MAIN6]] -> Node[[FOO]][tooltip="ContextIds: 6",fillcolor="cyan"
 ; DOT: }
 
 
 ; DOTCLONED: digraph "cloned" {
 ; DOTCLONED: 	label="cloned";
-; DOTCLONED: 	Node[[FOO2:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO2]] ContextIds: 1 2 3 4 5",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z3foov -\> alloc}"];
-; DOTCLONED: 	Node[[AX:0x[a-z0-9]+]] [shape=record,tooltip="N[[AX]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: 8256774051149711748\n_ZN1A1xEv -\> _Z3foov}"];
-; DOTCLONED: 	Node[[AX]] -> Node[[FOO2]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"];
-; DOTCLONED: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2 4 5",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: 13626499562959447861\nnull call (external)}"];
-; DOTCLONED: 	Node[[BAR]] -> Node[[AX]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"];
-; DOTCLONED: 	Node[[BAR]] -> Node[[BX:0x[a-z0-9]+]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"];
-; DOTCLONED: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 748269490701775343\nmain -\> _Z3barP1A}"];
-; DOTCLONED: 	Node[[MAIN1]] -> Node[[BAR]][tooltip="ContextIds: 1",fillcolor="brown1"];
-; DOTCLONED: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 12699492813229484831\nmain -\> _Z3barP1A}"];
-; DOTCLONED: 	Node[[MAIN2]] -> Node[[BAR]][tooltip="ContextIds: 2",fillcolor="cyan"];
-; DOTCLONED: 	Node[[MAIN3:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN3]] ContextIds: 3",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
-; DOTCLONED: 	Node[[MAIN3]] -> Node[[FOO2]][tooltip="ContextIds: 3",fillcolor="brown1"];
-; DOTCLONED: 	Node[[BX]] [shape=record,tooltip="N[[BX]] ContextIds: 4 5",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: 13614864978754796978\n_ZN1B1xEv -\> _Z3foov}"];
-; DOTCLONED: 	Node[[BX]] -> Node[[FOO2]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"];
-; DOTCLONED: 	Node[[MAIN4:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN4]] ContextIds: 4",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 6792096022461663180\nmain -\> _Z3barP1A}"];
-; DOTCLONED: 	Node[[MAIN4]] -> Node[[BAR]][tooltip="ContextIds: 4",fillcolor="cyan"];
-; DOTCLONED: 	Node[[MAIN5:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN5]] ContextIds: 5",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 15737101490731057601\nmain -\> _Z3barP1A}"];
-; DOTCLONED: 	Node[[MAIN5]] -> Node[[BAR]][tooltip="ContextIds: 5",fillcolor="brown1"];
-; DOTCLONED: 	Node[[MAIN6:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN6]] ContextIds: 6",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
-; DOTCLONED: 	Node[[MAIN6]] -> Node[[FOO2:0x[a-z0-9]+]][tooltip="ContextIds: 6",fillcolor="cyan"];
-; DOTCLONED: 	Node[[FOO2]] [shape=record,tooltip="N[[FOO2]] ContextIds: 6",fillcolor="cyan",style="filled",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3foov -\> alloc}"];
+; DOTCLONED: 	Node[[FOO2:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO2]] ContextIds: 1 2 3 4 5",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc0\n_Z3foov -\> alloc}"];
+; DOTCLONED: 	Node[[AX:0x[a-z0-9]+]] [shape=record,tooltip="N[[AX]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 8256774051149711748\n_ZN1A1xEv -\> _Z3foov}"];
+; DOTCLONED: 	Node[[AX]] -> Node[[FOO2]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"
+; DOTCLONED: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2 4 5",fillcolor="mediumorchid1",style="filled",label="{OrigId: 13626499562959447861\nnull call (external)}"];
+; DOTCLONED: 	Node[[BAR]] -> Node[[AX]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1"
+; DOTCLONED: 	Node[[BAR]] -> Node[[BX:0x[a-z0-9]+]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"
+; DOTCLONED: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 748269490701775343\nmain -\> _Z3barP1A}"];
+; DOTCLONED: 	Node[[MAIN1]] -> Node[[BAR]][tooltip="ContextIds: 1",fillcolor="brown1"
+; DOTCLONED: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",label="{OrigId: 12699492813229484831\nmain -\> _Z3barP1A}"];
+; DOTCLONED: 	Node[[MAIN2]] -> Node[[BAR]][tooltip="ContextIds: 2",fillcolor="cyan"
+; DOTCLONED: 	Node[[MAIN3:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN3]] ContextIds: 3",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
+; DOTCLONED: 	Node[[MAIN3]] -> Node[[FOO2]][tooltip="ContextIds: 3",fillcolor="brown1"
+; DOTCLONED: 	Node[[BX]] [shape=record,tooltip="N[[BX]] ContextIds: 4 5",fillcolor="mediumorchid1",style="filled",label="{OrigId: 13614864978754796978\n_ZN1B1xEv -\> _Z3foov}"];
+; DOTCLONED: 	Node[[BX]] -> Node[[FOO2]][tooltip="ContextIds: 4 5",fillcolor="mediumorchid1"
+; DOTCLONED: 	Node[[MAIN4:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN4]] ContextIds: 4",fillcolor="cyan",style="filled",label="{OrigId: 6792096022461663180\nmain -\> _Z3barP1A}"];
+; DOTCLONED: 	Node[[MAIN4]] -> Node[[BAR]][tooltip="ContextIds: 4",fillcolor="cyan"
+; DOTCLONED: 	Node[[MAIN5:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN5]] ContextIds: 5",fillcolor="brown1",style="filled",label="{OrigId: 15737101490731057601\nmain -\> _Z3barP1A}"];
+; DOTCLONED: 	Node[[MAIN5]] -> Node[[BAR]][tooltip="ContextIds: 5",fillcolor="brown1"
+; DOTCLONED: 	Node[[MAIN6:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN6]] ContextIds: 6",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
+; DOTCLONED: 	Node[[MAIN6]] -> Node[[FOO2:0x[a-z0-9]+]][tooltip="ContextIds: 6",fillcolor="cyan"
+; DOTCLONED: 	Node[[FOO2]] [shape=record,tooltip="N[[FOO2]] ContextIds: 6",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3foov -\> alloc}"];
 ; DOTCLONED: }

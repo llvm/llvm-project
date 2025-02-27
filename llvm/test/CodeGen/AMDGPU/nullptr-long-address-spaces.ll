@@ -1,6 +1,6 @@
 ; XFAIL: *
 ; RUN: llc < %s -mtriple=amdgcn-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,GCN %s
-; RUN: llc < %s -march=r600 -mtriple=r600-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,R600 %s
+; RUN: llc < %s -mtriple=r600-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,R600 %s
 
 ; This is a temporary xfail, as the assembly printer is broken when dealing with
 ; lowerConstant() trying to return a value of size greater than 8 bytes.

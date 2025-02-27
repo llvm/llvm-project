@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMCMP_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMCMP_H
 
-#include "src/__support/macros/config.h"                   // LIBC_INLINE
+#include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 #include "src/string/memory_utils/utils.h"                 // Ptr, CPtr
 
@@ -31,14 +31,15 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE int inline_memcmp(const void *p1, const void *p2, size_t count) {
+[[gnu::flatten]] LIBC_INLINE int inline_memcmp(const void *p1, const void *p2,
+                                               size_t count) {
   return static_cast<int>(LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP(
       reinterpret_cast<CPtr>(p1), reinterpret_cast<CPtr>(p2), count));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #undef LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP
 

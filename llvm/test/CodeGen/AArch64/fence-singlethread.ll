@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu %s -o - | FileCheck %s --check-prefix=LINUX
 ; RUN: llc -mtriple=aarch64-apple-ios %s -o - | FileCheck %s --check-prefix=IOS
 ; RUN: llc -mtriple=aarch64-apple-ios %s -o - -global-isel | FileCheck %s --check-prefix=IOS
-; RUN: llc -mtriple=aarch64-linux-gnueabihf %s -filetype=obj -o %t
+; RUN: llc -mtriple=aarch64 %s -filetype=obj -o %t
 ; RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=OBJ
 
 ; OBJ-NOT: dmb

@@ -121,7 +121,7 @@ template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
 struct VariadicFunction {
-  ResultT operator()() const { return Func(std::nullopt); }
+  ResultT operator()() const { return Func({}); }
 
   template <typename... ArgsT>
   ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
@@ -161,6 +161,9 @@ inline QualType getUnderlyingType(const FriendDecl &Node) {
 inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
   return Node.getType();
 }
+inline QualType getUnderlyingType(const ObjCInterfaceDecl &Node) {
+  return Node.getTypeForDecl()->getPointeeType();
+}
 
 /// Unifies obtaining a `TypeSourceInfo` from different node types.
 template <typename T,
@@ -185,10 +188,6 @@ inline TypeSourceInfo *GetTypeSourceInfo(const BlockDecl &Node) {
 }
 inline TypeSourceInfo *GetTypeSourceInfo(const CXXNewExpr &Node) {
   return Node.getAllocatedTypeSourceInfo();
-}
-inline TypeSourceInfo *
-GetTypeSourceInfo(const ClassTemplateSpecializationDecl &Node) {
-  return Node.getTypeAsWritten();
 }
 
 /// Unifies obtaining the FunctionProtoType pointer from both
@@ -1117,6 +1116,11 @@ private:
     return matchesDecl(Node.getDecl(), Finder, Builder);
   }
 
+  bool matchesSpecialized(const ObjCInterfaceDecl &Node, ASTMatchFinder *Finder,
+                          BoundNodesTreeBuilder *Builder) const {
+    return matchesDecl(Node.getCanonicalDecl(), Finder, Builder);
+  }
+
   /// Extracts the operator new of the new call and returns whether the
   /// inner matcher matches on it.
   bool matchesSpecialized(const CXXNewExpr &Node,
@@ -1217,7 +1221,7 @@ using HasDeclarationSupportedTypes =
              ElaboratedType, InjectedClassNameType, LabelStmt, AddrLabelExpr,
              MemberExpr, QualType, RecordType, TagType,
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
-             UnresolvedUsingType, ObjCIvarRefExpr>;
+             UnresolvedUsingType, ObjCIvarRefExpr, ObjCInterfaceDecl>;
 
 /// A Matcher that allows binding the node it matches to an id.
 ///
@@ -1800,7 +1804,7 @@ private:
 ///
 /// Used to implement the \c loc() matcher.
 class TypeLocTypeMatcher : public MatcherInterface<TypeLoc> {
-  DynTypedMatcher InnerMatcher;
+  Matcher<QualType> InnerMatcher;
 
 public:
   explicit TypeLocTypeMatcher(const Matcher<QualType> &InnerMatcher)
@@ -1810,8 +1814,7 @@ public:
                BoundNodesTreeBuilder *Builder) const override {
     if (!Node)
       return false;
-    return this->InnerMatcher.matches(DynTypedNode::create(Node.getType()),
-                                      Finder, Builder);
+    return this->InnerMatcher.matches(Node.getType(), Finder, Builder);
   }
 };
 
@@ -1940,6 +1943,11 @@ getTemplateSpecializationArgs(const ClassTemplateSpecializationDecl &D) {
 }
 
 inline ArrayRef<TemplateArgument>
+getTemplateSpecializationArgs(const VarTemplateSpecializationDecl &D) {
+  return D.getTemplateArgs().asArray();
+}
+
+inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const TemplateSpecializationType &T) {
   return T.template_arguments();
 }
@@ -1948,7 +1956,46 @@ inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const FunctionDecl &FD) {
   if (const auto* TemplateArgs = FD.getTemplateSpecializationArgs())
     return TemplateArgs->asArray();
-  return ArrayRef<TemplateArgument>();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->arguments();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->arguments();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const FunctionDecl &FD) {
+  if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
+    return Args->arguments();
+  return {};
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const DeclRefExpr &DRE) {
+  if (const auto *Args = DRE.getTemplateArgs())
+    return {Args, DRE.getNumTemplateArgs()};
+  return {};
+}
+
+inline SmallVector<TemplateArgumentLoc>
+getTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
+  SmallVector<TemplateArgumentLoc> Args;
+  if (!T.isNull()) {
+    Args.reserve(T.getNumArgs());
+    for (unsigned I = 0; I < T.getNumArgs(); ++I)
+      Args.emplace_back(T.getArgLoc(I));
+  }
+  return Args;
 }
 
 struct NotEqualsBoundNodePredicate {
@@ -2195,6 +2242,9 @@ inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
   }
   return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
 }
+inline StringRef getOpName(const CXXFoldExpr &Node) {
+  return BinaryOperator::getOpcodeStr(Node.getOperator());
+}
 
 /// Matches overloaded operators with a specific name.
 ///
@@ -2290,6 +2340,14 @@ MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
                       internal::BoundNodesTreeBuilder *Builder) {
   return !Node.isNull() && Index < Node.getNumArgs() &&
          InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
+}
+
+inline std::string getDependentName(const DependentScopeDeclRefExpr &node) {
+  return node.getDeclName().getAsString();
+}
+
+inline std::string getDependentName(const DependentNameType &node) {
+  return node.getIdentifier()->getName().str();
 }
 
 } // namespace internal

@@ -177,11 +177,11 @@ ProcEntityDetails::ProcEntityDetails(EntityDetails &&d)
     : EntityDetails(std::move(d)) {}
 
 UseErrorDetails::UseErrorDetails(const UseDetails &useDetails) {
-  add_occurrence(useDetails.location(), *GetUsedModule(useDetails).scope());
+  add_occurrence(useDetails.location(), useDetails.symbol());
 }
 UseErrorDetails &UseErrorDetails::add_occurrence(
-    const SourceName &location, const Scope &module) {
-  occurrences_.push_back(std::make_pair(location, &module));
+    const SourceName &location, const Symbol &used) {
+  occurrences_.push_back(std::make_pair(location, &used));
   return *this;
 }
 
@@ -192,12 +192,10 @@ void GenericDetails::AddSpecificProc(
 }
 void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!specific_);
-  CHECK(!derivedType_);
   specific_ = &specific;
 }
 void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
-  CHECK(!specific_);
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
@@ -211,9 +209,10 @@ const Symbol *GenericDetails::CheckSpecific() const {
   return const_cast<GenericDetails *>(this)->CheckSpecific();
 }
 Symbol *GenericDetails::CheckSpecific() {
-  if (specific_) {
+  if (specific_ && !specific_->has<UseErrorDetails>()) {
+    const Symbol &ultimate{specific_->GetUltimate()};
     for (const Symbol &proc : specificProcs_) {
-      if (&proc == specific_) {
+      if (&proc.GetUltimate() == &ultimate) {
         return nullptr;
       }
     }
@@ -232,11 +231,10 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
     derivedType_ = from.derivedType_;
   }
   for (std::size_t i{0}; i < from.specificProcs_.size(); ++i) {
-    if (std::find_if(specificProcs_.begin(), specificProcs_.end(),
-            [&](const Symbol &mySymbol) {
-              return &mySymbol.GetUltimate() ==
-                  &from.specificProcs_[i]->GetUltimate();
-            }) == specificProcs_.end()) {
+    if (llvm::none_of(specificProcs_, [&](const Symbol &mySymbol) {
+          return &mySymbol.GetUltimate() ==
+              &from.specificProcs_[i]->GetUltimate();
+        })) {
       specificProcs_.push_back(from.specificProcs_[i]);
       bindingNames_.push_back(from.bindingNames_[i]);
     }
@@ -377,6 +375,18 @@ void Symbol::SetIsExplicitBindName(bool yes) {
       details_);
 }
 
+void Symbol::SetIsCDefined(bool yes) {
+  common::visit(
+      [&](auto &x) {
+        if constexpr (HasBindName<decltype(&x)>) {
+          x.set_isCDefined(yes);
+        } else {
+          DIE("CDEFINED not allowed on this kind of symbol");
+        }
+      },
+      details_);
+}
+
 bool Symbol::IsFuncResult() const {
   return common::visit(
       common::visitors{[](const EntityDetails &x) { return x.isFuncResult(); },
@@ -387,9 +397,17 @@ bool Symbol::IsFuncResult() const {
       details_);
 }
 
+const ArraySpec *Symbol::GetShape() const {
+  if (const auto *details{std::get_if<ObjectEntityDetails>(&details_)}) {
+    return &details->shape();
+  } else {
+    return nullptr;
+  }
+}
+
 bool Symbol::IsObjectArray() const {
-  const auto *details{std::get_if<ObjectEntityDetails>(&details_)};
-  return details && details->IsArray();
+  const ArraySpec *shape{GetShape()};
+  return shape && !shape->empty();
 }
 
 bool Symbol::IsSubprogram() const {
@@ -416,6 +434,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const EntityDetails &x) {
     os << " type: " << *x.type();
   }
   DumpOptional(os, "bindName", x.bindName());
+  DumpBool(os, "CDEFINED", x.isCDefined());
   return os;
 }
 
@@ -454,6 +473,9 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const ProcEntityDetails &x) {
   if (x.procInterface_) {
+    if (x.rawProcInterface_ != x.procInterface_) {
+      os << ' ' << x.rawProcInterface_->name() << " ->";
+    }
     os << ' ' << x.procInterface_->name();
   } else {
     DumpType(os, x.type());
@@ -535,9 +557,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           [&](const UseErrorDetails &x) {
             os << " uses:";
             char sep{':'};
-            for (const auto &[location, module] : x.occurrences()) {
-              os << sep << " from " << module->GetName().value() << " at "
-                 << location;
+            for (const auto &[location, sym] : x.occurrences()) {
+              os << sep << " from " << sym->name() << " at " << location;
               sep = ',';
             }
           },
@@ -566,7 +587,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
-            os << ' ' << common::EnumToString(x.attr());
+            if (auto attr{x.attr()}) {
+              os << ' ' << common::EnumToString(*attr);
+            } else {
+              os << " (no attr)";
+            }
             DumpExpr(os, "init", x.init());
           },
           [&](const MiscDetails &x) {
@@ -717,9 +742,16 @@ const Symbol *DerivedTypeDetails::GetFinalForRank(int rank) const {
   return nullptr;
 }
 
-void TypeParamDetails::set_type(const DeclTypeSpec &type) {
+TypeParamDetails &TypeParamDetails::set_attr(common::TypeParamAttr attr) {
+  CHECK(!attr_);
+  attr_ = attr;
+  return *this;
+}
+
+TypeParamDetails &TypeParamDetails::set_type(const DeclTypeSpec &type) {
   CHECK(!type_);
   type_ = &type;
+  return *this;
 }
 
 bool GenericKind::IsIntrinsicOperator() const {
@@ -733,22 +765,10 @@ bool GenericKind::IsOperator() const {
 
 std::string GenericKind::ToString() const {
   return common::visit(
-      common::visitors {
-        [](const OtherKind &x) { return std::string{EnumToString(x)}; },
-            [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            [](const common::NumericOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::LogicalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::RelationalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-#else
-            [](const auto &x) { return std::string{common::EnumToString(x)}; },
-#endif
+      common::visitors{
+          [](const OtherKind &x) { return std::string{EnumToString(x)}; },
+          [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
+          [](const auto &x) { return std::string{common::EnumToString(x)}; },
       },
       u);
 }

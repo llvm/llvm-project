@@ -241,7 +241,7 @@ private:
 
   /// A list of the serialization ID numbers for each of the top-level
   /// declarations parsed within the precompiled preamble.
-  std::vector<serialization::DeclID> TopLevelDeclsInPreamble;
+  std::vector<LocalDeclID> TopLevelDeclsInPreamble;
 
   /// Whether we should be caching code-completion results.
   bool ShouldCacheCodeCompletionResults : 1;
@@ -692,12 +692,13 @@ public:
   ///
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
   static std::unique_ptr<ASTUnit>
-  LoadFromASTFile(const std::string &Filename,
-                  const PCHContainerReader &PCHContainerRdr, WhatToLoad ToLoad,
+  LoadFromASTFile(StringRef Filename, const PCHContainerReader &PCHContainerRdr,
+                  WhatToLoad ToLoad,
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
                   std::shared_ptr<HeaderSearchOptions> HSOpts,
-                  bool UseDebugInfo = false, bool OnlyLocalDecls = false,
+                  std::shared_ptr<LangOptions> LangOpts = nullptr,
+                  bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
                   bool AllowASTWithCompilerErrors = false,
                   bool UserFilesAreVolatile = false,
@@ -835,7 +836,7 @@ public:
       bool StorePreamblesInMemory = false,
       StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
+      ArrayRef<RemappedFile> RemappedFiles = {},
       bool RemappedFilesKeepOriginalName = true,
       unsigned PrecompilePreambleAfterNParses = 0,
       TranslationUnitKind TUKind = TU_Complete,
@@ -863,7 +864,7 @@ public:
   /// \returns True if a failure occurred that causes the ASTUnit not to
   /// contain any translation-unit information, false otherwise.
   bool Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-               ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
+               ArrayRef<RemappedFile> RemappedFiles = {},
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Free data that will be re-generated on the next parse.
@@ -904,7 +905,7 @@ public:
                     SourceManager &SourceMgr, FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
-                    std::unique_ptr<SyntaxOnlyAction> Act = nullptr);
+                    std::unique_ptr<SyntaxOnlyAction> Act);
 
   /// Save this translation unit to a file with the given name.
   ///

@@ -4,7 +4,7 @@
 define <4 x i32> @PR63507() {
 ; CHECK-LABEL: PR63507:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [4294967295,4294967295]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967295,0,4294967295,0]
 ; CHECK-NEXT:    vpmulld %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %psll.i = tail call <4 x i32> @llvm.x86.sse2.psll.d(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer)

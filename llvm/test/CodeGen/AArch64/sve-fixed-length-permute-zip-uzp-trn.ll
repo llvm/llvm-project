@@ -140,13 +140,13 @@ define void @zip_v4f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_512-NEXT:    ptrue p0.d, vl4
 ; VBITS_EQ_512-NEXT:    mov x8, sp
-; VBITS_EQ_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_EQ_512-NEXT:    mov z2.d, z1.d[3]
-; VBITS_EQ_512-NEXT:    mov z3.d, z0.d[3]
-; VBITS_EQ_512-NEXT:    mov z4.d, z1.d[2]
-; VBITS_EQ_512-NEXT:    mov z5.d, z0.d[2]
-; VBITS_EQ_512-NEXT:    zip1 z0.d, z0.d, z1.d
+; VBITS_EQ_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_EQ_512-NEXT:    mov z2.d, z0.d[3]
+; VBITS_EQ_512-NEXT:    mov z3.d, z1.d[3]
+; VBITS_EQ_512-NEXT:    mov z4.d, z0.d[2]
+; VBITS_EQ_512-NEXT:    mov z5.d, z1.d[2]
+; VBITS_EQ_512-NEXT:    zip1 z0.d, z1.d, z0.d
 ; VBITS_EQ_512-NEXT:    stp d3, d2, [sp, #16]
 ; VBITS_EQ_512-NEXT:    stp d5, d4, [sp]
 ; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x8]
@@ -201,7 +201,7 @@ define void @zip1_v8i32_undef(ptr %a) #0 {
 ; VBITS_EQ_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load  volatile <8 x i32>, ptr %a
-  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
   store volatile <8 x i32> %tmp2, ptr %a
   ret void
 }
@@ -231,7 +231,7 @@ define void @trn_v32i8(ptr %a, ptr %b) #0 {
   %tmp1 = load <32 x i8>, ptr %a
   %tmp2 = load <32 x i8>, ptr %b
   %tmp3 = shufflevector <32 x i8> %tmp1, <32 x i8> %tmp2, <32 x i32> <i32 0, i32 32, i32 2, i32 34, i32 4, i32 36, i32 6, i32 38, i32 8, i32 40, i32 10, i32 42, i32 12, i32 44, i32 14, i32 46, i32 16, i32 48, i32 18, i32 50, i32 20, i32 52, i32 22, i32 54, i32 24, i32 56, i32 26, i32 58, i32 28, i32 60, i32 30, i32 62>
-  %tmp4 = shufflevector <32 x i8> %tmp1, <32 x i8> %tmp2, <32 x i32> <i32 1, i32 33, i32 3, i32 35, i32 undef, i32 37, i32 7, i32 undef, i32 undef, i32 41, i32 11, i32 43, i32 13, i32 45, i32 15, i32 47, i32 17, i32 49, i32 19, i32 51, i32 21, i32 53, i32 23, i32 55, i32 25, i32 57, i32 27, i32 59, i32 29, i32 61, i32 31, i32 63>
+  %tmp4 = shufflevector <32 x i8> %tmp1, <32 x i8> %tmp2, <32 x i32> <i32 1, i32 33, i32 3, i32 35, i32 poison, i32 37, i32 7, i32 poison, i32 poison, i32 41, i32 11, i32 43, i32 13, i32 45, i32 15, i32 47, i32 17, i32 49, i32 19, i32 51, i32 21, i32 53, i32 23, i32 55, i32 25, i32 57, i32 27, i32 59, i32 29, i32 61, i32 31, i32 63>
   %tmp5 = add <32 x i8> %tmp3, %tmp4
   store <32 x i8> %tmp5, ptr %a
   ret void
@@ -243,15 +243,15 @@ define void @trn_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-NEXT:    ptrue p0.h
 ; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; VBITS_EQ_256-NEXT:    trn1 z4.h, z0.h, z2.h
-; VBITS_EQ_256-NEXT:    trn2 z0.h, z0.h, z2.h
-; VBITS_EQ_256-NEXT:    trn1 z2.h, z1.h, z3.h
-; VBITS_EQ_256-NEXT:    trn2 z1.h, z1.h, z3.h
+; VBITS_EQ_256-NEXT:    trn1 z4.h, z0.h, z1.h
+; VBITS_EQ_256-NEXT:    trn2 z0.h, z0.h, z1.h
+; VBITS_EQ_256-NEXT:    trn1 z1.h, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    trn2 z2.h, z2.h, z3.h
 ; VBITS_EQ_256-NEXT:    add z0.h, z4.h, z0.h
-; VBITS_EQ_256-NEXT:    add z1.h, z2.h, z1.h
+; VBITS_EQ_256-NEXT:    add z1.h, z1.h, z2.h
 ; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
 ; VBITS_EQ_256-NEXT:    ret
@@ -269,7 +269,7 @@ define void @trn_v32i16(ptr %a, ptr %b) #0 {
   %tmp1 = load <32 x i16>, ptr %a
   %tmp2 = load <32 x i16>, ptr %b
   %tmp3 = shufflevector <32 x i16> %tmp1, <32 x i16> %tmp2, <32 x i32> <i32 0, i32 32, i32 2, i32 34, i32 4, i32 36, i32 6, i32 38, i32 8, i32 40, i32 10, i32 42, i32 12, i32 44, i32 14, i32 46, i32 16, i32 48, i32 18, i32 50, i32 20, i32 52, i32 22, i32 54, i32 24, i32 56, i32 26, i32 58, i32 28, i32 60, i32 30, i32 62>
-  %tmp4 = shufflevector <32 x i16> %tmp1, <32 x i16> %tmp2, <32 x i32> <i32 1, i32 33, i32 3, i32 35, i32 undef, i32 37, i32 7, i32 undef, i32 undef, i32 41, i32 11, i32 43, i32 13, i32 45, i32 15, i32 47, i32 17, i32 49, i32 19, i32 51, i32 21, i32 53, i32 23, i32 55, i32 25, i32 57, i32 27, i32 59, i32 29, i32 61, i32 31, i32 63>
+  %tmp4 = shufflevector <32 x i16> %tmp1, <32 x i16> %tmp2, <32 x i32> <i32 1, i32 33, i32 3, i32 35, i32 poison, i32 37, i32 7, i32 poison, i32 poison, i32 41, i32 11, i32 43, i32 13, i32 45, i32 15, i32 47, i32 17, i32 49, i32 19, i32 51, i32 21, i32 53, i32 23, i32 55, i32 25, i32 57, i32 27, i32 59, i32 29, i32 61, i32 31, i32 63>
   %tmp5 = add <32 x i16> %tmp3, %tmp4
   store <32 x i16> %tmp5, ptr %a
   ret void
@@ -330,8 +330,8 @@ define void @trn_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
   %tmp2 = load <8 x i32>, ptr %b
-  %tmp3 = shufflevector <8 x i32> %tmp1, <8 x i32> %tmp2, <8 x i32> <i32 0, i32 8, i32 undef, i32 undef, i32 4, i32 12, i32 6, i32 14>
-  %tmp4 = shufflevector <8 x i32> %tmp1, <8 x i32> %tmp2, <8 x i32> <i32 1, i32 undef, i32 3, i32 11, i32 5, i32 13, i32 undef, i32 undef>
+  %tmp3 = shufflevector <8 x i32> %tmp1, <8 x i32> %tmp2, <8 x i32> <i32 0, i32 8, i32 poison, i32 poison, i32 4, i32 12, i32 6, i32 14>
+  %tmp4 = shufflevector <8 x i32> %tmp1, <8 x i32> %tmp2, <8 x i32> <i32 1, i32 poison, i32 3, i32 11, i32 5, i32 13, i32 poison, i32 poison>
   %tmp5 = add <8 x i32> %tmp3, %tmp4
   store <8 x i32> %tmp5, ptr %a
   ret void
@@ -409,8 +409,8 @@ define void @trn_v8i32_undef(ptr %a) #0 {
 ; VBITS_EQ_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
-  %tmp3 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
-  %tmp4 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %tmp3 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %tmp4 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
   %tmp5 = add <8 x i32> %tmp3, %tmp4
   store <8 x i32> %tmp5, ptr %a
   ret void
@@ -480,7 +480,7 @@ define void @zip2_v8i32_undef(ptr %a) #1 {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load volatile <8 x i32>, ptr %a
-  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
   store volatile <8 x i32> %tmp2, ptr %a
   ret void
 }
@@ -501,7 +501,7 @@ define void @uzp_v32i8(ptr %a, ptr %b) #1 {
   %tmp1 = load <32 x i8>, ptr %a
   %tmp2 = load <32 x i8>, ptr %b
   %tmp3 = shufflevector <32 x i8> %tmp1, <32 x i8> %tmp2, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
-  %tmp4 = shufflevector <32 x i8> %tmp1, <32 x i8> %tmp2, <32 x i32> <i32 1, i32 3, i32 5, i32 undef, i32 9, i32 11, i32 13, i32 undef, i32 undef, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
+  %tmp4 = shufflevector <32 x i8> %tmp1, <32 x i8> %tmp2, <32 x i32> <i32 1, i32 3, i32 5, i32 poison, i32 9, i32 11, i32 13, i32 poison, i32 poison, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
   %tmp5 = add <32 x i8> %tmp3, %tmp4
   store <32 x i8> %tmp5, ptr %a
   ret void
@@ -515,23 +515,23 @@ define void @uzp_v32i16(ptr %a, ptr %b) #1 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, #16 // =0x10
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
-; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; CHECK-NEXT:    uzp1 z4.h, z3.h, z2.h
-; CHECK-NEXT:    uzp2 z2.h, z3.h, z2.h
-; CHECK-NEXT:    uzp1 z3.h, z1.h, z0.h
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x1, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x0]
+; CHECK-NEXT:    uzp1 z4.h, z1.h, z0.h
 ; CHECK-NEXT:    uzp2 z0.h, z1.h, z0.h
-; CHECK-NEXT:    add z1.h, z4.h, z2.h
-; CHECK-NEXT:    add z0.h, z3.h, z0.h
-; CHECK-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    uzp1 z1.h, z3.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z3.h, z2.h
+; CHECK-NEXT:    add z0.h, z4.h, z0.h
+; CHECK-NEXT:    add z1.h, z1.h, z2.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <32 x i16>, ptr %a
   %tmp2 = load <32 x i16>, ptr %b
   %tmp3 = shufflevector <32 x i16> %tmp1, <32 x i16> %tmp2, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
-  %tmp4 = shufflevector <32 x i16> %tmp1, <32 x i16> %tmp2, <32 x i32> <i32 1, i32 3, i32 5, i32 undef, i32 9, i32 11, i32 13, i32 undef, i32 undef, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
+  %tmp4 = shufflevector <32 x i16> %tmp1, <32 x i16> %tmp2, <32 x i32> <i32 1, i32 3, i32 5, i32 poison, i32 9, i32 11, i32 13, i32 poison, i32 poison, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
   %tmp5 = add <32 x i16> %tmp3, %tmp4
   store <32 x i16> %tmp5, ptr %a
   ret void
@@ -574,8 +574,8 @@ define void @uzp_v8f32(ptr %a, ptr %b) #1 {
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x float>, ptr %a
   %tmp2 = load <8 x float>, ptr %b
-  %tmp3 = shufflevector <8 x float> %tmp1, <8 x float> %tmp2, <8 x i32> <i32 0, i32 undef, i32 4, i32 6, i32 undef, i32 10, i32 12, i32 14>
-  %tmp4 = shufflevector <8 x float> %tmp1, <8 x float> %tmp2, <8 x i32> <i32 1, i32 undef, i32 5, i32 7, i32 9, i32 11, i32 undef, i32 undef>
+  %tmp3 = shufflevector <8 x float> %tmp1, <8 x float> %tmp2, <8 x i32> <i32 0, i32 poison, i32 4, i32 6, i32 poison, i32 10, i32 12, i32 14>
+  %tmp4 = shufflevector <8 x float> %tmp1, <8 x float> %tmp2, <8 x i32> <i32 1, i32 poison, i32 5, i32 7, i32 9, i32 11, i32 poison, i32 poison>
   %tmp5 = fadd <8 x float> %tmp3, %tmp4
   store <8 x float> %tmp5, ptr %a
   ret void
@@ -611,14 +611,14 @@ define void @uzp_v8i16(ptr %a, ptr %b) #1 {
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    eor v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %a
   %tmp2 = load <8 x i16>, ptr %b
   %tmp3 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %tmp4 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-  %tmp5 = add <8 x i16> %tmp3, %tmp4
+  %tmp5 = xor <8 x i16> %tmp3, %tmp4
   store <8 x i16> %tmp5, ptr %a
   ret void
 }
@@ -635,8 +635,8 @@ define void @uzp_v8i32_undef(ptr %a) #1 {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
-  %tmp3 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 0, i32 2, i32 4, i32 6>
-  %tmp4 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 1, i32 3, i32 5, i32 7>
+  %tmp3 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 0, i32 2, i32 4, i32 6>
+  %tmp4 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 1, i32 3, i32 5, i32 7>
   %tmp5 = add <8 x i32> %tmp3, %tmp4
   store <8 x i32> %tmp5, ptr %a
   ret void
@@ -657,13 +657,13 @@ define void @zip_vscale2_4(ptr %a, ptr %b) #2 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    mov z2.d, z1.d[3]
-; CHECK-NEXT:    mov z3.d, z0.d[3]
-; CHECK-NEXT:    mov z4.d, z1.d[2]
-; CHECK-NEXT:    mov z5.d, z0.d[2]
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z2.d, z0.d[3]
+; CHECK-NEXT:    mov z3.d, z1.d[3]
+; CHECK-NEXT:    mov z4.d, z0.d[2]
+; CHECK-NEXT:    mov z5.d, z1.d[2]
+; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    stp d3, d2, [sp, #16]
 ; CHECK-NEXT:    stp d5, d4, [sp]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]

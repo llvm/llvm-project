@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; XUN: llc -march=amdgcn -mcpu=tonga -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; XUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; Note: breaking up large PHIs is disabled to prevent some testcases from becoming
 ;  branchless.
@@ -55,11 +55,8 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_vcc_clobber:
+; GCN: s_cbranch_vccnz
 ; GCN: ; clobber vcc
-; GCN: v_cmp_neq_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc
-; GCN: s_mov_b64 vcc, [[CMP]]
-; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle_vcc_clobber(ptr addrspace(1) %out, ptr addrspace(1) %in, float %k) #0 {
 entry:
   %v = load i32, ptr addrspace(1) %in

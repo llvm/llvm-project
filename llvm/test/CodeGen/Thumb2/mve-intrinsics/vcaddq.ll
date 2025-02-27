@@ -699,6 +699,30 @@ entry:
   ret <4 x i32> %0
 }
 
+define arm_aapcs_vfpcc <4 x i32> @test_vhcaddq_rot270_s32_undef() {
+; CHECK-LABEL: test_vhcaddq_rot270_s32_undef:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT: vhcadd.s32 q{{[0-9]+}}, q{{[0-9]+}}, q{{[0-9]+}}, #270
+; CHECK-NOT:  vhcadd.s32 q[[REG:[0-9]+]], q{{[0-9]+}}, q[[REG]], #270
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x i32> @llvm.arm.mve.vcaddq.v4i32(i32 0, i32 1, <4 x i32> undef, <4 x i32> undef)
+  ret <4 x i32> %0
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vhcaddq_rot270_s32_undef_inline_asm() {
+; CHECK-LABEL: test_vhcaddq_rot270_s32_undef_inline_asm:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT: @APP
+; CHECK-NEXT: vhcadd.s32 q{{[0-9]+}}, q{{[0-9]+}}, q{{[0-9]+}}, #270
+; CHECK-NOT:  vhcadd.s32 q[[REG:[0-9]+]], q{{[0-9]+}}, q[[REG]], #270
+; CHECK-NEXT: @NO_APP
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = call <4 x i32> asm sideeffect "vhcadd.s32 ${0}, ${1}, ${2}, #270", "=&w,w,w,~{memory}"(<4 x i32> undef, <4 x i32> undef)
+  ret <4 x i32> %0
+}
+
 define arm_aapcs_vfpcc <16 x i8> @test_vhcaddq_rot90_x_s8(<16 x i8> %a, <16 x i8> %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vhcaddq_rot90_x_s8:
 ; CHECK:       @ %bb.0: @ %entry

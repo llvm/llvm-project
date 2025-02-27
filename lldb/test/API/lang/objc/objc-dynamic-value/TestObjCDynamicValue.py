@@ -71,7 +71,7 @@ class ObjCDynamicValueTestCase(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, main_before_setProperty_bkpt
         )
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
 
         #
@@ -133,7 +133,7 @@ class ObjCDynamicValueTestCase(TestBase):
         thread.StepInto()
 
         threads = lldbutil.get_stopped_threads(process, lldb.eStopReasonPlanComplete)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         line_entry = threads[0].GetFrameAtIndex(0).GetLineEntry()
 
         self.assertEqual(line_entry.GetLine(), self.set_property_line)
@@ -143,7 +143,7 @@ class ObjCDynamicValueTestCase(TestBase):
         # and make sure we get the correct dynamic value.
 
         threads = lldbutil.continue_to_breakpoint(process, handle_SourceBase_bkpt)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -184,7 +184,7 @@ class ObjCDynamicValueTestCase(TestBase):
         # whatever...
 
         threads = lldbutil.continue_to_breakpoint(process, handle_SourceBase_bkpt)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -205,4 +205,4 @@ class ObjCDynamicValueTestCase(TestBase):
         self.assertNotEqual(object.GetTypeName().find("SourceDerived"), -1)
         derivedValue = object.GetChildMemberWithName("_derivedValue")
         self.assertTrue(derivedValue)
-        self.assertEquals(int(derivedValue.GetValue(), 0), 30)
+        self.assertEqual(int(derivedValue.GetValue(), 0), 30)

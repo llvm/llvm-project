@@ -61,6 +61,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   New->setDataLayout(M.getDataLayout());
   New->setTargetTriple(M.getTargetTriple());
   New->setModuleInlineAsm(M.getModuleInlineAsm());
+  New->IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
 
   // Loop over all of the global variables, making corresponding globals in the
   // new module.  Here we add them to the VMap and to the new Module.  We
@@ -207,8 +208,8 @@ std::unique_ptr<Module> llvm::CloneModule(
   // And named metadata....
   for (const NamedMDNode &NMD : M.named_metadata()) {
     NamedMDNode *NewNMD = New->getOrInsertNamedMetadata(NMD.getName());
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
+    for (const MDNode *N : NMD.operands())
+      NewNMD->addOperand(MapMetadata(N, VMap));
   }
 
   return New;

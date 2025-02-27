@@ -1,0 +1,105 @@
+## Test that we can generate and read DWARF section headers.
+
+# RUN: yaml2obj --docnum=1 %s -o %t32
+# RUN: obj2yaml %t32 | FileCheck --check-prefix=YAML %s
+
+# RUN: yaml2obj --docnum=1 -DMAGIC=0x01F7 %s -o %t64
+# RUN: obj2yaml %t64 | FileCheck --check-prefix=YAML %s
+
+# YAML:         - Name:            .dwabrev
+# YAML:         Flags:           [ STYP_DWARF ]
+# YAML-NEXT:    DWARFSectionSubtype: SSUBTYP_DWABREV
+# YAML:         - Name:            .dwinfo
+# YAML:         Flags:           [ STYP_DWARF ]
+# YAML-NEXT:    DWARFSectionSubtype: SSUBTYP_DWINFO
+# YAML:         - Name:            .dwline
+# YAML:         Flags:           [ STYP_DWARF ]
+# YAML-NEXT:    DWARFSectionSubtype: SSUBTYP_DWLINE
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x01DF]]
+  NumberOfSections: 4
+  CreationTime:    0
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .data
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DATA ]
+    SectionData:     '00000001'
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DWARFSectionSubtype: SSUBTYP_DWABREV
+    SectionData:     01110125
+  - Name:            .dwinfo
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DWARFSectionSubtype: SSUBTYP_DWINFO
+    SectionData:     00000080
+  - Name:            .dwline
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DWARFSectionSubtype: SSUBTYP_DWLINE
+    SectionData:     00000021
+StringTable:     {}
+...
+
+## Test that an invalid DWARF section subtype is diagnosed.
+# RUN: not yaml2obj --docnum=2 %s -o %t 2>&1 | FileCheck --check-prefix=ERR1 %s
+
+# ERR1: the low-order bits of DWARFSectionSubtype must be 0
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+  NumberOfSections: 2
+  CreationTime:    0
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .data
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DATA ]
+    SectionData:     '00000001'
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DWARFSectionSubtype: 0x12345
+    SectionData:     01110125
+StringTable:     {}
+...
+
+## Test that a DWARF section subtype on a non-DWARF section is diagnosed.
+# RUN: not yaml2obj --docnum=3 %s -o %t 2>&1 | FileCheck --check-prefix=ERR2 %s
+
+# ERR2: a DWARFSectionSubtype is only allowed for a DWARF section
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+  NumberOfSections: 2
+  CreationTime:    0
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .data
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DATA ]
+    DWARFSectionSubtype: SSUBTYP_DWABREV
+    SectionData:     '00000001'
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    SectionData:     01110125
+StringTable:     {}
+...

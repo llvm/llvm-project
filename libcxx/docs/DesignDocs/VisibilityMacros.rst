@@ -49,10 +49,6 @@ Visibility Macros
   Mark a function as not being part of the ABI of any final linked image that
   uses it.
 
-**_LIBCPP_INLINE_VISIBILITY**
-  Historical predecessor of ``_LIBCPP_HIDE_FROM_ABI`` -- please use
-  ``_LIBCPP_HIDE_FROM_ABI`` instead.
-
 **_LIBCPP_HIDE_FROM_ABI_AFTER_V1**
   Mark a function as being hidden from the ABI (per `_LIBCPP_HIDE_FROM_ABI`)
   when libc++ is built with an ABI version after ABI v1. This macro is used to

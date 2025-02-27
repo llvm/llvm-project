@@ -253,7 +253,8 @@ void LSPServer::onCodeAction(const CodeActionParams &params,
     if (only.empty())
       return true;
     return llvm::any_of(only, [&](StringRef base) {
-      return kind.consume_front(base) && (kind.empty() || kind.startswith("."));
+      return kind.consume_front(base) &&
+             (kind.empty() || kind.starts_with("."));
     });
   };
 

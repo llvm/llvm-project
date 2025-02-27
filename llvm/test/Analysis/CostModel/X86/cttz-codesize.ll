@@ -61,9 +61,13 @@ define i32 @var_cttz_i32u(i32 %a) {
 }
 
 define i16 @var_cttz_i16(i16 %a) {
-; CHECK-LABEL: 'var_cttz_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i16 @llvm.cttz.i16(i16 %a, i1 false)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %cttz
+; NOBMI-LABEL: 'var_cttz_i16'
+; NOBMI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cttz = call i16 @llvm.cttz.i16(i16 %a, i1 false)
+; NOBMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %cttz
+;
+; BMI-LABEL: 'var_cttz_i16'
+; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i16 @llvm.cttz.i16(i16 %a, i1 false)
+; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %cttz
 ;
   %cttz = call i16 @llvm.cttz.i16(i16 %a, i1 0)
   ret i16 %cttz
@@ -79,9 +83,13 @@ define i16 @var_cttz_i16u(i16 %a) {
 }
 
 define i8 @var_cttz_i8(i8 %a) {
-; CHECK-LABEL: 'var_cttz_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i8 @llvm.cttz.i8(i8 %a, i1 false)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %cttz
+; NOBMI-LABEL: 'var_cttz_i8'
+; NOBMI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cttz = call i8 @llvm.cttz.i8(i8 %a, i1 false)
+; NOBMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %cttz
+;
+; BMI-LABEL: 'var_cttz_i8'
+; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i8 @llvm.cttz.i8(i8 %a, i1 false)
+; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %cttz
 ;
   %cttz = call i8 @llvm.cttz.i8(i8 %a, i1 0)
   ret i8 %cttz

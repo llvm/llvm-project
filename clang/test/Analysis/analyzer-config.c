@@ -9,11 +9,8 @@
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
 // CHECK-NEXT: alpha.cplusplus.STLAlgorithmModeling:AggressiveStdFindModeling = false
 // CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
-// CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
-// CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
-// CHECK-NEXT: alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv = false
-// CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: apply-fixits = false
+// CHECK-NEXT: assume-at-least-one-iteration = false
 // CHECK-NEXT: assume-controlled-environment = false
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
 // CHECK-NEXT: c++-allocator-inlining = true
@@ -44,6 +41,10 @@
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
+// CHECK-NEXT: crosscheck-with-z3-eqclass-timeout-threshold = 0
+// CHECK-NEXT: crosscheck-with-z3-max-attempts-per-query = 3
+// CHECK-NEXT: crosscheck-with-z3-rlimit-threshold = 0
+// CHECK-NEXT: crosscheck-with-z3-timeout-threshold = 15000
 // CHECK-NEXT: ctu-dir = ""
 // CHECK-NEXT: ctu-import-cpp-threshold = 8
 // CHECK-NEXT: ctu-import-threshold = 24
@@ -94,6 +95,7 @@
 // CHECK-NEXT: max-inlinable-size = 100
 // CHECK-NEXT: max-nodes = 225000
 // CHECK-NEXT: max-symbol-complexity = 35
+// CHECK-NEXT: max-tainted-symbol-complexity = 9
 // CHECK-NEXT: max-times-inline-large = 32
 // CHECK-NEXT: min-cfg-size-treat-functions-as-large = 14
 // CHECK-NEXT: mode = deep
@@ -110,12 +112,15 @@
 // CHECK-NEXT: optin.cplusplus.VirtualCall:ShowFixIts = false
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24
+// CHECK-NEXT: optin.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: osx.NumberObjectConversion:Pedantic = false
 // CHECK-NEXT: osx.cocoa.RetainCount:TrackNSCFStartParam = false
 // CHECK-NEXT: prune-paths = true
+// CHECK-NEXT: region-store-max-binding-fanout = 128
 // CHECK-NEXT: region-store-small-array-limit = 5
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false
+// CHECK-NEXT: security.cert.env.InvalidPtr:InvalidatingGetEnv = false
 // CHECK-NEXT: serialize-stats = false
 // CHECK-NEXT: silence-checkers = ""
 // CHECK-NEXT: stable-report-filename = false
@@ -129,7 +134,8 @@
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unix.Errno:AllowErrnoReadOutsideConditionExpressions = true
 // CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
-// CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = false
+// CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = true
+// CHECK-NEXT: unix.Stream:Pedantic = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false

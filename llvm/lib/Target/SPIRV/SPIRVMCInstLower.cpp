@@ -23,6 +23,9 @@ using namespace llvm;
 void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
                              SPIRV::ModuleAnalysisInfo *MAI) const {
   OutMI.setOpcode(MI->getOpcode());
+  // Propagate previously set flags
+  if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH16)
+    OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH16);
   const MachineFunction *MF = MI->getMF();
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
@@ -32,7 +35,13 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_GlobalAddress: {
       Register FuncReg = MAI->getFuncReg(dyn_cast<Function>(MO.getGlobal()));
-      assert(FuncReg.isValid() && "Cannot find function Id");
+      if (!FuncReg.isValid()) {
+        std::string DiagMsg;
+        raw_string_ostream OS(DiagMsg);
+        MI->print(OS);
+        DiagMsg = "Unknown function in:" + DiagMsg;
+        report_fatal_error(DiagMsg.c_str());
+      }
       MCOp = MCOperand::createReg(FuncReg);
       break;
     }

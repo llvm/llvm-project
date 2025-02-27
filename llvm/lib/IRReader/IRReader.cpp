@@ -124,7 +124,6 @@ LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
       raw_string_ostream os(buf);
 
       Diag.print(nullptr, os, false);
-      os.flush();
 
       *OutMessage = strdup(buf.c_str());
     }

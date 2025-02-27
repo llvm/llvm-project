@@ -21,7 +21,7 @@ def CycloneModel : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE]);
+                                                    [HasMTE, HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//

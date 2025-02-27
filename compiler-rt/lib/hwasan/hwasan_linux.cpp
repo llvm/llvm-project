@@ -106,8 +106,22 @@ static uptr GetHighMemEnd() {
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  __hwasan_shadow_memory_dynamic_address =
-      FindDynamicShadowStart(shadow_size_bytes);
+  // FIXME: Android should init flags before shadow.
+  if (!SANITIZER_ANDROID && flags()->fixed_shadow_base != (uptr)-1) {
+    __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
+    uptr beg = __hwasan_shadow_memory_dynamic_address;
+    uptr end = beg + shadow_size_bytes;
+    if (!MemoryRangeIsAvailable(beg, end)) {
+      Report(
+          "FATAL: HWAddressSanitizer: Shadow range %p-%p is not available.\n",
+          (void *)beg, (void *)end);
+      DumpProcessMap();
+      CHECK(MemoryRangeIsAvailable(beg, end));
+    }
+  } else {
+    __hwasan_shadow_memory_dynamic_address =
+        FindDynamicShadowStart(shadow_size_bytes);
+  }
 }
 
 static void MaybeDieIfNoTaggingAbi(const char *message) {
@@ -246,9 +260,6 @@ bool InitShadow() {
   CHECK_GT(kLowShadowEnd, kLowShadowStart);
   CHECK_GT(kLowShadowStart, kLowMemEnd);
 
-  if (Verbosity())
-    PrintAddressSpaceLayout();
-
   // Reserve shadow memory.
   ReserveShadowMemoryRange(kLowShadowStart, kLowShadowEnd, "low shadow");
   ReserveShadowMemoryRange(kHighShadowStart, kHighShadowEnd, "high shadow");
@@ -261,6 +272,9 @@ bool InitShadow() {
     ProtectGap(kLowShadowEnd + 1, kHighShadowStart - kLowShadowEnd - 1);
   if (kHighShadowEnd + 1 < kHighMemStart)
     ProtectGap(kHighShadowEnd + 1, kHighMemStart - kHighShadowEnd - 1);
+
+  if (Verbosity())
+    PrintAddressSpaceLayout();
 
   return true;
 }
@@ -485,12 +499,8 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context) {
 }
 
 void Thread::InitStackAndTls(const InitState *) {
-  uptr tls_size;
-  uptr stack_size;
-  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
+  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_top_, &tls_begin_,
+                       &tls_end_);
 }
 
 uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
@@ -517,16 +527,34 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
   return AddTagToPointer(p, tag);
 }
 
+static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::LockGlobal();
+  }
+  // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+  // stuff we need.
+  __lsan::LockThreads();
+  __lsan::LockAllocator();
+  StackDepotLockBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  StackDepotUnlockAfterFork(fork_child);
+  // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+  // the stuff we need.
+  __lsan::UnlockAllocator();
+  __lsan::UnlockThreads();
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::UnlockGlobal();
+  }
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
+}
+
 void HwasanInstallAtForkHandler() {
-  auto before = []() {
-    HwasanAllocatorLock();
-    StackDepotLockAll();
-  };
-  auto after = []() {
-    StackDepotUnlockAll();
-    HwasanAllocatorUnlock();
-  };
-  pthread_atfork(before, after, after);
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
 }
 
 void InstallAtExitCheckLeaks() {

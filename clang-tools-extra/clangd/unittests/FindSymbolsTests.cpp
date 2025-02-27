@@ -113,7 +113,7 @@ TEST(WorkspaceSymbols, Unnamed) {
 TEST(WorkspaceSymbols, InMainFile) {
   TestTU TU;
   TU.Code = R"cpp(
-      int test() {}
+      int test() { return 0; }
       static void test2() {}
       )cpp";
   EXPECT_THAT(getSymbols(TU, "test"),
@@ -537,12 +537,14 @@ TEST(DocumentSymbols, InHeaderFile) {
   TestTU TU;
   TU.AdditionalFiles["bar.h"] = R"cpp(
       int foo() {
+        return 0;
       }
       )cpp";
   TU.Code = R"cpp(
       int i; // declaration to finish preamble
       #include "bar.h"
       int test() {
+        return 0;
       }
       )cpp";
   EXPECT_THAT(getSymbols(TU.build()),
@@ -750,6 +752,9 @@ TEST(DocumentSymbols, RangeFromMacro) {
     $fullDef[[FF3() {
       int var = 42;
     }]]
+
+    #define FF4(name) int name = 0
+    $FooRange[[FF4($FooSelectionRange[[foo]])]];
   )");
   TU.Code = Main.code().str();
   EXPECT_THAT(
@@ -766,14 +771,18 @@ TEST(DocumentSymbols, RangeFromMacro) {
           AllOf(withName("FF3"), withDetail("()"),
                 symRange(Main.range("fullDef")),
                 children(AllOf(withName("waldo"), withDetail("void ()"),
-                               symRange(Main.range("fullDef")))))));
+                               symRange(Main.range("fullDef"))))),
+          AllOf(
+              withName("FF4"), withDetail("(foo)"),
+              children(AllOf(withName("foo"), symRange(Main.range("FooRange")),
+                             symNameRange(Main.range("FooSelectionRange")))))));
 }
 
 TEST(DocumentSymbols, FuncTemplates) {
   TestTU TU;
   Annotations Source(R"cpp(
     template <class T>
-    T foo() {}
+    T foo() { return T{}; }
 
     auto x = foo<int>();
     auto y = foo<double>();

@@ -6,16 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
-#define LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
+#ifndef LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H
+#define LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H
 
-#include <time.h>
+#include "hdr/types/struct_tm.h"
+#include "src/__support/macros/config.h"
+#include "src/time/time_constants.h"
 
-#include "src/time/time_utils.h"
-
-using LIBC_NAMESPACE::time_utils::TimeConstants;
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace tmhelper {
 namespace testing {
 
@@ -29,7 +27,7 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
                     .tm_mday = mday,
                     .tm_mon = month - 1, // tm_mon starts with 0 for Jan
                     // years since 1900
-                    .tm_year = year - TimeConstants::TIME_YEAR_BASE,
+                    .tm_year = year - time_constants::TIME_YEAR_BASE,
                     .tm_wday = wday,
                     .tm_yday = yday,
                     .tm_isdst = 0};
@@ -38,6 +36,6 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
 
 } // namespace testing
 } // namespace tmhelper
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_TEST_SRC_TIME_TM_HELPER_H
+#endif // LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H

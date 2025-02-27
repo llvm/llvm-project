@@ -11,11 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
+#include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -54,9 +58,9 @@ void printErrorAndExit(Twine ErrMsg) {
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "filedescs=<infd>,<outfd> [args...]\n"
+         << "[test-jitloadergdb] filedescs=<infd>,<outfd> [args...]\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "listen=<host>:<port> [args...]\n";
+         << "[test-jitloadergdb] listen=<host>:<port> [args...]\n";
   exit(1);
 }
 
@@ -112,6 +116,21 @@ int openListener(std::string Host, std::string PortStr) {
 #endif // LLVM_ON_UNIX
 }
 
+#if LLVM_ENABLE_THREADS
+
+// JITLink debug support plugins put information about JITed code in this GDB
+// JIT Interface global from OrcTargetProcess.
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
+
+static void *findLastDebugDescriptorEntryPtr() {
+  struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;
+  while (Last && Last->next_entry)
+    Last = Last->next_entry;
+  return Last;
+}
+
+#endif
+
 int main(int argc, char *argv[]) {
 #if LLVM_ENABLE_THREADS
 
@@ -123,38 +142,45 @@ int main(int argc, char *argv[]) {
 
   if (argc < 2)
     printErrorAndExit("insufficient arguments");
-  else {
 
-    StringRef ConnectArg = argv[FirstProgramArg++];
+  StringRef NextArg = argv[FirstProgramArg++];
 #ifndef NDEBUG
-    if (ConnectArg == "debug") {
-      DebugFlag = true;
-      ConnectArg = argv[FirstProgramArg++];
-    }
+  if (NextArg == "debug") {
+    DebugFlag = true;
+    NextArg = argv[FirstProgramArg++];
+  }
 #endif
 
-    StringRef SpecifierType, Specifier;
-    std::tie(SpecifierType, Specifier) = ConnectArg.split('=');
-    if (SpecifierType == "filedescs") {
-      StringRef FD1Str, FD2Str;
-      std::tie(FD1Str, FD2Str) = Specifier.split(',');
-      if (FD1Str.getAsInteger(10, InFD))
-        printErrorAndExit(FD1Str + " is not a valid file descriptor");
-      if (FD2Str.getAsInteger(10, OutFD))
-        printErrorAndExit(FD2Str + " is not a valid file descriptor");
-    } else if (SpecifierType == "listen") {
-      StringRef Host, PortStr;
-      std::tie(Host, PortStr) = Specifier.split(':');
-
-      int Port = 0;
-      if (PortStr.getAsInteger(10, Port))
-        printErrorAndExit("port number '" + PortStr +
-                          "' is not a valid integer");
-
-      InFD = OutFD = openListener(Host.str(), PortStr.str());
-    } else
-      printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
+  std::vector<StringRef> TestOutputFlags;
+  while (NextArg.starts_with("test-")) {
+    TestOutputFlags.push_back(NextArg);
+    NextArg = argv[FirstProgramArg++];
   }
+
+  if (llvm::is_contained(TestOutputFlags, "test-jitloadergdb"))
+    fprintf(stderr, "__jit_debug_descriptor.last_entry = 0x%016" PRIx64 "\n",
+            pointerToJITTargetAddress(findLastDebugDescriptorEntryPtr()));
+
+  StringRef SpecifierType, Specifier;
+  std::tie(SpecifierType, Specifier) = NextArg.split('=');
+  if (SpecifierType == "filedescs") {
+    StringRef FD1Str, FD2Str;
+    std::tie(FD1Str, FD2Str) = Specifier.split(',');
+    if (FD1Str.getAsInteger(10, InFD))
+      printErrorAndExit(FD1Str + " is not a valid file descriptor");
+    if (FD2Str.getAsInteger(10, OutFD))
+      printErrorAndExit(FD2Str + " is not a valid file descriptor");
+  } else if (SpecifierType == "listen") {
+    StringRef Host, PortStr;
+    std::tie(Host, PortStr) = Specifier.split(':');
+
+    int Port = 0;
+    if (PortStr.getAsInteger(10, Port))
+      printErrorAndExit("port number '" + PortStr + "' is not a valid integer");
+
+    InFD = OutFD = openListener(Host.str(), PortStr.str());
+  } else
+    printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
 
   auto Server =
       ExitOnErr(SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
@@ -163,6 +189,12 @@ int main(int argc, char *argv[]) {
                 std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>());
             S.bootstrapSymbols() =
                 SimpleRemoteEPCServer::defaultBootstrapSymbols();
+            addDefaultBootstrapValuesForHostProcess(S.bootstrapMap(),
+                                                    S.bootstrapSymbols());
+#ifdef __APPLE__
+            if (UnwindInfoManager::TryEnable())
+              UnwindInfoManager::addBootstrapSymbols(S.bootstrapSymbols());
+#endif // __APPLE__
             S.services().push_back(
                 std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
             S.services().push_back(
@@ -173,6 +205,11 @@ int main(int argc, char *argv[]) {
           InFD, OutFD));
 
   ExitOnErr(Server->waitForDisconnect());
+
+  if (llvm::is_contained(TestOutputFlags, "test-jitloadergdb"))
+    fprintf(stderr, "__jit_debug_descriptor.last_entry = 0x%016" PRIx64 "\n",
+            pointerToJITTargetAddress(findLastDebugDescriptorEntryPtr()));
+
   return 0;
 
 #else

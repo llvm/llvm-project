@@ -64,7 +64,7 @@ class CMOVConversion : public BinaryFunctionPass {
     }
     double getMPRatio() { return (double)RemovedMP / PossibleMP; }
 
-    void dump();
+    void dumpTo(raw_ostream &OS);
   };
   // BinaryContext-wide stats
   Stats Global;
@@ -76,7 +76,7 @@ public:
 
   const char *getName() const override { return "CMOV conversion"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

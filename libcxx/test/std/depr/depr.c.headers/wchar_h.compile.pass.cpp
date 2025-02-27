@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 // <wchar.h>
 

@@ -7,65 +7,44 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFDebugAranges.h"
-#include "DWARFDebugArangeSet.h"
 #include "DWARFUnit.h"
 #include "LogChannelDWARF.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
+using llvm::DWARFDebugArangeSet;
 
 // Constructor
 DWARFDebugAranges::DWARFDebugAranges() : m_aranges() {}
 
-// CountArangeDescriptors
-class CountArangeDescriptors {
-public:
-  CountArangeDescriptors(uint32_t &count_ref) : count(count_ref) {
-    //      printf("constructor CountArangeDescriptors()\n");
-  }
-  void operator()(const DWARFDebugArangeSet &set) {
-    count += set.NumDescriptors();
-  }
-  uint32_t &count;
-};
-
 // Extract
 void DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
+  llvm::DWARFDataExtractor dwarf_data = debug_aranges_data.GetAsLLVMDWARF();
   lldb::offset_t offset = 0;
 
   DWARFDebugArangeSet set;
   Range range;
-  while (debug_aranges_data.ValidOffset(offset)) {
+  while (dwarf_data.isValidOffset(offset)) {
     const lldb::offset_t set_offset = offset;
-    if (llvm::Error error = set.extract(debug_aranges_data, &offset)) {
+    if (llvm::Error error = set.extract(dwarf_data, &offset)) {
       Log *log = GetLog(DWARFLog::DebugInfo);
       LLDB_LOG_ERROR(log, std::move(error),
                      "DWARFDebugAranges::extract failed to extract "
                      ".debug_aranges set at offset {1:x}: {0}",
                      set_offset);
-    } else {
-      const uint32_t num_descriptors = set.NumDescriptors();
-      if (num_descriptors > 0) {
-        const dw_offset_t cu_offset = set.GetHeader().cu_offset;
-
-        for (uint32_t i = 0; i < num_descriptors; ++i) {
-          const DWARFDebugArangeSet::Descriptor &descriptor =
-              set.GetDescriptorRef(i);
-          m_aranges.Append(RangeToDIE::Entry(descriptor.address,
-                                             descriptor.length, cu_offset));
-        }
-      }
+      set.clear();
+      return;
     }
-    // Always use the previous DWARFDebugArangeSet's information to calculate
-    // the offset of the next DWARFDebugArangeSet in case we entouncter an
-    // error in the current DWARFDebugArangeSet and our offset position is
-    // still in the middle of the data. If we do this, we can parse all valid
-    // DWARFDebugArangeSet objects without returning invalid errors.
-    offset = set.GetNextOffset();
-    set.Clear();
+    const uint64_t cu_offset = set.getCompileUnitDIEOffset();
+    for (const auto &desc : set.descriptors()) {
+      if (desc.Length != 0)
+        m_aranges.Append(
+            RangeToDIE::Entry(desc.Address, desc.Length, cu_offset));
+    }
   }
 }
 
@@ -89,8 +68,7 @@ void DWARFDebugAranges::AppendRange(dw_offset_t offset, dw_addr_t low_pc,
 }
 
 void DWARFDebugAranges::Sort(bool minimize) {
-  LLDB_SCOPED_TIMERF("%s this = %p", LLVM_PRETTY_FUNCTION,
-                     static_cast<void *>(this));
+  LLDB_SCOPED_TIMER();
 
   m_aranges.Sort();
   m_aranges.CombineConsecutiveEntriesWithEqualData();

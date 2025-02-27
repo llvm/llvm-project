@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6,sram < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=avr6,sram < %s -mtriple=avr | FileCheck %s
 
 ; This file tests whether the compiler correctly works with the r1 register,
 ; clearing it when needed.
@@ -8,8 +8,8 @@
 ; CHECK:      st {{[XYZ]}}, r1
 ; CHECK-NEXT: mov r24, r1
 ; CHECK-NEXT: ret
-define i8 @store8zero(i8* %x) {
-  store i8 0, i8* %x
+define i8 @store8zero(ptr %x) {
+  store i8 0, ptr %x
   ret i8 0
 }
 
@@ -20,8 +20,8 @@ define i8 @store8zero(i8* %x) {
 ; CHECK-NEXT: clr r1
 ; CHECK-NEXT: st {{[XYZ]}}, r0
 ; CHECK-NEXT: ret
-define void @mul(i8* %ptr, i8 %n) {
+define void @mul(ptr %ptr, i8 %n) {
   %result = mul i8 %n, 3
-  store i8 %result, i8* %ptr
+  store i8 %result, ptr %ptr
   ret void
 }

@@ -4,6 +4,11 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E-n64" | FileCheck %s --check-prefixes=ANY,ANYBE,BE64
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E-n128" | FileCheck %s --check-prefixes=ANY,ANYBE,BE128
 
+; RUN: opt < %s -passes=instcombine -S -data-layout="e-n64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYLE,LE64
+; RUN: opt < %s -passes=instcombine -S -data-layout="e-n128" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYLE,LE128
+; RUN: opt < %s -passes=instcombine -S -data-layout="E-n64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYBE,BE64
+; RUN: opt < %s -passes=instcombine -S -data-layout="E-n128" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYBE,BE128
+
 define i32 @extractelement_out_of_range(<2 x i32> %x) {
 ; ANY-LABEL: @extractelement_out_of_range(
 ; ANY-NEXT:    ret i32 poison
@@ -50,7 +55,7 @@ define i32 @bitcasted_inselt_wide_source_zero_elt(i64 %x) {
 ;
 ; ANYBE-LABEL: @bitcasted_inselt_wide_source_zero_elt(
 ; ANYBE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
-; ANYBE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; ANYBE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; ANYBE-NEXT:    ret i32 [[R]]
 ;
   %i = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
@@ -66,7 +71,7 @@ define i16 @bitcasted_inselt_wide_source_modulo_elt(i64 %x) {
 ;
 ; ANYBE-LABEL: @bitcasted_inselt_wide_source_modulo_elt(
 ; ANYBE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 48
-; ANYBE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i16
+; ANYBE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP1]] to i16
 ; ANYBE-NEXT:    ret i16 [[R]]
 ;
   %i = insertelement <2 x i64> undef, i64 %x, i32 1
@@ -78,7 +83,7 @@ define i16 @bitcasted_inselt_wide_source_modulo_elt(i64 %x) {
 define i32 @bitcasted_inselt_wide_source_not_modulo_elt(i64 %x) {
 ; ANYLE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt(
 ; ANYLE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
-; ANYLE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; ANYLE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; ANYLE-NEXT:    ret i32 [[R]]
 ;
 ; ANYBE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt(
@@ -145,14 +150,14 @@ declare void @use(<8 x i8>)
 
 define i8 @bitcasted_inselt_wide_source_uses(i32 %x) {
 ; ANYLE-LABEL: @bitcasted_inselt_wide_source_uses(
-; ANYLE-NEXT:    [[I:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i64 0
+; ANYLE-NEXT:    [[I:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[X:%.*]], i64 0
 ; ANYLE-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[I]] to <8 x i8>
 ; ANYLE-NEXT:    call void @use(<8 x i8> [[B]])
 ; ANYLE-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[B]], i64 3
 ; ANYLE-NEXT:    ret i8 [[R]]
 ;
 ; ANYBE-LABEL: @bitcasted_inselt_wide_source_uses(
-; ANYBE-NEXT:    [[I:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i64 0
+; ANYBE-NEXT:    [[I:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[X:%.*]], i64 0
 ; ANYBE-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[I]] to <8 x i8>
 ; ANYBE-NEXT:    call void @use(<8 x i8> [[B]])
 ; ANYBE-NEXT:    [[R:%.*]] = trunc i32 [[X]] to i8
@@ -168,7 +173,7 @@ define i8 @bitcasted_inselt_wide_source_uses(i32 %x) {
 define float @bitcasted_inselt_to_FP(i64 %x) {
 ; ANYLE-LABEL: @bitcasted_inselt_to_FP(
 ; ANYLE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
-; ANYLE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; ANYLE-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; ANYLE-NEXT:    [[R:%.*]] = bitcast i32 [[TMP2]] to float
 ; ANYLE-NEXT:    ret float [[R]]
 ;
@@ -188,7 +193,7 @@ declare void @use_v8f32(<8 x float>)
 
 define float @bitcasted_inselt_to_FP_uses(i128 %x) {
 ; ANY-LABEL: @bitcasted_inselt_to_FP_uses(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i128> undef, i128 [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i128> <i128 poison, i128 undef>, i128 [[X:%.*]], i64 0
 ; ANY-NEXT:    call void @use_v2i128(<2 x i128> [[I]])
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i128> [[I]] to <8 x float>
 ; ANY-NEXT:    [[R:%.*]] = extractelement <8 x float> [[B]], i64 1
@@ -203,7 +208,7 @@ define float @bitcasted_inselt_to_FP_uses(i128 %x) {
 
 define float @bitcasted_inselt_to_FP_uses2(i128 %x) {
 ; ANY-LABEL: @bitcasted_inselt_to_FP_uses2(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i128> undef, i128 [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i128> <i128 poison, i128 undef>, i128 [[X:%.*]], i64 0
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i128> [[I]] to <8 x float>
 ; ANY-NEXT:    call void @use_v8f32(<8 x float> [[B]])
 ; ANY-NEXT:    [[R:%.*]] = extractelement <8 x float> [[B]], i64 1
@@ -220,7 +225,7 @@ define i32 @bitcasted_inselt_from_FP(double %x) {
 ; ANYLE-LABEL: @bitcasted_inselt_from_FP(
 ; ANYLE-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
 ; ANYLE-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 32
-; ANYLE-NEXT:    [[R:%.*]] = trunc i64 [[TMP2]] to i32
+; ANYLE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP2]] to i32
 ; ANYLE-NEXT:    ret i32 [[R]]
 ;
 ; ANYBE-LABEL: @bitcasted_inselt_from_FP(
@@ -239,7 +244,7 @@ declare void @use_v8i16(<8 x i16>)
 
 define i16 @bitcasted_inselt_from_FP_uses(double %x) {
 ; ANY-LABEL: @bitcasted_inselt_from_FP_uses(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[X:%.*]], i64 0
 ; ANY-NEXT:    call void @use_v2f64(<2 x double> [[I]])
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <8 x i16>
 ; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i16> [[B]], i64 1
@@ -254,7 +259,7 @@ define i16 @bitcasted_inselt_from_FP_uses(double %x) {
 
 define i16 @bitcasted_inselt_from_FP_uses2(double %x) {
 ; ANY-LABEL: @bitcasted_inselt_from_FP_uses2(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[X:%.*]], i64 0
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <8 x i16>
 ; ANY-NEXT:    call void @use_v8i16(<8 x i16> [[B]])
 ; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i16> [[B]], i64 1
@@ -269,7 +274,7 @@ define i16 @bitcasted_inselt_from_FP_uses2(double %x) {
 
 define float @bitcasted_inselt_to_and_from_FP(double %x) {
 ; ANY-LABEL: @bitcasted_inselt_to_and_from_FP(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> poison, double [[X:%.*]], i64 0
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <4 x float>
 ; ANY-NEXT:    [[R:%.*]] = extractelement <4 x float> [[B]], i64 1
 ; ANY-NEXT:    ret float [[R]]
@@ -282,7 +287,7 @@ define float @bitcasted_inselt_to_and_from_FP(double %x) {
 
 define float @bitcasted_inselt_to_and_from_FP_uses(double %x) {
 ; ANY-LABEL: @bitcasted_inselt_to_and_from_FP_uses(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[X:%.*]], i64 0
 ; ANY-NEXT:    call void @use_v2f64(<2 x double> [[I]])
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <4 x float>
 ; ANY-NEXT:    [[R:%.*]] = extractelement <4 x float> [[B]], i64 1
@@ -299,7 +304,7 @@ declare void @use_v4f32(<4 x float>)
 
 define float @bitcasted_inselt_to_and_from_FP_uses2(double %x) {
 ; ANY-LABEL: @bitcasted_inselt_to_and_from_FP_uses2(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[X:%.*]], i64 0
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <4 x float>
 ; ANY-NEXT:    call void @use_v4f32(<4 x float> [[B]])
 ; ANY-NEXT:    [[R:%.*]] = extractelement <4 x float> [[B]], i64 1
@@ -341,7 +346,7 @@ define i8 @bitcast_scalar_supported_type_index0(i32 %x) {
 ;
 ; ANYBE-LABEL: @bitcast_scalar_supported_type_index0(
 ; ANYBE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 24
-; ANYBE-NEXT:    [[R:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i8
+; ANYBE-NEXT:    [[R:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i8
 ; ANYBE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast i32 %x to <4 x i8>
@@ -443,7 +448,7 @@ define half @bitcast_fp16vec_index0(i32 %x) {
 ;
 ; ANYBE-LABEL: @bitcast_fp16vec_index0(
 ; ANYBE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 16
-; ANYBE-NEXT:    [[TMP1:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i16
+; ANYBE-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
 ; ANYBE-NEXT:    [[R:%.*]] = bitcast i16 [[TMP1]] to half
 ; ANYBE-NEXT:    ret half [[R]]
 ;
@@ -455,7 +460,7 @@ define half @bitcast_fp16vec_index0(i32 %x) {
 define half @bitcast_fp16vec_index1(i32 %x) {
 ; ANYLE-LABEL: @bitcast_fp16vec_index1(
 ; ANYLE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 16
-; ANYLE-NEXT:    [[TMP1:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i16
+; ANYLE-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
 ; ANYLE-NEXT:    [[R:%.*]] = bitcast i16 [[TMP1]] to half
 ; ANYLE-NEXT:    ret half [[R]]
 ;
@@ -477,7 +482,7 @@ define bfloat @bitcast_bfp16vec_index0(i32 %x) {
 ;
 ; ANYBE-LABEL: @bitcast_bfp16vec_index0(
 ; ANYBE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 16
-; ANYBE-NEXT:    [[TMP1:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i16
+; ANYBE-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
 ; ANYBE-NEXT:    [[R:%.*]] = bitcast i16 [[TMP1]] to bfloat
 ; ANYBE-NEXT:    ret bfloat [[R]]
 ;
@@ -489,7 +494,7 @@ define bfloat @bitcast_bfp16vec_index0(i32 %x) {
 define bfloat @bitcast_bfp16vec_index1(i32 %x) {
 ; ANYLE-LABEL: @bitcast_bfp16vec_index1(
 ; ANYLE-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[X:%.*]], 16
-; ANYLE-NEXT:    [[TMP1:%.*]] = trunc i32 [[EXTELT_OFFSET]] to i16
+; ANYLE-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
 ; ANYLE-NEXT:    [[R:%.*]] = bitcast i16 [[TMP1]] to bfloat
 ; ANYLE-NEXT:    ret bfloat [[R]]
 ;
@@ -511,7 +516,7 @@ define float @bitcast_fp32vec_index0(i64 %x) {
 ;
 ; BE64-LABEL: @bitcast_fp32vec_index0(
 ; BE64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[X:%.*]], 32
-; BE64-NEXT:    [[TMP1:%.*]] = trunc i64 [[EXTELT_OFFSET]] to i32
+; BE64-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
 ; BE64-NEXT:    [[R:%.*]] = bitcast i32 [[TMP1]] to float
 ; BE64-NEXT:    ret float [[R]]
 ;
@@ -528,7 +533,7 @@ define float @bitcast_fp32vec_index0(i64 %x) {
 define float @bitcast_fp32vec_index1(i64 %x) {
 ; LE64-LABEL: @bitcast_fp32vec_index1(
 ; LE64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[X:%.*]], 32
-; LE64-NEXT:    [[TMP1:%.*]] = trunc i64 [[EXTELT_OFFSET]] to i32
+; LE64-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
 ; LE64-NEXT:    [[R:%.*]] = bitcast i32 [[TMP1]] to float
 ; LE64-NEXT:    ret float [[R]]
 ;
@@ -570,7 +575,7 @@ define double @bitcast_fp64vec_index0(i128 %x) {
 ;
 ; BE128-LABEL: @bitcast_fp64vec_index0(
 ; BE128-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i128 [[X:%.*]], 64
-; BE128-NEXT:    [[TMP1:%.*]] = trunc i128 [[EXTELT_OFFSET]] to i64
+; BE128-NEXT:    [[TMP1:%.*]] = trunc nuw i128 [[EXTELT_OFFSET]] to i64
 ; BE128-NEXT:    [[R:%.*]] = bitcast i64 [[TMP1]] to double
 ; BE128-NEXT:    ret double [[R]]
 ;
@@ -587,7 +592,7 @@ define double @bitcast_fp64vec_index1(i128 %x) {
 ;
 ; LE128-LABEL: @bitcast_fp64vec_index1(
 ; LE128-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i128 [[X:%.*]], 64
-; LE128-NEXT:    [[TMP1:%.*]] = trunc i128 [[EXTELT_OFFSET]] to i64
+; LE128-NEXT:    [[TMP1:%.*]] = trunc nuw i128 [[EXTELT_OFFSET]] to i64
 ; LE128-NEXT:    [[R:%.*]] = bitcast i64 [[TMP1]] to double
 ; LE128-NEXT:    ret double [[R]]
 ;
@@ -722,20 +727,14 @@ define i8 @bitcast_scalar_index_variable(i32 %x, i64 %y) {
   ret i8 %r
 }
 
-; extra use is ok if we don't need a shift
+; extra use is not ok, even if we don't need a shift
 
 define i8 @bitcast_scalar_index0_use(i64 %x) {
-; ANYLE-LABEL: @bitcast_scalar_index0_use(
-; ANYLE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
-; ANYLE-NEXT:    call void @use(<8 x i8> [[V]])
-; ANYLE-NEXT:    [[R:%.*]] = trunc i64 [[X]] to i8
-; ANYLE-NEXT:    ret i8 [[R]]
-;
-; ANYBE-LABEL: @bitcast_scalar_index0_use(
-; ANYBE-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
-; ANYBE-NEXT:    call void @use(<8 x i8> [[V]])
-; ANYBE-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[V]], i64 0
-; ANYBE-NEXT:    ret i8 [[R]]
+; ANY-LABEL: @bitcast_scalar_index0_use(
+; ANY-NEXT:    [[V:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
+; ANY-NEXT:    call void @use(<8 x i8> [[V]])
+; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[V]], i64 0
+; ANY-NEXT:    ret i8 [[R]]
 ;
 
   %v = bitcast i64 %x to <8 x i8>

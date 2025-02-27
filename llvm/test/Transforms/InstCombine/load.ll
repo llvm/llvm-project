@@ -56,6 +56,18 @@ define i32 @test5(i1 %C) {
   ret i32 %Z
 }
 
+; FIXME: Constants should be allowed for this optimization.
+define i32 @test5_asan(i1 %C) sanitize_address {
+; CHECK-LABEL: @test5_asan(
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C:%.*]], ptr @X, ptr @X2
+; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %Y = select i1 %C, ptr @X, ptr @X2		; <ptr> [#uses=1]
+  %Z = load i32, ptr %Y		; <i32> [#uses=1]
+  ret i32 %Z
+}
+
 define i32 @load_gep_null_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_inbounds(
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
@@ -136,7 +148,7 @@ C:		; preds = %F, %T
 
 define double @test11(ptr %p) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[T0:%.*]] = getelementptr double, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[T0:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
 ; CHECK-NEXT:    store double 2.000000e+00, ptr [[T0]], align 8
 ; CHECK-NEXT:    ret double 2.000000e+00
 ;
@@ -426,4 +438,46 @@ define i4 @test_vector_load_i4_non_byte_sized() {
   %ptr0 = getelementptr i8, ptr @foo, i64 0
   %res0 = load i4, ptr %ptr0, align 1
   ret i4 %res0
+}
+
+define i32 @load_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
+; CHECK-LABEL: @load_select_with_null_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %gep = getelementptr i8, ptr %sel, i64 %off
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}
+
+define i16 @load_select_with_null_gep2(i1 %cond, ptr %p, i64 %x) {
+; CHECK-LABEL: @load_select_with_null_gep2(
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %invariant.gep = getelementptr i8, ptr %sel, i64 -2
+  %gep = getelementptr i16, ptr %invariant.gep, i64 %x
+  %res = load i16, ptr %gep, align 2
+  ret i16 %res
+}
+
+define i16 @load_select_with_null_gep3(i1 %cond, ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @load_select_with_null_gep3(
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[GEP]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP2]], align 2
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %invariant.gep = getelementptr i8, ptr %sel, i64 -2
+  %gep = getelementptr i16, ptr %invariant.gep, i64 %x
+  %gep2 = getelementptr i16, ptr %gep, i64 %y
+  %res = load i16, ptr %gep2, align 2
+  ret i16 %res
 }

@@ -19,6 +19,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 
@@ -30,6 +31,10 @@ MCXCOFFStreamer::MCXCOFFStreamer(MCContext &Context,
                                  std::unique_ptr<MCCodeEmitter> Emitter)
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
                        std::move(Emitter)) {}
+
+XCOFFObjectWriter &MCXCOFFStreamer::getWriter() {
+  return static_cast<XCOFFObjectWriter &>(getAssembler().getWriter());
+}
 
 bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
@@ -96,17 +101,24 @@ void MCXCOFFStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   DF->getFixups().push_back(Fixup);
 }
 
+void MCXCOFFStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
+                                               StringRef Rename) {
+  const MCSymbolXCOFF *Symbol = cast<const MCSymbolXCOFF>(Name);
+  if (!Symbol->hasRename())
+    report_fatal_error("Only explicit .rename is supported for XCOFF.");
+}
+
 void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
                                                const MCSymbol *Trap,
                                                unsigned Lang, unsigned Reason,
                                                unsigned FunctionSize,
                                                bool hasDebug) {
-  getAssembler().getWriter().addExceptionEntry(Symbol, Trap, Lang, Reason,
-                                               FunctionSize, hasDebug);
+  getWriter().addExceptionEntry(Symbol, Trap, Lang, Reason, FunctionSize,
+                                hasDebug);
 }
 
 void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
-  getAssembler().getWriter().addCInfoSymEntry(Name, Metadata);
+  getWriter().addCInfoSymEntry(Name, Metadata);
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -149,19 +161,7 @@ void MCXCOFFStreamer::emitInstToData(const MCInst &Inst,
   }
 
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
-}
-
-MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
-                                      std::unique_ptr<MCAsmBackend> &&MAB,
-                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                      std::unique_ptr<MCCodeEmitter> &&CE,
-                                      bool RelaxAll) {
-  MCXCOFFStreamer *S = new MCXCOFFStreamer(Context, std::move(MAB),
-                                           std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
-  return S;
+  DF->appendContents(Code);
 }
 
 void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,

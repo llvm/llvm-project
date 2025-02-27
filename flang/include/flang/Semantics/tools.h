@@ -12,7 +12,6 @@
 // Simple predicates and look-up functions that are best defined
 // canonically for use in semantic checking.
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
@@ -23,6 +22,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran.h"
 #include <functional>
 
 namespace Fortran::semantics {
@@ -42,17 +42,19 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Scope &);
 const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 
 const Scope *FindModuleContaining(const Scope &);
+const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
-const Scope *FindPureProcedureContaining(const Symbol &);
+const Scope *FindOpenACCConstructContaining(const Scope *);
+
 const Symbol *FindPointerComponent(const Scope &);
 const Symbol *FindPointerComponent(const DerivedTypeSpec &);
 const Symbol *FindPointerComponent(const DeclTypeSpec &);
 const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
-const Symbol *FindFunctionResult(const Symbol &);
-const Symbol *FindOverriddenBinding(const Symbol &);
+const Symbol *FindOverriddenBinding(
+    const Symbol &, bool &isInaccessibleDeferred);
 const Symbol *FindGlobal(const Symbol &);
 
 const DeclTypeSpec *FindParentTypeSpec(const DerivedTypeSpec &);
@@ -85,6 +87,7 @@ bool IsIntrinsicConcat(
 bool IsGenericDefinedOp(const Symbol &);
 bool IsDefinedOperator(SourceName);
 std::string MakeOpName(SourceName);
+bool IsCommonBlockContaining(const Symbol &, const Symbol &);
 
 // Returns true if maybeAncestor exists and is a proper ancestor of a
 // descendent scope (or symbol owner).  Will be false, unlike Scope::Contains(),
@@ -179,7 +182,8 @@ const Symbol *IsFinalizable(const Symbol &,
 const Symbol *IsFinalizable(const DerivedTypeSpec &,
     std::set<const DerivedTypeSpec *> * = nullptr,
     bool withImpureFinalizer = false, std::optional<int> rank = std::nullopt);
-const Symbol *HasImpureFinal(const Symbol &);
+const Symbol *HasImpureFinal(
+    const Symbol &, std::optional<int> rank = std::nullopt);
 // Is this type finalizable or does it contain any polymorphic allocatable
 // ultimate components?
 bool MayRequireFinalization(const DerivedTypeSpec &derived);
@@ -187,15 +191,6 @@ bool MayRequireFinalization(const DerivedTypeSpec &derived);
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
 
 bool IsInBlankCommon(const Symbol &);
-inline bool IsAssumedSizeArray(const Symbol &symbol) {
-  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    return object->IsAssumedSize();
-  } else if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
-    return assoc->IsAssumedSize();
-  } else {
-    return false;
-  }
-}
 bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
@@ -218,12 +213,40 @@ inline bool IsCUDADeviceContext(const Scope *scope) {
   return false;
 }
 
+inline bool HasCUDAAttr(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool NeedCUDAAlloc(const Symbol &sym) {
+  if (IsDummy(sym)) {
+    return false;
+  }
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
+bool IsAccessible(const Symbol &, const Scope &);
+
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const semantics::Scope &, const Symbol &);
+    const Scope &, const Symbol &);
 
 // Analysis of image control statements
 bool IsImageControlStmt(const parser::ExecutableConstruct &);
@@ -242,7 +265,7 @@ std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
 SymbolVector OrderParameterDeclarations(const Symbol &);
 // Returns the complete list of derived type parameter names in the
 // order defined by 7.5.3.2.
-std::list<SourceName> OrderParameterNames(const Symbol &);
+SymbolVector OrderParameterNames(const Symbol &);
 
 // Return an existing or new derived type instance
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,
@@ -288,6 +311,9 @@ const Symbol *FindExternallyVisibleObject(
 // Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
+
+// Given a cray pointee symbol, returns the related cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 
@@ -420,6 +446,18 @@ std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &);
 //     closure of its components (including POINTERs) and the
 //     PotentialAndPointer subobject components of its non-POINTER derived type
 //     components.
+//
+// type t1                     ultimate components:  x, a, p
+//  real x                     direct components:    x, a, p
+//  real, allocatable :: a     potential components: x, a
+//  real, pointer :: p         potential & pointers: x, a, p
+// end type
+// type t2                     ultimate components:  y, c%x, c%a, c%p, b
+//  real y                     direct components:    y, c, c%x, c%a, c%p, b
+//  type(t1) :: c              potential components: y, c, c%x, c%a, b, b%x, b%a
+//  type(t1), allocatable :: b potential & pointers: potentials + c%p + b%p
+// end type
+//
 // Parent and procedure components are considered against these definitions.
 // For this kind of iterator, the component tree is recursively visited in the
 // following order:
@@ -491,6 +529,9 @@ public:
     // bool() operator indicates if the iterator can be dereferenced without
     // having to check against an end() iterator.
     explicit operator bool() const { return !componentPath_.empty(); }
+
+    // Returns the current sequence of components, including parent components.
+    SymbolVector GetComponentPath() const;
 
     // Builds a designator name of the referenced component for messages.
     // The designator helps when the component referred to by the iterator
@@ -589,7 +630,7 @@ using PotentialAndPointerComponentIterator =
 // is returned. Otherwise, the returned iterator casts to true and can be
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
-    const DerivedTypeSpec &);
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(
@@ -598,8 +639,8 @@ UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
     const DerivedTypeSpec &);
 DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
     const DerivedTypeSpec &);
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &);
+PotentialComponentIterator::const_iterator
+FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &);
 
 // The LabelEnforce class (given a set of labels) provides an error message if
 // there is a branch to a label which is not in the given set.
@@ -627,7 +668,7 @@ public:
   void Post(const parser::ErrLabel &errLabel);
   void Post(const parser::EndLabel &endLabel);
   void Post(const parser::EorLabel &eorLabel);
-  void checkLabelUse(const parser::Label &labelUsed);
+  void CheckLabelUse(const parser::Label &labelUsed);
 
 private:
   SemanticsContext &context_;
@@ -680,14 +721,13 @@ inline const parser::Name *getDesignatorNameIfDataRef(
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
 template <typename R, typename T>
-std::optional<R> GetConstExpr(
-    Fortran::semantics::SemanticsContext &semanticsContext, const T &x) {
-  using DefaultCharConstantType = Fortran::evaluate::Ascii;
-  if (const auto *expr{Fortran::semantics::GetExpr(semanticsContext, x)}) {
-    const auto foldExpr{Fortran::evaluate::Fold(
-        semanticsContext.foldingContext(), Fortran::common::Clone(*expr))};
+std::optional<R> GetConstExpr(SemanticsContext &semanticsContext, const T &x) {
+  using DefaultCharConstantType = evaluate::Ascii;
+  if (const auto *expr{GetExpr(semanticsContext, x)}) {
+    const auto foldExpr{evaluate::Fold(
+        semanticsContext.foldingContext(), common::Clone(*expr))};
     if constexpr (std::is_same_v<R, std::string>) {
-      return Fortran::evaluate::GetScalarConstantValue<DefaultCharConstantType>(
+      return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
           foldExpr);
     }
   }
@@ -700,5 +740,37 @@ std::string GetModuleOrSubmoduleName(const Symbol &);
 // Return the assembly name emitted for a common block.
 std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 
+// Check for ambiguous USE associations
+bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
+
+/// Checks if the assignment statement has a single variable on the RHS.
+inline bool checkForSingleVariableOnRHS(
+    const Fortran::parser::AssignmentStmt &assignmentStmt) {
+  const Fortran::parser::Expr &expr{
+      std::get<Fortran::parser::Expr>(assignmentStmt.t)};
+  const Fortran::common::Indirection<Fortran::parser::Designator> *designator =
+      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
+          &expr.u);
+  return designator != nullptr;
+}
+
+/// Checks if the symbol on the LHS of the assignment statement is present in
+/// the RHS expression.
+inline bool checkForSymbolMatch(
+    const Fortran::parser::AssignmentStmt &assignmentStmt) {
+  const auto &var{std::get<Fortran::parser::Variable>(assignmentStmt.t)};
+  const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
+  const auto *e{Fortran::semantics::GetExpr(expr)};
+  const auto *v{Fortran::semantics::GetExpr(var)};
+  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
+  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
+  for (const Fortran::semantics::Symbol &symbol :
+      Fortran::evaluate::GetSymbolVector(*e)) {
+    if (varSymbol == symbol) {
+      return true;
+    }
+  }
+  return false;
+}
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

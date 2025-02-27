@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=dse -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=dse -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Observed in the wild, but test is created by running memcpyopt on
 ;; assignment-tracking/memcpyopt/merge-stores.ll then manually inserting
@@ -13,11 +14,11 @@
 ;; Check that there's an unlinked dbg.assign inserted after each overlapping
 ;; fragment of the shortened store.
 ;;
-; CHECK: llvm.dbg.assign({{.*}}, metadata ptr %g, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID]], metadata ptr %arrayidx3.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK: #dbg_assign({{.*}}, ptr %g, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[ID:[0-9]+]], ptr %arrayidx.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %arrayidx3.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[UniqueID1:[0-9]+]], ptr poison, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[UniqueID2:[0-9]+]], ptr poison, !DIExpression(),
 ; CHECK: call void @llvm.memset{{.*}}, !DIAssignID ![[ID]]
 
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()
@@ -31,7 +32,7 @@ $_ZN1vC2Ef = comdat any
 define dso_local void @_Z1fv() local_unnamed_addr !dbg !7 {
 entry:
   %g = alloca %struct.v, align 4, !DIAssignID !23
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !23, metadata ptr %g, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.assign(metadata i1 poison, metadata !11, metadata !DIExpression(), metadata !23, metadata ptr %g, metadata !DIExpression()), !dbg !24
    %arrayidx.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 2, !dbg !37
   call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !39, metadata ptr %arrayidx.i, metadata !DIExpression()), !dbg !24
   %arrayidx3.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 1, !dbg !40
@@ -41,7 +42,7 @@ entry:
   %arrayidx7.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 3, !dbg !42
   call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !39, metadata ptr %arrayidx7.i, metadata !DIExpression()), !dbg !24
   %0 = bitcast ptr %arrayidx5.i to ptr, !dbg !43
-  call void @llvm.memset.p0i8.i64(ptr align 4 %0, i8 0, i64 16, i1 false), !dbg !44, !DIAssignID !39
+  call void @llvm.memset.p0.i64(ptr align 4 %0, i8 0, i64 16, i1 false), !dbg !44, !DIAssignID !39
   ;; -- Start modification
   %arrayidx7 = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 3, !dbg !24
   store float 0.000000e+00, ptr %arrayidx7, align 4, !dbg !24, !DIAssignID !49
@@ -54,7 +55,7 @@ entry:
 
 declare !dbg !64 dso_local void @_Z3escP1v(ptr) local_unnamed_addr
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
-declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !1000}

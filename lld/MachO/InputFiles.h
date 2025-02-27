@@ -140,7 +140,7 @@ protected:
 
   InputFile(Kind, const llvm::MachO::InterfaceFile &);
 
-  // If true, this input's arch is compatiable with target.
+  // If true, this input's arch is compatible with target.
   bool compatArch = true;
 
 private:
@@ -241,6 +241,7 @@ public:
   DylibFile *exportingFile = nullptr;
   DylibFile *umbrella;
   SmallVector<StringRef, 2> rpaths;
+  SmallVector<StringRef> allowableClients;
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel

@@ -48,7 +48,6 @@ cl_khr_int64_extended_atomics/atom_max.cl
 cl_khr_int64_extended_atomics/atom_min.cl
 cl_khr_int64_extended_atomics/atom_or.cl
 cl_khr_int64_extended_atomics/atom_xor.cl
-convert.cl
 common/degrees.cl
 common/mix.cl
 common/radians.cl
@@ -69,6 +68,7 @@ integer/add_sat.cl
 integer/clz.cl
 integer/hadd.cl
 integer/mad24.cl
+integer/mad_hi.cl
 integer/mad_sat.cl
 integer/mul24.cl
 integer/mul_hi.cl
@@ -106,7 +106,6 @@ math/exp10.cl
 math/fabs.cl
 math/fdim.cl
 math/floor.cl
-math/clc_fma.cl
 math/fma.cl
 math/fmax.cl
 math/fmin.cl
@@ -131,7 +130,6 @@ math/half_tan.cl
 math/clc_hypot.cl
 math/hypot.cl
 math/ilogb.cl
-math/clc_ldexp.cl
 math/ldexp.cl
 math/lgamma.cl
 math/lgamma_r.cl
@@ -160,7 +158,6 @@ math/native_sin.cl
 math/native_sqrt.cl
 math/native_tan.cl
 math/tables.cl
-math/clc_nextafter.cl
 math/nextafter.cl
 math/clc_pow.cl
 math/pow.cl

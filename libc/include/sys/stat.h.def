@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SYS_STAT_H
 #define LLVM_LIBC_SYS_STAT_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
-#include <llvm-libc-macros/sys-stat-macros.h>
+#include "../llvm-libc-macros/sys-stat-macros.h"
 
 %%public_api()
 

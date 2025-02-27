@@ -5,34 +5,34 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.8.0"
 
 ; Function Attrs: nounwind ssp uwtable
-define void @RCModelEstimator() {
+define void @RCModelEstimator(i1 %arg) {
 ; CHECK-LABEL: @RCModelEstimator(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END_THREAD:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END_THREAD:%.*]]
 ; CHECK:       for.end.thread:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY3:%.*]], label [[IF_END103:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY3:%.*]], label [[IF_END103:%.*]]
 ; CHECK:       for.cond14.preheader:
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY16_LR_PH:%.*]], label [[IF_END103]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY16_LR_PH:%.*]], label [[IF_END103]]
 ; CHECK:       for.body16.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY16:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN7:%.*]], label [[FOR_INC11:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN7:%.*]], label [[FOR_INC11:%.*]]
 ; CHECK:       if.then7:
 ; CHECK-NEXT:    br label [[FOR_INC11]]
 ; CHECK:       for.inc11:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND14_PREHEADER:%.*]], label [[FOR_BODY3]]
 ; CHECK:       for.body16:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END39:%.*]], label [[FOR_BODY16]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END39:%.*]], label [[FOR_BODY16]]
 ; CHECK:       for.end39:
-; CHECK-NEXT:    br i1 undef, label [[IF_END103]], label [[FOR_COND45_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END103]], label [[FOR_COND45_PREHEADER:%.*]]
 ; CHECK:       for.cond45.preheader:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN88:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN88:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then88:
 ; CHECK-NEXT:    br label [[IF_END103]]
 ; CHECK:       if.else:
@@ -41,28 +41,28 @@ define void @RCModelEstimator() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %for.body.lr.ph, label %for.end.thread
+  br i1 %arg, label %for.body.lr.ph, label %for.end.thread
 
 for.end.thread:                                   ; preds = %entry
   unreachable
 
 for.body.lr.ph:                                   ; preds = %entry
-  br i1 undef, label %for.end, label %for.body
+  br i1 %arg, label %for.end, label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
-  br i1 undef, label %for.end, label %for.body
+  br i1 %arg, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %for.body.lr.ph
-  br i1 undef, label %for.body3, label %if.end103
+  br i1 %arg, label %for.body3, label %if.end103
 
 for.cond14.preheader:                             ; preds = %for.inc11
-  br i1 undef, label %for.body16.lr.ph, label %if.end103
+  br i1 %arg, label %for.body16.lr.ph, label %if.end103
 
 for.body16.lr.ph:                                 ; preds = %for.cond14.preheader
   br label %for.body16
 
 for.body3:                                        ; preds = %for.inc11, %for.end
-  br i1 undef, label %if.then7, label %for.inc11
+  br i1 %arg, label %if.then7, label %for.inc11
 
 if.then7:                                         ; preds = %for.body3
   br label %for.inc11
@@ -71,13 +71,13 @@ for.inc11:                                        ; preds = %if.then7, %for.body
   br i1 false, label %for.cond14.preheader, label %for.body3
 
 for.body16:                                       ; preds = %for.body16, %for.body16.lr.ph
-  br i1 undef, label %for.end39, label %for.body16
+  br i1 %arg, label %for.end39, label %for.body16
 
 for.end39:                                        ; preds = %for.body16
-  br i1 undef, label %if.end103, label %for.cond45.preheader
+  br i1 %arg, label %if.end103, label %for.cond45.preheader
 
 for.cond45.preheader:                             ; preds = %for.end39
-  br i1 undef, label %if.then88, label %if.else
+  br i1 %arg, label %if.then88, label %if.else
 
 if.then88:                                        ; preds = %for.cond45.preheader
   %mul89 = fmul double 0.000000e+00, 0.000000e+00

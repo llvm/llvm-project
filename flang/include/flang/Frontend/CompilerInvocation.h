@@ -15,16 +15,21 @@
 
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendOptions.h"
-#include "flang/Frontend/LangOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/LangOptions.h"
+#include "mlir/Support/Timing.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/Option/ArgList.h"
 #include <memory>
+
+namespace llvm {
+class TargetMachine;
+}
 
 namespace Fortran::frontend {
 
@@ -80,15 +85,12 @@ class CompilerInvocation : public CompilerInvocationBase {
   Fortran::frontend::CodeGenOptions codeGenOpts;
 
   /// Options controlling language dialect.
-  Fortran::frontend::LangOptions langOpts;
+  Fortran::common::LangOptions langOpts;
 
   // The original invocation of the compiler driver.
   // This string will be set as the return value from the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env.
   std::string allCompilerInvocOpts;
-
-  // Semantics context
-  std::unique_ptr<Fortran::semantics::SemanticsContext> semanticsContext;
 
   /// Semantic options
   // TODO: Merge with or translate to frontendOpts. We shouldn't need two sets
@@ -98,8 +100,12 @@ class CompilerInvocation : public CompilerInvocationBase {
   std::string moduleFileSuffix = ".mod";
 
   bool debugModuleDir = false;
+  bool hermeticModuleFileOutput = false;
 
   bool warnAsErr = false;
+
+  // Executable name
+  const char *argv0;
 
   /// This flag controls the unparsing and is used to decide whether to print
   /// out the semantically analyzed version of an object or expression or the
@@ -110,8 +116,10 @@ class CompilerInvocation : public CompilerInvocationBase {
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
+  // Fortran Warning options
   bool enableConformanceChecks = false;
   bool enableUsageChecks = false;
+  bool disableWarnings = false;
 
   /// Used in e.g. unparsing to dump the analyzed rather than the original
   /// parse-tree objects.
@@ -136,6 +144,10 @@ class CompilerInvocation : public CompilerInvocationBase {
       },
   };
 
+  /// Whether to time the invocation. Set when -ftime-report or -ftime-report=
+  /// is enabled.
+  bool enableTimers;
+
 public:
   CompilerInvocation() = default;
 
@@ -151,20 +163,18 @@ public:
   CodeGenOptions &getCodeGenOpts() { return codeGenOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
 
-  LangOptions &getLangOpts() { return langOpts; }
-  const LangOptions &getLangOpts() const { return langOpts; }
+  Fortran::common::LangOptions &getLangOpts() { return langOpts; }
+  const Fortran::common::LangOptions &getLangOpts() const { return langOpts; }
 
   Fortran::lower::LoweringOptions &getLoweringOpts() { return loweringOpts; }
   const Fortran::lower::LoweringOptions &getLoweringOpts() const {
     return loweringOpts;
   }
 
-  Fortran::semantics::SemanticsContext &getSemanticsContext() {
-    return *semanticsContext;
-  }
-  const Fortran::semantics::SemanticsContext &getSemanticsContext() const {
-    return *semanticsContext;
-  }
+  /// Creates and configures semantics context based on the compilation flags.
+  std::unique_ptr<Fortran::semantics::SemanticsContext>
+  getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
+                  const llvm::TargetMachine &);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }
@@ -174,6 +184,11 @@ public:
 
   bool &getDebugModuleDir() { return debugModuleDir; }
   const bool &getDebugModuleDir() const { return debugModuleDir; }
+
+  bool &getHermeticModuleFileOutput() { return hermeticModuleFileOutput; }
+  const bool &getHermeticModuleFileOutput() const {
+    return hermeticModuleFileOutput;
+  }
 
   bool &getWarnAsErr() { return warnAsErr; }
   const bool &getWarnAsErr() const { return warnAsErr; }
@@ -190,8 +205,13 @@ public:
     return enableConformanceChecks;
   }
 
+  const char *getArgv0() { return argv0; }
+
   bool &getEnableUsageChecks() { return enableUsageChecks; }
   const bool &getEnableUsageChecks() const { return enableUsageChecks; }
+
+  bool &getDisableWarnings() { return disableWarnings; }
+  const bool &getDisableWarnings() const { return disableWarnings; }
 
   Fortran::parser::AnalyzedObjectsAsFortran &getAsFortran() {
     return asFortran;
@@ -206,6 +226,8 @@ public:
   const Fortran::common::IntrinsicTypeDefaultKinds &getDefaultKinds() const {
     return defaultKinds;
   }
+
+  bool getEnableTimers() const { return enableTimers; }
 
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
@@ -222,7 +244,12 @@ public:
   // Enables the usage checks
   void setEnableUsageChecks() { enableUsageChecks = true; }
 
+  // Disables all Warnings
+  void setDisableWarnings() { disableWarnings = true; }
+
   /// Useful setters
+  void setArgv0(const char *dir) { argv0 = dir; }
+
   void setModuleDir(std::string &dir) { moduleDir = dir; }
 
   void setModuleFileSuffix(const char *suffix) {
@@ -230,6 +257,9 @@ public:
   }
 
   void setDebugModuleDir(bool flag) { debugModuleDir = flag; }
+  void setHermeticModuleFileOutput(bool flag) {
+    hermeticModuleFileOutput = flag;
+  }
 
   void setWarnAsErr(bool flag) { warnAsErr = flag; }
 

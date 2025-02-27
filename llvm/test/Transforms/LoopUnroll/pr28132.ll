@@ -6,7 +6,7 @@ declare void @fn1(ptr)
 
 declare i1 @fn2(ptr, ptr)
 
-define void @fn4() personality ptr @__CxxFrameHandler3 {
+define void @fn4(i1 %arg) personality ptr @__CxxFrameHandler3 {
 entry:
   br label %for.body
 
@@ -21,12 +21,12 @@ call.i.noexc:                                     ; preds = %for.body
           to label %call1.i.noexc unwind label %ehcleanup
 
 call1.i.noexc:                                    ; preds = %call.i.noexc
-  br i1 undef, label %if.then.i, label %if.end4.i
+  br i1 %arg, label %if.then.i, label %if.end4.i
 
 if.then.i:                                        ; preds = %call1.i.noexc
   %tmp1 = load i8, ptr undef, align 4
   %tobool.i = icmp eq i8 undef, undef
-  br i1 undef, label %if.end4.i, label %if.then2.i
+  br i1 %arg, label %if.end4.i, label %if.then2.i
 
 if.then2.i:                                       ; preds = %if.then.i
   %call3.i3 = invoke i1 @fn2(ptr undef, ptr null)

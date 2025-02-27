@@ -36,7 +36,8 @@ namespace llvm {
   /// for upgrading, and returns true if it requires upgrading. It may return
   /// null in NewFn if the all calls to the original intrinsic function
   /// should be transformed to non-function-call instructions.
-  bool UpgradeIntrinsicFunction(Function *F, Function *&NewFn);
+  bool UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
+                                bool CanUpgradeDebugIntrinsicsToRecords = true);
 
   /// This is the complement to the above, replacing a specific call to an
   /// intrinsic function with a call to the specified new function.
@@ -59,6 +60,10 @@ namespace llvm {
   /// This checks for module flags which should be upgraded. It returns true if
   /// module is modified.
   bool UpgradeModuleFlags(Module &M);
+
+  /// Convert legacy nvvm.annotations metadata to appropriate function
+  /// attributes.
+  void UpgradeNVVMAnnotations(Module &M);
 
   /// Convert calls to ARC runtime functions to intrinsic calls and upgrade the
   /// old retain release marker to new module flag format.

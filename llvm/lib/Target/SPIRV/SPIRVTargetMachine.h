@@ -14,11 +14,11 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVTARGETMACHINE_H
 
 #include "SPIRVSubtarget.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
-class SPIRVTargetMachine : public LLVMTargetMachine {
+class SPIRVTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   SPIRVSubtarget Subtarget;
 
@@ -43,6 +43,8 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 } // namespace llvm
 

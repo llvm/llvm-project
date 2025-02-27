@@ -10,15 +10,125 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OpenMP_OPS_INTERFACES
-#define OpenMP_OPS_INTERFACES
+#ifndef OPENMP_OPS_INTERFACES
+#define OPENMP_OPS_INTERFACES
 
 include "mlir/IR/OpBase.td"
+
+
+// Internal class to hold definitions of BlockArgOpenMPOpInterface methods,
+// based on the name of the clause and what clause comes earlier in the list.
+//
+// The clause order will define the expected relative order between block
+// arguments corresponding to each of these clauses.
+class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
+    BlockArgOpenMPClause previousClause> {
+  // Default-implemented method to be overriden by the corresponding clause.
+  //
+  // Usage example:
+  //
+  // ```c++
+  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
+  // unsigned numInReductionArgs = iface.numInReductionBlockArgs();
+  // ```
+  InterfaceMethod numArgsMethod = InterfaceMethod<
+    "Get number of block arguments defined by `" # clauseNameSnake # "`.",
+    "unsigned", "num" # clauseNameCamel # "BlockArgs", (ins), [{}], [{
+      return 0;
+    }]
+  >;
+
+  // Unified access method for the start index of clause-associated entry block
+  // arguments.
+  //
+  // Usage example:
+  //
+  // ```c++
+  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
+  // unsigned firstMapIndex = iface.getMapBlockArgsStart();
+  // ```
+  InterfaceMethod startMethod = InterfaceMethod<
+    "Get start index of block arguments defined by `" # clauseNameSnake # "`.",
+    "unsigned", "get" # clauseNameCamel # "BlockArgsStart", (ins),
+    !if(!initialized(previousClause), [{
+        auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+      }] # "return iface." # previousClause.startMethod.name # "() + $_op."
+        # previousClause.numArgsMethod.name # "();",
+        "return 0;"
+    )
+  >;
+
+  // Unified access method for clause-associated entry block arguments.
+  //
+  // Usage example:
+  //
+  // ```c++
+  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
+  // ArrayRef<BlockArgument> reductionArgs = iface.getReductionBlockArgs();
+  // ```
+  InterfaceMethod blockArgsMethod = InterfaceMethod<
+    "Get block arguments defined by `" # clauseNameSnake # "`.",
+    "::llvm::MutableArrayRef<::mlir::BlockArgument>",
+    "get" # clauseNameCamel # "BlockArgs", (ins), [{
+      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+      return $_op->getRegion(0).getArguments().slice(
+    }] # "iface." # startMethod.name # "(), $_op." # numArgsMethod.name # "());"
+  >;
+}
+
+def BlockArgHostEvalClause : BlockArgOpenMPClause<"host_eval", "HostEval", ?>;
+def BlockArgInReductionClause : BlockArgOpenMPClause<
+    "in_reduction", "InReduction", BlockArgHostEvalClause>;
+def BlockArgMapClause : BlockArgOpenMPClause<
+    "map", "Map", BlockArgInReductionClause>;
+def BlockArgPrivateClause : BlockArgOpenMPClause<
+    "private", "Private", BlockArgMapClause>;
+def BlockArgReductionClause : BlockArgOpenMPClause<
+    "reduction", "Reduction", BlockArgPrivateClause>;
+def BlockArgTaskReductionClause : BlockArgOpenMPClause<
+    "task_reduction", "TaskReduction", BlockArgReductionClause>;
+def BlockArgUseDeviceAddrClause : BlockArgOpenMPClause<
+    "use_device_addr", "UseDeviceAddr", BlockArgTaskReductionClause>;
+def BlockArgUseDevicePtrClause : BlockArgOpenMPClause<
+    "use_device_ptr", "UseDevicePtr", BlockArgUseDeviceAddrClause>;
+
+def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
+  let description = [{
+    OpenMP operations that define entry block arguments as part of the
+    representation of its clauses.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  defvar clauses = [ BlockArgHostEvalClause, BlockArgInReductionClause,
+    BlockArgMapClause, BlockArgPrivateClause, BlockArgReductionClause,
+    BlockArgTaskReductionClause, BlockArgUseDeviceAddrClause,
+    BlockArgUseDevicePtrClause ];
+
+  let methods = !listconcat(
+    !foreach(clause, clauses, clause.numArgsMethod),
+    !foreach(clause, clauses, clause.startMethod),
+    !foreach(clause, clauses, clause.blockArgsMethod)
+  );
+
+  let verify = [{
+    auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>($_op);
+  }] # "unsigned expectedArgs = "
+     # !interleave(
+         !foreach(clause, clauses, "iface." # clause.numArgsMethod.name # "()"),
+         " + "
+       ) # ";" # [{
+    if ($_op->getRegion(0).getNumArguments() < expectedArgs)
+      return $_op->emitOpError() << "expected at least " << expectedArgs
+                                 << " entry block argument(s)";
+    return ::mlir::success();
+  }];
+}
 
 def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let description = [{
     OpenMP operations whose region will be outlined will implement this
-    interface. These operations will
+    interface.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -27,6 +137,35 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
       return &$_op.getRegion().front();
+      }]>,
+  ];
+}
+
+def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
+  let description = [{
+    OpenMP operations which own a list of omp::MapInfoOp's implement this interface
+    to allow generic access to deal with map operands to more easily manipulate
+    this class of operations.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<"Get map operands", "::mlir::OperandRange", "getMapVars",
+      (ins), [{
+        return $_op.getMapVars();
+      }]>,
+      InterfaceMethod<"Get mutable map operands", "::mlir::MutableOperandRange",
+                      "getMapVarsMutable",
+      (ins), [{
+        return $_op.getMapVarsMutable();
+      }]>,
+      InterfaceMethod<"Get operand index for a map clause",
+                      "int64_t",
+                      "getOperandIndexForMap",
+      (ins "::mlir::Value":$map), [{
+         return std::distance($_op.getMapVars().begin(),
+                              llvm::find($_op.getMapVars(), map));
       }]>,
   ];
 }
@@ -44,6 +183,91 @@ def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
       "getAllReductionVars", (ins), [{}], [{
         return $_op.getReductionVars();
       }]>,
+  ];
+}
+
+def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
+  let description = [{
+    OpenMP operations that wrap a single loop nest. They must only contain a
+    single region with a single block in which there's a single operation and a
+    terminator. That nested operation must be another loop wrapper or an
+    `omp.loop_nest`.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        If there is another loop wrapper immediately nested inside, return that
+        operation. Assumes this operation is a valid loop wrapper.
+      }],
+      /*retTy=*/"::mlir::omp::LoopWrapperInterface",
+      /*methodName=*/"getNestedWrapper",
+      (ins), [{}], [{
+        Operation *nested = &*$_op->getRegion(0).op_begin();
+        return ::llvm::dyn_cast<LoopWrapperInterface>(nested);
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Return the loop nest nested directly or indirectly inside of this loop
+        wrapper. Assumes this operation is a valid loop wrapper.
+      }],
+      /*retTy=*/"::mlir::Operation *",
+      /*methodName=*/"getWrappedLoop",
+      (ins), [{}], [{
+        if (LoopWrapperInterface nested = $_op.getNestedWrapper())
+          return nested.getWrappedLoop();
+        return &*$_op->getRegion(0).op_begin();
+      }]
+    >
+  ];
+
+  let extraClassDeclaration = [{
+    /// Interface verifier imlementation.
+    llvm::LogicalResult verifyImpl();
+  }];
+
+  let verify = [{
+    return ::llvm::cast<::mlir::omp::LoopWrapperInterface>($_op).verifyImpl();
+  }];
+  let verifyWithRegions = 1;
+}
+
+def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
+  let description = [{
+    OpenMP operations that can represent a single leaf of a composite OpenMP
+    construct.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Check whether the operation is representing a leaf of a composite OpenMP
+        construct.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isComposite",
+      (ins ), [{}], [{
+        return $_op->hasAttr("omp.composite");
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Mark the operation as part of an OpenMP composite construct.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setComposite",
+      (ins "bool":$val), [{}], [{
+        if (val)
+          $_op->setDiscardableAttr("omp.composite", mlir::UnitAttr::get($_op->getContext()));
+        else
+          $_op->removeDiscardableAttr("omp.composite");
+      }]
+    >
   ];
 }
 
@@ -145,8 +369,8 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*methodName=*/"getIsTargetDevice",
       (ins), [{}], [{
         if (Attribute isTargetDevice = $_op->getAttr("omp.is_target_device"))
-          if (isTargetDevice.isa<mlir::BoolAttr>())
-           return isTargetDevice.dyn_cast<BoolAttr>().getValue();
+          if (::llvm::isa<mlir::BoolAttr>(isTargetDevice))
+           return ::llvm::dyn_cast<BoolAttr>(isTargetDevice).getValue();
         return false;
       }]>,
     InterfaceMethod<
@@ -170,7 +394,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*methodName=*/"getIsGPU",
       (ins), [{}], [{
         if (Attribute isTargetCGAttr = $_op->getAttr("omp.is_gpu"))
-          if (auto isTargetCGVal = isTargetCGAttr.dyn_cast<BoolAttr>())
+          if (auto isTargetCGVal = ::llvm::dyn_cast<BoolAttr>(isTargetCGAttr))
            return isTargetCGVal.getValue();
         return false;
       }]>,
@@ -198,39 +422,12 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             "bool":$assumeThreadsOversubscription,
             "bool":$assumeNoThreadState,
             "bool":$assumeNoNestedParallelism,
-            "uint32_t":$openmpDeviceVersion), [{}], [{
+            "uint32_t":$openmpDeviceVersion,
+            "bool":$noGPULib), [{}], [{
         $_op->setAttr(("omp." + mlir::omp::FlagsAttr::getMnemonic()).str(),
                   mlir::omp::FlagsAttr::get($_op->getContext(), debugKind,
                       assumeTeamsOversubscription, assumeThreadsOversubscription,
-                      assumeNoThreadState, assumeNoNestedParallelism, openmpDeviceVersion));
-      }]>,
-    InterfaceMethod<
-      /*description=*/[{
-        Get the Target attribute on the current module if it exists
-        and return the attribute, if it doesn't exist it returns a nullptr.
-      }],
-      /*retTy=*/"mlir::omp::TargetAttr",
-      /*methodName=*/"getTarget",
-      (ins), [{}], [{
-        if (Attribute flags = $_op->getAttr("omp.target"))
-          return ::llvm::dyn_cast_or_null<mlir::omp::TargetAttr>(flags);
-        return nullptr;
-      }]>,
-    InterfaceMethod<
-      /*description=*/[{
-        Set the attribute target on the current module with the
-        specified string arguments - name of cpu and corresponding features.
-      }],
-      /*retTy=*/"void",
-      /*methodName=*/"setTarget",
-      (ins "llvm::StringRef":$targetCPU,
-           "llvm::StringRef":$targetFeatures), [{}], [{
-        if (targetCPU.empty())
-          return;
-        $_op->setAttr(("omp." + mlir::omp::TargetAttr::getMnemonic()).str(),
-                  mlir::omp::TargetAttr::get($_op->getContext(),
-                                             targetCPU.str(),
-                                             targetFeatures.str()));
+                      assumeNoThreadState, assumeNoNestedParallelism, noGPULib, openmpDeviceVersion));
       }]>,
     InterfaceMethod<
       /*description=*/[{
@@ -270,7 +467,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*methodName=*/"getRequires",
       (ins), [{}], [{
         if (Attribute requiresAttr = $_op->getAttr("omp.requires"))
-          if (auto requiresVal = requiresAttr.dyn_cast<mlir::omp::ClauseRequiresAttr>())
+          if (auto requiresVal = ::llvm::dyn_cast<mlir::omp::ClauseRequiresAttr>(requiresAttr))
             return requiresVal.getValue();
         return mlir::omp::ClauseRequires::none;
       }]>,
@@ -283,48 +480,36 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       (ins "::mlir::omp::ClauseRequires":$clauses), [{}], [{
         $_op->setAttr(mlir::StringAttr::get($_op->getContext(), "omp.requires"),
           mlir::omp::ClauseRequiresAttr::get($_op->getContext(), clauses));
-      }]>
-  ];
-}
-
-def EarlyOutliningInterface : OpInterface<"EarlyOutliningInterface"> {
-  let description = [{
-    FuncOps that are a result of early outlining should have this interface.
-  }];
-
-  let cppNamespace = "::mlir::omp";
-
-  let methods = [
+      }]>,
     InterfaceMethod<
       /*description=*/[{
-        Set a StringAttr on an outlined target region function containing the
-        name of the parent function where the target region was outlined
-        from. The parent name is used to construct the kernel names for target
-        regions.
+        Get the omp.target_triples attribute on the operator if it's present and
+        return its value. If it doesn't exist, return an empty array by default.
+      }],
+      /*retTy=*/"::llvm::ArrayRef<::mlir::Attribute>",
+      /*methodName=*/"getTargetTriples",
+      (ins), [{}], [{
+        if (Attribute triplesAttr = $_op->getAttr("omp.target_triples"))
+          if (auto triples = ::llvm::dyn_cast<::mlir::ArrayAttr>(triplesAttr))
+            return triples.getValue();
+        return {};
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Set the omp.target_triples attribute on the operation.
       }],
       /*retTy=*/"void",
-      /*methodName=*/"setParentName",
-      (ins "std::string":$parentName), [{}], [{
+      /*methodName=*/"setTargetTriples",
+      (ins "::llvm::ArrayRef<::std::string>":$targetTriples), [{}], [{
+        auto names = ::llvm::to_vector(::llvm::map_range(
+            targetTriples, [&](::std::string str) -> ::mlir::Attribute {
+              return mlir::StringAttr::get($_op->getContext(), str);
+            }));
         $_op->setAttr(
-          mlir::StringAttr::get($_op->getContext(),
-                                llvm::Twine{"omp.outline_parent_name"}),
-          mlir::StringAttr::get($_op->getContext(), parentName));
-       }]>,
-
-    InterfaceMethod<
-      /*description=*/[{
-        Returns the parent function name from where the target op was outlined
-        from. If it doesn't exist it returns an empty string.
-      }],
-      /*retTy=*/"llvm::StringRef",
-      /*methodName=*/"getParentName",
-      (ins), [{}], [{
-        if (Attribute parentName = $_op->getAttr("omp.outline_parent_name"))
-          if (::llvm::isa<mlir::StringAttr>(parentName))
-            return ::llvm::dyn_cast<mlir::StringAttr>(parentName).getValue();
-        return {};
+            ::mlir::StringAttr::get($_op->getContext(), "omp.target_triples"),
+            ::mlir::ArrayAttr::get($_op->getContext(), names));
       }]>
   ];
 }
 
-#endif // OpenMP_OPS_INTERFACES
+#endif // OPENMP_OPS_INTERFACES

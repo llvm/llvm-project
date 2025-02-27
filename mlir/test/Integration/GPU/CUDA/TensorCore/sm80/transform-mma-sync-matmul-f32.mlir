@@ -11,8 +11,8 @@
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
-// RUN:   -test-lower-to-nvvm="cubin-chip=sm_80 cubin-features=+ptx76 cubin-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN:   -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_80 cubin-features=+ptx76 cubin-format=%gpu_compilation_format" \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \

@@ -28,7 +28,7 @@ void testva (int n, ...) {
   // CHECK: [[AP:%[a-z0-9]+]] = alloca ptr, align 4
   // CHECK: [[V5:%[a-z0-9]+]] = alloca %struct.x, align 4
   // CHECK: [[TMP:%[a-z0-9]+]] = alloca [4 x i32], align 4
-  // CHECK: call void @llvm.va_start(ptr [[AP]])
+  // CHECK: call void @llvm.va_start.p0(ptr [[AP]])
 
   char* v1 = va_arg (ap, char*);
   f(v1);
@@ -76,7 +76,8 @@ void testva (int n, ...) {
   // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[V5]], ptr align 4 [[P]], i32 20, i1 false)
   // CHECK: call void @f(ptr noundef [[V5]])
 
-  int* v6 = va_arg (ap, int[4]);  // an unusual aggregate type
+  // an unusual aggregate type
+  int* v6 = va_arg (ap, int[4]);  // expected-warning{{second argument to 'va_arg' is of array type 'int[4]'}}
   f(v6);
   // CHECK: [[I:%[a-z0-9]+]] = load ptr, ptr [[AP]]
   // CHECK: [[P:%[a-z0-9]+]] = load ptr, ptr [[I]]

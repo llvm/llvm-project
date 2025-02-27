@@ -144,61 +144,61 @@ vpmultishiftqb    (%rax){1to4}, %ymm17, %ymm19 {k1}{z}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 8.00   8.00   10.00  10.00   -     86.00   -      -      -      -      -     10.00   -
+# CHECK-NEXT: 8.00   8.00   10.00  10.00   -     86.00   -      -      -      -     10.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpermb	%xmm16, %xmm17, %xmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermb	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermb	(%rax), %xmm17, %xmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpermb	%xmm16, %xmm17, %xmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermb	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermb	(%rax), %xmm17, %xmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpermb	%xmm16, %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermb	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermb	(%rax), %xmm17, %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpermb	%ymm16, %ymm17, %ymm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermb	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermb	(%rax), %ymm17, %ymm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpermb	%ymm16, %ymm17, %ymm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermb	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermb	(%rax), %ymm17, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpermb	%ymm16, %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpermb	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpermb	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermi2b	%xmm16, %xmm17, %xmm19
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermi2b	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermi2b	(%rax), %xmm17, %xmm19
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermi2b	%xmm16, %xmm17, %xmm19 {%k1}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermi2b	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermi2b	(%rax), %xmm17, %xmm19 {%k1}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermi2b	%xmm16, %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermi2b	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermi2b	(%rax), %xmm17, %xmm19 {%k1} {z}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermi2b	%ymm16, %ymm17, %ymm19
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermi2b	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermi2b	(%rax), %ymm17, %ymm19
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermi2b	%ymm16, %ymm17, %ymm19 {%k1}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermi2b	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermi2b	(%rax), %ymm17, %ymm19 {%k1}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermi2b	%ymm16, %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermi2b	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermi2b	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermt2b	%xmm16, %xmm17, %xmm19
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermt2b	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermt2b	(%rax), %xmm17, %xmm19
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermt2b	%xmm16, %xmm17, %xmm19 {%k1}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermt2b	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermt2b	(%rax), %xmm17, %xmm19 {%k1}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermt2b	%xmm16, %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermt2b	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermt2b	(%rax), %xmm17, %xmm19 {%k1} {z}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermt2b	%ymm16, %ymm17, %ymm19
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermt2b	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermt2b	(%rax), %ymm17, %ymm19
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermt2b	%ymm16, %ymm17, %ymm19 {%k1}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermt2b	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermt2b	(%rax), %ymm17, %ymm19 {%k1}
 # CHECK-NEXT: 0.33   0.33    -      -      -     2.33    -      -      -      -      -      -      -     vpermt2b	%ymm16, %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -      -     0.33    -     vpermt2b	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.33   0.33   0.33   0.33    -     2.33    -      -      -      -     0.33    -      -     vpermt2b	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmultishiftqb	%xmm16, %xmm17, %xmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax), %xmm17, %xmm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax){1to2}, %xmm17, %xmm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmultishiftqb	%xmm16, %xmm17, %xmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax), %xmm17, %xmm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax){1to2}, %xmm17, %xmm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmultishiftqb	%xmm16, %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax), %xmm17, %xmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmultishiftqb	%ymm16, %ymm17, %ymm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax), %ymm17, %ymm19
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax){1to4}, %ymm17, %ymm19
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmultishiftqb	%ymm16, %ymm17, %ymm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax), %ymm17, %ymm19 {%k1}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax){1to4}, %ymm17, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     vpmultishiftqb	%ymm16, %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax), %ymm17, %ymm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     vpmultishiftqb	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     vpmultishiftqb	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}

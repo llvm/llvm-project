@@ -33,6 +33,17 @@ void test_TriviallyCopyable_64_bytes() {
   for (const auto r : records)
     (void)r;
 }
+void test_TriviallyCopyConstructible_64_bytes() {
+  struct Record {
+    char a[64];
+    Record& operator=(Record const& other){return *this;};
+
+  };
+
+  Record records[8];
+  for (const auto r : records)
+    (void)r;
+}
 
 void test_TriviallyCopyable_65_bytes() {
   struct Record {
@@ -40,6 +51,19 @@ void test_TriviallyCopyable_65_bytes() {
     char a[65];
   };
 
+  // expected-warning@+3 {{loop variable 'r' creates a copy from type 'const Record'}}
+  // expected-note@+2 {{use reference type 'const Record &' to prevent copying}}
+  Record records[8];
+  for (const auto r : records)
+    (void)r;
+}
+
+void test_TriviallyCopyConstructible_65_bytes() {
+  struct Record {
+    char a[65];
+    Record& operator=(Record const& other){return *this;};
+
+  };
   // expected-warning@+3 {{loop variable 'r' creates a copy from type 'const Record'}}
   // expected-note@+2 {{use reference type 'const Record &' to prevent copying}}
   Record records[8];
@@ -87,3 +111,4 @@ void test_TrivialABI_65_bytes() {
   for (const auto r : records)
     (void)r;
 }
+

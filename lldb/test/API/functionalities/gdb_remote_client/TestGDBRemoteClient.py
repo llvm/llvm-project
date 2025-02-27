@@ -63,7 +63,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
         error = lldb.SBError()
         target.AttachToProcessWithID(lldb.SBListener(), 47, error)
-        self.assertEquals(error_msg, error.GetCString())
+        self.assertEqual(error_msg, error.GetCString())
 
     def test_launch_fail(self):
         class MyResponder(MockGDBServerResponder):
@@ -132,12 +132,39 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         target = self.createTarget("a.yaml")
         process = self.connect(target)
 
-        self.assertEquals(1, self.server.responder.packetLog.count("g"))
-        self.server.responder.packetLog = []
+        # We want to make sure that the process is using the g packet, but it's
+        # not required the "connect" should read all registers.  However, it might
+        # have...  So we need to wait till we explicitly 'read_registers' to do
+        # test.
+        # Also, even with the use-g-packet-for-reading lldb will sometimes send p0
+        # early on to see if the packet is supported.  So we can't say that there
+        # will be NO p packets.
+        # But there certainly should be no p packets after the g packet.
+
         self.read_registers(process)
-        # Reading registers should not cause any 'p' packets to be exchanged.
-        self.assertEquals(
-            0, len([p for p in self.server.responder.packetLog if p.startswith("p")])
+        print(f"\nPACKET LOG:\n{self.server.responder.packetLog}\n")
+        g_pos = 0
+        try:
+            g_pos = self.server.responder.packetLog.index("g")
+        except err:
+            self.fail("'g' packet not found after fetching registers")
+
+        try:
+            second_g = self.server.responder.packetLog.index("g", g_pos)
+            self.fail("Found more than one 'g' packet")
+        except:
+            pass
+
+        # Make sure there aren't any `p` packets after the `g` packet:
+        self.assertEqual(
+            0,
+            len(
+                [
+                    p
+                    for p in self.server.responder.packetLog[g_pos:]
+                    if p.startswith("p")
+                ]
+            ),
         )
 
     def test_read_registers_using_p_packets(self):
@@ -162,7 +189,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.write_registers(process)
-        self.assertEquals(
+        self.assertEqual(
             0, len([p for p in self.server.responder.packetLog if p.startswith("G")])
         )
         self.assertGreater(
@@ -182,7 +209,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.write_registers(process)
-        self.assertEquals(
+        self.assertEqual(
             0, len([p for p in self.server.responder.packetLog if p.startswith("P")])
         )
         self.assertGreater(
@@ -191,7 +218,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
     def read_registers(self, process):
         self.for_each_gpr(
-            process, lambda r: self.assertEquals("0x0000000000000000", r.GetValue())
+            process, lambda r: self.assertEqual("0x0000000000000000", r.GetValue())
         )
 
     def write_registers(self, process):

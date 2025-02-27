@@ -60,8 +60,8 @@ Error lookupAndRecordAddrs(
   for (auto &KV : Pairs)
     Symbols.add(KV.first, LookupFlags);
 
-  ExecutorProcessControl::LookupRequest LR(H, Symbols);
-  auto Result = EPC.lookupSymbols(LR);
+  DylibManager::LookupRequest LR(H, Symbols);
+  auto Result = EPC.getDylibMgr().lookupSymbols(LR);
   if (!Result)
     return Result.takeError();
 
@@ -73,7 +73,7 @@ Error lookupAndRecordAddrs(
                                    inconvertibleErrorCode());
 
   for (unsigned I = 0; I != Pairs.size(); ++I)
-    *Pairs[I].second = Result->front()[I];
+    *Pairs[I].second = Result->front()[I].getAddress();
 
   return Error::success();
 }

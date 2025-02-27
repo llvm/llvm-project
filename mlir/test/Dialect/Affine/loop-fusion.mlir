@@ -448,8 +448,8 @@ func.func @should_fuse_no_top_level_access() {
 
 #set0 = affine_set<(d0) : (1 == 0)>
 
-// CHECK-LABEL: func @should_not_fuse_if_op_at_top_level() {
-func.func @should_not_fuse_if_op_at_top_level() {
+// CHECK-LABEL: func @should_fuse_despite_affine_if() {
+func.func @should_fuse_despite_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -462,12 +462,10 @@ func.func @should_not_fuse_if_op_at_top_level() {
   %c0 = arith.constant 4 : index
   affine.if #set0(%c0) {
   }
-  // Top-level IfOp should prevent fusion.
+  // An unrelated affine.if op doesn't prevent fusion.
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT: }
-  // CHECK:      affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
   return
 }
@@ -1208,6 +1206,9 @@ func.func @should_fuse_with_private_memref() {
   // CHECK:      affine.for %{{.*}} = 0 to 17 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT: }
+  // CHECK:      affine.for %{{.*}} = 0 to 82 {
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: return
@@ -1537,6 +1538,38 @@ func.func @should_fuse_and_preserve_dep_on_constant() {
   // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:  }
+  // CHECK-NEXT:  return
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @producer_consumer_with_outmost_user
+func.func @producer_consumer_with_outmost_user(%arg0 : f16) {
+  %c0 = arith.constant 0 : index
+  %src = memref.alloc() : memref<f16, 1>
+  %dst = memref.alloc() : memref<f16>
+  %tag = memref.alloc() : memref<1xi32>
+  affine.for %arg1 = 4 to 6 {
+    affine.for %arg2 = 0 to 1 {
+      %0 = arith.addf %arg0, %arg0 : f16
+      affine.store %0, %src[] : memref<f16, 1>
+    }
+    affine.for %arg3 = 0 to 1 {
+      %0 = affine.load %src[] : memref<f16, 1>
+    }
+  }
+  affine.dma_start %src[], %dst[], %tag[%c0], %c0 : memref<f16, 1>, memref<f16>, memref<1xi32>
+  // CHECK:       %[[CST_INDEX:.*]] = arith.constant 0 : index
+  // CHECK:       %[[DMA_SRC:.*]] = memref.alloc() : memref<f16, 1>
+  // CHECK:       %[[DMA_DST:.*]] = memref.alloc() : memref<f16>
+  // CHECK:       %[[DMA_TAG:.*]] = memref.alloc() : memref<1xi32>
+  // CHECK:       affine.for %arg1 = 4 to 6
+  // CHECK-NEXT:  affine.for %arg2 = 0 to 1
+  // CHECK-NEXT:  %[[RESULT_ADD:.*]] = arith.addf %arg0, %arg0 : f16
+  // CHECK-NEXT:  affine.store %[[RESULT_ADD]], %[[DMA_SRC]][] : memref<f16, 1>
+  // CHECK-NEXT:  affine.load %[[DMA_SRC]][] : memref<f16, 1>
+  // CHECK:       affine.dma_start %[[DMA_SRC]][], %[[DMA_DST]][], %[[DMA_TAG]][%[[CST_INDEX]]], %[[CST_INDEX]] : memref<f16, 1>, memref<f16>, memref<1xi32>
   // CHECK-NEXT:  return
   return
 }

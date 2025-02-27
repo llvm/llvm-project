@@ -195,7 +195,8 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
                                                 upperBound, lowerBound);
     Value step = getOrCreateStep(currentLoop, builder);
     if (getConstantIntValue(step) != static_cast<int64_t>(1))
-      range = builder.create<arith::DivSIOp>(currentLoop.getLoc(), range, step);
+      range =
+          builder.create<arith::CeilDivSIOp>(currentLoop.getLoc(), range, step);
     dims.push_back(range);
 
     lbs.push_back(lowerBound);
@@ -407,8 +408,8 @@ static LogicalResult processParallelLoop(
   ArrayAttr mapping =
       parallelOp->getAttrOfType<ArrayAttr>(gpu::getMappingAttrName());
 
-  // TODO: Support reductions.
-  if (!mapping || parallelOp.getNumResults() != 0)
+  // TODO: Support multiple reductions.
+  if (!mapping || parallelOp.getNumResults() > 1)
     return failure();
 
   Location loc = parallelOp.getLoc();
@@ -455,7 +456,8 @@ static LogicalResult processParallelLoop(
               rewriter.getAffineSymbolExpr(1));
       newIndex = rewriter.create<AffineApplyOp>(
           loc, annotation.getMap().compose(lowerAndStep),
-          ValueRange{operand, step, lowerBound});
+          ValueRange{operand, ensureLaunchIndependent(step),
+                     ensureLaunchIndependent(lowerBound)});
       // If there was also a bound, insert that, too.
       // TODO: Check that we do not assign bounds twice.
       if (annotation.getBound()) {
@@ -507,12 +509,11 @@ static LogicalResult processParallelLoop(
                   ensureLaunchIndependent(cloningMap.lookupOrDefault(step))});
           // todo(herhut,ravishankarm): Update the behavior of setMappingAttr
           // when this condition is relaxed.
-          if (bounds.contains(processor)) {
+          if (!bounds.try_emplace(processor, launchBound).second) {
             return rewriter.notifyMatchFailure(
                 parallelOp, "cannot redefine the bound for processor " +
                                 Twine(static_cast<int64_t>(processor)));
           }
-          bounds[processor] = launchBound;
         }
         if (!boundIsPrecise) {
           // We are using an approximation, create a surrounding conditional.
@@ -555,6 +556,11 @@ static LogicalResult processParallelLoop(
 
   Block *body = parallelOp.getBody();
   worklist.reserve(worklist.size() + body->getOperations().size());
+  // Include scf.reduce terminator if exists and has an operand.
+  if (auto terminator = body->getTerminator();
+      isa<scf::ReduceOp>(terminator) && terminator->getOperands().size() == 1) {
+    worklist.push_back(terminator);
+  }
   for (Operation &op : llvm::reverse(body->without_terminator()))
     worklist.push_back(&op);
   return success();
@@ -647,6 +653,33 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       rewriter.setInsertionPointAfter(parent);
       leftNestingScope = true;
       seenSideeffects = false;
+    } else if (auto reduceOp = dyn_cast<scf::ReduceOp>(op)) {
+      // Convert scf.reduction op
+      auto parentLoop = op->getParentOfType<ParallelOp>();
+      if (!parentLoop || op->getOperands().size() != 1)
+        return failure();
+      auto operand = op->getOperands().front();
+      auto newValue = cloningMap.lookupOrNull(operand);
+      if (!newValue || !operand.getType().isSignlessIntOrFloat())
+        return failure();
+      // Ensure reduction region is isolated from above.
+      llvm::SetVector<Value> externalValues;
+      getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
+      if (externalValues.size())
+        return failure();
+      // Replace by gpu.all_reduce.
+      auto gpuRedOp = rewriter.create<gpu::AllReduceOp>(loc, newValue);
+      cloningMap.map(parentLoop->getResult(0), gpuRedOp.getResult());
+      // Copy region.
+      rewriter.inlineRegionBefore(reduceOp.getRegion(0), gpuRedOp.getRegion(),
+                                  gpuRedOp.getRegion().begin());
+      // Replace src.reduce.return with gpu.yield.
+      auto scfReturn = gpuRedOp.getRegion().front().getTerminator();
+      auto ip = rewriter.saveInsertionPoint();
+      rewriter.setInsertionPointToEnd(&gpuRedOp.getRegion().front());
+      rewriter.replaceOpWithNewOp<gpu::YieldOp>(
+          scfReturn, scfReturn->getOperands().front());
+      rewriter.restoreInsertionPoint(ip);
     } else {
       // Otherwise we copy it over.
       Operation *clone = rewriter.clone(*op, cloningMap);

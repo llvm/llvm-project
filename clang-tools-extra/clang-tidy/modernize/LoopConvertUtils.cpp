@@ -777,7 +777,7 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                                                    const LambdaCapture *C,
                                                    Expr *Init) {
   if (C->capturesVariable()) {
-    const ValueDecl *VDecl = C->getCapturedVar();
+    ValueDecl *VDecl = C->getCapturedVar();
     if (areSameVariable(IndexVar, VDecl)) {
       // FIXME: if the index is captured, it will count as an usage and the
       // alias (if any) won't work, because it is only used in case of having
@@ -787,6 +787,8 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                                                        : Usage::UK_CaptureByRef,
                      C->getLocation()));
     }
+    if (VDecl->isInitCapture())
+      TraverseStmtImpl(cast<VarDecl>(VDecl)->getInit());
   }
   return VisitorBase::TraverseLambdaCapture(LE, C, Init);
 }
@@ -816,6 +818,17 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
   return true;
 }
 
+bool ForLoopIndexUseVisitor::TraverseStmtImpl(Stmt *S) {
+  // All this pointer swapping is a mechanism for tracking immediate parentage
+  // of Stmts.
+  const Stmt *OldNextParent = NextStmtParent;
+  CurrStmtParent = NextStmtParent;
+  NextStmtParent = S;
+  bool Result = VisitorBase::TraverseStmt(S);
+  NextStmtParent = OldNextParent;
+  return Result;
+}
+
 bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
   // If this is an initialization expression for a lambda capture, prune the
   // traversal so that we don't end up diagnosing the contained DeclRefExpr as
@@ -828,15 +841,7 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
       return true;
     }
   }
-
-  // All this pointer swapping is a mechanism for tracking immediate parentage
-  // of Stmts.
-  const Stmt *OldNextParent = NextStmtParent;
-  CurrStmtParent = NextStmtParent;
-  NextStmtParent = S;
-  bool Result = VisitorBase::TraverseStmt(S);
-  NextStmtParent = OldNextParent;
-  return Result;
+  return TraverseStmtImpl(S);
 }
 
 std::string VariableNamer::createIndexName() {
@@ -849,14 +854,14 @@ std::string VariableNamer::createIndexName() {
     ContainerName = TheContainer->getName();
 
   size_t Len = ContainerName.size();
-  if (Len > 1 && ContainerName.endswith(Style == NS_UpperCase ? "S" : "s")) {
+  if (Len > 1 && ContainerName.ends_with(Style == NS_UpperCase ? "S" : "s")) {
     IteratorName = std::string(ContainerName.substr(0, Len - 1));
     // E.g.: (auto thing : things)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())
       return IteratorName;
   }
 
-  if (Len > 2 && ContainerName.endswith(Style == NS_UpperCase ? "S_" : "s_")) {
+  if (Len > 2 && ContainerName.ends_with(Style == NS_UpperCase ? "S_" : "s_")) {
     IteratorName = std::string(ContainerName.substr(0, Len - 2));
     // E.g.: (auto thing : things_)
     if (!declarationExists(IteratorName) || IteratorName == OldIndex->getName())

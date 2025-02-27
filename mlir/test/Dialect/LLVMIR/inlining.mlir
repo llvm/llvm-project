@@ -18,7 +18,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   "llvm.intr.memset"(%ptr, %byte, %0) <{isVolatile = true}> : (!llvm.ptr, i8, i32) -> ()
   "llvm.intr.memmove"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   "llvm.intr.memcpy"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-  "llvm.intr.assume"(%true) : (i1) -> ()
+  llvm.intr.assume %true : i1
   llvm.fence release
   %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
   %3 = llvm.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
@@ -44,7 +44,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memset"(%[[PTR]]
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
-// CHECK: "llvm.intr.assume"
+// CHECK: llvm.intr.assume
 // CHECK: llvm.fence release
 // CHECK: llvm.atomicrmw add %[[PTR]], %[[CST]] monotonic
 // CHECK: llvm.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
@@ -90,12 +90,12 @@ llvm.func @caller() -> (i32) {
 
 // -----
 
-llvm.func @foo() -> (i32) attributes { passthrough = ["noinline"] } {
+llvm.func @foo() -> (i32) attributes { no_inline } {
   %0 = llvm.mlir.constant(0 : i32) : i32
   llvm.return %0 : i32
 }
 
-llvm.func @bar() -> (i32) attributes { passthrough = ["noinline"] } {
+llvm.func @bar() -> (i32) attributes { no_inline } {
   %0 = llvm.mlir.constant(1 : i32) : i32
   llvm.return %0 : i32
 }
@@ -161,11 +161,7 @@ llvm.func @caller() {
 
 // -----
 
-llvm.func @callee_noinline() attributes { passthrough = ["noinline"] } {
-  llvm.return
-}
-
-llvm.func @callee_optnone() attributes { passthrough = ["optnone"] } {
+llvm.func @callee_noinline() attributes { no_inline } {
   llvm.return
 }
 
@@ -187,7 +183,6 @@ llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] } {
 
 // CHECK-LABEL: llvm.func @caller
 // CHECK-NEXT: llvm.call @callee_noinline
-// CHECK-NEXT: llvm.call @callee_optnone
 // CHECK-NEXT: llvm.call @callee_noduplicate
 // CHECK-NEXT: llvm.call @callee_presplitcoroutine
 // CHECK-NEXT: llvm.call @callee_returns_twice
@@ -195,7 +190,6 @@ llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] } {
 // CHECK-NEXT: llvm.return
 llvm.func @caller() {
   llvm.call @callee_noinline() : () -> ()
-  llvm.call @callee_optnone() : () -> ()
   llvm.call @callee_noduplicate() : () -> ()
   llvm.call @callee_presplitcoroutine() : () -> ()
   llvm.call @callee_returns_twice() : () -> ()
@@ -324,6 +318,53 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
 
 // -----
 
+llvm.func @static_alloca() -> f32 {
+  %0 = llvm.mlir.constant(4 : i32) : i32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  llvm.return %2 : f32
+}
+
+// CHECK-LABEL: llvm.func @test_inline
+llvm.func @test_inline(%cond0 : i1) {
+  // Verify the alloca is relocated to the entry block of the parent function
+  // if the region operation is neither marked as isolated from above or
+  // automatic allocation scope.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+  // CHECK: "test.one_region_op"() ({
+  "test.one_region_op"() ({
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK-NEXT: llvm.intr.lifetime.start 4, %[[ALLOCA]]
+    // CHECK-NEXT: %[[RES:.+]] = llvm.load %[[ALLOCA]]
+    // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[ALLOCA]]
+    // CHECK-NEXT: test.region_yield %[[RES]]
+    test.region_yield %0 : f32
+  }) : () -> ()
+  // Verify the alloca is not relocated out of operations that are marked as
+  // isolated from above.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.isolated_regions
+  test.isolated_regions {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK: test.region_yield
+    test.region_yield %0 : f32
+  }
+  // Verify the alloca is not relocated out of operations that are marked as
+  // automatic allocation scope.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.alloca_scope_region
+  test.alloca_scope_region {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK: test.region_yield
+    test.region_yield %0 : f32
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @alloca_with_lifetime(%cond: i1) -> f32 {
   %0 = llvm.mlir.constant(4 : i32) : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
@@ -381,7 +422,7 @@ llvm.func @test_byval(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} {
   llvm.return
 }
 
@@ -395,7 +436,7 @@ llvm.func @test_byval_read_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite>} {
   llvm.return
 }
 
@@ -410,7 +451,7 @@ llvm.func @test_byval_write_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.return
 }
 
@@ -431,7 +472,7 @@ llvm.func @test_byval_input_aligned(%unaligned : !llvm.ptr, %aligned : !llvm.ptr
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -455,7 +496,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -483,7 +524,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -509,7 +550,7 @@ llvm.func @test_alignment_exceeded_anyway() {
 llvm.mlir.global private @unaligned_global(42 : i64) : i64
 llvm.mlir.global private @aligned_global(42 : i64) { alignment = 64 } : i64
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
   llvm.return
 }
 
@@ -596,4 +637,58 @@ llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
   llvm.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
   llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @vararg_func(...) {
+  llvm.return
+}
+
+llvm.func @vararg_intrinrics() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %list = llvm.alloca %0 x !llvm.struct<"struct.va_list_opaque", (ptr)> : (i32) -> !llvm.ptr
+  // The vararg intinriscs should normally be part of a variadic function.
+  // However, this test uses a non-variadic function to ensure the presence of
+  // the intrinsic alone suffices to prevent inlining.
+  llvm.intr.vastart %list : !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller() {
+  // CHECK-NEXT: llvm.call @vararg_func()
+  llvm.call @vararg_func() vararg(!llvm.func<void (...)>) : () -> ()
+  // CHECK-NEXT: llvm.call @vararg_intrinrics()
+  llvm.call @vararg_intrinrics() : () -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @private_func(%a : i32) -> i32 attributes {sym_visibility = "private"} {
+  llvm.return %a : i32
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller(%x : i32) -> i32 {
+  // CHECK-NOT: llvm.call @private_func
+  %z = llvm.call @private_func(%x) : (i32) -> (i32)
+  llvm.return %z : i32
+}
+
+// -----
+
+llvm.func @unreachable_func(%a : i32) -> i32 {
+  "llvm.intr.trap"() : () -> ()
+  llvm.unreachable
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller(%x : i32) -> i32 {
+  // CHECK-NOT: llvm.call @unreachable_func
+  // CHECK: llvm.intr.trap
+  // CHECK: llvm.unreachable
+  %z = llvm.call @unreachable_func(%x) : (i32) -> (i32)
+  llvm.return %z : i32
 }

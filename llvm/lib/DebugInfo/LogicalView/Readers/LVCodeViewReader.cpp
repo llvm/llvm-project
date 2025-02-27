@@ -13,15 +13,11 @@
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVType.h"
-#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
@@ -30,7 +26,6 @@
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -167,11 +162,12 @@ void LVCodeViewReader::cacheRelocations() {
   for (const SectionRef &Section : getObj().sections()) {
     const coff_section *CoffSection = getObj().getCOFFSection(Section);
 
+    auto &RM = RelocMap[CoffSection];
     for (const RelocationRef &Relocacion : Section.relocations())
-      RelocMap[CoffSection].push_back(Relocacion);
+      RM.push_back(Relocacion);
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[CoffSection], [](RelocationRef L, RelocationRef R) {
+    llvm::sort(RM, [](RelocationRef L, RelocationRef R) {
       return L.getOffset() < R.getOffset();
     });
   }
@@ -217,9 +213,7 @@ Error LVCodeViewReader::resolveSymbolName(const coff_section *CoffSection,
 // and they are printed only if the command line option 'internal=system'.
 bool LVCodeViewReader::isSystemEntry(LVElement *Element, StringRef Name) const {
   Name = Name.empty() ? Element->getName() : Name;
-  auto Find = [=](const char *String) -> bool {
-    return StringRef::npos != Name.find(String);
-  };
+  auto Find = [=](const char *String) -> bool { return Name.contains(String); };
   auto Starts = [=](const char *Pattern) -> bool {
     return Name.starts_with(Pattern);
   };
@@ -727,12 +721,11 @@ Error LVCodeViewReader::traverseSymbolSection(StringRef SectionName,
                                    getFileName());
 
         LLVM_DEBUG({ W.printString("Symbol Name", SymbolName); });
-        if (FunctionLineTables.count(SymbolName) != 0) {
+        if (!FunctionLineTables.try_emplace(SymbolName, Contents).second) {
           // Saw debug info for this function already?
           return createStringError(object_error::parse_failed, getFileName());
         }
 
-        FunctionLineTables[SymbolName] = Contents;
         SymbolNames.push_back(SymbolName);
       }
       break;

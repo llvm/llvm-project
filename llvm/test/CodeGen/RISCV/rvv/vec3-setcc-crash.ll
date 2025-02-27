@@ -13,54 +13,54 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    srli a2, a0, 16
-; RV32-NEXT:    srli a3, a0, 8
-; RV32-NEXT:    slli a4, a0, 16
+; RV32-NEXT:    slli a3, a0, 16
+; RV32-NEXT:    slli a4, a0, 24
+; RV32-NEXT:    slli a5, a0, 8
+; RV32-NEXT:    srli a6, a3, 24
+; RV32-NEXT:    srai a3, a3, 24
 ; RV32-NEXT:    srai a4, a4, 24
-; RV32-NEXT:    slli a5, a0, 24
 ; RV32-NEXT:    srai a5, a5, 24
-; RV32-NEXT:    slli a6, a0, 8
-; RV32-NEXT:    srai a6, a6, 24
-; RV32-NEXT:    sgtz a6, a6
 ; RV32-NEXT:    sgtz a5, a5
 ; RV32-NEXT:    sgtz a4, a4
+; RV32-NEXT:    sgtz a3, a3
+; RV32-NEXT:    neg a3, a3
 ; RV32-NEXT:    neg a4, a4
-; RV32-NEXT:    and a3, a4, a3
-; RV32-NEXT:    slli a3, a3, 8
-; RV32-NEXT:    neg a4, a5
+; RV32-NEXT:    neg a5, a5
+; RV32-NEXT:    and a3, a3, a6
 ; RV32-NEXT:    and a0, a4, a0
+; RV32-NEXT:    and a2, a5, a2
+; RV32-NEXT:    slli a3, a3, 8
 ; RV32-NEXT:    andi a0, a0, 255
 ; RV32-NEXT:    or a0, a0, a3
-; RV32-NEXT:    neg a3, a6
-; RV32-NEXT:    and a2, a3, a2
-; RV32-NEXT:    sb a2, 2(a1)
 ; RV32-NEXT:    sh a0, 0(a1)
+; RV32-NEXT:    sb a2, 2(a1)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vec3_setcc_crash:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lw a0, 0(a0)
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    srli a3, a0, 8
-; RV64-NEXT:    slli a4, a0, 48
+; RV64-NEXT:    srliw a2, a0, 16
+; RV64-NEXT:    slli a3, a0, 48
+; RV64-NEXT:    slli a4, a0, 56
+; RV64-NEXT:    slli a5, a0, 40
+; RV64-NEXT:    srli a6, a3, 56
+; RV64-NEXT:    srai a3, a3, 56
 ; RV64-NEXT:    srai a4, a4, 56
-; RV64-NEXT:    slli a5, a0, 56
 ; RV64-NEXT:    srai a5, a5, 56
-; RV64-NEXT:    slli a6, a0, 40
-; RV64-NEXT:    srai a6, a6, 56
-; RV64-NEXT:    sgtz a6, a6
 ; RV64-NEXT:    sgtz a5, a5
 ; RV64-NEXT:    sgtz a4, a4
+; RV64-NEXT:    sgtz a3, a3
+; RV64-NEXT:    negw a3, a3
 ; RV64-NEXT:    negw a4, a4
-; RV64-NEXT:    and a3, a4, a3
-; RV64-NEXT:    slli a3, a3, 8
-; RV64-NEXT:    negw a4, a5
+; RV64-NEXT:    negw a5, a5
+; RV64-NEXT:    and a3, a3, a6
 ; RV64-NEXT:    and a0, a4, a0
+; RV64-NEXT:    and a2, a5, a2
+; RV64-NEXT:    slli a3, a3, 8
 ; RV64-NEXT:    andi a0, a0, 255
 ; RV64-NEXT:    or a0, a0, a3
-; RV64-NEXT:    negw a3, a6
-; RV64-NEXT:    and a2, a3, a2
-; RV64-NEXT:    sb a2, 2(a1)
 ; RV64-NEXT:    sh a0, 0(a1)
+; RV64-NEXT:    sb a2, 2(a1)
 ; RV64-NEXT:    ret
   %a = load <3 x i8>, ptr %in
   %cmp = icmp sgt <3 x i8> %a, zeroinitializer

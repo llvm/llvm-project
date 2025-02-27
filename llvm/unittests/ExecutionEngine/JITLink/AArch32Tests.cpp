@@ -39,7 +39,8 @@ struct MutableWord {
 namespace llvm {
 namespace jitlink {
 
-Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType);
+Expected<aarch32::EdgeKind_aarch32>
+getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &Cfg);
 Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
 
 } // namespace jitlink
@@ -47,7 +48,8 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
 
 TEST(AArch32_ELF, EdgeKinds) {
   // Fails: Invalid ELF type -> JITLink kind
-  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_NONE);
+  aarch32::ArmConfig Cfg;
+  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_ME_TOO, Cfg);
   EXPECT_TRUE(errorToBool(ErrKind.takeError()));
 
   // Fails: Invalid JITLink kind -> ELF type
@@ -59,12 +61,35 @@ TEST(AArch32_ELF, EdgeKinds) {
     EXPECT_FALSE(errorToBool(ELFType.takeError()))
         << "Failed to translate JITLink kind -> ELF type";
 
-    Expected<Edge::Kind> JITLinkKind = getJITLinkEdgeKind(*ELFType);
+    Expected<Edge::Kind> JITLinkKind = getJITLinkEdgeKind(*ELFType, Cfg);
     EXPECT_FALSE(errorToBool(JITLinkKind.takeError()))
         << "Failed to translate ELF type -> JITLink kind";
 
     EXPECT_EQ(*JITLinkKind, K) << "Round-trip value inconsistent?";
   }
+}
+
+TEST(AArch32_ELF, DynFixupInfos) {
+  // We can do an opcode check for all Arm edges
+  for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
+    const auto *Info = FixupInfoBase::getDynFixupInfo(K);
+    EXPECT_NE(Info, nullptr);
+    const auto *InfoArm = static_cast<const FixupInfoArm *>(Info);
+    EXPECT_NE(InfoArm->checkOpcode, nullptr);
+    EXPECT_FALSE(InfoArm->checkOpcode(0x00000000));
+  }
+  // We can do an opcode check for all Thumb edges
+  for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
+    const auto *Info = FixupInfoBase::getDynFixupInfo(K);
+    EXPECT_NE(Info, nullptr);
+    const auto *InfoThumb = static_cast<const FixupInfoThumb *>(Info);
+    EXPECT_NE(InfoThumb->checkOpcode, nullptr);
+    EXPECT_FALSE(InfoThumb->checkOpcode(0x0000, 0x0000));
+  }
+  // We cannot do it for Data and generic edges
+  EXPECT_EQ(FixupInfoBase::getDynFixupInfo(FirstDataRelocation), nullptr);
+  EXPECT_EQ(FixupInfoBase::getDynFixupInfo(Edge::GenericEdgeKind::Invalid),
+            nullptr);
 }
 
 namespace llvm {
@@ -110,11 +135,9 @@ TEST(AArch32_Relocations, Thumb_Call_J1J2) {
   constexpr HalfWords ImmMask = FixupInfo<Thumb_Call>::ImmMask;
 
   static std::array<HalfWords, 3> MemPresets{
-      makeHalfWords<llvm::endianness::little>(
-          {0xff, 0xf7, 0xfe, 0xef}), // common
-      makeHalfWords<llvm::endianness::little>(
-          {0x00, 0x00, 0x00, 0x00}), // zeros
-      makeHalfWords<llvm::endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
+      makeHalfWords<endianness::little>({0xff, 0xf7, 0xfe, 0xef}), // common
+      makeHalfWords<endianness::little>({0x00, 0x00, 0x00, 0x00}), // zeros
+      makeHalfWords<endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
   };
 
   auto EncodeDecode = [ImmMask](int64_t In, MutableHalfWords &Mem) {
@@ -148,11 +171,9 @@ TEST(AArch32_Relocations, Thumb_Call_Bare) {
   constexpr HalfWords ImmMask = FixupInfo<Thumb_Call>::ImmMask;
 
   static std::array<HalfWords, 3> MemPresets{
-      makeHalfWords<llvm::endianness::little>(
-          {0xff, 0xf7, 0xfe, 0xef}), // common
-      makeHalfWords<llvm::endianness::little>(
-          {0x00, 0x00, 0x00, 0x00}), // zeros
-      makeHalfWords<llvm::endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
+      makeHalfWords<endianness::little>({0xff, 0xf7, 0xfe, 0xef}), // common
+      makeHalfWords<endianness::little>({0x00, 0x00, 0x00, 0x00}), // zeros
+      makeHalfWords<endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
   };
 
   auto EncodeDecode = [ImmMask](int64_t In, MutableHalfWords &Mem) {
@@ -221,11 +242,9 @@ TEST(AArch32_Relocations, Thumb_MovtAbs) {
 
   static std::array<uint8_t, 3> Registers{0, 5, 12};
   static std::array<HalfWords, 3> MemPresets{
-      makeHalfWords<llvm::endianness::little>(
-          {0xff, 0xf7, 0xfe, 0xef}), // common
-      makeHalfWords<llvm::endianness::little>(
-          {0x00, 0x00, 0x00, 0x00}), // zeros
-      makeHalfWords<llvm::endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
+      makeHalfWords<endianness::little>({0xff, 0xf7, 0xfe, 0xef}), // common
+      makeHalfWords<endianness::little>({0x00, 0x00, 0x00, 0x00}), // zeros
+      makeHalfWords<endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
   };
 
   auto EncodeDecode = [ImmMask](uint32_t In, MutableHalfWords &Mem) {

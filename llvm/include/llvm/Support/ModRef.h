@@ -1,4 +1,4 @@
-//===--- ModRef.h - Memory effect modelling ---------------------*- C++ -*-===//
+//===--- ModRef.h - Memory effect modeling ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -61,8 +61,10 @@ enum class IRMemLocation {
   ArgMem = 0,
   /// Memory that is inaccessible via LLVM IR.
   InaccessibleMem = 1,
+  /// Errno memory.
+  ErrnoMem = 2,
   /// Any other memory.
-  Other = 2,
+  Other = 3,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
@@ -139,6 +141,16 @@ public:
     return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
+  /// Create MemoryEffectsBase that can only access errno memory.
+  static MemoryEffectsBase errnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ErrnoMem, MR);
+  }
+
+  /// Create MemoryEffectsBase that can only access other memory.
+  static MemoryEffectsBase otherMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::Other, MR);
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase
@@ -212,6 +224,11 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  /// Whether this function only (at most) accesses errno memory.
+  bool onlyAccessesErrnoMem() const {
+    return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
+  }
+
   /// Whether this function only (at most) accesses argument and inaccessible
   /// memory.
   bool onlyAccessesInaccessibleOrArgMem() const {
@@ -272,6 +289,124 @@ raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 
 // Legacy alias.
 using FunctionModRefBehavior = MemoryEffects;
+
+/// Components of the pointer that may be captured.
+enum class CaptureComponents : uint8_t {
+  None = 0,
+  AddressIsNull = (1 << 0),
+  Address = (1 << 1) | AddressIsNull,
+  ReadProvenance = (1 << 2),
+  Provenance = (1 << 3) | ReadProvenance,
+  All = Address | Provenance,
+  LLVM_MARK_AS_BITMASK_ENUM(Provenance),
+};
+
+inline bool capturesNothing(CaptureComponents CC) {
+  return CC == CaptureComponents::None;
+}
+
+inline bool capturesAnything(CaptureComponents CC) {
+  return CC != CaptureComponents::None;
+}
+
+inline bool capturesAddressIsNullOnly(CaptureComponents CC) {
+  return (CC & CaptureComponents::Address) == CaptureComponents::AddressIsNull;
+}
+
+inline bool capturesAddress(CaptureComponents CC) {
+  return (CC & CaptureComponents::Address) != CaptureComponents::None;
+}
+
+inline bool capturesReadProvenanceOnly(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) ==
+         CaptureComponents::ReadProvenance;
+}
+
+inline bool capturesFullProvenance(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
+
+/// Represents which components of the pointer may be captured in which
+/// location. This represents the captures(...) attribute in IR.
+///
+/// For more information on the precise semantics see LangRef.
+class CaptureInfo {
+  CaptureComponents OtherComponents;
+  CaptureComponents RetComponents;
+
+public:
+  CaptureInfo(CaptureComponents OtherComponents,
+              CaptureComponents RetComponents)
+      : OtherComponents(OtherComponents), RetComponents(RetComponents) {}
+
+  CaptureInfo(CaptureComponents Components)
+      : OtherComponents(Components), RetComponents(Components) {}
+
+  /// Create CaptureInfo that does not capture any components of the pointer
+  static CaptureInfo none() { return CaptureInfo(CaptureComponents::None); }
+
+  /// Create CaptureInfo that may capture all components of the pointer.
+  static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
+
+  /// Get components potentially captured by the return value.
+  CaptureComponents getRetComponents() const { return RetComponents; }
+
+  /// Get components potentially captured through locations other than the
+  /// return value.
+  CaptureComponents getOtherComponents() const { return OtherComponents; }
+
+  /// Get the potentially captured components of the pointer (regardless of
+  /// location).
+  operator CaptureComponents() const { return OtherComponents | RetComponents; }
+
+  bool operator==(CaptureInfo Other) const {
+    return OtherComponents == Other.OtherComponents &&
+           RetComponents == Other.RetComponents;
+  }
+
+  bool operator!=(CaptureInfo Other) const { return !(*this == Other); }
+
+  /// Compute union of CaptureInfos.
+  CaptureInfo operator|(CaptureInfo Other) const {
+    return CaptureInfo(OtherComponents | Other.OtherComponents,
+                       RetComponents | Other.RetComponents);
+  }
+
+  /// Compute intersection of CaptureInfos.
+  CaptureInfo operator&(CaptureInfo Other) const {
+    return CaptureInfo(OtherComponents & Other.OtherComponents,
+                       RetComponents & Other.RetComponents);
+  }
+
+  /// Compute union of CaptureInfos in-place.
+  CaptureInfo &operator|=(CaptureInfo Other) {
+    OtherComponents |= Other.OtherComponents;
+    RetComponents |= Other.RetComponents;
+    return *this;
+  }
+
+  /// Compute intersection of CaptureInfos in-place.
+  CaptureInfo &operator&=(CaptureInfo Other) {
+    OtherComponents &= Other.OtherComponents;
+    RetComponents &= Other.RetComponents;
+    return *this;
+  }
+
+  static CaptureInfo createFromIntValue(uint32_t Data) {
+    return CaptureInfo(CaptureComponents(Data >> 4),
+                       CaptureComponents(Data & 0xf));
+  }
+
+  /// Convert CaptureInfo into an encoded integer value (used by captures
+  /// attribute).
+  uint32_t toIntValue() const {
+    return (uint32_t(OtherComponents) << 4) | uint32_t(RetComponents);
+  }
+};
+
+raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
 
 } // namespace llvm
 

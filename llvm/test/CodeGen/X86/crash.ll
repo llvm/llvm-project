@@ -115,9 +115,9 @@ do.body92:                                        ; preds = %if.then66
 ; Crash during XOR optimization.
 ; <rdar://problem/7869290>
 
-define void @test7() nounwind ssp {
+define void @test7(i1 %arg) nounwind ssp {
 entry:
-  br i1 undef, label %bb14, label %bb67
+  br i1 %arg, label %bb14, label %bb67
 
 bb14:
   %tmp0 = trunc i16 undef to i1
@@ -157,14 +157,14 @@ entry:
 ; shift of and.
 %struct.S0 = type { i8, [2 x i8], i8 }
 
-define void @func_59(i32 %p_63) noreturn nounwind {
+define void @func_59(i32 %p_63, i1 %arg) noreturn nounwind {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.inc44, %entry
   %p_63.addr.1 = phi i32 [ %p_63, %entry ], [ 0, %for.inc44 ]
   %l_74.0 = phi i32 [ 0, %entry ], [ %add46, %for.inc44 ]
-  br i1 undef, label %for.inc44, label %bb.nph81
+  br i1 %arg, label %for.inc44, label %bb.nph81
 
 bb.nph81:                                         ; preds = %for.body
   %tmp98 = add i32 %p_63.addr.1, 0
@@ -237,7 +237,7 @@ declare i64 @llvm.objectsize.i64.p0(ptr, i1) nounwind readnone
 %t20 = type { i32, i32 }
 %t21 = type { ptr }
 
-define void @_ZNK4llvm17MipsFrameLowering12emitPrologueERNS_15MachineFunctionE() ssp align 2 {
+define void @_ZNK4llvm17MipsFrameLowering12emitPrologueERNS_15MachineFunctionE(i1 %arg) ssp align 2 {
 bb:
   %tmp = load ptr, ptr undef, align 4
   %tmp3 = getelementptr inbounds %t9, ptr %tmp, i32 0, i32 0, i32 0, i32 0, i32 1
@@ -246,7 +246,7 @@ bb:
 bb4:                                              ; preds = %bb37, %bb
   %tmp5 = phi i96 [ undef, %bb ], [ %tmp38, %bb37 ]
   %tmp6 = phi i96 [ undef, %bb ], [ %tmp39, %bb37 ]
-  br i1 undef, label %bb34, label %bb7
+  br i1 %arg, label %bb34, label %bb7
 
 bb7:                                              ; preds = %bb4
   %tmp8 = load i32, ptr undef, align 4
@@ -292,7 +292,7 @@ bb33:                                             ; preds = %bb29
   unreachable
 
 bb34:                                             ; preds = %bb4
-  br i1 undef, label %bb36, label %bb35
+  br i1 %arg, label %bb36, label %bb35
 
 bb35:                                             ; preds = %bb34
   store ptr null, ptr %tmp3, align 4
@@ -319,7 +319,7 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
 ; PR10463
 ; Spilling a virtual register with <undef> uses.
-define void @autogen_239_1000() {
+define void @autogen_239_1000(i1 %arg) {
 BB:
     %Shuff = shufflevector <8 x double> undef, <8 x double> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 undef, i32 undef>
     br label %CF
@@ -327,14 +327,14 @@ BB:
 CF:
     %B16 = frem <8 x double> zeroinitializer, %Shuff
     %E19 = extractelement <8 x double> %Shuff, i32 5
-    br i1 undef, label %CF, label %CF75
+    br i1 %arg, label %CF, label %CF75
 
 CF75:
-    br i1 undef, label %CF75, label %CF76
+    br i1 %arg, label %CF75, label %CF76
 
 CF76:
     store double %E19, ptr undef
-    br i1 undef, label %CF76, label %CF77
+    br i1 %arg, label %CF76, label %CF77
 
 CF77:
     %B55 = fmul <8 x double> %B16, undef
@@ -396,24 +396,24 @@ if.end:
 ; InstrEmitter::EmitSubregNode() may steal virtual registers from already
 ; emitted blocks when isCoalescableExtInstr points out the opportunity.
 ; Make sure kill flags are cleared on the newly global virtual register.
-define i64 @ov_read(ptr %vf, ptr nocapture %buffer, i32 %length, i32 %bigendianp, i32 %word, i32 %sgned, ptr %bitstream) nounwind uwtable ssp {
+define i64 @ov_read(ptr %vf, ptr nocapture %buffer, i32 %length, i32 %bigendianp, i32 %word, i32 %sgned, ptr %bitstream, i1 %arg) nounwind uwtable ssp {
 entry:
-  br i1 undef, label %return, label %while.body.preheader
+  br i1 %arg, label %return, label %while.body.preheader
 
 while.body.preheader:                             ; preds = %entry
-  br i1 undef, label %if.then3, label %if.end7
+  br i1 %arg, label %if.then3, label %if.end7
 
 if.then3:                                         ; preds = %while.body.preheader
   %0 = load i32, ptr undef, align 4
-  br i1 undef, label %land.lhs.true.i255, label %if.end7
+  br i1 %arg, label %land.lhs.true.i255, label %if.end7
 
 land.lhs.true.i255:                               ; preds = %if.then3
-  br i1 undef, label %if.then.i256, label %if.end7
+  br i1 %arg, label %if.then.i256, label %if.end7
 
 if.then.i256:                                     ; preds = %land.lhs.true.i255
   %sub.i = sub i32 0, %0
   %conv = sext i32 %sub.i to i64
-  br i1 undef, label %if.end7, label %while.end
+  br i1 %arg, label %if.end7, label %while.end
 
 if.end7:                                          ; preds = %if.then.i256, %land.lhs.true.i255, %if.then3, %while.body.preheader
   unreachable
@@ -438,7 +438,7 @@ entry:
   %conv = uitofp i64 %sub to float
   %div = fmul float %conv, 5.000000e-01
   %conv2 = fpext float %div to double
-  tail call void (...) @_Z6PrintFz(ptr getelementptr inbounds ({ [1 x i8], [63 x i8] }, ptr @.str, i64 0, i32 0, i64 0), double %conv2)
+  tail call void (...) @_Z6PrintFz(ptr @.str, double %conv2)
   ret void
 }
 declare void @_Z6PrintFz(...)
@@ -486,12 +486,12 @@ declare void @fn3(...)
 ; When coalescing %1 and %2, the IMPLICIT_DEF instruction should be
 ; erased along with its value number.
 ;
-define void @rdar12474033() nounwind ssp {
+define void @rdar12474033(i1 %arg, i32 %arg2, i32 %arg3, i32 %arg4) nounwind ssp {
 bb:
-  br i1 undef, label %bb21, label %bb1
+  br i1 %arg, label %bb21, label %bb1
 
 bb1:                                              ; preds = %bb
-  switch i32 undef, label %bb10 [
+  switch i32 %arg2, label %bb10 [
     i32 4, label %bb2
     i32 1, label %bb9
     i32 5, label %bb3
@@ -503,7 +503,7 @@ bb2:                                              ; preds = %bb1
   unreachable
 
 bb3:                                              ; preds = %bb1, %bb1
-  br i1 undef, label %bb4, label %bb5
+  br i1 %arg, label %bb4, label %bb5
 
 bb4:                                              ; preds = %bb3
   unreachable
@@ -521,7 +521,7 @@ bb9:                                              ; preds = %bb1, %bb1
 bb10:                                             ; preds = %bb5, %bb1
   %tmp11 = phi i128 [ undef, %bb1 ], [ %tmp6, %bb5 ]
   %tmp12 = phi i128 [ 0, %bb1 ], [ %tmp8, %bb5 ]
-  switch i32 undef, label %bb21 [
+  switch i32 %arg3, label %bb21 [
     i32 2, label %bb18
     i32 3, label %bb13
     i32 5, label %bb16
@@ -530,7 +530,7 @@ bb10:                                             ; preds = %bb5, %bb1
   ]
 
 bb13:                                             ; preds = %bb10
-  br i1 undef, label %bb15, label %bb14
+  br i1 %arg, label %bb15, label %bb14
 
 bb14:                                             ; preds = %bb13
   br label %bb21
@@ -554,7 +554,7 @@ bb21:                                             ; preds = %bb18, %bb14, %bb10,
   %tmp23 = phi <4 x float> [ undef, %bb ], [ undef, %bb10 ], [ undef, %bb14 ], [ %tmp19, %bb18 ]
   store <4 x float> %tmp23, ptr undef, align 16
   store <4 x float> %tmp22, ptr undef, align 16
-  switch i32 undef, label %bb29 [
+  switch i32 %arg4, label %bb29 [
     i32 5, label %bb27
     i32 1, label %bb24
     i32 2, label %bb25

@@ -133,3 +133,55 @@ define iXLen @lround_f16(half %a) nounwind {
   %1 = call iXLen @llvm.lround.iXLen.f16(half %a)
   ret iXLen %1
 }
+
+define i32 @lround_i32_f16(half %a) nounwind {
+; RV32IZFHMIN-LABEL: lround_i32_f16:
+; RV32IZFHMIN:       # %bb.0:
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV32IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rmm
+; RV32IZFHMIN-NEXT:    ret
+;
+; RV64IZFHMIN-LABEL: lround_i32_f16:
+; RV64IZFHMIN:       # %bb.0:
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rmm
+; RV64IZFHMIN-NEXT:    ret
+;
+; RV32IDZFHMIN-LABEL: lround_i32_f16:
+; RV32IDZFHMIN:       # %bb.0:
+; RV32IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV32IDZFHMIN-NEXT:    fcvt.w.s a0, fa5, rmm
+; RV32IDZFHMIN-NEXT:    ret
+;
+; RV64IDZFHMIN-LABEL: lround_i32_f16:
+; RV64IDZFHMIN:       # %bb.0:
+; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IDZFHMIN-NEXT:    fcvt.w.s a0, fa5, rmm
+; RV64IDZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: lround_i32_f16:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rmm
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: lround_i32_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rmm
+; RV64IZHINXMIN-NEXT:    ret
+;
+; RV32IZDINXZHINXMIN-LABEL: lround_i32_f16:
+; RV32IZDINXZHINXMIN:       # %bb.0:
+; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0, rmm
+; RV32IZDINXZHINXMIN-NEXT:    ret
+;
+; RV64IZDINXZHINXMIN-LABEL: lround_i32_f16:
+; RV64IZDINXZHINXMIN:       # %bb.0:
+; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0, rmm
+; RV64IZDINXZHINXMIN-NEXT:    ret
+  %1 = call i32 @llvm.lround.i32.f16(half %a)
+  ret i32 %1
+}

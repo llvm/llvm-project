@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -24,17 +25,17 @@ using namespace llvm;
 namespace {
 class TestDialectVersionParser : public cl::parser<test::TestDialectVersion> {
 public:
-  TestDialectVersionParser(cl::Option &O)
-      : cl::parser<test::TestDialectVersion>(O) {}
+  TestDialectVersionParser(cl::Option &o)
+      : cl::parser<test::TestDialectVersion>(o) {}
 
-  bool parse(cl::Option &O, StringRef /*argName*/, StringRef arg,
+  bool parse(cl::Option &o, StringRef /*argName*/, StringRef arg,
              test::TestDialectVersion &v) {
-    long long major_, minor_;
-    if (getAsSignedInteger(arg.split(".").first, 10, major_))
-      return O.error("Invalid argument '" + arg);
-    if (getAsSignedInteger(arg.split(".").second, 10, minor_))
-      return O.error("Invalid argument '" + arg);
-    v = test::TestDialectVersion(major_, minor_);
+    long long major, minor;
+    if (getAsSignedInteger(arg.split(".").first, 10, major))
+      return o.error("Invalid argument '" + arg);
+    if (getAsSignedInteger(arg.split(".").second, 10, minor))
+      return o.error("Invalid argument '" + arg);
+    v = test::TestDialectVersion(major, minor);
     // Returns true on error.
     return false;
   }
@@ -182,12 +183,12 @@ private:
           if (failed(reader.readVarInt(encoding)) || encoding != 999)
             return success();
           llvm::outs() << "Overriding parsing of IntegerType encoding...\n";
-          uint64_t _widthAndSignedness, width;
+          uint64_t widthAndSignedness, width;
           IntegerType::SignednessSemantics signedness;
-          if (succeeded(reader.readVarInt(_widthAndSignedness)) &&
-              ((width = _widthAndSignedness >> 2), true) &&
+          if (succeeded(reader.readVarInt(widthAndSignedness)) &&
+              ((width = widthAndSignedness >> 2), true) &&
               ((signedness = static_cast<IntegerType::SignednessSemantics>(
-                    _widthAndSignedness & 0x3)),
+                    widthAndSignedness & 0x3)),
                true))
             entry = IntegerType::get(reader.getContext(), width, signedness);
           // Return nullopt to fall through the rest of the parsing code path.
@@ -200,7 +201,7 @@ private:
   // the encoding of builtin IntegerType. We can natively parse this without
   // the use of a callback, relying on the existing builtin reader mechanism.
   void runTest1(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     BytecodeWriterConfig writeConfig;
@@ -231,7 +232,7 @@ private:
   // parsing, we use the encoding of IntegerType to intercept all i32. Then,
   // instead of creating i32s, we assemble TestI32Type and return it.
   void runTest2(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     BytecodeWriterConfig writeConfig;
@@ -259,7 +260,7 @@ private:
   // can natively parse this without the use of a callback, relying on the
   // existing builtin reader mechanism.
   void runTest3(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     auto i32Type = IntegerType::get(op->getContext(), 32,
@@ -295,7 +296,7 @@ private:
   // <2xi32>. Instead of assembling a DenseIntElementsAttr, we assemble
   // TestAttrParamsAttr and return it.
   void runTest4(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     auto i32Type = IntegerType::get(op->getContext(), 32,
@@ -330,7 +331,7 @@ private:
   // the builtin types and attributes and take full control of the encoding,
   // returning failure if any type or attribute is not part of builtin.
   void runTest5(Operation *op) {
-    auto builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
     BytecodeDialectInterface *iface =
         builtin->getRegisteredInterface<BytecodeDialectInterface>();
     BytecodeWriterConfig writeConfig;

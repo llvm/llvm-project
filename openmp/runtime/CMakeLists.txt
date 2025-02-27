@@ -30,7 +30,7 @@ if(${OPENMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc64/ppc64le/aarch64/mic/mips/mips64/riscv64/loongarch64/ve/s390x).")
+    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/wasm32).")
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
@@ -51,8 +51,12 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH x86_64)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc64le")
     set(LIBOMP_ARCH ppc64le)
-  elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc")
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc64")
     set(LIBOMP_ARCH ppc64)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc")
+    set(LIBOMP_ARCH ppc)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "aarch64_32")
+    set(LIBOMP_ARCH aarch64_32)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "aarch64")
     set(LIBOMP_ARCH aarch64)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "arm64")
@@ -67,6 +71,8 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH ve)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "s390x")
     set(LIBOMP_ARCH s390x)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm")
+    set(LIBOMP_ARCH wasm32)
   else()
     # last ditch effort
     libomp_get_architecture(LIBOMP_ARCH)
@@ -87,7 +93,7 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x wasm32)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -126,8 +132,17 @@ set(LIBOMP_ASMFLAGS "" CACHE STRING
   "Appended user specified assembler flags.")
 set(LIBOMP_LDFLAGS "" CACHE STRING
   "Appended user specified linker flags.")
-set(LIBOMP_LIBFLAGS "" CACHE STRING
-  "Appended user specified linked libs flags. (e.g., -lm)")
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
+    "Appended user specified linked libs flags. (e.g., -lm)")
+  if("${LIBOMP_ARCH}" STREQUAL "ppc")
+    # PPC (32-bit) on AIX needs libatomic for __atomic_load_8, etc.
+    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+  endif()
+else()
+  set(LIBOMP_LIBFLAGS "" CACHE STRING
+    "Appended user specified linked libs flags. (e.g., -lm)")
+endif()
 set(LIBOMP_FFLAGS "" CACHE STRING
   "Appended user specified Fortran compiler flags.  These are only used if LIBOMP_FORTRAN_MODULES==TRUE.")
 
@@ -157,6 +172,7 @@ set(IA32 FALSE)
 set(INTEL64 FALSE)
 set(ARM FALSE)
 set(AARCH64 FALSE)
+set(AARCH64_32 FALSE)
 set(AARCH64_A64FX FALSE)
 set(PPC64BE FALSE)
 set(PPC64LE FALSE)
@@ -168,12 +184,16 @@ set(RISCV64 FALSE)
 set(LOONGARCH64 FALSE)
 set(VE FALSE)
 set(S390X FALSE)
+set(WASM FALSE)
+set(PPC FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
   set(INTEL64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "arm") # ARM architecture
   set(ARM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "ppc") # PPC32 architecture
+  set(PPC TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "ppc64") # PPC64BE architecture
   set(PPC64BE TRUE)
   set(PPC64 TRUE)
@@ -182,6 +202,8 @@ elseif("${LIBOMP_ARCH}" STREQUAL "ppc64le") # PPC64LE architecture
   set(PPC64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "aarch64") # AARCH64 architecture
   set(AARCH64 TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "aarch64_32") # AARCH64_32 architecture
+  set(AARCH64_32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "aarch64_a64fx") # AARCH64_A64FX architecture
   set(AARCH64_A64FX TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "mic") # Intel(R) Many Integrated Core Architecture
@@ -198,6 +220,8 @@ elseif("${LIBOMP_ARCH}" STREQUAL "ve") # VE architecture
     set(VE TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
+    set(WASM TRUE)
 endif()
 
 # Set some flags based on build_type
@@ -305,6 +329,11 @@ endif()
 # Shared library can be switched to a static library
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")
+
+if(WASM)
+  libomp_warning_say("The WebAssembly build currently only supports static libraries; forcing LIBOMP_ENABLE_SHARED to false")
+  set(LIBOMP_ENABLE_SHARED FALSE)
+endif()
 
 if(WIN32 AND NOT LIBOMP_ENABLE_SHARED)
   libomp_error_say("Static libraries requested but not available on Windows")

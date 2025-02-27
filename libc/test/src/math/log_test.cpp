@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/log.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcLogTest = LIBC_NAMESPACE::testing::FPTest<double>;
@@ -63,7 +62,7 @@ TEST_F(LlvmLibcLogTest, TrickyInputs) {
       0x3fefbfdaa448ed98,
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
                                    LIBC_NAMESPACE::log(x), 0.5);
   }
@@ -98,12 +97,12 @@ TEST_F(LlvmLibcLogTest, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::log(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;

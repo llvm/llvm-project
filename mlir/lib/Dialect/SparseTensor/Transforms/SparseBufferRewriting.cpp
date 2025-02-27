@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
+#include "Utils/CodegenUtils.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -132,8 +132,7 @@ static void forEachIJPairInAllBuffers(
     function_ref<void(uint64_t, Value, Value, Value)> bodyBuilder) {
 
   // Create code for the first (xPerm + ny) buffers.
-  SmallVector<AffineExpr> exps(xPerm.getResults().begin(),
-                               xPerm.getResults().end());
+  SmallVector<AffineExpr> exps(xPerm.getResults());
   for (unsigned y = 0; y < ny; y++) {
     exps.push_back(builder.getAffineDimExpr(y + xPerm.getNumResults()));
   }
@@ -952,9 +951,9 @@ createQuickSort(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   Value cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ule,
                                              lenLow, lenHigh);
 
+  Value c0 = constantIndex(builder, loc, 0);
   scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
 
-  Value c0 = constantIndex(builder, loc, 0);
   auto mayRecursion = [&](Value low, Value high, Value len) {
     Value cond =
         builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, len, c0);

@@ -115,11 +115,7 @@ void Float2IntPass::findRoots(Function &F, const DominatorTree &DT) {
 // Helper - mark I as having been traversed, having range R.
 void Float2IntPass::seen(Instruction *I, ConstantRange R) {
   LLVM_DEBUG(dbgs() << "F2I: " << *I << ":" << R << "\n");
-  auto IT = SeenInsts.find(I);
-  if (IT != SeenInsts.end())
-    IT->second = std::move(R);
-  else
-    SeenInsts.insert(std::make_pair(I, std::move(R)));
+  SeenInsts.insert_or_assign(I, std::move(R));
 }
 
 // Helper - get a range representing a poison value.
@@ -311,7 +307,7 @@ void Float2IntPass::walkForwards() {
 }
 
 // If there is a valid transform to be done, do it.
-bool Float2IntPass::validateAndTransform() {
+bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
   bool MadeChange = false;
 
   // Iterate over every disjoint partition of the def-use graph.
@@ -359,9 +355,7 @@ bool Float2IntPass::validateAndTransform() {
 
     // The number of bits required is the maximum of the upper and
     // lower limits, plus one so it can be signed.
-    unsigned MinBW = std::max(R.getLower().getSignificantBits(),
-                              R.getUpper().getSignificantBits()) +
-                     1;
+    unsigned MinBW = R.getMinSignedBits() + 1;
     LLVM_DEBUG(dbgs() << "F2I: MinBitwidth=" << MinBW << ", R: " << R << "\n");
 
     // If we've run off the realms of the exactly representable integers,
@@ -376,15 +370,23 @@ bool Float2IntPass::validateAndTransform() {
       LLVM_DEBUG(dbgs() << "F2I: Value not guaranteed to be representable!\n");
       continue;
     }
-    if (MinBW > 64) {
-      LLVM_DEBUG(
-          dbgs() << "F2I: Value requires more than 64 bits to represent!\n");
-      continue;
-    }
 
-    // OK, R is known to be representable. Now pick a type for it.
-    // FIXME: Pick the smallest legal type that will fit.
-    Type *Ty = (MinBW > 32) ? Type::getInt64Ty(*Ctx) : Type::getInt32Ty(*Ctx);
+    // OK, R is known to be representable.
+    // Pick the smallest legal type that will fit.
+    Type *Ty = DL.getSmallestLegalIntType(*Ctx, MinBW);
+    if (!Ty) {
+      // Every supported target supports 64-bit and 32-bit integers,
+      // so fallback to a 32 or 64-bit integer if the value fits.
+      if (MinBW <= 32) {
+        Ty = Type::getInt32Ty(*Ctx);
+      } else if (MinBW <= 64) {
+        Ty = Type::getInt64Ty(*Ctx);
+      } else {
+        LLVM_DEBUG(dbgs() << "F2I: Value requires more bits to represent than "
+                             "the target supports!\n");
+        continue;
+      }
+    }
 
     for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
          MI != ME; ++MI)
@@ -396,9 +398,9 @@ bool Float2IntPass::validateAndTransform() {
 }
 
 Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
-  if (ConvertedInsts.contains(I))
+  if (auto It = ConvertedInsts.find(I); It != ConvertedInsts.end())
     // Already converted this instruction.
-    return ConvertedInsts[I];
+    return It->second;
 
   SmallVector<Value*,4> NewOperands;
   for (Value *V : I->operands()) {
@@ -491,7 +493,8 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   walkBackwards();
   walkForwards();
 
-  bool Modified = validateAndTransform();
+  const DataLayout &DL = F.getDataLayout();
+  bool Modified = validateAndTransform(DL);
   if (Modified)
     cleanup();
   return Modified;

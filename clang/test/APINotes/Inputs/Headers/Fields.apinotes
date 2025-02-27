@@ -1,0 +1,23 @@
+---
+Name: Fields
+Tags:
+- Name: IntWrapper
+  Fields:
+  - Name: value
+    Availability: none
+    AvailabilityMsg: "oh no"
+- Name: Outer
+  Tags:
+  - Name: Inner
+    Fields:
+    - Name: value
+      Availability: none
+      AvailabilityMsg: "oh no 2"
+  Methods:
+  - Name: value
+    Availability: none
+    AvailabilityMsg: "this should have no effect"  
+Functions:
+- Name: value
+  Availability: none
+  AvailabilityMsg: "this should have no effect"

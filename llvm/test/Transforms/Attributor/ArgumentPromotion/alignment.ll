@@ -2,6 +2,10 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
+;; Test with RemoveDIs debug-info mode to exercise a potential crash path.
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,TUNIT
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CGSCC
+
 define void @f() {
 ; TUNIT-LABEL: define {{[^@]+}}@f() {
 ; TUNIT-NEXT:  entry:
@@ -43,7 +47,7 @@ declare void @z(i32)
 define internal i32 @test(ptr %X, ptr %Y) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i64 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[X:%.*]], i64 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[Y_PRIV:%.*]] = alloca i64, align 8
 ; CGSCC-NEXT:    store i64 [[TMP0]], ptr [[Y_PRIV]], align 4
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[X]], align 4
@@ -75,7 +79,7 @@ define internal i32 @caller(ptr %A) {
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
-; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_PRIV]], i64 noundef 1) #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_PRIV]], i64 noundef 1) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[C]]
 ;
   %B = alloca i64

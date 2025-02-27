@@ -265,8 +265,8 @@ if.end:
 define dso_local void @test_sext_i8_icmp_neg128(i8 %x) nounwind !prof !14 {
 ; CHECK-LABEL: test_sext_i8_icmp_neg128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpb $-128, %dil
-; CHECK-NEXT:    je bar # TAILCALL
+; CHECK-NEXT:    negb %dil
+; CHECK-NEXT:    jo bar # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:

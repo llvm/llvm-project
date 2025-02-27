@@ -23,7 +23,7 @@ define internal i32 @i(ptr inalloca(ptr) %a, ...) {
 ; CHECK-LABEL: define {{[^@]+}}@i
 ; CHECK-SAME: (ptr inalloca(ptr) [[A:%.*]], ...) unnamed_addr {
 ; CHECK-NEXT:    [[AP:%.*]] = alloca ptr, align 4
-; CHECK-NEXT:    call void @llvm.va_start(ptr [[AP]])
+; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[AP]])
 ; CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[AP]], align 4
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
 ; CHECK-NEXT:    ret i32 [[L]]

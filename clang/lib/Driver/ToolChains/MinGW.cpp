@@ -15,6 +15,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -86,9 +87,9 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).startswith("msvcr") ||
-        StringRef(Lib).startswith("ucrt") ||
-        StringRef(Lib).startswith("crtdll"))
+    if (StringRef(Lib).starts_with("msvcr") ||
+        StringRef(Lib).starts_with("ucrt") ||
+        StringRef(Lib).starts_with("crtdll"))
       return;
   CmdArgs.push_back("-lmsvcrt");
 }
@@ -132,7 +133,13 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("thumb2pe");
     break;
   case llvm::Triple::aarch64:
-    CmdArgs.push_back("arm64pe");
+    if (TC.getEffectiveTriple().isWindowsArm64EC())
+      CmdArgs.push_back("arm64ecpe");
+    else
+      CmdArgs.push_back("arm64pe");
+    break;
+  case llvm::Triple::mipsel:
+    CmdArgs.push_back("mipspe");
     break;
   default:
     D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
@@ -183,6 +190,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << GuardArgs;
   }
+
+  if (Args.hasArg(options::OPT_fms_hotpatch))
+    CmdArgs.push_back("--functionpadmin");
 
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
@@ -247,7 +257,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  if (C.getDriver().IsFlangMode()) {
+  if (C.getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
     addFortranRuntimeLibs(TC, Args, CmdArgs);
   }
@@ -460,7 +471,7 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
   Subdirs.back() += "-w64-mingw32";
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32ucrt";
-  StringRef ClangRoot = llvm::sys::path::parent_path(D.getInstalledDir());
+  StringRef ClangRoot = llvm::sys::path::parent_path(D.Dir);
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
@@ -471,12 +482,23 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
+static bool looksLikeMinGWSysroot(const std::string &Directory) {
+  StringRef Sep = llvm::sys::path::get_separator();
+  if (!llvm::sys::fs::exists(Directory + Sep + "include" + Sep + "_mingw.h"))
+    return false;
+  if (!llvm::sys::fs::exists(Directory + Sep + "lib" + Sep + "libkernel32.a"))
+    return false;
+  return true;
+}
+
 toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
       RocmInstallation(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
+  getProgramPaths().push_back(getDriver().Dir);
 
+  std::string InstallBase =
+      std::string(llvm::sys::path::parent_path(getDriver().Dir));
   // The sequence for detecting a sysroot here should be kept in sync with
   // the testTriple function below.
   llvm::Triple LiteralTriple = getLiteralTriple(D, getTriple());
@@ -487,13 +509,17 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   else if (llvm::ErrorOr<std::string> TargetSubdir = findClangRelativeSysroot(
                getDriver(), LiteralTriple, getTriple(), SubdirName))
     Base = std::string(llvm::sys::path::parent_path(TargetSubdir.get()));
+  // If the install base of Clang seems to have mingw sysroot files directly
+  // in the toplevel include and lib directories, use this as base instead of
+  // looking for a triple prefixed GCC in the path.
+  else if (looksLikeMinGWSysroot(InstallBase))
+    Base = InstallBase;
   else if (llvm::ErrorOr<std::string> GPPName =
                findGcc(LiteralTriple, getTriple()))
     Base = std::string(llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(GPPName.get())));
   else
-    Base = std::string(
-        llvm::sys::path::parent_path(getDriver().getInstalledDir()));
+    Base = InstallBase;
 
   Base += llvm::sys::path::get_separator();
   findGccLibDir(LiteralTriple);
@@ -599,17 +625,17 @@ SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
 
 void toolchains::MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                            ArgStringList &CC1Args) const {
-  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+  CudaInstallation->AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::MinGW::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                           ArgStringList &CC1Args) const {
-  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+  RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::MinGW::printVerboseInfo(raw_ostream &OS) const {
-  CudaInstallation.print(OS);
-  RocmInstallation.print(OS);
+  CudaInstallation->print(OS);
+  RocmInstallation->print(OS);
 }
 
 // Include directories for various hosts:
@@ -708,6 +734,30 @@ void toolchains::MinGW::addClangTargetOptions(
     }
   }
 
+  // Default to not enabling sized deallocation, but let user provided options
+  // override it.
+  //
+  // If using sized deallocation, user code that invokes delete will end up
+  // calling delete(void*,size_t). If the user wanted to override the
+  // operator delete(void*), there may be a fallback operator
+  // delete(void*,size_t) which calls the regular operator delete(void*).
+  //
+  // However, if the C++ standard library is linked in the form of a DLL,
+  // and the fallback operator delete(void*,size_t) is within this DLL (which is
+  // the case for libc++ at least) it will only redirect towards the library's
+  // default operator delete(void*), not towards the user's provided operator
+  // delete(void*).
+  //
+  // This issue can be avoided, if the fallback operators are linked statically
+  // into the callers, even if the C++ standard library is linked as a DLL.
+  //
+  // This is meant as a temporary workaround until libc++ implements this
+  // technique, which is tracked in
+  // https://github.com/llvm/llvm-project/issues/96899.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
+
   CC1Args.push_back("-fno-use-init-array");
 
   for (auto Opt : {options::OPT_mthreads, options::OPT_mwindows,
@@ -778,9 +828,14 @@ static bool testTriple(const Driver &D, const llvm::Triple &Triple,
   if (D.SysRoot.size())
     return true;
   llvm::Triple LiteralTriple = getLiteralTriple(D, Triple);
+  std::string InstallBase = std::string(llvm::sys::path::parent_path(D.Dir));
   if (llvm::ErrorOr<std::string> TargetSubdir =
           findClangRelativeSysroot(D, LiteralTriple, Triple, SubdirName))
     return true;
+  // If the install base itself looks like a mingw sysroot, we'll use that
+  // - don't use any potentially unrelated gcc to influence what triple to use.
+  if (looksLikeMinGWSysroot(InstallBase))
+    return false;
   if (llvm::ErrorOr<std::string> GPPName = findGcc(LiteralTriple, Triple))
     return true;
   // If we neither found a colocated sysroot or a matching gcc executable,

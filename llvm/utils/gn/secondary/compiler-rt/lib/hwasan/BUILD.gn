@@ -11,7 +11,7 @@ gen_version_script("version_script") {
   extra = "hwasan.syms.extra"
   output = "$target_gen_dir/hwasan.vers"
   libs = [
-    ":hwasan",
+    ":hwasan_static",
     ":hwasan_cxx",
   ]
   lib_names = [
@@ -57,17 +57,27 @@ source_set("sources") {
     "hwasan_poisoning.h",
     "hwasan_report.cpp",
     "hwasan_report.h",
-    "hwasan_setjmp_aarch64.S",
-    "hwasan_setjmp_riscv64.S",
-    "hwasan_setjmp_x86_64.S",
-    "hwasan_tag_mismatch_aarch64.S",
-    "hwasan_tag_mismatch_riscv64.S",
     "hwasan_thread.cpp",
     "hwasan_thread.h",
     "hwasan_thread_list.cpp",
     "hwasan_thread_list.h",
     "hwasan_type_test.cpp",
   ]
+  if (current_cpu == "arm64") {
+    sources += [
+      "hwasan_setjmp_aarch64.S",
+      "hwasan_tag_mismatch_aarch64.S",
+    ]
+  }
+  if (current_cpu == "riscv64") {
+    sources += [
+      "hwasan_setjmp_riscv64.S",
+      "hwasan_tag_mismatch_riscv64.S",
+    ]
+  }
+  if (current_cpu == "x64") {
+    sources += [ "hwasan_setjmp_x86_64.S" ]
+  }
 }
 
 source_set("cxx_sources") {
@@ -78,7 +88,7 @@ source_set("cxx_sources") {
   sources = [ "hwasan_new_delete.cpp" ]
 }
 
-static_library("hwasan") {
+static_library("hwasan_static") {
   output_dir = crt_current_out_dir
   output_name = "clang_rt.$hwasan_name$crt_current_target_suffix"
   complete_static_lib = true
@@ -121,7 +131,7 @@ shared_library("hwasan_shared") {
 
 static_library("hwasan_preinit") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.${hwasan_name}_preinit$crt_current_target_suffix"
+  output_name = "clang_rt.${hwasan_name}-preinit$crt_current_target_suffix"
   complete_static_lib = true
   configs -= [
     "//llvm/utils/gn/build:llvm_code",
@@ -129,4 +139,14 @@ static_library("hwasan_preinit") {
   ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   sources = [ "hwasan_preinit.cpp" ]
+}
+
+group("hwasan") {
+  deps = [
+    ":hwasan_preinit",
+    ":hwasan_shared",
+    ":hwasan_static",
+    ":hwasan_cxx",
+    ":version_script",
+  ]
 }

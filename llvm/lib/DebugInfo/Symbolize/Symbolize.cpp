@@ -31,7 +31,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include <algorithm>
 #include <cassert>
 #include <cstring>
 
@@ -71,7 +70,9 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DILineInfo LineInfo = Info->symbolizeCode(
-      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      ModuleOffset,
+      DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle)
     LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
@@ -85,7 +86,7 @@ LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
 }
 
 Expected<DILineInfo>
-LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeCode(StringRef ModuleName,
                               object::SectionedAddress ModuleOffset) {
   return symbolizeCodeCommon(ModuleName, ModuleOffset);
 }
@@ -116,7 +117,9 @@ Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DIInliningInfo InlinedContext = Info->symbolizeInlinedCode(
-      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      ModuleOffset,
+      DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle) {
     for (int i = 0, n = InlinedContext.getNumberOfFrames(); i < n; i++) {
@@ -134,7 +137,7 @@ LLVMSymbolizer::symbolizeInlinedCode(const ObjectFile &Obj,
 }
 
 Expected<DIInliningInfo>
-LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeInlinedCode(StringRef ModuleName,
                                      object::SectionedAddress ModuleOffset) {
   return symbolizeInlinedCodeCommon(ModuleName, ModuleOffset);
 }
@@ -179,7 +182,7 @@ LLVMSymbolizer::symbolizeData(const ObjectFile &Obj,
 }
 
 Expected<DIGlobal>
-LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeData(StringRef ModuleName,
                               object::SectionedAddress ModuleOffset) {
   return symbolizeDataCommon(ModuleName, ModuleOffset);
 }
@@ -220,7 +223,7 @@ LLVMSymbolizer::symbolizeFrame(const ObjectFile &Obj,
 }
 
 Expected<std::vector<DILocal>>
-LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeFrame(StringRef ModuleName,
                                object::SectionedAddress ModuleOffset) {
   return symbolizeFrameCommon(ModuleName, ModuleOffset);
 }
@@ -233,7 +236,8 @@ LLVMSymbolizer::symbolizeFrame(ArrayRef<uint8_t> BuildID,
 
 template <typename T>
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
+LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol,
+                                 uint64_t Offset) {
   auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
   if (!InfoOrErr)
     return InfoOrErr.takeError();
@@ -246,7 +250,7 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
   if (!Info)
     return Result;
 
-  for (object::SectionedAddress A : Info->findSymbol(Symbol)) {
+  for (object::SectionedAddress A : Info->findSymbol(Symbol, Offset)) {
     DILineInfo LineInfo = Info->symbolizeCode(
         A, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
         Opts.UseSymbolTable);
@@ -261,18 +265,21 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol) {
-  return findSymbolCommon(Obj, Symbol);
+LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(Obj, Symbol, Offset);
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(StringRef ModuleName, StringRef Symbol) {
-  return findSymbolCommon(ModuleName.str(), Symbol);
+LLVMSymbolizer::findSymbol(StringRef ModuleName, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(ModuleName, Symbol, Offset);
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol) {
-  return findSymbolCommon(BuildID, Symbol);
+LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(BuildID, Symbol, Offset);
 }
 
 void LLVMSymbolizer::flush() {
@@ -299,7 +306,7 @@ std::string getDarwinDWARFResourceForPath(const std::string &Path,
   }
   sys::path::append(ResourceName, "Contents", "Resources", "DWARF");
   sys::path::append(ResourceName, Basename);
-  return std::string(ResourceName.str());
+  return std::string(ResourceName);
 }
 
 bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
@@ -430,14 +437,14 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   // Try relative/path/to/original_binary/debuglink_name
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   // Try relative/path/to/original_binary/.debug/debuglink_name
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   // Make the path absolute so that lookups will go to
@@ -459,7 +466,7 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
                           DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   return false;
@@ -596,13 +603,13 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
 }
 
 Expected<SymbolizableModule *>
-LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
-  std::string BinaryName = ModuleName;
-  std::string ArchName = Opts.DefaultArch;
+LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
+  StringRef BinaryName = ModuleName;
+  StringRef ArchName = Opts.DefaultArch;
   size_t ColonPos = ModuleName.find_last_of(':');
   // Verify that substring after colon form a valid arch name.
   if (ColonPos != std::string::npos) {
-    std::string ArchStr = ModuleName.substr(ColonPos + 1);
+    StringRef ArchStr = ModuleName.substr(ColonPos + 1);
     if (Triple(ArchStr).getArch() != Triple::UnknownArch) {
       BinaryName = ModuleName.substr(0, ColonPos);
       ArchName = ArchStr;
@@ -615,7 +622,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     return I->second.get();
   }
 
-  auto ObjectsOrErr = getOrCreateObjectPair(BinaryName, ArchName);
+  auto ObjectsOrErr =
+      getOrCreateObjectPair(std::string{BinaryName}, std::string{ArchName});
   if (!ObjectsOrErr) {
     // Failed to find valid object file.
     Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
@@ -624,13 +632,20 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   ObjectPair Objects = ObjectsOrErr.get();
 
   std::unique_ptr<DIContext> Context;
-  // If this is a COFF object containing PDB info, use a PDBContext to
-  // symbolize. Otherwise, use DWARF.
+  // If this is a COFF object containing PDB info and not containing DWARF
+  // section, use a PDBContext to symbolize. Otherwise, use DWARF.
   if (auto CoffObject = dyn_cast<COFFObjectFile>(Objects.first)) {
     const codeview::DebugInfo *DebugInfo;
     StringRef PDBFileName;
     auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
-    if (!EC && DebugInfo != nullptr && !PDBFileName.empty()) {
+    // Use DWARF if there're DWARF sections.
+    bool HasDwarf =
+        llvm::any_of(Objects.first->sections(), [](SectionRef Section) -> bool {
+          if (Expected<StringRef> SectionName = Section.getName())
+            return SectionName.get() == ".debug_info";
+          return false;
+        });
+    if (!EC && !HasDwarf && DebugInfo != nullptr && !PDBFileName.empty()) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
 
@@ -732,7 +747,7 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 } // end anonymous namespace
 
 std::string
-LLVMSymbolizer::DemangleName(const std::string &Name,
+LLVMSymbolizer::DemangleName(StringRef Name,
                              const SymbolizableModule *DbiModuleDescriptor) {
   std::string Result;
   if (nonMicrosoftDemangle(Name, Result))
@@ -746,7 +761,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
         MSDemangleFlags(MSDF_NoAccessSpecifier | MSDF_NoCallingConvention |
                         MSDF_NoMemberType | MSDF_NoReturnType));
     if (status != 0)
-      return Name;
+      return std::string{Name};
     Result = DemangledName;
     free(DemangledName);
     return Result;
@@ -760,7 +775,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
       return Result;
     return DemangledCName;
   }
-  return Name;
+  return std::string{Name};
 }
 
 void LLVMSymbolizer::recordAccess(CachedBinary &Bin) {

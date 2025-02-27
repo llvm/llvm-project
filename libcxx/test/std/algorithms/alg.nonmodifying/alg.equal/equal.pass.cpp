@@ -18,12 +18,17 @@
 //   constexpr bool     // constexpr after c++17
 //   equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2);
 
-// We test the cartesian product, so we somethimes compare differently signed types
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+// We test the cartesian product, so we sometimes compare differently signed types
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// MSVC warning C4242: 'argument': conversion from 'int' to 'const _Ty', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data
+// MSVC warning C4389: '==': signed/unsigned mismatch
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244 /wd4389
 
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#include <vector>
 
 #include "test_iterators.h"
 #include "test_macros.h"
@@ -58,6 +63,10 @@ struct Test {
 struct TestNarrowingEqualTo {
   template <class UnderlyingType>
   TEST_CONSTEXPR_CXX20 void operator()() {
+    TEST_DIAGNOSTIC_PUSH
+    // MSVC warning C4310: cast truncates constant value
+    TEST_MSVC_DIAGNOSTIC_IGNORED(4310)
+
     UnderlyingType a[] = {
         UnderlyingType(0x1000),
         UnderlyingType(0x1001),
@@ -70,6 +79,8 @@ struct TestNarrowingEqualTo {
         UnderlyingType(0x1602),
         UnderlyingType(0x1603),
         UnderlyingType(0x1604)};
+
+    TEST_DIAGNOSTIC_POP
 
     assert(std::equal(a, a + 5, b, std::equal_to<char>()));
 #if TEST_STD_VER >= 14
@@ -113,6 +124,30 @@ private:
 
 #endif
 
+template <std::size_t N>
+TEST_CONSTEXPR_CXX20 void test_vector_bool() {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+
+  { // Test equal() with aligned bytes
+    std::vector<bool> out = in;
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+#if TEST_STD_VER >= 14
+    assert(std::equal(in.begin(), in.end(), out.begin(), out.end()));
+#endif
+  }
+
+  { // Test equal() with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::copy(in.begin(), in.end(), out.begin() + 4);
+    assert(std::equal(in.begin(), in.end(), out.begin() + 4));
+#if TEST_STD_VER >= 14
+    assert(std::equal(in.begin(), in.end(), out.begin() + 4, out.end() - 4));
+#endif
+  }
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestIter2<int, types::cpp17_input_iterator_list<int*> >());
   types::for_each(
@@ -127,6 +162,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
       types::cpp17_input_iterator_list<trivially_equality_comparable*>{},
       TestIter2<trivially_equality_comparable, types::cpp17_input_iterator_list<trivially_equality_comparable*>>{});
 #endif
+
+  { // Test vector<bool>::iterator optimization
+    test_vector_bool<8>();
+    test_vector_bool<19>();
+    test_vector_bool<32>();
+    test_vector_bool<49>();
+    test_vector_bool<64>();
+    test_vector_bool<199>();
+    test_vector_bool<256>();
+  }
 
   return true;
 }

@@ -53,7 +53,7 @@ subroutine while_inside_do_loop
   ! CHECK: fir.store %[[TDEC]] to %[[T_REF]]
   ! CHECK: %[[I3:.*]] = fir.load %[[I_REF]] : !fir.ref<i32>
   ! CHECK: %[[C1_2:.*]] = arith.constant 1 : i32
-  ! CHECK: %[[IINC:.*]] = arith.addi %[[I3]], %[[C1_2]] : i32
+  ! CHECK: %[[IINC:.*]] = arith.addi %[[I3]], %[[C1_2]] overflow<nsw> : i32
   ! CHECK: fir.store %[[IINC]] to %[[I_REF]] : !fir.ref<i32>
   ! CHECK: br ^[[HDR1]]
   end do
@@ -100,10 +100,10 @@ subroutine do_inside_while_loop
         ! CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
         ! CHECK: %[[JINC:.*]] = arith.muli %[[C2]], %[[J2]] : i32
         ! CHECK: fir.store %[[JINC]] to %[[J_REF]] : !fir.ref<i32>
-        ! CHECK: %[[IINC:.*]] = arith.addi %[[IDX]], %[[C1]] : index
+        ! CHECK: %[[IINC:.*]] = arith.addi %[[IDX]], %[[C1]] overflow<nsw> : index
         ! CHECK: %[[I_STEPCAST:.*]] = fir.convert %[[C1]] : (index) -> i32
         ! CHECK: %[[I_IVLOAD:.*]] = fir.load %[[I_REF]] : !fir.ref<i32>
-        ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] : i32
+        ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] overflow<nsw> : i32
         ! CHECK: fir.result %[[IINC]], %[[I_IVINC]] : index, i32
       do i=8,13
         j=j*2

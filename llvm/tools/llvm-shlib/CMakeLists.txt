@@ -11,8 +11,11 @@ if(LLVM_LINK_LLVM_DYLIB AND LLVM_DYLIB_EXPORTED_SYMBOL_FILE)
 endif()
 
 if(LLVM_BUILD_LLVM_DYLIB)
-  if(MSVC)
+  if(MSVC AND NOT LLVM_BUILD_LLVM_DYLIB_VIS)
     message(FATAL_ERROR "Generating libLLVM is not supported on MSVC")
+  endif()
+  if(ZOS)
+    message(FATAL_ERROR "Generating libLLVM is not supported on z/OS")
   endif()
 
   llvm_map_components_to_libnames(LIB_NAMES ${LLVM_DYLIB_COMPONENTS})
@@ -30,38 +33,51 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if (LLVM_LINK_LLVM_DYLIB)
     set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
   endif()
-  add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+  if (WIN32)
+    add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+  else()
+    add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB OUTPUT_NAME LLVM ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
+    # Add symlink for backwards compatibility with old library name
+    llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> SHARED FULL_DEST COMPONENT LLVM)
+  endif()
 
   list(REMOVE_DUPLICATES LIB_NAMES)
-  if((MINGW) OR (HAIKU)
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "GNU")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "NetBSD")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "DragonFly")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
-     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")) # FIXME: It should be "GNU ld for elf"
-    configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
-    ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
-
-    # GNU ld doesn't resolve symbols in the version script.
-    set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
-    if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
-      # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
-      set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
-    endif()
-    if (NOT MINGW)
-      # Optimize function calls for default visibility definitions to avoid PLT and
-      # reduce dynamic relocations.
-      # Note: for -fno-pic default, the address of a function may be different from
-      # inside and outside libLLVM.so.
-      target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
-    endif()
-  elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
+  else()
+    if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
+      configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+        ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
+    else()
+      foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
+        # Replace the special string with a per config directory.
+        string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} PER_CONF_LIBRARY_DIR ${LLVM_LIBRARY_DIR})
+        configure_file(
+          ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+          ${PER_CONF_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
+      endforeach()
+    endif()
+    if(MSVC)
+      target_link_directories(LLVM PRIVATE ${LLVM_LIBRARY_DIR})
+      foreach(library ${LIB_NAMES})
+        target_link_options(LLVM PRIVATE /WHOLEARCHIVE:${library}.lib)
+      endforeach()
+    else()
+      # GNU ld doesn't resolve symbols in the version script.
+      set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
+      if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
+        # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
+        set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
+      endif()
+      if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+        # Optimize function calls for default visibility definitions to avoid PLT and
+        # reduce dynamic relocations.
+        # Note: for -fno-pic default, the address of a function may be different from
+        # inside and outside libLLVM.so.
+        target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
+      endif()
+    endif()
   endif()
 
   target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
@@ -149,7 +165,10 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Need to separate lib names with newlines.
   string(REPLACE ";" "\n" FILE_CONTENT "${FULL_LIB_NAMES}")
 
-  if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
+  if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
+    # Write out the full lib names into file to be read by the python script.
+    file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
+  else()
     foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
       # Replace the special string with a per config directory.
       string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} PER_CONF_CONTENT "${FILE_CONTENT}")
@@ -159,9 +178,6 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
       # ${CMAKE_CFG_INTDIR} correctly and select the right one.
       file(WRITE ${LLVM_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
     endforeach()
-  else()
-    # Write out the full lib names into file to be read by the python script.
-    file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
   endif()
 
   # Generate the exports file dynamically.
@@ -181,7 +197,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
 
   if (LLVM_INTEGRATED_CRT_ALLOC AND MSVC)
     # Make sure we search LLVMSupport first, before the CRT libs
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -INCLUDE:malloc")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}-INCLUDE:malloc")
   endif()
   
 endif()

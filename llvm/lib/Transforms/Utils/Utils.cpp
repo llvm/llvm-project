@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Utils.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 
 using namespace llvm;
@@ -29,8 +28,6 @@ void llvm::initializeTransformUtils(PassRegistry &Registry) {
   initializeLowerInvokeLegacyPassPass(Registry);
   initializeLowerSwitchLegacyPassPass(Registry);
   initializePromoteLegacyPassPass(Registry);
-  initializeStripGCRelocatesLegacyPass(Registry);
-  initializePredicateInfoPrinterLegacyPassPass(Registry);
   initializeFixIrreduciblePass(Registry);
   initializeUnifyLoopExitsLegacyPassPass(Registry);
 }

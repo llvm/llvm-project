@@ -1,5 +1,7 @@
 ; RUN: opt -passes=inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
+;
+; RUN: opt -passes=inline -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Make sure the inliner doesn't crash when a metadata-bridged SSA operand is an
 ; undominated use.
@@ -21,7 +23,7 @@ define i32 @caller(i32 %i) {
 entry:
 ; Although the inliner shouldn't crash, it can't be expected to get the
 ; "correct" SSA value since its assumptions have been violated.
-; CHECK-NEXT:   tail call void @llvm.dbg.value(metadata i32 %add.i,
+; CHECK-NEXT:   #dbg_value(i32 %add.i,
 ; CHECK-NEXT:   %{{.*}} = add nsw
   %call = tail call i32 @foo(i32 %i)
   ret i32 %call

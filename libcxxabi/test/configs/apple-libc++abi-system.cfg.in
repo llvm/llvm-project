@@ -1,0 +1,34 @@
+# Testing configuration for back-deployment against the system-provided libc++abi.
+#
+# Under this configuration, we compile and link all the test suite against the just-built
+# libc++abi, but we run against the system libc++abi.
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+    '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
+    '-I %{libcxx}/test/support -I %{libcxx}/src'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -lc++'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T -- '
+))
+
+config.stdlib = 'apple-libc++'
+config.using_system_stdlib = True
+
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

@@ -248,3 +248,90 @@ define void @test_8_5(ptr %p) {
   load i8, ptr addrspace(3) @shm
   ret void
 }
+
+; CHECK: MayAlias:  i8 addrspace(9)* %p, i8* %p1
+define void @test_9_0(ptr addrspace(9) %p, ptr addrspace(0) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(0) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(9)* %p, i8 addrspace(1)* %p1
+define void @test_9_1(ptr addrspace(9) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(1) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(9)* %p, i8 addrspace(2)* %p1
+define void @test_9_2(ptr addrspace(9) %p, ptr addrspace(2) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(2) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(9)* %p, i8 addrspace(3)* %p1
+define void @test_9_3(ptr addrspace(9) %p, ptr addrspace(3) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(3) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(9)* %p, i8 addrspace(4)* %p1
+define void @test_9_4(ptr addrspace(9) %p, ptr addrspace(4) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(4) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(9)* %p, i8 addrspace(5)* %p1
+define void @test_9_5(ptr addrspace(9) %p, ptr addrspace(5) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(5) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(9)* %p, i8 addrspace(6)* %p1
+define void @test_9_6(ptr addrspace(9) %p, ptr addrspace(6) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(6) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(9)* %p, i8 addrspace(7)* %p1
+define void @test_9_7(ptr addrspace(9) %p, ptr addrspace(7) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(7) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(9)* %p, i8 addrspace(8)* %p1
+define void @test_9_8(ptr addrspace(9) %p, ptr addrspace(8) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(8) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(9)* %p, i8 addrspace(9)* %p1
+define void @test_9_9(ptr addrspace(9) %p, ptr addrspace(9) %p1) {
+  load i8, ptr addrspace(9) %p
+  load i8, ptr addrspace(9) %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: test_kernel_arg_local_ptr
+; CHECK: MayAlias:   i32 addrspace(3)* %arg, i32 addrspace(3)* %arg1
+; CHECK: MayAlias:   i32 addrspace(3)* %arg, i32* %arg2
+; CHECK: MayAlias:   i32 addrspace(3)* %arg1, i32* %arg2
+define amdgpu_kernel void @test_kernel_arg_local_ptr(ptr addrspace(3) %arg) {
+entry:
+  %load1 = load i32, ptr addrspace(3) %arg, align 4
+  %arg.plus.1 = getelementptr inbounds nuw i8, ptr addrspace(3) %arg, i64 1
+  %arg1 = getelementptr inbounds nuw i8, ptr addrspace(3) %arg.plus.1, i64 -1
+  %load2 = load i32, ptr addrspace(3) %arg1, align 4
+  %arg.plus.4 = getelementptr inbounds nuw i8, ptr addrspace(3) %arg, i64 4
+  %acast = addrspacecast ptr addrspace(3) %arg.plus.4 to ptr
+  %arg2 = getelementptr inbounds i8, ptr %acast, i64 -4
+  %load3 = load i32, ptr %arg2, align 4
+  ret void
+}

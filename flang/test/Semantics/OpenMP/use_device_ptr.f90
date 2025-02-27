@@ -1,4 +1,4 @@
-! RUN: %flang -fc1 -fopenmp -fdebug-dump-symbols %s | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols %s | FileCheck %s
 ! OpenMP Version 5.0
 ! 2.10.1 use_device_ptr clause
 ! List items that appear in a use_device_ptr clause are converted into device

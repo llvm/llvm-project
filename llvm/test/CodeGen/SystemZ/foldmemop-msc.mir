@@ -4,10 +4,10 @@
 # Test folding of a memory operand into logical compare with an immediate.
 
 --- |
-  define i32 @fun0(i32* %src, i32 %arg) { ret i32 0 }
-  define i64 @fun1(i64* %src, i64 %arg) { ret i64 0 }
-  define i32 @fun2(i32* %src, i32 %arg) { ret i32 0 }
-  define i64 @fun3(i64* %src, i64 %arg) { ret i64 0 }
+  define i32 @fun0(ptr %src, i32 %arg) { ret i32 0 }
+  define i64 @fun1(ptr %src, i64 %arg) { ret i64 0 }
+  define i32 @fun2(ptr %src, i32 %arg) { ret i32 0 }
+  define i64 @fun3(ptr %src, i64 %arg) { ret i64 0 }
 ...
 
 

@@ -34,7 +34,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
@@ -57,12 +56,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -73,7 +73,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class SymbolizerOptTable : public opt::GenericOptTable {
 public:
-  SymbolizerOptTable() : GenericOptTable(InfoTable) {
+  SymbolizerOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -159,7 +160,7 @@ static Error makeStringError(StringRef Msg) {
 static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
                           StringRef InputString, Command &Cmd,
                           std::string &ModuleName, object::BuildID &BuildID,
-                          StringRef &Symbol, uint64_t &ModuleOffset) {
+                          StringRef &Symbol, uint64_t &Offset) {
   ModuleName = BinaryName;
   if (InputString.consume_front("CODE ")) {
     Cmd = Command::Code;
@@ -224,25 +225,51 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
       return makeStringError("no input filename has been specified");
   }
 
-  // Parse module offset, which can be specified as a number or as a symbol.
-  InputString = InputString.ltrim();
+  // Parse address specification, which can be an offset in module or a
+  // symbol with optional offset.
+  InputString = InputString.trim();
   if (InputString.empty())
     return makeStringError("no module offset has been specified");
 
   // If input string contains a space, ignore everything after it. This behavior
   // is consistent with GNU addr2line.
-  int OffsetLength = InputString.find_first_of(" \n\r");
-  StringRef Offset = InputString.substr(0, OffsetLength);
+  int AddrSpecLength = InputString.find_first_of(" \n\r");
+  StringRef AddrSpec = InputString.substr(0, AddrSpecLength);
+  bool StartsWithDigit = std::isdigit(AddrSpec.front());
 
-  // GNU addr2line assumes the offset is hexadecimal and allows a redundant
+  // GNU addr2line assumes the address is hexadecimal and allows a redundant
   // "0x" or "0X" prefix; do the same for compatibility.
   if (IsAddr2Line)
-    Offset.consume_front("0x") || Offset.consume_front("0X");
+    AddrSpec.consume_front("0x") || AddrSpec.consume_front("0X");
 
-  // If the input is not a number, treat it is a symbol.
-  if (Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset)) {
-    Symbol = Offset;
-    ModuleOffset = 0;
+  // If address specification is a number, treat it as a module offset.
+  if (!AddrSpec.getAsInteger(IsAddr2Line ? 16 : 0, Offset)) {
+    // Module offset is an address.
+    Symbol = StringRef();
+    return Error::success();
+  }
+
+  // If address specification starts with a digit, but is not a number, consider
+  // it as invalid.
+  if (StartsWithDigit || AddrSpec.empty())
+    return makeStringError("expected a number as module offset");
+
+  // Otherwise it is a symbol name, potentially with an offset.
+  Symbol = AddrSpec;
+  Offset = 0;
+
+  // If the address specification contains '+', try treating it as
+  // "symbol + offset".
+  size_t Plus = AddrSpec.rfind('+');
+  if (Plus != StringRef::npos) {
+    StringRef SymbolStr = AddrSpec.take_front(Plus);
+    StringRef OffsetStr = AddrSpec.substr(Plus + 1);
+    if (!SymbolStr.empty() && !OffsetStr.empty() &&
+        !OffsetStr.getAsInteger(0, Offset)) {
+      Symbol = SymbolStr;
+      return Error::success();
+    }
+    // The found '+' is not an offset delimiter.
   }
 
   return Error::success();
@@ -268,7 +295,7 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
     print(SymRequest, ResOrErr, Printer);
   } else if (!Symbol.empty()) {
     Expected<std::vector<DILineInfo>> ResOrErr =
-        Symbolizer.findSymbol(ModuleSpec, Symbol);
+        Symbolizer.findSymbol(ModuleSpec, Symbol, Offset);
     print(SymRequest, ResOrErr, Printer);
   } else if (ShouldInline) {
     Expected<DIInliningInfo> ResOrErr =
@@ -312,6 +339,14 @@ static void symbolizeInput(const opt::InputArgList &Args,
   object::BuildID BuildID(IncomingBuildID.begin(), IncomingBuildID.end());
   uint64_t Offset = 0;
   StringRef Symbol;
+
+  // An empty input string may be used to check if the process is alive and
+  // responding to input. Do not emit a message on stderr in this case but
+  // respond on stdout.
+  if (InputString.empty()) {
+    printUnknownLineInfo(ModuleName, Printer);
+    return;
+  }
   if (Error E = parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
                              StringRef(InputString), Cmd, ModuleName, BuildID,
                              Symbol, Offset)) {
@@ -430,13 +465,12 @@ static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symboliz
   std::string InputString;
   while (std::getline(std::cin, InputString)) {
     InputString += '\n';
-    Filter.filter(InputString);
+    Filter.filter(std::move(InputString));
   }
   Filter.finish();
 }
 
 int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 
   ToolName = argv[0];
@@ -458,6 +492,7 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   } else {
     Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
   }
+  Opts.SkipLineZero = Args.hasArg(OPT_skip_line_zero);
   Opts.DebugFileDirectory = Args.getAllArgValues(OPT_debug_file_directory_EQ);
   Opts.DefaultArch = Args.getLastArgValue(OPT_default_arch_EQ).str();
   Opts.Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, !IsAddr2Line);

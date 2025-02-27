@@ -91,10 +91,10 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[LOADgot:%[0-9]+]]:gpr64common = LOADgot target-flags(aarch64-got) @c
   ; CHECK-NEXT:   [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[LOADgot]], 0 :: (dereferenceable load (s64) from @c)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2359306 /* regdef:WSeqPairsClass_with_sube32_in_MatrixIndexGPR32_12_15 */, def %2, 2147483657 /* reguse tiedto:$0 */, [[LDRDui]](tied-def 3)
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 3735562 /* regdef:FPR64 */, def %2, 2147483657 /* reguse tiedto:$0 */, [[LDRDui]](tied-def 3)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr64 = COPY %2
   ; CHECK-NEXT:   [[LDRDui1:%[0-9]+]]:fpr64 = LDRDui [[LOADgot]], 0 :: (dereferenceable load (s64) from @c)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2359306 /* regdef:WSeqPairsClass_with_sube32_in_MatrixIndexGPR32_12_15 */, def %4, 2147483657 /* reguse tiedto:$0 */, [[LDRDui1]](tied-def 3)
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 3735562 /* regdef:FPR64 */, def %4, 2147483657 /* reguse tiedto:$0 */, [[LDRDui1]](tied-def 3)
   ; CHECK-NEXT:   [[FNEGDr:%[0-9]+]]:fpr64 = FNEGDr %2
   ; CHECK-NEXT:   nofpexcept FCMPDrr %4, killed [[FNEGDr]], implicit-def $nzcv, implicit $fpcr
   ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
@@ -111,10 +111,10 @@ body:             |
 
     %6:gpr64common = LOADgot target-flags(aarch64-got) @c
     %3:fpr64 = LDRDui %6, 0 :: (dereferenceable load (s64) from @c)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2359306 /* regdef:FPR64 */, def %2, 2147483657 /* reguse tiedto:$0 */, %3(tied-def 3)
+    INLINEASM &"", 1 /* sideeffect attdialect */, 3735562 /* regdef:FPR64 */, def %2, 2147483657 /* reguse tiedto:$0 */, %3(tied-def 3)
     %0:fpr64 = COPY %2
     %5:fpr64 = LDRDui %6, 0 :: (dereferenceable load (s64) from @c)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2359306 /* regdef:FPR64 */, def %4, 2147483657 /* reguse tiedto:$0 */, %5(tied-def 3)
+    INLINEASM &"", 1 /* sideeffect attdialect */, 3735562 /* regdef:FPR64 */, def %4, 2147483657 /* reguse tiedto:$0 */, %5(tied-def 3)
     %7:fpr64 = FNEGDr %2
     nofpexcept FCMPDrr %4, killed %7, implicit-def $nzcv, implicit $fpcr
     Bcc 1, %bb.2, implicit $nzcv

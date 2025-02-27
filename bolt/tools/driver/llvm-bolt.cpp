@@ -63,6 +63,11 @@ BoltProfile("b",
   cl::aliasopt(InputDataFilename),
   cl::cat(BoltCategory));
 
+cl::opt<std::string>
+    LogFile("log-file",
+            cl::desc("redirect journaling to a file instead of stdout/stderr"),
+            cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<std::string>
 InputDataFilename2("data2",
   cl::desc("<data file>"),
@@ -124,6 +129,7 @@ void perf2boltMode(int argc, char **argv) {
     exit(1);
   }
   opts::AggregateOnly = true;
+  opts::ShowDensity = true;
 }
 
 void boltDiffMode(int argc, char **argv) {
@@ -167,16 +173,6 @@ void boltMode(int argc, char **argv) {
   }
 }
 
-static std::string GetExecutablePath(const char *Argv0) {
-  SmallString<256> ExecutablePath(Argv0);
-  // Do a PATH lookup if Argv0 isn't a valid path.
-  if (!llvm::sys::fs::exists(ExecutablePath))
-    if (llvm::ErrorOr<std::string> P =
-            llvm::sys::findProgramByName(ExecutablePath))
-      ExecutablePath = *P;
-  return std::string(ExecutablePath.str());
-}
-
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -184,28 +180,48 @@ int main(int argc, char **argv) {
 
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  std::string ToolPath = GetExecutablePath(argv[0]);
+  std::string ToolPath = llvm::sys::fs::getMainExecutable(argv[0], nullptr);
 
   // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
-  llvm::InitializeAllDisassemblers();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
 
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
+#include "bolt/Core/TargetConfig.def"
 
   ToolName = argv[0];
 
-  if (llvm::sys::path::filename(ToolName) == "perf2bolt")
+  if (llvm::sys::path::filename(ToolName).starts_with("perf2bolt"))
     perf2boltMode(argc, argv);
-  else if (llvm::sys::path::filename(ToolName) == "llvm-boltdiff")
+  else if (llvm::sys::path::filename(ToolName).starts_with("llvm-boltdiff"))
     boltDiffMode(argc, argv);
   else
     boltMode(argc, argv);
 
   if (!sys::fs::exists(opts::InputFilename))
     report_error(opts::InputFilename, errc::no_such_file_or_directory);
+
+  // Initialize journaling streams
+  raw_ostream *BOLTJournalOut = &outs();
+  raw_ostream *BOLTJournalErr = &errs();
+  // RAII obj to keep log file open throughout execution
+  std::unique_ptr<raw_fd_ostream> LogFileStream;
+  if (!opts::LogFile.empty()) {
+    std::error_code LogEC;
+    LogFileStream = std::make_unique<raw_fd_ostream>(
+        opts::LogFile, LogEC, sys::fs::OpenFlags::OF_None);
+    if (LogEC) {
+      errs() << "BOLT-ERROR: cannot open requested log file for writing: "
+             << LogEC.message() << "\n";
+      exit(1);
+    }
+    BOLTJournalOut = LogFileStream.get();
+    BOLTJournalErr = LogFileStream.get();
+  }
 
   // Attempt to open the binary.
   if (!opts::DiffOnly) {
@@ -216,7 +232,8 @@ int main(int argc, char **argv) {
     Binary &Binary = *BinaryOrErr.get().getBinary();
 
     if (auto *e = dyn_cast<ELFObjectFileBase>(&Binary)) {
-      auto RIOrErr = RewriteInstance::create(e, argc, argv, ToolPath);
+      auto RIOrErr = RewriteInstance::create(e, argc, argv, ToolPath,
+                                             *BOLTJournalOut, *BOLTJournalErr);
       if (Error E = RIOrErr.takeError())
         report_error(opts::InputFilename, std::move(E));
       RewriteInstance &RI = *RIOrErr.get();

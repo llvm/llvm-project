@@ -7,14 +7,14 @@
 __mmask32 test_knot_mask32(__mmask32 a) {
   // CHECK-LABEL: @test_knot_mask32
   // CHECK: [[IN:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[IN]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[IN]], splat (i1 true)
   return _knot_mask32(a);
 }
 
 __mmask64 test_knot_mask64(__mmask64 a) {
   // CHECK-LABEL: @test_knot_mask64
   // CHECK: [[IN:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[IN]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[IN]], splat (i1 true)
   return _knot_mask64(a);
 }
 
@@ -42,7 +42,7 @@ __mmask32 test_kandn_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kandn_mask32
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = and <32 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu16_mask(_kandn_mask32(_mm512_cmpneq_epu16_mask(__A, __B),
                                                      _mm512_cmpneq_epu16_mask(__C, __D)),
@@ -53,7 +53,7 @@ __mmask64 test_kandn_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kandn_mask64
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = and <64 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu8_mask(_kandn_mask64(_mm512_cmpneq_epu8_mask(__A, __B),
                                                     _mm512_cmpneq_epu8_mask(__C, __D)),
@@ -84,7 +84,7 @@ __mmask32 test_kxnor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kxnor_mask32
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = xor <32 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu16_mask(_kxnor_mask32(_mm512_cmpneq_epu16_mask(__A, __B),
                                                      _mm512_cmpneq_epu16_mask(__C, __D)),
@@ -95,7 +95,7 @@ __mmask64 test_kxnor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kxnor_mask64
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = xor <64 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu8_mask(_kxnor_mask64(_mm512_cmpneq_epu8_mask(__A, __B),
                                                     _mm512_cmpneq_epu8_mask(__C, __D)),
@@ -1889,7 +1889,7 @@ __m512i test_mm512_maskz_mov_epi8(__mmask64 __U, __m512i __A) {
 
 __m512i test_mm512_mask_set1_epi8(__m512i __O, __mmask64 __M, char __A) {
   // CHECK-LABEL: @test_mm512_mask_set1_epi8
-  // CHECK: insertelement <64 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <64 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <64 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <64 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <64 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -1957,7 +1957,7 @@ __m512i test_mm512_mask_set1_epi8(__m512i __O, __mmask64 __M, char __A) {
 
 __m512i test_mm512_maskz_set1_epi8(__mmask64 __M, char __A) {
   // CHECK-LABEL: @test_mm512_maskz_set1_epi8
-  // CHECK: insertelement <64 x i8> undef, i8 %{{.*}}, i32 0
+  // CHECK: insertelement <64 x i8> poison, i8 %{{.*}}, i32 0
   // CHECK: insertelement <64 x i8> %{{.*}}, i8 %{{.*}}, i32 1
   // CHECK: insertelement <64 x i8> %{{.*}}, i8 %{{.*}}, i32 2
   // CHECK: insertelement <64 x i8> %{{.*}}, i8 %{{.*}}, i32 3
@@ -2228,7 +2228,7 @@ __m512i test_mm512_maskz_broadcastw_epi16(__mmask32 __M, __m128i __A) {
 
 __m512i test_mm512_mask_set1_epi16(__m512i __O, __mmask32 __M, short __A) {
   // CHECK-LABEL: @test_mm512_mask_set1_epi16
-  // CHECK: insertelement <32 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <32 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <32 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <32 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <32 x i16> %{{.*}}, i16 %{{.*}}, i32 3
@@ -2266,7 +2266,7 @@ __m512i test_mm512_mask_set1_epi16(__m512i __O, __mmask32 __M, short __A) {
 
 __m512i test_mm512_maskz_set1_epi16(__mmask32 __M, short __A) {
   // CHECK-LABEL: @test_mm512_maskz_set1_epi16
-  // CHECK: insertelement <32 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <32 x i16> poison, i16 %{{.*}}, i32 0
   // CHECK: insertelement <32 x i16> %{{.*}}, i16 %{{.*}}, i32 1
   // CHECK: insertelement <32 x i16> %{{.*}}, i16 %{{.*}}, i32 2
   // CHECK: insertelement <32 x i16> %{{.*}}, i16 %{{.*}}, i32 3

@@ -11,29 +11,23 @@
 #include <climits>
 #include <cstdlib>
 #include <sys/types.h>
+
 #ifndef _WIN32
 #include <dlfcn.h>
 #include <grp.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
 #include <unistd.h>
+#include <spawn.h>
 #endif
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
 #include <mach/mach_init.h>
 #include <mach/mach_port.h>
-#endif
-
-#if defined(__linux__) || defined(__FreeBSD__) ||                              \
-    defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
-    defined(__NetBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
-#if !defined(__ANDROID__)
-#include <spawn.h>
-#endif
-#include <sys/syscall.h>
-#include <sys/wait.h>
 #endif
 
 #if defined(__FreeBSD__)
@@ -63,6 +57,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -89,10 +84,34 @@ using namespace lldb;
 using namespace lldb_private;
 
 #if !defined(__APPLE__)
-void Host::SystemLog(llvm::StringRef message) { llvm::errs() << message; }
+// The system log is currently only meaningful on Darwin, where this means
+// os_log. The meaning of a "system log" isn't as clear on other platforms, and
+// therefore we don't providate a default implementation. Vendors are free to
+// to implement this function if they have a use for it.
+void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif
 
+static constexpr Log::Category g_categories[] = {
+    {{"system"}, {"system log"}, SystemLog::System}};
+
+static Log::Channel g_system_channel(g_categories, SystemLog::System);
+static Log g_system_log(g_system_channel);
+
+template <> Log::Channel &lldb_private::LogChannelFor<SystemLog>() {
+  return g_system_channel;
+}
+
+void LogChannelSystem::Initialize() {
+  g_system_log.Enable(std::make_shared<SystemLogHandler>());
+}
+
+void LogChannelSystem::Terminate() { g_system_log.Disable(); }
+
 #if !defined(__APPLE__) && !defined(_WIN32)
+extern "C" char **environ;
+
+Environment Host::GetEnvironment() { return Environment(environ); }
+
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,
                                   Host::MonitorChildProcessCallback callback);
@@ -133,11 +152,7 @@ private:
 #endif // __linux__
 
 #ifdef __linux__
-#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8))
-static __thread volatile sig_atomic_t g_usr1_called;
-#else
 static thread_local volatile sig_atomic_t g_usr1_called;
-#endif
 
 static void SigUsr1Handler(int) { g_usr1_called = 1; }
 #endif // __linux__
@@ -331,7 +346,6 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) { return false; }
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
-#if !defined(__ANDROID__)
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname) {
@@ -339,7 +353,6 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
       FileSystem::Instance().Resolve(module_filespec);
     }
   }
-#endif
   return module_filespec;
 }
 
@@ -473,11 +486,12 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   const lldb::pid_t pid = launch_info.GetProcessID();
 
   if (error.Success() && pid == LLDB_INVALID_PROCESS_ID)
-    error.SetErrorString("failed to get process ID");
+    error = Status::FromErrorString("failed to get process ID");
 
   if (error.Success()) {
     if (!shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout)) {
-      error.SetErrorString("timed out waiting for shell command to complete");
+      error = Status::FromErrorString(
+          "timed out waiting for shell command to complete");
 
       // Kill the process since it didn't complete within the timeout specified
       Kill(pid, SIGKILL);
@@ -497,7 +511,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             FileSystem::Instance().GetByteSize(output_file_spec);
         if (file_size > 0) {
           if (file_size > command_output_ptr->max_size()) {
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
             WritableDataBufferSP Buffer =
@@ -558,7 +572,7 @@ bool Host::IsInteractiveGraphicSession() { return false; }
 
 std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
 #if defined(_WIN32)
-  if (url.startswith("file://"))
+  if (url.starts_with("file://"))
     return std::unique_ptr<Connection>(new ConnectionGenericFile());
 #endif
   return std::unique_ptr<Connection>(new ConnectionFileDescriptor());
@@ -622,5 +636,5 @@ char SystemLogHandler::ID;
 SystemLogHandler::SystemLogHandler() {}
 
 void SystemLogHandler::Emit(llvm::StringRef message) {
-  Host::SystemLog(message);
+  Host::SystemLog(lldb::eSeverityInfo, message);
 }

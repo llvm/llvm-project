@@ -14,13 +14,13 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/Support/Threading.h"
 
@@ -81,9 +81,9 @@ ObjCLanguage::MethodName::Create(llvm::StringRef name, bool strict) {
 
   // Figure out type
   Type type = eTypeUnspecified;
-  if (name.startswith("+["))
+  if (name.starts_with("+["))
     type = eTypeClassMethod;
-  else if (name.startswith("-["))
+  else if (name.starts_with("-["))
     type = eTypeInstanceMethod;
 
   // If there's no type and it's strict, this is invalid
@@ -1039,4 +1039,12 @@ bool ObjCLanguage::IsSourceFile(llvm::StringRef file_path) const {
       return true;
   }
   return false;
+}
+
+std::optional<bool>
+ObjCLanguage::GetBooleanFromString(llvm::StringRef str) const {
+  return llvm::StringSwitch<std::optional<bool>>(str)
+      .Case("YES", {true})
+      .Case("NO", {false})
+      .Default({});
 }

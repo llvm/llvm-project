@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 ; Verify that we correctly emit code for extending ldg/ldu. We do not expose
 ; extending variants in the backend, but the ldg/ldu selection code may pick
@@ -26,8 +26,4 @@ bb:
   ret void
 }
 
-attributes #0 = { norecurse nounwind "polly.skip.fn" }
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @spam, !"maxntidx", i64 1, !"maxntidy", i64 1, !"maxntidz", i64 1}
+attributes #0 = { norecurse nounwind "polly.skip.fn" "nvvm.maxntid"="1,1,1" }

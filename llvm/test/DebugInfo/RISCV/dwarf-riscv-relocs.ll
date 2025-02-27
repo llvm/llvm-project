@@ -6,14 +6,14 @@
 
 ; Check that we actually have relocations, otherwise this is kind of pointless.
 ; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_info {
-; READOBJ-RELOCS:    0x1B R_RISCV_ADD32 <null> 0x0
-; READOBJ-RELOCS-NEXT:    0x1B R_RISCV_SUB32 <null> 0x0
+; READOBJ-RELOCS:    0x1B R_RISCV_ADD32 .L0  0x0
+; READOBJ-RELOCS-NEXT:    0x1B R_RISCV_SUB32 .L0  0x0
 ; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_frame {
-; READOBJ-RELOCS:    0x20 R_RISCV_ADD32 <null> 0x0
-; READOBJ-RELOCS-NEXT:    0x20 R_RISCV_SUB32 <null> 0x0
+; READOBJ-RELOCS:    0x20 R_RISCV_ADD32 .L0  0x0
+; READOBJ-RELOCS-NEXT:    0x20 R_RISCV_SUB32 .L0  0x0
 ; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_line {
-; READOBJ-RELOCS:    0x5A R_RISCV_ADD16 <null> 0x0
-; READOBJ-RELOCS-NEXT:    0x5A R_RISCV_SUB16 <null> 0x0
+; READOBJ-RELOCS:    0x5A R_RISCV_ADD16 .L0  0x0
+; READOBJ-RELOCS-NEXT:    0x5A R_RISCV_SUB16 .L0  0x0
 
 ; Check that we can print the source, even with relocations.
 ; OBJDUMP-SOURCE: Disassembly of section .text:
@@ -71,7 +71,7 @@
 ; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
 ; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt
 ; DWARF-DUMP-NEXT: 0x000000000000001c      3      5      0   0             0       0  is_stmt prologue_end
-; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0       0  epilogue_begin
+; DWARF-DUMP-NEXT: 0x0000000000000020      3      5      0   0             0       0  epilogue_begin
 ; DWARF-DUMP-NEXT: 0x0000000000000030      3      5      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-riscv-relocs.c'

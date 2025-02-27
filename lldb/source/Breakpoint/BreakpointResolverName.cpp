@@ -87,8 +87,7 @@ BreakpointResolverName::BreakpointResolverName(
       m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
 
 BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+    const StructuredData::Dictionary &options_dict, Status &error) {
   LanguageType language = eLanguageTypeUnknown;
   llvm::StringRef language_name;
   bool success = options_dict.GetValueForKeyAsString(
@@ -96,8 +95,8 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
   if (success) {
     language = Language::GetLanguageTypeFromString(language_name);
     if (language == eLanguageTypeUnknown) {
-      error.SetErrorStringWithFormatv("BRN::CFSD: Unknown language: {0}.",
-                                      language_name);
+      error = Status::FromErrorStringWithFormatv(
+          "BRN::CFSD: Unknown language: {0}.", language_name);
       return nullptr;
     }
   }
@@ -106,7 +105,7 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
   success =
       options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Offset), offset);
   if (!success) {
-    error.SetErrorString("BRN::CFSD: Missing offset entry.");
+    error = Status::FromErrorString("BRN::CFSD: Missing offset entry.");
     return nullptr;
   }
 
@@ -114,7 +113,7 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::SkipPrologue), skip_prologue);
   if (!success) {
-    error.SetErrorString("BRN::CFSD: Missing Skip prologue entry.");
+    error = Status::FromErrorString("BRN::CFSD: Missing Skip prologue entry.");
     return nullptr;
   }
 
@@ -123,32 +122,34 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
       GetKey(OptionNames::RegexString), regex_text);
   if (success) {
     return std::make_shared<BreakpointResolverName>(
-        bkpt, RegularExpression(regex_text), language, offset, skip_prologue);
+        nullptr, RegularExpression(regex_text), language, offset,
+        skip_prologue);
   } else {
     StructuredData::Array *names_array;
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::SymbolNameArray), names_array);
     if (!success) {
-      error.SetErrorString("BRN::CFSD: Missing symbol names entry.");
+      error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
       return nullptr;
     }
     StructuredData::Array *names_mask_array;
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::NameMaskArray), names_mask_array);
     if (!success) {
-      error.SetErrorString("BRN::CFSD: Missing symbol names mask entry.");
+      error = Status::FromErrorString(
+          "BRN::CFSD: Missing symbol names mask entry.");
       return nullptr;
     }
 
     size_t num_elem = names_array->GetSize();
     if (num_elem != names_mask_array->GetSize()) {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "BRN::CFSD: names and names mask arrays have different sizes.");
       return nullptr;
     }
 
     if (num_elem == 0) {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "BRN::CFSD: no name entry in a breakpoint by name breakpoint.");
       return nullptr;
     }
@@ -158,22 +159,24 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
       std::optional<llvm::StringRef> maybe_name =
           names_array->GetItemAtIndexAsString(i);
       if (!maybe_name) {
-        error.SetErrorString("BRN::CFSD: name entry is not a string.");
+        error =
+            Status::FromErrorString("BRN::CFSD: name entry is not a string.");
         return nullptr;
       }
-      std::underlying_type<FunctionNameType>::type fnt;
-      success = names_mask_array->GetItemAtIndexAsInteger(i, fnt);
-      if (!success) {
-        error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
+      auto maybe_fnt = names_mask_array->GetItemAtIndexAsInteger<
+          std::underlying_type<FunctionNameType>::type>(i);
+      if (!maybe_fnt) {
+        error = Status::FromErrorString(
+            "BRN::CFSD: name mask entry is not an integer.");
         return nullptr;
       }
       names.push_back(std::string(*maybe_name));
-      name_masks.push_back(static_cast<FunctionNameType>(fnt));
+      name_masks.push_back(static_cast<FunctionNameType>(*maybe_fnt));
     }
 
     std::shared_ptr<BreakpointResolverName> resolver_sp =
         std::make_shared<BreakpointResolverName>(
-            bkpt, names[0].c_str(), name_masks[0], language,
+            nullptr, names[0].c_str(), name_masks[0], language,
             Breakpoint::MatchType::Exact, offset, skip_prologue);
     for (size_t i = 1; i < num_elem; i++) {
       resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
@@ -336,7 +339,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (!sc.block->GetStartAddress(break_addr))
         break_addr.Clear();
     } else if (sc.function) {
-      break_addr = sc.function->GetAddressRange().GetBaseAddress();
+      break_addr = sc.function->GetAddress();
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
         if (prologue_byte_size)

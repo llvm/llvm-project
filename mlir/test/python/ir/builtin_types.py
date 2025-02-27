@@ -3,6 +3,7 @@
 import gc
 from mlir.ir import *
 from mlir.dialects import arith, tensor, func, memref
+import mlir.extras.types as T
 
 
 def run(f):
@@ -56,8 +57,8 @@ def testTypeEq():
     print("t1 == t2:", t1 == t2)
     # CHECK: t1 == t3: True
     print("t1 == t3:", t1 == t3)
-    # CHECK: t1 == None: False
-    print("t1 == None:", t1 == None)
+    # CHECK: t1 is None: False
+    print("t1 is None:", t1 is None)
 
 
 # CHECK-LABEL: TEST: testTypeHash
@@ -99,8 +100,50 @@ def testTypeIsInstance():
     print(IntegerType.isinstance(t1))
     # CHECK: False
     print(F32Type.isinstance(t1))
+    # CHECK: False
+    print(FloatType.isinstance(t1))
     # CHECK: True
     print(F32Type.isinstance(t2))
+    # CHECK: True
+    print(FloatType.isinstance(t2))
+
+
+# CHECK-LABEL: TEST: testFloatTypeSubclasses
+@run
+def testFloatTypeSubclasses():
+    ctx = Context()
+    # CHECK: True
+    print(isinstance(Type.parse("f4E2M1FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f6E2M3FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f6E3M2FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E3M4", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3FN", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E5M2", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3FNUZ", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E4M3B11FNUZ", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E5M2FNUZ", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f8E8M0FNU", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f16", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("bf16", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f32", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("tf32", ctx), FloatType))
+    # CHECK: True
+    print(isinstance(Type.parse("f64", ctx), FloatType))
 
 
 # CHECK-LABEL: TEST: testTypeEqDoesNotRaise
@@ -112,9 +155,9 @@ def testTypeEqDoesNotRaise():
     # CHECK: False
     print(t1 == not_a_type)
     # CHECK: False
-    print(t1 == None)
+    print(t1 is None)
     # CHECK: True
-    print(t1 != None)
+    print(t1 is not None)
 
 
 # CHECK-LABEL: TEST: testTypeCapsule
@@ -198,6 +241,16 @@ def testIndexType():
 @run
 def testFloatType():
     with Context():
+        # CHECK: float: f4E2M1FN
+        print("float:", Float4E2M1FNType.get())
+        # CHECK: float: f6E2M3FN
+        print("float:", Float6E2M3FNType.get())
+        # CHECK: float: f6E3M2FN
+        print("float:", Float6E3M2FNType.get())
+        # CHECK: float: f8E3M4
+        print("float:", Float8E3M4Type.get())
+        # CHECK: float: f8E4M3
+        print("float:", Float8E4M3Type.get())
         # CHECK: float: f8E4M3FN
         print("float:", Float8E4M3FNType.get())
         # CHECK: float: f8E5M2
@@ -208,6 +261,8 @@ def testFloatType():
         print("float:", Float8E4M3FNUZType.get())
         # CHECK: float: f8E4M3B11FNUZ
         print("float:", Float8E4M3B11FNUZType.get())
+        # CHECK: float: f8E8M0FNU
+        print("float:", Float8E8M0FNUType.get())
         # CHECK: float: bf16
         print("float:", BF16Type.get())
         # CHECK: float: f16
@@ -217,7 +272,10 @@ def testFloatType():
         # CHECK: float: f32
         print("float:", F32Type.get())
         # CHECK: float: f64
-        print("float:", F64Type.get())
+        f64 = F64Type.get()
+        print("float:", f64)
+        # CHECK: f64 width: 64
+        print("f64 width:", f64.width)
 
 
 # CHECK-LABEL: TEST: testNoneType
@@ -303,7 +361,7 @@ def testVectorType():
             VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: vector elements must be int/index/float type but got 'none'
+            # CHECK: error: unknown: failed to verify 'elementType': integer or index or floating-point
             print(e)
         else:
             print("Exception not produced")
@@ -567,14 +625,21 @@ def testTypeIDs():
         types = [
             (IntegerType, IntegerType.get_signless(16)),
             (IndexType, IndexType.get()),
+            (Float4E2M1FNType, Float4E2M1FNType.get()),
+            (Float6E2M3FNType, Float6E2M3FNType.get()),
+            (Float6E3M2FNType, Float6E3M2FNType.get()),
+            (Float8E3M4Type, Float8E3M4Type.get()),
+            (Float8E4M3Type, Float8E4M3Type.get()),
             (Float8E4M3FNType, Float8E4M3FNType.get()),
             (Float8E5M2Type, Float8E5M2Type.get()),
             (Float8E4M3FNUZType, Float8E4M3FNUZType.get()),
             (Float8E4M3B11FNUZType, Float8E4M3B11FNUZType.get()),
             (Float8E5M2FNUZType, Float8E5M2FNUZType.get()),
+            (Float8E8M0FNUType, Float8E8M0FNUType.get()),
             (BF16Type, BF16Type.get()),
             (F16Type, F16Type.get()),
             (F32Type, F32Type.get()),
+            (FloatTF32Type, FloatTF32Type.get()),
             (F64Type, F64Type.get()),
             (NoneType, NoneType.get()),
             (ComplexType, ComplexType.get(f32)),
@@ -590,14 +655,21 @@ def testTypeIDs():
 
         # CHECK: IntegerType(i16)
         # CHECK: IndexType(index)
+        # CHECK: Float4E2M1FNType(f4E2M1FN)
+        # CHECK: Float6E2M3FNType(f6E2M3FN)
+        # CHECK: Float6E3M2FNType(f6E3M2FN)
+        # CHECK: Float8E3M4Type(f8E3M4)
+        # CHECK: Float8E4M3Type(f8E4M3)
         # CHECK: Float8E4M3FNType(f8E4M3FN)
         # CHECK: Float8E5M2Type(f8E5M2)
         # CHECK: Float8E4M3FNUZType(f8E4M3FNUZ)
         # CHECK: Float8E4M3B11FNUZType(f8E4M3B11FNUZ)
         # CHECK: Float8E5M2FNUZType(f8E5M2FNUZ)
+        # CHECK: Float8E8M0FNUType(f8E8M0FNU)
         # CHECK: BF16Type(bf16)
         # CHECK: F16Type(f16)
         # CHECK: F32Type(f32)
+        # CHECK: FloatTF32Type(tf32)
         # CHECK: F64Type(f64)
         # CHECK: NoneType(none)
         # CHECK: ComplexType(complex<f32>)
@@ -664,12 +736,30 @@ def testConcreteTypesRoundTrip():
         # CHECK: F32Type
         # CHECK: F32Type(f32)
         print_downcasted(F32Type.get())
+        # CHECK: FloatTF32Type
+        # CHECK: FloatTF32Type(tf32)
+        print_downcasted(FloatTF32Type.get())
         # CHECK: F64Type
         # CHECK: F64Type(f64)
         print_downcasted(F64Type.get())
+        # CHECK: Float4E2M1FNType
+        # CHECK: Float4E2M1FNType(f4E2M1FN)
+        print_downcasted(Float4E2M1FNType.get())
+        # CHECK: Float6E2M3FNType
+        # CHECK: Float6E2M3FNType(f6E2M3FN)
+        print_downcasted(Float6E2M3FNType.get())
+        # CHECK: Float6E3M2FNType
+        # CHECK: Float6E3M2FNType(f6E3M2FN)
+        print_downcasted(Float6E3M2FNType.get())
+        # CHECK: Float8E3M4Type
+        # CHECK: Float8E3M4Type(f8E3M4)
+        print_downcasted(Float8E3M4Type.get())
         # CHECK: Float8E4M3B11FNUZType
         # CHECK: Float8E4M3B11FNUZType(f8E4M3B11FNUZ)
         print_downcasted(Float8E4M3B11FNUZType.get())
+        # CHECK: Float8E4M3Type
+        # CHECK: Float8E4M3Type(f8E4M3)
+        print_downcasted(Float8E4M3Type.get())
         # CHECK: Float8E4M3FNType
         # CHECK: Float8E4M3FNType(f8E4M3FN)
         print_downcasted(Float8E4M3FNType.get())
@@ -682,6 +772,9 @@ def testConcreteTypesRoundTrip():
         # CHECK: Float8E5M2FNUZType
         # CHECK: Float8E5M2FNUZType(f8E5M2FNUZ)
         print_downcasted(Float8E5M2FNUZType.get())
+        # CHECK: Float8E8M0FNUType
+        # CHECK: Float8E8M0FNUType(f8E8M0FNU)
+        print_downcasted(Float8E8M0FNUType.get())
         # CHECK: BF16Type
         # CHECK: BF16Type(bf16)
         print_downcasted(BF16Type.get())
@@ -772,3 +865,101 @@ def testCustomTypeTypeCaster():
         print(t)
         # CHECK: OperationType(!transform.op<"foo.bar">)
         print(repr(t))
+
+
+# CHECK-LABEL: TEST: testTypeWrappers
+@run
+def testTypeWrappers():
+    def stride(strides, offset=0):
+        return StridedLayoutAttr.get(offset, strides)
+
+    with Context(), Location.unknown():
+        ia = T.i(5)
+        sia = T.si(6)
+        uia = T.ui(7)
+        assert repr(ia) == "IntegerType(i5)"
+        assert repr(sia) == "IntegerType(si6)"
+        assert repr(uia) == "IntegerType(ui7)"
+
+        assert T.i(16) == T.i16()
+        assert T.si(16) == T.si16()
+        assert T.ui(16) == T.ui16()
+
+        c1 = T.complex(T.f16())
+        c2 = T.complex(T.i32())
+        assert repr(c1) == "ComplexType(complex<f16>)"
+        assert repr(c2) == "ComplexType(complex<i32>)"
+
+        vec_1 = T.vector(2, 3, T.f32())
+        vec_2 = T.vector(2, 3, 4, T.f32())
+        assert repr(vec_1) == "VectorType(vector<2x3xf32>)"
+        assert repr(vec_2) == "VectorType(vector<2x3x4xf32>)"
+
+        m1 = T.memref(2, 3, 4, T.f64())
+        assert repr(m1) == "MemRefType(memref<2x3x4xf64>)"
+
+        m2 = T.memref(2, 3, 4, T.f64(), memory_space=1)
+        assert repr(m2) == "MemRefType(memref<2x3x4xf64, 1>)"
+
+        m3 = T.memref(2, 3, 4, T.f64(), memory_space=1, layout=stride([5, 7, 13]))
+        assert repr(m3) == "MemRefType(memref<2x3x4xf64, strided<[5, 7, 13]>, 1>)"
+
+        m4 = T.memref(2, 3, 4, T.f64(), memory_space=1, layout=stride([5, 7, 13], 42))
+        assert (
+            repr(m4)
+            == "MemRefType(memref<2x3x4xf64, strided<[5, 7, 13], offset: 42>, 1>)"
+        )
+
+        S = ShapedType.get_dynamic_size()
+
+        t1 = T.tensor(S, 3, S, T.f64())
+        assert repr(t1) == "RankedTensorType(tensor<?x3x?xf64>)"
+        ut1 = T.tensor(T.f64())
+        assert repr(ut1) == "UnrankedTensorType(tensor<*xf64>)"
+        t2 = T.tensor(S, 3, S, element_type=T.f64())
+        assert repr(t2) == "RankedTensorType(tensor<?x3x?xf64>)"
+        ut2 = T.tensor(element_type=T.f64())
+        assert repr(ut2) == "UnrankedTensorType(tensor<*xf64>)"
+
+        t3 = T.tensor(S, 3, S, T.f64(), encoding="encoding")
+        assert repr(t3) == 'RankedTensorType(tensor<?x3x?xf64, "encoding">)'
+
+        v = T.vector(3, 3, 3, T.f64())
+        assert repr(v) == "VectorType(vector<3x3x3xf64>)"
+
+        m5 = T.memref(S, 3, S, T.f64())
+        assert repr(m5) == "MemRefType(memref<?x3x?xf64>)"
+        um1 = T.memref(T.f64())
+        assert repr(um1) == "UnrankedMemRefType(memref<*xf64>)"
+        m6 = T.memref(S, 3, S, element_type=T.f64())
+        assert repr(m6) == "MemRefType(memref<?x3x?xf64>)"
+        um2 = T.memref(element_type=T.f64())
+        assert repr(um2) == "UnrankedMemRefType(memref<*xf64>)"
+
+        m7 = T.memref(S, 3, S, T.f64())
+        assert repr(m7) == "MemRefType(memref<?x3x?xf64>)"
+        um3 = T.memref(T.f64())
+        assert repr(um3) == "UnrankedMemRefType(memref<*xf64>)"
+
+        scalable_1 = T.vector(2, 3, T.f32(), scalable=[False, True])
+        scalable_2 = T.vector(2, 3, 4, T.f32(), scalable=[True, False, True])
+        assert repr(scalable_1) == "VectorType(vector<2x[3]xf32>)"
+        assert repr(scalable_2) == "VectorType(vector<[2]x3x[4]xf32>)"
+
+        scalable_3 = T.vector(2, 3, T.f32(), scalable_dims=[1])
+        scalable_4 = T.vector(2, 3, 4, T.f32(), scalable_dims=[0, 2])
+        assert scalable_3 == scalable_1
+        assert scalable_4 == scalable_2
+
+        opaq = T.opaque("scf", "placeholder")
+        assert repr(opaq) == "OpaqueType(!scf.placeholder)"
+
+        tup1 = T.tuple(T.i16(), T.i32(), T.i64())
+        tup2 = T.tuple(T.f16(), T.f32(), T.f64())
+        assert repr(tup1) == "TupleType(tuple<i16, i32, i64>)"
+        assert repr(tup2) == "TupleType(tuple<f16, f32, f64>)"
+
+        func = T.function(
+            inputs=(T.i16(), T.i32(), T.i64()), results=(T.f16(), T.f32(), T.f64())
+        )
+        assert repr(func) == "FunctionType((i16, i32, i64) -> (f16, f32, f64))"

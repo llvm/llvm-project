@@ -15,11 +15,11 @@
 // build systems to override this value.
 // https://libcxx.llvm.org/UsingLibcxx.html#enabling-the-safe-libc-mode
 #ifndef _LIBCPP_VERBOSE_ABORT
-#define _LIBCPP_VERBOSE_ABORT(...) abort_message(__VA_ARGS__)
+#define _LIBCPP_VERBOSE_ABORT(...) __abort_message(__VA_ARGS__)
 #include "../abort_message.h"
 #endif
 
-#include <ciso646>
+#include <version>
 
 #ifdef _MSC_VER
 // snprintf is implemented in VS 2015
@@ -97,6 +97,11 @@
 #define DEMANGLE_FALLTHROUGH [[clang::fallthrough]]
 #else
 #define DEMANGLE_FALLTHROUGH
+#endif
+
+#ifndef DEMANGLE_ASSERT
+#include <cassert>
+#define DEMANGLE_ASSERT(__expr, __msg) assert((__expr) && (__msg))
 #endif
 
 #define DEMANGLE_NAMESPACE_BEGIN namespace { namespace itanium_demangle {

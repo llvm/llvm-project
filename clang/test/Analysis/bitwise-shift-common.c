@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core.BitwiseShift \
+// RUN:    -analyzer-checker=debug.ExprInspection \
 // RUN:    -analyzer-output=text -verify \
 // RUN:    -triple x86_64-pc-linux-gnu -x c %s \
 // RUN:    -Wno-shift-count-negative -Wno-shift-negative-value \
@@ -6,6 +7,7 @@
 // RUN:    -Wno-shift-sign-overflow
 //
 // RUN: %clang_analyze_cc1 -analyzer-checker=core.BitwiseShift \
+// RUN:    -analyzer-checker=debug.ExprInspection \
 // RUN:    -analyzer-config core.BitwiseShift:Pedantic=true \
 // RUN:    -analyzer-output=text -verify \
 // RUN:    -triple x86_64-pc-linux-gnu -x c++ -std=c++20 %s \
@@ -85,17 +87,23 @@ int too_large_right_operand_symbolic(int left, int right) {
     return 0;
   return left >> right;
   // expected-warning@-1 {{Right shift overflows the capacity of 'int'}}
-  // expected-note@-2 {{The result of right shift is undefined because the right operand is not smaller than 32, the capacity of 'int'}}
-  // NOTE: the messages of the checker are a bit vague in this case, but the
-  // tracking of the variables reveals our knowledge about them.
+  // expected-note@-2 {{The result of right shift is undefined because the right operand is >= 32, not smaller than 32, the capacity of 'int'}}
 }
 
+void clang_analyzer_value(int);
 int too_large_right_operand_compound(unsigned short arg) {
   // Note: this would be valid code with an 'unsigned int' because
   // unsigned addition is allowed to overflow.
+  clang_analyzer_value(32+arg);
+  // expected-warning@-1 {{32s:{ [-2147483648, 2147483647] }}
+  // expected-note@-2 {{32s:{ [-2147483648, 2147483647] }}
   return 1 << (32 + arg);
   // expected-warning@-1 {{Left shift overflows the capacity of 'int'}}
   // expected-note@-2 {{The result of left shift is undefined because the right operand is not smaller than 32, the capacity of 'int'}}
+  // FIXME: this message should be
+  //     {{The result of left shift is undefined because the right operand is >= 32, not smaller than 32, the capacity of 'int'}}
+  // but for some reason neither the new logic, nor debug.ExprInspection and
+  // clang_analyzer_value reports this range information.
 }
 
 // TEST STATE UPDATES
@@ -146,7 +154,7 @@ int expression_tracked_back(void) {
 //===----------------------------------------------------------------------===//
 
 int allow_overflows_and_negative_operands(void) {
-  // These are all legal under C++ 20 and many compilers accept them under
+  // These are all legal under C++20 and many compilers accept them under
   // earlier standards as well.
   int int_min = 1 << 31; // no-warning
   int this_overflows = 1027 << 30; // no-warning

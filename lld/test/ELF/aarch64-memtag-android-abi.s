@@ -5,7 +5,7 @@
 ## maintained, i.e. new versions of the linker will still produce binaries that
 ## can be run on these versions of Android.
 
-# RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android %s -o %t.o
+# RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android %s -o %t.o
 # RUN: ld.lld -shared --android-memtag-mode=async --android-memtag-heap %t.o -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=CHECK,HEAP,NOSTACK,ASYNC
 
@@ -55,6 +55,18 @@
 # RUN:    FileCheck %s --check-prefix=BAD-MODE
 # BAD-MODE: error: unknown --android-memtag-mode value: "asymm", should be one of
 # BAD-MODE: {async, sync, none}
+
+# RUN: ld.lld -static --android-memtag-mode=sync --android-memtag-heap \
+# RUN:    --android-memtag-stack %t.o -o %t
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=STATIC
+
+# STATIC:      Memtag Dynamic Entries:
+# STATIC-NEXT: < none found >
+# STATIC:      Memtag Android Note:
+# STATIC-NEXT:  Tagging Mode: SYNC
+# STATIC-NEXT:  Heap: Enabled
+# STATIC-NEXT:  Stack: Enabled
+
 
 .globl _start
 _start:

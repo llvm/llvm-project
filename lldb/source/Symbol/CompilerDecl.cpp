@@ -9,6 +9,7 @@
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Utility/Scalar.h"
 
 using namespace lldb_private;
 
@@ -22,6 +23,10 @@ ConstString CompilerDecl::GetMangledName() const {
 
 CompilerDeclContext CompilerDecl::GetDeclContext() const {
   return m_type_system->DeclGetDeclContext(m_opaque_decl);
+}
+
+CompilerType CompilerDecl::GetType() const {
+  return m_type_system->GetTypeForDecl(m_opaque_decl);
 }
 
 CompilerType CompilerDecl::GetFunctionReturnType() const {
@@ -46,4 +51,13 @@ bool lldb_private::operator!=(const lldb_private::CompilerDecl &lhs,
                               const lldb_private::CompilerDecl &rhs) {
   return lhs.GetTypeSystem() != rhs.GetTypeSystem() ||
          lhs.GetOpaqueDecl() != rhs.GetOpaqueDecl();
+}
+
+std::vector<lldb_private::CompilerContext>
+CompilerDecl::GetCompilerContext() const {
+  return m_type_system->DeclGetCompilerContext(m_opaque_decl);
+}
+
+Scalar CompilerDecl::GetConstantValue() const {
+  return m_type_system->DeclGetConstantValue(m_opaque_decl);
 }

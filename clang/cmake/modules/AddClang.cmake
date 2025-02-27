@@ -26,7 +26,6 @@ function(clang_tablegen)
 
   if(CTG_TARGET)
     add_public_tablegen_target(${CTG_TARGET})
-    set_target_properties( ${CTG_TARGET} PROPERTIES FOLDER "Clang tablegenning")
     set_property(GLOBAL APPEND PROPERTY CLANG_TABLEGEN_TARGETS ${CTG_TARGET})
   endif()
 endfunction(clang_tablegen)
@@ -97,13 +96,29 @@ macro(add_clang_library name)
     else()
       set(LIBTYPE STATIC)
     endif()
-    if(NOT XCODE)
+    if(NOT XCODE AND NOT MSVC_IDE)
       # The Xcode generator doesn't handle object libraries correctly.
+      # The Visual Studio CMake generator does handle object libraries
+      # correctly, but it is preferable to list the libraries with their
+      # source files (instead of the object files and the source files in
+      # a separate target in the "Object Libraries" folder)
       list(APPEND LIBTYPE OBJECT)
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
+
+  if(MSVC AND NOT CLANG_LINK_CLANG_DYLIB)
+    # Make sure all consumers also turn off visibility macros so they're not
+    # trying to dllimport symbols.
+    target_compile_definitions(${name} PUBLIC CLANG_BUILD_STATIC)
+    if(TARGET "obj.${name}")
+      target_compile_definitions("obj.${name}" PUBLIC CLANG_BUILD_STATIC)
+    endif()
+  elseif(TARGET "obj.${name}" AND NOT ARG_SHARED AND NOT ARG_STATIC)
+    # Clang component libraries linked to clang-cpp are declared without SHARED or STATIC
+    target_compile_definitions("obj.${name}" PUBLIC CLANG_EXPORTS)
+  endif()
 
   set(libs ${name})
   if(ARG_SHARED AND ARG_STATIC)
@@ -138,14 +153,13 @@ macro(add_clang_library name)
     endif()
   endforeach()
 
-  set_target_properties(${name} PROPERTIES FOLDER "Clang libraries")
   set_clang_windows_version_resource_properties(${name})
 endmacro(add_clang_library)
 
 macro(add_clang_executable name)
   add_llvm_executable( ${name} ${ARGN} )
-  set_target_properties(${name} PROPERTIES FOLDER "Clang executables")
   set_clang_windows_version_resource_properties(${name})
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro(add_clang_executable)
 
 macro(add_clang_tool name)
@@ -180,6 +194,7 @@ macro(add_clang_tool name)
       set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
     endif()
   endif()
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro()
 
 macro(add_clang_symlink name dest)

@@ -29,8 +29,7 @@ bool ValidateMemRefs::checkAndFixJTReference(BinaryFunction &BF, MCInst &Inst,
   if (!BD)
     return false;
 
-  const uint64_t TargetAddress = BD->getAddress() + Offset;
-  JumpTable *JT = BC.getJumpTableContainingAddress(TargetAddress);
+  JumpTable *JT = BC.getJumpTableContainingAddress(BD->getAddress());
   if (!JT)
     return false;
 
@@ -43,8 +42,9 @@ bool ValidateMemRefs::checkAndFixJTReference(BinaryFunction &BF, MCInst &Inst,
   // the jump table label with a regular rodata reference. Get a
   // non-JT reference by fetching the symbol 1 byte before the JT
   // label.
-  MCSymbol *NewSym = BC.getOrCreateGlobalSymbol(TargetAddress - 1, "DATAat");
-  BC.MIB->setOperandToSymbolRef(Inst, OperandNum, NewSym, 1, &*BC.Ctx, 0);
+  MCSymbol *NewSym = BC.getOrCreateGlobalSymbol(BD->getAddress() - 1, "DATAat");
+  BC.MIB->setOperandToSymbolRef(Inst, OperandNum, NewSym, Offset + 1, &*BC.Ctx,
+                                0);
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: replaced reference @" << BF.getPrintName()
                     << " from " << BD->getName() << " to " << NewSym->getName()
                     << " + 1\n");
@@ -72,13 +72,13 @@ void ValidateMemRefs::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void ValidateMemRefs::runOnFunctions(BinaryContext &BC) {
+Error ValidateMemRefs::runOnFunctions(BinaryContext &BC) {
   if (!BC.isX86())
-    return;
+    return Error::success();
 
   // Skip validation if not moving JT
   if (opts::JumpTables == JTS_NONE || opts::JumpTables == JTS_BASIC)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncWithAllocTy ProcessFunction =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId) {
@@ -94,10 +94,11 @@ void ValidateMemRefs::runOnFunctions(BinaryContext &BC) {
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: memrefs validation is concluded\n");
 
   if (!ReplacedReferences)
-    return;
+    return Error::success();
 
-  outs() << "BOLT-INFO: validate-mem-refs updated " << ReplacedReferences
-         << " object references\n";
+  BC.outs() << "BOLT-INFO: validate-mem-refs updated " << ReplacedReferences
+            << " object references\n";
+  return Error::success();
 }
 
 } // namespace llvm::bolt

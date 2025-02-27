@@ -16,15 +16,12 @@ define void @_ada_c34007g() {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movl (%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:  .LBB0_3: # %bb5507
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    testb %cl, %al
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4

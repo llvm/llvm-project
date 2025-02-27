@@ -22,16 +22,16 @@ entry:
   ret void
 }
 
-define void @fn2() {
+define void @fn2(i1 %arg) {
   ret void
 
 ; Unreachable code below
 
 for.inc:                                          ; preds = %for.inc
-  br i1 undef, label %for.end6, label %for.inc
+  br i1 %arg, label %for.end6, label %for.inc
 
 for.end6:                                         ; preds = %for.inc
-  br i1 undef, label %lor.rhs, label %lor.end
+  br i1 %arg, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %for.end6
   br label %lor.end

@@ -8,7 +8,7 @@
 ; CHECK: store i32 1, ptr addrspace(3) @IsSPMDMode
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ;
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 target triple = "amdgcn-amd-amdhsa"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
@@ -297,12 +297,10 @@ attributes #14 = { convergent nounwind "llvm.assume"="ompx_aligned_barrier,ompx_
 attributes #15 = { convergent nounwind }
 
 !omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
 !llvm.module.flags = !{!2, !3, !4, !5}
 !llvm.ident = !{!6}
 
 !0 = !{i32 0, i32 32, i32 18757968, !"main", i32 12, i32 0}
-!1 = !{ptr @__omp_offloading_20_11e3950_main_l12, !"kernel", i32 1}
 !2 = !{i32 1, !"wchar_size", i32 4}
 !3 = !{i32 7, !"openmp", i32 50}
 !4 = !{i32 7, !"openmp-device", i32 50}

@@ -8,16 +8,18 @@
 define void @test1(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    blez a1, .LBB0_2
-; CHECK-NEXT:  .LBB0_1: # %for.body
+; CHECK-NEXT:    blez a1, .LBB0_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a1, a0, a1
+; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a2, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB0_1
-; CHECK-NEXT:  .LBB0_2: # %for.cond.cleanup
+; CHECK-NEXT:    bne a0, a1, .LBB0_2
+; CHECK-NEXT:  .LBB0_3: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
   %cmp3 = icmp sgt i32 %n, 0
@@ -62,11 +64,11 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a5, -4(a4)
 ; CHECK-NEXT:    lw a6, 0(a4)
-; CHECK-NEXT:    addi a5, a5, 4
-; CHECK-NEXT:    sw a5, -4(a4)
-; CHECK-NEXT:    addi a6, a6, 4
-; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    addi a3, a3, 2
+; CHECK-NEXT:    addi a5, a5, 4
+; CHECK-NEXT:    addi a6, a6, 4
+; CHECK-NEXT:    sw a5, -4(a4)
+; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    addi a4, a4, 8
 ; CHECK-NEXT:    bne a1, a3, .LBB1_4
 ; CHECK-NEXT:  .LBB1_5: # %for.cond.cleanup.loopexit.unr-lcssa
@@ -115,7 +117,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %2 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %2, 4
   store i32 %add, ptr %arrayidx, align 4
-  %indvars.iv.next = or i64 %indvars.iv, 1
+  %indvars.iv.next = or disjoint i64 %indvars.iv, 1
   %arrayidx.1 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.next
   %3 = load i32, ptr %arrayidx.1, align 4
   %add.1 = add nsw i32 %3, 4

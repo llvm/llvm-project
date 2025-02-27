@@ -51,7 +51,11 @@
 # CHECK-NEXT:  "result": [
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "bar:",
+# CHECK-NEXT:      "label": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "value": "bar:"
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
 # CHECK-NEXT:      "paddingLeft": false,
 # CHECK-NEXT:      "paddingRight": true,
 # CHECK-NEXT:      "position": {

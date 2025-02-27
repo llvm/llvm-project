@@ -81,6 +81,12 @@ static llvm::cl::list<std::string> UserStylesheets(
     llvm::cl::desc("CSS stylesheets to extend the default styles."),
     llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<std::string> UserAssetPath(
+    "asset",
+    llvm::cl::desc("User supplied asset path to "
+                   "override the default css and js files for html output"),
+    llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<std::string> SourceRoot("source-root", llvm::cl::desc(R"(
 Directory where processed files are stored.
 Links to definition locations will only be
@@ -127,8 +133,92 @@ std::string getFormatString() {
 // GetMainExecutable (since some platforms don't support taking the
 // address of main, and some platforms can't implement GetMainExecutable
 // without being given the address of a function in the main executable).
-std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
+std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
+}
+
+llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
+  using DirIt = llvm::sys::fs::directory_iterator;
+  std::error_code FileErr;
+  llvm::SmallString<128> FilePath(UserAssetPath);
+  for (DirIt DirStart = DirIt(UserAssetPath, FileErr),
+                   DirEnd;
+       !FileErr && DirStart != DirEnd; DirStart.increment(FileErr)) {
+    FilePath = DirStart->path();
+    if (llvm::sys::fs::is_regular_file(FilePath)) {
+      if (llvm::sys::path::extension(FilePath) == ".css")
+        CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                                     std::string(FilePath));
+      else if (llvm::sys::path::extension(FilePath) == ".js")
+        CDCtx.JsScripts.emplace_back(FilePath.str());
+    }
+  }
+  if (FileErr)
+    return llvm::createFileError(FilePath, FileErr);
+  return llvm::Error::success();
+}
+
+llvm::Error getDefaultAssetFiles(const char *Argv0,
+                                 clang::doc::ClangDocContext &CDCtx) {
+  void *MainAddr = (void *)(intptr_t)getExecutablePath;
+  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
+  llvm::SmallString<128> DefaultStylesheet;
+  llvm::sys::path::native(AssetsPath, DefaultStylesheet);
+  llvm::sys::path::append(DefaultStylesheet,
+                          "clang-doc-default-stylesheet.css");
+  llvm::SmallString<128> IndexJS;
+  llvm::sys::path::native(AssetsPath, IndexJS);
+  llvm::sys::path::append(IndexJS, "index.js");
+
+  if (!llvm::sys::fs::is_regular_file(IndexJS))
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "default index.js file missing at " +
+                                       IndexJS + "\n");
+
+  if (!llvm::sys::fs::is_regular_file(DefaultStylesheet))
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "default clang-doc-default-stylesheet.css file missing at " +
+            DefaultStylesheet + "\n");
+
+  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                               std::string(DefaultStylesheet));
+  CDCtx.JsScripts.emplace_back(IndexJS.str());
+
+  return llvm::Error::success();
+}
+
+llvm::Error getHtmlAssetFiles(const char *Argv0,
+                              clang::doc::ClangDocContext &CDCtx) {
+  if (!UserAssetPath.empty() &&
+      !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+  if (llvm::sys::fs::is_directory(std::string(UserAssetPath)))
+    return getAssetFiles(CDCtx);
+  return getDefaultAssetFiles(Argv0, CDCtx);
+}
+
+/// Make the output of clang-doc deterministic by sorting the children of
+/// namespaces and records.
+void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+  for (auto &I : USRToInfo) {
+    auto &Info = I.second;
+    if (Info->IT == doc::InfoType::IT_namespace) {
+      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info.get());
+      Namespace->Children.sort();
+    }
+    if (Info->IT == doc::InfoType::IT_record) {
+      auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+      Record->Children.sort();
+    }
+  }
 }
 
 int main(int argc, const char **argv) {
@@ -136,7 +226,7 @@ int main(int argc, const char **argv) {
   std::error_code OK;
 
   const char *Overview =
-    R"(Generates documentation from source code and comments.
+      R"(Generates documentation from source code and comments.
 
 Example usage for files without flags (default):
 
@@ -178,27 +268,14 @@ Example usage for a project using a compile commands database:
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
-      {UserStylesheets.begin(), UserStylesheets.end()},
-      {"index.js", "index_json.js"}};
+      {UserStylesheets.begin(), UserStylesheets.end()}
+  };
 
   if (Format == "html") {
-    void *MainAddr = (void *)(intptr_t)GetExecutablePath;
-    std::string ClangDocPath = GetExecutablePath(argv[0], MainAddr);
-    llvm::SmallString<128> NativeClangDocPath;
-    llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
-    llvm::SmallString<128> AssetsPath;
-    AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
-    llvm::sys::path::append(AssetsPath, "..", "share", "clang");
-    llvm::SmallString<128> DefaultStylesheet;
-    llvm::sys::path::native(AssetsPath, DefaultStylesheet);
-    llvm::sys::path::append(DefaultStylesheet,
-                            "clang-doc-default-stylesheet.css");
-    llvm::SmallString<128> IndexJS;
-    llvm::sys::path::native(AssetsPath, IndexJS);
-    llvm::sys::path::append(IndexJS, "index.js");
-    CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                                 std::string(DefaultStylesheet.str()));
-    CDCtx.FilesToCopy.emplace_back(IndexJS.str());
+    if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
+      llvm::errs() << toString(std::move(Err)) << "\n";
+      return 1;
+    }
   }
 
   // Mapping phase
@@ -223,8 +300,7 @@ Example usage for a project using a compile commands database:
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
   Executor->get()->getToolResults()->forEachResult(
       [&](StringRef Key, StringRef Value) {
-        auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
-        R.first->second.emplace_back(Value);
+        USRToBitcode[Key].emplace_back(Value);
       });
 
   // Collects all Infos according to their unique USR value. This map is added
@@ -238,11 +314,10 @@ Example usage for a project using a compile commands database:
   Error = false;
   llvm::sys::Mutex IndexMutex;
   // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
+  llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       std::vector<std::unique_ptr<doc::Info>> Infos;
-
       for (auto &Bitcode : Group.getValue()) {
         llvm::BitstreamCursor Stream(Bitcode);
         doc::ClangDocBitcodeReader Reader(Stream);
@@ -281,6 +356,8 @@ Example usage for a project using a compile commands database:
   if (Error)
     return 1;
 
+  sortUsrToInfo(USRToInfo);
+
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
       Err != std::error_code()) {
@@ -299,8 +376,7 @@ Example usage for a project using a compile commands database:
   llvm::outs() << "Generating assets for docs...\n";
   Err = G->get()->createResources(CDCtx);
   if (Err) {
-    llvm::errs() << toString(std::move(Err)) << "\n";
-    return 1;
+    llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
   }
 
   return 0;

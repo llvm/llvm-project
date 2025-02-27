@@ -28,7 +28,7 @@ class AArch64ZAThreadedTestCase(TestBase):
         )
 
         current_vg = self.match("register read vg", ["(0x[0-9]+)"])
-        self.assertTrue(current_vg is not None)
+        self.assertIsNotNone(current_vg)
         self.expect("register write vg {}".format(current_vg.group()))
 
         # Aka 128, 256 and 512 bit.

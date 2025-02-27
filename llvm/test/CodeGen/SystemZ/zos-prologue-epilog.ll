@@ -6,16 +6,16 @@
 
 ; Small stack frame.
 ; CHECK-LABEL: func0
-; CHECK64: stmg  6, 7, 1872(4)
+; CHECK64: stmg  6,7,1872(4)
 ; stmg instruction's displacement field must be 2064-dsa_size
 ; as per ABI
-; CHECK64: aghi  4, -192
+; CHECK64: aghi  4,-192
 
-; CHECK64: lg  7, 2072(4)
-; CHECK64: aghi  4, 192
+; CHECK64: lg  7,2072(4)
+; CHECK64: aghi  4,192
 ; CHECK64: b 2(7)
 
-; CHECK64: @@PPA1_func0_0:
+; CHECK64: L#PPA1_func0_0:
 ; CHECK64: .short	0  * Length/4 of Parms
 define void @func0() {
   call i64 (i64) @fun(i64 10) 
@@ -24,14 +24,14 @@ define void @func0() {
 
 ; Spill all GPR CSRs
 ; CHECK-LABEL: func1
-; CHECK64: stmg 6, 15, 1904(4)
-; CHECK64: aghi  4, -160
+; CHECK64: stmg 6,15,1904(4)
+; CHECK64: aghi  4,-160
 
-; CHECK64: lmg 7, 15, 2072(4)
-; CHECK64: aghi  4, 160
+; CHECK64: lmg 7,15,2072(4)
+; CHECK64: aghi  4,160
 ; CHECK64: b 2(7)
 
-; CHECK64: @@PPA1_func1_0:
+; CHECK64: L#PPA1_func1_0:
 ; CHECK64: .short	2  * Length/4 of Parms
 define void @func1(ptr %ptr) {
   %l01 = load volatile i64, ptr %ptr
@@ -85,43 +85,43 @@ define void @func1(ptr %ptr) {
 
 ; Spill all FPRs and VRs
 ; CHECK-LABEL: func2
-; CHECK64: stmg	6, 7, 1744(4)
-; CHECK64: aghi  4, -320 
-; CHECK64: std	15, {{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	14, {{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	13, {{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	12, {{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	11, {{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	10, {{[0-9]+}}(4)                      * 8-byte Folded Spill
-; CHECK64: std	9, {{[0-9]+}}(4)                       * 8-byte Folded Spill
-; CHECK64: std	8, {{[0-9]+}}(4)                       * 8-byte Folded Spill
-; CHECK64: vst	23, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
-; CHECK64: vst	22, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
-; CHECK64: vst	21, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
-; CHECK64: vst	20, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
-; CHECK64: vst	19, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
-; CHECK64: vst	18, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
-; CHECK64: vst	17, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
-; CHECK64: vst	16, {{[0-9]+}}(4), 4                   * 16-byte Folded Spill
+; CHECK64: stmg	6,7,1744(4)
+; CHECK64: aghi  4,-320
+; CHECK64: std	15,{{[0-9]+}}(4)                      * 8-byte Folded Spill
+; CHECK64: std	14,{{[0-9]+}}(4)                      * 8-byte Folded Spill
+; CHECK64: std	13,{{[0-9]+}}(4)                      * 8-byte Folded Spill
+; CHECK64: std	12,{{[0-9]+}}(4)                      * 8-byte Folded Spill
+; CHECK64: std	11,{{[0-9]+}}(4)                      * 8-byte Folded Spill
+; CHECK64: std	10,{{[0-9]+}}(4)                      * 8-byte Folded Spill
+; CHECK64: std	9,{{[0-9]+}}(4)                       * 8-byte Folded Spill
+; CHECK64: std	8,{{[0-9]+}}(4)                       * 8-byte Folded Spill
+; CHECK64: vst	23,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: vst	22,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: vst	21,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: vst	20,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: vst	19,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: vst	18,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: vst	17,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
+; CHECK64: vst	16,{{[0-9]+}}(4),4                   * 16-byte Folded Spill
 
-; CHECK64: ld	15, {{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	14, {{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	13, {{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	12, {{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	11, {{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	10, {{[0-9]+}}(4)                      * 8-byte Folded Reload
-; CHECK64: ld	9, {{[0-9]+}}(4)                       * 8-byte Folded Reload
-; CHECK64: ld	8, {{[0-9]+}}(4)                       * 8-byte Folded Reload
-; CHECK64: vl	23, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: vl	22, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: vl	21, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: vl	20, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: vl	19, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: vl	18, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: vl	17, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: vl	16, {{[0-9]+}}(4), 4                   * 16-byte Folded Reload
-; CHECK64: lg  7, 2072(4)
-; CHECK64: aghi  4, 320
+; CHECK64: ld	15,{{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	14,{{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	13,{{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	12,{{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	11,{{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	10,{{[0-9]+}}(4)                      * 8-byte Folded Reload
+; CHECK64: ld	9,{{[0-9]+}}(4)                       * 8-byte Folded Reload
+; CHECK64: ld	8,{{[0-9]+}}(4)                       * 8-byte Folded Reload
+; CHECK64: vl	23,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: vl	22,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: vl	21,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: vl	20,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: vl	19,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: vl	18,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: vl	17,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: vl	16,{{[0-9]+}}(4),4                   * 16-byte Folded Reload
+; CHECK64: lg  7,2072(4)
+; CHECK64: aghi  4,320
 ; CHECK64: b 2(7)
 
 define void @func2(ptr %ptr, ptr %vec_ptr) {
@@ -275,9 +275,9 @@ define void @func2(ptr %ptr, ptr %vec_ptr) {
 
 ; Big stack frame, force the use of agfi before stmg
 ; despite not requiring stack extension routine.
-; CHECK64: agfi  4, -1040768
-; CHECK64: stmg  6, 7, 2064(4)
-; CHECK64: agfi  4, 1040768
+; CHECK64: agfi  4,-1040768
+; CHECK64: stmg  6,7,2064(4)
+; CHECK64: agfi  4,1040768
 define void @func3() {
   %arr = alloca [130070 x i64], align 8
   call i64 (ptr) @fun1(ptr %arr)
@@ -286,14 +286,14 @@ define void @func3() {
 
 ; Requires the saving of r4 due to variable sized
 ; object in stack frame. (Eg: VLA) Sets up frame pointer in r8
-; CHECK64: stmg  4, 10, 1856(4)
-; CHECK64: aghi  4, -192
-; CHECK64: lg  6, 40(5)
-; CHECK64: lg  5, 32(5)
-; CHECK64: lgr     8, 4
-; CHECK64: basr   7, 6
-; CHECK64-NEXT: bcr     0, 0
-; CHECK64: lmg  4, 10, 2048(4)
+; CHECK64: stmg  4,10,1856(4)
+; CHECK64: aghi  4,-192
+; CHECK64: lg  6,40(5)
+; CHECK64: lg  5,32(5)
+; CHECK64: lgr     8,4
+; CHECK64: basr   7,6
+; CHECK64-NEXT: bcr     0,0
+; CHECK64: lmg  4,10,2048(4)
 define i64 @func4(i64 %n) {
   %vla = alloca i64, i64 %n, align 8
   %call = call i64 @fun2(i64 %n, ptr nonnull %vla, ptr nonnull %vla)
@@ -302,13 +302,13 @@ define i64 @func4(i64 %n) {
 
 ; Require saving of r4 and in addition, a displacement large enough
 ; to force use of agfi before stmg.
-; CHECK64: lgr	0, 4
-; CHECK64: agfi	4, -1040192
-; CHECK64: stmg  4, 10, 2048(4)
-; CHECK64: lgr     8, 4
-; CHECK64: basr   7, 6
-; CHECK64-NEXT: bcr     0, 0
-; CHECK64: lmg 4, 10, 2048(4)
+; CHECK64: lgr	0,4
+; CHECK64: agfi	4,-1040224
+; CHECK64: stmg  4,10,2048(4)
+; CHECK64: lgr     8,4
+; CHECK64: basr   7,6
+; CHECK64-NEXT: bcr     0,0
+; CHECK64: lmg 4,10,2048(4)
 define i64 @func5(i64 %n) {
   %vla = alloca i64, i64 %n, align 8
   %arr = alloca [130000 x i64], align 8
@@ -317,14 +317,14 @@ define i64 @func5(i64 %n) {
 }
 
 ; CHECK-LABEL: large_stack
-; CHECK64: agfi  4, -1048768
-; CHECK64-NEXT: llgt  3, 1208
-; CHECK64-NEXT: cg  4, 64(3)
+; CHECK64: agfi  4,-1048800
+; CHECK64-NEXT: llgt  3,1208
+; CHECK64-NEXT: cg  4,64(3)
 ; CHECK64-NEXT: jhe
 ; CHECK64: * %bb.1:
-; CHECK64: lg  3, 72(3)
-; CHECK64: basr  3, 3
-; CHECK64: stmg  6, 7, 2064(4)
+; CHECK64: lg  3,72(3)
+; CHECK64: basr  3,3
+; CHECK64: stmg  6,7,2064(4)
 define void @large_stack0() {
   %arr = alloca [131072 x i64], align 8
   call i64 (ptr) @fun1(ptr %arr)
@@ -332,20 +332,20 @@ define void @large_stack0() {
 }
 
 ; CHECK-LABEL: large_stack1
-; CHECK64: agfi  4, -1048768
-; CHECK64: lgr 0, 3
-; CHECK64: llgt  3, 1208
-; CHECK64: cg  4, 64(3)
-; CHECK64: jhe @BB7_2
+; CHECK64: agfi  4,-1048800
+; CHECK64: lgr 0,3
+; CHECK64: llgt  3,1208
+; CHECK64: cg  4,64(3)
+; CHECK64: jhe L#BB7_2
 ; CHECK64: %bb.1:
-; CHECK64: lg  3, 72(3)
-; CHECK64: basr  3, 3
-; CHECK64: bcr 0, 7
-; CHECK64: @BB7_2:
-; CHECK64: stmg  6, 7, 2064(4)
-; CHECK64: lgr 3, 0
+; CHECK64: lg  3,72(3)
+; CHECK64: basr  3,3
+; CHECK64: bcr 0,7
+; CHECK64: L#BB7_2:
+; CHECK64: stmg  6,7,2064(4)
+; CHECK64: lgr 3,0
 
-; CHECK64: @@PPA1_large_stack1_0:
+; CHECK64: L#PPA1_large_stack1_0:
 ; CHECK64: .short	6  * Length/4 of Parms
 define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
   %arr = alloca [131072 x i64], align 8
@@ -356,21 +356,21 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 
 
 ; CHECK-LABEL: large_stack2
-; CHECK64: lgr 0, 4
-; CHECK64: stg 3, 2192(4)
-; CHECK64: agfi  4, -1048768
-; CHECK64: llgt  3, 1208
-; CHECK64: cg  4, 64(3)
-; CHECK64: jhe @BB8_2
+; CHECK64: lgr 0,4
+; CHECK64: stg 3,2192(4)
+; CHECK64: agfi  4,-1048800
+; CHECK64: llgt  3,1208
+; CHECK64: cg  4,64(3)
+; CHECK64: jhe L#BB8_2
 ; CHECK64: %bb.1:
-; CHECK64: lg  3, 72(3)
-; CHECK64: basr  3, 3
-; CHECK64: bcr 0, 7
-; CHECK64: @BB8_2:
-; CHECK64: lgr 3, 0
-; CHECK64: lg  3, 2192(3)
-; CHECK64: stmg  4, 12, 2048(4)
-; CHECK64: lgr 8, 4
+; CHECK64: lg  3,72(3)
+; CHECK64: basr  3,3
+; CHECK64: bcr 0,7
+; CHECK64: L#BB8_2:
+; CHECK64: lgr 3,0
+; CHECK64: lg  3,2192(3)
+; CHECK64: stmg  4,12,2048(4)
+; CHECK64: lgr 8,4
 define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
   %arr0 = alloca [131072 x i64], align 8
   %arr1 = alloca i64, i64 %n1, align 8
@@ -386,9 +386,9 @@ define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK-NEXT:     *   Bit 2: 0 = Does not use alloca
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: stmg
-; CHECK: agr	1, 2
-; CHECK: msgr	1, 3
-; CHECK: aghik	3, 1, -4
+; CHECK: agr	1,2
+; CHECK: msgr	1,3
+; CHECK: aghik	3,1,-4
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: lmg
 define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {

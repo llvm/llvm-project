@@ -47,7 +47,7 @@ FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
 #define PRINT_ALIAS_INSTR
 #include "PPCGenAsmWriter.inc"
 
-void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   const char *RegName = getRegisterName(Reg);
   OS << RegName;
 }
@@ -484,14 +484,17 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
   if (!MI->getOperand(OpNo).isImm())
     return printOperand(MI, OpNo, STI, O);
 
-  O << SignExtend32<32>((unsigned)MI->getOperand(OpNo).getImm() << 2);
+  uint64_t Imm = static_cast<uint64_t>(MI->getOperand(OpNo).getImm()) << 2;
+  if (!TT.isPPC64())
+    Imm = static_cast<uint32_t>(Imm);
+  O << formatHex(Imm);
 }
 
 void PPCInstPrinter::printcrbitm(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned CCReg = MI->getOperand(OpNo).getReg();
+  MCRegister CCReg = MI->getOperand(OpNo).getReg();
   unsigned RegNo;
-  switch (CCReg) {
+  switch (CCReg.id()) {
   default: llvm_unreachable("Unknown CR register");
   case PPC::CR0: RegNo = 0; break;
   case PPC::CR1: RegNo = 1; break;
@@ -645,7 +648,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     if (!ShowVSRNumsAsVR)
       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 

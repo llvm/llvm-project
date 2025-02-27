@@ -16,186 +16,13 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/VFABIDemangler.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
 class TargetLibraryInfo;
-
-/// Describes the type of Parameters
-enum class VFParamKind {
-  Vector,            // No semantic information.
-  OMP_Linear,        // declare simd linear(i)
-  OMP_LinearRef,     // declare simd linear(ref(i))
-  OMP_LinearVal,     // declare simd linear(val(i))
-  OMP_LinearUVal,    // declare simd linear(uval(i))
-  OMP_LinearPos,     // declare simd linear(i:c) uniform(c)
-  OMP_LinearValPos,  // declare simd linear(val(i:c)) uniform(c)
-  OMP_LinearRefPos,  // declare simd linear(ref(i:c)) uniform(c)
-  OMP_LinearUValPos, // declare simd linear(uval(i:c)) uniform(c)
-  OMP_Uniform,       // declare simd uniform(i)
-  GlobalPredicate,   // Global logical predicate that acts on all lanes
-                     // of the input and output mask concurrently. For
-                     // example, it is implied by the `M` token in the
-                     // Vector Function ABI mangled name.
-  Unknown
-};
-
-/// Describes the type of Instruction Set Architecture
-enum class VFISAKind {
-  AdvancedSIMD, // AArch64 Advanced SIMD (NEON)
-  SVE,          // AArch64 Scalable Vector Extension
-  SSE,          // x86 SSE
-  AVX,          // x86 AVX
-  AVX2,         // x86 AVX2
-  AVX512,       // x86 AVX512
-  LLVM,         // LLVM internal ISA for functions that are not
-  // attached to an existing ABI via name mangling.
-  Unknown // Unknown ISA
-};
-
-/// Encapsulates information needed to describe a parameter.
-///
-/// The description of the parameter is not linked directly to
-/// OpenMP or any other vector function description. This structure
-/// is extendible to handle other paradigms that describe vector
-/// functions and their parameters.
-struct VFParameter {
-  unsigned ParamPos;         // Parameter Position in Scalar Function.
-  VFParamKind ParamKind;     // Kind of Parameter.
-  int LinearStepOrPos = 0;   // Step or Position of the Parameter.
-  Align Alignment = Align(); // Optional alignment in bytes, defaulted to 1.
-
-  // Comparison operator.
-  bool operator==(const VFParameter &Other) const {
-    return std::tie(ParamPos, ParamKind, LinearStepOrPos, Alignment) ==
-           std::tie(Other.ParamPos, Other.ParamKind, Other.LinearStepOrPos,
-                    Other.Alignment);
-  }
-};
-
-/// Contains the information about the kind of vectorization
-/// available.
-///
-/// This object in independent on the paradigm used to
-/// represent vector functions. in particular, it is not attached to
-/// any target-specific ABI.
-struct VFShape {
-  ElementCount VF;                        // Vectorization factor.
-  SmallVector<VFParameter, 8> Parameters; // List of parameter information.
-  // Comparison operator.
-  bool operator==(const VFShape &Other) const {
-    return std::tie(VF, Parameters) == std::tie(Other.VF, Other.Parameters);
-  }
-
-  /// Update the parameter in position P.ParamPos to P.
-  void updateParam(VFParameter P) {
-    assert(P.ParamPos < Parameters.size() && "Invalid parameter position.");
-    Parameters[P.ParamPos] = P;
-    assert(hasValidParameterList() && "Invalid parameter list");
-  }
-
-  // Retrieve the VFShape that can be used to map a (scalar) function to itself,
-  // with VF = 1.
-  static VFShape getScalarShape(const CallInst &CI) {
-    return VFShape::get(CI, ElementCount::getFixed(1),
-                        /*HasGlobalPredicate*/ false);
-  }
-
-  // Retrieve the basic vectorization shape of the function, where all
-  // parameters are mapped to VFParamKind::Vector with \p EC
-  // lanes. Specifies whether the function has a Global Predicate
-  // argument via \p HasGlobalPred.
-  static VFShape get(const CallInst &CI, ElementCount EC, bool HasGlobalPred) {
-    SmallVector<VFParameter, 8> Parameters;
-    for (unsigned I = 0; I < CI.arg_size(); ++I)
-      Parameters.push_back(VFParameter({I, VFParamKind::Vector}));
-    if (HasGlobalPred)
-      Parameters.push_back(
-          VFParameter({CI.arg_size(), VFParamKind::GlobalPredicate}));
-
-    return {EC, Parameters};
-  }
-  /// Validation check on the Parameters in the VFShape.
-  bool hasValidParameterList() const;
-};
-
-/// Holds the VFShape for a specific scalar to vector function mapping.
-struct VFInfo {
-  VFShape Shape;          /// Classification of the vector function.
-  std::string ScalarName; /// Scalar Function Name.
-  std::string VectorName; /// Vector Function Name associated to this VFInfo.
-  VFISAKind ISA;          /// Instruction Set Architecture.
-
-  /// Returns the index of the first parameter with the kind 'GlobalPredicate',
-  /// if any exist.
-  std::optional<unsigned> getParamIndexForOptionalMask() const {
-    unsigned ParamCount = Shape.Parameters.size();
-    for (unsigned i = 0; i < ParamCount; ++i)
-      if (Shape.Parameters[i].ParamKind == VFParamKind::GlobalPredicate)
-        return i;
-
-    return std::nullopt;
-  }
-
-  /// Returns true if at least one of the operands to the vectorized function
-  /// has the kind 'GlobalPredicate'.
-  bool isMasked() const { return getParamIndexForOptionalMask().has_value(); }
-};
-
-namespace VFABI {
-/// LLVM Internal VFABI ISA token for vector functions.
-static constexpr char const *_LLVM_ = "_LLVM_";
-/// Prefix for internal name redirection for vector function that
-/// tells the compiler to scalarize the call using the scalar name
-/// of the function. For example, a mangled name like
-/// `_ZGV_LLVM_N2v_foo(_LLVM_Scalarize_foo)` would tell the
-/// vectorizer to vectorize the scalar call `foo`, and to scalarize
-/// it once vectorization is done.
-static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
-
-/// Function to construct a VFInfo out of a mangled names in the
-/// following format:
-///
-/// <VFABI_name>{(<redirection>)}
-///
-/// where <VFABI_name> is the name of the vector function, mangled according
-/// to the rules described in the Vector Function ABI of the target vector
-/// extension (or <isa> from now on). The <VFABI_name> is in the following
-/// format:
-///
-/// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
-///
-/// This methods support demangling rules for the following <isa>:
-///
-/// * AArch64: https://developer.arm.com/docs/101129/latest
-///
-/// * x86 (libmvec): https://sourceware.org/glibc/wiki/libmvec and
-///  https://sourceware.org/glibc/wiki/libmvec?action=AttachFile&do=view&target=VectorABI.txt
-///
-/// \param MangledName -> input string in the format
-/// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)].
-/// \param M -> Module used to retrieve informations about the vector
-/// function that are not possible to retrieve from the mangled
-/// name. At the moment, this parameter is needed only to retrieve the
-/// Vectorization Factor of scalable vector functions from their
-/// respective IR declarations.
-std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
-                                          const Module &M);
-
-/// Retrieve the `VFParamKind` from a string token.
-VFParamKind getVFParamKindFromString(const StringRef Token);
-
-// Name of the attribute where the variant mappings are stored.
-static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
-
-/// Populates a set of strings representing the Vector Function ABI variants
-/// associated to the CallInst CI. If the CI does not contain the
-/// vector-function-abi-variant attribute, we return without populating
-/// VariantMappings, i.e. callers of getVectorVariantNames need not check for
-/// the presence of the attribute (see InjectTLIMappings).
-void getVectorVariantNames(const CallInst &CI,
-                           SmallVectorImpl<std::string> &VariantMappings);
-} // end namespace VFABI
 
 /// The Vector Function Database.
 ///
@@ -227,7 +54,7 @@ class VFDatabase {
       return;
     for (const auto &MangledName : ListOfStrings) {
       const std::optional<VFInfo> Shape =
-          VFABI::tryDemangleForVFABI(MangledName, *(CI.getModule()));
+          VFABI::tryDemangleForVFABI(MangledName, CI.getFunctionType());
       // A match is found via scalar and vector names, and also by
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector
@@ -271,12 +98,13 @@ public:
   VFDatabase(CallInst &CI)
       : M(CI.getModule()), CI(CI),
         ScalarToVectorMappings(VFDatabase::getMappings(CI)) {}
+
   /// \defgroup VFDatabase query interface.
   ///
   /// @{
   /// Retrieve the Function with VFShape \p Shape.
   Function *getVectorizedFunction(const VFShape &Shape) const {
-    if (Shape == VFShape::getScalarShape(CI))
+    if (Shape == VFShape::getScalarShape(CI.getFunctionType()))
       return CI.getCalledFunction();
 
     for (const auto &Info : ScalarToVectorMappings)
@@ -293,41 +121,50 @@ class DemandedBits;
 template <typename InstTy> class InterleaveGroup;
 class IRBuilderBase;
 class Loop;
-class ScalarEvolution;
 class TargetTransformInfo;
-class Type;
 class Value;
 
 namespace Intrinsic {
 typedef unsigned ID;
 }
 
-/// A helper function for converting Scalar types to vector types. If
-/// the incoming type is void, we return void. If the EC represents a
-/// scalar, we return the scalar type.
-inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
-    return Scalar;
-  return VectorType::get(Scalar, EC);
-}
-
-inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
-  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
-}
-
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
 /// isVectorIntrinsicWithScalarOpAtArg) for the vector form of the intrinsic.
+///
+/// Note: isTriviallyVectorizable implies isTriviallyScalarizable.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
 
+/// Identify if the intrinsic is trivially scalarizable.
+/// This method returns true following the same predicates of
+/// isTriviallyVectorizable.
+
+/// Note: There are intrinsics where implementing vectorization for the
+/// intrinsic is redundant, but we want to implement scalarization of the
+/// vector. To prevent the requirement that an intrinsic also implements
+/// vectorization we provide this seperate function.
+bool isTriviallyScalarizable(Intrinsic::ID ID, const TargetTransformInfo *TTI);
+
 /// Identifies if the vector form of the intrinsic has a scalar operand.
-bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                        unsigned ScalarOpdIdx);
+/// \p TTI is used to consider target specific intrinsics, if no target specific
+/// intrinsics will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
+                                        const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
-bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
+/// \p TTI is used to consider target specific intrinsics, if no target specific
+/// intrinsics will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
+                                            const TargetTransformInfo *TTI);
+
+/// Identifies if the vector form of the intrinsic that returns a struct is
+/// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
+/// consider target specific intrinsics, if no target specific intrinsics
+/// will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
@@ -398,6 +235,20 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// A variant of the previous method which is specialized for Scale=2, and
+/// treats -1 as undef and allows widening when a wider element is partially
+/// undef in the narrow form of the mask.  This transformation discards
+/// information about which bytes in the original shuffle were undef.
+bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMask);
+
+/// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
+/// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
+/// This will assert unless NumDstElts is a multiple of Mask.size (or
+/// vice-versa). Returns false on failure, and ScaledMask will be in an
+/// undefined state.
+bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                          SmallVectorImpl<int> &ScaledMask);
+
 /// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
 /// to get the shuffle mask with widest possible elements.
 void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
@@ -419,7 +270,25 @@ void processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction);
+
+/// Compute the demanded elements mask of horizontal binary operations. A
+/// horizontal operation combines two adjacent elements in a vector operand.
+/// This function returns a mask for the elements that correspond to the first
+/// operand of this horizontal combination. For example, for two vectors
+/// [X1, X2, X3, X4] and [Y1, Y2, Y3, Y4], the resulting mask can include the
+/// elements X1, X3, Y1, and Y3. To get the other operands, simply shift the
+/// result of this function to the left by 1.
+///
+/// \param VectorBitWidth the total bit width of the vector
+/// \param DemandedElts   the demanded elements mask for the operation
+/// \param DemandedLHS    the demanded elements mask for the left operand
+/// \param DemandedRHS    the demanded elements mask for the right operand
+void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
+                                         const APInt &DemandedElts,
+                                         APInt &DemandedLHS,
+                                         APInt &DemandedRHS);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -476,7 +345,7 @@ MDNode *intersectAccessGroups(const Instruction *Inst1,
                               const Instruction *Inst2);
 
 /// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
-/// MD_nontemporal, MD_access_group].
+/// MD_nontemporal, MD_access_group, MD_mmra].
 /// For K in Kinds, we get the MDNode for K from each of the
 /// elements of VL, compute their "intersection" (i.e., the most generic
 /// metadata value that covers all of the individual values), and set I's
@@ -580,6 +449,11 @@ bool maskIsAllZeroOrUndef(Value *Mask);
 /// predicate mask are known to be true or undef.  That is, return true if all
 /// lanes can be assumed active.
 bool maskIsAllOneOrUndef(Value *Mask);
+
+/// Given a mask vector of i1, Return true if any of the elements of this
+/// predicate mask are known to be true or undef.  That is, return true if at
+/// least one lane can be assumed active.
+bool maskContainsAllOneOrUndef(Value *Mask);
 
 /// Given a mask vector of the form <Y x i1>, return an APInt (of bitwidth Y)
 /// for each lane which may be active.
@@ -874,21 +748,26 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
   createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
-    assert(!InterleaveGroupMap.count(Instr) &&
-           "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] =
-        new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
-    InterleaveGroups.insert(InterleaveGroupMap[Instr]);
-    return InterleaveGroupMap[Instr];
+    auto [It, Inserted] = InterleaveGroupMap.try_emplace(Instr);
+    assert(Inserted && "Already in an interleaved access group");
+    It->second = new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
+    InterleaveGroups.insert(It->second);
+    return It->second;
   }
 
   /// Release the group and remove all the relationships.
   void releaseGroup(InterleaveGroup<Instruction> *Group) {
+    InterleaveGroups.erase(Group);
+    releaseGroupWithoutRemovingFromSet(Group);
+  }
+
+  /// Do everything necessary to release the group, apart from removing it from
+  /// the InterleaveGroups set.
+  void releaseGroupWithoutRemovingFromSet(InterleaveGroup<Instruction> *Group) {
     for (unsigned i = 0; i < Group->getFactor(); i++)
       if (Instruction *Member = Group->getMember(i))
         InterleaveGroupMap.erase(Member);
 
-    InterleaveGroups.erase(Group);
     delete Group;
   }
 
@@ -965,9 +844,11 @@ private:
   void collectDependences() {
     if (!areDependencesValid())
       return;
-    auto *Deps = LAI->getDepChecker().getDependences();
+    const auto &DepChecker = LAI->getDepChecker();
+    auto *Deps = DepChecker.getDependences();
     for (auto Dep : *Deps)
-      Dependences[Dep.getSource(*LAI)].insert(Dep.getDestination(*LAI));
+      Dependences[Dep.getSource(DepChecker)].insert(
+          Dep.getDestination(DepChecker));
   }
 };
 

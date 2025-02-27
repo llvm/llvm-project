@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
@@ -57,8 +58,8 @@ TEST(AsmParserTest, SlotMappingTest) {
   EXPECT_TRUE(Mod != nullptr);
   EXPECT_TRUE(Error.getMessage().empty());
 
-  ASSERT_EQ(Mapping.GlobalValues.size(), 1u);
-  EXPECT_TRUE(isa<GlobalVariable>(Mapping.GlobalValues[0]));
+  ASSERT_EQ(Mapping.GlobalValues.getNext(), 1u);
+  EXPECT_TRUE(isa<GlobalVariable>(Mapping.GlobalValues.get(0)));
 
   EXPECT_EQ(Mapping.MetadataNodes.size(), 2u);
   EXPECT_EQ(Mapping.MetadataNodes.count(0), 1u);
@@ -92,6 +93,22 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_TRUE(V->getType()->isVectorTy());
   ASSERT_TRUE(isa<ConstantDataVector>(V));
 
+  V = parseConstantValue("<4 x i32> splat (i32 -2)", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<ConstantDataVector>(V));
+
+  V = parseConstantValue("<4 x i32> zeroinitializer", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<Constant>(V));
+  EXPECT_TRUE(cast<Constant>(V)->isNullValue());
+
+  V = parseConstantValue("<4 x i32> poison", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<PoisonValue>(V));
+
   V = parseConstantValue("i32 add (i32 1, i32 2)", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantInt>(V));
@@ -103,6 +120,10 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   V = parseConstantValue("ptr undef", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<UndefValue>(V));
+
+  V = parseConstantValue("ptr poison", Error, M);
+  ASSERT_TRUE(V);
+  ASSERT_TRUE(isa<PoisonValue>(V));
 
   EXPECT_FALSE(parseConstantValue("duble 3.25", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected type");
@@ -409,6 +430,53 @@ TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
       });
   ASSERT_TRUE(Mod2 != nullptr);
   EXPECT_EQ(Mod2->getDataLayout(), FixedDL);
+}
+
+TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  StringRef Source = "";
+  SlotMapping Mapping;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping);
+  ASSERT_TRUE(Mod != nullptr);
+  auto &M = *Mod;
+  unsigned Read;
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
+
+  DIExpression *Expr;
+
+  Expr = parseDIExpressionBodyAtBeginning("()", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 0u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(0)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 1u);
+
+  Expr = parseDIExpressionBodyAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read,
+                                          Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+
+  Expr = parseDIExpressionBodyAtBeginning(
+      "(DW_OP_LLVM_fragment, 0, 1)  trailing source", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3u);
+  ASSERT_EQ(Read, StringRef("(DW_OP_LLVM_fragment, 0, 1)  ").size());
+
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning("i32", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
+
+  Error = {};
+  Expr = parseDIExpressionBodyAtBeginning(
+      "!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+  ASSERT_EQ(Error.getMessage(), "expected '(' here");
+
+  ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
 }
 
 } // end anonymous namespace

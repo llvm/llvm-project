@@ -21,9 +21,10 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
-    return getNaturalAlignIndirect(Ty);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
   }
 
   // Treat an enum type as its underlying type.
@@ -36,10 +37,11 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
         Context.getTypeSize(Context.getTargetInfo().hasInt128Type()
                                 ? Context.Int128Ty
                                 : Context.LongLongTy))
-      return getNaturalAlignIndirect(Ty);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
-  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                            : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
@@ -47,7 +49,7 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (isAggregateTypeForABI(RetTy))
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
@@ -58,7 +60,8 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
         getContext().getTypeSize(getContext().getTargetInfo().hasInt128Type()
                                      ? getContext().Int128Ty
                                      : getContext().LongLongTy))
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
@@ -71,19 +74,12 @@ void DefaultABIInfo::computeInfo(CGFunctionInfo &FI) const {
     I.info = classifyArgumentType(I.type);
 }
 
-Address DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
-  return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
-}
-
-ABIArgInfo CodeGen::coerceToIntArray(QualType Ty, ASTContext &Context,
-                                     llvm::LLVMContext &LLVMContext) {
-  // Alignment and Size are measured in bits.
-  const uint64_t Size = Context.getTypeSize(Ty);
-  const uint64_t Alignment = Context.getTypeAlign(Ty);
-  llvm::Type *IntType = llvm::Type::getIntNTy(LLVMContext, Alignment);
-  const uint64_t NumElements = (Size + Alignment - 1) / Alignment;
-  return ABIArgInfo::getDirect(llvm::ArrayType::get(IntType, NumElements));
+RValue DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(
+          EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty),
+      Slot);
 }
 
 void CodeGen::AssignToArrayRange(CodeGen::CGBuilderTy &Builder,
@@ -132,7 +128,8 @@ bool CodeGen::classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
   if (const auto *RT = Ty->getAs<RecordType>())
     if (!isa<CXXRecordDecl>(RT->getDecl()) &&
         !RT->getDecl()->canPassInRegisters()) {
-      FI.getReturnInfo() = Info.getNaturalAlignIndirect(Ty);
+      FI.getReturnInfo() = Info.getNaturalAlignIndirect(
+          Ty, Info.getDataLayout().getAllocaAddrSpace());
       return true;
     }
 
@@ -157,7 +154,7 @@ llvm::Value *CodeGen::emitRoundPointerUpToAlignment(CodeGenFunction &CGF,
   llvm::Value *RoundUp = CGF.Builder.CreateConstInBoundsGEP1_32(
       CGF.Builder.getInt8Ty(), Ptr, Align.getQuantity() - 1);
   return CGF.Builder.CreateIntrinsic(
-      llvm::Intrinsic::ptrmask, {CGF.AllocaInt8PtrTy, CGF.IntPtrTy},
+      llvm::Intrinsic::ptrmask, {Ptr->getType(), CGF.IntPtrTy},
       {RoundUp, llvm::ConstantInt::get(CGF.IntPtrTy, -Align.getQuantity())},
       nullptr, Ptr->getName() + ".aligned");
 }
@@ -187,7 +184,7 @@ CodeGen::emitVoidPtrDirectVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits FullDirectSize = DirectSize.alignTo(SlotSize);
   Address NextPtr =
       CGF.Builder.CreateConstInBoundsByteGEP(Addr, FullDirectSize, "argp.next");
-  CGF.Builder.CreateStore(NextPtr.getPointer(), VAListAddr);
+  CGF.Builder.CreateStore(NextPtr.emitRawPointer(CGF), VAListAddr);
 
   // If the argument is smaller than a slot, and this is a big-endian
   // target, the argument will be right-adjusted in its slot.
@@ -199,12 +196,12 @@ CodeGen::emitVoidPtrDirectVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return Addr.withElementType(DirectTy);
 }
 
-Address CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType ValueTy, bool IsIndirect,
-                                  TypeInfoChars ValueInfo,
-                                  CharUnits SlotSizeAndAlign,
-                                  bool AllowHigherAlign,
-                                  bool ForceRightAdjust) {
+RValue CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType ValueTy, bool IsIndirect,
+                                 TypeInfoChars ValueInfo,
+                                 CharUnits SlotSizeAndAlign,
+                                 bool AllowHigherAlign, AggValueSlot Slot,
+                                 bool ForceRightAdjust) {
   // The size and alignment of the value that was passed directly.
   CharUnits DirectSize, DirectAlign;
   if (IsIndirect) {
@@ -230,7 +227,7 @@ Address CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Addr = Address(CGF.Builder.CreateLoad(Addr), ElementTy, ValueInfo.Align);
   }
 
-  return Addr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, ValueTy), Slot);
 }
 
 Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
@@ -239,15 +236,15 @@ Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
                               const llvm::Twine &Name) {
   assert(Addr1.getType() == Addr2.getType());
   llvm::PHINode *PHI = CGF.Builder.CreatePHI(Addr1.getType(), 2, Name);
-  PHI->addIncoming(Addr1.getPointer(), Block1);
-  PHI->addIncoming(Addr2.getPointer(), Block2);
+  PHI->addIncoming(Addr1.emitRawPointer(CGF), Block1);
+  PHI->addIncoming(Addr2.emitRawPointer(CGF), Block2);
   CharUnits Align = std::min(Addr1.getAlignment(), Addr2.getAlignment());
   return Address(PHI, Addr1.getElementType(), Align);
 }
 
 bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
                            bool AllowArrays, bool AsIfNoUniqueAddr) {
-  if (FD->isUnnamedBitfield())
+  if (FD->isUnnamedBitField())
     return true;
 
   QualType FT = FD->getType();
@@ -257,7 +254,7 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
   bool WasArray = false;
   if (AllowArrays)
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
-      if (AT->getSize() == 0)
+      if (AT->isZeroSize())
         return true;
       FT = AT->getElementType();
       // The [[no_unique_address]] special case below does not apply to
@@ -307,6 +304,41 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
   return true;
 }
 
+bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
+                                    const FieldDecl *FD) {
+  if (FD->isZeroLengthBitField())
+    return true;
+
+  if (FD->isUnnamedBitField())
+    return false;
+
+  return isEmptyRecordForLayout(Context, FD->getType());
+}
+
+bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
+  const RecordType *RT = T->getAs<RecordType>();
+  if (!RT)
+    return false;
+
+  const RecordDecl *RD = RT->getDecl();
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (CXXRD->isDynamicClass())
+      return false;
+
+    for (const auto &I : CXXRD->bases())
+      if (!isEmptyRecordForLayout(Context, I.getType()))
+        return false;
+  }
+
+  for (const auto *I : RD->fields())
+    if (!isEmptyFieldForLayout(Context, I))
+      return false;
+
+  return true;
+}
+
 const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
   const RecordType *RT = T->getAs<RecordType>();
   if (!RT)
@@ -352,7 +384,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
 
     // Treat single element arrays as the element.
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
-      if (AT->getSize().getZExtValue() != 1)
+      if (AT->getZExtSize() != 1)
         break;
       FT = AT->getElementType();
     }
@@ -400,7 +432,7 @@ Address CodeGen::EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr,
     llvm::Type *ElementTy = CGF.ConvertTypeForMem(Ty);
     llvm::Type *BaseTy = llvm::PointerType::getUnqual(ElementTy);
     llvm::Value *Addr =
-        CGF.Builder.CreateVAArg(VAListAddr.getPointer(), BaseTy);
+        CGF.Builder.CreateVAArg(VAListAddr.emitRawPointer(CGF), BaseTy);
     return Address(Addr, ElementTy, TyAlignForABI);
   } else {
     assert((AI.isDirect() || AI.isExtend()) &&
@@ -416,7 +448,7 @@ Address CodeGen::EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr,
            "Unexpected CoerceToType seen in arginfo in generic VAArg emitter!");
 
     Address Temp = CGF.CreateMemTemp(Ty, "varet");
-    Val = CGF.Builder.CreateVAArg(VAListAddr.getPointer(),
+    Val = CGF.Builder.CreateVAArg(VAListAddr.emitRawPointer(CGF),
                                   CGF.ConvertTypeForMem(Ty));
     CGF.Builder.CreateStore(Val, Temp);
     return Temp;

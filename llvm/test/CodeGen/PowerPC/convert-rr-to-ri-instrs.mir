@@ -162,17 +162,17 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define zeroext i8 @testLBZUX(i8* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define zeroext i8 @testLBZUX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i8, i8* %ptr, i64 %idxprom
-    %0 = load i8, i8* %arrayidx, align 1, !tbaa !3
+    %arrayidx = getelementptr inbounds i8, ptr %ptr, i64 %idxprom
+    %0 = load i8, ptr %arrayidx, align 1, !tbaa !3
     %conv = zext i8 %0 to i32
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i8, i8* %ptr, i64 %idxprom2
-    %1 = load i8, i8* %arrayidx3, align 1, !tbaa !3
+    %arrayidx3 = getelementptr inbounds i8, ptr %ptr, i64 %idxprom2
+    %1 = load i8, ptr %arrayidx3, align 1, !tbaa !3
     %conv4 = zext i8 %1 to i32
     %add5 = add nuw nsw i32 %conv4, %conv
     %conv6 = trunc i32 %add5 to i8
@@ -180,17 +180,17 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define zeroext i8 @testLBZX(i8* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define zeroext i8 @testLBZX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i8, i8* %ptr, i64 %idxprom
-    %0 = load i8, i8* %arrayidx, align 1, !tbaa !3
+    %arrayidx = getelementptr inbounds i8, ptr %ptr, i64 %idxprom
+    %0 = load i8, ptr %arrayidx, align 1, !tbaa !3
     %conv = zext i8 %0 to i32
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i8, i8* %ptr, i64 %idxprom2
-    %1 = load i8, i8* %arrayidx3, align 1, !tbaa !3
+    %arrayidx3 = getelementptr inbounds i8, ptr %ptr, i64 %idxprom2
+    %1 = load i8, ptr %arrayidx3, align 1, !tbaa !3
     %conv4 = zext i8 %1 to i32
     %add5 = add nuw nsw i32 %conv4, %conv
     %conv6 = trunc i32 %add5 to i8
@@ -198,17 +198,17 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define zeroext i16 @testLHZUX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define zeroext i16 @testLHZUX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i16, i16* %ptr, i64 %idxprom
-    %0 = load i16, i16* %arrayidx, align 2, !tbaa !6
+    %arrayidx = getelementptr inbounds i16, ptr %ptr, i64 %idxprom
+    %0 = load i16, ptr %arrayidx, align 2, !tbaa !6
     %conv = zext i16 %0 to i32
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i16, i16* %ptr, i64 %idxprom2
-    %1 = load i16, i16* %arrayidx3, align 2, !tbaa !6
+    %arrayidx3 = getelementptr inbounds i16, ptr %ptr, i64 %idxprom2
+    %1 = load i16, ptr %arrayidx3, align 2, !tbaa !6
     %conv4 = zext i16 %1 to i32
     %add5 = add nuw nsw i32 %conv4, %conv
     %conv6 = trunc i32 %add5 to i16
@@ -216,17 +216,17 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define zeroext i16 @testLHZX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define zeroext i16 @testLHZX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i16, i16* %ptr, i64 %idxprom
-    %0 = load i16, i16* %arrayidx, align 2, !tbaa !6
+    %arrayidx = getelementptr inbounds i16, ptr %ptr, i64 %idxprom
+    %0 = load i16, ptr %arrayidx, align 2, !tbaa !6
     %conv = zext i16 %0 to i32
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i16, i16* %ptr, i64 %idxprom2
-    %1 = load i16, i16* %arrayidx3, align 2, !tbaa !6
+    %arrayidx3 = getelementptr inbounds i16, ptr %ptr, i64 %idxprom2
+    %1 = load i16, ptr %arrayidx3, align 2, !tbaa !6
     %conv4 = zext i16 %1 to i32
     %add5 = add nuw nsw i32 %conv4, %conv
     %conv6 = trunc i32 %add5 to i16
@@ -234,17 +234,17 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define signext i16 @testLHAUX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define signext i16 @testLHAUX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i16, i16* %ptr, i64 %idxprom
-    %0 = load i16, i16* %arrayidx, align 2, !tbaa !6
+    %arrayidx = getelementptr inbounds i16, ptr %ptr, i64 %idxprom
+    %0 = load i16, ptr %arrayidx, align 2, !tbaa !6
     %conv9 = zext i16 %0 to i32
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i16, i16* %ptr, i64 %idxprom2
-    %1 = load i16, i16* %arrayidx3, align 2, !tbaa !6
+    %arrayidx3 = getelementptr inbounds i16, ptr %ptr, i64 %idxprom2
+    %1 = load i16, ptr %arrayidx3, align 2, !tbaa !6
     %conv410 = zext i16 %1 to i32
     %add5 = add nuw nsw i32 %conv410, %conv9
     %conv6 = trunc i32 %add5 to i16
@@ -252,17 +252,17 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define signext i16 @testLHAX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define signext i16 @testLHAX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i16, i16* %ptr, i64 %idxprom
-    %0 = load i16, i16* %arrayidx, align 2, !tbaa !6
+    %arrayidx = getelementptr inbounds i16, ptr %ptr, i64 %idxprom
+    %0 = load i16, ptr %arrayidx, align 2, !tbaa !6
     %conv9 = zext i16 %0 to i32
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i16, i16* %ptr, i64 %idxprom2
-    %1 = load i16, i16* %arrayidx3, align 2, !tbaa !6
+    %arrayidx3 = getelementptr inbounds i16, ptr %ptr, i64 %idxprom2
+    %1 = load i16, ptr %arrayidx3, align 2, !tbaa !6
     %conv410 = zext i16 %1 to i32
     %add5 = add nuw nsw i32 %conv410, %conv9
     %conv6 = trunc i32 %add5 to i16
@@ -270,136 +270,136 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define zeroext i32 @testLWZUX(i32* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define zeroext i32 @testLWZUX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i32, i32* %ptr, i64 %idxprom
-    %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
+    %arrayidx = getelementptr inbounds i32, ptr %ptr, i64 %idxprom
+    %0 = load i32, ptr %arrayidx, align 4, !tbaa !8
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom2
-    %1 = load i32, i32* %arrayidx3, align 4, !tbaa !8
+    %arrayidx3 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom2
+    %1 = load i32, ptr %arrayidx3, align 4, !tbaa !8
     %add4 = add i32 %1, %0
     ret i32 %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define zeroext i32 @testLWZX(i32* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define zeroext i32 @testLWZX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i32, i32* %ptr, i64 %idxprom
-    %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
+    %arrayidx = getelementptr inbounds i32, ptr %ptr, i64 %idxprom
+    %0 = load i32, ptr %arrayidx, align 4, !tbaa !8
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom2
-    %1 = load i32, i32* %arrayidx3, align 4, !tbaa !8
+    %arrayidx3 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom2
+    %1 = load i32, ptr %arrayidx3, align 4, !tbaa !8
     %add4 = add i32 %1, %0
     ret i32 %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @testLWAX(i32* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define i64 @testLWAX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i32, i32* %ptr, i64 %idxprom
-    %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
+    %arrayidx = getelementptr inbounds i32, ptr %ptr, i64 %idxprom
+    %0 = load i32, ptr %arrayidx, align 4, !tbaa !8
     %conv = sext i32 %0 to i64
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom2
-    %1 = load i32, i32* %arrayidx3, align 4, !tbaa !8
+    %arrayidx3 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom2
+    %1 = load i32, ptr %arrayidx3, align 4, !tbaa !8
     %conv4 = sext i32 %1 to i64
     %add5 = add nsw i64 %conv4, %conv
     ret i64 %add5
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @testLDUX(i64* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define i64 @testLDUX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i64, i64* %ptr, i64 %idxprom
-    %0 = load i64, i64* %arrayidx, align 8, !tbaa !10
+    %arrayidx = getelementptr inbounds i64, ptr %ptr, i64 %idxprom
+    %0 = load i64, ptr %arrayidx, align 8, !tbaa !10
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i64, i64* %ptr, i64 %idxprom2
-    %1 = load i64, i64* %arrayidx3, align 8, !tbaa !10
+    %arrayidx3 = getelementptr inbounds i64, ptr %ptr, i64 %idxprom2
+    %1 = load i64, ptr %arrayidx3, align 8, !tbaa !10
     %add4 = add i64 %1, %0
     ret i64 %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define i64 @testLDX(i64* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define i64 @testLDX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i64, i64* %ptr, i64 %idxprom
-    %0 = load i64, i64* %arrayidx, align 8, !tbaa !10
+    %arrayidx = getelementptr inbounds i64, ptr %ptr, i64 %idxprom
+    %0 = load i64, ptr %arrayidx, align 8, !tbaa !10
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i64, i64* %ptr, i64 %idxprom2
-    %1 = load i64, i64* %arrayidx3, align 8, !tbaa !10
+    %arrayidx3 = getelementptr inbounds i64, ptr %ptr, i64 %idxprom2
+    %1 = load i64, ptr %arrayidx3, align 8, !tbaa !10
     %add4 = add i64 %1, %0
     ret i64 %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define double @testLFDUX(double* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
+  define double @testLFDUX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds double, double* %ptr, i64 %idxprom
-    %0 = load double, double* %arrayidx, align 8, !tbaa !12
+    %arrayidx = getelementptr inbounds double, ptr %ptr, i64 %idxprom
+    %0 = load double, ptr %arrayidx, align 8, !tbaa !12
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 %idxprom2
-    %1 = load double, double* %arrayidx3, align 8, !tbaa !12
+    %arrayidx3 = getelementptr inbounds double, ptr %ptr, i64 %idxprom2
+    %1 = load double, ptr %arrayidx3, align 8, !tbaa !12
     %add4 = fadd double %0, %1
     ret double %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define double @testLFDX(double* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
+  define double @testLFDX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds double, double* %ptr, i64 %idxprom
-    %0 = load double, double* %arrayidx, align 8, !tbaa !12
+    %arrayidx = getelementptr inbounds double, ptr %ptr, i64 %idxprom
+    %0 = load double, ptr %arrayidx, align 8, !tbaa !12
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 %idxprom2
-    %1 = load double, double* %arrayidx3, align 8, !tbaa !12
+    %arrayidx3 = getelementptr inbounds double, ptr %ptr, i64 %idxprom2
+    %1 = load double, ptr %arrayidx3, align 8, !tbaa !12
     %add4 = fadd double %0, %1
     ret double %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define <4 x float> @testLFSUX(float* nocapture readonly %ptr, i32 signext %idx) local_unnamed_addr #2 {
+  define <4 x float> @testLFSUX(ptr nocapture readonly %ptr, i32 signext %idx) local_unnamed_addr #2 {
   entry:
     %idxprom = sext i32 %idx to i64
-    %arrayidx = getelementptr inbounds float, float* %ptr, i64 %idxprom
-    %0 = load float, float* %arrayidx, align 4, !tbaa !14
+    %arrayidx = getelementptr inbounds float, ptr %ptr, i64 %idxprom
+    %0 = load float, ptr %arrayidx, align 4, !tbaa !14
     %conv = fptoui float %0 to i32
     %vecinit = insertelement <4 x i32> undef, i32 %conv, i32 0
-    %1 = bitcast float* %ptr to i8*
+    %1 = bitcast ptr %ptr to ptr
     %2 = shl i64 %idxprom, 2
-    %uglygep = getelementptr i8, i8* %1, i64 %2
-    %uglygep2 = getelementptr i8, i8* %uglygep, i64 4
-    %3 = bitcast i8* %uglygep2 to float*
-    %4 = load float, float* %3, align 4, !tbaa !14
+    %uglygep = getelementptr i8, ptr %1, i64 %2
+    %uglygep2 = getelementptr i8, ptr %uglygep, i64 4
+    %3 = bitcast ptr %uglygep2 to ptr
+    %4 = load float, ptr %3, align 4, !tbaa !14
     %conv3 = fptoui float %4 to i32
     %vecinit4 = insertelement <4 x i32> %vecinit, i32 %conv3, i32 1
-    %uglygep5 = getelementptr i8, i8* %uglygep, i64 8
-    %5 = bitcast i8* %uglygep5 to float*
-    %6 = load float, float* %5, align 4, !tbaa !14
+    %uglygep5 = getelementptr i8, ptr %uglygep, i64 8
+    %5 = bitcast ptr %uglygep5 to ptr
+    %6 = load float, ptr %5, align 4, !tbaa !14
     %conv8 = fptoui float %6 to i32
     %vecinit9 = insertelement <4 x i32> %vecinit4, i32 %conv8, i32 2
-    %uglygep8 = getelementptr i8, i8* %uglygep, i64 12
-    %7 = bitcast i8* %uglygep8 to float*
-    %8 = load float, float* %7, align 4, !tbaa !14
+    %uglygep8 = getelementptr i8, ptr %uglygep, i64 12
+    %7 = bitcast ptr %uglygep8 to ptr
+    %8 = load float, ptr %7, align 4, !tbaa !14
     %conv13 = fptoui float %8 to i32
     %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
     %9 = bitcast <4 x i32> %vecinit14 to <4 x float>
@@ -407,61 +407,61 @@
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define float @testLFSX(float* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
+  define float @testLFSX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds float, float* %ptr, i64 %idxprom
-    %0 = load float, float* %arrayidx, align 4, !tbaa !14
+    %arrayidx = getelementptr inbounds float, ptr %ptr, i64 %idxprom
+    %0 = load float, ptr %arrayidx, align 4, !tbaa !14
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds float, float* %ptr, i64 %idxprom2
-    %1 = load float, float* %arrayidx3, align 4, !tbaa !14
+    %arrayidx3 = getelementptr inbounds float, ptr %ptr, i64 %idxprom2
+    %1 = load float, ptr %arrayidx3, align 4, !tbaa !14
     %add4 = fadd float %0, %1
     ret float %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define double @testLXSDX(double* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define double @testLXSDX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds double, double* %ptr, i64 %idxprom
-    %0 = load double, double* %arrayidx, align 8, !tbaa !12
+    %arrayidx = getelementptr inbounds double, ptr %ptr, i64 %idxprom
+    %0 = load double, ptr %arrayidx, align 8, !tbaa !12
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 %idxprom2
-    %1 = load double, double* %arrayidx3, align 8, !tbaa !12
+    %arrayidx3 = getelementptr inbounds double, ptr %ptr, i64 %idxprom2
+    %1 = load double, ptr %arrayidx3, align 8, !tbaa !12
     %add4 = fadd double %0, %1
     ret double %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define float @testLXSSPX(float* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define float @testLXSSPX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds float, float* %ptr, i64 %idxprom
-    %0 = load float, float* %arrayidx, align 4, !tbaa !14
+    %arrayidx = getelementptr inbounds float, ptr %ptr, i64 %idxprom
+    %0 = load float, ptr %arrayidx, align 4, !tbaa !14
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds float, float* %ptr, i64 %idxprom2
-    %1 = load float, float* %arrayidx3, align 4, !tbaa !14
+    %arrayidx3 = getelementptr inbounds float, ptr %ptr, i64 %idxprom2
+    %1 = load float, ptr %arrayidx3, align 4, !tbaa !14
     %add4 = fadd float %0, %1
     ret float %add4
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define <4 x i32> @testLXVX(<4 x i32>* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
+  define <4 x i32> @testLXVX(ptr nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 %idxprom
-    %0 = load <4 x i32>, <4 x i32>* %arrayidx, align 16, !tbaa !3
+    %arrayidx = getelementptr inbounds <4 x i32>, ptr %ptr, i64 %idxprom
+    %0 = load <4 x i32>, ptr %arrayidx, align 16, !tbaa !3
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 %idxprom2
-    %1 = load <4 x i32>, <4 x i32>* %arrayidx3, align 16, !tbaa !3
+    %arrayidx3 = getelementptr inbounds <4 x i32>, ptr %ptr, i64 %idxprom2
+    %1 = load <4 x i32>, ptr %arrayidx3, align 16, !tbaa !3
     %add4 = add <4 x i32> %1, %0
     ret <4 x i32> %add4
   }
@@ -747,197 +747,197 @@
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTBUX(i8* nocapture %ptr, i8 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTBUX(ptr nocapture %ptr, i8 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i8, i8* %ptr, i64 %idxprom
-    store i8 %a, i8* %arrayidx, align 1, !tbaa !3
+    %arrayidx = getelementptr inbounds i8, ptr %ptr, i64 %idxprom
+    store i8 %a, ptr %arrayidx, align 1, !tbaa !3
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i8, i8* %ptr, i64 %idxprom2
-    store i8 %a, i8* %arrayidx3, align 1, !tbaa !3
+    %arrayidx3 = getelementptr inbounds i8, ptr %ptr, i64 %idxprom2
+    store i8 %a, ptr %arrayidx3, align 1, !tbaa !3
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTBX(i8* nocapture %ptr, i8 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTBX(ptr nocapture %ptr, i8 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i8, i8* %ptr, i64 %idxprom
-    store i8 %a, i8* %arrayidx, align 1, !tbaa !3
+    %arrayidx = getelementptr inbounds i8, ptr %ptr, i64 %idxprom
+    store i8 %a, ptr %arrayidx, align 1, !tbaa !3
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i8, i8* %ptr, i64 %idxprom2
-    store i8 %a, i8* %arrayidx3, align 1, !tbaa !3
+    %arrayidx3 = getelementptr inbounds i8, ptr %ptr, i64 %idxprom2
+    store i8 %a, ptr %arrayidx3, align 1, !tbaa !3
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTHUX(i16* nocapture %ptr, i16 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTHUX(ptr nocapture %ptr, i16 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i16, i16* %ptr, i64 %idxprom
-    store i16 %a, i16* %arrayidx, align 2, !tbaa !6
+    %arrayidx = getelementptr inbounds i16, ptr %ptr, i64 %idxprom
+    store i16 %a, ptr %arrayidx, align 2, !tbaa !6
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i16, i16* %ptr, i64 %idxprom2
-    store i16 %a, i16* %arrayidx3, align 2, !tbaa !6
+    %arrayidx3 = getelementptr inbounds i16, ptr %ptr, i64 %idxprom2
+    store i16 %a, ptr %arrayidx3, align 2, !tbaa !6
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTHX(i16* nocapture %ptr, i16 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTHX(ptr nocapture %ptr, i16 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i16, i16* %ptr, i64 %idxprom
-    store i16 %a, i16* %arrayidx, align 1, !tbaa !3
+    %arrayidx = getelementptr inbounds i16, ptr %ptr, i64 %idxprom
+    store i16 %a, ptr %arrayidx, align 1, !tbaa !3
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i16, i16* %ptr, i64 %idxprom2
-    store i16 %a, i16* %arrayidx3, align 1, !tbaa !3
+    %arrayidx3 = getelementptr inbounds i16, ptr %ptr, i64 %idxprom2
+    store i16 %a, ptr %arrayidx3, align 1, !tbaa !3
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTWUX(i32* nocapture %ptr, i32 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTWUX(ptr nocapture %ptr, i32 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i32, i32* %ptr, i64 %idxprom
-    store i32 %a, i32* %arrayidx, align 4, !tbaa !8
+    %arrayidx = getelementptr inbounds i32, ptr %ptr, i64 %idxprom
+    store i32 %a, ptr %arrayidx, align 4, !tbaa !8
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom2
-    store i32 %a, i32* %arrayidx3, align 4, !tbaa !8
+    %arrayidx3 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom2
+    store i32 %a, ptr %arrayidx3, align 4, !tbaa !8
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTWX(i32* nocapture %ptr, i32 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTWX(ptr nocapture %ptr, i32 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i32, i32* %ptr, i64 %idxprom
-    store i32 %a, i32* %arrayidx, align 4, !tbaa !8
+    %arrayidx = getelementptr inbounds i32, ptr %ptr, i64 %idxprom
+    store i32 %a, ptr %arrayidx, align 4, !tbaa !8
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i32, i32* %ptr, i64 %idxprom2
-    store i32 %a, i32* %arrayidx3, align 4, !tbaa !8
+    %arrayidx3 = getelementptr inbounds i32, ptr %ptr, i64 %idxprom2
+    store i32 %a, ptr %arrayidx3, align 4, !tbaa !8
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTDUX(i64* nocapture %ptr, i64 %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTDUX(ptr nocapture %ptr, i64 %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i64, i64* %ptr, i64 %idxprom
-    store i64 %a, i64* %arrayidx, align 8, !tbaa !10
+    %arrayidx = getelementptr inbounds i64, ptr %ptr, i64 %idxprom
+    store i64 %a, ptr %arrayidx, align 8, !tbaa !10
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i64, i64* %ptr, i64 %idxprom2
-    store i64 %a, i64* %arrayidx3, align 8, !tbaa !10
+    %arrayidx3 = getelementptr inbounds i64, ptr %ptr, i64 %idxprom2
+    store i64 %a, ptr %arrayidx3, align 8, !tbaa !10
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTDX(i64* nocapture %ptr, i64 %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTDX(ptr nocapture %ptr, i64 %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds i64, i64* %ptr, i64 %idxprom
-    store i64 %a, i64* %arrayidx, align 8, !tbaa !10
+    %arrayidx = getelementptr inbounds i64, ptr %ptr, i64 %idxprom
+    store i64 %a, ptr %arrayidx, align 8, !tbaa !10
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds i64, i64* %ptr, i64 %idxprom2
-    store i64 %a, i64* %arrayidx3, align 8, !tbaa !10
+    %arrayidx3 = getelementptr inbounds i64, ptr %ptr, i64 %idxprom2
+    store i64 %a, ptr %arrayidx3, align 8, !tbaa !10
     ret void
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define void @testSTFSX(float* nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #2 {
+  define void @testSTFSX(ptr nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds float, float* %ptr, i64 %idxprom
-    store float %a, float* %arrayidx, align 4, !tbaa !14
+    %arrayidx = getelementptr inbounds float, ptr %ptr, i64 %idxprom
+    store float %a, ptr %arrayidx, align 4, !tbaa !14
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds float, float* %ptr, i64 %idxprom2
-    store float %a, float* %arrayidx3, align 4, !tbaa !14
+    %arrayidx3 = getelementptr inbounds float, ptr %ptr, i64 %idxprom2
+    store float %a, ptr %arrayidx3, align 4, !tbaa !14
     ret void
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define void @testSTFSUX(float* nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #2 {
+  define void @testSTFSUX(ptr nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds float, float* %ptr, i64 %idxprom
-    store float %a, float* %arrayidx, align 4, !tbaa !14
+    %arrayidx = getelementptr inbounds float, ptr %ptr, i64 %idxprom
+    store float %a, ptr %arrayidx, align 4, !tbaa !14
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds float, float* %ptr, i64 %idxprom2
-    store float %a, float* %arrayidx3, align 4, !tbaa !14
+    %arrayidx3 = getelementptr inbounds float, ptr %ptr, i64 %idxprom2
+    store float %a, ptr %arrayidx3, align 4, !tbaa !14
     ret void
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define void @testSTFDX(double* nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #2 {
+  define void @testSTFDX(ptr nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds double, double* %ptr, i64 %idxprom
-    store double %a, double* %arrayidx, align 8, !tbaa !12
+    %arrayidx = getelementptr inbounds double, ptr %ptr, i64 %idxprom
+    store double %a, ptr %arrayidx, align 8, !tbaa !12
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 %idxprom2
-    store double %a, double* %arrayidx3, align 8, !tbaa !12
+    %arrayidx3 = getelementptr inbounds double, ptr %ptr, i64 %idxprom2
+    store double %a, ptr %arrayidx3, align 8, !tbaa !12
     ret void
   }
 
   ; Function Attrs: norecurse nounwind readonly
-  define void @testSTFDUX(double* nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #2 {
+  define void @testSTFDUX(ptr nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
     %add = add i32 %idx, 1
     %idxprom = zext i32 %add to i64
-    %arrayidx = getelementptr inbounds double, double* %ptr, i64 %idxprom
-    store double %a, double* %arrayidx, align 8, !tbaa !12
+    %arrayidx = getelementptr inbounds double, ptr %ptr, i64 %idxprom
+    store double %a, ptr %arrayidx, align 8, !tbaa !12
     %add1 = add i32 %idx, 2
     %idxprom2 = zext i32 %add1 to i64
-    %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 %idxprom2
-    store double %a, double* %arrayidx3, align 8, !tbaa !12
+    %arrayidx3 = getelementptr inbounds double, ptr %ptr, i64 %idxprom2
+    store double %a, ptr %arrayidx3, align 8, !tbaa !12
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTXSSPX(float* nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTXSSPX(ptr nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %idxprom = zext i32 %idx to i64
-    %arrayidx = getelementptr inbounds float, float* %ptr, i64 %idxprom
-    store float %a, float* %arrayidx, align 4, !tbaa !14
+    %arrayidx = getelementptr inbounds float, ptr %ptr, i64 %idxprom
+    store float %a, ptr %arrayidx, align 4, !tbaa !14
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTXSDX(double* nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTXSDX(ptr nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %idxprom = zext i32 %idx to i64
-    %arrayidx = getelementptr inbounds double, double* %ptr, i64 %idxprom
-    store double %a, double* %arrayidx, align 8, !tbaa !12
+    %arrayidx = getelementptr inbounds double, ptr %ptr, i64 %idxprom
+    store double %a, ptr %arrayidx, align 8, !tbaa !12
     ret void
   }
 
   ; Function Attrs: norecurse nounwind
-  define void @testSTXVX(<4 x i32>* nocapture %ptr, <4 x i32> %a, i32 zeroext %idx) local_unnamed_addr #3 {
+  define void @testSTXVX(ptr nocapture %ptr, <4 x i32> %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
     %idxprom = zext i32 %idx to i64
-    %arrayidx = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 %idxprom
-    store <4 x i32> %a, <4 x i32>* %arrayidx, align 16, !tbaa !3
+    %arrayidx = getelementptr inbounds <4 x i32>, ptr %ptr, i64 %idxprom
+    store <4 x i32> %a, ptr %arrayidx, align 16, !tbaa !3
     ret void
   }
 
@@ -1348,7 +1348,7 @@ body:             |
     %1 = LI 77
     %2 = ADDI killed %1, 44
     %3 = EXTSW_32_64 killed %2
-    ; CHECK: LI 121
+    ; CHECK: LI8 121
     ; CHECK-LATE: li 3, 121
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -3573,7 +3573,7 @@ body:             |
 
     %0 = LI 777
     %1 = ORI %0, 88
-    ; CHECK: LI 857
+    ; CHECK: LI8 857
     ; CHECK-LATE: li 3, 857
     $x3 = EXTSW_32_64 %1
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4145,7 +4145,7 @@ body:             |
     %3 = IMPLICIT_DEF
     %2 = LI 17
     %4 = RLWINM killed %2, 4, 20, 27
-    ; CHECK: LI 272
+    ; CHECK: LI8 272
     ; CHECK-LATE: li 3, 272
     $x3 = EXTSW_32_64 %4
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4990,7 +4990,10 @@ body:             |
     %2 = LI 15
     %3 = COPY %0.sub_32
     %4 = SRAW killed %3, killed %2, implicit-def dead $carry
-    ; CHECK: SRAWI killed %3, 15, implicit-def dead $carry
+    ; CHECK:      %6:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: %7:g8rc = INSERT_SUBREG %6, killed %3, %subreg.sub_32
+    ; CHECK-NEXT: %8:g8rc = SRAWI8 killed %7, 15, implicit-def $carry, implicit-def dead $carry
+    ; CHECK-NEXT: %4:gprc = COPY killed %8.sub_32
     ; CHECK-LATE: srawi 3, 3, 15
     %5 = EXTSW_32_64 killed %4
     $x3 = COPY %5
@@ -5047,7 +5050,7 @@ body:             |
     %2 = LI 8
     %3 = COPY %0.sub_32
     %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRAWI_rec killed %3, 8, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK:  %11:g8rc = SRAWI8_rec killed %10, 8, implicit-def $carry, implicit-def $cr0, implicit-def dead $carry, implicit-def $cr0
     ; CHECK-LATE: srawi. 3, 3, 8
     %5 = COPY killed $cr0
     %6 = ISEL %2, %4, %5.sub_eq
@@ -6456,7 +6459,7 @@ body:             |
 
     %0 = LI 871
     %1 = XORI %0, 17
-    ; CHECK: LI 886
+    ; CHECK: LI8 886
     ; CHECK-LATE: li 3, 886
     $x3 = EXTSW_32_64 %1
     BLR8 implicit $lr8, implicit $rm, implicit $x3

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-fold-operands %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-fold-operands %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_part_fold{{$}}
 # GCN: %2:sreg_32 = S_ADD_I32 70, %1
@@ -46,7 +46,7 @@ body: |
     %2:sreg_32 = S_LSHL2_ADD_U32 %0, %1, implicit-def $scc
 ...
 # GCN-LABEL: name: test_frameindex{{$}}
-# GCN: %1:sreg_32 = S_ADD_I32 %stack.0, %0
+# GCN: %1:sreg_32 = S_ADD_I32 %stack.0, 70
 ---
 name: test_frameindex
 tracksRegLiveness: true
@@ -68,4 +68,203 @@ body: |
   bb.0:
     %0:sreg_32 = S_MOV_B32 63
     %1:sreg_32 = S_ADD_I32 %stack.0, %0, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_no_fold_literal_already_inline_lhs{{$}}
+# GCN: %0:sreg_32 = S_MOV_B32 80
+# GCN-NEXT: %1:sreg_32 = S_ADD_I32 70, %0
+---
+name: test_no_fold_literal_already_inline_lhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    %1:sreg_32 = S_ADD_I32 70, %0, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_no_fold_literal_already_inline_rhs{{$}}
+# GCN: %0:sreg_32 = S_MOV_B32 80
+# GCN-NEXT: %1:sreg_32 = S_ADD_I32 %0, 70
+---
+name: test_no_fold_literal_already_inline_rhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    %1:sreg_32 = S_ADD_I32 %0, 70, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_fold_literal_inlineimm_lhs{{$}}
+# GCN: %1:sreg_32 = S_ADD_I32 64, 80
+---
+name: test_fold_literal_inlineimm_lhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    %1:sreg_32 = S_ADD_I32 64, %0, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_fold_literal_inlineimm_rhs{{$}}
+# GCN: %1:sreg_32 = S_ADD_I32 80, 64
+---
+name: test_fold_literal_inlineimm_rhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    %1:sreg_32 = S_ADD_I32 %0, 64, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_fold_same_literal_2x{{$}}
+# GCN: %2:sreg_32 = S_ADD_I32 70, 70
+---
+name: test_fold_same_literal_2x
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 70
+    %1:sreg_32 = S_MOV_B32 70
+    %2:sreg_32 = S_ADD_I32 %0, %1, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_fold_same_literal_lhs{{$}}
+# GCN: %1:sreg_32 = S_ADD_I32 70, 70
+---
+name: test_fold_same_literal_lhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 70
+    %1:sreg_32 = S_ADD_I32 70, %0, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_fold_same_literal_rhs{{$}}
+# GCN: %1:sreg_32 = S_ADD_I32 70, 70
+---
+name: test_fold_same_literal_rhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 70
+    %1:sreg_32 = S_ADD_I32 %0, 70, implicit-def $scc
+...
+
+
+# GCN-LABEL: name: test_s_cselect_b32_2x_literal_fold{{$}}
+# GCN: %2:sreg_32 = S_CSELECT_B32 70, %1, implicit $scc
+---
+name: test_s_cselect_b32_2x_literal_fold
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 70
+    %1:sreg_32 = S_MOV_B32 80
+    $scc = IMPLICIT_DEF
+    %2:sreg_32 = S_CSELECT_B32 %0, %1, implicit $scc
+...
+
+# GCN-LABEL: name: test_s_cselect_b32_fold_literal_literal_lhs{{$}}
+# GCN: %1:sreg_32 = S_CSELECT_B32 70, %0, implicit $scc
+---
+name: test_s_cselect_b32_fold_literal_literal_lhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    $scc = IMPLICIT_DEF
+    %1:sreg_32 = S_CSELECT_B32 70, %0, implicit $scc
+...
+
+# GCN-LABEL: name: test_s_cselect_b32_fold_literal_literal_rhs{{$}}
+# GCN: %1:sreg_32 = S_CSELECT_B32 %0, 70, implicit $scc
+---
+name: test_s_cselect_b32_fold_literal_literal_rhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    $scc = IMPLICIT_DEF
+    %1:sreg_32 = S_CSELECT_B32 %0, 70, implicit $scc
+...
+
+# GCN-LABEL: name: test_s_cselect_b32_fold_literal_inlineimm_lhs{{$}}
+# GCN: %1:sreg_32 = S_CSELECT_B32 64, 80, implicit $scc
+---
+name: test_s_cselect_b32_fold_literal_inlineimm_lhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    $scc = IMPLICIT_DEF
+    %1:sreg_32 = S_CSELECT_B32 64, %0, implicit $scc
+...
+
+# GCN-LABEL: name: test_s_cselect_b32_fold_literal_inlineimm_rhs{{$}}
+# GCN: %1:sreg_32 = S_CSELECT_B32 80, 64, implicit $scc
+---
+name: test_s_cselect_b32_fold_literal_inlineimm_rhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    $scc = IMPLICIT_DEF
+    %1:sreg_32 = S_CSELECT_B32 %0, 64, implicit $scc
+...
+
+# GCN-LABEL: name: test_s_cmp_b32_2x_literal_fold{{$}}
+# GCN: S_CMP_EQ_U32 70, %1, implicit-def $scc
+---
+name: test_s_cmp_b32_2x_literal_fold
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 70
+    %1:sreg_32 = S_MOV_B32 80
+    $scc = IMPLICIT_DEF
+    S_CMP_EQ_U32 %0, %1, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_s_cmp_b32_literal_literal_lhs{{$}}
+# GCN: S_CMP_EQ_U32 70, %0, implicit-def $scc
+---
+name: test_s_cmp_b32_literal_literal_lhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    S_CMP_EQ_U32 70, %0, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_s_cmp_b32_literal_literal_rhs{{$}}
+# GCN: S_CMP_EQ_U32 %0, 70, implicit-def $scc
+---
+name: test_s_cmp_b32_literal_literal_rhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    S_CMP_EQ_U32 %0, 70, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_s_cmp_b32_literal_inlineimm_lhs{{$}}
+# GCN: S_CMP_EQ_U32 64, 80, implicit-def $scc
+---
+name: test_s_cmp_b32_literal_inlineimm_lhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    S_CMP_EQ_U32 64, %0, implicit-def $scc
+...
+
+# GCN-LABEL: name: test_s_cmp_b32_literal_inlineimm_rhs{{$}}
+# GCN: S_CMP_EQ_U32 80, 64, implicit-def $scc
+---
+name: test_s_cmp_b32_literal_inlineimm_rhs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 80
+    S_CMP_EQ_U32 %0, 64, implicit-def $scc
 ...

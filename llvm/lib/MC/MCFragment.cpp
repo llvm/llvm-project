@@ -11,315 +11,75 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/MC/MCAsmLayout.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstdint>
 #include <utility>
 
 using namespace llvm;
 
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
-  // Compute the section layout order. Virtual sections must go last.
-  for (MCSection &Sec : Asm)
-    if (!Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-  for (MCSection &Sec : Asm)
-    if (Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-}
-
-bool MCAsmLayout::isFragmentValid(const MCFragment *F) const {
-  const MCSection *Sec = F->getParent();
-  const MCFragment *LastValid = LastValidFragment.lookup(Sec);
-  if (!LastValid)
-    return false;
-  assert(LastValid->getParent() == Sec);
-  return F->getLayoutOrder() <= LastValid->getLayoutOrder();
-}
-
-bool MCAsmLayout::canGetFragmentOffset(const MCFragment *F) const {
-  MCSection *Sec = F->getParent();
-  MCSection::iterator I;
-  if (MCFragment *LastValid = LastValidFragment[Sec]) {
-    // Fragment already valid, offset is available.
-    if (F->getLayoutOrder() <= LastValid->getLayoutOrder())
-      return true;
-    I = ++MCSection::iterator(LastValid);
-  } else
-    I = Sec->begin();
-
-  // A fragment ordered before F is currently being laid out.
-  const MCFragment *FirstInvalidFragment = &*I;
-  if (FirstInvalidFragment->IsBeingLaidOut)
-    return false;
-
-  return true;
-}
-
-void MCAsmLayout::invalidateFragmentsFrom(MCFragment *F) {
-  // If this fragment wasn't already valid, we don't need to do anything.
-  if (!isFragmentValid(F))
-    return;
-
-  // Otherwise, reset the last valid fragment to the previous fragment
-  // (if this is the first fragment, it will be NULL).
-  LastValidFragment[F->getParent()] = F->getPrevNode();
-}
-
-void MCAsmLayout::ensureValid(const MCFragment *F) const {
-  MCSection *Sec = F->getParent();
-  MCSection::iterator I;
-  if (MCFragment *Cur = LastValidFragment[Sec])
-    I = ++MCSection::iterator(Cur);
-  else
-    I = Sec->begin();
-
-  // Advance the layout position until the fragment is valid.
-  while (!isFragmentValid(F)) {
-    assert(I != Sec->end() && "Layout bookkeeping error");
-    const_cast<MCAsmLayout *>(this)->layoutFragment(&*I);
-    ++I;
-  }
-}
-
-uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
-  ensureValid(F);
-  assert(F->Offset != ~UINT64_C(0) && "Address not set!");
-  return F->Offset;
-}
-
-// Simple getSymbolOffset helper for the non-variable case.
-static bool getLabelOffset(const MCAsmLayout &Layout, const MCSymbol &S,
-                           bool ReportError, uint64_t &Val) {
-  if (!S.getFragment()) {
-    if (ReportError)
-      report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         S.getName() + "'");
-    return false;
-  }
-  Val = Layout.getFragmentOffset(S.getFragment()) + S.getOffset();
-  return true;
-}
-
-static bool getSymbolOffsetImpl(const MCAsmLayout &Layout, const MCSymbol &S,
-                                bool ReportError, uint64_t &Val) {
-  if (!S.isVariable())
-    return getLabelOffset(Layout, S, ReportError, Val);
-
-  // If SD is a variable, evaluate it.
-  MCValue Target;
-  if (!S.getVariableValue()->evaluateAsValue(Target, Layout))
-    report_fatal_error("unable to evaluate offset for variable '" +
-                       S.getName() + "'");
-
-  uint64_t Offset = Target.getConstant();
-
-  const MCSymbolRefExpr *A = Target.getSymA();
-  if (A) {
-    uint64_t ValA;
-    // FIXME: On most platforms, `Target`'s component symbols are labels from
-    // having been simplified during evaluation, but on Mach-O they can be
-    // variables due to PR19203. This, and the line below for `B` can be
-    // restored to call `getLabelOffset` when PR19203 is fixed.
-    if (!getSymbolOffsetImpl(Layout, A->getSymbol(), ReportError, ValA))
-      return false;
-    Offset += ValA;
-  }
-
-  const MCSymbolRefExpr *B = Target.getSymB();
-  if (B) {
-    uint64_t ValB;
-    if (!getSymbolOffsetImpl(Layout, B->getSymbol(), ReportError, ValB))
-      return false;
-    Offset -= ValB;
-  }
-
-  Val = Offset;
-  return true;
-}
-
-bool MCAsmLayout::getSymbolOffset(const MCSymbol &S, uint64_t &Val) const {
-  return getSymbolOffsetImpl(*this, S, false, Val);
-}
-
-uint64_t MCAsmLayout::getSymbolOffset(const MCSymbol &S) const {
-  uint64_t Val;
-  getSymbolOffsetImpl(*this, S, true, Val);
-  return Val;
-}
-
-const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
-  if (!Symbol.isVariable())
-    return &Symbol;
-
-  const MCExpr *Expr = Symbol.getVariableValue();
-  MCValue Value;
-  if (!Expr->evaluateAsValue(Value, *this)) {
-    Assembler.getContext().reportError(
-        Expr->getLoc(), "expression could not be evaluated");
-    return nullptr;
-  }
-
-  const MCSymbolRefExpr *RefB = Value.getSymB();
-  if (RefB) {
-    Assembler.getContext().reportError(
-        Expr->getLoc(), Twine("symbol '") + RefB->getSymbol().getName() +
-                     "' could not be evaluated in a subtraction expression");
-    return nullptr;
-  }
-
-  const MCSymbolRefExpr *A = Value.getSymA();
-  if (!A)
-    return nullptr;
-
-  const MCSymbol &ASym = A->getSymbol();
-  const MCAssembler &Asm = getAssembler();
-  if (ASym.isCommon()) {
-    Asm.getContext().reportError(Expr->getLoc(),
-                                 "Common symbol '" + ASym.getName() +
-                                     "' cannot be used in assignment expr");
-    return nullptr;
-  }
-
-  return &ASym;
-}
-
-uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
-  // The size is the last fragment's end offset.
-  const MCFragment &F = Sec->getFragmentList().back();
-  return getFragmentOffset(&F) + getAssembler().computeFragmentSize(*this, F);
-}
-
-uint64_t MCAsmLayout::getSectionFileSize(const MCSection *Sec) const {
-  // Virtual sections have no file size.
-  if (Sec->isVirtualSection())
-    return 0;
-
-  // Otherwise, the file size is the same as the address space size.
-  return getSectionAddressSize(Sec);
-}
-
-uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
-                                    const MCEncodedFragment *F,
-                                    uint64_t FOffset, uint64_t FSize) {
-  uint64_t BundleSize = Assembler.getBundleAlignSize();
-  assert(BundleSize > 0 &&
-         "computeBundlePadding should only be called if bundling is enabled");
-  uint64_t BundleMask = BundleSize - 1;
-  uint64_t OffsetInBundle = FOffset & BundleMask;
-  uint64_t EndOfFragment = OffsetInBundle + FSize;
-
-  // There are two kinds of bundling restrictions:
-  //
-  // 1) For alignToBundleEnd(), add padding to ensure that the fragment will
-  //    *end* on a bundle boundary.
-  // 2) Otherwise, check if the fragment would cross a bundle boundary. If it
-  //    would, add padding until the end of the bundle so that the fragment
-  //    will start in a new one.
-  if (F->alignToBundleEnd()) {
-    // Three possibilities here:
-    //
-    // A) The fragment just happens to end at a bundle boundary, so we're good.
-    // B) The fragment ends before the current bundle boundary: pad it just
-    //    enough to reach the boundary.
-    // C) The fragment ends after the current bundle boundary: pad it until it
-    //    reaches the end of the next bundle boundary.
-    //
-    // Note: this code could be made shorter with some modulo trickery, but it's
-    // intentionally kept in its more explicit form for simplicity.
-    if (EndOfFragment == BundleSize)
-      return 0;
-    else if (EndOfFragment < BundleSize)
-      return BundleSize - EndOfFragment;
-    else { // EndOfFragment > BundleSize
-      return 2 * BundleSize - EndOfFragment;
-    }
-  } else if (OffsetInBundle > 0 && EndOfFragment > BundleSize)
-    return BundleSize - OffsetInBundle;
-  else
-    return 0;
-}
-
-/* *** */
-
-void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
-
-MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
-                       MCSection *Parent)
-    : Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)), LayoutOrder(0),
-      Kind(Kind), IsBeingLaidOut(false), HasInstructions(HasInstructions) {
-  if (Parent && !isa<MCDummyFragment>(*this))
-    Parent->getFragmentList().push_back(this);
-}
+MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
+    : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
+      LinkerRelaxable(false), AllowAutoPadding(false) {}
 
 void MCFragment::destroy() {
-  // First check if we are the sentinal.
-  if (Kind == FragmentType(~0)) {
-    delete this;
-    return;
-  }
-
   switch (Kind) {
     case FT_Align:
-      delete cast<MCAlignFragment>(this);
+      cast<MCAlignFragment>(this)->~MCAlignFragment();
       return;
     case FT_Data:
-      delete cast<MCDataFragment>(this);
-      return;
-    case FT_CompactEncodedInst:
-      delete cast<MCCompactEncodedInstFragment>(this);
+      cast<MCDataFragment>(this)->~MCDataFragment();
       return;
     case FT_Fill:
-      delete cast<MCFillFragment>(this);
+      cast<MCFillFragment>(this)->~MCFillFragment();
       return;
     case FT_Nops:
-      delete cast<MCNopsFragment>(this);
+      cast<MCNopsFragment>(this)->~MCNopsFragment();
       return;
     case FT_Relaxable:
-      delete cast<MCRelaxableFragment>(this);
+      cast<MCRelaxableFragment>(this)->~MCRelaxableFragment();
       return;
     case FT_Org:
-      delete cast<MCOrgFragment>(this);
+      cast<MCOrgFragment>(this)->~MCOrgFragment();
       return;
     case FT_Dwarf:
-      delete cast<MCDwarfLineAddrFragment>(this);
+      cast<MCDwarfLineAddrFragment>(this)->~MCDwarfLineAddrFragment();
       return;
     case FT_DwarfFrame:
-      delete cast<MCDwarfCallFrameFragment>(this);
+      cast<MCDwarfCallFrameFragment>(this)->~MCDwarfCallFrameFragment();
       return;
     case FT_LEB:
-      delete cast<MCLEBFragment>(this);
+      cast<MCLEBFragment>(this)->~MCLEBFragment();
       return;
     case FT_BoundaryAlign:
-      delete cast<MCBoundaryAlignFragment>(this);
+      cast<MCBoundaryAlignFragment>(this)->~MCBoundaryAlignFragment();
       return;
     case FT_SymbolId:
-      delete cast<MCSymbolIdFragment>(this);
+      cast<MCSymbolIdFragment>(this)->~MCSymbolIdFragment();
       return;
     case FT_CVInlineLines:
-      delete cast<MCCVInlineLineTableFragment>(this);
+      cast<MCCVInlineLineTableFragment>(this)->~MCCVInlineLineTableFragment();
       return;
     case FT_CVDefRange:
-      delete cast<MCCVDefRangeFragment>(this);
+      cast<MCCVDefRangeFragment>(this)->~MCCVDefRangeFragment();
       return;
     case FT_PseudoProbe:
-      delete cast<MCPseudoProbeAddrFragment>(this);
+      cast<MCPseudoProbeAddrFragment>(this)->~MCPseudoProbeAddrFragment();
       return;
     case FT_Dummy:
-      delete cast<MCDummyFragment>(this);
+      cast<MCDummyFragment>(this)->~MCDummyFragment();
       return;
   }
+}
+
+const MCSymbol *MCFragment::getAtom() const {
+  return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
 }
 
 // Debugging methods
@@ -343,8 +103,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   switch (getKind()) {
   case MCFragment::FT_Align: OS << "MCAlignFragment"; break;
   case MCFragment::FT_Data:  OS << "MCDataFragment"; break;
-  case MCFragment::FT_CompactEncodedInst:
-    OS << "MCCompactEncodedInstFragment"; break;
   case MCFragment::FT_Fill:  OS << "MCFillFragment"; break;
   case MCFragment::FT_Nops:
     OS << "MCFNopsFragment";
@@ -392,29 +150,12 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     }
     OS << "] (" << Contents.size() << " bytes)";
 
-    if (DF->fixup_begin() != DF->fixup_end()) {
+    if (DF->getFixups().size()) {
       OS << ",\n       ";
       OS << " Fixups:[";
-      for (MCDataFragment::const_fixup_iterator it = DF->fixup_begin(),
-             ie = DF->fixup_end(); it != ie; ++it) {
-        if (it != DF->fixup_begin()) OS << ",\n                ";
-        OS << *it;
-      }
+      interleave(DF->getFixups(), OS, ",\n                ");
       OS << "]";
     }
-    break;
-  }
-  case MCFragment::FT_CompactEncodedInst: {
-    const auto *CEIF =
-      cast<MCCompactEncodedInstFragment>(this);
-    OS << "\n       ";
-    OS << " Contents:[";
-    const SmallVectorImpl<char> &Contents = CEIF->getContents();
-    for (unsigned i = 0, e = Contents.size(); i != e; ++i) {
-      if (i) OS << ",";
-      OS << hexdigit((Contents[i] >> 4) & 0xF) << hexdigit(Contents[i] & 0xF);
-    }
-    OS << "] (" << Contents.size() << " bytes)";
     break;
   }
   case MCFragment::FT_Fill:  {

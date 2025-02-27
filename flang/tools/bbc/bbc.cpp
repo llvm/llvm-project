@@ -14,9 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/default-kinds.h"
+#include "flang/Frontend/CodeGenOptions.h"
+#include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
@@ -38,7 +37,13 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/OpenMP-features.h"
+#include "flang/Support/Version.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
+#include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/AsmState.h"
@@ -50,6 +55,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
@@ -63,6 +69,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
+#include <memory>
 
 //===----------------------------------------------------------------------===//
 // Some basic command-line options
@@ -140,6 +147,16 @@ static llvm::cl::opt<bool>
                     llvm::cl::desc("enable openmp GPU target codegen"),
                     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableOpenMPForceUSM(
+    "fopenmp-force-usm",
+    llvm::cl::desc("force openmp unified shared memory mode"),
+    llvm::cl::init(false));
+
+static llvm::cl::list<std::string> targetTriplesOpenMP(
+    "fopenmp-targets",
+    llvm::cl::desc("comma-separated list of OpenMP offloading triples"),
+    llvm::cl::CommaSeparated);
+
 // A simplified subset of the OpenMP RTL Flags from Flang, only the primary
 // positive options are available, no negative options e.g. fopen_assume* vs
 // fno_open_assume*
@@ -177,14 +194,15 @@ static llvm::cl::opt<bool> setOpenMPNoNestedParallelism(
                    "a parallel region."),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+    setNoGPULib("nogpulib",
+                llvm::cl::desc("Do not link device library for CUDA/HIP device "
+                               "compilation"),
+                llvm::cl::init(false));
+
 static llvm::cl::opt<bool> enableOpenACC("fopenacc",
                                          llvm::cl::desc("enable openacc"),
                                          llvm::cl::init(false));
-
-static llvm::cl::opt<bool> enablePolymorphic(
-    "polymorphic-type",
-    llvm::cl::desc("enable polymorphic type lowering (experimental)"),
-    llvm::cl::init(false));
 
 static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
     "fno-ppc-native-vector-element-order",
@@ -199,12 +217,37 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<std::string>
+    enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
+                  llvm::cl::init(""));
+
 static llvm::cl::opt<bool> fixedForm("ffixed-form",
                                      llvm::cl::desc("enable fixed form"),
                                      llvm::cl::init(false));
+static llvm::cl::opt<std::string>
+    targetTripleOverride("target",
+                         llvm::cl::desc("Override host target triple"),
+                         llvm::cl::init(""));
+
+static llvm::cl::opt<bool> integerWrapAround(
+    "fwrapv",
+    llvm::cl::desc("Treat signed integer overflow as two's complement"),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> initGlobalZero(
+    "finit-global-zero",
+    llvm::cl::desc("Zero initialize globals without default initialization"),
+    llvm::cl::init(true));
+
+static llvm::cl::opt<bool>
+    reallocateLHS("frealloc-lhs",
+                  llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
+                                 "the LHS of the intrinsic assignment"),
+                  llvm::cl::init(true));
 
 #define FLANG_EXCLUDE_CODEGEN
-#include "flang/Tools/CLOptions.inc"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 //===----------------------------------------------------------------------===//
 
@@ -221,15 +264,53 @@ static void registerAllPasses() {
   fir::registerOptTransformPasses();
 }
 
+/// Create a target machine that is at least sufficient to get data-layout
+/// information required by flang semantics and lowering. Note that it may not
+/// contain all the CPU feature information to get optimized assembly generation
+/// from LLVM IR. Drivers that needs to generate assembly from LLVM IR should
+/// create a target machine according to their specific options.
+static std::unique_ptr<llvm::TargetMachine>
+createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
+  std::string triple{targetTriple};
+  if (triple.empty())
+    triple = llvm::sys::getDefaultTargetTriple();
+
+  const llvm::Target *theTarget =
+      llvm::TargetRegistry::lookupTarget(triple, error);
+  if (!theTarget)
+    return nullptr;
+  return std::unique_ptr<llvm::TargetMachine>{
+      theTarget->createTargetMachine(triple, /*CPU=*/"",
+                                     /*Features=*/"", llvm::TargetOptions(),
+                                     /*Reloc::Model=*/std::nullopt)};
+}
+
+/// Build and execute the OpenMPFIRPassPipeline with its own instance
+/// of the pass manager, allowing it to be invoked as soon as it's
+/// required without impacting the main pass pipeline that may be invoked
+/// more than once for verification.
+static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
+  mlir::PassManager pm(mlirModule->getName(),
+                       mlir::OpPassManager::Nesting::Implicit);
+  fir::createOpenMPFIRPassPipeline(pm, enableOpenMPDevice);
+  (void)mlir::applyPassManagerCLOptions(pm);
+  if (mlir::failed(pm.run(mlirModule))) {
+    llvm::errs() << "FATAL: failed to correctly apply OpenMP pass pipeline";
+    return mlir::failure();
+  }
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // Translate Fortran input to FIR, a dialect of MLIR.
 //===----------------------------------------------------------------------===//
 
-static mlir::LogicalResult convertFortranSourceToMLIR(
+static llvm::LogicalResult convertFortranSourceToMLIR(
     std::string path, Fortran::parser::Options options,
     const ProgramName &programPrefix,
     Fortran::semantics::SemanticsContext &semanticsContext,
-    const mlir::PassPipelineCLParser &passPipeline) {
+    const mlir::PassPipelineCLParser &passPipeline,
+    const llvm::TargetMachine &targetMachine) {
 
   // prep for prescan and parse
   Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
@@ -242,17 +323,20 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   // parse the input Fortran
   parsing.Parse(llvm::outs());
-  parsing.messages().Emit(llvm::errs(), parsing.allCooked());
   if (!parsing.consumedWholeFile()) {
+    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
                         "parser FAIL (final position)",
                         "error: ", llvm::raw_ostream::RED);
     return mlir::failure();
-  }
-  if ((!parsing.messages().empty() && (parsing.messages().AnyFatalError())) ||
-      !parsing.parseTree().has_value()) {
+  } else if ((!parsing.messages().empty() &&
+              (parsing.messages().AnyFatalError())) ||
+             !parsing.parseTree().has_value()) {
+    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     llvm::errs() << programPrefix << "could not parse " << path << '\n';
     return mlir::failure();
+  } else {
+    semanticsContext.messages().Annex(std::move(parsing.messages()));
   }
 
   // run semantics
@@ -290,21 +374,28 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // translate to FIR dialect of MLIR
   mlir::DialectRegistry registry;
   fir::support::registerNonCodegenDialects(registry);
+  fir::support::addFIRExtensions(registry);
   mlir::MLIRContext ctx(registry);
   fir::support::loadNonCodegenDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fir::fromDefaultKinds(defKinds)});
+  std::string targetTriple = targetMachine.getTargetTriple().normalize();
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
-  loweringOptions.setPolymorphicTypeImpl(enablePolymorphic);
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
+  loweringOptions.setIntegerWrapAround(integerWrapAround);
+  loweringOptions.setInitGlobalZero(initGlobalZero);
+  loweringOptions.setReallocateLHS(reallocateLHS);
+  std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
+  Fortran::frontend::TargetOptions targetOpts;
+  Fortran::frontend::CodeGenOptions cgOpts;
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
-      semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
-      kindMap, loweringOptions, {}, semanticsContext.languageFeatures());
-  burnside.lower(parseTree, semanticsContext);
+      semanticsContext.targetCharacteristics(), parsing.allCooked(),
+      targetTriple, kindMap, loweringOptions, envDefaults,
+      semanticsContext.languageFeatures(), targetMachine, targetOpts, cgOpts);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
@@ -312,14 +403,21 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
                       "-fopenmp-is-target-device is also set";
       return mlir::failure();
     }
-    auto offloadModuleOpts =
-        OffloadModuleOpts(setOpenMPTargetDebug, setOpenMPTeamSubscription,
-                          setOpenMPThreadSubscription, setOpenMPNoThreadState,
-                          setOpenMPNoNestedParallelism, enableOpenMPDevice,
-                          enableOpenMPGPU, setOpenMPVersion);
+    // Construct offloading target triples vector.
+    std::vector<llvm::Triple> targetTriples;
+    targetTriples.reserve(targetTriplesOpenMP.size());
+    for (llvm::StringRef s : targetTriplesOpenMP)
+      targetTriples.emplace_back(s);
+
+    auto offloadModuleOpts = OffloadModuleOpts(
+        setOpenMPTargetDebug, setOpenMPTeamSubscription,
+        setOpenMPThreadSubscription, setOpenMPNoThreadState,
+        setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
+        enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }
+  burnside.lower(parseTree, semanticsContext);
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())
@@ -330,14 +428,16 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
                            "could not open output file ")
            << outputName;
 
+  // WARNING: This pipeline must be run immediately after the lowering to
+  // ensure that the FIR is correct with respect to OpenMP operations/
+  // attributes.
+  if (enableOpenMP)
+    if (mlir::failed(runOpenMPPasses(mlirModule)))
+      return mlir::failure();
+
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
-  if (enableOpenMP)
-    // WARNING: This pipeline must be run immediately after the lowering to
-    // ensure that the FIR is correct with respect to OpenMP operations/
-    // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, enableOpenMPDevice);
   pm.enableVerifier(/*verifyPasses=*/true);
   (void)mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
@@ -358,7 +458,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
-      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
+      fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP,
+                                        llvm::OptimizationLevel::O2);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
         return mlir::failure();
@@ -372,8 +473,12 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
     // Add O2 optimizer pass pipeline.
-    fir::createDefaultFIROptimizerPassPipeline(
-        pm, MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel::O2));
+    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    if (enableOpenMP)
+      config.EnableOpenMP = true;
+    config.NSWOnLoopVarInc = !integerWrapAround;
+    fir::registerDefaultInlinerPass(config);
+    fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }
 
   if (mlir::succeeded(pm.run(mlirModule))) {
@@ -388,6 +493,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
 int main(int argc, char **argv) {
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
   registerAllPasses();
 
   mlir::registerMLIRContextCLOptions();
@@ -420,6 +527,21 @@ int main(int argc, char **argv) {
   options.predefinitions.emplace_back(
       "__flang_patchlevel__"s, std::string{FLANG_VERSION_PATCHLEVEL_STRING});
 
+  Fortran::common::LangOptions langOpts;
+  langOpts.NoGPULib = setNoGPULib;
+  langOpts.OpenMPVersion = setOpenMPVersion;
+  langOpts.OpenMPIsTargetDevice = enableOpenMPDevice;
+  langOpts.OpenMPIsGPU = enableOpenMPGPU;
+  langOpts.OpenMPForceUSM = enableOpenMPForceUSM;
+  langOpts.OpenMPTargetDebug = setOpenMPTargetDebug;
+  langOpts.OpenMPThreadSubscription = setOpenMPThreadSubscription;
+  langOpts.OpenMPTeamSubscription = setOpenMPTeamSubscription;
+  langOpts.OpenMPNoThreadState = setOpenMPNoThreadState;
+  langOpts.OpenMPNoNestedParallelism = setOpenMPNoNestedParallelism;
+  std::transform(targetTriplesOpenMP.begin(), targetTriplesOpenMP.end(),
+                 std::back_inserter(langOpts.OMPTargetTriples),
+                 [](const std::string &str) { return llvm::Triple(str); });
+
   // enable parsing of OpenMP
   if (enableOpenMP) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
@@ -437,6 +559,12 @@ int main(int argc, char **argv) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
   }
 
+  if (enableGPUMode == "managed") {
+    options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
+  } else if (enableGPUMode == "unified") {
+    options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
+  }
+
   if (fixedForm) {
     options.isFixedForm = fixedForm;
   }
@@ -445,7 +573,7 @@ int main(int argc, char **argv) {
   Fortran::parser::AllSources allSources;
   Fortran::parser::AllCookedSources allCookedSources(allSources);
   Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, options.features, allCookedSources};
+      defaultKinds, options.features, langOpts, allCookedSources};
   semanticsContext.set_moduleDirectory(moduleDir)
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)
@@ -453,17 +581,21 @@ int main(int argc, char **argv) {
       .set_warnOnNonstandardUsage(warnStdViolation)
       .set_warningsAreErrors(warnIsError);
 
-  llvm::Triple targetTriple{llvm::Triple(
-      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple()))};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86 &&
-      targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    semanticsContext.targetCharacteristics().DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
+  std::string error;
+  // Create host target machine.
+  std::unique_ptr<llvm::TargetMachine> targetMachine =
+      createTargetMachine(targetTripleOverride, error);
+  if (!targetMachine) {
+    llvm::errs() << "failed to create target machine: " << error << "\n";
+    return mlir::failed(mlir::failure());
   }
-  if (targetTriple.isPPC())
-    semanticsContext.targetCharacteristics().set_isPPC(true);
+  std::string compilerVersion = Fortran::common::getFlangToolFullVersion("bbc");
+  std::string compilerOptions = "";
+  Fortran::tools::setUpTargetCharacteristics(
+      semanticsContext.targetCharacteristics(), *targetMachine, {},
+      compilerVersion, compilerOptions);
 
-  return mlir::failed(convertFortranSourceToMLIR(
-      inputFilename, options, programPrefix, semanticsContext, passPipe));
+  return mlir::failed(
+      convertFortranSourceToMLIR(inputFilename, options, programPrefix,
+                                 semanticsContext, passPipe, *targetMachine));
 }

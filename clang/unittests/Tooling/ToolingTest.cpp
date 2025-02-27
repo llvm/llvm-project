@@ -152,6 +152,20 @@ TEST(buildASTFromCode, ReportsErrors) {
   EXPECT_EQ(1u, Consumer.NumDiagnosticsSeen);
 }
 
+TEST(buildASTFromCode, FileSystem) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  InMemoryFileSystem->addFile("included_file.h", 0,
+                              llvm::MemoryBuffer::getMemBufferCopy("class X;"));
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs(
+      R"(#include "included_file.h")", {}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      getClangStripDependencyFileAdjuster(), FileContentMappings(), nullptr,
+      InMemoryFileSystem);
+  ASSERT_TRUE(AST.get());
+  EXPECT_TRUE(FindClassDeclX(AST.get()));
+}
+
 TEST(newFrontendActionFactory, CreatesFrontendActionFactoryFromType) {
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory<SyntaxOnlyAction>());
@@ -197,8 +211,8 @@ TEST(ToolInvocation, TestMapVirtualFile) {
 
 TEST(ToolInvocation, TestVirtualModulesCompilation) {
   // FIXME: Currently, this only tests that we don't exit with an error if a
-  // mapped module.map is found on the include path. In the future, expand this
-  // test to run a full modules enabled compilation, so we make sure we can
+  // mapped module.modulemap is found on the include path. In the future, expand
+  // this test to run a full modules enabled compilation, so we make sure we can
   // rerun modules compilations with a virtual file system.
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
       new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
@@ -218,9 +232,9 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
       "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("#include <abc>\n"));
   InMemoryFileSystem->addFile("def/abc", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
-  // Add a module.map file in the include directory of our header, so we trigger
-  // the module.map header search logic.
-  InMemoryFileSystem->addFile("def/module.map", 0,
+  // Add a module.modulemap file in the include directory of our header, so we
+  // trigger the module.modulemap header search logic.
+  InMemoryFileSystem->addFile("def/module.modulemap", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   EXPECT_TRUE(Invocation.run());
 }
@@ -384,7 +398,8 @@ struct CommandLineExtractorTest : public ::testing::Test {
 public:
   CommandLineExtractorTest()
       : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
-        Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions)),
+        Diags(CompilerInstance::createDiagnostics(*InMemoryFS,
+                                                  new DiagnosticOptions)),
         Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
                "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
 
@@ -586,6 +601,11 @@ TEST(runToolOnCode, TestSkipFunctionBody) {
   EXPECT_FALSE(runToolOnCodeWithArgs(
       std::make_unique<SkipBodyAction>(),
       "template<typename T> int skipMeNot() { an_error_here }", Args2));
+
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<SkipBodyAction>(),
+      "__inline __attribute__((__gnu_inline__)) void skipMe() {}",
+      {"--cuda-host-only", "-nocudainc", "-xcuda"}));
 }
 
 TEST(runToolOnCodeWithArgs, TestNoDepFile) {

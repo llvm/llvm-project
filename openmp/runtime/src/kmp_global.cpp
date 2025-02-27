@@ -172,7 +172,7 @@ int __kmp_ncores = 0;
 int __kmp_chunk = 0;
 int __kmp_force_monotonic = 0;
 int __kmp_abort_delay = 0;
-#if KMP_OS_LINUX && defined(KMP_TDATA_GTID)
+#if (KMP_OS_LINUX || KMP_OS_AIX) && defined(KMP_TDATA_GTID)
 int __kmp_gtid_mode = 3; /* use __declspec(thread) TLS to store gtid */
 int __kmp_adjust_gtid_mode = FALSE;
 #elif KMP_OS_WINDOWS
@@ -241,11 +241,6 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     // will likely not be used, introduced here just to debug the code
     // of public intel extension schedules
 };
-
-#if KMP_OS_LINUX
-enum clock_function_type __kmp_clock_function;
-int __kmp_clock_function_param;
-#endif /* KMP_OS_LINUX */
 
 #if KMP_MIC_SUPPORTED
 enum mic_type __kmp_mic_type = non_mic;
@@ -492,10 +487,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN_CACHE_INTERNODE
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN_CACHE_INTERNODE
-kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
-KMP_ALIGN_CACHE_INTERNODE
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #else
 KMP_ALIGN_CACHE
 
@@ -512,10 +503,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN(128)
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN(128)
-kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
-KMP_ALIGN(128)
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #endif
 
 /* ----------------------------------------------- */

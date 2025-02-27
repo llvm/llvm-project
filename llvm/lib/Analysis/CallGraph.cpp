@@ -138,16 +138,6 @@ void CallGraph::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void CallGraph::dump() const { print(dbgs()); }
 #endif
 
-void CallGraph::ReplaceExternalCallEdge(CallGraphNode *Old,
-                                        CallGraphNode *New) {
-  for (auto &CR : ExternalCallingNode->CalledFunctions)
-    if (CR.second == Old) {
-      CR.second->DropRef();
-      CR.second = New;
-      CR.second->AddRef();
-    }
-}
-
 // removeFunctionFromModule - Unlink the function from this module, returning
 // it.  Because this removes the function from the module, the call graph node
 // is destroyed.  This is only valid if the function does not call any other
@@ -202,39 +192,6 @@ void CallGraphNode::print(raw_ostream &OS) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CallGraphNode::dump() const { print(dbgs()); }
 #endif
-
-/// removeCallEdgeFor - This method removes the edge in the node for the
-/// specified call site.  Note that this method takes linear time, so it
-/// should be used sparingly.
-void CallGraphNode::removeCallEdgeFor(CallBase &Call) {
-  for (CalledFunctionsVector::iterator I = CalledFunctions.begin(); ; ++I) {
-    assert(I != CalledFunctions.end() && "Cannot find callsite to remove!");
-    if (I->first && *I->first == &Call) {
-      I->second->DropRef();
-      *I = CalledFunctions.back();
-      CalledFunctions.pop_back();
-
-      // Remove all references to callback functions if there are any.
-      forEachCallbackFunction(Call, [=](Function *CB) {
-        removeOneAbstractEdgeTo(CG->getOrInsertFunction(CB));
-      });
-      return;
-    }
-  }
-}
-
-// removeAnyCallEdgeTo - This method removes any call edges from this node to
-// the specified callee function.  This takes more time to execute than
-// removeCallEdgeTo, so it should not be used unless necessary.
-void CallGraphNode::removeAnyCallEdgeTo(CallGraphNode *Callee) {
-  for (unsigned i = 0, e = CalledFunctions.size(); i != e; ++i)
-    if (CalledFunctions[i].second == Callee) {
-      Callee->DropRef();
-      CalledFunctions[i] = CalledFunctions.back();
-      CalledFunctions.pop_back();
-      --i; --e;
-    }
-}
 
 /// removeOneAbstractEdgeTo - Remove one edge associated with a null callsite
 /// from this node to the specified callee function.
@@ -319,15 +276,13 @@ PreservedAnalyses CallGraphSCCsPrinterPass::run(Module &M,
     const std::vector<CallGraphNode *> &nextSCC = *SCCI;
     OS << "\nSCC #" << ++sccNum << ": ";
     bool First = true;
-    for (std::vector<CallGraphNode *>::const_iterator I = nextSCC.begin(),
-                                                      E = nextSCC.end();
-         I != E; ++I) {
+    for (CallGraphNode *CGN : nextSCC) {
       if (First)
         First = false;
       else
         OS << ", ";
-      OS << ((*I)->getFunction() ? (*I)->getFunction()->getName()
-                                 : "external node");
+      OS << (CGN->getFunction() ? CGN->getFunction()->getName()
+                                : "external node");
     }
 
     if (nextSCC.size() == 1 && SCCI.hasCycle())
@@ -382,33 +337,3 @@ void CallGraphWrapperPass::print(raw_ostream &OS, const Module *) const {
 LLVM_DUMP_METHOD
 void CallGraphWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
-
-namespace {
-
-struct CallGraphPrinterLegacyPass : public ModulePass {
-  static char ID; // Pass ID, replacement for typeid
-
-  CallGraphPrinterLegacyPass() : ModulePass(ID) {
-    initializeCallGraphPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequiredTransitive<CallGraphWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    getAnalysis<CallGraphWrapperPass>().print(errs(), &M);
-    return false;
-  }
-};
-
-} // end anonymous namespace
-
-char CallGraphPrinterLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(CallGraphPrinterLegacyPass, "print-callgraph",
-                      "Print a call graph", true, true)
-INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(CallGraphPrinterLegacyPass, "print-callgraph",
-                    "Print a call graph", true, true)

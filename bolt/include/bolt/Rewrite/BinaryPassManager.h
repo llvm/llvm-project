@@ -46,10 +46,10 @@ public:
   }
 
   /// Run all registered passes in the order they were added.
-  void runPasses();
+  Error runPasses();
 
   /// Runs all enabled implemented passes on all functions.
-  static void runAllPasses(BinaryContext &BC);
+  static Error runAllPasses(BinaryContext &BC);
 };
 
 } // namespace bolt

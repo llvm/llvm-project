@@ -13,8 +13,8 @@ export module A;
 
 export void f_streaming(void) __arm_streaming { }
 export void f_streaming_compatible(void) __arm_streaming_compatible { }
-export void f_shared_za(void) __arm_shared_za { }
-export void f_preserves_za(void) __arm_preserves_za { }
+export void f_shared_za(void) __arm_inout("za") { }
+export void f_preserves_za(void) __arm_preserves("za") { }
 
 //--- Use.cpp
 // expected-no-diagnostics
@@ -43,18 +43,18 @@ import A;
 //
 // CHECK:declare void @_ZW1A22f_streaming_compatiblev() #[[STREAMING_COMPATIBLE_DECL:[0-9]+]]
 //
-// CHECK-DAG: attributes #[[SHARED_ZA_DEF]] = {{{.*}} "aarch64_pstate_za_shared" {{.*}}}
-// CHECK-DAG: attributes #[[SHARED_ZA_DECL]] = {{{.*}} "aarch64_pstate_za_shared" {{.*}}}
-// CHECK-DAG: attributes #[[PRESERVES_ZA_DECL]] = {{{.*}} "aarch64_pstate_za_preserved" {{.*}}}
+// CHECK-DAG: attributes #[[SHARED_ZA_DEF]] = {{{.*}} "aarch64_inout_za" {{.*}}}
+// CHECK-DAG: attributes #[[SHARED_ZA_DECL]] = {{{.*}} "aarch64_inout_za" {{.*}}}
+// CHECK-DAG: attributes #[[PRESERVES_ZA_DECL]] = {{{.*}} "aarch64_preserves_za" {{.*}}}
 // CHECK-DAG: attributes #[[NORMAL_DEF]] = {{{.*}}}
 // CHECK-DAG: attributes #[[STREAMING_DECL]] = {{{.*}} "aarch64_pstate_sm_enabled" {{.*}}}
 // CHECK-DAG: attributes #[[STREAMING_COMPATIBLE_DECL]] = {{{.*}} "aarch64_pstate_sm_compatible" {{.*}}}
-// CHECK-DAG: attributes #[[SHARED_ZA_USE]] = { "aarch64_pstate_za_shared" }
-// CHECK-DAG: attributes #[[PRESERVES_ZA_USE]] = { "aarch64_pstate_za_preserved" }
+// CHECK-DAG: attributes #[[SHARED_ZA_USE]] = { "aarch64_inout_za" }
+// CHECK-DAG: attributes #[[PRESERVES_ZA_USE]] = { "aarch64_preserves_za" }
 // CHECK-DAG: attributes #[[STREAMING_USE]] = { "aarch64_pstate_sm_enabled" }
 // CHECK-DAG: attributes #[[STREAMING_COMPATIBLE_USE]] = { "aarch64_pstate_sm_compatible" }
 
-void f_shared_za_caller(void) __arm_shared_za {
+void f_shared_za_caller(void) __arm_inout("za") {
   f_shared_za();
   f_preserves_za();
 }

@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+c -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+c -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+c -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+c -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -M no-aliases -d - \
+# RUN:     | llvm-objdump --no-print-imm-hex -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -M no-aliases -d - \
+# RUN:     | llvm-objdump --no-print-imm-hex -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 
 # CHECK-EXPAND: c.lw s0, 0(s1)
@@ -17,3 +17,7 @@ c.sw x8, (x9)
 c.lwsp x8, (x2)
 # CHECK-EXPAND: c.swsp s0, 0(sp)
 c.swsp x8, (x2)
+# CHECK-EXPAND: c.lwsp s2, 0(sp)
+c.lwsp x18, (x2)
+# CHECK-EXPAND: c.swsp s2, 0(sp)
+c.swsp x18, (x2)

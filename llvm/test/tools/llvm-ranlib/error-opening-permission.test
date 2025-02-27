@@ -1,5 +1,6 @@
 ## Unsupported on windows as marking files "unreadable" is non-trivial on windows.
 # UNSUPPORTED: system-windows
+# REQUIRES: non-root-user
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: yaml2obj 1.yaml -o 1.o

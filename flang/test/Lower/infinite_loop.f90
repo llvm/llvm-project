@@ -1,7 +1,10 @@
 ! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
 
 ! Tests for infinite loop.
+
+! NO-NSW-NOT: overflow<nsw>
 
 subroutine empty_infinite()
   do
@@ -95,10 +98,10 @@ end subroutine
 ! CHECK-SAME: %[[C1_INDEX]] to %[[C10_INDEX]] step %[[C1_1]]
 ! CHECK-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) {
 ! CHECK:    fir.store %[[J_IV]] to %[[J_REF]] : !fir.ref<i32>
-! CHECK:    %[[J_NEXT:.*]] = arith.addi %[[J]], %[[C1_1]] : index
+! CHECK:    %[[J_NEXT:.*]] = arith.addi %[[J]], %[[C1_1]] overflow<nsw> : index
 ! CHECK:    %[[J_STEPCAST:.*]] = fir.convert %[[C1_1]] : (index) -> i32
 ! CHECK:    %[[J_IVLOAD:.*]] = fir.load %[[J_REF]] : !fir.ref<i32>
-! CHECK:    %[[J_IVINC:.*]] = arith.addi %[[J_IVLOAD]], %[[J_STEPCAST]] : i32
+! CHECK:    %[[J_IVINC:.*]] = arith.addi %[[J_IVLOAD]], %[[J_STEPCAST]] overflow<nsw> : i32
 ! CHECK:    fir.result %[[J_NEXT]], %[[J_IVINC]] : index, i32
 ! CHECK:  }
 ! CHECK:  fir.store %[[J_FINAL]]#1 to %[[J_REF]] : !fir.ref<i32>

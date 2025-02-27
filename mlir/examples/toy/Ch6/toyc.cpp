@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "toy/AST.h"
 #include "toy/Dialect.h"
 #include "toy/Lexer.h"
@@ -112,7 +112,7 @@ int loadMLIR(mlir::MLIRContext &context,
              mlir::OwningOpRef<mlir::ModuleOp> &module) {
   // Handle '.toy' input to the compiler.
   if (inputType != InputType::MLIR &&
-      !llvm::StringRef(inputFilename).endswith(".mlir")) {
+      !llvm::StringRef(inputFilename).ends_with(".mlir")) {
     auto moduleAST = parseInputFile(inputFilename);
     if (!moduleAST)
       return 6;
@@ -187,8 +187,7 @@ int loadAndProcessMLIR(mlir::MLIRContext &context,
     // This is necessary to have line tables emitted and basic
     // debugger working. In the future we will add proper debug information
     // emission directly from our frontend.
-    pm.addNestedPass<mlir::LLVM::LLVMFuncOp>(
-        mlir::LLVM::createDIScopeForLLVMFuncOpPass());
+    pm.addPass(mlir::LLVM::createDIScopeForLLVMFuncOpPass());
   }
 
   if (mlir::failed(pm.run(*module)))
@@ -301,6 +300,7 @@ int main(int argc, char **argv) {
   // If we aren't dumping the AST, then we are compiling with/to MLIR.
   mlir::DialectRegistry registry;
   mlir::func::registerAllExtensions(registry);
+  mlir::LLVM::registerInlinerInterface(registry);
 
   mlir::MLIRContext context(registry);
   // Load our Dialect in this MLIR Context.

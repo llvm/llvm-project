@@ -33,6 +33,146 @@ static const MachineMemOperand::Flags MOStridedAccess =
 
 #define FALKOR_STRIDED_ACCESS_MD "falkor.strided.access"
 
+// AArch64 MachineCombiner patterns
+enum AArch64MachineCombinerPattern : unsigned {
+  // These are patterns used to reduce the length of dependence chain.
+  SUBADD_OP1 = MachineCombinerPattern::TARGET_PATTERN_START,
+  SUBADD_OP2,
+
+  // These are multiply-add patterns matched by the AArch64 machine combiner.
+  MULADDW_OP1,
+  MULADDW_OP2,
+  MULSUBW_OP1,
+  MULSUBW_OP2,
+  MULADDWI_OP1,
+  MULSUBWI_OP1,
+  MULADDX_OP1,
+  MULADDX_OP2,
+  MULSUBX_OP1,
+  MULSUBX_OP2,
+  MULADDXI_OP1,
+  MULSUBXI_OP1,
+  // NEON integers vectors
+  MULADDv8i8_OP1,
+  MULADDv8i8_OP2,
+  MULADDv16i8_OP1,
+  MULADDv16i8_OP2,
+  MULADDv4i16_OP1,
+  MULADDv4i16_OP2,
+  MULADDv8i16_OP1,
+  MULADDv8i16_OP2,
+  MULADDv2i32_OP1,
+  MULADDv2i32_OP2,
+  MULADDv4i32_OP1,
+  MULADDv4i32_OP2,
+
+  MULSUBv8i8_OP1,
+  MULSUBv8i8_OP2,
+  MULSUBv16i8_OP1,
+  MULSUBv16i8_OP2,
+  MULSUBv4i16_OP1,
+  MULSUBv4i16_OP2,
+  MULSUBv8i16_OP1,
+  MULSUBv8i16_OP2,
+  MULSUBv2i32_OP1,
+  MULSUBv2i32_OP2,
+  MULSUBv4i32_OP1,
+  MULSUBv4i32_OP2,
+
+  MULADDv4i16_indexed_OP1,
+  MULADDv4i16_indexed_OP2,
+  MULADDv8i16_indexed_OP1,
+  MULADDv8i16_indexed_OP2,
+  MULADDv2i32_indexed_OP1,
+  MULADDv2i32_indexed_OP2,
+  MULADDv4i32_indexed_OP1,
+  MULADDv4i32_indexed_OP2,
+
+  MULSUBv4i16_indexed_OP1,
+  MULSUBv4i16_indexed_OP2,
+  MULSUBv8i16_indexed_OP1,
+  MULSUBv8i16_indexed_OP2,
+  MULSUBv2i32_indexed_OP1,
+  MULSUBv2i32_indexed_OP2,
+  MULSUBv4i32_indexed_OP1,
+  MULSUBv4i32_indexed_OP2,
+
+  // Floating Point
+  FMULADDH_OP1,
+  FMULADDH_OP2,
+  FMULSUBH_OP1,
+  FMULSUBH_OP2,
+  FMULADDS_OP1,
+  FMULADDS_OP2,
+  FMULSUBS_OP1,
+  FMULSUBS_OP2,
+  FMULADDD_OP1,
+  FMULADDD_OP2,
+  FMULSUBD_OP1,
+  FMULSUBD_OP2,
+  FNMULSUBH_OP1,
+  FNMULSUBS_OP1,
+  FNMULSUBD_OP1,
+  FMLAv1i32_indexed_OP1,
+  FMLAv1i32_indexed_OP2,
+  FMLAv1i64_indexed_OP1,
+  FMLAv1i64_indexed_OP2,
+  FMLAv4f16_OP1,
+  FMLAv4f16_OP2,
+  FMLAv8f16_OP1,
+  FMLAv8f16_OP2,
+  FMLAv2f32_OP2,
+  FMLAv2f32_OP1,
+  FMLAv2f64_OP1,
+  FMLAv2f64_OP2,
+  FMLAv4i16_indexed_OP1,
+  FMLAv4i16_indexed_OP2,
+  FMLAv8i16_indexed_OP1,
+  FMLAv8i16_indexed_OP2,
+  FMLAv2i32_indexed_OP1,
+  FMLAv2i32_indexed_OP2,
+  FMLAv2i64_indexed_OP1,
+  FMLAv2i64_indexed_OP2,
+  FMLAv4f32_OP1,
+  FMLAv4f32_OP2,
+  FMLAv4i32_indexed_OP1,
+  FMLAv4i32_indexed_OP2,
+  FMLSv1i32_indexed_OP2,
+  FMLSv1i64_indexed_OP2,
+  FMLSv4f16_OP1,
+  FMLSv4f16_OP2,
+  FMLSv8f16_OP1,
+  FMLSv8f16_OP2,
+  FMLSv2f32_OP1,
+  FMLSv2f32_OP2,
+  FMLSv2f64_OP1,
+  FMLSv2f64_OP2,
+  FMLSv4i16_indexed_OP1,
+  FMLSv4i16_indexed_OP2,
+  FMLSv8i16_indexed_OP1,
+  FMLSv8i16_indexed_OP2,
+  FMLSv2i32_indexed_OP1,
+  FMLSv2i32_indexed_OP2,
+  FMLSv2i64_indexed_OP1,
+  FMLSv2i64_indexed_OP2,
+  FMLSv4f32_OP1,
+  FMLSv4f32_OP2,
+  FMLSv4i32_indexed_OP1,
+  FMLSv4i32_indexed_OP2,
+
+  FMULv2i32_indexed_OP1,
+  FMULv2i32_indexed_OP2,
+  FMULv2i64_indexed_OP1,
+  FMULv2i64_indexed_OP2,
+  FMULv4i16_indexed_OP1,
+  FMULv4i16_indexed_OP2,
+  FMULv4i32_indexed_OP1,
+  FMULv4i32_indexed_OP2,
+  FMULv8i16_indexed_OP1,
+  FMULv8i16_indexed_OP2,
+
+  FNMADD,
+};
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
   const AArch64Subtarget &Subtarget;
@@ -56,9 +196,9 @@ public:
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   /// Does this instruction set its full destination register to zero?
@@ -111,6 +251,12 @@ public:
   /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
+  /// Returns whether the physical register is FP or NEON.
+  static bool isFpOrNEON(Register Reg);
+
+  /// Returns the shift amount operator of a load/store.
+  static const MachineOperand &getLdStAmountOp(const MachineInstr &MI);
+
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 
@@ -155,7 +301,7 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
 
   /// If \p OffsetIsScalable is set to 'true', the offset is scaled by `vscale`.
@@ -165,7 +311,7 @@ public:
   bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, bool &OffsetIsScalable,
-                                    unsigned &Width,
+                                    TypeSize &Width,
                                     const TargetRegisterInfo *TRI) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
@@ -174,38 +320,44 @@ public:
   /// Returns true if opcode \p Opc is a memory operation. If it is, set
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
-  /// For unscaled instructions, \p Scale is set to 1.
-  static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, unsigned &Width,
+  /// For unscaled instructions, \p Scale is set to 1. All values are in bytes.
+  /// MinOffset/MaxOffset are the un-scaled limits of the immediate in the
+  /// instruction, the actual offset limit is [MinOffset*Scale,
+  /// MaxOffset*Scale].
+  static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, TypeSize &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
-                           unsigned NumLoads, unsigned NumBytes) const override;
+                           int64_t Offset2, bool OffsetIsScalable2,
+                           unsigned ClusterSize,
+                           unsigned NumBytes) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, MCRegister DestReg,
                         MCRegister SrcReg, bool KillSrc, unsigned Opcode,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                       DebugLoc DL, unsigned DestReg, unsigned SrcReg,
+                       const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                        bool KillSrc, unsigned Opcode, unsigned ZeroReg,
                        llvm::ArrayRef<unsigned> Indices) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // This tells target independent code that it is okay to pass instructions
   // with subreg operands to foldMemoryOperandImpl.
@@ -244,6 +396,10 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
@@ -276,17 +432,17 @@ public:
                             const MachineRegisterInfo *MRI) const override;
   bool optimizeCondBranch(MachineInstr &MI) const override;
 
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
   /// \param Pattern - combiner pattern
-  bool isThroughputPattern(MachineCombinerPattern Pattern) const override;
+  bool isThroughputPattern(unsigned Pattern) const override;
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in ``Root``. All potential patterns are
   /// listed in the ``Patterns`` array.
-  bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const override;
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
   /// Return true when Inst is associative and commutative so that it can be
   /// reassociated. If Invert is true, then the inverse of Inst operation must
   /// be checked.
@@ -295,7 +451,7 @@ public:
   /// When getMachineCombinerPatterns() finds patterns, this function generates
   /// the instructions that could replace the original code sequence
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
@@ -315,12 +471,16 @@ public:
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
-  outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
   SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;
@@ -374,13 +534,18 @@ public:
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
-
   // Return true if address of the form BaseReg + Scale * ScaledReg + Offset can
   // be used for a load/store of NumBytes. BaseReg is always present and
   // implicit.
   bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
                              unsigned Scale) const;
+
+  // Decrement the SP, issuing probes along the way. `TargetReg` is the new top
+  // of the stack. `FrameSetup` is passed as true, if the allocation is a part
+  // of constructing the activation frame of a function.
+  MachineBasicBlock::iterator probedStackAlloc(MachineBasicBlock::iterator MBBI,
+                                               Register TargetReg,
+                                               bool FrameSetup) const;
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
@@ -391,6 +556,8 @@ protected:
   /// registers as machine operands.
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
+  std::optional<DestSourcePair>
+  isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;
@@ -418,6 +585,13 @@ private:
   bool optimizePTestInstr(MachineInstr *PTest, unsigned MaskReg,
                           unsigned PredReg,
                           const MachineRegisterInfo *MRI) const;
+  std::optional<unsigned>
+  canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
+                      MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
+
+  /// verifyInstruction - Perform target specific instruction verification.
+  bool verifyInstruction(const MachineInstr &MI,
+                         StringRef &ErrInfo) const override;
 };
 
 struct UsedNZCV {
@@ -518,6 +692,10 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBZX:
   case AArch64::TBNZW:
   case AArch64::TBNZX:
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
     return true;
   default:
     return false;
@@ -571,6 +749,7 @@ static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
   case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 /// Return PAC opcode to be used for a ptrauth sign using the given key, or its
@@ -583,6 +762,7 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
   case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 // struct TSFlags {

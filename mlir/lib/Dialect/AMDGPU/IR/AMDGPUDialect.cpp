@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -55,6 +56,59 @@ LogicalResult PackedTrunc2xFp8Op::verify() {
 LogicalResult PackedStochRoundFp8Op::verify() {
   if (getExisting() && getExisting().getType() != getResult().getType())
     return emitOpError("existing values must have same type as result");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FatRawBuferCastOp
+//===----------------------------------------------------------------------===//
+
+/// Convert the type `source` to one with the same sizes and strides - and
+/// offset, unless `stripOffset` is true, in which case the offset is reset to
+/// 0, if the offset should be reset but the layout of `source` isn't either the
+/// identity layout or a strided layout, this function fails.
+static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
+                                                     bool resetOffset) {
+  MLIRContext *ctx = source.getContext();
+  MemRefType::Builder mb(source);
+  mb.setMemorySpace(
+      amdgpu::AddressSpaceAttr::get(ctx, amdgpu::AddressSpace::FatRawBuffer));
+  MemRefLayoutAttrInterface layout = source.getLayout();
+  if (resetOffset && !layout.isIdentity()) {
+    auto stridedLayout = dyn_cast<StridedLayoutAttr>(layout);
+    if (!stridedLayout)
+      return failure();
+    mb.setLayout(StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides()));
+  }
+  return (MemRefType)(mb);
+}
+
+LogicalResult FatRawBufferCastOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  Adaptor adaptor(operands, attributes, properties, regions);
+  auto sourceType =
+      dyn_cast_if_present<MemRefType>(adaptor.getSource().getType());
+  if (!sourceType)
+    return failure();
+  FailureOr<MemRefType> resultType =
+      getFatRawBufferTypeLike(sourceType, adaptor.getResetOffset());
+  if (failed(resultType))
+    return failure();
+  inferredReturnTypes = SmallVector<Type>{*resultType};
+  return success();
+}
+
+LogicalResult FatRawBufferCastOp::verify() {
+  FailureOr<MemRefType> expectedResultType =
+      getFatRawBufferTypeLike(getSource().getType(), getResetOffset());
+  if (failed(expectedResultType))
+    return emitOpError("source type ")
+           << getSource().getType() << " can't have its offset reset";
+  if (getResult().getType() != *expectedResultType)
+    return emitOpError("expected result type to be ")
+           << *expectedResultType << " but got " << getResult().getType();
   return success();
 }
 
@@ -128,7 +182,7 @@ static bool staticallyOutOfBounds(OpType op) {
     return false;
   int64_t offset;
   SmallVector<int64_t> strides;
-  if (failed(getStridesAndOffset(bufferType, strides, offset)))
+  if (failed(bufferType.getStridesAndOffset(strides, offset)))
     return false;
   int64_t result = offset + op.getIndexOffset().value_or(0);
   if (op.getSgprOffset()) {
@@ -227,15 +281,16 @@ LogicalResult WMMAOp::verify() {
   Type sourceAType = getSourceA().getType();
   Type destType = getDestC().getType();
 
-  VectorType sourceVectorAType = sourceAType.dyn_cast<VectorType>();
-  VectorType destVectorType = destType.dyn_cast<VectorType>();
+  VectorType sourceVectorAType = dyn_cast<VectorType>(sourceAType);
+  VectorType destVectorType = dyn_cast<VectorType>(destType);
 
   Type sourceAElemType = sourceVectorAType.getElementType();
   Type destElemType = destVectorType.getElementType();
 
-  bool isDestFloat =
-      (destElemType.isF32() || destElemType.isF16() || destElemType.isBF16());
-  bool isSrcFloat = (sourceAElemType.isF16() || sourceAElemType.isBF16());
+  bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
+  bool isSrcFloat =
+      isa<Float16Type, BFloat16Type, Float8E4M3FNType, Float8E5M2Type>(
+          sourceAElemType);
 
   if (isDestFloat && !isSrcFloat) {
     return emitOpError("Expected float sources with float destination");
@@ -270,14 +325,14 @@ LogicalResult MFMAOp::verify() {
   }
 
   Type sourceBType = getSourceB().getType();
-  if (sourceElem.isFloat8E5M2FNUZ() || sourceElem.isFloat8E4M3FNUZ()) {
+  if (isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(sourceElem)) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
     if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }
-    if (!sourceBElem.isFloat8E5M2FNUZ() && !sourceBElem.isFloat8E4M3FNUZ())
+    if (!isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(sourceBElem))
       return emitOpError("expected both source operands to have f8 elements");
     if (sourceLen != sourceBLen)
       return emitOpError(
@@ -323,6 +378,68 @@ LogicalResult MFMAOp::verify() {
     return emitOpError(
         "negation flags only available for double-precision operations");
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DPPOp
+//===----------------------------------------------------------------------===//
+LogicalResult DPPOp::verify() {
+  Type srcType = getSrc().getType();
+  if (srcType.getIntOrFloatBitWidth() > 64) {
+    return emitOpError("integer and floating point types larger than 64 bits "
+                       "are not supported");
+  }
+
+  DPPPerm kind = getKind();
+  Attribute permArgument = getPermArgument().value_or(Attribute{});
+
+  switch (kind) {
+
+  case DPPPerm::quad_perm: {
+    auto quadPermAttr = dyn_cast_or_null<ArrayAttr>(permArgument);
+    if (!quadPermAttr || quadPermAttr.size() != 4) {
+      return emitOpError("quad_perm attribute must have exactly 4 elements");
+    }
+    for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
+      int32_t num = elem.getInt();
+      if (num < 0 || num > 3) {
+        return emitOpError(
+            "Each element of quad_perm must be in the range [0, 3]");
+      }
+    }
+  } break;
+
+  case DPPPerm::row_shl:
+  case DPPPerm::row_shr:
+  case DPPPerm::row_ror: {
+    if (!permArgument) {
+      return emitOpError("Attribute '" + Twine(stringifyDPPPerm(kind)) +
+                         "' value not specified");
+    }
+    if (auto intAttr = dyn_cast<IntegerAttr>(permArgument)) {
+      uint32_t attrValue = intAttr.getInt();
+      if (attrValue < 1 || attrValue > 15) {
+        return emitOpError("Attribute value must be between 1 and 15");
+      }
+    }
+  } break;
+
+  case DPPPerm::wave_shl:
+  case DPPPerm::wave_shr:
+  case DPPPerm::wave_rol:
+  case DPPPerm::wave_ror:
+  case DPPPerm::row_mirror:
+  case DPPPerm::row_half_mirror:
+  case DPPPerm::row_bcast_15:
+  case DPPPerm::row_bcast_31: {
+    if (permArgument && !isa<UnitAttr>(permArgument)) {
+      return emitOpError("Expected unit attribute for permArgument, but found "
+                         "non-trivial argument");
+    }
+    break;
+  }
+  }
   return success();
 }
 

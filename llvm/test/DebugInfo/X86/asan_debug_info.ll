@@ -2,6 +2,10 @@
 ; RUN:   llc -O0 -filetype=obj - -o - | \
 ; RUN:   llvm-dwarfdump - | FileCheck %s
 
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes=asan -asan-use-after-return=never -S | \
+; RUN:   llc --try-experimental-debuginfo-iterators -O0 -filetype=obj - -o - | \
+; RUN:   llvm-dwarfdump - | FileCheck %s
+
 ; For this test case, ASan used to produce IR which resulted in the following
 ; DWARF (at -O0):
 ;

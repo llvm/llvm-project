@@ -75,16 +75,20 @@ Clang-Tidy Checks
    :doc:`android-cloexec-pipe2 <android/cloexec-pipe2>`, "Yes"
    :doc:`android-cloexec-socket <android/cloexec-socket>`, "Yes"
    :doc:`android-comparison-in-temp-failure-retry <android/comparison-in-temp-failure-retry>`,
+   :doc:`boost-use-ranges <boost/use-ranges>`, "Yes"
    :doc:`boost-use-to-string <boost/use-to-string>`, "Yes"
    :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
    :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
+   :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
+   :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
+   :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
@@ -97,6 +101,7 @@ Clang-Tidy Checks
    :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
    :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,
    :doc:`bugprone-incorrect-enable-if <bugprone/incorrect-enable-if>`, "Yes"
+   :doc:`bugprone-incorrect-enable-shared-from-this <bugprone/incorrect-enable-shared-from-this>`, "Yes"
    :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,
    :doc:`bugprone-infinite-loop <bugprone/infinite-loop>`,
    :doc:`bugprone-integer-division <bugprone/integer-division>`,
@@ -110,14 +115,18 @@ Clang-Tidy Checks
    :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
    :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,
+   :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,
    :doc:`bugprone-no-escape <bugprone/no-escape>`,
    :doc:`bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion>`,
+   :doc:`bugprone-nondeterministic-pointer-iteration-order <bugprone/nondeterministic-pointer-iteration-order>`,
    :doc:`bugprone-not-null-terminated-result <bugprone/not-null-terminated-result>`, "Yes"
    :doc:`bugprone-optional-value-conversion <bugprone/optional-value-conversion>`, "Yes"
    :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
+   :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
+   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
@@ -137,8 +146,10 @@ Clang-Tidy Checks
    :doc:`bugprone-suspicious-realloc-usage <bugprone/suspicious-realloc-usage>`,
    :doc:`bugprone-suspicious-semicolon <bugprone/suspicious-semicolon>`, "Yes"
    :doc:`bugprone-suspicious-string-compare <bugprone/suspicious-string-compare>`, "Yes"
+   :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,
    :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes"
    :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,
+   :doc:`bugprone-tagged-union-member-count <bugprone/tagged-union-member-count>`,
    :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"
    :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,
@@ -149,11 +160,11 @@ Clang-Tidy Checks
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-dcl21-cpp <cert/dcl21-cpp>`, "Yes"
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`,
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
    :doc:`cert-env33-c <cert/env33-c>`,
@@ -181,7 +192,6 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage>`,
    :doc:`cppcoreguidelines-misleading-capture-default-by-value <cppcoreguidelines/misleading-capture-default-by-value>`, "Yes"
    :doc:`cppcoreguidelines-missing-std-forward <cppcoreguidelines/missing-std-forward>`,
-   :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
    :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`cppcoreguidelines-no-suspend-with-lock <cppcoreguidelines/no-suspend-with-lock>`,
    :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,
@@ -226,10 +236,11 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
+   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
-   :doc:`linuxkernel-must-use-errs <linuxkernel/must-use-errs>`,
+   :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
@@ -262,6 +273,7 @@ Clang-Tidy Checks
    :doc:`misc-unused-parameters <misc/unused-parameters>`, "Yes"
    :doc:`misc-unused-using-decls <misc/unused-using-decls>`, "Yes"
    :doc:`misc-use-anonymous-namespace <misc/use-anonymous-namespace>`,
+   :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
@@ -271,6 +283,7 @@ Clang-Tidy Checks
    :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
    :doc:`modernize-make-shared <modernize/make-shared>`, "Yes"
    :doc:`modernize-make-unique <modernize/make-unique>`, "Yes"
+   :doc:`modernize-min-max-use-initializer-list <modernize/min-max-use-initializer-list>`, "Yes"
    :doc:`modernize-pass-by-value <modernize/pass-by-value>`, "Yes"
    :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes"
    :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes"
@@ -285,13 +298,19 @@ Clang-Tidy Checks
    :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
    :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
+   :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"
    :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
    :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
+   :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes"
    :doc:`modernize-use-nodiscard <modernize/use-nodiscard>`, "Yes"
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
+   :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
+   :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
+   :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
+   :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
@@ -332,9 +351,12 @@ Clang-Tidy Checks
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
+   :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
+   :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
+   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
-   :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
    :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
    :doc:`readability-container-contains <readability/container-contains>`, "Yes"
    :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
@@ -343,6 +365,7 @@ Clang-Tidy Checks
    :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes"
    :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes"
    :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
+   :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`readability-function-cognitive-complexity <readability/function-cognitive-complexity>`,
    :doc:`readability-function-size <readability/function-size>`,
    :doc:`readability-identifier-length <readability/identifier-length>`,
@@ -352,6 +375,7 @@ Clang-Tidy Checks
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
+   :doc:`readability-math-missing-parentheses <readability/math-missing-parentheses>`, "Yes"
    :doc:`readability-misleading-indentation <readability/misleading-indentation>`,
    :doc:`readability-misplaced-array-index <readability/misplaced-array-index>`, "Yes"
    :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
@@ -359,9 +383,11 @@ Clang-Tidy Checks
    :doc:`readability-operators-representation <readability/operators-representation>`, "Yes"
    :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`readability-redundant-access-specifiers <readability/redundant-access-specifiers>`, "Yes"
+   :doc:`readability-redundant-casting <readability/redundant-casting>`, "Yes"
    :doc:`readability-redundant-control-flow <readability/redundant-control-flow>`, "Yes"
    :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
+   :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
@@ -377,15 +403,19 @@ Clang-Tidy Checks
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
+   :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
+Check aliases
+-------------
 
-.. csv-table:: Aliases..
+.. csv-table::
    :header: "Name", "Redirect", "Offers fixes"
 
-   :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`, :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
+   :doc:`cert-arr39-c <cert/arr39-c>`, :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
    :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`cert-con54-cpp <cert/con54-cpp>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
+   :doc:`cert-ctr56-cpp <cert/ctr56-cpp>`, :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`cert-dcl03-c <cert/dcl03-c>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`cert-dcl16-c <cert/dcl16-c>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`cert-dcl37-c <cert/dcl37-c>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
@@ -397,6 +427,7 @@ Clang-Tidy Checks
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`cert-flp37-c <cert/flp37-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
+   :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
@@ -422,12 +453,13 @@ Clang-Tidy Checks
    :doc:`clang-analyzer-core.uninitialized.CapturedBlockVariable <clang-analyzer/core.uninitialized.CapturedBlockVariable>`, `Clang Static Analyzer core.uninitialized.CapturedBlockVariable <https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-capturedblockvariable>`_,
    :doc:`clang-analyzer-core.uninitialized.NewArraySize <clang-analyzer/core.uninitialized.NewArraySize>`, `Clang Static Analyzer core.uninitialized.NewArraySize <https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-newarraysize>`_,
    :doc:`clang-analyzer-core.uninitialized.UndefReturn <clang-analyzer/core.uninitialized.UndefReturn>`, `Clang Static Analyzer core.uninitialized.UndefReturn <https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-undefreturn>`_,
+   :doc:`clang-analyzer-cplusplus.ArrayDelete <clang-analyzer/cplusplus.ArrayDelete>`, `Clang Static Analyzer cplusplus.ArrayDelete <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete>`_,
    :doc:`clang-analyzer-cplusplus.InnerPointer <clang-analyzer/cplusplus.InnerPointer>`, `Clang Static Analyzer cplusplus.InnerPointer <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-innerpointer>`_,
-   :doc:`clang-analyzer-cplusplus.Move <clang-analyzer/cplusplus.Move>`, Clang Static Analyzer cplusplus.Move,
+   :doc:`clang-analyzer-cplusplus.Move <clang-analyzer/cplusplus.Move>`, `Clang Static Analyzer cplusplus.Move <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-move>`_,
    :doc:`clang-analyzer-cplusplus.NewDelete <clang-analyzer/cplusplus.NewDelete>`, `Clang Static Analyzer cplusplus.NewDelete <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-newdelete>`_,
    :doc:`clang-analyzer-cplusplus.NewDeleteLeaks <clang-analyzer/cplusplus.NewDeleteLeaks>`, `Clang Static Analyzer cplusplus.NewDeleteLeaks <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-newdeleteleaks>`_,
    :doc:`clang-analyzer-cplusplus.PlacementNew <clang-analyzer/cplusplus.PlacementNew>`, `Clang Static Analyzer cplusplus.PlacementNew <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-placementnew>`_,
-   :doc:`clang-analyzer-cplusplus.PureVirtualCall <clang-analyzer/cplusplus.PureVirtualCall>`, Clang Static Analyzer cplusplus.PureVirtualCall,
+   :doc:`clang-analyzer-cplusplus.SelfAssignment <clang-analyzer/cplusplus.SelfAssignment>`, `Clang Static Analyzer cplusplus.SelfAssignment <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-selfassignment>`_,
    :doc:`clang-analyzer-cplusplus.StringChecker <clang-analyzer/cplusplus.StringChecker>`, `Clang Static Analyzer cplusplus.StringChecker <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-stringchecker>`_,
    :doc:`clang-analyzer-deadcode.DeadStores <clang-analyzer/deadcode.DeadStores>`, `Clang Static Analyzer deadcode.DeadStores <https://clang.llvm.org/docs/analyzer/checkers.html#deadcode-deadstores>`_,
    :doc:`clang-analyzer-fuchsia.HandleChecker <clang-analyzer/fuchsia.HandleChecker>`, `Clang Static Analyzer fuchsia.HandleChecker <https://clang.llvm.org/docs/analyzer/checkers.html#fuchsia-handlechecker>`_,
@@ -436,19 +468,18 @@ Clang-Tidy Checks
    :doc:`clang-analyzer-nullability.NullableDereferenced <clang-analyzer/nullability.NullableDereferenced>`, `Clang Static Analyzer nullability.NullableDereferenced <https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullabledereferenced>`_,
    :doc:`clang-analyzer-nullability.NullablePassedToNonnull <clang-analyzer/nullability.NullablePassedToNonnull>`, `Clang Static Analyzer nullability.NullablePassedToNonnull <https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullablepassedtononnull>`_,
    :doc:`clang-analyzer-nullability.NullableReturnedFromNonnull <clang-analyzer/nullability.NullableReturnedFromNonnull>`, `Clang Static Analyzer nullability.NullableReturnedFromNonnull <https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullablereturnedfromnonnull>`_,
+   :doc:`clang-analyzer-optin.core.EnumCastOutOfRange <clang-analyzer/optin.core.EnumCastOutOfRange>`, `Clang Static Analyzer optin.core.EnumCastOutOfRange <https://clang.llvm.org/docs/analyzer/checkers.html#optin-core-enumcastoutofrange>`_,
    :doc:`clang-analyzer-optin.cplusplus.UninitializedObject <clang-analyzer/optin.cplusplus.UninitializedObject>`, `Clang Static Analyzer optin.cplusplus.UninitializedObject <https://clang.llvm.org/docs/analyzer/checkers.html#optin-cplusplus-uninitializedobject>`_,
    :doc:`clang-analyzer-optin.cplusplus.VirtualCall <clang-analyzer/optin.cplusplus.VirtualCall>`, `Clang Static Analyzer optin.cplusplus.VirtualCall <https://clang.llvm.org/docs/analyzer/checkers.html#optin-cplusplus-virtualcall>`_,
    :doc:`clang-analyzer-optin.mpi.MPI-Checker <clang-analyzer/optin.mpi.MPI-Checker>`, `Clang Static Analyzer optin.mpi.MPI-Checker <https://clang.llvm.org/docs/analyzer/checkers.html#optin-mpi-mpi-checker>`_,
-   :doc:`clang-analyzer-optin.osx.OSObjectCStyleCast <clang-analyzer/optin.osx.OSObjectCStyleCast>`, Clang Static Analyzer optin.osx.OSObjectCStyleCast,
    :doc:`clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker <clang-analyzer/optin.osx.cocoa.localizability.EmptyLocalizationContextChecker>`, `Clang Static Analyzer optin.osx.cocoa.localizability.EmptyLocalizationContextChecker <https://clang.llvm.org/docs/analyzer/checkers.html#optin-osx-cocoa-localizability-emptylocalizationcontextchecker>`_,
    :doc:`clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker <clang-analyzer/optin.osx.cocoa.localizability.NonLocalizedStringChecker>`, `Clang Static Analyzer optin.osx.cocoa.localizability.NonLocalizedStringChecker <https://clang.llvm.org/docs/analyzer/checkers.html#optin-osx-cocoa-localizability-nonlocalizedstringchecker>`_,
    :doc:`clang-analyzer-optin.performance.GCDAntipattern <clang-analyzer/optin.performance.GCDAntipattern>`, `Clang Static Analyzer optin.performance.GCDAntipattern <https://clang.llvm.org/docs/analyzer/checkers.html#optin-performance-gcdantipattern>`_,
    :doc:`clang-analyzer-optin.performance.Padding <clang-analyzer/optin.performance.Padding>`, `Clang Static Analyzer optin.performance.Padding <https://clang.llvm.org/docs/analyzer/checkers.html#optin-performance-padding>`_,
    :doc:`clang-analyzer-optin.portability.UnixAPI <clang-analyzer/optin.portability.UnixAPI>`, `Clang Static Analyzer optin.portability.UnixAPI <https://clang.llvm.org/docs/analyzer/checkers.html#optin-portability-unixapi>`_,
+   :doc:`clang-analyzer-optin.taint.TaintedAlloc <clang-analyzer/optin.taint.TaintedAlloc>`, `Clang Static Analyzer optin.taint.TaintedAlloc <https://clang.llvm.org/docs/analyzer/checkers.html#optin-taint-taintedalloc>`_,
    :doc:`clang-analyzer-osx.API <clang-analyzer/osx.API>`, `Clang Static Analyzer osx.API <https://clang.llvm.org/docs/analyzer/checkers.html#osx-api>`_,
-   :doc:`clang-analyzer-osx.MIG <clang-analyzer/osx.MIG>`, Clang Static Analyzer osx.MIG,
    :doc:`clang-analyzer-osx.NumberObjectConversion <clang-analyzer/osx.NumberObjectConversion>`, `Clang Static Analyzer osx.NumberObjectConversion <https://clang.llvm.org/docs/analyzer/checkers.html#osx-numberobjectconversion>`_,
-   :doc:`clang-analyzer-osx.OSObjectRetainCount <clang-analyzer/osx.OSObjectRetainCount>`, Clang Static Analyzer osx.OSObjectRetainCount,
    :doc:`clang-analyzer-osx.ObjCProperty <clang-analyzer/osx.ObjCProperty>`, `Clang Static Analyzer osx.ObjCProperty <https://clang.llvm.org/docs/analyzer/checkers.html#osx-objcproperty>`_,
    :doc:`clang-analyzer-osx.SecKeychainAPI <clang-analyzer/osx.SecKeychainAPI>`, `Clang Static Analyzer osx.SecKeychainAPI <https://clang.llvm.org/docs/analyzer/checkers.html#osx-seckeychainapi>`_,
    :doc:`clang-analyzer-osx.cocoa.AtSync <clang-analyzer/osx.cocoa.AtSync>`, `Clang Static Analyzer osx.cocoa.AtSync <https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-atsync>`_,
@@ -475,6 +506,9 @@ Clang-Tidy Checks
    :doc:`clang-analyzer-osx.coreFoundation.containers.OutOfBounds <clang-analyzer/osx.coreFoundation.containers.OutOfBounds>`, `Clang Static Analyzer osx.coreFoundation.containers.OutOfBounds <https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-containers-outofbounds>`_,
    :doc:`clang-analyzer-osx.coreFoundation.containers.PointerSizedValues <clang-analyzer/osx.coreFoundation.containers.PointerSizedValues>`, `Clang Static Analyzer osx.coreFoundation.containers.PointerSizedValues <https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-containers-pointersizedvalues>`_,
    :doc:`clang-analyzer-security.FloatLoopCounter <clang-analyzer/security.FloatLoopCounter>`, `Clang Static Analyzer security.FloatLoopCounter <https://clang.llvm.org/docs/analyzer/checkers.html#security-floatloopcounter>`_,
+   :doc:`clang-analyzer-security.PutenvStackArray <clang-analyzer/security.PutenvStackArray>`, `Clang Static Analyzer security.PutenvStackArray <https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c>`_,
+   :doc:`clang-analyzer-security.SetgidSetuidOrder <clang-analyzer/security.SetgidSetuidOrder>`, `Clang Static Analyzer security.SetgidSetuidOrder <https://clang.llvm.org/docs/analyzer/checkers.html#security-setgidsetuidorder-c>`_,
+   :doc:`clang-analyzer-security.cert.env.InvalidPtr <clang-analyzer/security.cert.env.InvalidPtr>`, `Clang Static Analyzer security.cert.env.InvalidPtr <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`_,
    :doc:`clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling <clang-analyzer/security.insecureAPI.DeprecatedOrUnsafeBufferHandling>`, `Clang Static Analyzer security.insecureAPI.DeprecatedOrUnsafeBufferHandling <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-deprecatedorunsafebufferhandling>`_,
    :doc:`clang-analyzer-security.insecureAPI.UncheckedReturn <clang-analyzer/security.insecureAPI.UncheckedReturn>`, `Clang Static Analyzer security.insecureAPI.UncheckedReturn <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-uncheckedreturn>`_,
    :doc:`clang-analyzer-security.insecureAPI.bcmp <clang-analyzer/security.insecureAPI.bcmp>`, `Clang Static Analyzer security.insecureAPI.bcmp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp>`_,
@@ -489,15 +523,16 @@ Clang-Tidy Checks
    :doc:`clang-analyzer-security.insecureAPI.strcpy <clang-analyzer/security.insecureAPI.strcpy>`, `Clang Static Analyzer security.insecureAPI.strcpy <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-strcpy>`_,
    :doc:`clang-analyzer-security.insecureAPI.vfork <clang-analyzer/security.insecureAPI.vfork>`, `Clang Static Analyzer security.insecureAPI.vfork <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-vfork>`_,
    :doc:`clang-analyzer-unix.API <clang-analyzer/unix.API>`, `Clang Static Analyzer unix.API <https://clang.llvm.org/docs/analyzer/checkers.html#unix-api>`_,
+   :doc:`clang-analyzer-unix.BlockInCriticalSection <clang-analyzer/unix.BlockInCriticalSection>`, `Clang Static Analyzer unix.BlockInCriticalSection <https://clang.llvm.org/docs/analyzer/checkers.html#unix-blockincriticalsection>`_,
+   :doc:`clang-analyzer-unix.Errno <clang-analyzer/unix.Errno>`, `Clang Static Analyzer unix.Errno <https://clang.llvm.org/docs/analyzer/checkers.html#unix-errno>`_,
    :doc:`clang-analyzer-unix.Malloc <clang-analyzer/unix.Malloc>`, `Clang Static Analyzer unix.Malloc <https://clang.llvm.org/docs/analyzer/checkers.html#unix-malloc>`_,
    :doc:`clang-analyzer-unix.MallocSizeof <clang-analyzer/unix.MallocSizeof>`, `Clang Static Analyzer unix.MallocSizeof <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mallocsizeof>`_,
    :doc:`clang-analyzer-unix.MismatchedDeallocator <clang-analyzer/unix.MismatchedDeallocator>`, `Clang Static Analyzer unix.MismatchedDeallocator <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator>`_,
+   :doc:`clang-analyzer-unix.StdCLibraryFunctions <clang-analyzer/unix.StdCLibraryFunctions>`, `Clang Static Analyzer unix.StdCLibraryFunctions <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions>`_,
+   :doc:`clang-analyzer-unix.Stream <clang-analyzer/unix.Stream>`, `Clang Static Analyzer unix.Stream <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stream>`_,
    :doc:`clang-analyzer-unix.Vfork <clang-analyzer/unix.Vfork>`, `Clang Static Analyzer unix.Vfork <https://clang.llvm.org/docs/analyzer/checkers.html#unix-vfork>`_,
    :doc:`clang-analyzer-unix.cstring.BadSizeArg <clang-analyzer/unix.cstring.BadSizeArg>`, `Clang Static Analyzer unix.cstring.BadSizeArg <https://clang.llvm.org/docs/analyzer/checkers.html#unix-cstring-badsizearg>`_,
    :doc:`clang-analyzer-unix.cstring.NullArg <clang-analyzer/unix.cstring.NullArg>`, `Clang Static Analyzer unix.cstring.NullArg <https://clang.llvm.org/docs/analyzer/checkers.html#unix-cstring-nullarg>`_,
-   :doc:`clang-analyzer-valist.CopyToSelf <clang-analyzer/valist.CopyToSelf>`, Clang Static Analyzer valist.CopyToSelf,
-   :doc:`clang-analyzer-valist.Uninitialized <clang-analyzer/valist.Uninitialized>`, Clang Static Analyzer valist.Uninitialized,
-   :doc:`clang-analyzer-valist.Unterminated <clang-analyzer/valist.Unterminated>`, Clang Static Analyzer valist.Unterminated,
    :doc:`clang-analyzer-webkit.NoUncountedMemberChecker <clang-analyzer/webkit.NoUncountedMemberChecker>`, `Clang Static Analyzer webkit.NoUncountedMemberChecker <https://clang.llvm.org/docs/analyzer/checkers.html#webkit-nouncountedmemberchecker>`_,
    :doc:`clang-analyzer-webkit.RefCntblBaseVirtualDtor <clang-analyzer/webkit.RefCntblBaseVirtualDtor>`, `Clang Static Analyzer webkit.RefCntblBaseVirtualDtor <https://clang.llvm.org/docs/analyzer/checkers.html#webkit-refcntblbasevirtualdtor>`_,
    :doc:`clang-analyzer-webkit.UncountedLambdaCapturesChecker <clang-analyzer/webkit.UncountedLambdaCapturesChecker>`, `Clang Static Analyzer webkit.UncountedLambdaCapturesChecker <https://clang.llvm.org/docs/analyzer/checkers.html#webkit-uncountedlambdacaptureschecker>`_,
@@ -506,18 +541,19 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-c-copy-assignment-signature <cppcoreguidelines/c-copy-assignment-signature>`, :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,
    :doc:`cppcoreguidelines-explicit-virtual-functions <cppcoreguidelines/explicit-virtual-functions>`, :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`cppcoreguidelines-macro-to-enum <cppcoreguidelines/macro-to-enum>`, :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
+   :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`, :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,
    :doc:`cppcoreguidelines-noexcept-destructor <cppcoreguidelines/noexcept-destructor>`, :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
    :doc:`cppcoreguidelines-noexcept-move-operations <cppcoreguidelines/noexcept-move-operations>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`cppcoreguidelines-noexcept-swap <cppcoreguidelines/noexcept-swap>`, :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
-   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
-   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
    :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,

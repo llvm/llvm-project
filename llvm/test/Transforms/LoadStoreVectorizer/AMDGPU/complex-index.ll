@@ -38,7 +38,7 @@ entry:
   %cstoreval1 = fptrunc double %storeval1 to float
   store float %cstoreval1, ptr addrspace(1) %arrayidx, align 4
 
-  %add23 = or i64 %add10, 1
+  %add23 = or disjoint i64 %add10, 1
   %arrayidx24 = getelementptr inbounds float, ptr addrspace(1) %c, i64 %add23
   %load2 = load float, ptr addrspace(1) %arrayidx24, align 4
   %conv25 = fpext float %load2 to double

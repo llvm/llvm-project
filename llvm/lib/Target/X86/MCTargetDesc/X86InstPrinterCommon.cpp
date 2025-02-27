@@ -29,27 +29,51 @@ using namespace llvm;
 void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
-  bool Flavor = MI->getOpcode() == X86::CMPCCXADDmr32 ||
-                MI->getOpcode() == X86::CMPCCXADDmr64;
+  unsigned Opc = MI->getOpcode();
+  bool IsCCMPOrCTEST = X86::isCCMPCC(Opc) || X86::isCTESTCC(Opc);
+
+  // clang-format off
   switch (Imm) {
   default: llvm_unreachable("Invalid condcode argument!");
   case    0: O << "o";  break;
   case    1: O << "no"; break;
   case    2: O << "b";  break;
-  case    3: O << (Flavor ? "nb" : "ae"); break;
-  case    4: O << (Flavor ?  "z" :  "e"); break;
-  case    5: O << (Flavor ? "nz" : "ne"); break;
+  case    3: O << "ae"; break;
+  case    4: O << "e";  break;
+  case    5: O << "ne"; break;
   case    6: O << "be"; break;
-  case    7: O << (Flavor ? "nbe" : "a"); break;
+  case    7: O << "a";  break;
   case    8: O << "s";  break;
   case    9: O << "ns"; break;
-  case  0xa: O << "p";  break;
-  case  0xb: O << "np"; break;
+  case  0xa: O << (IsCCMPOrCTEST ? "t" : "p");  break;
+  case  0xb: O << (IsCCMPOrCTEST ? "f" : "np"); break;
   case  0xc: O << "l";  break;
-  case  0xd: O << (Flavor ? "nl" : "ge"); break;
+  case  0xd: O << "ge"; break;
   case  0xe: O << "le"; break;
-  case  0xf: O << (Flavor ? "nle" : "g"); break;
+  case  0xf: O << "g";  break;
   }
+  // clang-format on
+}
+
+void X86InstPrinterCommon::printCondFlags(const MCInst *MI, unsigned Op,
+                                          raw_ostream &O) {
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  int64_t Imm = MI->getOperand(Op).getImm();
+  assert(Imm >= 0 && Imm < 16 && "Invalid condition flags");
+  O << "{dfv=";
+  std::string Flags;
+  if (Imm & 0x8)
+    Flags += "of,";
+  if (Imm & 0x4)
+    Flags += "sf,";
+  if (Imm & 0x2)
+    Flags += "zf,";
+  if (Imm & 0x1)
+    Flags += "cf,";
+  StringRef SimplifiedFlags = StringRef(Flags).rtrim(",");
+  O << SimplifiedFlags << "}";
 }
 
 void X86InstPrinterCommon::printSSEAVXCC(const MCInst *MI, unsigned Op,
@@ -144,9 +168,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPDZ128rmik: case X86::VPCMPDZ128rrik:
   case X86::VPCMPDZ256rmik: case X86::VPCMPDZ256rrik:
   case X86::VPCMPDZrmik:    case X86::VPCMPDZrrik:
-  case X86::VPCMPDZ128rmib: case X86::VPCMPDZ128rmibk:
-  case X86::VPCMPDZ256rmib: case X86::VPCMPDZ256rmibk:
-  case X86::VPCMPDZrmib:    case X86::VPCMPDZrmibk:
+  case X86::VPCMPDZ128rmbi: case X86::VPCMPDZ128rmbik:
+  case X86::VPCMPDZ256rmbi: case X86::VPCMPDZ256rmbik:
+  case X86::VPCMPDZrmbi:    case X86::VPCMPDZrmbik:
     OS << "d\t";
     break;
   case X86::VPCMPQZ128rmi:  case X86::VPCMPQZ128rri:
@@ -155,9 +179,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPQZ128rmik: case X86::VPCMPQZ128rrik:
   case X86::VPCMPQZ256rmik: case X86::VPCMPQZ256rrik:
   case X86::VPCMPQZrmik:    case X86::VPCMPQZrrik:
-  case X86::VPCMPQZ128rmib: case X86::VPCMPQZ128rmibk:
-  case X86::VPCMPQZ256rmib: case X86::VPCMPQZ256rmibk:
-  case X86::VPCMPQZrmib:    case X86::VPCMPQZrmibk:
+  case X86::VPCMPQZ128rmbi: case X86::VPCMPQZ128rmbik:
+  case X86::VPCMPQZ256rmbi: case X86::VPCMPQZ256rmbik:
+  case X86::VPCMPQZrmbi:    case X86::VPCMPQZrmbik:
     OS << "q\t";
     break;
   case X86::VPCMPUBZ128rmi:  case X86::VPCMPUBZ128rri:
@@ -174,9 +198,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPUDZ128rmik: case X86::VPCMPUDZ128rrik:
   case X86::VPCMPUDZ256rmik: case X86::VPCMPUDZ256rrik:
   case X86::VPCMPUDZrmik:    case X86::VPCMPUDZrrik:
-  case X86::VPCMPUDZ128rmib: case X86::VPCMPUDZ128rmibk:
-  case X86::VPCMPUDZ256rmib: case X86::VPCMPUDZ256rmibk:
-  case X86::VPCMPUDZrmib:    case X86::VPCMPUDZrmibk:
+  case X86::VPCMPUDZ128rmbi: case X86::VPCMPUDZ128rmbik:
+  case X86::VPCMPUDZ256rmbi: case X86::VPCMPUDZ256rmbik:
+  case X86::VPCMPUDZrmbi:    case X86::VPCMPUDZrmbik:
     OS << "ud\t";
     break;
   case X86::VPCMPUQZ128rmi:  case X86::VPCMPUQZ128rri:
@@ -185,9 +209,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPUQZ128rmik: case X86::VPCMPUQZ128rrik:
   case X86::VPCMPUQZ256rmik: case X86::VPCMPUQZ256rrik:
   case X86::VPCMPUQZrmik:    case X86::VPCMPUQZrrik:
-  case X86::VPCMPUQZ128rmib: case X86::VPCMPUQZ128rmibk:
-  case X86::VPCMPUQZ256rmib: case X86::VPCMPUQZ256rmibk:
-  case X86::VPCMPUQZrmib:    case X86::VPCMPUQZrmibk:
+  case X86::VPCMPUQZ128rmbi: case X86::VPCMPUQZ128rmbik:
+  case X86::VPCMPUQZ256rmbi: case X86::VPCMPUQZ256rmbik:
+  case X86::VPCMPUQZrmbi:    case X86::VPCMPUQZrmbik:
     OS << "uq\t";
     break;
   case X86::VPCMPUWZ128rmi:  case X86::VPCMPUWZ128rri:
@@ -247,24 +271,24 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPPSZrrib:    case X86::VCMPPSZrribk:
     OS << "ps\t";
     break;
-  case X86::CMPSDrm:        case X86::CMPSDrr:
-  case X86::CMPSDrm_Int:    case X86::CMPSDrr_Int:
-  case X86::VCMPSDrm:       case X86::VCMPSDrr:
-  case X86::VCMPSDrm_Int:   case X86::VCMPSDrr_Int:
-  case X86::VCMPSDZrm:      case X86::VCMPSDZrr:
-  case X86::VCMPSDZrm_Int:  case X86::VCMPSDZrr_Int:
-  case X86::VCMPSDZrm_Intk: case X86::VCMPSDZrr_Intk:
-  case X86::VCMPSDZrrb_Int: case X86::VCMPSDZrrb_Intk:
+  case X86::CMPSDrmi:        case X86::CMPSDrri:
+  case X86::CMPSDrmi_Int:    case X86::CMPSDrri_Int:
+  case X86::VCMPSDrmi:       case X86::VCMPSDrri:
+  case X86::VCMPSDrmi_Int:   case X86::VCMPSDrri_Int:
+  case X86::VCMPSDZrmi:      case X86::VCMPSDZrri:
+  case X86::VCMPSDZrmi_Int:  case X86::VCMPSDZrri_Int:
+  case X86::VCMPSDZrmik_Int: case X86::VCMPSDZrrik_Int:
+  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrribk_Int:
     OS << "sd\t";
     break;
-  case X86::CMPSSrm:        case X86::CMPSSrr:
-  case X86::CMPSSrm_Int:    case X86::CMPSSrr_Int:
-  case X86::VCMPSSrm:       case X86::VCMPSSrr:
-  case X86::VCMPSSrm_Int:   case X86::VCMPSSrr_Int:
-  case X86::VCMPSSZrm:      case X86::VCMPSSZrr:
-  case X86::VCMPSSZrm_Int:  case X86::VCMPSSZrr_Int:
-  case X86::VCMPSSZrm_Intk: case X86::VCMPSSZrr_Intk:
-  case X86::VCMPSSZrrb_Int: case X86::VCMPSSZrrb_Intk:
+  case X86::CMPSSrmi:        case X86::CMPSSrri:
+  case X86::CMPSSrmi_Int:    case X86::CMPSSrri_Int:
+  case X86::VCMPSSrmi:       case X86::VCMPSSrri:
+  case X86::VCMPSSrmi_Int:   case X86::VCMPSSrri_Int:
+  case X86::VCMPSSZrmi:      case X86::VCMPSSZrri:
+  case X86::VCMPSSZrmi_Int:  case X86::VCMPSSZrri_Int:
+  case X86::VCMPSSZrmik_Int: case X86::VCMPSSZrrik_Int:
+  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrribk_Int:
     OS << "ss\t";
     break;
   case X86::VCMPPHZ128rmi:  case X86::VCMPPHZ128rri:
@@ -279,11 +303,22 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPPHZrrib:    case X86::VCMPPHZrribk:
     OS << "ph\t";
     break;
-  case X86::VCMPSHZrm:      case X86::VCMPSHZrr:
-  case X86::VCMPSHZrm_Int:  case X86::VCMPSHZrr_Int:
-  case X86::VCMPSHZrrb_Int: case X86::VCMPSHZrrb_Intk:
-  case X86::VCMPSHZrm_Intk: case X86::VCMPSHZrr_Intk:
+  case X86::VCMPSHZrmi:      case X86::VCMPSHZrri:
+  case X86::VCMPSHZrmi_Int:  case X86::VCMPSHZrri_Int:
+  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrribk_Int:
+  case X86::VCMPSHZrmik_Int: case X86::VCMPSHZrrik_Int:
     OS << "sh\t";
+    break;
+  case X86::VCMPBF16Z128rmi:  case X86::VCMPBF16Z128rri:
+  case X86::VCMPBF16Z256rmi:  case X86::VCMPBF16Z256rri:
+  case X86::VCMPBF16Zrmi:     case X86::VCMPBF16Zrri:
+  case X86::VCMPBF16Z128rmik: case X86::VCMPBF16Z128rrik:
+  case X86::VCMPBF16Z256rmik: case X86::VCMPBF16Z256rrik:
+  case X86::VCMPBF16Zrmik:    case X86::VCMPBF16Zrrik:
+  case X86::VCMPBF16Z128rmbi: case X86::VCMPBF16Z128rmbik:
+  case X86::VCMPBF16Z256rmbi: case X86::VCMPBF16Z256rmbik:
+  case X86::VCMPBF16Zrmbi:    case X86::VCMPBF16Zrmbik:
+    OS << "bf16\t";
     break;
   }
 }
@@ -369,14 +404,19 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
 
+  if (TSFlags & X86II::EVEX_NF && !X86::isCFCMOVCC(MI->getOpcode()))
+    O << "\t{nf}";
+
   // These all require a pseudo prefix
-  if ((Flags & X86::IP_USE_VEX) || (TSFlags & X86II::ExplicitVEXPrefix))
+  if ((Flags & X86::IP_USE_VEX) ||
+      (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitVEXPrefix)
     O << "\t{vex}";
   else if (Flags & X86::IP_USE_VEX2)
     O << "\t{vex2}";
   else if (Flags & X86::IP_USE_VEX3)
     O << "\t{vex3}";
-  else if (Flags & X86::IP_USE_EVEX)
+  else if ((Flags & X86::IP_USE_EVEX) ||
+           (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitEVEXPrefix)
     O << "\t{evex}";
 
   if (Flags & X86::IP_USE_DISP8)
@@ -419,6 +459,25 @@ void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
     return;
   case X86::K6_K7:
     printRegName(OS, X86::K6);
+    return;
+  }
+  llvm_unreachable("Unknown mask pair register name");
+}
+
+void X86InstPrinterCommon::printTILEPair(const MCInst *MI, unsigned OpNo,
+                                         raw_ostream &OS) {
+  switch (MI->getOperand(OpNo).getReg()) {
+  case X86::TMM0_TMM1:
+    printRegName(OS, X86::TMM0);
+    return;
+  case X86::TMM2_TMM3:
+    printRegName(OS, X86::TMM2);
+    return;
+  case X86::TMM4_TMM5:
+    printRegName(OS, X86::TMM4);
+    return;
+  case X86::TMM6_TMM7:
+    printRegName(OS, X86::TMM6);
     return;
   }
   llvm_unreachable("Unknown mask pair register name");

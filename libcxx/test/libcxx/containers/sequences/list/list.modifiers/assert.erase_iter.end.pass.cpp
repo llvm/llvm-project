@@ -13,17 +13,17 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <list>
 
 #include "check_assertion.h"
 
 int main(int, char**) {
-    int a1[] = {1, 2, 3};
-    std::list<int> l1(a1, a1+3);
-    std::list<int>::const_iterator i = l1.end();
-    TEST_LIBCPP_ASSERT_FAILURE(l1.erase(i), "list::erase(iterator) called with a non-dereferenceable iterator");
+  int a1[] = {1, 2, 3};
+  std::list<int> l1(a1, a1 + 3);
+  std::list<int>::const_iterator i = l1.end();
+  TEST_LIBCPP_ASSERT_FAILURE(l1.erase(i), "list::erase(iterator) called with a non-dereferenceable iterator");
 
-    return 0;
+  return 0;
 }

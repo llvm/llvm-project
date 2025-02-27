@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv67t < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv67t < %s | FileCheck %s
 
 ; Another scheduling test for Tiny Core.
 

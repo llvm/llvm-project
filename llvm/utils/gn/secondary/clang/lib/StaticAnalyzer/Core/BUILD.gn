@@ -20,6 +20,7 @@ static_library("Core") {
     "BlockCounter.cpp",
     "BugReporter.cpp",
     "BugReporterVisitors.cpp",
+    "BugSuppression.cpp",
     "CallDescription.cpp",
     "CallEvent.cpp",
     "Checker.cpp",
@@ -59,5 +60,6 @@ static_library("Core") {
     "SymbolManager.cpp",
     "TextDiagnostics.cpp",
     "WorkList.cpp",
+    "Z3CrosscheckVisitor.cpp",
   ]
 }

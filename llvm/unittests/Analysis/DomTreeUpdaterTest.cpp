@@ -15,6 +15,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 
@@ -375,12 +376,7 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   std::vector<BasicBlock *> BasicBlocks;
   BasicBlocks.push_back(BB1);
   BasicBlocks.push_back(BB2);
-  auto Eraser = [&](BasicBlock *BB) {
-    BasicBlocks.erase(
-        std::remove_if(BasicBlocks.begin(), BasicBlocks.end(),
-                       [&](const BasicBlock *i) { return i == BB; }),
-        BasicBlocks.end());
-  };
+  auto Eraser = [&](BasicBlock *BB) { llvm::erase(BasicBlocks, BB); };
   ASSERT_EQ(BasicBlocks.size(), static_cast<size_t>(2));
   // Remove bb2 from F. This has to happen before the call to
   // applyUpdates() for DTU to detect there is no longer an edge between
@@ -791,4 +787,46 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   DTU.applyUpdates({{DominatorTree::Insert, BB0, BB2}});
   ASSERT_TRUE(DTU.getDomTree().verify());
+}
+
+TEST(DomTreeUpdater, CriticalEdgeSplitTest) {
+  StringRef FuncName = "f";
+  StringRef ModuleString = R"(
+declare void @use1(i32)
+
+define void @f(i32 %i, i1 %c) {
+entry:
+	%A = icmp eq i32 %i, 0		; <i1> [#uses=1]
+	br i1 %A, label %brtrue, label %brfalse
+
+brtrue:  ; preds = %entry
+  call void @use1( i32 %i )
+  br label %brfalse
+
+brfalse: ; preds = %brtrue, %entry
+  call void @use1( i32 %i )
+  ret void
+}
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *F = M->getFunction(FuncName);
+
+  // Make the DTU.
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(&DT, nullptr, DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_TRUE(DTU.getDomTree().verify());
+
+  CriticalEdgeSplittingOptions Opts;
+  SplitAllCriticalEdges(*F, Opts);
+
+  Function::iterator FI = F->begin();
+  BasicBlock *BBEntry = &*FI++;
+  BasicBlock *SplitB = &*FI++;
+  [[maybe_unused]] BasicBlock *BBTrue = &*FI++;
+  BasicBlock *BBFalse = &*FI++;
+  DTU.splitCriticalEdge(BBEntry, BBFalse, SplitB);
+  DominatorTree NewDT(*F);
+  ASSERT_FALSE(NewDT.compare(DTU.getDomTree()));
 }

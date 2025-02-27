@@ -49,13 +49,16 @@ config("cxx_config") {
     "-Wno-covered-switch-default",
   ]
   cflags_cc = [
-    "-std=c++20",
+    "-std=c++23",
     "-nostdinc++",
   ]
   defines = [
     "_LIBCPP_BUILDING_LIBRARY",
     "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
   ]
+  if (current_os != "win") {
+    defines += [ "LIBCXX_BUILDING_LIBCXXABI" ]
+  }
   if (target_os == "win") {
     cflags += [ "/Zl" ]
     defines += [
@@ -122,12 +125,15 @@ cxx_sources = [
   "condition_variable_destructor.cpp",
   "error_category.cpp",
   "exception.cpp",
+  "expected.cpp",
+  "fstream.cpp",
   "functional.cpp",
   "future.cpp",
   "hash.cpp",
   "include/apple_availability.h",
   "include/atomic_support.h",
   "include/config_elast.h",
+  "include/from_chars_floating_point.h",
   "include/refstring.h",
   "include/ryu/common.h",
   "include/ryu/d2fixed.h",
@@ -143,7 +149,6 @@ cxx_sources = [
   "ios.cpp",
   "ios.instantiations.cpp",
   "iostream.cpp",
-  "legacy_pointer_safety.cpp",
   "locale.cpp",
   "memory.cpp",
   "memory_resource.cpp",
@@ -153,6 +158,7 @@ cxx_sources = [
   "new_handler.cpp",
   "new_helpers.cpp",
   "optional.cpp",
+  "ostream.cpp",
   "print.cpp",
   "random.cpp",
   "random_shuffle.cpp",
@@ -186,6 +192,7 @@ cxx_sources = [
 ]
 if (target_os == "win") {
   cxx_sources += [
+    "support/win32/compiler_rt_shims.cpp",
     "support/win32/locale_win32.cpp",
     "support/win32/support.cpp",
     "support/win32/thread_win32.cpp",
@@ -240,6 +247,7 @@ if (libcxx_enable_shared) {
     include_dirs = [ "." ]
     deps = [
       "//compiler-rt/lib/builtins",
+      "//libc:common_utils",
       "//libcxx/include",
       "//libcxxabi/src:cxxabi_shared",
       "//libunwind/src:unwind_shared",
@@ -285,12 +293,13 @@ if (libcxx_enable_static) {
     if (libcxx_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
       if (libcxx_enable_new_delete_definitions) {
-        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
+        cflags_cc = [ "-fvisibility-global-new-delete=force-hidden" ]
       }
       defines = [ "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS" ]
     }
     deps = [
       "//compiler-rt/lib/builtins",
+      "//libc:common_utils",
       "//libcxx/include",
       "//libcxxabi/src:cxxabi_static",
       "//libunwind/src:unwind_static",
@@ -307,11 +316,19 @@ if (libcxx_enable_experimental) {
   static_library("cxx_experimental") {
     output_dir = runtimes_dir
     output_name = "c++experimental"
-    sources = [ "experimental/memory_resource.cpp" ]
+    sources = [ "experimental/keep.cpp" ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
-        "tz.cpp",
-        "tzdb_list.cpp",
+        # TODO TZDB The exception could be moved in chrono once the TZDB library
+        # is no longer experimental.
+        "experimental/chrono_exception.cpp",
+        "experimental/include/tzdb/time_zone_private.h",
+        "experimental/include/tzdb/types_private.h",
+        "experimental/include/tzdb/tzdb_list_private.h",
+        "experimental/include/tzdb/tzdb_private.h",
+        "experimental/time_zone.cpp",
+        "experimental/tzdb.cpp",
+        "experimental/tzdb_list.cpp",
       ]
     }
     deps = [ "//libcxx/include" ]

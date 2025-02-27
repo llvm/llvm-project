@@ -29,14 +29,6 @@ def SPIRV_BranchOp : SPIRV_Op<"Branch", [
   let description = [{
     This instruction must be the last instruction in a block.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    branch-op ::= `spirv.Branch` successor
-    successor ::= bb-id branch-use-list?
-    branch-use-list ::= `(` ssa-use-list `:` type-list-no-parens `)`
-    ```
-
     #### Example:
 
     ```mlir
@@ -212,13 +204,6 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
     information: Result Type must match the Return Type of the function, and
     the calling argument types must match the formal parameter types.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    function-call-op ::= `spirv.FunctionCall` function-id `(` ssa-use-list `)`
-                     `:` function-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -229,12 +214,23 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
   let arguments = (ins
     FlatSymbolRefAttr:$callee,
-    Variadic<SPIRV_Type>:$arguments
+    Variadic<SPIRV_Type>:$arguments,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
   let results = (outs
     Optional<SPIRV_Type>:$return_value
   );
+
+  let builders = [
+    OpBuilder<(ins "Type":$returnType, "FlatSymbolRefAttr":$callee,
+      "ValueRange":$arguments),
+    [{
+      build($_builder, $_state, returnType, callee, arguments,
+            /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
+    }]>
+  ];
 
   let autogenSerialization = 0;
 
@@ -242,6 +238,48 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
     $callee `(` $arguments `)` attr-dict `:`
       functional-type($arguments, results)
   }];
+}
+
+// -----
+
+def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
+  let summary = [{
+    Deprecated (use OpTerminateInvocation or OpDemoteToHelperInvocation).
+  }];
+
+  let description = [{
+    Fragment-shader discard.
+
+    Ceases all further processing in any invocation that executes it: Only
+    instructions these invocations executed before OpKill have observable
+    side effects. If this instruction is executed in non-uniform control
+    flow, all subsequent control flow is non-uniform (for invocations that
+    continue to execute).
+
+    This instruction must be the last instruction in a block.
+
+    This instruction is only valid in the Fragment Execution Model.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    spirv.Kill
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Shader]>
+  ];
+
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 0;
 }
 
 // -----
@@ -300,7 +338,7 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
 
     // Adds an empty entry block and loop merge block containing one
     // spirv.mlir.merge op.
-    void addEntryAndMergeBlock();
+    void addEntryAndMergeBlock(OpBuilder &builder);
   }];
 
   let hasOpcode = 0;
@@ -344,10 +382,10 @@ def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, Pure,
   let description = [{
     This instruction must be the last instruction in a block.
 
-    <!-- End of AutoGen section -->
+    #### Example:
 
-    ```
-    return-op ::= `spirv.Return`
+    ```mlir
+    spirv.Return
     ```
   }];
 
@@ -365,12 +403,6 @@ def SPIRV_UnreachableOp : SPIRV_Op<"Unreachable", [InFunctionScope, Terminator]>
 
   let description = [{
     This instruction must be the last instruction in a block.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    unreachable-op ::= `spirv.Unreachable`
-    ```
   }];
 
   let arguments = (ins);
@@ -392,12 +424,6 @@ def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, Pure,
     instruction is in.
 
     This instruction must be the last instruction in a block.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    return-value-op ::= `spirv.ReturnValue` ssa-use `:` spirv-type
-    ```
 
     #### Example:
 
@@ -454,7 +480,7 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
     Block *getMergeBlock();
 
     /// Adds a selection merge block containing one spirv.mlir.merge op.
-    void addMergeBlock();
+    void addMergeBlock(OpBuilder &builder);
 
     /// Creates a spirv.mlir.selection op for `if (<condition>) then { <thenBody> }`
     /// with `builder`. `builder`'s insertion point will remain at after the

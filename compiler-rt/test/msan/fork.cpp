@@ -3,7 +3,7 @@
 // and verify that origin reads do not deadlock in the child process.
 
 // RUN: %clangxx_msan -std=c++11 -fsanitize-memory-track-origins=2 -g -O3 %s -o %t
-// RUN: MSAN_OPTIONS=store_context_size=1000,origin_history_size=0,origin_history_per_stack_limit=0 %run %t 2>&1 | FileCheck %s
+// RUN: env MSAN_OPTIONS=store_context_size=1000,origin_history_size=0,origin_history_per_stack_limit=0 %run %t 2>&1 | FileCheck %s
 
 // Fun fact: if test output is redirected to a file (as opposed to
 // being piped directly to FileCheck), we may lose some "done"s due to

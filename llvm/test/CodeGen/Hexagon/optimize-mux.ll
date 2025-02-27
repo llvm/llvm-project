@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -hexagon-gen-mux-threshold=0 < %s | FileCheck %s --check-prefix=CHECK0
-; RUN: llc -march=hexagon -hexagon-gen-mux-threshold=4 < %s | FileCheck %s --check-prefix=CHECK4
+; RUN: llc -mtriple=hexagon -hexagon-gen-mux-threshold=0 < %s | FileCheck %s --check-prefix=CHECK0
+; RUN: llc -mtriple=hexagon -hexagon-gen-mux-threshold=4 < %s | FileCheck %s --check-prefix=CHECK4
 
 ; Generate mux with threshold = 0:
 ; CHECK0: [[R0:r[0-9]+]] = add(r0,#-48)

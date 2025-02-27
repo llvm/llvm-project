@@ -246,9 +246,8 @@ private:
   __parse_empty_range_underlying_spec(_ParseContext& __ctx, typename _ParseContext::iterator __begin) {
     __ctx.advance_to(__begin);
     [[maybe_unused]] typename _ParseContext::iterator __result = __underlying_.parse(__ctx);
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __result == __begin,
-        "the underlying's parse function should not advance the input beyond the end of the input");
+    _LIBCPP_ASSERT_INTERNAL(__result == __begin,
+                            "the underlying's parse function should not advance the input beyond the end of the input");
     return __begin;
   }
 
@@ -258,7 +257,7 @@ private:
   basic_string_view<_CharT> __closing_bracket_ = _LIBCPP_STATICALLY_WIDEN(_CharT, "]");
 };
 
-#endif //_LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

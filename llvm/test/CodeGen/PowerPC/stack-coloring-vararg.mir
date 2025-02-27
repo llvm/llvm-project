@@ -17,30 +17,30 @@
   target datalayout = "E-m:e-p:32:32-i64:64-n32"
   target triple = "powerpc-unknown-freebsd13.0"
 
-  %struct.__va_list_tag = type { i8, i8, i16, i8*, i8* }
+  %struct.__va_list_tag = type { i8, i8, i16, ptr, ptr }
   ; Function Attrs: argmemonly nounwind willreturn
-  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
-  define dso_local void @atf_tc_fail_nonfatal(i8* %fmt, ...) !dbg !3 {
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
+  define dso_local void @atf_tc_fail_nonfatal(ptr %fmt, ...) !dbg !3 {
   entry:
     %buf.i.i = alloca [1024 x i8], align 1
     %ap2.i.i = alloca [1 x %struct.__va_list_tag], align 4
     br i1 undef, label %format_reason_ap.exit.i, label %if.then6.i.i
 
   if.then6.i.i:                                     ; preds = %entry
-    %0 = bitcast [1 x %struct.__va_list_tag]* %ap2.i.i to i8*
-    call void @llvm.lifetime.start.p0i8(i64 12, i8* nonnull %0)
-    call void @llvm.va_copy(i8* nonnull %0, i8* nonnull null)
+    %0 = bitcast ptr %ap2.i.i to ptr
+    call void @llvm.lifetime.start.p0(i64 12, ptr nonnull %0)
+    call void @llvm.va_copy(ptr nonnull %0, ptr nonnull null)
     ret void
 
   format_reason_ap.exit.i:                          ; preds = %entry
-    %1 = bitcast [1024 x i8]* %buf.i.i to i8*
-    call void @llvm.lifetime.start.p0i8(i64 1024, i8* nonnull %1)
-    call void @fprintf(i8* nonnull %1)
+    %1 = bitcast ptr %buf.i.i to ptr
+    call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %1)
+    call void @fprintf(ptr nonnull %1)
     ret void
   }
-  declare void @fprintf(i8*)
+  declare void @fprintf(ptr)
   ; Function Attrs: nounwind
-  declare void @llvm.va_copy(i8*, i8*) #1
+  declare void @llvm.va_copy(ptr, ptr) #1
 
   attributes #0 = { argmemonly nounwind willreturn }
   attributes #1 = { nounwind }

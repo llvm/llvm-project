@@ -70,10 +70,9 @@ static DenseMap<StringRef, StringRef> getImageArguments(StringRef Image,
   DenseMap<StringRef, StringRef> Args;
   for (StringRef Arg : llvm::split(Image, ",")) {
     auto [Key, Value] = Arg.split("=");
-    if (Args.count(Key))
-      Args[Key] = Saver.save(Args[Key] + "," + Value);
-    else
-      Args[Key] = Value;
+    auto [It, Inserted] = Args.try_emplace(Key, Value);
+    if (!Inserted)
+      It->second = Saver.save(It->second + "," + Value);
   }
 
   return Args;
@@ -104,33 +103,36 @@ static Error bundleImages() {
           inconvertibleErrorCode(),
           "'file' and 'triple' are required image arguments");
 
-    OffloadBinary::OffloadingImage ImageBinary{};
-    std::unique_ptr<llvm::MemoryBuffer> DeviceImage;
-    for (const auto &[Key, Value] : Args) {
-      if (Key == "file") {
-        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
-            llvm::MemoryBuffer::getFileOrSTDIN(Value);
-        if (std::error_code EC = ObjectOrErr.getError())
-          return errorCodeToError(EC);
+    // Permit using multiple instances of `file` in a single string.
+    for (auto &File : llvm::split(Args["file"], ",")) {
+      OffloadBinary::OffloadingImage ImageBinary{};
+      std::unique_ptr<llvm::MemoryBuffer> DeviceImage;
 
-        // Clang uses the '.o' suffix for LTO bitcode.
-        if (identify_magic((*ObjectOrErr)->getBuffer()) == file_magic::bitcode)
-          ImageBinary.TheImageKind = object::IMG_Bitcode;
-        else
-          ImageBinary.TheImageKind =
-              getImageKind(sys::path::extension(Value).drop_front());
-        ImageBinary.Image = std::move(*ObjectOrErr);
-      } else if (Key == "kind") {
-        ImageBinary.TheOffloadKind = getOffloadKind(Value);
-      } else {
-        ImageBinary.StringData[Key] = Value;
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
+          llvm::MemoryBuffer::getFileOrSTDIN(File);
+      if (std::error_code EC = ObjectOrErr.getError())
+        return errorCodeToError(EC);
+
+      // Clang uses the '.o' suffix for LTO bitcode.
+      if (identify_magic((*ObjectOrErr)->getBuffer()) == file_magic::bitcode)
+        ImageBinary.TheImageKind = object::IMG_Bitcode;
+      else
+        ImageBinary.TheImageKind =
+            getImageKind(sys::path::extension(File).drop_front());
+      ImageBinary.Image = std::move(*ObjectOrErr);
+      for (const auto &[Key, Value] : Args) {
+        if (Key == "kind") {
+          ImageBinary.TheOffloadKind = getOffloadKind(Value);
+        } else if (Key != "file") {
+          ImageBinary.StringData[Key] = Value;
+        }
       }
+      llvm::SmallString<0> Buffer = OffloadBinary::write(ImageBinary);
+      if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+        return createStringError(inconvertibleErrorCode(),
+                                 "Offload binary has invalid size alignment");
+      OS << Buffer;
     }
-    llvm::SmallString<0> Buffer = OffloadBinary::write(ImageBinary);
-    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-      return createStringError(inconvertibleErrorCode(),
-                               "Offload binary has invalid size alignment");
-    OS << Buffer;
   }
 
   if (Error E = writeFile(OutputFile,
@@ -194,14 +196,14 @@ static Error unbundleImages() {
 
       if (Error E = writeArchive(
               Args["file"], Members, SymtabWritingMode::NormalSymtab,
-              Archive::getDefaultKindForHost(), true, false, nullptr))
+              Archive::getDefaultKind(), true, false, nullptr))
         return E;
-    } else if (Args.count("file")) {
+    } else if (auto It = Args.find("file"); It != Args.end()) {
       if (Extracted.size() > 1)
         WithColor::warning(errs(), PackagerExecutable)
-            << "Multiple inputs match to a single file, '" << Args["file"]
+            << "Multiple inputs match to a single file, '" << It->second
             << "'\n";
-      if (Error E = writeFile(Args["file"], Extracted.back()->getImage()))
+      if (Error E = writeFile(It->second, Extracted.back()->getImage()))
         return E;
     } else {
       uint64_t Idx = 0;

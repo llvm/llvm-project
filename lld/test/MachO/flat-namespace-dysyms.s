@@ -32,7 +32,7 @@
 # RUN: cd %t
 # RUN: tar -tf repro.tar | FileCheck -DPATH='%:t.dir' --check-prefix=REPRO %s
 # RUN: tar -xf repro.tar repro/response.txt
-# RUN: FileCheck --implicit-check-not=dylib --check-prefix=RESPONSE %s \
+# RUN: FileCheck --implicit-check-not=.dylib --check-prefix=RESPONSE %s \
 # RUN:     < %t/repro/response.txt
 
 # HEADERBITS-NOT: NOUNDEFS

@@ -9,7 +9,6 @@
 #include "clang/Driver/Job.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -26,7 +25,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <string>
@@ -95,10 +93,10 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
 
   // These flags are treated as a single argument (e.g., -F<Dir>).
   StringRef FlagRef(Flag);
-  IsInclude = FlagRef.startswith("-F") || FlagRef.startswith("-I");
+  IsInclude = FlagRef.starts_with("-F") || FlagRef.starts_with("-I");
   if (IsInclude)
     return !HaveCrashVFS;
-  if (FlagRef.startswith("-fmodules-cache-path="))
+  if (FlagRef.starts_with("-fmodules-cache-path="))
     return true;
 
   SkipNum = 0;
@@ -185,8 +183,8 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
   SmallString<128> NewInc;
   if (NumArgs == 1) {
     StringRef FlagRef(Args[Idx + NumArgs - 1]);
-    assert((FlagRef.startswith("-F") || FlagRef.startswith("-I")) &&
-            "Expecting -I or -F");
+    assert((FlagRef.starts_with("-F") || FlagRef.starts_with("-I")) &&
+           "Expecting -I or -F");
     StringRef Inc = FlagRef.slice(2, StringRef::npos);
     if (getAbsPath(Inc, NewInc)) {
       SmallString<128> NewArg(FlagRef.slice(0, 2));
@@ -343,7 +341,6 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
     writeResponseFile(SS);
     buildArgvForResponseFile(Argv);
     Argv.push_back(nullptr);
-    SS.flush();
 
     // Save the response file in the appropriate encoding
     if (std::error_code EC = writeFileWithEncoding(

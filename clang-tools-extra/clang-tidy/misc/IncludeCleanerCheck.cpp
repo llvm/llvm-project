@@ -57,10 +57,9 @@ struct MissingIncludeInfo {
 IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreHeaders(utils::options::parseStringList(
-          Options.getLocalOrGlobal("IgnoreHeaders", ""))),
-      DeduplicateFindings(
-          Options.getLocalOrGlobal("DeduplicateFindings", true)) {
+      IgnoreHeaders(
+          utils::options::parseStringList(Options.get("IgnoreHeaders", ""))),
+      DeduplicateFindings(Options.get("DeduplicateFindings", true)) {
   for (const auto &Header : IgnoreHeaders) {
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;
@@ -124,7 +123,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     MainFileDecls.push_back(D);
   }
   llvm::DenseSet<include_cleaner::Symbol> SeenSymbols;
-  const DirectoryEntry *ResourceDir =
+  OptionalDirectoryEntryRef ResourceDir =
       PP->getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   // FIXME: Find a way to have less code duplication between include-cleaner
   // analysis implementation and the below code.
@@ -180,7 +179,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
       // header mappings. But that's not different than rest of the places.
-      if (getCurrentMainFile().endswith(PHeader))
+      if (getCurrentMainFile().ends_with(PHeader))
         continue;
     }
     auto StdHeader = tooling::stdlib::Header::named(

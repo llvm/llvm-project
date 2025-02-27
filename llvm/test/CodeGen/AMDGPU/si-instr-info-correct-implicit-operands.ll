@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -march=amdgcn -mcpu=verde -verify-machineinstrs -stop-after finalize-isel | FileCheck %s
+; RUN: llc -o - %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs -stop-after finalize-isel | FileCheck %s
 ; This test verifies that the instruction selection will add the implicit
 ; register operands in the correct order when modifying the opcode of an
 ; instruction to V_ADD_CO_U32_e32.

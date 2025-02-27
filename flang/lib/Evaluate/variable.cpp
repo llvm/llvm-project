@@ -214,17 +214,21 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
   }
   if (!result) { // error cases
     if (*lbi < 1) {
-      context.messages().Say(
-          "Lower bound (%jd) on substring is less than one"_warn_en_US,
-          static_cast<std::intmax_t>(*lbi));
+      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
+        context.messages().Say(common::UsageWarning::Bounds,
+            "Lower bound (%jd) on substring is less than one"_warn_en_US,
+            static_cast<std::intmax_t>(*lbi));
+      }
       *lbi = 1;
       lower_ = AsExpr(Constant<SubscriptInteger>{1});
     }
     if (length && *ubi > *length) {
-      context.messages().Say(
-          "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
-          static_cast<std::intmax_t>(*ubi),
-          static_cast<std::intmax_t>(*length));
+      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
+        context.messages().Say(common::UsageWarning::Bounds,
+            "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
+            static_cast<std::intmax_t>(*ubi),
+            static_cast<std::intmax_t>(*length));
+      }
       *ubi = *length;
       upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
     }
@@ -246,7 +250,8 @@ DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
   const Symbol &last{base_.GetLastSymbol()};
   CHECK(IsDescriptor(last));
   CHECK((field == Field::Len && dim == 0) ||
-      (field != Field::Len && dim >= 0 && dim < last.Rank()));
+      (field != Field::Len && dim >= 0 &&
+          (dim < last.Rank() || IsAssumedRank(last))));
 }
 
 // LEN()
@@ -460,6 +465,59 @@ template <typename T> int Designator<T>::Rank() const {
       u);
 }
 
+// Corank()
+int BaseObject::Corank() const {
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Corank(); },
+                           [](const StaticDataObject::Pointer &) { return 0; },
+                       },
+      u);
+}
+
+int Component::Corank() const {
+  if (int corank{symbol_->Corank()}; corank > 0) {
+    return corank;
+  }
+  return base().Corank();
+}
+
+int NamedEntity::Corank() const {
+  return common::visit(common::visitors{
+                           [](const SymbolRef s) { return s->Corank(); },
+                           [](const Component &c) { return c.Corank(); },
+                       },
+      u_);
+}
+
+int ArrayRef::Corank() const { return base().Corank(); }
+
+int DataRef::Corank() const {
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Corank(); },
+                           [](const auto &x) { return x.Corank(); },
+                       },
+      u);
+}
+
+int Substring::Corank() const {
+  return common::visit(
+      common::visitors{
+          [](const DataRef &dataRef) { return dataRef.Corank(); },
+          [](const StaticDataObject::Pointer &) { return 0; },
+      },
+      parent_);
+}
+
+int ComplexPart::Corank() const { return complex_.Corank(); }
+
+template <typename T> int Designator<T>::Corank() const {
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Corank(); },
+                           [](const auto &x) { return x.Corank(); },
+                       },
+      u);
+}
+
 // GetBaseObject(), GetFirstSymbol(), GetLastSymbol(), &c.
 const Symbol &Component::GetFirstSymbol() const {
   return base_.value().GetFirstSymbol();
@@ -567,15 +625,7 @@ template <typename T> BaseObject Designator<T>::GetBaseObject() const {
       common::visitors{
           [](SymbolRef symbol) { return BaseObject{symbol}; },
           [](const Substring &sstring) { return sstring.GetBaseObject(); },
-          [](const auto &x) {
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            if constexpr (std::is_same_v<std::decay_t<decltype(x)>,
-                              Substring>) {
-              return x.GetBaseObject();
-            } else
-#endif
-              return BaseObject{x.GetFirstSymbol()};
-          },
+          [](const auto &x) { return BaseObject{x.GetFirstSymbol()}; },
       },
       u);
 }
@@ -585,15 +635,7 @@ template <typename T> const Symbol *Designator<T>::GetLastSymbol() const {
       common::visitors{
           [](SymbolRef symbol) { return &*symbol; },
           [](const Substring &sstring) { return sstring.GetLastSymbol(); },
-          [](const auto &x) {
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            if constexpr (std::is_same_v<std::decay_t<decltype(x)>,
-                              Substring>) {
-              return x.GetLastSymbol();
-            } else
-#endif
-              return &x.GetLastSymbol();
-          },
+          [](const auto &x) { return &x.GetLastSymbol(); },
       },
       u);
 }

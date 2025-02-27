@@ -141,7 +141,7 @@ Options for all Libraries
 Options for ``libomp``
 ----------------------
 
-**LIBOMP_ARCH** = ``aarch64|arm|i386|loongarch64|mic|mips|mips64|ppc64|ppc64le|x86_64|riscv64|s390x``
+**LIBOMP_ARCH** = ``aarch64|aarch64_32|arm|i386|loongarch64|mic|mips|mips64|ppc64|ppc64le|x86_64|riscv64|s390x``
   The default value for this option is chosen based on probing the compiler for
   architecture macros (e.g., is ``__x86_64__`` predefined by compiler?).
 

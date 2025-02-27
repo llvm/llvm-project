@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpfel | FileCheck -check-prefixes=CHECK,EL %s
-; RUN: llc < %s -march=bpfeb | FileCheck -check-prefixes=CHECK,EB %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v1 | FileCheck -check-prefixes=CHECK,EL %s
+; RUN: llc < %s -mtriple=bpfeb -mcpu=v1 | FileCheck -check-prefixes=CHECK,EB %s
 
 %struct.bpf_map_def = type { i32, i32, i32, i32 }
 %struct.__sk_buff = type opaque

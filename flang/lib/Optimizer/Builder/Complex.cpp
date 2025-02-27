@@ -14,18 +14,11 @@
 
 mlir::Type
 fir::factory::Complex::getComplexPartType(mlir::Type complexType) const {
-  return builder.getRealType(complexType.cast<fir::ComplexType>().getFKind());
+  return mlir::cast<mlir::ComplexType>(complexType).getElementType();
 }
 
 mlir::Type fir::factory::Complex::getComplexPartType(mlir::Value cplx) const {
   return getComplexPartType(cplx.getType());
-}
-
-mlir::Value fir::factory::Complex::createComplex(fir::KindTy kind,
-                                                 mlir::Value real,
-                                                 mlir::Value imag) {
-  auto complexTy = fir::ComplexType::get(builder.getContext(), kind);
-  return createComplex(complexTy, real, imag);
 }
 
 mlir::Value fir::factory::Complex::createComplex(mlir::Type cplxTy,
@@ -33,4 +26,11 @@ mlir::Value fir::factory::Complex::createComplex(mlir::Type cplxTy,
                                                  mlir::Value imag) {
   mlir::Value und = builder.create<fir::UndefOp>(loc, cplxTy);
   return insert<Part::Imag>(insert<Part::Real>(und, real), imag);
+}
+
+mlir::Value fir::factory::Complex::createComplex(mlir::Value real,
+                                                 mlir::Value imag) {
+  assert(real.getType() == imag.getType() && "part types must match");
+  mlir::Type cplxTy = mlir::ComplexType::get(real.getType());
+  return createComplex(cplxTy, real, imag);
 }

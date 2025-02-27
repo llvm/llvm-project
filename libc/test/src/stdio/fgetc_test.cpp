@@ -16,8 +16,8 @@
 #include "src/stdio/getc.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 class LlvmLibcGetcTest : public LIBC_NAMESPACE::testing::Test {
 public:
@@ -33,7 +33,7 @@ public:
     // This is an error and not a real EOF.
     ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
     ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 

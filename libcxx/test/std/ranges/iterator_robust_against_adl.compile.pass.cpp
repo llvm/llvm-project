@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // ADL call with nested iterators of views should not look up base's view's
 // namespace

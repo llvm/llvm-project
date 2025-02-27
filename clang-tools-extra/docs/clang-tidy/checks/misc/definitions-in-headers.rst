@@ -92,27 +92,3 @@ When :program:`clang-tidy` is invoked with the `--fix-notes` option, this check
 provides fixes that automatically add the ``inline`` keyword to discovered
 functions. Please note that the addition of the ``inline`` keyword to variables
 is not currently supported by this check.
-
-Options
--------
-
-.. option:: HeaderFileExtensions
-
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 19. Please use the global configuration option
-   `HeaderFileExtensions`.
-
-   A comma-separated list of filename extensions of header files (the filename
-   extensions should not include "." prefix). Default is "h,hh,hpp,hxx".
-   For header files without an extension, use an empty string (if there are no
-   other desired extensions) or leave an empty element in the list. E.g.,
-   "h,hh,hpp,hxx," (note the trailing comma).
-
-.. option:: UseHeaderFileExtension
-
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 19. The check will unconditionally use the global option
-   `HeaderFileExtensions`.
-
-   When `true`, the check will use the file extension to distinguish header
-   files. Default is `true`.

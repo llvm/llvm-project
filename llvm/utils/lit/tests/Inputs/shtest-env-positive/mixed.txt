@@ -1,0 +1,18 @@
+## Tests env command for setting and unsetting single and multiple environment variables.
+
+## Check for setting and removing one environment variable
+#
+# RUN: env A_FOO=999 -u FOO | FileCheck --check-prefix=CHECK-ENV-1 %s
+#
+## Check for setting/unsetting multiple environment variables
+#
+# RUN: env A_FOO=1 -u FOO B_BAR=2 -u BAR C_OOF=3 | FileCheck --check-prefix=CHECK-ENV-MULTIPLE %s
+
+# CHECK-ENV-1: A_FOO = 999
+# CHECK-ENV-1-NOT: FOO
+
+# CHECK-ENV-MULTIPLE: A_FOO = 1
+# CHECK-ENV-MULTIPLE-NOT: BAR
+# CHECK-ENV-MULTIPLE: B_BAR = 2
+# CHECK-ENV-MULTIPLE: C_OOF = 3
+# CHECK-ENV-MULTIPLE-NOT: FOO

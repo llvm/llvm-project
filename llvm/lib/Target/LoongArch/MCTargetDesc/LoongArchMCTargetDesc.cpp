@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchMCTargetDesc.h"
-#include "LoongArchBaseInfo.h"
 #include "LoongArchELFStreamer.h"
 #include "LoongArchInstPrinter.h"
 #include "LoongArchMCAsmInfo.h"
@@ -55,7 +54,7 @@ static MCInstrInfo *createLoongArchMCInstrInfo() {
 static MCSubtargetInfo *
 createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPU.empty() || CPU == "generic")
-    CPU = TT.isArch64Bit() ? "la464" : "generic-la32";
+    CPU = TT.isArch64Bit() ? "generic-la64" : "generic-la32";
   return createLoongArchMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
@@ -65,7 +64,7 @@ static MCAsmInfo *createLoongArchMCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT);
 
   // Initial state of the frame pointer is sp(r3).
-  MCRegister SP = MRI.getDwarfRegNum(LoongArch::R3, true);
+  unsigned SP = MRI.getDwarfRegNum(LoongArch::R3, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
   MAI->addInitialFrameState(Inst);
 
@@ -87,6 +86,12 @@ createLoongArchObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
              : nullptr;
 }
 
+static MCTargetStreamer *
+createLoongArchAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                                 MCInstPrinter *InstPrint) {
+  return new LoongArchTargetAsmStreamer(S, OS);
+}
+
 namespace {
 
 class LoongArchMCInstrAnalysis : public MCInstrAnalysis {
@@ -97,7 +102,8 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override {
     unsigned NumOps = Inst.getNumOperands();
-    if (isBranch(Inst) || Inst.getOpcode() == LoongArch::BL) {
+    if ((isBranch(Inst) && !isIndirectBranch(Inst)) ||
+        Inst.getOpcode() == LoongArch::BL) {
       Target = Addr + Inst.getOperand(NumOps - 1).getImm();
       return true;
     }
@@ -192,10 +198,9 @@ namespace {
 MCStreamer *createLoongArchELFStreamer(const Triple &T, MCContext &Context,
                                        std::unique_ptr<MCAsmBackend> &&MAB,
                                        std::unique_ptr<MCObjectWriter> &&MOW,
-                                       std::unique_ptr<MCCodeEmitter> &&MCE,
-                                       bool RelaxAll) {
+                                       std::unique_ptr<MCCodeEmitter> &&MCE) {
   return createLoongArchELFStreamer(Context, std::move(MAB), std::move(MOW),
-                                    std::move(MCE), RelaxAll);
+                                    std::move(MCE));
 }
 } // end namespace
 
@@ -212,5 +217,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTargetMC() {
     TargetRegistry::RegisterELFStreamer(*T, createLoongArchELFStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createLoongArchObjectTargetStreamer);
+    TargetRegistry::RegisterAsmTargetStreamer(*T,
+                                              createLoongArchAsmTargetStreamer);
   }
 }

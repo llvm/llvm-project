@@ -3,12 +3,33 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load(":targets.bzl", "bolt_targets")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
 licenses(["notice"])
+
+genrule(
+    name = "generate_vcs_revision",
+    outs = ["include/VCSVersion.inc"],
+    cmd = "echo '#undef BOLT_REVISION' >> $@\n",
+)
+
+expand_template(
+    name = "target_config_def_gen",
+    out = "include/bolt/Core/TargetConfig.def",
+    substitutions = {"@BOLT_ENUM_TARGETS@": "\n".join(
+        ["BOLT_TARGET({})".format(target) for target in bolt_targets],
+    )},
+    template = "include/bolt/Core/TargetConfig.def.in",
+)
+
+cc_library(
+    name = "TargetConfig",
+    textual_hdrs = [":target_config_def_gen"],
+)
 
 cc_binary(
     name = "llvm-bolt-heatmap",
@@ -18,6 +39,7 @@ cc_binary(
     deps = [
         ":Profile",
         ":Rewrite",
+        ":TargetConfig",
         ":Utils",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsDisassemblers",
@@ -48,6 +70,7 @@ cc_binary(
         ":Profile",
         ":Rewrite",
         ":RuntimeLibs",
+        ":TargetConfig",
         ":TargetAArch64",
         ":TargetX86",
         ":Utils",
@@ -80,10 +103,10 @@ cc_library(
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
+        "//llvm:DWARFLinker",
         "//llvm:DWP",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
-        "//llvm:DWARFLinker",
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:MCDisassembler",
@@ -110,6 +133,7 @@ cc_library(
     srcs = glob([
         "lib/RuntimeLibs/*.cpp",
     ]),
+    defines = ["CMAKE_INSTALL_FULL_LIBDIR=\\\"\\\""],
     includes = ["include"],
     textual_hdrs = glob([
         "include/bolt/RuntimeLibs/*.h",
@@ -130,6 +154,13 @@ cc_library(
         "//llvm:Object",
         "//llvm:Support",
     ],
+)
+
+cc_library(
+    name = "ProfileHeaders",
+    hdrs = glob(["include/bolt/Profile/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:private"],
 )
 
 cc_library(
@@ -167,7 +198,10 @@ cc_library(
     ]),
     hdrs = glob([
         "include/bolt/Passes/*.h",
-    ]),
+    ]) + [
+        # To avoid circular dependency on "Profile".
+        "include/bolt/Profile/BoltAddressTranslation.h",
+    ],
     includes = ["include"],
     deps = [
         ":Core",
@@ -221,8 +255,6 @@ cc_library(
     srcs = glob([
         "lib/Target/AArch64/*.cpp",
     ]),
-    hdrs = glob([
-    ]),
     includes = ["include"],
     deps = [
         ":Core",
@@ -257,6 +289,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ProfileHeaders",
         ":Utils",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
@@ -269,8 +302,10 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Object",
         "//llvm:ObjectYAML",
+        "//llvm:OrcShared",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:config",
         "//llvm:ir_headers",
     ],
 )
@@ -280,7 +315,9 @@ cc_library(
     srcs = glob([
         "lib/Utils/*.cpp",
     ]),
-    hdrs = glob([
+    hdrs = [
+        "include/VCSVersion.inc",
+    ] + glob([
         "include/bolt/Utils/*.h",
     ]),
     includes = ["include"],

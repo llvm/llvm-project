@@ -5,7 +5,7 @@
 ;; AIX assembly syntax.
 
 ; REQUIRES: powerpc-registered-target
-; RUN: llc -filetype=obj -o %t -mtriple=powerpc-aix-ibm-xcoff < %s
+; RUN: llc -filetype=obj -o %t -mtriple=powerpc-aix-ibm-xcoff -ppc-global-merge=false < %s
 ; RUN: llvm-symbolizer --obj=%t 'DATA 0x60' 'DATA 0x61' 'DATA 0x64' 'DATA 0X68' \
 ; RUN:   'DATA 0x90' 'DATA 0x94' 'DATA 0X98' | \
 ; RUN:   FileCheck %s

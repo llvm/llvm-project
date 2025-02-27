@@ -51,89 +51,7 @@ define void @test_large_number_of_group(ptr %dst, i64 %off, i64 %N) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[OFF]], 88
 ; CHECK-NEXT:    [[DIFF_CHECK18:%.*]] = icmp ult i64 [[TMP9]], 32
 ; CHECK-NEXT:    [[CONFLICT_RDX19:%.*]] = or i1 [[CONFLICT_RDX17]], [[DIFF_CHECK18]]
-; CHECK-NEXT:    [[DIFF_CHECK20:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX21:%.*]] = or i1 [[CONFLICT_RDX19]], [[DIFF_CHECK20]]
-; CHECK-NEXT:    [[DIFF_CHECK22:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX23:%.*]] = or i1 [[CONFLICT_RDX21]], [[DIFF_CHECK22]]
-; CHECK-NEXT:    [[DIFF_CHECK24:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX25:%.*]] = or i1 [[CONFLICT_RDX23]], [[DIFF_CHECK24]]
-; CHECK-NEXT:    [[DIFF_CHECK26:%.*]] = icmp ult i64 [[TMP2]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX27:%.*]] = or i1 [[CONFLICT_RDX25]], [[DIFF_CHECK26]]
-; CHECK-NEXT:    [[DIFF_CHECK28:%.*]] = icmp ult i64 [[TMP3]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX29:%.*]] = or i1 [[CONFLICT_RDX27]], [[DIFF_CHECK28]]
-; CHECK-NEXT:    [[DIFF_CHECK30:%.*]] = icmp ult i64 [[TMP4]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX31:%.*]] = or i1 [[CONFLICT_RDX29]], [[DIFF_CHECK30]]
-; CHECK-NEXT:    [[DIFF_CHECK32:%.*]] = icmp ult i64 [[TMP5]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX33:%.*]] = or i1 [[CONFLICT_RDX31]], [[DIFF_CHECK32]]
-; CHECK-NEXT:    [[DIFF_CHECK34:%.*]] = icmp ult i64 [[TMP6]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX35:%.*]] = or i1 [[CONFLICT_RDX33]], [[DIFF_CHECK34]]
-; CHECK-NEXT:    [[DIFF_CHECK36:%.*]] = icmp ult i64 [[TMP7]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX37:%.*]] = or i1 [[CONFLICT_RDX35]], [[DIFF_CHECK36]]
-; CHECK-NEXT:    [[DIFF_CHECK38:%.*]] = icmp ult i64 [[TMP8]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX39:%.*]] = or i1 [[CONFLICT_RDX37]], [[DIFF_CHECK38]]
-; CHECK-NEXT:    [[DIFF_CHECK40:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX41:%.*]] = or i1 [[CONFLICT_RDX39]], [[DIFF_CHECK40]]
-; CHECK-NEXT:    [[DIFF_CHECK42:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX43:%.*]] = or i1 [[CONFLICT_RDX41]], [[DIFF_CHECK42]]
-; CHECK-NEXT:    [[DIFF_CHECK44:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX45:%.*]] = or i1 [[CONFLICT_RDX43]], [[DIFF_CHECK44]]
-; CHECK-NEXT:    [[DIFF_CHECK46:%.*]] = icmp ult i64 [[TMP2]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX47:%.*]] = or i1 [[CONFLICT_RDX45]], [[DIFF_CHECK46]]
-; CHECK-NEXT:    [[DIFF_CHECK48:%.*]] = icmp ult i64 [[TMP3]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX49:%.*]] = or i1 [[CONFLICT_RDX47]], [[DIFF_CHECK48]]
-; CHECK-NEXT:    [[DIFF_CHECK50:%.*]] = icmp ult i64 [[TMP4]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX51:%.*]] = or i1 [[CONFLICT_RDX49]], [[DIFF_CHECK50]]
-; CHECK-NEXT:    [[DIFF_CHECK52:%.*]] = icmp ult i64 [[TMP5]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX53:%.*]] = or i1 [[CONFLICT_RDX51]], [[DIFF_CHECK52]]
-; CHECK-NEXT:    [[DIFF_CHECK54:%.*]] = icmp ult i64 [[TMP6]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX55:%.*]] = or i1 [[CONFLICT_RDX53]], [[DIFF_CHECK54]]
-; CHECK-NEXT:    [[DIFF_CHECK56:%.*]] = icmp ult i64 [[TMP7]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX57:%.*]] = or i1 [[CONFLICT_RDX55]], [[DIFF_CHECK56]]
-; CHECK-NEXT:    [[DIFF_CHECK58:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX59:%.*]] = or i1 [[CONFLICT_RDX57]], [[DIFF_CHECK58]]
-; CHECK-NEXT:    [[DIFF_CHECK60:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX61:%.*]] = or i1 [[CONFLICT_RDX59]], [[DIFF_CHECK60]]
-; CHECK-NEXT:    [[DIFF_CHECK62:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX63:%.*]] = or i1 [[CONFLICT_RDX61]], [[DIFF_CHECK62]]
-; CHECK-NEXT:    [[DIFF_CHECK64:%.*]] = icmp ult i64 [[TMP2]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX65:%.*]] = or i1 [[CONFLICT_RDX63]], [[DIFF_CHECK64]]
-; CHECK-NEXT:    [[DIFF_CHECK66:%.*]] = icmp ult i64 [[TMP3]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX67:%.*]] = or i1 [[CONFLICT_RDX65]], [[DIFF_CHECK66]]
-; CHECK-NEXT:    [[DIFF_CHECK68:%.*]] = icmp ult i64 [[TMP4]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX69:%.*]] = or i1 [[CONFLICT_RDX67]], [[DIFF_CHECK68]]
-; CHECK-NEXT:    [[DIFF_CHECK70:%.*]] = icmp ult i64 [[TMP5]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX71:%.*]] = or i1 [[CONFLICT_RDX69]], [[DIFF_CHECK70]]
-; CHECK-NEXT:    [[DIFF_CHECK72:%.*]] = icmp ult i64 [[TMP6]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX73:%.*]] = or i1 [[CONFLICT_RDX71]], [[DIFF_CHECK72]]
-; CHECK-NEXT:    [[DIFF_CHECK74:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[DIFF_CHECK75:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[DIFF_CHECK76:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[DIFF_CHECK77:%.*]] = icmp ult i64 [[TMP2]], 32
-; CHECK-NEXT:    [[DIFF_CHECK78:%.*]] = icmp ult i64 [[TMP3]], 32
-; CHECK-NEXT:    [[DIFF_CHECK79:%.*]] = icmp ult i64 [[TMP4]], 32
-; CHECK-NEXT:    [[DIFF_CHECK80:%.*]] = icmp ult i64 [[TMP5]], 32
-; CHECK-NEXT:    [[DIFF_CHECK81:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[DIFF_CHECK82:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[DIFF_CHECK83:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[DIFF_CHECK84:%.*]] = icmp ult i64 [[TMP2]], 32
-; CHECK-NEXT:    [[DIFF_CHECK85:%.*]] = icmp ult i64 [[TMP3]], 32
-; CHECK-NEXT:    [[DIFF_CHECK86:%.*]] = icmp ult i64 [[TMP4]], 32
-; CHECK-NEXT:    [[DIFF_CHECK87:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[DIFF_CHECK88:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[DIFF_CHECK89:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[DIFF_CHECK90:%.*]] = icmp ult i64 [[TMP2]], 32
-; CHECK-NEXT:    [[DIFF_CHECK91:%.*]] = icmp ult i64 [[TMP3]], 32
-; CHECK-NEXT:    [[DIFF_CHECK92:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[DIFF_CHECK93:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[DIFF_CHECK94:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[DIFF_CHECK95:%.*]] = icmp ult i64 [[TMP2]], 32
-; CHECK-NEXT:    [[DIFF_CHECK96:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[DIFF_CHECK97:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[DIFF_CHECK98:%.*]] = icmp ult i64 [[TMP1]], 32
-; CHECK-NEXT:    [[DIFF_CHECK99:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    [[DIFF_CHECK100:%.*]] = icmp ult i64 [[TMP0]], 32
-; CHECK-NEXT:    [[DIFF_CHECK101:%.*]] = icmp ult i64 [[OFF_MUL_8]], 32
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX73]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX19]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -300,6 +218,81 @@ loop:
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %N
   br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @check_creation_order(ptr %a, ptr %b, i32 %m) {
+; CHECK-LABEL: @check_creation_order(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[M_EXT:%.*]] = sext i32 [[M:%.*]] to i64
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr double, ptr [[A]], i64 [[M_EXT]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[M_EXT]], -8
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]]
+; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK3]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[INVARIANT_GEP]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP3]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 31996
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 31996, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[INVARIANT_GEP]], i64 [[IV]]
+; CHECK-NEXT:    [[L_0:%.*]] = load double, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_B]], align 8
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd double [[L_0]], [[L_1]]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store double [[ADD3]], ptr [[GEP_A]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 31999
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %m.ext = sext i32 %m to i64
+  %invariant.gep = getelementptr double, ptr %a, i64 %m.ext
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr double, ptr %invariant.gep, i64 %iv
+  %l.0 = load double, ptr %gep, align 8
+  %gep.b = getelementptr inbounds double, ptr %b, i64 %iv
+  %l.1 = load double, ptr %gep.b, align 8
+  %add3 = fadd double %l.0, %l.1
+  %gep.a = getelementptr inbounds double, ptr %a, i64 %iv
+  store double %add3, ptr %gep.a, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 31999
+  br i1 %exitcond.not, label %exit, label %loop
 
 exit:
   ret void

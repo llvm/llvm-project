@@ -17,8 +17,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SMLoc.h"
+#include <map>
 #include <utility>
 
 namespace llvm {
@@ -35,9 +37,7 @@ class TargetRegisterClass;
 class TargetSubtargetInfo;
 
 struct VRegInfo {
-  enum uint8_t {
-    UNKNOWN, NORMAL, GENERIC, REGBANK
-  } Kind = UNKNOWN;
+  enum : uint8_t { UNKNOWN, NORMAL, GENERIC, REGBANK } Kind = UNKNOWN;
   bool Explicit = false; ///< VReg was explicitly specified in the .mir file.
   union {
     const TargetRegisterClass *RC;
@@ -45,6 +45,7 @@ struct VRegInfo {
   } D;
   Register VReg;
   Register PreferredReg;
+  uint8_t Flags = 0;
 };
 
 using Name2RegClassMap = StringMap<const TargetRegisterClass *>;
@@ -147,6 +148,8 @@ public:
   ///
   /// Return null if the name isn't a register bank.
   const RegisterBank *getRegBank(StringRef Name);
+
+  bool getVRegFlagValue(StringRef FlagName, uint8_t &FlagValue) const;
 
   PerTargetMIParsingState(const TargetSubtargetInfo &STI)
     : Subtarget(STI) {

@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine %s -o - -S | FileCheck %s
+; RUN: opt -passes=instcombine %s -o - -S --try-experimental-debuginfo-iterators | FileCheck %s
 ; typedef struct v *v_t;
 ; struct v {
 ;   unsigned long long p;
@@ -36,8 +37,8 @@ for.body.lr.ph:                                   ; preds = %entry
   ; The add is later eliminated, so we verify that the dbg.value is salvaged by using DW_OP_minus.
   ; CHECK-LABEL: for.body.lr.ph:
   ; CHECK-NEXT: %0 = load
-  ; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %0, metadata !25, metadata !DIExpression()), !dbg !
-  ; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %0, metadata !26, metadata !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value)), !dbg !
+  ; CHECK-NEXT: #dbg_value(i64 %0, !25, !DIExpression(), !
+  ; CHECK-NEXT: #dbg_value(i64 %0, !26, !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value), !
   br label %for.body, !dbg !32
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
@@ -49,7 +50,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %sub2 = add i32 %head_size.09, -4096, !dbg !37
   %offset.0 = add i64 %offset.010, -4096
   tail call void @llvm.dbg.value(metadata i64 %offset.0, metadata !26, metadata !DIExpression()), !dbg !30
-  ; CHECK: call void @llvm.dbg.value(metadata i64 %offset.010, metadata !26, metadata !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value)), !dbg !
+  ; CHECK: #dbg_value(i64 %offset.010, !26, !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value), !
   tail call void @llvm.dbg.value(metadata i32 %sub2, metadata !23, metadata !DIExpression()), !dbg !31
   %tobool = icmp eq i32 %sub2, 0, !dbg !32
   br i1 %tobool, label %for.end, label %for.body, !dbg !32, !llvm.loop !38

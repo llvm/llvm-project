@@ -11,11 +11,13 @@
 import argparse
 from git import Repo  # type: ignore
 import html
+import json
 import github
 import os
 import re
 import requests
 import sys
+import textwrap
 import time
 from typing import List, Optional
 
@@ -24,23 +26,19 @@ Hi!
 
 This issue may be a good introductory issue for people new to working on LLVM. If you would like to work on this issue, your first steps are:
 
-  1) Assign the issue to you.
-  2) Fix the issue locally.
-  3) [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally.
-    3.1) Remember that the subdirectories under `test/` create fine-grained testing targets, so you can
-         e.g. use `make check-clang-ast` to only run Clang's AST tests.
-  4) Create a `git` commit
-  5) Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
-  6) Submit the patch to [Phabricator](https://reviews.llvm.org/).
-    6.1) Detailed instructions can be found [here](https://llvm.org/docs/Phabricator.html#requesting-a-review-via-the-web-interface)
+1. Check that no other contributor has already been assigned to this issue. If you believe that no one is actually working on it despite an assignment, ping the person. After one week without a response, the assignee may be changed.
+1. In the comments of this issue, request for it to be assigned to you, or just create a [pull request](https://github.com/llvm/llvm-project/pulls) after following the steps below. [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
+1. Fix the issue locally.
+1. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
+1. Create a Git commit.
+1. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
+1. Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub. Detailed instructions can be found [in GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
 
-For more instructions on how to submit a patch to LLVM, see our [documentation](https://llvm.org/docs/Contributing.html).
-
-If you have any further questions about this issue, don't hesitate to ask via a comment on this Github issue.
+If you have any further questions about this issue, don't hesitate to ask via a comment in the thread below.
 """
 
 
-def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+def _get_current_team(team_name, teams) -> Optional[github.Team.Team]:
     for team in teams:
         if team_name == team.name.lower():
             return team
@@ -74,16 +72,17 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
+
         comment = ""
         if team.slug == "issue-subscribers-good-first-issue":
             comment = "{}\n".format(beginner_comment)
+            self.issue.create_comment(comment)
 
         body = escape_description(self.issue.body)
-
         comment = f"""
 @llvm/{team.slug}
 
@@ -128,7 +127,7 @@ class PRSubscriber:
 
     def run(self) -> bool:
         patch = None
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -204,11 +203,154 @@ Author: {self.pr.user.name} ({self.pr.user.login})
             )
         return True
 
-    def _get_curent_team(self) -> Optional[github.Team.Team]:
+    def _get_current_team(self) -> Optional[github.Team.Team]:
         for team in self.org.get_teams():
             if self.team_name == team.name.lower():
                 return team
         return None
+
+
+def get_top_values(values: dict, top: int = 3) -> list:
+    return [v for v in sorted(values.items(), key=lambda x: x[1], reverse=True)][:top]
+
+
+def get_user_values_str(values: list) -> str:
+    return ", ".join([f"@{v[0]} ({v[1]})" for v in values])
+
+
+class PRGreeter:
+    COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
+
+    def __init__(self, token: str, repo: str, pr_number: int):
+        repo = github.Github(token).get_repo(repo)
+        self.pr = repo.get_issue(pr_number).as_pull_request()
+
+    def run(self) -> bool:
+        # We assume that this is only called for a PR that has just been opened
+        # by a user new to LLVM and/or GitHub itself.
+
+        # This text is using Markdown formatting.
+
+        comment = f"""\
+{PRGreeter.COMMENT_TAG}
+Thank you for submitting a Pull Request (PR) to the LLVM Project!
+
+This PR will be automatically labeled and the relevant teams will be notified.
+
+If you wish to, you can add reviewers by using the "Reviewers" section on this page.
+
+If this is not working for you, it is probably because you do not have write permissions for the repository. In which case you can instead tag reviewers by name in a comment by using `@` followed by their GitHub username.
+
+If you have received no comments on your PR for a week, you can request a review by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate is once a week. Please remember that you are asking for valuable time from other developers.
+
+If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
+
+You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
+        self.pr.as_issue().create_comment(comment)
+        return True
+
+
+class CommitRequestGreeter:
+    def __init__(self, token: str, repo: str, issue_number: int):
+        self.repo = github.Github(token).get_repo(repo)
+        self.issue = self.repo.get_issue(issue_number)
+
+    def run(self) -> bool:
+        # Post greeter comment:
+        comment = textwrap.dedent(
+            f"""
+            @{self.issue.user.login} thank you for applying for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
+        """
+        )
+        self.issue.create_comment(comment)
+
+        # Post activity summary:
+        total_prs = 0
+        merged_prs = 0
+        merged_by = {}
+        reviewed_by = {}
+        for i in self.repo.get_issues(creator=self.issue.user.login, state="all"):
+            issue_reviewed_by = set()
+            try:
+                pr = i.as_pull_request()
+                total_prs += 1
+                for c in pr.get_review_comments():
+                    if c.user.login == self.issue.user.login:
+                        continue
+                    issue_reviewed_by.add(c.user.login)
+                for r in issue_reviewed_by:
+                    if r not in reviewed_by:
+                        reviewed_by[r] = 1
+                    else:
+                        reviewed_by[r] += 1
+                if pr.is_merged():
+                    merged_prs += 1
+                    merger = pr.merged_by.login
+                    if merger not in merged_by:
+                        merged_by[merger] = 1
+                    else:
+                        merged_by[merger] += 1
+                    continue
+
+            except github.GithubException:
+                continue
+
+        comment = f"""
+            ### Activity Summary:
+            * [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
+            * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
+            * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
+        """
+        self.issue.create_comment(textwrap.dedent(comment))
+
+
+class PRBuildbotInformation:
+    COMMENT_TAG = "<!--LLVM BUILDBOT INFORMATION COMMENT-->\n"
+
+    def __init__(self, token: str, repo: str, pr_number: int, author: str):
+        repo = github.Github(token).get_repo(repo)
+        self.pr = repo.get_issue(pr_number).as_pull_request()
+        self.author = author
+
+    def should_comment(self) -> bool:
+        # As soon as a new contributor has a PR merged, they are no longer a new contributor.
+        # We can tell that they were a new contributor previously because we would have
+        # added a new contributor greeting comment when they opened the PR.
+        found_greeting = False
+        for comment in self.pr.as_issue().get_comments():
+            if PRGreeter.COMMENT_TAG in comment.body:
+                found_greeting = True
+            elif PRBuildbotInformation.COMMENT_TAG in comment.body:
+                # When an issue is reopened, then closed as merged again, we should not
+                # add a second comment. This event will be rare in practice as it seems
+                # like it's only possible when the main branch is still at the exact
+                # revision that the PR was merged on to, beyond that it's closed forever.
+                return False
+        return found_greeting
+
+    def run(self) -> bool:
+        if not self.should_comment():
+            return
+
+        # This text is using Markdown formatting. Some of the lines are longer
+        # than others so that the final text is some reasonable looking paragraphs
+        # after the long URLs are rendered.
+        comment = f"""\
+{PRBuildbotInformation.COMMENT_TAG}
+@{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
+
+Your changes will be combined with recent changes from other authors, then tested by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may receive a report in an email or a comment on this PR.
+
+Please check whether problems have been caused by your change specifically, as the builds can include changes from many authors. It is not uncommon for your change to be included in a build that fails due to someone else's changes, or infrastructure issues.
+
+How to do this, and the rest of the post-merge process, is covered in detail [here](https://llvm.org/docs/MyFirstTypoFix.html#myfirsttypofix-issues-after-landing-your-pr).
+
+If your change does cause a problem, it may be reverted, or you can revert it yourself. This is a normal part of [LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy). You can fix your changes and open a new PR to merge them again.
+
+If you don't get any reports, no action is required from you. Your changes are working as expected, well done!
+"""
+        self.pr.as_issue().create_comment(comment)
+        return True
 
 
 def setup_llvmbot_git(git_dir="."):
@@ -220,85 +362,6 @@ def setup_llvmbot_git(git_dir="."):
     with repo.config_writer() as config:
         config.set_value("user", "name", "llvmbot")
         config.set_value("user", "email", "llvmbot@llvm.org")
-
-
-def phab_api_call(phab_token: str, url: str, args: dict) -> dict:
-    """
-    Make an API call to the Phabricator web service and return a dictionary
-    containing the json response.
-    """
-    data = {"api.token": phab_token}
-    data.update(args)
-    response = requests.post(url, data=data)
-    return response.json()
-
-
-def phab_login_to_github_login(
-    phab_token: str, repo: github.Repository.Repository, phab_login: str
-) -> Optional[str]:
-    """
-    Tries to translate a Phabricator login to a github login by
-    finding a commit made in Phabricator's Differential.
-    The commit's SHA1 is then looked up in the github repo and
-    the committer's login associated with that commit is returned.
-
-    :param str phab_token: The Conduit API token to use for communication with Pabricator
-    :param github.Repository.Repository repo: The github repo to use when looking for the SHA1 found in Differential
-    :param str phab_login: The Phabricator login to be translated.
-    """
-
-    args = {
-        "constraints[authors][0]": phab_login,
-        # PHID for "LLVM Github Monorepo" repository
-        "constraints[repositories][0]": "PHID-REPO-f4scjekhnkmh7qilxlcy",
-        "limit": 1,
-    }
-    # API documentation: https://reviews.llvm.org/conduit/method/diffusion.commit.search/
-    r = phab_api_call(
-        phab_token, "https://reviews.llvm.org/api/diffusion.commit.search", args
-    )
-    data = r["result"]["data"]
-    if len(data) == 0:
-        # Can't find any commits associated with this user
-        return None
-
-    commit_sha = data[0]["fields"]["identifier"]
-    committer = repo.get_commit(commit_sha).committer
-    if not committer:
-        # This committer had an email address GitHub could not recognize, so
-        # it can't link the user to a GitHub account.
-        print(f"Warning: Can't find github account for {phab_login}")
-        return None
-    return committer.login
-
-
-def phab_get_commit_approvers(phab_token: str, commit: github.Commit.Commit) -> list:
-    args = {"corpus": commit.commit.message}
-    # API documentation: https://reviews.llvm.org/conduit/method/differential.parsecommitmessage/
-    r = phab_api_call(
-        phab_token, "https://reviews.llvm.org/api/differential.parsecommitmessage", args
-    )
-    review_id = r["result"]["revisionIDFieldInfo"]["value"]
-    if not review_id:
-        # No Phabricator revision for this commit
-        return []
-
-    args = {"constraints[ids][0]": review_id, "attachments[reviewers]": True}
-    # API documentation: https://reviews.llvm.org/conduit/method/differential.revision.search/
-    r = phab_api_call(
-        phab_token, "https://reviews.llvm.org/api/differential.revision.search", args
-    )
-    reviewers = r["result"]["data"][0]["attachments"]["reviewers"]["reviewers"]
-    accepted = []
-    for reviewer in reviewers:
-        if reviewer["status"] != "accepted":
-            continue
-        phid = reviewer["reviewerPHID"]
-        args = {"constraints[phids][0]": phid}
-        # API documentation: https://reviews.llvm.org/conduit/method/user.search/
-        r = phab_api_call(phab_token, "https://reviews.llvm.org/api/user.search", args)
-        accepted.append(r["result"]["data"][0]["fields"]["username"])
-    return accepted
 
 
 def extract_commit_hash(arg: str):
@@ -335,7 +398,7 @@ class ReleaseWorkflow:
         branch_repo_name: str,
         branch_repo_token: str,
         llvm_project_dir: str,
-        phab_token: str,
+        requested_by: str,
     ) -> None:
         self._token = token
         self._repo_name = repo
@@ -346,7 +409,7 @@ class ReleaseWorkflow:
         else:
             self._branch_repo_token = self.token
         self._llvm_project_dir = llvm_project_dir
-        self._phab_token = phab_token
+        self._requested_by = requested_by
 
     @property
     def token(self) -> str:
@@ -361,6 +424,10 @@ class ReleaseWorkflow:
         return self._issue_number
 
     @property
+    def branch_repo_owner(self) -> str:
+        return self.branch_repo_name.split("/")[0]
+
+    @property
     def branch_repo_name(self) -> str:
         return self._branch_repo_name
 
@@ -373,8 +440,8 @@ class ReleaseWorkflow:
         return self._llvm_project_dir
 
     @property
-    def phab_token(self) -> str:
-        return self._phab_token
+    def requested_by(self) -> str:
+        return self._requested_by
 
     @property
     def repo(self) -> github.Repository.Repository:
@@ -405,6 +472,98 @@ class ReleaseWorkflow:
             return m.group(1)
         return None
 
+    def update_issue_project_status(self) -> None:
+        """
+        A common workflow is to merge a PR and then use the /cherry-pick
+        command in a pull request comment to backport the change to the
+        release branch.  In this case, once the new PR for the backport has
+        been created, we want to mark the project status for the original PR
+        as Done.  This is becuase we can track progress now on the new PR
+        which is targeting the release branch.
+
+        """
+
+        pr = self.issue.as_pull_request()
+        if not pr:
+            return
+
+        if pr.state != "closed":
+            return
+
+        gh = github.Github(login_or_token=self.token)
+        query = """
+            query($node_id: ID!) {
+              node(id: $node_id) {
+                ... on PullRequest {
+                  url
+                  projectItems(first:100){
+                    nodes {
+                      id
+                      project {
+                        id
+                        number
+                        field(name: "Status") {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        """
+        variables = {"node_id": pr.node_id}
+        res_header, res_data = gh._Github__requester.graphql_query(
+            query=query, variables=variables
+        )
+        print(res_header)
+
+        llvm_release_status_project_number = 3
+        for item in res_data["data"]["node"]["projectItems"]["nodes"]:
+            project = item["project"]
+            if project["number"] != llvm_release_status_project_number:
+                continue
+            status_field = project["field"]
+            for option in status_field["options"]:
+                if option["name"] != "Done":
+                    continue
+                variables = {
+                    "project": project["id"],
+                    "item": item["id"],
+                    "status_field": status_field["id"],
+                    "status_value": option["id"],
+                }
+
+                query = """
+                  mutation($project: ID!, $item: ID!, $status_field: ID!, $status_value: String!) {
+                    set_status:
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: $status_field
+                      value: {
+                        singleSelectOptionId: $status_value
+                      }
+                    }) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                """
+
+                res_header, res_data = gh._Github__requester.graphql_query(
+                    query=query, variables=variables
+                )
+                print(res_header)
+
     def print_release_branch(self) -> None:
         print(self.release_branch_for_issue)
 
@@ -415,7 +574,7 @@ class ReleaseWorkflow:
 
     def issue_notify_pull_request(self, pull: github.PullRequest.PullRequest) -> None:
         self.issue.create_comment(
-            "/pull-request {}#{}".format(self.branch_repo_name, pull.number)
+            "/pull-request {}#{}".format(self.repo_name, pull.number)
         )
 
     def make_ignore_comment(self, comment: str) -> str:
@@ -450,7 +609,7 @@ class ReleaseWorkflow:
         action_url = self.action_url
         if action_url:
             message += action_url + "\n\n"
-        message += "Please manually backport the fix and push it to your github fork.  Once this is done, please add a comment like this:\n\n`/branch <user>/<repo>/<branch>`"
+        message += "Please manually backport the fix and push it to your github fork.  Once this is done, please create a [pull request](https://github.com/llvm/llvm-project/compare)"
         issue = self.issue
         comment = issue.create_comment(message)
         issue.add_to_labels(self.CHERRY_PICK_FAILED_LABEL)
@@ -467,29 +626,39 @@ class ReleaseWorkflow:
         if self.CHERRY_PICK_FAILED_LABEL in [l.name for l in self.issue.labels]:
             self.issue.remove_from_labels(self.CHERRY_PICK_FAILED_LABEL)
 
+    def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
+        commit = self.repo.get_commit(cherry_pick_sha)
+        message = commit.commit.message
+        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
+        if not m:
+            return None
+        return self.repo.get_commit(m.group(1))
+
     def pr_request_review(self, pr: github.PullRequest.PullRequest):
         """
         This function will try to find the best reviewers for `commits` and
-        then add a comment requesting review of the backport and assign the
-        pull request to the selected reviewers.
+        then add a comment requesting review of the backport and add them as
+        reviewers.
 
-        The reviewers selected are those users who approved the patch in
-        Phabricator.
+        The reviewers selected are those users who approved the pull request
+        for the main branch.
         """
         reviewers = []
         for commit in pr.get_commits():
-            approvers = phab_get_commit_approvers(self.phab_token, commit)
-            for a in approvers:
-                login = phab_login_to_github_login(self.phab_token, self.repo, a)
-                if not login:
-                    continue
-                reviewers.append(login)
+            main_commit = self.get_main_commit(commit.sha)
+            if not main_commit:
+                continue
+            for pull in main_commit.get_pulls():
+                for review in pull.get_reviews():
+                    if review.state != "APPROVED":
+                        continue
+                reviewers.append(review.user.login)
         if len(reviewers):
             message = "{} What do you think about merging this PR to the release branch?".format(
                 " ".join(["@" + r for r in reviewers])
             )
             pr.create_issue_comment(message)
-            pr.add_to_assignees(*reviewers)
+            pr.create_review_request(reviewers)
 
     def create_branch(self, commits: List[str]) -> bool:
         """
@@ -518,9 +687,10 @@ class ReleaseWorkflow:
         print("Pushing to {} {}".format(push_url, branch_name))
         local_repo.git.push(push_url, "HEAD:{}".format(branch_name), force=True)
 
-        self.issue_notify_branch()
         self.issue_remove_cherry_pick_failed_label()
-        return True
+        return self.create_pull_request(
+            self.branch_repo_owner, self.repo_name, branch_name, commits
+        )
 
     def check_if_pull_request_exists(
         self, repo: github.Repository.Repository, head: str
@@ -528,9 +698,11 @@ class ReleaseWorkflow:
         pulls = repo.get_pulls(head=head)
         return pulls.totalCount != 0
 
-    def create_pull_request(self, owner: str, repo_name: str, branch: str) -> bool:
+    def create_pull_request(
+        self, owner: str, repo_name: str, branch: str, commits: List[str]
+    ) -> bool:
         """
-        reate a pull request in `self.branch_repo_name`.  The base branch of the
+        Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
         the issue represented by `self.issue_number`  For example if the milestone
         is Release 13.0.1, then the base branch will be release/13.x. `branch`
@@ -538,54 +710,40 @@ class ReleaseWorkflow:
         https://docs.github.com/en/get-started/quickstart/github-glossary#base-branch
         https://docs.github.com/en/get-started/quickstart/github-glossary#compare-branch
         """
-        repo = github.Github(self.token).get_repo(self.branch_repo_name)
+        repo = github.Github(self.token).get_repo(self.repo_name)
         issue_ref = "{}#{}".format(self.repo_name, self.issue_number)
         pull = None
         release_branch_for_issue = self.release_branch_for_issue
         if release_branch_for_issue is None:
             return False
-        head_branch = branch
-        if not repo.fork:
-            # If the target repo is not a fork of llvm-project, we need to copy
-            # the branch into the target repo.  GitHub only supports cross-repo pull
-            # requests on forked repos.
-            head_branch = f"{owner}-{branch}"
-            local_repo = Repo(self.llvm_project_dir)
-            push_done = False
-            for _ in range(0, 5):
-                try:
-                    local_repo.git.fetch(
-                        f"https://github.com/{owner}/{repo_name}", f"{branch}:{branch}"
-                    )
-                    local_repo.git.push(
-                        self.push_url, f"{branch}:{head_branch}", force=True
-                    )
-                    push_done = True
-                    break
-                except Exception as e:
-                    print(e)
-                    time.sleep(30)
-                    continue
-            if not push_done:
-                raise Exception("Failed to mirror branch into {}".format(self.push_url))
-            owner = repo.owner.login
 
-        head = f"{owner}:{head_branch}"
+        head = f"{owner}:{branch}"
         if self.check_if_pull_request_exists(repo, head):
             print("PR already exists...")
             return True
         try:
+            commit_message = repo.get_commit(commits[-1]).commit.message
+            message_lines = commit_message.splitlines()
+            title = "{}: {}".format(release_branch_for_issue, message_lines[0])
+            body = "Backport {}\n\nRequested by: @{}".format(
+                " ".join(commits), self.requested_by
+            )
             pull = repo.create_pull(
-                title=f"PR for {issue_ref}",
-                body="resolves {}".format(issue_ref),
+                title=title,
+                body=body,
                 base=release_branch_for_issue,
                 head=head,
-                maintainer_can_modify=False,
+                maintainer_can_modify=True,
             )
 
+            pull.as_issue().edit(milestone=self.issue.milestone)
+
+            # Once the pull request has been created, we can close the
+            # issue that was used to request the cherry-pick
+            self.issue.edit(state="closed", state_reason="completed")
+
             try:
-                if self.phab_token:
-                    self.pr_request_review(pull)
+                self.pr_request_review(pull)
             except Exception as e:
                 print("error: Failed while searching for reviewers", e)
 
@@ -598,6 +756,7 @@ class ReleaseWorkflow:
 
         self.issue_notify_pull_request(pull)
         self.issue_remove_cherry_pick_failed_label()
+        self.update_issue_project_status()
 
         # TODO(tstellar): Do you really want to always return True?
         return True
@@ -605,39 +764,54 @@ class ReleaseWorkflow:
     def execute_command(self) -> bool:
         """
         This function reads lines from STDIN and executes the first command
-        that it finds.  The 2 supported commands are:
-        /cherry-pick commit0 <commit1> <commit2> <...>
-        /branch <owner>/<repo>/<branch>
+        that it finds.  The supported command is:
+        /cherry-pick< ><:> commit0 <commit1> <commit2> <...>
         """
         for line in sys.stdin:
             line.rstrip()
-            m = re.search(r"/([a-z-]+)\s(.+)", line)
+            m = re.search(r"/cherry-pick\s*:? *(.*)", line)
             if not m:
                 continue
-            command = m.group(1)
-            args = m.group(2)
 
-            if command == "cherry-pick":
-                arg_list = args.split()
-                commits = list(map(lambda a: extract_commit_hash(a), arg_list))
-                return self.create_branch(commits)
+            args = m.group(1)
 
-            if command == "branch":
-                m = re.match("([^/]+)/([^/]+)/(.+)", args)
-                if m:
-                    owner = m.group(1)
-                    repo = m.group(2)
-                    branch = m.group(3)
-                    return self.create_pull_request(owner, repo, branch)
+            arg_list = args.split()
+            commits = list(map(lambda a: extract_commit_hash(a), arg_list))
+            return self.create_branch(commits)
 
         print("Do not understand input:")
         print(sys.stdin.readlines())
         return False
 
 
+def request_release_note(token: str, repo_name: str, pr_number: int):
+    repo = github.Github(token).get_repo(repo_name)
+    pr = repo.get_issue(pr_number).as_pull_request()
+    submitter = pr.user.login
+    if submitter == "llvmbot":
+        m = re.search("Requested by: @(.+)$", pr.body)
+        if not m:
+            submitter = None
+            print("Warning could not determine user who requested backport.")
+        submitter = m.group(1)
+
+    mention = ""
+    if submitter:
+        mention = f"@{submitter}"
+
+    comment = f"{mention} (or anyone else). If you would like to add a note about this fix in the release notes (completely optional). Please reply to this comment with a one or two sentence description of the fix.  When you are done, please add the release:note label to this PR. "
+    try:
+        pr.as_issue().create_comment(comment)
+    except:
+        # Failed to create comment so emit file instead
+        with open("comments", "w") as file:
+            data = [{"body": comment}]
+            json.dump(data, file)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--token", type=str, required=True, help="GitHub authentiation token"
+    "--token", type=str, required=True, help="GitHub authentication token"
 )
 parser.add_argument(
     "--repo",
@@ -655,20 +829,25 @@ pr_subscriber_parser = subparsers.add_parser("pr-subscriber")
 pr_subscriber_parser.add_argument("--label-name", type=str, required=True)
 pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
+pr_greeter_parser = subparsers.add_parser("pr-greeter")
+pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
+
+commit_request_greeter = subparsers.add_parser("commit-request-greeter")
+commit_request_greeter.add_argument("--issue-number", type=int, required=True)
+
+pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information")
+pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
+pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
     type=str,
     default=".",
-    help="directory containing the llvm-project checout",
+    help="directory containing the llvm-project checkout",
 )
 release_workflow_parser.add_argument(
     "--issue-number", type=int, required=True, help="The issue number to update"
-)
-release_workflow_parser.add_argument(
-    "--phab-token",
-    type=str,
-    help="Phabricator conduit API token. See https://reviews.llvm.org/settings/user/<USER>/page/apitokens/",
 )
 release_workflow_parser.add_argument(
     "--branch-repo-token",
@@ -678,7 +857,7 @@ release_workflow_parser.add_argument(
 release_workflow_parser.add_argument(
     "--branch-repo",
     type=str,
-    default="llvm/llvm-project-release-prs",
+    default="llvmbot/llvm-project",
     help="The name of the repo where new branches will be pushed (e.g. llvm/llvm-project)",
 )
 release_workflow_parser.add_argument(
@@ -692,6 +871,24 @@ llvmbot_git_config_parser = subparsers.add_parser(
     "setup-llvmbot-git",
     help="Set the default user and email for the git repo in LLVM_PROJECT_DIR to llvmbot",
 )
+release_workflow_parser.add_argument(
+    "--requested-by",
+    type=str,
+    required=True,
+    help="The user that requested this backport",
+)
+
+request_release_note_parser = subparsers.add_parser(
+    "request-release-note",
+    help="Request a release note for a pull request",
+)
+request_release_note_parser.add_argument(
+    "--pr-number",
+    type=int,
+    required=True,
+    help="The pull request to request the release note",
+)
+
 
 args = parser.parse_args()
 
@@ -705,6 +902,17 @@ elif args.command == "pr-subscriber":
         args.token, args.repo, args.issue_number, args.label_name
     )
     pr_subscriber.run()
+elif args.command == "pr-greeter":
+    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
+    pr_greeter.run()
+elif args.command == "commit-request-greeter":
+    commit_greeter = CommitRequestGreeter(args.token, args.repo, args.issue_number)
+    commit_greeter.run()
+elif args.command == "pr-buildbot-information":
+    pr_buildbot_information = PRBuildbotInformation(
+        args.token, args.repo, args.issue_number, args.author
+    )
+    pr_buildbot_information.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,
@@ -713,7 +921,7 @@ elif args.command == "release-workflow":
         args.branch_repo,
         args.branch_repo_token,
         args.llvm_project_dir,
-        args.phab_token,
+        args.requested_by,
     )
     if not release_workflow.release_branch_for_issue:
         release_workflow.issue_notify_no_milestone(sys.stdin.readlines())
@@ -725,3 +933,5 @@ elif args.command == "release-workflow":
             sys.exit(1)
 elif args.command == "setup-llvmbot-git":
     setup_llvmbot_git()
+elif args.command == "request-release-note":
+    request_release_note(args.token, args.repo, args.pr_number)

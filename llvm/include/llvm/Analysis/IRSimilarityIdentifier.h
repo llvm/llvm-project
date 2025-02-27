@@ -57,7 +57,6 @@
 #include <optional>
 
 namespace llvm {
-class Module;
 
 namespace IRSimilarity {
 
@@ -1198,6 +1197,7 @@ class IRSimilarityAnalysisPrinterPass
 public:
   explicit IRSimilarityAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

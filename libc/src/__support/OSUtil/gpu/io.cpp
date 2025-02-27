@@ -10,14 +10,15 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 void write_to_stderr(cpp::string_view msg) {
-  rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STDERR>();
+  rpc::Client::Port port = rpc::client.open<LIBC_WRITE_TO_STDERR>();
   port.send_n(msg.data(), msg.size());
-  port.recv([](rpc::Buffer *) { /* void */ });
+  port.recv([](rpc::Buffer *, uint32_t) { /* void */ });
   port.close();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

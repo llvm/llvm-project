@@ -145,6 +145,10 @@ public:
            LHS.MultiVersionIndex == RHS.MultiVersionIndex;
   }
 
+  bool operator!=(const GlobalDecl &Other) const {
+    return !(*this == Other);
+  }
+
   void *getAsOpaquePtr() const { return Value.getOpaqueValue(); }
 
   explicit operator bool() const { return getAsOpaquePtr(); }

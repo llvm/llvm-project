@@ -214,8 +214,8 @@ define i64 @sext_add_constant_extra_use(i32 %V) {
 
 define <2 x i64> @test5_splat(<2 x i32> %V) {
 ; CHECK-LABEL: @test5_splat(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[NARROW:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 1073741823, i32 1073741823>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[NARROW:%.*]] = add nsw <2 x i32> [[ASHR]], splat (i32 1073741823)
 ; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
 ;
@@ -227,7 +227,7 @@ define <2 x i64> @test5_splat(<2 x i32> %V) {
 
 define <2 x i64> @test5_vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test5_vec(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[NARROW:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 1, i32 2>
 ; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
@@ -253,8 +253,8 @@ define i64 @test6(i32 %V) {
 
 define <2 x i64> @test6_splat(<2 x i32> %V) {
 ; CHECK-LABEL: @test6_splat(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[NARROW:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 -1073741824, i32 -1073741824>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[NARROW:%.*]] = add nsw <2 x i32> [[ASHR]], splat (i32 -1073741824)
 ; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
 ;
@@ -266,7 +266,7 @@ define <2 x i64> @test6_splat(<2 x i32> %V) {
 
 define <2 x i64> @test6_vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test6_vec(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[NARROW:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 -1, i32 -2>
 ; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
@@ -279,7 +279,7 @@ define <2 x i64> @test6_vec(<2 x i32> %V) {
 
 define <2 x i64> @test6_vec2(<2 x i32> %V) {
 ; CHECK-LABEL: @test6_vec2(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[NARROW:%.*]] = add nsw <2 x i32> [[ASHR]], <i32 -1, i32 1>
 ; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
@@ -305,8 +305,8 @@ define i64 @test7(i32 %V) {
 
 define <2 x i64> @test7_splat(<2 x i32> %V) {
 ; CHECK-LABEL: @test7_splat(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <2 x i32> [[LSHR]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <2 x i32> [[LSHR]], splat (i32 2147483647)
 ; CHECK-NEXT:    [[ADD:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
 ;
@@ -318,7 +318,7 @@ define <2 x i64> @test7_splat(<2 x i32> %V) {
 
 define <2 x i64> @test7_vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test7_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <2 x i32> [[LSHR]], <i32 1, i32 2>
 ; CHECK-NEXT:    [[ADD:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
@@ -344,8 +344,8 @@ define i64 @test8(i32 %V) {
 
 define <2 x i64> @test8_splat(<2 x i32> %V) {
 ; CHECK-LABEL: @test8_splat(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw <2 x i32> [[ASHR]], <i32 32767, i32 32767>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 16)
+; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw <2 x i32> [[ASHR]], splat (i32 32767)
 ; CHECK-NEXT:    [[MUL:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
 ;
@@ -357,7 +357,7 @@ define <2 x i64> @test8_splat(<2 x i32> %V) {
 
 define <2 x i64> @test8_vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test8_vec(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw <2 x i32> [[ASHR]], <i32 32767, i32 16384>
 ; CHECK-NEXT:    [[MUL:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
@@ -370,7 +370,7 @@ define <2 x i64> @test8_vec(<2 x i32> %V) {
 
 define <2 x i64> @test8_vec2(<2 x i32> %V) {
 ; CHECK-LABEL: @test8_vec2(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw <2 x i32> [[ASHR]], <i32 32767, i32 -32767>
 ; CHECK-NEXT:    [[MUL:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
@@ -396,8 +396,8 @@ define i64 @test9(i32 %V) {
 
 define <2 x i64> @test9_splat(<2 x i32> %V) {
 ; CHECK-LABEL: @test9_splat(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw <2 x i32> [[ASHR]], <i32 -32767, i32 -32767>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 16)
+; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw <2 x i32> [[ASHR]], splat (i32 -32767)
 ; CHECK-NEXT:    [[MUL:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
 ;
@@ -409,7 +409,7 @@ define <2 x i64> @test9_splat(<2 x i32> %V) {
 
 define <2 x i64> @test9_vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test9_vec(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw <2 x i32> [[ASHR]], <i32 -32767, i32 -10>
 ; CHECK-NEXT:    [[MUL:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
@@ -435,8 +435,8 @@ define i64 @test10(i32 %V) {
 
 define <2 x i64> @test10_splat(<2 x i32> %V) {
 ; CHECK-LABEL: @test10_splat(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[NARROW:%.*]] = mul nuw <2 x i32> [[LSHR]], <i32 65535, i32 65535>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], splat (i32 16)
+; CHECK-NEXT:    [[NARROW:%.*]] = mul nuw <2 x i32> [[LSHR]], splat (i32 65535)
 ; CHECK-NEXT:    [[MUL:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
 ;
@@ -448,7 +448,7 @@ define <2 x i64> @test10_splat(<2 x i32> %V) {
 
 define <2 x i64> @test10_vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test10_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[NARROW:%.*]] = mul nuw <2 x i32> [[LSHR]], <i32 65535, i32 2>
 ; CHECK-NEXT:    [[MUL:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
@@ -538,8 +538,8 @@ define i64 @test15(i32 %V) {
 
 define <2 x i64> @test15vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test15vec(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[NARROW:%.*]] = sub nsw <2 x i32> <i32 8, i32 8>, [[ASHR]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[NARROW:%.*]] = sub nsw <2 x i32> splat (i32 8), [[ASHR]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[SUB]]
 ;
@@ -564,8 +564,8 @@ define i64 @test16(i32 %V) {
 
 define <2 x i64> @test16vec(<2 x i32> %V) {
 ; CHECK-LABEL: @test16vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw <2 x i32> <i32 -2, i32 -2>, [[LSHR]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw <2 x i32> splat (i32 -2), [[LSHR]]
 ; CHECK-NEXT:    [[SUB:%.*]] = zext <2 x i32> [[NARROW]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[SUB]]
 ;

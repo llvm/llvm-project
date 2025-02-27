@@ -63,7 +63,7 @@ int simple_no_unroll1() {
   int a[9];
   int k = 42;
   for (int i = 0; i < 9; i++) {
-    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    clang_analyzer_numTimesReached(); // expected-warning {{2}}
     a[i] = 42;
     foo(i);
   }
@@ -76,7 +76,7 @@ int simple_no_unroll2() {
   int k = 42;
   int i;
   for (i = 0; i < 9; i++) {
-    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    clang_analyzer_numTimesReached(); // expected-warning {{2}}
     a[i] = 42;
     i += getNum();
   }
@@ -309,9 +309,9 @@ int nested_inner_unrolled() {
   int k = 42;
   int j = 0;
   for (int i = 0; i < getNum(); i++) {
-    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    clang_analyzer_numTimesReached(); // expected-warning {{2}}
     for (j = 0; j < 8; ++j) {
-      clang_analyzer_numTimesReached(); // expected-warning {{32}}
+      clang_analyzer_numTimesReached(); // expected-warning {{16}}
       a[j] = 22;
     }
     a[i] = 42;
@@ -346,11 +346,7 @@ int simple_known_bound_loop() {
 
 int simple_unknown_bound_loop() {
   for (int i = 2; i < getNum(); i++) {
-#ifdef DFS
-    clang_analyzer_numTimesReached(); // expected-warning {{16}}
-#else
     clang_analyzer_numTimesReached(); // expected-warning {{8}}
-#endif
   }
   return 0;
 }
@@ -368,11 +364,7 @@ int nested_inlined_unroll1() {
 int nested_inlined_no_unroll1() {
   int k;
   for (int i = 0; i < 9; i++) {
-#ifdef DFS
-    clang_analyzer_numTimesReached(); // expected-warning {{18}}
-#else
-    clang_analyzer_numTimesReached(); // expected-warning {{14}}
-#endif
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
     k = simple_unknown_bound_loop();  // reevaluation without inlining, splits the state as well
   }
   int a = 22 / k; // no-warning
@@ -475,9 +467,13 @@ int num_steps_over_limit2() {
 
 int num_steps_on_limit3() {
   for (int i = 0; i < getNum(); i++) {
-    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    clang_analyzer_numTimesReached(); // expected-warning {{2}}
     for (int j = 0; j < 32; j++) {
-      clang_analyzer_numTimesReached(); // expected-warning {{128}}
+      // Here the loop unrollig logic calculates with four potential iterations
+      // in the outer loop where it cannot determine the iteration count in
+      // advance; but after two loops the analyzer conservatively assumes that
+      // the (still opaque) loop condition is false.
+      clang_analyzer_numTimesReached(); // expected-warning {{64}}
     }
   }
   return 0;
@@ -493,6 +489,15 @@ int num_steps_over_limit3() {
   return 0;
 }
 
+int num_steps_on_limit4() {
+  for (int i = 0; i < 4; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    for (int j = 0; j < 32; j++) {
+      clang_analyzer_numTimesReached(); // expected-warning {{128}}
+    }
+  }
+  return 0;
+}
 
 void pr34943() {
   for (int i = 0; i < 6L; ++i) {
@@ -546,4 +551,16 @@ void capture_implicitly_by_ref_as_loop_counter() {
       clang_analyzer_numTimesReached(); // expected-warning {{4}}
     }
   };
+}
+
+
+void test_escaping_on_var_before_switch_case_no_crash(int c) {
+  // https://github.com/llvm/llvm-project/issues/68819
+  switch (c) {
+    int i; // no-crash: The declaration of `i` is found here.
+    case 0: {
+      for (i = 0; i < 16; i++) {}
+      break;
+    }
+  }
 }

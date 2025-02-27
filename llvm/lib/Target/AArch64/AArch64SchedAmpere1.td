@@ -18,7 +18,7 @@
 
 def Ampere1Model : SchedMachineModel {
   let IssueWidth            =   4;  // 4-way decode and dispatch
-  let MicroOpBufferSize     = 174;  // micro-op re-order buffer size
+  let MicroOpBufferSize     = 192;  // re-order buffer size
   let LoadLatency           =   4;  // Optimistic load latency
   let MispredictPenalty     =  10;  // Branch mispredict penalty
   let LoopMicroOpBufferSize =  32;  // Instruction queue size

@@ -20,7 +20,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "GCNVOPDUtils.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -28,9 +27,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include <utility>
 
 #define DEBUG_TYPE "gcn-create-vopd"
 STATISTIC(NumVOPDCreated, "Number of VOPD Insts Created.");
@@ -43,7 +40,7 @@ class GCNCreateVOPD : public MachineFunctionPass {
 private:
     class VOPDCombineInfo {
     public:
-      VOPDCombineInfo() {}
+      VOPDCombineInfo() = default;
       VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
           : FirstMI(First), SecondMI(Second) {}
 
@@ -71,8 +68,11 @@ public:
     auto *SecondMI = CI.SecondMI;
     unsigned Opc1 = FirstMI->getOpcode();
     unsigned Opc2 = SecondMI->getOpcode();
-    int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
-                                        AMDGPU::getVOPDOpcode(Opc2));
+    unsigned EncodingFamily =
+        AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
+    int NewOpcode =
+        AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
+                            AMDGPU::getVOPDOpcode(Opc2), EncodingFamily);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 
@@ -98,6 +98,7 @@ public:
       }
     }
 
+    SII->fixImplicitOperands(*VOPDInst);
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
 

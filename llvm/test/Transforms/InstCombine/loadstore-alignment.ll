@@ -9,24 +9,24 @@ target datalayout = "E-p:64:64:64-p1:64:64:64-p2:32:32:32-a0:0:8-f32:32:32-f64:6
 
 define <2 x i64> @static_hem() {
 ; CHECK-LABEL: @static_hem(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 1
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @x, i64 112), align 1
+; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 7
-  %tmp1 = load <2 x i64>, ptr %t, align 1
-  ret <2 x i64> %tmp1
+  %l = load <2 x i64>, ptr %t, align 1
+  ret <2 x i64> %l
 }
 
 define <2 x i64> @hem(i32 %i) {
 ; CHECK-LABEL: @hem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr @x, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 1
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[T]], align 1
+; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 %i
-  %tmp1 = load <2 x i64>, ptr %t, align 1
-  ret <2 x i64> %tmp1
+  %l = load <2 x i64>, ptr %t, align 1
+  ret <2 x i64> %l
 }
 
 define <2 x i64> @hem_2d(i32 %i, i32 %j) {
@@ -34,39 +34,39 @@ define <2 x i64> @hem_2d(i32 %i, i32 %j) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
 ; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 1
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[T]], align 1
+; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
   %t = getelementptr [13 x <2 x i64>], ptr @xx, i32 %i, i32 %j
-  %tmp1 = load <2 x i64>, ptr %t, align 1
-  ret <2 x i64> %tmp1
+  %l = load <2 x i64>, ptr %t, align 1
+  ret <2 x i64> %l
 }
 
 define <2 x i64> @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @x, align 1
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr @x, align 1
+; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
-  %tmp1 = load <2 x i64>, ptr @x, align 1
-  ret <2 x i64> %tmp1
+  %l = load <2 x i64>, ptr @x, align 1
+  ret <2 x i64> %l
 }
 
 define <2 x i64> @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[T:%.*]] = alloca <2 x i64>, align 16
 ; CHECK-NEXT:    call void @kip(ptr nonnull [[T]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 1
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[T]], align 1
+; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
   %t = alloca <2 x i64>
   call void @kip(ptr %t)
-  %tmp1 = load <2 x i64>, ptr %t, align 1
-  ret <2 x i64> %tmp1
+  %l = load <2 x i64>, ptr %t, align 1
+  ret <2 x i64> %l
 }
 
 define void @static_hem_store(<2 x i64> %y) {
 ; CHECK-LABEL: @static_hem_store(
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 1
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr getelementptr (i8, ptr @x, i64 112), align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 7

@@ -24,15 +24,15 @@
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           %[[DEMAP:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]]
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<30x10x20xf32, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<20x30x10xf32>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<20x30x10xf32> to memref<20x30x10xf32>
 // CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_9]] : memref<20x30x10xf32>)
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_11]] : index
+// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_15:.*]] = arith.muli %[[VAL_13]], %[[VAL_2]] : index
 // CHECK:               scf.for %[[VAL_14:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_6]] {
-// CHECK:                 %[[VAL_15:.*]] = arith.muli %[[VAL_13]], %[[VAL_2]] : index
-// CHECK:                 %[[VAL_16:.*]] = arith.addi %[[VAL_15]], %[[VAL_14]] : index
+// CHECK:                 %[[VAL_16:.*]] = arith.addi %[[VAL_14]], %[[VAL_15]] : index
 // CHECK:                 %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xf32>
 // CHECK:                 memref.store %[[VAL_17]], %[[VAL_9]]{{\[}}%[[VAL_14]], %[[VAL_10]], %[[VAL_11]]] : memref<20x30x10xf32>
 // CHECK:               }
@@ -64,15 +64,15 @@ func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?x?xf32>
-// CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_10]] : memref<?x?x?xf32>)
+// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<?x?x?xf32> to memref<?x?x?xf32>
+// CHECK-DAG:       linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_10]] : memref<?x?x?xf32>)
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
+// CHECK:             %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_8]] : index
 // CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_4]] {
-// CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_8]], %[[VAL_11]] : index
-// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : index
+// CHECK:               %[[VAL_16:.*]] = arith.muli %[[VAL_14]], %[[VAL_6]] : index
 // CHECK:               scf.for %[[VAL_15:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_4]] {
-// CHECK:                 %[[VAL_16:.*]] = arith.muli %[[VAL_6]], %[[VAL_14]] : index
-// CHECK:                 %[[VAL_17:.*]] = arith.addi %[[VAL_16]], %[[VAL_15]] : index
+// CHECK:                 %[[VAL_17:.*]] = arith.addi %[[VAL_15]], %[[VAL_16]] : index
 // CHECK:                 %[[VAL_18:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_17]]] : memref<?xf32>
 // CHECK:                 memref.store %[[VAL_18]], %[[VAL_10]]{{\[}}%[[VAL_15]], %[[VAL_11]], %[[VAL_12]]] : memref<?x?x?xf32>
 // CHECK:               }

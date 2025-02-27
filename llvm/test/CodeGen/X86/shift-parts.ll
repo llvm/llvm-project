@@ -13,7 +13,7 @@ define i32 @int87(i32 %uint64p_8, i1 %cond) nounwind {
 ; CHECK-NEXT:    movq g_144+16(%rip), %rcx
 ; CHECK-NEXT:    movzbl %sil, %edx
 ; CHECK-NEXT:    shll $6, %edx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $64, %dl

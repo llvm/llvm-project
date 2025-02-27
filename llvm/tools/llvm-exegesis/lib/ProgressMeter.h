@@ -92,7 +92,7 @@ public:
     ProgressMeterStep &operator=(ProgressMeterStep &&) = delete;
   };
 
-  ProgressMeter(int NumStepsTotal_, raw_ostream &out_ = llvm::errs())
+  ProgressMeter(int NumStepsTotal_, raw_ostream &out_ = errs())
       : Out(out_), NumStepsTotal(NumStepsTotal_) {
     assert(NumStepsTotal > 0 && "No steps are planned?");
   }

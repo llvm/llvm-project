@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=VI -check-prefix=GFX89 -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=VI -check-prefix=GFX89 -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=GCN %s
 
 # GFX89-LABEL: {{^}}name: vop1_instructions
 
@@ -147,14 +147,15 @@ body:             |
 ---
 # GCN-LABEL: {{^}}name: vop2_instructions
 
-
-# VI: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit $exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit $exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_LSHLREV_B32_e64 16, %{{[0-9]+}}, implicit $exec
 # VI: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit $mode, implicit $exec
 # VI: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit $mode, implicit $exec
 # VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 6, 1, implicit $mode, implicit $exec
 # VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit $mode, implicit $exec
 
-# GFX9: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit $exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit $exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_LSHLREV_B32_e64 16, %{{[0-9]+}}, implicit $exec
 # GFX9: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit $mode, implicit $exec
 # GFX9: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit $mode, implicit $exec
 # GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_e32 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, implicit $mode, implicit $exec

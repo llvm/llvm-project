@@ -102,30 +102,30 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir
 // CHECK:           return
 // CHECK:         }
 
-func.func @_QPtest5(%arg0: !fir.ref<!fir.array<77x!fir.complex<4>>> {fir.bindc_name = "x"}) {
+func.func @_QPtest5(%arg0: !fir.ref<!fir.array<77xcomplex<f32>>> {fir.bindc_name = "x"}) {
   %cst = arith.constant 0.000000e+00 : f32
   %c77 = arith.constant 77 : index
   %0 = fir.shape %c77 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "_QFtest5Ex"} : (!fir.ref<!fir.array<77x!fir.complex<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<77x!fir.complex<4>>>, !fir.ref<!fir.array<77x!fir.complex<4>>>)
-  %2 = fir.undefined !fir.complex<4>
-  %3 = fir.insert_value %2, %cst, [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  %4 = fir.insert_value %3, %cst, [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  hlfir.assign %4 to %1#0 : !fir.complex<4>, !fir.ref<!fir.array<77x!fir.complex<4>>>
+  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "_QFtest5Ex"} : (!fir.ref<!fir.array<77xcomplex<f32>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<77xcomplex<f32>>>, !fir.ref<!fir.array<77xcomplex<f32>>>)
+  %2 = fir.undefined complex<f32>
+  %3 = fir.insert_value %2, %cst, [0 : index] : (complex<f32>, f32) -> complex<f32>
+  %4 = fir.insert_value %3, %cst, [1 : index] : (complex<f32>, f32) -> complex<f32>
+  hlfir.assign %4 to %1#0 : complex<f32>, !fir.ref<!fir.array<77xcomplex<f32>>>
   return
 }
 // CHECK-LABEL:   func.func @_QPtest5(
-// CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<!fir.array<77x!fir.complex<4>>> {fir.bindc_name = "x"}) {
+// CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<!fir.array<77xcomplex<f32>>> {fir.bindc_name = "x"}) {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 77 : index
 // CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) {uniq_name = "_QFtest5Ex"} : (!fir.ref<!fir.array<77x!fir.complex<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<77x!fir.complex<4>>>, !fir.ref<!fir.array<77x!fir.complex<4>>>)
-// CHECK:           %[[VAL_6:.*]] = fir.undefined !fir.complex<4>
-// CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_2]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-// CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_2]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) {uniq_name = "_QFtest5Ex"} : (!fir.ref<!fir.array<77xcomplex<f32>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<77xcomplex<f32>>>, !fir.ref<!fir.array<77xcomplex<f32>>>)
+// CHECK:           %[[VAL_6:.*]] = fir.undefined complex<f32>
+// CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_2]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+// CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_2]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 // CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_1]] unordered {
-// CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<77x!fir.complex<4>>>, index) -> !fir.ref<!fir.complex<4>>
-// CHECK:             hlfir.assign %[[VAL_8]] to %[[VAL_10]] : !fir.complex<4>, !fir.ref<!fir.complex<4>>
+// CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<77xcomplex<f32>>>, index) -> !fir.ref<complex<f32>>
+// CHECK:             hlfir.assign %[[VAL_8]] to %[[VAL_10]] : complex<f32>, !fir.ref<complex<f32>>
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }

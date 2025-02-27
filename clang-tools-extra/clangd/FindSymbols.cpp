@@ -41,8 +41,8 @@ struct ScoredSymbolGreater {
 
 // Returns true if \p Query can be found as a sub-sequence inside \p Scope.
 bool approximateScopeMatch(llvm::StringRef Scope, llvm::StringRef Query) {
-  assert(Scope.empty() || Scope.endswith("::"));
-  assert(Query.empty() || Query.endswith("::"));
+  assert(Scope.empty() || Scope.ends_with("::"));
+  assert(Query.empty() || Query.ends_with("::"));
   while (!Scope.empty() && !Query.empty()) {
     auto Colons = Scope.find("::");
     assert(Colons != llvm::StringRef::npos);
@@ -111,7 +111,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
       *Req.Limit *= 5;
   }
   TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(
-      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
+      Req.Limit.value_or(std::numeric_limits<size_t>::max()));
   FuzzyMatcher Filter(Req.Query);
 
   Index->fuzzyFind(Req, [HintPath, &Top, &Filter, AnyScope = Req.AnyScope,
@@ -182,7 +182,6 @@ std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
     OS << (Method->isInstanceMethod() ? '-' : '+');
     Method->getSelector().print(OS);
 
-    OS.flush();
     return Name;
   }
   return printName(Ctx, ND);
@@ -223,8 +222,8 @@ std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
 std::optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
-  SourceLocation BeginLoc = SM.getFileLoc(ND.getBeginLoc());
-  SourceLocation EndLoc = SM.getFileLoc(ND.getEndLoc());
+  SourceLocation BeginLoc = ND.getBeginLoc();
+  SourceLocation EndLoc = ND.getEndLoc();
   const auto SymbolRange =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!SymbolRange)
@@ -454,7 +453,7 @@ private:
       if (!MacroName.isValid() || !MacroName.isFileID())
         continue;
       // All conditions satisfied, add the macro.
-      if (auto *Tok = AST.getTokens().spelledTokenAt(MacroName))
+      if (auto *Tok = AST.getTokens().spelledTokenContaining(MacroName))
         CurParent = &CurParent->inMacro(
             *Tok, SM, AST.getTokens().expansionStartingAt(Tok));
     }

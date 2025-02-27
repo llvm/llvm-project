@@ -1,5 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-- -S -structurizecfg -si-annotate-control-flow %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: opt -mtriple=amdgcn-- -S -passes=structurizecfg,si-annotate-control-flow %s | FileCheck -check-prefix=OPT %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 
 ; OPT-LABEL: @annotate_unreachable(

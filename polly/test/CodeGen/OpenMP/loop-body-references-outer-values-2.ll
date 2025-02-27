@@ -1,12 +1,12 @@
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -passes=polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
 ; AST: #pragma simd
 ; AST: #pragma omp parallel for
 ; AST: for (int c0 = 0; c0 <= 1023; c0 += 1)
 ; AST:   Stmt_for_i(c0);
 
-; IR: getelementptr inbounds { ptr }, ptr %polly.par.userContext, i32 0, i32 0
+; IR: getelementptr inbounds nuw { ptr }, ptr %polly.par.userContext, i32 0, i32 0
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

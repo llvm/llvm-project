@@ -101,7 +101,7 @@ namespace {
 
   // Lattice cell, based on that was described in the W-Z paper on constant
   // propagation.
-  // Latice cell will be allowed to hold multiple constant values. While
+  // Lattice cell will be allowed to hold multiple constant values. While
   // multiple values would normally indicate "bottom", we can still derive
   // some useful information from them. For example, comparison X > 0
   // could be folded if all the values in the cell associated with X are
@@ -795,7 +795,7 @@ void MachineConstPropagator::visitUsesOf(unsigned Reg) {
   LLVM_DEBUG(dbgs() << "Visiting uses of " << printReg(Reg, &MCE.TRI)
                     << Cells.get(Reg) << '\n');
   for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
-    // Do not process non-executable instructions. They can become exceutable
+    // Do not process non-executable instructions. They can become executable
     // later (via a flow-edge in the work queue). In such case, the instruc-
     // tion will be visited at that time.
     if (!InstrExec.count(&MI))
@@ -2503,7 +2503,8 @@ APInt HexagonConstEvaluator::getCmpImm(unsigned Opc, unsigned OpX,
   }
 
   uint64_t Val = MO.getImm();
-  return APInt(32, Val, Signed);
+  // TODO: Is implicitTrunc correct here?
+  return APInt(32, Val, Signed, /*implicitTrunc=*/true);
 }
 
 void HexagonConstEvaluator::replaceWithNop(MachineInstr &MI) {
@@ -2860,8 +2861,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
   // For each defined register, if it is a constant, create an instruction
   //   NewR = const
   // and replace all uses of the defined register with NewR.
-  for (unsigned i = 0, n = DefRegs.size(); i < n; ++i) {
-    unsigned R = DefRegs[i];
+  for (unsigned R : DefRegs) {
     const LatticeCell &L = Inputs.get(R);
     if (L.isBottom())
       continue;

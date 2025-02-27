@@ -26,6 +26,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include <optional>
 
@@ -46,10 +48,13 @@ GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
                           const Address &at_addr) {
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   AddressRange range_bounds(at_addr, 4);
   const bool prefer_file_cache = true;
-  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
+  DisassemblerSP disassembler_sp =
+      Disassembler::DisassembleRange(arch, plugin_name, flavor, cpu, features,
+                                     target, range_bounds, prefer_file_cache);
   if (!disassembler_sp)
     return std::nullopt;
 
@@ -90,9 +95,7 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
 
   Target &target = *exe_ctx.GetTargetPtr();
   Process &process = *exe_ctx.GetProcessPtr();
-  ABISP abi_sp = process.GetABI();
   const ArchSpec &arch = target.GetArchitecture();
-  assert(abi_sp && "Missing ABI info");
 
   // Check for a ptrauth-enabled target.
   const bool ptrauth_enabled_target =
@@ -107,6 +110,9 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
                 m_exc_code, at_address);
     strm.Printf("Note: Possible pointer authentication failure detected.\n");
   };
+
+  ABISP abi_sp = process.GetABI();
+  assert(abi_sp && "Missing ABI info");
 
   // Check if we have a "brk 0xc47x" trap, where the value that failed to
   // authenticate is in x16.
@@ -485,36 +491,6 @@ const char *StopInfoMachException::GetDescription() {
   return m_description.c_str();
 }
 
-static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
-                                           uint32_t exc_data_count,
-                                           uint64_t exc_sub_code,
-                                           uint64_t exc_sub_sub_code) {
-  // Try hardware watchpoint.
-  if (target) {
-    // The exc_sub_code indicates the data break address.
-    lldb::WatchpointSP wp_sp =
-        target->GetWatchpointList().FindByAddress((lldb::addr_t)exc_sub_code);
-    if (wp_sp && wp_sp->IsEnabled()) {
-      return StopInfo::CreateStopReasonWithWatchpointID(thread, wp_sp->GetID());
-    }
-  }
-
-  // Try hardware breakpoint.
-  ProcessSP process_sp(thread.GetProcess());
-  if (process_sp) {
-    // The exc_sub_code indicates the data break address.
-    lldb::BreakpointSiteSP bp_sp =
-        process_sp->GetBreakpointSiteList().FindByAddress(
-            (lldb::addr_t)exc_sub_code);
-    if (bp_sp && bp_sp->IsEnabled()) {
-      return StopInfo::CreateStopReasonWithBreakpointSiteID(thread,
-                                                            bp_sp->GetID());
-    }
-  }
-
-  return nullptr;
-}
-
 #if defined(__APPLE__)
 const char *
 StopInfoMachException::MachException::Name(exception_type_t exc_type) {
@@ -594,12 +570,32 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   if (exc_type == 0)
     return StopInfoSP();
 
+  bool not_stepping_but_got_singlestep_exception = false;
   uint32_t pc_decrement = 0;
   ExecutionContext exe_ctx(thread.shared_from_this());
   Target *target = exe_ctx.GetTargetPtr();
   const llvm::Triple::ArchType cpu =
       target ? target->GetArchitecture().GetMachine()
              : llvm::Triple::UnknownArch;
+
+  ProcessSP process_sp(thread.GetProcess());
+  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  // Caveat: with x86 KDP if we've hit a breakpoint, the pc we
+  // receive is past the breakpoint instruction.
+  // If we have a breakpoints at 0x100 and 0x101, we hit the
+  // 0x100 breakpoint and the pc is reported at 0x101.
+  // We will initially mark this thread as being stopped at an
+  // unexecuted breakpoint at 0x101. Later when we see that
+  // we stopped for a Breakpoint reason, we will decrement the
+  // pc, and update the thread to record that we hit the
+  // breakpoint at 0x100.
+  // The fact that the pc may be off by one at this point
+  // (for an x86 KDP breakpoint hit) is not a problem.
+  addr_t pc = reg_ctx_sp->GetPC();
+  BreakpointSiteSP bp_site_sp =
+      process_sp->GetBreakpointSiteList().FindByAddress(pc);
+  if (bp_site_sp && bp_site_sp->IsEnabled())
+    thread.SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (exc_type) {
   case 1: // EXC_BAD_ACCESS
@@ -627,187 +623,154 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     }
     break;
 
+    // A mach exception comes with 2-4 pieces of data.
+    // The sub-codes are only provided for certain types
+    // of mach exceptions.
+    // [exc_type, exc_code, exc_sub_code, exc_sub_sub_code]
+    //
+    // Here are all of the EXC_BREAKPOINT, exc_type==6,
+    // exceptions we can receive.
+    //
+    // Instruction step:
+    //   [6, 1, 0]
+    //   Intel KDP [6, 3, ??]
+    //   armv7 [6, 0x102, <stop-pc>]  Same as software breakpoint!
+    //
+    // Software breakpoint:
+    //   x86 [6, 2, 0]
+    //   Intel KDP [6, 2, <bp-addr + 1>]
+    //   arm64 [6, 1, <bp-addr>]
+    //   armv7 [6, 0x102, <bp-addr>]  Same as instruction step!
+    //
+    // Hardware breakpoint:
+    //   x86 [6, 1, <bp-addr>, 0]
+    //   x86/Rosetta not implemented, see software breakpoint
+    //   arm64 [6, 1, <bp-addr>]
+    //   armv7 not implemented, see software breakpoint
+    //
+    // Hardware watchpoint:
+    //   x86 [6, 1, <accessed-addr>, 0] (both Intel hw and Rosetta)
+    //   arm64 [6, 0x102, <accessed-addr>, 0]
+    //   armv7 [6, 0x102, <accessed-addr>, 0]
+    //
+    // arm64 BRK instruction (imm arg not reflected in the ME)
+    //   [ 6, 1, <addr-of-BRK-insn>]
+    //
+    // In order of codes mach exceptions:
+    //   [6, 1, 0] - instruction step
+    //   [6, 1, <bp-addr>] - hardware breakpoint or watchpoint
+    //
+    //   [6, 2, 0] - software breakpoint
+    //   [6, 2, <bp-addr + 1>] - software breakpoint
+    //
+    //   [6, 3] - instruction step
+    //
+    //   [6, 0x102, <stop-pc>] armv7 instruction step
+    //   [6, 0x102, <bp-addr>] armv7 software breakpoint
+    //   [6, 0x102, <accessed-addr>, 0] arm64/armv7 watchpoint
+
   case 6: // EXC_BREAKPOINT
   {
-    bool is_actual_breakpoint = false;
-    bool is_trace_if_actual_breakpoint_missing = false;
-    switch (cpu) {
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      if (exc_code == 1) // EXC_I386_SGL
-      {
-        if (!exc_sub_code) {
-          // This looks like a plain trap.
-          // Have to check if there is a breakpoint here as well.  When you
-          // single-step onto a trap, the single step stops you not to trap.
-          // Since we also do that check below, let's just use that logic.
-          is_actual_breakpoint = true;
-          is_trace_if_actual_breakpoint_missing = true;
-        } else {
-          if (StopInfoSP stop_info =
-                  GetStopInfoForHardwareBP(thread, target, exc_data_count,
-                                           exc_sub_code, exc_sub_sub_code))
-            return stop_info;
-        }
-      } else if (exc_code == 2 || // EXC_I386_BPT
-                 exc_code == 3)   // EXC_I386_BPTFLT
-      {
-        // KDP returns EXC_I386_BPTFLT for trace breakpoints
-        if (exc_code == 3)
-          is_trace_if_actual_breakpoint_missing = true;
+    bool stopped_by_hitting_breakpoint = false;
+    bool stopped_by_completing_stepi = false;
+    bool stopped_watchpoint = false;
+    std::optional<addr_t> address;
 
-        is_actual_breakpoint = true;
+    // exc_code 1
+    if (exc_code == 1) {
+      if (exc_sub_code == 0) {
+        stopped_by_completing_stepi = true;
+      } else {
+        // Ambiguous: could be signalling a
+        // breakpoint or watchpoint hit.
+        stopped_by_hitting_breakpoint = true;
+        stopped_watchpoint = true;
+        address = exc_sub_code;
+      }
+    }
+
+    // exc_code 2
+    if (exc_code == 2) {
+      if (exc_sub_code == 0)
+        stopped_by_hitting_breakpoint = true;
+      else {
+        stopped_by_hitting_breakpoint = true;
+        // Intel KDP software breakpoint
         if (!pc_already_adjusted)
           pc_decrement = 1;
       }
-      break;
-
-    case llvm::Triple::arm:
-    case llvm::Triple::thumb:
-      if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
-      {
-        // It's a watchpoint, then, if the exc_sub_code indicates a
-        // known/enabled data break address from our watchpoint list.
-        lldb::WatchpointSP wp_sp;
-        if (target)
-          wp_sp = target->GetWatchpointList().FindByAddress(
-              (lldb::addr_t)exc_sub_code);
-        if (wp_sp && wp_sp->IsEnabled()) {
-          return StopInfo::CreateStopReasonWithWatchpointID(thread,
-                                                            wp_sp->GetID());
-        } else {
-          is_actual_breakpoint = true;
-          is_trace_if_actual_breakpoint_missing = true;
-        }
-      } else if (exc_code == 1) // EXC_ARM_BREAKPOINT
-      {
-        is_actual_breakpoint = true;
-        is_trace_if_actual_breakpoint_missing = true;
-      } else if (exc_code == 0) // FIXME not EXC_ARM_BREAKPOINT but a kernel
-                                // is currently returning this so accept it
-                                // as indicating a breakpoint until the
-                                // kernel is fixed
-      {
-        is_actual_breakpoint = true;
-        is_trace_if_actual_breakpoint_missing = true;
-      }
-      break;
-
-    case llvm::Triple::aarch64_32:
-    case llvm::Triple::aarch64: {
-      // xnu describes three things with type EXC_BREAKPOINT:
-      //
-      //   exc_code 0x102 [EXC_ARM_DA_DEBUG], exc_sub_code addr-of-insn
-      //      Watchpoint access.  exc_sub_code is the address of the
-      //      instruction which trigged the watchpoint trap.
-      //      debugserver may add the watchpoint number that was triggered
-      //      in exc_sub_sub_code.
-      //
-      //   exc_code 1 [EXC_ARM_BREAKPOINT], exc_sub_code 0
-      //      Instruction step has completed.
-      //
-      //   exc_code 1 [EXC_ARM_BREAKPOINT], exc_sub_code address-of-instruction
-      //      Software breakpoint instruction executed.
-
-      if (exc_code == 1 && exc_sub_code == 0) // EXC_ARM_BREAKPOINT
-      {
-        // This is hit when we single instruction step aka MDSCR_EL1 SS bit 0
-        // is set
-        is_actual_breakpoint = true;
-        is_trace_if_actual_breakpoint_missing = true;
-#ifndef NDEBUG
-        if (thread.GetTemporaryResumeState() != eStateStepping) {
-          StreamString s;
-          s.Printf("CreateStopReasonWithMachException got EXC_BREAKPOINT [1,0] "
-                   "indicating trace event, but thread is not tracing, it has "
-                   "ResumeState %d",
-                   thread.GetTemporaryResumeState());
-          if (RegisterContextSP regctx = thread.GetRegisterContext()) {
-            if (const RegisterInfo *ri = regctx->GetRegisterInfoByName("esr")) {
-              uint32_t esr =
-                  (uint32_t)regctx->ReadRegisterAsUnsigned(ri, UINT32_MAX);
-              if (esr != UINT32_MAX) {
-                s.Printf(" esr value: 0x%" PRIx32, esr);
-              }
-            }
-          }
-          thread.GetProcess()->DumpPluginHistory(s);
-          llvm::report_fatal_error(s.GetData());
-          lldbassert(
-              false &&
-              "CreateStopReasonWithMachException got EXC_BREAKPOINT [1,0] "
-              "indicating trace event, but thread was not doing a step.");
-        }
-#endif
-      }
-      if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
-      {
-        // It's a watchpoint, then, if the exc_sub_code indicates a
-        // known/enabled data break address from our watchpoint list.
-        lldb::WatchpointSP wp_sp;
-        if (target)
-          wp_sp = target->GetWatchpointList().FindByAddress(
-              (lldb::addr_t)exc_sub_code);
-        if (wp_sp && wp_sp->IsEnabled()) {
-          return StopInfo::CreateStopReasonWithWatchpointID(thread,
-                                                            wp_sp->GetID());
-        }
-        // EXC_ARM_DA_DEBUG seems to be reused for EXC_BREAKPOINT as well as
-        // EXC_BAD_ACCESS
-        if (thread.GetTemporaryResumeState() == eStateStepping)
-          return StopInfo::CreateStopReasonToTrace(thread);
-      }
-      // It looks like exc_sub_code has the 4 bytes of the instruction that
-      // triggered the exception, i.e. our breakpoint opcode
-      is_actual_breakpoint = exc_code == 1;
-      break;
     }
 
-    default:
-      break;
+    // exc_code 3
+    if (exc_code == 3)
+      stopped_by_completing_stepi = true;
+
+    // exc_code 0x102
+    if (exc_code == 0x102 && exc_sub_code != 0) {
+      if (cpu == llvm::Triple::arm || cpu == llvm::Triple::thumb) {
+        stopped_by_hitting_breakpoint = true;
+        stopped_by_completing_stepi = true;
+      }
+      stopped_watchpoint = true;
+      address = exc_sub_code;
     }
 
-    if (is_actual_breakpoint) {
-      RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+    // The Mach Exception may have been ambiguous --
+    // e.g. we stopped either because of a breakpoint
+    // or a watchpoint.  We'll disambiguate which it
+    // really was.
+
+    if (stopped_by_hitting_breakpoint) {
       addr_t pc = reg_ctx_sp->GetPC() - pc_decrement;
 
-      ProcessSP process_sp(thread.CalculateProcess());
-
-      lldb::BreakpointSiteSP bp_site_sp;
-      if (process_sp)
+      if (address)
+        bp_site_sp =
+            process_sp->GetBreakpointSiteList().FindByAddress(*address);
+      if (!bp_site_sp && reg_ctx_sp) {
         bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(pc);
+      }
       if (bp_site_sp && bp_site_sp->IsEnabled()) {
-        // Update the PC if we were asked to do so, but only do so if we find
-        // a breakpoint that we know about cause this could be a trap
-        // instruction in the code
-        if (pc_decrement > 0 && adjust_pc_if_needed)
-          reg_ctx_sp->SetPC(pc);
+        // We've hit this breakpoint, whether it was intended for this thread
+        // or not.  Clear this in the Tread object so we step past it on resume.
+        thread.SetThreadHitBreakpointSite();
 
-        // If the breakpoint is for this thread, then we'll report the hit,
-        // but if it is for another thread, we can just report no reason.  We
-        // don't need to worry about stepping over the breakpoint here, that
-        // will be taken care of when the thread resumes and notices that
-        // there's a breakpoint under the pc. If we have an operating system
-        // plug-in, we might have set a thread specific breakpoint using the
-        // operating system thread ID, so we can't make any assumptions about
-        // the thread ID so we must always report the breakpoint regardless
-        // of the thread.
-        if (bp_site_sp->ValidForThisThread(thread) ||
-            thread.GetProcess()->GetOperatingSystem() != nullptr)
+        if (bp_site_sp->ValidForThisThread(thread)) {
+          // Update the PC if we were asked to do so, but only do so if we find
+          // a breakpoint that we know about because this could be a trap
+          // instruction in the code.
+          if (pc_decrement > 0 && adjust_pc_if_needed && reg_ctx_sp)
+            reg_ctx_sp->SetPC(pc);
+
           return StopInfo::CreateStopReasonWithBreakpointSiteID(
               thread, bp_site_sp->GetID());
-        else if (is_trace_if_actual_breakpoint_missing)
-          return StopInfo::CreateStopReasonToTrace(thread);
-        else
+        } else {
           return StopInfoSP();
-      }
-
-      // Don't call this a trace if we weren't single stepping this thread.
-      if (is_trace_if_actual_breakpoint_missing &&
-          thread.GetTemporaryResumeState() == eStateStepping) {
-        return StopInfo::CreateStopReasonToTrace(thread);
+        }
       }
     }
+
+    // Breakpoint-hit events are handled.
+    // Now handle watchpoints.
+
+    if (stopped_watchpoint && address) {
+      WatchpointResourceSP wp_rsrc_sp =
+          target->GetProcessSP()->GetWatchpointResourceList().FindByAddress(
+              *address);
+      if (wp_rsrc_sp && wp_rsrc_sp->GetNumberOfConstituents() > 0) {
+        return StopInfo::CreateStopReasonWithWatchpointID(
+            thread, wp_rsrc_sp->GetConstituentAtIndex(0)->GetID());
+      }
+    }
+
+    // Finally, handle instruction step.
+
+    if (stopped_by_completing_stepi) {
+      if (thread.GetTemporaryResumeState() != eStateStepping)
+        not_stepping_but_got_singlestep_exception = true;
+      else
+        return StopInfo::CreateStopReasonToTrace(thread);
+    }
+
   } break;
 
   case 7:  // EXC_SYSCALL
@@ -817,6 +780,56 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     break;
   }
 
-  return StopInfoSP(new StopInfoMachException(thread, exc_type, exc_data_count,
-                                              exc_code, exc_sub_code));
+  return std::make_shared<StopInfoMachException>(
+      thread, exc_type, exc_data_count, exc_code, exc_sub_code,
+      not_stepping_but_got_singlestep_exception);
+}
+
+// Detect an unusual situation on Darwin where:
+//
+//   0. We did an instruction-step before this.
+//   1. We have a hardware breakpoint or watchpoint set.
+//   2. We resumed the process, but not with an instruction-step.
+//   3. The thread gets an "instruction-step completed" mach exception.
+//   4. The pc has not advanced - it is the same as before.
+//
+// This method returns true for that combination of events.
+bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
+  Log *log = GetLog(LLDBLog::Step);
+
+  // We got an instruction-step completed mach exception but we were not
+  // doing an instruction step on this thread.
+  if (!m_not_stepping_but_got_singlestep_exception)
+    return false;
+
+  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  std::optional<addr_t> prev_pc = thread.GetPreviousFrameZeroPC();
+  if (!reg_ctx_sp || !prev_pc)
+    return false;
+
+  // The previous pc value and current pc value are the same.
+  if (*prev_pc != reg_ctx_sp->GetPC())
+    return false;
+
+  // We have a watchpoint -- this is the kernel bug.
+  ProcessSP process_sp = thread.GetProcess();
+  if (process_sp->GetWatchpointResourceList().GetSize()) {
+    LLDB_LOGF(log,
+              "Thread stopped with insn-step completed mach exception but "
+              "thread was not stepping; there is a hardware watchpoint set.");
+    return true;
+  }
+
+  // We have a hardware breakpoint -- this is the kernel bug.
+  auto &bp_site_list = process_sp->GetBreakpointSiteList();
+  for (auto &site : bp_site_list.Sites()) {
+    if (site->IsHardware() && site->IsEnabled()) {
+      LLDB_LOGF(log,
+                "Thread stopped with insn-step completed mach exception but "
+                "thread was not stepping; there is a hardware breakpoint set.");
+      return true;
+    }
+  }
+
+  return false;
 }

@@ -82,7 +82,7 @@ func.func @func_with_ops(i1, i32, i64) {
 
 func.func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 ^bb0(%cond : vector<12xi1>, %t : vector<42xi32>, %f : vector<42xi32>):
-  // expected-error@+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  // expected-error@+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
   %r = "arith.select"(%cond, %t, %f) : (vector<12xi1>, vector<42xi32>, vector<42xi32>) -> vector<42xi32>
 }
 
@@ -90,7 +90,7 @@ func.func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 
 func.func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 ^bb0(%cond : tensor<12xi1>, %t : tensor<42xi32>, %f : tensor<42xi32>):
-  // expected-error@+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  // expected-error@+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
   %r = "arith.select"(%cond, %t, %f) : (tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) -> tensor<42xi32>
 }
 
@@ -118,3 +118,8 @@ func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 // expected-error@+1 {{expected ':' after block name}}
 "g"()({^a:^b })
+
+// -----
+
+// expected-error@+1 {{number of operands and types do not match: got 0 operands and 1 types}}
+test.variadic_args_types_split "hello_world" : i32

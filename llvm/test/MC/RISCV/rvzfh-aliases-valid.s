@@ -1,22 +1,22 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zfh -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zfh -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+zfh \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zfh < %s \
-# RUN:     | llvm-objdump -d --mattr=+zfh -M no-aliases - \
+# RUN:     | llvm-objdump -d --mattr=+zfh --no-print-imm-hex -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zfh < %s \
-# RUN:     | llvm-objdump -d --mattr=+zfh - \
+# RUN:     | llvm-objdump -d --mattr=+zfh --no-print-imm-hex - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zfh < %s \
-# RUN:     | llvm-objdump -d --mattr=+zfh -M no-aliases - \
+# RUN:     | llvm-objdump -d --mattr=+zfh --no-print-imm-hex -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zfh < %s \
-# RUN:     | llvm-objdump -d --mattr=+zfh - \
+# RUN:     | llvm-objdump -d --mattr=+zfh --no-print-imm-hex - \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
 
 ##===----------------------------------------------------------------------===##

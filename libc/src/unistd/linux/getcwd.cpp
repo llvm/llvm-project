@@ -10,14 +10,14 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/allocating_string_utils.h" // For strdup.
 
 #include "src/errno/libc_errno.h"
 #include <linux/limits.h> // This is safe to include without any name pollution.
-#include <stdlib.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -63,4 +63,4 @@ LLVM_LIBC_FUNCTION(char *, getcwd, (char *buf, size_t size)) {
   return buf;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

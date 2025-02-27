@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -30,6 +31,8 @@ struct std::formatter<color, CharT> : std::formatter<basic_string_view<CharT>, C
 template <class CharT, class TestFunction, class ExceptionTest, class TupleOrPair>
 void test_tuple_or_pair_int_int(TestFunction check, ExceptionTest check_exception, TupleOrPair&& input) {
   check(SV("(42, 99)"), SV("{}"), input);
+  check(SV("(42, 99)^42"), SV("{}^42"), input);
+  check(SV("(42, 99)^42"), SV("{:}^42"), input);
 
   // *** align-fill & width ***
   check(SV("(42, 99)     "), SV("{:13}"), input);
@@ -42,9 +45,8 @@ void test_tuple_or_pair_int_int(TestFunction check, ExceptionTest check_exceptio
   check(SV("__(42, 99)___"), SV("{:_^{}}"), input, 13);
   check(SV("#####(42, 99)"), SV("{:#>{}}"), input, 13);
 
-  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -77,6 +79,8 @@ void test_tuple_or_pair_int_int(TestFunction check, ExceptionTest check_exceptio
 template <class CharT, class TestFunction, class ExceptionTest, class TupleOrPair>
 void test_tuple_or_pair_int_string(TestFunction check, ExceptionTest check_exception, TupleOrPair&& input) {
   check(SV("(42, \"hello\")"), SV("{}"), input);
+  check(SV("(42, \"hello\")^42"), SV("{}^42"), input);
+  check(SV("(42, \"hello\")^42"), SV("{:}^42"), input);
 
   // *** align-fill & width ***
   check(SV("(42, \"hello\")     "), SV("{:18}"), input);
@@ -89,9 +93,8 @@ void test_tuple_or_pair_int_string(TestFunction check, ExceptionTest check_excep
   check(SV("__(42, \"hello\")___"), SV("{:_^{}}"), input, 18);
   check(SV("#####(42, \"hello\")"), SV("{:#>{}}"), input, 18);
 
-  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -167,6 +170,8 @@ void test_tuple_int(TestFunction check, ExceptionTest check_exception) {
   auto input = std::make_tuple(42);
 
   check(SV("(42)"), SV("{}"), input);
+  check(SV("(42)^42"), SV("{}^42"), input);
+  check(SV("(42)^42"), SV("{:}^42"), input);
 
   // *** align-fill & width ***
   check(SV("(42)     "), SV("{:9}"), input);
@@ -179,9 +184,8 @@ void test_tuple_int(TestFunction check, ExceptionTest check_exception) {
   check(SV("__(42)___"), SV("{:_^{}}"), input, 9);
   check(SV("#####(42)"), SV("{:#>{}}"), input, 9);
 
-  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -216,6 +220,8 @@ void test_tuple_int_string_color(TestFunction check, ExceptionTest check_excepti
   const auto input = std::make_tuple(42, SV("hello"), color::red);
 
   check(SV("(42, \"hello\", \"red\")"), SV("{}"), input);
+  check(SV("(42, \"hello\", \"red\")^42"), SV("{}^42"), input);
+  check(SV("(42, \"hello\", \"red\")^42"), SV("{:}^42"), input);
 
   // *** align-fill & width ***
   check(SV("(42, \"hello\", \"red\")     "), SV("{:25}"), input);
@@ -228,9 +234,8 @@ void test_tuple_int_string_color(TestFunction check, ExceptionTest check_excepti
   check(SV("__(42, \"hello\", \"red\")___"), SV("{:_^{}}"), input, 25);
   check(SV("#####(42, \"hello\", \"red\")"), SV("{:#>{}}"), input, 25);
 
-  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
@@ -289,6 +294,8 @@ void test_nested(TestFunction check, ExceptionTest check_exception, Nested&& inp
   // addressed this.
 
   check(SV("(42, (\"hello\", \"red\"))"), SV("{}"), input);
+  check(SV("(42, (\"hello\", \"red\"))^42"), SV("{}^42"), input);
+  check(SV("(42, (\"hello\", \"red\"))^42"), SV("{:}^42"), input);
 
   // *** align-fill & width ***
   check(SV("(42, (\"hello\", \"red\"))     "), SV("{:27}"), input);
@@ -301,9 +308,8 @@ void test_nested(TestFunction check, ExceptionTest check_exception, Nested&& inp
   check(SV("__(42, (\"hello\", \"red\"))___"), SV("{:_^{}}"), input, 27);
   check(SV("#####(42, (\"hello\", \"red\"))"), SV("{:#>{}}"), input, 27);
 
-  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
   check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
-  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
   check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);

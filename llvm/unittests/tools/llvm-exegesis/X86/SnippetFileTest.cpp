@@ -81,7 +81,8 @@ MATCHER_P3(MemoryDefinitionIs, Name, Value, Size, "") {
 }
 
 MATCHER_P2(MemoryMappingIs, Address, Name, "") {
-  if (arg.Address == Address && arg.MemoryValueName == Name)
+  if (arg.Address == static_cast<uintptr_t>(Address) &&
+      arg.MemoryValueName == Name)
     return true;
   *result_listener << "expected: {" << Address << ", " << Name << "} ";
   *result_listener << "actual: {" << arg.Address << ", " << arg.MemoryValueName
@@ -147,8 +148,8 @@ TEST_F(X86SnippetFileTest, NoAsmStreamer) {
 TEST_F(X86SnippetFileTest, MemoryDefinitionTestSingleDef) {
   auto Snippets = TestCommon(R"(
     # LLVM-EXEGESIS-MEM-DEF test1 4096 ff
-    # LLVM-EXEGESIS-MEM-MAP test1 8192
-    # LLVM-EXEGESIS-MEM-MAP test1 16384
+    # LLVM-EXEGESIS-MEM-MAP test1 65536
+    # LLVM-EXEGESIS-MEM-MAP test1 131072
     movq $8192, %r10
     movq (%r10), %r11
   )");
@@ -158,16 +159,16 @@ TEST_F(X86SnippetFileTest, MemoryDefinitionTestSingleDef) {
   ASSERT_THAT(Snippet.Key.MemoryValues,
               UnorderedElementsAre(MemoryDefinitionIs("test1", 255, 4096)));
   ASSERT_THAT(Snippet.Key.MemoryMappings,
-              ElementsAre(MemoryMappingIs(8192, "test1"),
-                          MemoryMappingIs(16384, "test1")));
+              ElementsAre(MemoryMappingIs(65536, "test1"),
+                          MemoryMappingIs(131072, "test1")));
 }
 
 TEST_F(X86SnippetFileTest, MemoryDefinitionsTestTwoDef) {
   auto Snippets = TestCommon(R"(
     # LLVM-EXEGESIS-MEM-DEF test1 4096 ff
     # LLVM-EXEGESIS-MEM-DEF test2 4096 100
-    # LLVM-EXEGESIS-MEM-MAP test1 8192
-    # LLVM-EXEGESIS-MEM-MAP test2 16384
+    # LLVM-EXEGESIS-MEM-MAP test1 65536
+    # LLVM-EXEGESIS-MEM-MAP test2 131072
     movq $8192, %r10
     movq (%r10), %r11
   )");
@@ -178,8 +179,8 @@ TEST_F(X86SnippetFileTest, MemoryDefinitionsTestTwoDef) {
               UnorderedElementsAre(MemoryDefinitionIs("test1", 255, 4096),
                                    MemoryDefinitionIs("test2", 256, 4096)));
   ASSERT_THAT(Snippet.Key.MemoryMappings,
-              ElementsAre(MemoryMappingIs(8192, "test1"),
-                          MemoryMappingIs(16384, "test2")));
+              ElementsAre(MemoryMappingIs(65536, "test1"),
+                          MemoryMappingIs(131072, "test2")));
 }
 
 TEST_F(X86SnippetFileTest, MemoryDefinitionMissingParameter) {
@@ -202,19 +203,39 @@ TEST_F(X86SnippetFileTest, MemoryMappingMissingParameters) {
 
 TEST_F(X86SnippetFileTest, MemoryMappingNoDefinition) {
   auto Error = TestCommon(R"(
-    # LLVM-EXEGESIS-MEM-MAP test1 4096
+    # LLVM-EXEGESIS-MEM-MAP test1 65536
   )")
                    .takeError();
   EXPECT_TRUE((bool)Error);
   consumeError(std::move(Error));
 }
 
-TEST_F(X86SnippetFileTest, IncompatibleExecutorMode) {
+TEST_F(X86SnippetFileTest, SnippetAddress) {
+  auto Snippets = TestCommon(R"(
+    # LLVM-EXEGESIS-SNIPPET-ADDRESS 10000
+  )");
+  ASSERT_TRUE(static_cast<bool>(Snippets));
+  EXPECT_THAT(*Snippets, SizeIs(1));
+  const auto &Snippet = (*Snippets)[0];
+  EXPECT_EQ(Snippet.Key.SnippetAddress, static_cast<uintptr_t>(0x10000));
+}
+
+TEST_F(X86SnippetFileTest, LoopRegister) {
+  auto Snippets = TestCommon(R"(
+    # LLVM-EXEGESIS-LOOP-REGISTER R11
+  )");
+  ASSERT_TRUE(static_cast<bool>(Snippets));
+  EXPECT_THAT(*Snippets, SizeIs(1));
+  const auto &Snippet = (*Snippets)[0];
+  EXPECT_EQ(Snippet.Key.LoopRegister, X86::R11);
+}
+
+TEST_F(X86SnippetFileTest, LoopRegisterInvalidRegister) {
   auto Error = TestCommon(R"(
-    # LLVM-EXEGESIS-MEM-MAP test1 4096
+    # LLVM-EXEGESIS-LOOP-REGISTER INVALID
   )")
                    .takeError();
-  EXPECT_TRUE((bool)Error);
+  EXPECT_TRUE(static_cast<bool>(Error));
   consumeError(std::move(Error));
 }
 

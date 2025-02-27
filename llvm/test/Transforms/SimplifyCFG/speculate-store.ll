@@ -120,14 +120,14 @@ define i32 @load_before_store_noescape(i64 %i, i32 %b)  {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i32], align 8
 ; CHECK-NEXT:    store i64 4294967296, ptr [[A]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[B:%.*]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[TMP0]]
 ; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -158,17 +158,17 @@ define i32 @load_before_store_escape(i64 %i, i32 %b)  {
 ; CHECK-NEXT:    store i64 4294967296, ptr [[A]], align 8
 ; CHECK-NEXT:    call void @fork_some_threads(ptr [[A]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    call void @join_some_threads()
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -194,6 +194,156 @@ if.end:
   ret i32 %add
 }
 
+define i64 @load_before_store_noescape_byval(ptr byval([2 x i32]) %a, i64 %i, i32 %b)  {
+; CHECK-LABEL: @load_before_store_noescape_byval(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 -1, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[V]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[V2]]
+;
+entry:
+  store i64 -1, ptr %a, align 8
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 %i
+  %v = load i32, ptr %arrayidx, align 4
+  %cmp = icmp slt i32 %v, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 %b, ptr %arrayidx, align 4
+  br label %if.end
+
+if.end:
+  %v2 = load i64, ptr %a, align 8
+  ret i64 %v2
+}
+
+declare noalias ptr @malloc(i64 %size)
+
+define i64 @load_before_store_noescape_malloc(i64 %i, i32 %b)  {
+; CHECK-LABEL: @load_before_store_noescape_malloc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 8)
+; CHECK-NEXT:    store i64 -1, ptr [[A]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[V]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[V2]]
+;
+entry:
+  %a = call ptr @malloc(i64 8)
+  store i64 -1, ptr %a, align 8
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 %i
+  %v = load i32, ptr %arrayidx, align 4
+  %cmp = icmp slt i32 %v, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 %b, ptr %arrayidx, align 4
+  br label %if.end
+
+if.end:
+  %v2 = load i64, ptr %a, align 8
+  ret i64 %v2
+}
+
+define i64 @load_before_store_noescape_writable(ptr noalias writable dereferenceable(8) %a, i64 %i, i32 %b)  {
+; CHECK-LABEL: @load_before_store_noescape_writable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 -1, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[V]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[V2]]
+;
+entry:
+  store i64 -1, ptr %a, align 8
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 1
+  %v = load i32, ptr %arrayidx, align 4
+  %cmp = icmp slt i32 %v, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 %b, ptr %arrayidx, align 4
+  br label %if.end
+
+if.end:
+  %v2 = load i64, ptr %a, align 8
+  ret i64 %v2
+}
+
+define i64 @load_before_store_noescape_writable_missing_noalias(ptr writable dereferenceable(8) %a, i64 %i, i32 %b)  {
+; CHECK-LABEL: @load_before_store_noescape_writable_missing_noalias(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 -1, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[V2]]
+;
+entry:
+  store i64 -1, ptr %a, align 8
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 1
+  %v = load i32, ptr %arrayidx, align 4
+  %cmp = icmp slt i32 %v, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 %b, ptr %arrayidx, align 4
+  br label %if.end
+
+if.end:
+  %v2 = load i64, ptr %a, align 8
+  ret i64 %v2
+}
+
+define i64 @load_before_store_noescape_writable_missing_derefable(ptr noalias writable %a, i64 %i, i32 %b)  {
+; CHECK-LABEL: @load_before_store_noescape_writable_missing_derefable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 -1, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[V]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[V2]]
+;
+entry:
+  store i64 -1, ptr %a, align 8
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 1
+  %v = load i32, ptr %arrayidx, align 4
+  %cmp = icmp slt i32 %v, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 %b, ptr %arrayidx, align 4
+  br label %if.end
+
+if.end:
+  %v2 = load i64, ptr %a, align 8
+  ret i64 %v2
+}
+
 declare void @fork_some_threads(ptr);
 declare void @join_some_threads();
 
@@ -205,18 +355,18 @@ define i32 @not_alone_in_block(i64 %i, i32 %b)  {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i32], align 8
 ; CHECK-NEXT:    store i64 4294967296, ptr [[A]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -238,6 +388,58 @@ if.end:
   %2 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %2
   ret i32 %add
+}
+
+define void @wrong_align_store(ptr %A, i32 %B, i32 %C, i32 %D) {
+; CHECK-LABEL: @wrong_align_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[D:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[A]], align 8
+; CHECK-NEXT:    br label [[RET_END]]
+; CHECK:       ret.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 %B, ptr %A, align 4
+  %cmp = icmp sgt i32 %D, 42
+  br i1 %cmp, label %if.then, label %ret.end
+
+if.then:
+  store i32 %C, ptr %A, align 8
+  br label %ret.end
+
+ret.end:
+  ret void
+}
+
+define void @wrong_align_load(i32 %C, i32 %D) {
+; CHECK-LABEL: @wrong_align_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[D:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[A]], align 8
+; CHECK-NEXT:    br label [[RET_END]]
+; CHECK:       ret.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %A = alloca i32, align 4
+  load i32, ptr %A, align 4
+  %cmp = icmp sgt i32 %D, 42
+  br i1 %cmp, label %if.then, label %ret.end
+
+if.then:
+  store i32 %C, ptr %A, align 8
+  br label %ret.end
+
+ret.end:
+  ret void
 }
 
 ; CHECK: !0 = !{!"branch_weights", i32 3, i32 5}

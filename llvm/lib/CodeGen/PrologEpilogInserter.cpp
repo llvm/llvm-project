@@ -48,10 +48,8 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
@@ -63,7 +61,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -150,8 +147,8 @@ char &llvm::PrologEpilogCodeInserterID = PEI::ID;
 
 INITIALIZE_PASS_BEGIN(PEI, DEBUG_TYPE, "Prologue/Epilogue Insertion", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(PEI, DEBUG_TYPE,
                     "Prologue/Epilogue Insertion & Frame Finalization", false,
@@ -166,8 +163,8 @@ STATISTIC(NumBytesStackSpace,
 
 void PEI::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<MachineLoopInfo>();
-  AU.addPreserved<MachineDominatorTree>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -211,8 +208,8 @@ static void stashEntryDbgValues(MachineBasicBlock &MBB,
   }
 
   // Remove stashed debug values from the block.
-  if (EntryDbgValues.count(&MBB))
-    for (auto *MI : EntryDbgValues[&MBB])
+  if (auto It = EntryDbgValues.find(&MBB); It != EntryDbgValues.end())
+    for (auto *MI : It->second)
       MI->removeFromParent();
 }
 
@@ -228,9 +225,13 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
-  // Calculate the MaxCallFrameSize and AdjustsStack variables for the
-  // function's frame information. Also eliminates call frame pseudo
-  // instructions.
+  // Spill frame pointer and/or base pointer registers if they are clobbered.
+  // It is placed before call frame instruction elimination so it will not mess
+  // with stack arguments.
+  TFI->spillFPBP(MF);
+
+  // Calculate the MaxCallFrameSize value for the function's frame
+  // information. Also eliminates call frame pseudo instructions.
   calculateCallFrameInfo(MF);
 
   // Determine placement of CSR spill/restore code and prolog/epilog code:
@@ -342,6 +343,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
            << ore::NV("Function", MF.getFunction().getName()) << "'";
   });
 
+  // Emit any remarks implemented for the target, based on final frame layout.
+  TFI->emitRemarks(MF, ORE);
+
   delete RS;
   SaveBlocks.clear();
   RestoreBlocks.clear();
@@ -350,16 +354,12 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-/// Calculate the MaxCallFrameSize and AdjustsStack
-/// variables for the function's frame information and eliminate call frame
-/// pseudo instructions.
+/// Calculate the MaxCallFrameSize variable for the function's frame
+/// information and eliminate call frame pseudo instructions.
 void PEI::calculateCallFrameInfo(MachineFunction &MF) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-
-  unsigned MaxCallFrameSize = 0;
-  bool AdjustsStack = MFI.adjustsStack();
 
   // Get the function call frame set-up and tear-down instruction opcode
   unsigned FrameSetupOpcode = TII.getCallFrameSetupOpcode();
@@ -370,26 +370,15 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
   if (FrameSetupOpcode == ~0u && FrameDestroyOpcode == ~0u)
     return;
 
+  // (Re-)Compute the MaxCallFrameSize.
+  [[maybe_unused]] uint64_t MaxCFSIn =
+      MFI.isMaxCallFrameSizeComputed() ? MFI.getMaxCallFrameSize() : UINT64_MAX;
   std::vector<MachineBasicBlock::iterator> FrameSDOps;
-  for (MachineBasicBlock &BB : MF)
-    for (MachineBasicBlock::iterator I = BB.begin(); I != BB.end(); ++I)
-      if (TII.isFrameInstr(*I)) {
-        unsigned Size = TII.getFrameSize(*I);
-        if (Size > MaxCallFrameSize) MaxCallFrameSize = Size;
-        AdjustsStack = true;
-        FrameSDOps.push_back(I);
-      } else if (I->isInlineAsm()) {
-        // Some inline asm's need a stack frame, as indicated by operand 1.
-        unsigned ExtraInfo = I->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
-        if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
-          AdjustsStack = true;
-      }
-
-  assert(!MFI.isMaxCallFrameSizeComputed() ||
-         (MFI.getMaxCallFrameSize() >= MaxCallFrameSize &&
-          !(AdjustsStack && !MFI.adjustsStack())));
-  MFI.setAdjustsStack(AdjustsStack);
-  MFI.setMaxCallFrameSize(MaxCallFrameSize);
+  MFI.computeMaxCallFrameSize(MF, &FrameSDOps);
+  assert(MFI.getMaxCallFrameSize() <= MaxCFSIn &&
+         "Recomputing MaxCFS gave a larger value.");
+  assert((FrameSDOps.empty() || MF.getFrameInfo().adjustsStack()) &&
+         "AdjustsStack not set in presence of a frame pseudo instruction.");
 
   if (TFI->canSimplifyCallFramePseudos(MF)) {
     // If call frames are not being included as part of the stack frame, and
@@ -492,7 +481,7 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
       if (CS.isSpilledToReg())
         continue;
 
-      unsigned Reg = CS.getReg();
+      MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
       int FrameIdx;
@@ -581,7 +570,7 @@ static void updateLiveness(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const CalleeSavedInfo &I : CSI) {
     for (MachineBasicBlock *MBB : Visited) {
-      MCPhysReg Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       // Add the callee-saved register as live-in.
       // It's killed at the spill.
       if (!MRI.isReserved(Reg) && !MBB->isLiveIn(Reg))
@@ -616,7 +605,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
-      unsigned Reg = CS.getReg();
+      MCRegister Reg = CS.getReg();
 
       if (CS.isSpilledToReg()) {
         BuildMI(SaveBlock, I, DebugLoc(),
@@ -645,7 +634,7 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      unsigned Reg = CI.getReg();
+      MCRegister Reg = CI.getReg();
       if (CI.isSpilledToReg()) {
         BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
           .addReg(CI.getDstReg(), getKillRegState(true));
@@ -1251,9 +1240,9 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
             continue;
 
           MCRegister Reg = MO.getReg();
-          if (AllocatableSet[Reg] && !MO.isImplicit() &&
+          if (AllocatableSet[Reg.id()] && !MO.isImplicit() &&
               (MO.isDef() || MO.isUse()))
-            UsedRegs.set(Reg);
+            UsedRegs.set(Reg.id());
         }
       }
 
@@ -1273,20 +1262,20 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
       continue;
 
     // Want only used registers.
-    if (OnlyUsed && !UsedRegs[Reg])
+    if (OnlyUsed && !UsedRegs[Reg.id()])
       continue;
 
     // Want only registers used for arguments.
     if (OnlyArg) {
       if (OnlyUsed) {
-        if (!LiveIns[Reg])
+        if (!LiveIns[Reg.id()])
           continue;
       } else if (!TRI.isArgumentRegister(MF, Reg)) {
         continue;
       }
     }
 
-    RegsToZero.set(Reg);
+    RegsToZero.set(Reg.id());
   }
 
   // Don't clear registers that are live when leaving the function.
@@ -1339,7 +1328,7 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
   for (const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
        MCPhysReg CSReg = *CSRegs; ++CSRegs)
     for (MCRegister Reg : TRI.sub_and_superregs_inclusive(CSReg))
-      RegsToZero.reset(Reg);
+      RegsToZero.reset(Reg.id());
 
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)
@@ -1460,7 +1449,7 @@ bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
   // pointer as the base register.
   if (MI.getOpcode() == TargetOpcode::STATEPOINT) {
     assert((!MI.isDebugValue() || OpIdx == 0) &&
-           "Frame indicies can only appear as the first operand of a "
+           "Frame indices can only appear as the first operand of a "
            "DBG_VALUE machine instruction");
     Register Reg;
     MachineOperand &Offset = MI.getOperand(OpIdx + 1);

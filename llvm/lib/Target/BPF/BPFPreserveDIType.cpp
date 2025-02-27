@@ -21,7 +21,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -57,7 +56,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
       if (!GV)
         continue;
 
-      if (GV->getName().startswith("llvm.bpf.btf.type.id")) {
+      if (GV->getName().starts_with("llvm.bpf.btf.type.id")) {
         if (!Call->getMetadata(LLVMContext::MD_preserve_access_index))
           report_fatal_error(
               "Missing metadata for llvm.bpf.btf.type.id intrinsic");
@@ -116,8 +115,8 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     GV->setMetadata(LLVMContext::MD_preserve_access_index, MD);
 
     // Load the global variable which represents the type info.
-    auto *LDInst =
-        new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+    auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                                Call->getIterator());
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
     Call->replaceAllUsesWith(PassThroughInst);

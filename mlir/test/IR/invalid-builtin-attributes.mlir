@@ -45,7 +45,8 @@ func.func @elementsattr_floattype1() -> () {
 // -----
 
 func.func @elementsattr_floattype2() -> () {
-  // expected-error@+1 {{expected floating-point elements, but parsed integer}}
+  // expected-error@below {{unexpected decimal integer literal for a floating point value}}
+  // expected-note@below {{add a trailing dot to make the literal a float}}
   "foo"(){bar = dense<[4]> : tensor<1xf32>} : () -> ()
 }
 
@@ -138,21 +139,22 @@ func.func @float_in_int_tensor() {
 // -----
 
 func.func @float_in_bool_tensor() {
-  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  // expected-error@below {{expected integer elements, but parsed floating-point}}
   "foo"() {bar = dense<[true, 42.0]> : tensor<2xi1>} : () -> ()
 }
 
 // -----
 
 func.func @decimal_int_in_float_tensor() {
-  // expected-error @+1 {{expected floating-point elements, but parsed integer}}
+  // expected-error@below {{unexpected decimal integer literal for a floating point value}}
+  // expected-note@below {{add a trailing dot to make the literal a float}}
   "foo"() {bar = dense<[42, 42.0]> : tensor<2xf32>} : () -> ()
 }
 
 // -----
 
 func.func @bool_in_float_tensor() {
-  // expected-error @+1 {{expected floating-point elements, but parsed integer}}
+  // expected-error @+1 {{expected floating point literal}}
   "foo"() {bar = dense<[42.0, true]> : tensor<2xf32>} : () -> ()
 }
 
@@ -589,3 +591,48 @@ func.func @duplicate_dictionary_attr_key() {
 #attr1 = distinct[0]<43 : i32>
 
 // -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant
+    // expected-error@below {{elements literal must be a shaped type}} 
+    dense<[3]> : i32
+  return
+}
+
+// -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant 
+    // expected-error@below {{elements literal must be a shaped type}}
+    sparse<
+     [
+       [0, 1, 2, 3],
+       [1, 1, 2, 3],
+       [1, 2, 2, 3],
+       [1, 2, 3, 4]
+     ],
+     [1, 1, 1, 1] > : i32
+  return
+}
+
+// -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant 
+    // expected-error@below {{elements literal must be a shaped type}}
+    sparse <> : i32
+  return
+}
+
+// -----
+
+// Prevent assertions when parsing a dense attribute expected to be a string 
+// but encountering a different type. 
+func.func @expect_to_parse_literal() {
+  // expected-error@below {{expected string token, got 23}}
+  %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
+  return
+}

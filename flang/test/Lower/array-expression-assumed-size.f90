@@ -1,5 +1,5 @@
 ! RUN: bbc --emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: bbc -hlfir=false %s -o - | FileCheck --check-prefix=PostOpt %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | FileCheck --check-prefix=PostOpt %s
 
 
 subroutine assumed_size_test(a)
@@ -19,7 +19,7 @@ end subroutine assumed_size_forall_test
 ! CHECK:         %[[VAL_1A:.*]] = fir.convert %c10{{.*}} : (i64) -> index 
 ! CHECK:         %[[VAL_1B:.*]] = arith.cmpi sgt, %[[VAL_1A]], %c0{{.*}} : index 
 ! CHECK:         %[[VAL_1:.*]] = arith.select %[[VAL_1B]], %[[VAL_1A]], %c0{{.*}} : index
-! CHECK:         %[[VAL_2:.*]] = fir.undefined index
+! CHECK:         %[[VAL_2:.*]] = arith.constant -1 : index
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 1 : i64
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
@@ -82,7 +82,7 @@ end subroutine assumed_size_forall_test
 ! CHECK:         %[[VAL_2A:.*]] = fir.convert %c10{{.*}} : (i64) -> index 
 ! CHECK:         %[[VAL_2B:.*]] = arith.cmpi sgt, %[[VAL_2A]], %c0{{.*}} : index 
 ! CHECK:         %[[VAL_2:.*]] = arith.select %[[VAL_2B]], %[[VAL_2A]], %c0{{.*}} : index
-! CHECK:         %[[VAL_3:.*]] = fir.undefined index
+! CHECK:         %[[VAL_3:.*]] = arith.constant -1 : index
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 2 : i32
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> index
 ! CHECK:         %[[VAL_6:.*]] = arith.constant 6 : i32
@@ -149,7 +149,7 @@ end subroutine assumed_size_forall_test
 ! PostOpt-DAG:         %[[VAL_4:.*]] = arith.constant 0 : index
 ! PostOpt-DAG:         %[[VAL_5:.*]] = arith.constant 3 : index
 ! PostOpt-DAG:         %[[VAL_6:.*]] = arith.constant 4 : index
-! PostOpt:         %[[VAL_7:.*]] = fir.undefined index
+! PostOpt-DAG:         %[[VAL_7:.*]] = arith.constant -1 : index
 ! PostOpt:         %[[VAL_8:.*]] = fir.shape %[[VAL_1]], %[[VAL_7]] : (index, index) -> !fir.shape<2>
 ! PostOpt:         %[[VAL_9:.*]] = fir.slice %[[VAL_2]], %[[VAL_1]], %[[VAL_2]], %[[VAL_2]], %[[VAL_3]], %[[VAL_2]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! PostOpt:         %[[VAL_10:.*]] = fir.allocmem !fir.array<10x?xi32>, %[[VAL_3]]
@@ -227,8 +227,8 @@ end subroutine assumed_size_forall_test
 ! PostOpt-DAG:         %[[VAL_4:.*]] = arith.constant 1 : index
 ! PostOpt-DAG:         %[[VAL_5:.*]] = arith.constant 0 : index
 ! PostOpt-DAG:         %[[VAL_6:.*]] = arith.constant 5 : index
+! PostOpt-DAG:         %[[VAL_8:.*]] = arith.constant -1 : index
 ! PostOpt:         %[[VAL_7:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
-! PostOpt:         %[[VAL_8:.*]] = fir.undefined index
 ! PostOpt:         %[[VAL_9:.*]] = fir.shape %[[VAL_2]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 ! PostOpt:         %[[VAL_10:.*]] = fir.allocmem !fir.array<10x?xi32>, %[[VAL_4]]
 ! PostOpt:         br ^bb1(%[[VAL_5]], %[[VAL_4]] : index, index)

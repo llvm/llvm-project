@@ -98,10 +98,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -110,7 +108,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-collect-loh"
@@ -254,7 +251,7 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
 /// Number of GPR registers traked by mapRegToGPRIndex()
 static const unsigned N_GPR_REGS = 31;
 /// Map register number to index from 0-30.
-static int mapRegToGPRIndex(MCPhysReg Reg) {
+static int mapRegToGPRIndex(MCRegister Reg) {
   static_assert(AArch64::X28 - AArch64::X0 + 3 == N_GPR_REGS, "Number of GPRs");
   static_assert(AArch64::W30 - AArch64::W0 + 1 == N_GPR_REGS, "Number of GPRs");
   if (AArch64::X0 <= Reg && Reg <= AArch64::X28)

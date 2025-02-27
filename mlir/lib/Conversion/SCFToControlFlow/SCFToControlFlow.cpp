@@ -15,7 +15,9 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
@@ -25,7 +27,7 @@
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_SCFTOCONTROLFLOW
+#define GEN_PASS_DEF_SCFTOCONTROLFLOWPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -35,7 +37,7 @@ using namespace mlir::scf;
 namespace {
 
 struct SCFToControlFlowPass
-    : public impl::SCFToControlFlowBase<SCFToControlFlowPass> {
+    : public impl::SCFToControlFlowPassBase<SCFToControlFlowPass> {
   void runOnOperation() override;
 };
 
@@ -369,9 +371,18 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   auto comparison = rewriter.create<arith::CmpIOp>(
       loc, arith::CmpIPredicate::slt, iv, upperBound);
 
-  rewriter.create<cf::CondBranchOp>(loc, comparison, firstBodyBlock,
-                                    ArrayRef<Value>(), endBlock,
-                                    ArrayRef<Value>());
+  auto condBranchOp = rewriter.create<cf::CondBranchOp>(
+      loc, comparison, firstBodyBlock, ArrayRef<Value>(), endBlock,
+      ArrayRef<Value>());
+
+  // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
+  // llvm.loop_annotation attribute.
+  SmallVector<NamedAttribute> llvmAttrs;
+  llvm::copy_if(forOp->getAttrs(), std::back_inserter(llvmAttrs),
+                [](auto attr) {
+                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+                });
+  condBranchOp->setDiscardableAttrs(llvmAttrs);
   // The result of the loop operation is the values of the condition block
   // arguments except the induction variable on the last iteration.
   rewriter.replaceOp(forOp, conditionBlock->getArguments().drop_front());
@@ -471,6 +482,10 @@ LogicalResult
 ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
                                   PatternRewriter &rewriter) const {
   Location loc = parallelOp.getLoc();
+  auto reductionOp = dyn_cast<ReduceOp>(parallelOp.getBody()->getTerminator());
+  if (!reductionOp) {
+    return failure();
+  }
 
   // For a parallel loop, we essentially need to create an n-dimensional loop
   // nest. We do this by translating to scf.for ops and have those lowered in
@@ -506,23 +521,20 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   }
 
   // First, merge reduction blocks into the main region.
-  SmallVector<Value, 4> yieldOperands;
+  SmallVector<Value> yieldOperands;
   yieldOperands.reserve(parallelOp.getNumResults());
-  for (auto &op : *parallelOp.getBody()) {
-    auto reduce = dyn_cast<ReduceOp>(op);
-    if (!reduce)
-      continue;
-
-    Block &reduceBlock = reduce.getReductionOperator().front();
+  for (int64_t i = 0, e = parallelOp.getNumResults(); i < e; ++i) {
+    Block &reductionBody = reductionOp.getReductions()[i].front();
     Value arg = iterArgs[yieldOperands.size()];
-    yieldOperands.push_back(reduceBlock.getTerminator()->getOperand(0));
-    rewriter.eraseOp(reduceBlock.getTerminator());
-    rewriter.inlineBlockBefore(&reduceBlock, &op, {arg, reduce.getOperand()});
-    rewriter.eraseOp(reduce);
+    yieldOperands.push_back(
+        cast<ReduceReturnOp>(reductionBody.getTerminator()).getResult());
+    rewriter.eraseOp(reductionBody.getTerminator());
+    rewriter.inlineBlockBefore(&reductionBody, reductionOp,
+                               {arg, reductionOp.getOperands()[i]});
   }
+  rewriter.eraseOp(reductionOp);
 
   // Then merge the loop body without the terminator.
-  rewriter.eraseOp(parallelOp.getBody()->getTerminator());
   Block *newBody = rewriter.getInsertionBlock();
   if (newBody->empty())
     rewriter.mergeBlocks(parallelOp.getBody(), newBody, ivs);
@@ -690,33 +702,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
 
 LogicalResult ForallLowering::matchAndRewrite(ForallOp forallOp,
                                               PatternRewriter &rewriter) const {
-  Location loc = forallOp.getLoc();
-  if (!forallOp.getOutputs().empty())
-    return rewriter.notifyMatchFailure(
-        forallOp,
-        "only fully bufferized scf.forall ops can be lowered to scf.parallel");
-
-  // Convert mixed bounds and steps to SSA values.
-  SmallVector<Value> lbs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedLowerBound());
-  SmallVector<Value> ubs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedUpperBound());
-  SmallVector<Value> steps =
-      getValueOrCreateConstantIndexOp(rewriter, loc, forallOp.getMixedStep());
-
-  // Create empty scf.parallel op.
-  auto parallelOp = rewriter.create<ParallelOp>(loc, lbs, ubs, steps);
-  rewriter.eraseBlock(&parallelOp.getRegion().front());
-  rewriter.inlineRegionBefore(forallOp.getRegion(), parallelOp.getRegion(),
-                              parallelOp.getRegion().begin());
-  // Replace the terminator.
-  rewriter.setInsertionPointToEnd(&parallelOp.getRegion().front());
-  rewriter.replaceOpWithNewOp<scf::YieldOp>(
-      parallelOp.getRegion().front().getTerminator());
-
-  // Erase the scf.forall op.
-  rewriter.replaceOp(forallOp, parallelOp);
-  return success();
+  return scf::forallToParallelLoop(rewriter, forallOp);
 }
 
 void mlir::populateSCFToControlFlowConversionPatterns(
@@ -739,8 +725,4 @@ void SCFToControlFlowPass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<Pass> mlir::createConvertSCFToCFPass() {
-  return std::make_unique<SCFToControlFlowPass>();
 }

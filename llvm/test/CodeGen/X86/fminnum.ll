@@ -22,17 +22,26 @@ declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>)
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define float @test_fminf(float %x, float %y) {
-; SSE-LABEL: test_fminf:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    minss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm2
-; SSE-NEXT:    orps %xmm3, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_fminf:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordss %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    minss %xmm0, %xmm1
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    orps %xmm3, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_fminf:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movaps %xmm1, %xmm2
+; SSE4-NEXT:    minss %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
+; SSE4-NEXT:    blendvps %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movaps %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fminf:
 ; AVX1:       # %bb.0:
@@ -63,17 +72,26 @@ define float @test_fminf_minsize(float %x, float %y) minsize {
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define double @test_fmin(double %x, double %y) {
-; SSE-LABEL: test_fmin:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm3
-; SSE-NEXT:    andpd %xmm1, %xmm3
-; SSE-NEXT:    minsd %xmm0, %xmm1
-; SSE-NEXT:    andnpd %xmm1, %xmm2
-; SSE-NEXT:    orpd %xmm3, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_fmin:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordsd %xmm0, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    minsd %xmm0, %xmm1
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm3, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_fmin:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movapd %xmm1, %xmm2
+; SSE4-NEXT:    minsd %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordsd %xmm0, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movapd %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmin:
 ; AVX1:       # %bb.0:
@@ -111,17 +129,26 @@ define x86_fp80 @test_fminl(x86_fp80 %x, x86_fp80 %y) {
 }
 
 define float @test_intrinsic_fminf(float %x, float %y) {
-; SSE-LABEL: test_intrinsic_fminf:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    minss %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm2
-; SSE-NEXT:    orps %xmm3, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_intrinsic_fminf:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordss %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    minss %xmm0, %xmm1
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    orps %xmm3, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_intrinsic_fminf:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movaps %xmm1, %xmm2
+; SSE4-NEXT:    minss %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
+; SSE4-NEXT:    blendvps %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movaps %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_intrinsic_fminf:
 ; AVX1:       # %bb.0:
@@ -142,17 +169,26 @@ define float @test_intrinsic_fminf(float %x, float %y) {
 }
 
 define double @test_intrinsic_fmin(double %x, double %y) {
-; SSE-LABEL: test_intrinsic_fmin:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm3
-; SSE-NEXT:    andpd %xmm1, %xmm3
-; SSE-NEXT:    minsd %xmm0, %xmm1
-; SSE-NEXT:    andnpd %xmm1, %xmm2
-; SSE-NEXT:    orpd %xmm3, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_intrinsic_fmin:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordsd %xmm0, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    minsd %xmm0, %xmm1
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm3, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_intrinsic_fmin:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movapd %xmm1, %xmm2
+; SSE4-NEXT:    minsd %xmm0, %xmm2
+; SSE4-NEXT:    cmpunordsd %xmm0, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE4-NEXT:    movapd %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: test_intrinsic_fmin:
 ; AVX1:       # %bb.0:

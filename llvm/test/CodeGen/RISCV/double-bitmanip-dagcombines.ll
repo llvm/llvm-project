@@ -36,8 +36,7 @@ define double @fneg(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fneg:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    lui a2, 524288
-; RV32IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV32IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fneg:
@@ -56,9 +55,7 @@ define double @fneg(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fneg:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    li a1, -1
-; RV64IZFINXZDINX-NEXT:    slli a1, a1, 63
-; RV64IZFINXZDINX-NEXT:    xor a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV64IZFINXZDINX-NEXT:    ret
   %1 = fneg double %a
   ret double %1
@@ -81,8 +78,7 @@ define double @fabs(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fabs:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    slli a1, a1, 1
-; RV32IZFINXZDINX-NEXT:    srli a1, a1, 1
+; RV32IZFINXZDINX-NEXT:    fabs.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs:
@@ -99,8 +95,7 @@ define double @fabs(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fabs:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    slli a0, a0, 1
-; RV64IZFINXZDINX-NEXT:    srli a0, a0, 1
+; RV64IZFINXZDINX-NEXT:    fabs.d a0, a0
 ; RV64IZFINXZDINX-NEXT:    ret
   %1 = call double @llvm.fabs.f64(double %a)
   ret double %1
@@ -117,8 +112,8 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a2, a3
 ; RV32I-NEXT:    lui a3, 524288
-; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
@@ -141,21 +136,7 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcopysign_fneg:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fsgnjn.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fcopysign_fneg:
@@ -170,21 +151,16 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ;
 ; RV64IFD-LABEL: fcopysign_fneg:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    li a2, -1
-; RV64IFD-NEXT:    slli a2, a2, 63
-; RV64IFD-NEXT:    xor a1, a1, a2
-; RV64IFD-NEXT:    fmv.d.x fa5, a1
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
+; RV64IFD-NEXT:    not a0, a1
 ; RV64IFD-NEXT:    fmv.d.x fa4, a0
-; RV64IFD-NEXT:    fsgnj.d fa5, fa4, fa5
+; RV64IFD-NEXT:    fsgnj.d fa5, fa5, fa4
 ; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcopysign_fneg:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    li a2, -1
-; RV64IZFINXZDINX-NEXT:    slli a2, a2, 63
-; RV64IZFINXZDINX-NEXT:    xor a1, a1, a2
-; RV64IZFINXZDINX-NEXT:    fsgnj.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fsgnjn.d a0, a0, a1
 ; RV64IZFINXZDINX-NEXT:    ret
   %1 = fneg double %b
   %2 = call double @llvm.copysign.f64(double %a, double %1)

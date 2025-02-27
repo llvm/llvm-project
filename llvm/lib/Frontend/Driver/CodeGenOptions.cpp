@@ -12,7 +12,7 @@
 
 namespace llvm::driver {
 
-TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
+TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                   driver::VectorLibrary Veclib) {
   TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
 
@@ -44,6 +44,10 @@ TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
     break;
   case VectorLibrary::ArmPL:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::ArmPL,
+                                             TargetTriple);
+    break;
+  case VectorLibrary::AMDLIBM:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::AMDLIBM,
                                              TargetTriple);
     break;
   default:

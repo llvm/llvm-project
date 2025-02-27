@@ -16,8 +16,9 @@
 // Test the feature test macros defined by <format>
 
 /*  Constant                   Value
-    __cpp_lib_format           202106L [C++20]
+    __cpp_lib_format           202110L [C++20]
     __cpp_lib_format_ranges    202207L [C++23]
+    __cpp_lib_format_uchar     202311L [C++20]
 */
 
 #include <format>
@@ -33,6 +34,10 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should not be defined before c++20"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_format
@@ -41,6 +46,10 @@
 
 # ifdef __cpp_lib_format_ranges
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should not be defined before c++20"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -53,18 +62,22 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should not be defined before c++20"
+# endif
+
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
 #   ifndef __cpp_lib_format
 #     error "__cpp_lib_format should be defined in c++20"
 #   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++20"
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++20"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
 #   endif
 # endif
 
@@ -72,18 +85,25 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
+# ifndef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should be defined in c++20"
+# endif
+# if __cpp_lib_format_uchar != 202311L
+#   error "__cpp_lib_format_uchar should have the value 202311L in c++20"
+# endif
+
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
 #   ifndef __cpp_lib_format
 #     error "__cpp_lib_format should be defined in c++23"
 #   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++23"
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++23"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
 #   endif
 # endif
 
@@ -94,18 +114,25 @@
 #   error "__cpp_lib_format_ranges should have the value 202207L in c++23"
 # endif
 
+# ifndef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should be defined in c++23"
+# endif
+# if __cpp_lib_format_uchar != 202311L
+#   error "__cpp_lib_format_uchar should have the value 202311L in c++23"
+# endif
+
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
 #   ifndef __cpp_lib_format
 #     error "__cpp_lib_format should be defined in c++26"
 #   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++26"
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
 #   endif
 # endif
 
@@ -114,6 +141,13 @@
 # endif
 # if __cpp_lib_format_ranges != 202207L
 #   error "__cpp_lib_format_ranges should have the value 202207L in c++26"
+# endif
+
+# ifndef __cpp_lib_format_uchar
+#   error "__cpp_lib_format_uchar should be defined in c++26"
+# endif
+# if __cpp_lib_format_uchar != 202311L
+#   error "__cpp_lib_format_uchar should have the value 202311L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

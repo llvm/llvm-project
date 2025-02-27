@@ -29,8 +29,9 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
     if (auto callable{GetHostRuntimeWrapper<T, T>(name)}) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
-    } else {
-      context.messages().Say(
+    } else if (context.languageFeatures().ShouldWarn(
+                   common::UsageWarning::FoldingFailure)) {
+      context.messages().Say(common::UsageWarning::FoldingFailure,
           "%s(complex(kind=%d)) cannot be folded on host"_warn_en_US, name,
           KIND);
     }

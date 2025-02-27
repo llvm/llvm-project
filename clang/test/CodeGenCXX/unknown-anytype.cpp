@@ -70,7 +70,7 @@ struct Test7 {
 };
 extern "C" __unknown_anytype test7_any(int);
 Test7 test7() {
-  // COMMON: call void @test7_any(ptr sret({{%.*}}) align 1 {{%.*}}, i32 noundef 5)
+  // COMMON: call void @test7_any(ptr dead_on_unwind writable sret({{%.*}}) align 1 {{%.*}}, i32 noundef 5)
   return (Test7) test7_any(5);
 }
 

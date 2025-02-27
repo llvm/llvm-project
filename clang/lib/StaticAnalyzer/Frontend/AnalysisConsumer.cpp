@@ -15,7 +15,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CallGraph.h"
@@ -39,6 +39,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -68,7 +69,7 @@ STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 namespace {
 
 class AnalysisConsumer : public AnalysisASTConsumer,
-                         public RecursiveASTVisitor<AnalysisConsumer> {
+                         public DynamicRecursiveASTVisitor {
   enum {
     AM_None = 0,
     AM_Syntax = 0x1,
@@ -89,7 +90,7 @@ public:
   const std::string OutDir;
   AnalyzerOptions &Opts;
   ArrayRef<std::string> Plugins;
-  CodeInjector *Injector;
+  std::unique_ptr<CodeInjector> Injector;
   cross_tu::CrossTranslationUnitContext CTU;
 
   /// Stores the declarations from the local translation unit.
@@ -122,10 +123,10 @@ public:
 
   AnalysisConsumer(CompilerInstance &CI, const std::string &outdir,
                    AnalyzerOptions &opts, ArrayRef<std::string> plugins,
-                   CodeInjector *injector)
+                   std::unique_ptr<CodeInjector> injector)
       : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr),
-        PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts),
-        Plugins(plugins), Injector(injector), CTU(CI),
+        PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
+        Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
     DigestAnalyzerOptions();
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
@@ -147,6 +148,9 @@ public:
 
     if (Opts.ShouldDisplayMacroExpansions)
       MacroExpansions.registerForPreprocessor(PP);
+
+    // Visitor options.
+    ShouldWalkTypesOfTypeLocs = false;
   }
 
   ~AnalysisConsumer() override {
@@ -225,9 +229,9 @@ public:
     checkerMgr = std::make_unique<CheckerManager>(*Ctx, Opts, PP, Plugins,
                                                   CheckerRegistrationFns);
 
-    Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
-                                            CreateStoreMgr, CreateConstraintMgr,
-                                            checkerMgr.get(), Opts, Injector);
+    Mgr = std::make_unique<AnalysisManager>(
+        *Ctx, PP, std::move(PathConsumers), CreateStoreMgr, CreateConstraintMgr,
+        checkerMgr.get(), Opts, std::move(Injector));
   }
 
   /// Store the top level decls in the set to be processed later on.
@@ -261,11 +265,8 @@ public:
                               ExprEngine::InliningModes IMode,
                               SetOfConstDecls *VisitedCallees);
 
-  /// Visitors for the RecursiveASTVisitor.
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
   /// Handle callbacks for arbitrary Decls.
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     AnalysisMode Mode = getModeForDecl(D, RecVisitorMode);
     if (Mode & AM_Syntax) {
       if (SyntaxCheckTimer)
@@ -277,7 +278,7 @@ public:
     return true;
   }
 
-  bool VisitVarDecl(VarDecl *VD) {
+  bool VisitVarDecl(VarDecl *VD) override {
     if (!Opts.IsNaiveCTUEnabled)
       return true;
 
@@ -306,9 +307,9 @@ public:
     return true;
   }
 
-  bool VisitFunctionDecl(FunctionDecl *FD) {
+  bool VisitFunctionDecl(FunctionDecl *FD) override {
     IdentifierInfo *II = FD->getIdentifier();
-    if (II && II->getName().startswith("__inline"))
+    if (II && II->getName().starts_with("__inline"))
       return true;
 
     // We skip function template definitions, as their semantics is
@@ -321,7 +322,7 @@ public:
     return true;
   }
 
-  bool VisitObjCMethodDecl(ObjCMethodDecl *MD) {
+  bool VisitObjCMethodDecl(ObjCMethodDecl *MD) override {
     if (MD->isThisDeclarationADefinition()) {
       assert(RecVisitorMode == AM_Syntax || Mgr->shouldInlineCall() == false);
       HandleCode(MD, RecVisitorMode);
@@ -329,7 +330,7 @@ public:
     return true;
   }
 
-  bool VisitBlockDecl(BlockDecl *BD) {
+  bool VisitBlockDecl(BlockDecl *BD) override {
     if (BD->hasBody()) {
       assert(RecVisitorMode == AM_Syntax || Mgr->shouldInlineCall() == false);
       // Since we skip function template definitions, we should skip blocks
@@ -341,8 +342,9 @@ public:
     return true;
   }
 
-  void AddDiagnosticConsumer(PathDiagnosticConsumer *Consumer) override {
-    PathConsumers.push_back(Consumer);
+  void AddDiagnosticConsumer(
+      std::unique_ptr<PathDiagnosticConsumer> Consumer) override {
+    PathConsumers.push_back(std::move(Consumer));
   }
 
   void AddCheckerRegistrationFn(std::function<void(CheckerRegistry&)> Fn) override {
@@ -358,9 +360,40 @@ private:
 
   /// Print \p S to stderr if \c Opts.AnalyzerDisplayProgress is set.
   void reportAnalyzerProgress(StringRef S);
-}; // namespace
-} // end anonymous namespace
+};
 
+std::string timeTraceScopeDeclName(StringRef FunName, const Decl *D) {
+  if (llvm::timeTraceProfilerEnabled()) {
+    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
+      return (FunName + " " + ND->getQualifiedNameAsString()).str();
+    return (FunName + " <anonymous> ").str();
+  }
+  return "";
+}
+
+llvm::TimeTraceMetadata timeTraceScopeDeclMetadata(const Decl *D) {
+  // If time-trace profiler is not enabled, this function is never called.
+  assert(llvm::timeTraceProfilerEnabled());
+  if (const auto &Loc = D->getBeginLoc(); Loc.isValid()) {
+    const auto &SM = D->getASTContext().getSourceManager();
+    std::string DeclName = AnalysisDeclContext::getFunctionName(D);
+    return llvm::TimeTraceMetadata{
+        std::move(DeclName), SM.getFilename(Loc).str(),
+        static_cast<int>(SM.getExpansionLineNumber(Loc))};
+  }
+  return llvm::TimeTraceMetadata{"", ""};
+}
+
+void flushReports(llvm::Timer *BugReporterTimer, BugReporter &BR) {
+  llvm::TimeTraceScope TCS{"Flushing reports"};
+  // Display warnings.
+  if (BugReporterTimer)
+    BugReporterTimer->startTimer();
+  BR.FlushReports();
+  if (BugReporterTimer)
+    BugReporterTimer->stopTimer();
+}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer implementation.
@@ -527,7 +560,8 @@ static void reportAnalyzerFunctionMisuse(const AnalyzerOptions &Opts,
 
 void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   BugReporter BR(*Mgr);
-  TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  const TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  BR.setAnalysisEntryPoint(TU);
   if (SyntaxCheckTimer)
     SyntaxCheckTimer->startTimer();
   checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
@@ -657,6 +691,8 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
                                   SetOfConstDecls *VisitedCallees) {
+  llvm::TimeTraceScope TCS(timeTraceScopeDeclName("HandleCode", D),
+                           [D]() { return timeTraceScopeDeclMetadata(D); });
   if (!D->hasBody())
     return;
   Mode = getModeForDecl(D, Mode);
@@ -675,6 +711,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 
   DisplayFunction(D, Mode, IMode);
   BugReporter BR(*Mgr);
+  BR.setAnalysisEntryPoint(D);
 
   if (Mode & AM_Syntax) {
     llvm::TimeRecord CheckerStartTime;
@@ -740,12 +777,7 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   if (Mgr->options.visualizeExplodedGraphWithGraphViz)
     Eng.ViewGraph(Mgr->options.TrimGraph);
 
-  // Display warnings.
-  if (BugReporterTimer)
-    BugReporterTimer->startTimer();
-  Eng.getBugReporter().FlushReports();
-  if (BugReporterTimer)
-    BugReporterTimer->stopTimer();
+  flushReports(BugReporterTimer.get(), Eng.getBugReporter());
 }
 
 //===----------------------------------------------------------------------===//
@@ -763,5 +795,5 @@ ento::CreateAnalysisConsumer(CompilerInstance &CI) {
   return std::make_unique<AnalysisConsumer>(
       CI, CI.getFrontendOpts().OutputFile, analyzerOpts,
       CI.getFrontendOpts().Plugins,
-      hasModelPath ? new ModelInjector(CI) : nullptr);
+      hasModelPath ? std::make_unique<ModelInjector>(CI) : nullptr);
 }

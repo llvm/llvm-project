@@ -50,16 +50,11 @@ getTemplateSpecializationArgLocs(const NamedDecl &ND) {
     if (const ASTTemplateArgumentListInfo *Args =
             Func->getTemplateSpecializationArgsAsWritten())
       return Args->arguments();
-  } else if (auto *Cls =
-                 llvm::dyn_cast<ClassTemplatePartialSpecializationDecl>(&ND)) {
+  } else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
     if (auto *Args = Cls->getTemplateArgsAsWritten())
       return Args->arguments();
-  } else if (auto *Var =
-                 llvm::dyn_cast<VarTemplatePartialSpecializationDecl>(&ND)) {
-    if (auto *Args = Var->getTemplateArgsAsWritten())
-      return Args->arguments();
   } else if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND)) {
-    if (auto *Args = Var->getTemplateArgsInfo())
+    if (auto *Args = Var->getTemplateArgsAsWritten())
       return Args->arguments();
   }
   // We return std::nullopt for ClassTemplateSpecializationDecls because it does
@@ -149,8 +144,13 @@ getQualification(ASTContext &Context, const DeclContext *DestContext,
   // since we stored inner-most parent first.
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  for (const auto *Parent : llvm::reverse(Parents))
+  for (const auto *Parent : llvm::reverse(Parents)) {
+    if (Parent != *Parents.rbegin() && Parent->isDependent() &&
+        Parent->getAsRecordDecl() &&
+        Parent->getAsRecordDecl()->getDescribedClassTemplate())
+      OS << "template ";
     Parent->print(OS, Context.getPrintingPolicy());
+  }
   return OS.str();
 }
 
@@ -192,8 +192,7 @@ std::string printQualifiedName(const NamedDecl &ND) {
   // In clangd, context is usually available and paths are mostly noise.
   Policy.AnonymousTagLocations = false;
   ND.printQualifiedName(OS, Policy);
-  OS.flush();
-  assert(!StringRef(QName).startswith("::"));
+  assert(!StringRef(QName).starts_with("::"));
   return QName;
 }
 
@@ -270,24 +269,11 @@ std::string printTemplateSpecializationArgs(const NamedDecl &ND) {
           getTemplateSpecializationArgLocs(ND)) {
     printTemplateArgumentList(OS, *Args, Policy);
   } else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
-    if (const TypeSourceInfo *TSI = Cls->getTypeAsWritten()) {
-      // ClassTemplateSpecializationDecls do not contain
-      // TemplateArgumentTypeLocs, they only have TemplateArgumentTypes. So we
-      // create a new argument location list from TypeSourceInfo.
-      auto STL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-      llvm::SmallVector<TemplateArgumentLoc> ArgLocs;
-      ArgLocs.reserve(STL.getNumArgs());
-      for (unsigned I = 0; I < STL.getNumArgs(); ++I)
-        ArgLocs.push_back(STL.getArgLoc(I));
-      printTemplateArgumentList(OS, ArgLocs, Policy);
-    } else {
-      // FIXME: Fix cases when getTypeAsWritten returns null inside clang AST,
-      // e.g. friend decls. Currently we fallback to Template Arguments without
-      // location information.
-      printTemplateArgumentList(OS, Cls->getTemplateArgs().asArray(), Policy);
-    }
+    // FIXME: Fix cases when getTypeAsWritten returns null inside clang AST,
+    // e.g. friend decls. Currently we fallback to Template Arguments without
+    // location information.
+    printTemplateArgumentList(OS, Cls->getTemplateArgs().asArray(), Policy);
   }
-  OS.flush();
   return TemplateArgs;
 }
 
@@ -320,7 +306,6 @@ std::string printObjCMethod(const ObjCMethodDecl &Method) {
     OS << ", ...";
 
   OS << ']';
-  OS.flush();
   return Name;
 }
 
@@ -331,7 +316,6 @@ std::string printObjCContainer(const ObjCContainerDecl &C) {
     const ObjCInterfaceDecl *Class = Category->getClassInterface();
     OS << getNameOrErrForObjCInterface(Class) << '(' << Category->getName()
        << ')';
-    OS.flush();
     return Name;
   }
   if (const ObjCCategoryImplDecl *CID = dyn_cast<ObjCCategoryImplDecl>(&C)) {
@@ -339,7 +323,6 @@ std::string printObjCContainer(const ObjCContainerDecl &C) {
     llvm::raw_string_ostream OS(Name);
     const ObjCInterfaceDecl *Class = CID->getClassInterface();
     OS << getNameOrErrForObjCInterface(Class) << '(' << CID->getName() << ')';
-    OS.flush();
     return Name;
   }
   return C.getNameAsString();
@@ -453,10 +436,12 @@ bool hasReservedScope(const DeclContext &DC) {
 }
 
 QualType declaredType(const TypeDecl *D) {
+  ASTContext &Context = D->getASTContext();
   if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
-    if (const auto *TSI = CTSD->getTypeAsWritten())
-      return TSI->getType();
-  return D->getASTContext().getTypeDeclType(D);
+    if (const auto *Args = CTSD->getTemplateArgsAsWritten())
+      return Context.getTemplateSpecializationType(
+          TemplateName(CTSD->getSpecializedTemplate()), Args->arguments());
+  return Context.getTypeDeclType(D);
 }
 
 namespace {
@@ -696,7 +681,7 @@ std::string getQualification(ASTContext &Context,
                              const NamedDecl *ND,
                              llvm::ArrayRef<std::string> VisibleNamespaces) {
   for (llvm::StringRef NS : VisibleNamespaces) {
-    assert(NS.endswith("::"));
+    assert(NS.ends_with("::"));
     (void)NS;
   }
   return getQualification(
@@ -757,7 +742,7 @@ const TemplateTypeParmType *getFunctionPackType(const FunctionDecl *Callee) {
 // Returns the template parameter pack type that this parameter was expanded
 // from (if in the Args... or Args&... or Args&&... form), if this is the case,
 // nullptr otherwise.
-const TemplateTypeParmType *getUnderylingPackType(const ParmVarDecl *Param) {
+const TemplateTypeParmType *getUnderlyingPackType(const ParmVarDecl *Param) {
   const auto *PlainType = Param->getType().getTypePtr();
   if (auto *RT = dyn_cast<ReferenceType>(PlainType))
     PlainType = RT->getPointeeTypeAsWritten().getTypePtr();
@@ -793,8 +778,8 @@ class ForwardingCallVisitor
     : public RecursiveASTVisitor<ForwardingCallVisitor> {
 public:
   ForwardingCallVisitor(ArrayRef<const ParmVarDecl *> Parameters)
-      : Parameters{Parameters}, PackType{getUnderylingPackType(
-                                    Parameters.front())} {}
+      : Parameters{Parameters},
+        PackType{getUnderlyingPackType(Parameters.front())} {}
 
   bool VisitCallExpr(CallExpr *E) {
     auto *Callee = getCalleeDeclOrUniqueOverload(E);
@@ -859,7 +844,7 @@ private:
     if (const auto *TTPT = getFunctionPackType(Callee)) {
       // In this case: Separate the parameters into head, pack and tail
       auto IsExpandedPack = [&](const ParmVarDecl *P) {
-        return getUnderylingPackType(P) == TTPT;
+        return getUnderlyingPackType(P) == TTPT;
       };
       ForwardingInfo FI;
       FI.Head = MatchingParams.take_until(IsExpandedPack);
@@ -964,7 +949,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
   if (const auto *TTPT = getFunctionPackType(D)) {
     // Split the parameters into head, pack and tail
     auto IsExpandedPack = [TTPT](const ParmVarDecl *P) {
-      return getUnderylingPackType(P) == TTPT;
+      return getUnderlyingPackType(P) == TTPT;
     };
     ArrayRef<const ParmVarDecl *> Head = Parameters.take_until(IsExpandedPack);
     ArrayRef<const ParmVarDecl *> Pack =
@@ -973,7 +958,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
         Parameters.drop_front(Head.size() + Pack.size());
     SmallVector<const ParmVarDecl *> Result(Parameters.size());
     // Fill in non-pack parameters
-    auto HeadIt = std::copy(Head.begin(), Head.end(), Result.begin());
+    auto *HeadIt = std::copy(Head.begin(), Head.end(), Result.begin());
     auto TailIt = std::copy(Tail.rbegin(), Tail.rend(), Result.rbegin());
     // Recurse on pack parameters
     size_t Depth = 0;
@@ -1016,7 +1001,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
 }
 
 bool isExpandedFromParameterPack(const ParmVarDecl *D) {
-  return getUnderylingPackType(D) != nullptr;
+  return getUnderlyingPackType(D) != nullptr;
 }
 
 } // namespace clangd

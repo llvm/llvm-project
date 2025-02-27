@@ -13,9 +13,9 @@
 ; Function Attrs: noinline nounwind ssp
 define void @foo(i32 %t) {
 entry:
-  %tmp = load i32, i32* @a, align 4
+  %tmp = load i32, ptr @a, align 4
   %add = add nsw i32 %tmp, %t
-  store i32 %add, i32* @a, align 4
+  store i32 %add, ptr @a, align 4
   ret void
 }
 
@@ -33,22 +33,22 @@ entry:
   br i1 %cmp, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %entry
-  %tmp = load i32, i32* @a, align 4
+  %tmp = load i32, ptr @a, align 4
   %add = add nsw i32 %tmp, %t
   %cmp1 = icmp sgt i32 %add, 12
   br i1 %cmp1, label %if.then2, label %if.end4
 
 if.then2:                                         ; preds = %if.then
   tail call void @foo(i32 %add)
-  %tmp1 = load i32, i32* @a, align 4
+  %tmp1 = load i32, ptr @a, align 4
   br label %if.end4
 
 if.end4:                                          ; preds = %if.then2, %if.then, %entry
   %t.addr.0 = phi i32 [ %tmp1, %if.then2 ], [ %t, %if.then ], [ %t, %entry ]
-  %tmp2 = load i32, i32* @b, align 4
+  %tmp2 = load i32, ptr @b, align 4
   %add5 = add nsw i32 %tmp2, %t.addr.0
   tail call void @foo(i32 %add5)
-  %tmp3 = load i32, i32* @b, align 4
+  %tmp3 = load i32, ptr @b, align 4
   %add6 = add nsw i32 %tmp3, %t.addr.0
   ret i32 %add6
 }
@@ -67,7 +67,7 @@ if.end4:                                          ; preds = %if.then2, %if.then,
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define i32 @getC() {
-  %res = load i32, i32* @C, align 4
+  %res = load i32, ptr @C, align 4
   ret i32 %res
 }
 
@@ -83,7 +83,7 @@ define i32 @getC() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define i64 @getSExtC() {
-  %res = load i32, i32* @C, align 4
+  %res = load i32, ptr @C, align 4
   %sextres = sext i32 %res to i64
   ret i64 %sextres
 }
@@ -103,9 +103,9 @@ define i64 @getSExtC() {
 ; CHECK: .loh AdrpLdrGot [[ADRP_LABEL]], [[LDRGOT_LABEL]]
 define void @getSeveralC(i32 %t) {
 entry:
-  %tmp = load i32, i32* @C, align 4
+  %tmp = load i32, ptr @C, align 4
   %add = add nsw i32 %tmp, %t
-  store i32 %add, i32* @C, align 4
+  store i32 %add, ptr @C, align 4
   ret void
 }
 
@@ -122,7 +122,7 @@ entry:
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define void @setC(i32 %t) {
 entry:
-  store i32 %t, i32* @C, align 4
+  store i32 %t, ptr @C, align 4
   ret void
 }
 
@@ -143,8 +143,8 @@ entry:
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpAddLdr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
 define i32 @getInternalCPlus4() {
-  %addr = getelementptr inbounds i32, i32* @InternalC, i32 4
-  %res = load i32, i32* %addr, align 4
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  %res = load i32, ptr %addr, align 4
   ret i32 %res
 }
 
@@ -160,8 +160,8 @@ define i32 @getInternalCPlus4() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpAddLdr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
 define i64 @getSExtInternalCPlus4() {
-  %addr = getelementptr inbounds i32, i32* @InternalC, i32 4
-  %res = load i32, i32* %addr, align 4
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  %res = load i32, ptr %addr, align 4
   %sextres = sext i32 %res to i64
   ret i64 %sextres
 }
@@ -181,10 +181,10 @@ define i64 @getSExtInternalCPlus4() {
 ; CHECK: .loh AdrpAdd [[ADRP_LABEL]], [[ADDGOT_LABEL]]
 define void @getSeveralInternalCPlus4(i32 %t) {
 entry:
-  %addr = getelementptr inbounds i32, i32* @InternalC, i32 4
-  %tmp = load i32, i32* %addr, align 4
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  %tmp = load i32, ptr %addr, align 4
   %add = add nsw i32 %tmp, %t
-  store i32 %add, i32* %addr, align 4
+  store i32 %add, ptr %addr, align 4
   ret void
 }
 
@@ -201,8 +201,8 @@ entry:
 ; CHECK: .loh AdrpAddStr [[ADRP_LABEL]], [[ADDGOT_LABEL]], [[LDR_LABEL]]
 define void @setInternalCPlus4(i32 %t) {
 entry:
-  %addr = getelementptr inbounds i32, i32* @InternalC, i32 4
-  store i32 %t, i32* %addr, align 4
+  %addr = getelementptr inbounds i32, ptr @InternalC, i32 4
+  store i32 %t, ptr %addr, align 4
   ret void
 }
 
@@ -216,7 +216,7 @@ entry:
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdr [[ADRP_LABEL]], [[LDR_LABEL]]
 define i32 @getInternalC() {
-  %res = load i32, i32* @InternalC, align 4
+  %res = load i32, ptr @InternalC, align 4
   ret i32 %res
 }
 
@@ -230,7 +230,7 @@ define i32 @getInternalC() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdr [[ADRP_LABEL]], [[LDR_LABEL]]
 define i64 @getSExtInternalC() {
-  %res = load i32, i32* @InternalC, align 4
+  %res = load i32, ptr @InternalC, align 4
   %sextres = sext i32 %res to i64
   ret i64 %sextres
 }
@@ -247,9 +247,9 @@ define i64 @getSExtInternalC() {
 ; CHECK-NEXT: ret
 define void @getSeveralInternalC(i32 %t) {
 entry:
-  %tmp = load i32, i32* @InternalC, align 4
+  %tmp = load i32, ptr @InternalC, align 4
   %add = add nsw i32 %tmp, %t
-  store i32 %add, i32* @InternalC, align 4
+  store i32 %add, ptr @InternalC, align 4
   ret void
 }
 
@@ -263,7 +263,7 @@ entry:
 ; CHECK-NEXT: ret
 define void @setInternalC(i32 %t) {
 entry:
-  store i32 %t, i32* @InternalC, align 4
+  store i32 %t, ptr @InternalC, align 4
   ret void
 }
 
@@ -282,7 +282,7 @@ entry:
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGot [[ADRP_LABEL]], [[LDRGOT_LABEL]]
 define i8 @getD() {
-  %res = load i8, i8* @D, align 4
+  %res = load i8, ptr @D, align 4
   ret i8 %res
 }
 
@@ -296,7 +296,7 @@ define i8 @getD() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setD(i8 %t) {
-  store i8 %t, i8* @D, align 4
+  store i8 %t, ptr @D, align 4
   ret void
 }
 
@@ -312,7 +312,7 @@ define void @setD(i8 %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define i32 @getSExtD() {
-  %res = load i8, i8* @D, align 4
+  %res = load i8, ptr @D, align 4
   %sextres = sext i8 %res to i32
   ret i32 %sextres
 }
@@ -329,7 +329,7 @@ define i32 @getSExtD() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define i64 @getSExt64D() {
-  %res = load i8, i8* @D, align 4
+  %res = load i8, ptr @D, align 4
   %sextres = sext i8 %res to i64
   ret i64 %sextres
 }
@@ -347,7 +347,7 @@ define i64 @getSExt64D() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGot [[ADRP_LABEL]], [[LDRGOT_LABEL]]
 define i16 @getE() {
-  %res = load i16, i16* @E, align 4
+  %res = load i16, ptr @E, align 4
   ret i16 %res
 }
 
@@ -363,7 +363,7 @@ define i16 @getE() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define i32 @getSExtE() {
-  %res = load i16, i16* @E, align 4
+  %res = load i16, ptr @E, align 4
   %sextres = sext i16 %res to i32
   ret i32 %sextres
 }
@@ -378,7 +378,7 @@ define i32 @getSExtE() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setE(i16 %t) {
-  store i16 %t, i16* @E, align 4
+  store i16 %t, ptr @E, align 4
   ret void
 }
 
@@ -394,7 +394,7 @@ define void @setE(i16 %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define i64 @getSExt64E() {
-  %res = load i16, i16* @E, align 4
+  %res = load i16, ptr @E, align 4
   %sextres = sext i16 %res to i64
   ret i64 %sextres
 }
@@ -413,7 +413,7 @@ define i64 @getSExt64E() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define i64 @getF() {
-  %res = load i64, i64* @F, align 4
+  %res = load i64, ptr @F, align 4
   ret i64 %res
 }
 
@@ -427,7 +427,7 @@ define i64 @getF() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setF(i64 %t) {
-  store i64 %t, i64* @F, align 4
+  store i64 %t, ptr @F, align 4
   ret void
 }
 
@@ -445,7 +445,7 @@ define void @setF(i64 %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define float @getG() {
-  %res = load float, float* @G, align 4
+  %res = load float, ptr @G, align 4
   ret float %res
 }
 
@@ -459,7 +459,7 @@ define float @getG() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setG(float %t) {
-  store float %t, float* @G, align 4
+  store float %t, ptr @G, align 4
   ret void
 }
 
@@ -477,7 +477,7 @@ define void @setG(float %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define half @getH() {
-  %res = load half, half* @H, align 4
+  %res = load half, ptr @H, align 4
   ret half %res
 }
 
@@ -491,7 +491,7 @@ define half @getH() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setH(half %t) {
-  store half %t, half* @H, align 4
+  store half %t, ptr @H, align 4
   ret void
 }
 
@@ -509,7 +509,7 @@ define void @setH(half %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define double @getI() {
-  %res = load double, double* @I, align 4
+  %res = load double, ptr @I, align 4
   ret double %res
 }
 
@@ -523,7 +523,7 @@ define double @getI() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setI(double %t) {
-  store double %t, double* @I, align 4
+  store double %t, ptr @I, align 4
   ret void
 }
 
@@ -541,7 +541,7 @@ define void @setI(double %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define <2 x i32> @getJ() {
-  %res = load <2 x i32>, <2 x i32>* @J, align 4
+  %res = load <2 x i32>, ptr @J, align 4
   ret <2 x i32> %res
 }
 
@@ -555,7 +555,7 @@ define <2 x i32> @getJ() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setJ(<2 x i32> %t) {
-  store <2 x i32> %t, <2 x i32>* @J, align 4
+  store <2 x i32> %t, ptr @J, align 4
   ret void
 }
 
@@ -573,7 +573,7 @@ define void @setJ(<2 x i32> %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define <4 x i32> @getK() {
-  %res = load <4 x i32>, <4 x i32>* @K, align 4
+  %res = load <4 x i32>, ptr @K, align 4
   ret <4 x i32> %res
 }
 
@@ -587,7 +587,7 @@ define <4 x i32> @getK() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotStr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[STR_LABEL]]
 define void @setK(<4 x i32> %t) {
-  store <4 x i32> %t, <4 x i32>* @K, align 4
+  store <4 x i32> %t, ptr @K, align 4
   ret void
 }
 
@@ -605,7 +605,7 @@ define void @setK(<4 x i32> %t) {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGotLdr [[ADRP_LABEL]], [[LDRGOT_LABEL]], [[LDR_LABEL]]
 define <1 x i8> @getL() {
-  %res = load <1 x i8>, <1 x i8>* @L, align 4
+  %res = load <1 x i8>, ptr @L, align 4
   ret <1 x i8> %res
 }
 
@@ -621,7 +621,7 @@ define <1 x i8> @getL() {
 ; CHECK-NEXT: ret
 ; CHECK: .loh AdrpLdrGot [[ADRP_LABEL]], [[LDRGOT_LABEL]]
 define void @setL(<1 x i8> %t) {
-  store <1 x i8> %t, <1 x i8>* @L, align 4
+  store <1 x i8> %t, ptr @L, align 4
   ret void
 }
 
@@ -642,29 +642,29 @@ define void @setL(<1 x i8> %t) {
 ; CHECK: ext.16b v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, #1
 ; CHECK: ret
 ; CHECK: .loh AdrpLdr [[LOH_LABEL0]], [[LOH_LABEL1]]
-define void @uninterestingSub(i8* nocapture %row) #0 {
-  %tmp = bitcast i8* %row to <16 x i8>*
-  %tmp1 = load <16 x i8>, <16 x i8>* %tmp, align 16
+define void @uninterestingSub(ptr nocapture %row) #0 {
+  %tmp = bitcast ptr %row to ptr
+  %tmp1 = load <16 x i8>, ptr %tmp, align 16
   %vext43 = shufflevector <16 x i8> <i8 undef, i8 16, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2>, <16 x i8> %tmp1, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   %add.i.414 = add <16 x i8> zeroinitializer, %vext43
-  store <16 x i8> %add.i.414, <16 x i8>* %tmp, align 16
-  %add.ptr51 = getelementptr inbounds i8, i8* %row, i64 16
-  %tmp2 = bitcast i8* %add.ptr51 to <16 x i8>*
-  %tmp3 = load <16 x i8>, <16 x i8>* %tmp2, align 16
-  %tmp4 = bitcast i8* undef to <16 x i8>*
-  %tmp5 = load <16 x i8>, <16 x i8>* %tmp4, align 16
+  store <16 x i8> %add.i.414, ptr %tmp, align 16
+  %add.ptr51 = getelementptr inbounds i8, ptr %row, i64 16
+  %tmp2 = bitcast ptr %add.ptr51 to ptr
+  %tmp3 = load <16 x i8>, ptr %tmp2, align 16
+  %tmp4 = bitcast ptr undef to ptr
+  %tmp5 = load <16 x i8>, ptr %tmp4, align 16
   %vext157 = shufflevector <16 x i8> %tmp3, <16 x i8> %tmp5, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   %add.i.402 = add <16 x i8> zeroinitializer, %vext157
-  store <16 x i8> %add.i.402, <16 x i8>* %tmp4, align 16
+  store <16 x i8> %add.i.402, ptr %tmp4, align 16
   ret void
 }
 
 @.str.89 = external unnamed_addr constant [12 x i8], align 1
 @.str.90 = external unnamed_addr constant [5 x i8], align 1
 ; CHECK-LABEL: test_r274582
-define void @test_r274582(double %x) {
+define void @test_r274582(double %x, i1 %arg) {
 entry:
-  br i1 undef, label %if.then.i, label %if.end.i
+  br i1 %arg, label %if.then.i, label %if.end.i
 if.then.i:
   ret void
 if.end.i:
@@ -675,9 +675,9 @@ if.end.i:
   %mul = fmul double %x, 1.000000e-06
   %add = fadd double %mul, %mul
   %sub = fsub double %add, %add
-  call void (i8*, ...) @callee(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.89, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.90, i64 0, i64 0), double %sub)
+  call void (ptr, ...) @callee(ptr @.str.89, ptr @.str.90, double %sub)
   unreachable
 }
-declare void @callee(i8* nocapture readonly, ...) 
+declare void @callee(ptr nocapture readonly, ...) 
 
 attributes #0 = { "target-cpu"="cyclone" }

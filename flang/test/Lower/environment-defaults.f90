@@ -5,8 +5,9 @@ program test
   continue
 end
 
-! Test that a null pointer is generated for environment defaults if nothing is specified
+! Test that a null pointer is passed for environment defaults if nothing is specified
 
-! CHECK: fir.global @_QQEnvironmentDefaults constant : !fir.ref<tuple<i[[int_size:.*]], !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>> {
-! CHECK:  %[[VAL_0:.*]] = fir.zero_bits !fir.ref<tuple<i[[int_size]], !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
-! CHECK: fir.has_value  %[[VAL_0]] : !fir.ref<tuple<i[[int_size]], !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
+! CHECK-NOT: @_QQEnvironmentDefaults
+
+! CHECK: %0 = fir.zero_bits !fir.ref<tuple<i32, !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
+! CHECK-NEXT: @_FortranAProgramStart(%arg0, %arg1, %arg2, %0)

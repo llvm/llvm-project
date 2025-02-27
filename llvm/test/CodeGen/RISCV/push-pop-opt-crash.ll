@@ -1,8 +1,8 @@
 ; RUN: llc -mattr=+zcmp -verify-machineinstrs  \
-; RUN: -mtriple=riscv32 -target-abi ilp32 < %s \
+; RUN: -mtriple=riscv32 -target-abi=ilp32 < %s \
 ; RUN: | FileCheck %s -check-prefixes=RV32IZCMP
 ; RUN: llc -mattr=+zcmp -verify-machineinstrs  \
-; RUN: -mtriple=riscv64 -target-abi ilp64 < %s \
+; RUN: -mtriple=riscv64 -target-abi=lp64 < %s \
 ; RUN: | FileCheck %s -check-prefixes=RV64IZCMP
 
 ; This source code exposed a crash in the RISC-V Zcmp Push/Pop optimization
@@ -22,6 +22,8 @@ define  dso_local void @f0() local_unnamed_addr {
 ; RV32IZCMP-NEXT: 	.cfi_offset ra, -4
 ; RV32IZCMP-NEXT: 	call	f1
 ; RV32IZCMP-NEXT: 	cm.pop	{ra}, 16
+; RV32IZCMP-NEXT:     .cfi_restore ra
+; RV32IZCMP-NEXT:     .cfi_def_cfa_offset 0
 ; RV32IZCMP-NEXT: .LBB0_2:                                # %if.F
 ; RV32IZCMP-NEXT: 	tail	f2
 ; RV32IZCMP-NEXT: .Lfunc_end0:
@@ -36,6 +38,8 @@ define  dso_local void @f0() local_unnamed_addr {
 ; RV64IZCMP-NEXT: 	.cfi_offset ra, -8
 ; RV64IZCMP-NEXT: 	call	f1
 ; RV64IZCMP-NEXT: 	cm.pop	{ra}, 16
+; RV64IZCMP-NEXT:     .cfi_restore ra
+; RV64IZCMP-NEXT:     .cfi_def_cfa_offset 0
 ; RV64IZCMP-NEXT: .LBB0_2:                                # %if.F
 ; RV64IZCMP-NEXT: 	tail	f2
 ; RV64IZCMP-NEXT: .Lfunc_end0:

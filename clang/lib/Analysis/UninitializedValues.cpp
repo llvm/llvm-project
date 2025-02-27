@@ -44,7 +44,7 @@ static bool recordIsNotEmpty(const RecordDecl *RD) {
   // We consider a record decl to be empty if it contains only unnamed bit-
   // fields, zero-width fields, and fields of empty record type.
   for (const auto *FD : RD->fields()) {
-    if (FD->isUnnamedBitfield())
+    if (FD->isUnnamedBitField())
       continue;
     if (FD->isZeroSize(FD->getASTContext()))
       continue;
@@ -64,7 +64,7 @@ static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
     QualType ty = vd->getType();
     if (const auto *RD = ty->getAsRecordDecl())
       return recordIsNotEmpty(RD);
-    return ty->isScalarType() || ty->isVectorType() || ty->isRVVType();
+    return ty->isScalarType() || ty->isVectorType() || ty->isRVVSizelessBuiltinType();
   }
   return false;
 }
@@ -379,8 +379,10 @@ void ClassifyRefs::classify(const Expr *E, Class C) {
   }
 
   FindVarResult Var = findVar(E, DC);
-  if (const DeclRefExpr *DRE = Var.getDeclRefExpr())
-    Classification[DRE] = std::max(Classification[DRE], C);
+  if (const DeclRefExpr *DRE = Var.getDeclRefExpr()) {
+    auto &Class = Classification[DRE];
+    Class = std::max(Class, C);
+  }
 }
 
 void ClassifyRefs::VisitDeclStmt(DeclStmt *DS) {

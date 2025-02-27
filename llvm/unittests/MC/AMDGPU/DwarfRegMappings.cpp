@@ -27,7 +27,7 @@ void InitializeAMDGPUTarget() {
   });
 }
 
-std::unique_ptr<LLVMTargetMachine>
+std::unique_ptr<TargetMachine>
 createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   InitializeAMDGPUTarget();
 
@@ -37,9 +37,8 @@ createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-          TStr, CPU, FS, Options, std::nullopt, std::nullopt)));
+  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
+      TStr, CPU, FS, Options, std::nullopt, std::nullopt));
 }
 
 TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {
@@ -52,9 +51,11 @@ TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {
       // PC_64 => 16, EXEC_MASK_64 => 17, S0 => 32, S63 => 95,
       // S64 => 1088, S105 => 1129, V0 => 2560, V255 => 2815,
       // A0 => 3072, A255 => 3327
-      for (int llvmReg : {16, 17, 32, 95, 1088, 1129, 2560, 2815, 3072, 3327}) {
-        MCRegister PCReg(*MRI->getLLVMRegNum(llvmReg, false));
-        EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, false));
+      for (int DwarfEncoding :
+           {16, 17, 32, 95, 1088, 1129, 2560, 2815, 3072, 3327}) {
+        MCRegister Reg = *MRI->getLLVMRegNum(DwarfEncoding, false);
+        EXPECT_EQ(DwarfEncoding, MRI->getDwarfRegNum(Reg, false));
+        EXPECT_EQ(DwarfEncoding, MRI->getDwarfRegNum(Reg, true));
       }
     }
   }
@@ -70,9 +71,11 @@ TEST(AMDGPUDwarfRegMappingTests, TestWave32DwarfRegMapping) {
       // PC_64 => 16, EXEC_MASK_32 => 1, S0 => 32, S63 => 95,
       // S64 => 1088, S105 => 1129, V0 => 1536, V255 => 1791,
       // A0 => 2048, A255 => 2303
-      for (int llvmReg : {16, 1, 32, 95, 1088, 1129, 1536, 1791, 2048, 2303}) {
-        MCRegister PCReg(*MRI->getLLVMRegNum(llvmReg, false));
-        EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, false));
+      for (int DwarfEncoding :
+           {16, 1, 32, 95, 1088, 1129, 1536, 1791, 2048, 2303}) {
+        MCRegister Reg = *MRI->getLLVMRegNum(DwarfEncoding, false);
+        EXPECT_EQ(DwarfEncoding, MRI->getDwarfRegNum(Reg, false));
+        EXPECT_EQ(DwarfEncoding, MRI->getDwarfRegNum(Reg, true));
       }
     }
   }

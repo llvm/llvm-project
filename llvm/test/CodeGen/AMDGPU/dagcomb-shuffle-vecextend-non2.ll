@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; We are only checking that instruction selection can succeed in this case. This
 ; cut down test results in no instructions, but that's fine.
@@ -10,9 +10,10 @@
 ;
 ; GCN: s_endpgm
 
-define amdgpu_ps void @main(i32 %in1) local_unnamed_addr {
+define amdgpu_ps void @main(i32 %in1, i32 inreg %arg) local_unnamed_addr {
 .entry:
-  br i1 undef, label %bb12, label %bb
+  %cond = icmp eq i32 %arg, 0
+  br i1 %cond, label %bb12, label %bb
 
 bb:
   %__llpc_global_proxy_r5.12.vec.insert = insertelement <4 x i32> undef, i32 %in1, i32 3

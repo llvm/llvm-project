@@ -193,9 +193,8 @@ public:
 
 class Location {
   template <typename CHECKER>
-  static void _checkLocation(void *checker,
-                             const SVal &location, bool isLoad, const Stmt *S,
-                             CheckerContext &C) {
+  static void _checkLocation(void *checker, SVal location, bool isLoad,
+                             const Stmt *S, CheckerContext &C) {
     ((const CHECKER *)checker)->checkLocation(location, isLoad, S, C);
   }
 
@@ -209,8 +208,7 @@ public:
 
 class Bind {
   template <typename CHECKER>
-  static void _checkBind(void *checker,
-                         const SVal &location, const SVal &val, const Stmt *S,
+  static void _checkBind(void *checker, SVal location, SVal val, const Stmt *S,
                          CheckerContext &C) {
     ((const CHECKER *)checker)->checkBind(location, val, S, C);
   }
@@ -456,10 +454,8 @@ namespace eval {
 
 class Assume {
   template <typename CHECKER>
-  static ProgramStateRef _evalAssume(void *checker,
-                                         ProgramStateRef state,
-                                         const SVal &cond,
-                                         bool assumption) {
+  static ProgramStateRef _evalAssume(void *checker, ProgramStateRef state,
+                                     SVal cond, bool assumption) {
     return ((const CHECKER *)checker)->evalAssume(state, cond, assumption);
   }
 

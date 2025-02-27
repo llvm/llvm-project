@@ -91,7 +91,7 @@ bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,
       expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(*BCOrErr));
   if (!TripleOrErr)
     return false;
-  return StringRef(*TripleOrErr).startswith(TriplePrefix);
+  return StringRef(*TripleOrErr).starts_with(TriplePrefix);
 }
 
 std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
@@ -382,17 +382,17 @@ void LTOModule::addDefinedDataSymbol(StringRef Name, const GlobalValue *v) {
   // special case if this data blob is an ObjC class definition
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(v)) {
     StringRef Section = GV->getSection();
-    if (Section.startswith("__OBJC,__class,")) {
+    if (Section.starts_with("__OBJC,__class,")) {
       addObjCClass(GV);
     }
 
     // special case if this data blob is an ObjC category definition
-    else if (Section.startswith("__OBJC,__category,")) {
+    else if (Section.starts_with("__OBJC,__category,")) {
       addObjCCategory(GV);
     }
 
     // special case if this data blob is the list of referenced classes
-    else if (Section.startswith("__OBJC,__cls_refs,")) {
+    else if (Section.starts_with("__OBJC,__cls_refs,")) {
       addObjCClassRef(GV);
     }
   }
@@ -406,11 +406,16 @@ void LTOModule::addDefinedFunctionSymbol(ModuleSymbolTable::Symbol Sym) {
     Buffer.c_str();
   }
 
-  const Function *F = cast<Function>(cast<GlobalValue *>(Sym));
-  addDefinedFunctionSymbol(Buffer, F);
+  auto *GV = cast<GlobalValue *>(Sym);
+  assert((isa<Function>(GV) ||
+          (isa<GlobalAlias>(GV) &&
+           isa<Function>(cast<GlobalAlias>(GV)->getAliasee()))) &&
+         "Not function or function alias");
+
+  addDefinedFunctionSymbol(Buffer, GV);
 }
 
-void LTOModule::addDefinedFunctionSymbol(StringRef Name, const Function *F) {
+void LTOModule::addDefinedFunctionSymbol(StringRef Name, const GlobalValue *F) {
   // add to list of defined symbols
   addDefinedSymbol(Name, F, true);
 }
@@ -611,7 +616,11 @@ void LTOModule::parseSymbols() {
     }
 
     assert(isa<GlobalAlias>(GV));
-    addDefinedDataSymbol(Sym);
+
+    if (isa<Function>(cast<GlobalAlias>(GV)->getAliasee()))
+      addDefinedFunctionSymbol(Sym);
+    else
+      addDefinedDataSymbol(Sym);
   }
 
   // make symbols for all undefines
@@ -694,7 +703,7 @@ bool LTOModule::hasCtorDtor() const {
     if (auto *GV = dyn_cast_if_present<GlobalValue *>(Sym)) {
       StringRef Name = GV->getName();
       if (Name.consume_front("llvm.global_")) {
-        if (Name.equals("ctors") || Name.equals("dtors"))
+        if (Name == "ctors" || Name == "dtors")
           return true;
       }
     }

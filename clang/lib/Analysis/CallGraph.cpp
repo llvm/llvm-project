@@ -147,6 +147,9 @@ void CallGraph::addNodesForBlocks(DeclContext *D) {
 }
 
 CallGraph::CallGraph() {
+  ShouldWalkTypesOfTypeLocs = false;
+  ShouldVisitTemplateInstantiations = true;
+  ShouldVisitImplicitCode = true;
   Root = getOrInsertNode(nullptr);
 }
 
@@ -168,7 +171,7 @@ bool CallGraph::includeCalleeInGraph(const Decl *D) {
       return false;
 
     IdentifierInfo *II = FD->getIdentifier();
-    if (II && II->getName().startswith("__inline"))
+    if (II && II->getName().starts_with("__inline"))
       return false;
   }
 

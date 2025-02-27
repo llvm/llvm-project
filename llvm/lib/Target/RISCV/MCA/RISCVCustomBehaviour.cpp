@@ -20,26 +20,6 @@
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
-// This brings in a table with primary key of
-// base instruction opcode and lmul and maps
-// to the opcode of the pseudo instruction.
-namespace RISCVVInversePseudosTable {
-using namespace llvm;
-using namespace llvm::RISCV;
-
-struct PseudoInfo {
-  uint16_t Pseudo;
-  uint16_t BaseInstr;
-  uint8_t VLMul;
-  uint8_t SEW;
-};
-
-#define GET_RISCVVInversePseudosTable_IMPL
-#define GET_RISCVVInversePseudosTable_DECL
-#include "RISCVGenSearchableTables.inc"
-
-} // end namespace RISCVVInversePseudosTable
-
 namespace llvm {
 namespace mca {
 
@@ -127,32 +107,32 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
     LLVM_DEBUG(dbgs() << "RVCB: Found VSETVLI and creating instrument for it: "
                       << Inst << "\n");
     unsigned VTypeI = Inst.getOperand(2).getImm();
-    RISCVII::VLMUL VLMUL = RISCVVType::getVLMUL(VTypeI);
+    RISCVVType::VLMUL VLMUL = RISCVVType::getVLMUL(VTypeI);
 
     StringRef LMUL;
     switch (VLMUL) {
-    case RISCVII::LMUL_1:
+    case RISCVVType::LMUL_1:
       LMUL = "M1";
       break;
-    case RISCVII::LMUL_2:
+    case RISCVVType::LMUL_2:
       LMUL = "M2";
       break;
-    case RISCVII::LMUL_4:
+    case RISCVVType::LMUL_4:
       LMUL = "M4";
       break;
-    case RISCVII::LMUL_8:
+    case RISCVVType::LMUL_8:
       LMUL = "M8";
       break;
-    case RISCVII::LMUL_F2:
+    case RISCVVType::LMUL_F2:
       LMUL = "MF2";
       break;
-    case RISCVII::LMUL_F4:
+    case RISCVVType::LMUL_F4:
       LMUL = "MF4";
       break;
-    case RISCVII::LMUL_F8:
+    case RISCVVType::LMUL_F8:
       LMUL = "MF8";
       break;
-    case RISCVII::LMUL_RESERVED:
+    case RISCVVType::LMUL_RESERVED:
       llvm_unreachable("Cannot create instrument for LMUL_RESERVED");
     }
     SmallVector<UniqueInstrument> Instruments;
@@ -186,36 +166,55 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
 }
 
 static std::pair<uint8_t, uint8_t>
-getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, RISCVII::VLMUL LMUL,
-                                    uint8_t SEW) {
+getEEWAndEMUL(unsigned Opcode, RISCVVType::VLMUL LMUL, uint8_t SEW) {
   uint8_t EEW;
   switch (Opcode) {
   case RISCV::VLM_V:
   case RISCV::VSM_V:
   case RISCV::VLE8_V:
   case RISCV::VSE8_V:
+  case RISCV::VLSE8_V:
+  case RISCV::VSSE8_V:
     EEW = 8;
     break;
   case RISCV::VLE16_V:
   case RISCV::VSE16_V:
+  case RISCV::VLSE16_V:
+  case RISCV::VSSE16_V:
     EEW = 16;
     break;
   case RISCV::VLE32_V:
   case RISCV::VSE32_V:
+  case RISCV::VLSE32_V:
+  case RISCV::VSSE32_V:
     EEW = 32;
     break;
   case RISCV::VLE64_V:
   case RISCV::VSE64_V:
+  case RISCV::VLSE64_V:
+  case RISCV::VSSE64_V:
     EEW = 64;
     break;
   default:
-    llvm_unreachable("Opcode is not a vector unit stride load nor store");
+    llvm_unreachable("Could not determine EEW from Opcode");
   }
 
   auto EMUL = RISCVVType::getSameRatioLMUL(SEW, LMUL, EEW);
   if (!EEW)
     llvm_unreachable("Invalid SEW or LMUL for new ratio");
   return std::make_pair(EEW, *EMUL);
+}
+
+bool opcodeHasEEWAndEMULInfo(unsigned short Opcode) {
+  return Opcode == RISCV::VLM_V || Opcode == RISCV::VSM_V ||
+         Opcode == RISCV::VLE8_V || Opcode == RISCV::VSE8_V ||
+         Opcode == RISCV::VLE16_V || Opcode == RISCV::VSE16_V ||
+         Opcode == RISCV::VLE32_V || Opcode == RISCV::VSE32_V ||
+         Opcode == RISCV::VLE64_V || Opcode == RISCV::VSE64_V ||
+         Opcode == RISCV::VLSE8_V || Opcode == RISCV::VSSE8_V ||
+         Opcode == RISCV::VLSE16_V || Opcode == RISCV::VSSE16_V ||
+         Opcode == RISCV::VLSE32_V || Opcode == RISCV::VSSE32_V ||
+         Opcode == RISCV::VLSE64_V || Opcode == RISCV::VSSE64_V;
 }
 
 unsigned RISCVInstrumentManager::getSchedClassID(
@@ -249,13 +248,9 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   uint8_t SEW = SI ? SI->getSEW() : 0;
 
   const RISCVVInversePseudosTable::PseudoInfo *RVV = nullptr;
-  if (Opcode == RISCV::VLM_V || Opcode == RISCV::VSM_V ||
-      Opcode == RISCV::VLE8_V || Opcode == RISCV::VSE8_V ||
-      Opcode == RISCV::VLE16_V || Opcode == RISCV::VSE16_V ||
-      Opcode == RISCV::VLE32_V || Opcode == RISCV::VSE32_V ||
-      Opcode == RISCV::VLE64_V || Opcode == RISCV::VSE64_V) {
-    RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(LMUL);
-    auto [EEW, EMUL] = getEEWAndEMULForUnitStrideLoadStore(Opcode, VLMUL, SEW);
+  if (opcodeHasEEWAndEMULInfo(Opcode)) {
+    RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(LMUL);
+    auto [EEW, EMUL] = getEEWAndEMUL(Opcode, VLMUL, SEW);
     RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, EMUL, EEW);
   } else {
     // Check if it depends on LMUL and SEW

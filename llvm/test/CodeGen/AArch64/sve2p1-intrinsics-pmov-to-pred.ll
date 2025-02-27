@@ -4,12 +4,7 @@
 define <vscale x 16 x i1> @test_pmov_to_pred_i8(<vscale x 16 x i8> %zn) {
 ; CHECK-LABEL: test_pmov_to_pred_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.pred.lane.nxv16i8
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    pmov	p0.b, z0
 ; CHECK-NEXT:    ret
   entry:
   %res = call <vscale x 16 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.nxv16i8(<vscale x 16 x i8> %zn, i32 0)
@@ -19,27 +14,10 @@ define <vscale x 16 x i1> @test_pmov_to_pred_i8(<vscale x 16 x i8> %zn) {
 define <vscale x 8 x i1> @test_pmov_to_pred_i16(<vscale x 8 x i16> %zn) {
 ; CHECK-LABEL: test_pmov_to_pred_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    mov z8.d, z0.d
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.pred.lane.nxv8i16
-; CHECK-NEXT:    mov z0.d, z8.d
-; CHECK-NEXT:    mov w0, #1 // =0x1
-; CHECK-NEXT:    mov p4.b, p0.b
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.pred.lane.nxv8i16
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    eor p0.b, p1/z, p4.b, p0.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ptrue	p0.h
+; CHECK-NEXT:    pmov	p1.h, z0[0]
+; CHECK-NEXT:    pmov	p2.h, z0[1]
+; CHECK-NEXT:    eor	p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   entry:
   %res1 = call <vscale x 8 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.nxv8i16(<vscale x 8 x i16> %zn, i32 0)
@@ -52,27 +30,10 @@ define <vscale x 8 x i1> @test_pmov_to_pred_i16(<vscale x 8 x i16> %zn) {
 define <vscale x 4 x i1> @test_pmov_to_pred_i32(<vscale x 4 x i32> %zn) {
 ; CHECK-LABEL: test_pmov_to_pred_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    mov z8.d, z0.d
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.pred.lane.nxv4i32
-; CHECK-NEXT:    mov z0.d, z8.d
-; CHECK-NEXT:    mov w0, #3 // =0x3
-; CHECK-NEXT:    mov p4.b, p0.b
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.pred.lane.nxv4i32
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    eor p0.b, p1/z, p4.b, p0.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ptrue	p0.s
+; CHECK-NEXT:    pmov	p1.s, z0[0]
+; CHECK-NEXT:    pmov	p2.s, z0[3]
+; CHECK-NEXT:    eor	p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   entry:
   %res1 = call <vscale x 4 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.nxv4i32(<vscale x 4 x i32> %zn, i32 0)
@@ -85,27 +46,10 @@ define <vscale x 4 x i1> @test_pmov_to_pred_i32(<vscale x 4 x i32> %zn) {
 define <vscale x 2 x i1> @test_pmov_to_pred_i64(<vscale x 2 x i64> %zn) {
 ; CHECK-LABEL: test_pmov_to_pred_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    mov z8.d, z0.d
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.pred.lane.nxv2i64
-; CHECK-NEXT:    mov z0.d, z8.d
-; CHECK-NEXT:    mov w0, #7 // =0x7
-; CHECK-NEXT:    mov p4.b, p0.b
-; CHECK-NEXT:    bl llvm.aarch64.sve.pmov.to.pred.lane.nxv2i64
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    eor p0.b, p1/z, p4.b, p0.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ptrue	p0.d
+; CHECK-NEXT:    pmov	p1.d, z0[0]
+; CHECK-NEXT:    pmov	p2.d, z0[7]
+; CHECK-NEXT:    eor	p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   entry:
   %res1 = call <vscale x 2 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.nxv2i64(<vscale x 2 x i64> %zn, i32 0)

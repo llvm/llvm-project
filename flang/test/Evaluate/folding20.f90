@@ -5,6 +5,10 @@ module m
   integer, parameter :: intmatrix(*,*) = reshape([1, 2, 3, 4, 5, 6], [2, 3])
   logical, parameter :: odds(2,3) = mod(intmatrix, 2) == 1
   character(*), parameter :: chmatrix(*,*) = reshape(['abc', 'def', 'ghi', 'jkl', 'mno', 'pqr'], [2, 3])
+  real, parameter :: nan = real(z'7FC00000'), inf = real(z'7F800000')
+  real, parameter :: nans(*) = [nan, nan]
+  real, parameter :: someNan(*) = [nan, 0.]
+  real, parameter :: someInf(*) = [inf, 0.]
 
   logical, parameter :: test_allidentity = all([Logical::])
   logical, parameter :: test_all = .not. all(odds)
@@ -43,9 +47,15 @@ module m
   logical, parameter :: test_rminval = minval(real(intmatrix)) == 1.0
   logical, parameter :: test_rmaxval_scalar_mask = maxval(real(intmatrix), .true.) == 6.0
   logical, parameter :: test_rminval_scalar_mask = minval(real(intmatrix), .false.) == huge(0.0)
+  logical, parameter :: test_rmaxval_allNaN = maxval(nans) /= maxval(nans)
+  logical, parameter :: test_rminval_allNaN = maxval(nans) /= maxval(nans)
+  logical, parameter :: test_rmaxval_someNaN = maxval(someNan) == 0.
+  logical, parameter :: test_rminval_someNaN = minval(someNan) == 0.
+  logical, parameter :: test_rmaxval_someInf = maxval(someInf) == inf
+  logical, parameter :: test_rminval_someInf = minval(-someInf) == -inf
   logical, parameter :: test_cmaxlen = len(maxval([character*4::])) == 4
   logical, parameter :: test_cmaxidentity = maxval([character*4::]) == repeat(char(0), 4)
-  logical, parameter :: test_cminidentity = minval([character*4::]) == repeat(char(127), 4)
+  logical, parameter :: test_cminidentity = minval([character*4::]) == repeat(char(255), 4)
   logical, parameter :: test_cmaxval = maxval(chmatrix) == 'pqr'
   logical, parameter :: test_cminval = minval(chmatrix) == 'abc'
   logical, parameter :: test_maxvaldim1 = all(maxval(intmatrix,dim=1) == [2, 4, 6])

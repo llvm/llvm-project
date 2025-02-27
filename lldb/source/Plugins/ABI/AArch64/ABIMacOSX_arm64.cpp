@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -29,6 +28,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Utility/ARM64_DWARF_Registers.h"
 
@@ -240,13 +240,13 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                       lldb::ValueObjectSP &new_value_sp) {
   Status error;
   if (!new_value_sp) {
-    error.SetErrorString("Empty value object for return value.");
+    error = Status::FromErrorString("Empty value object for return value.");
     return error;
   }
 
   CompilerType return_value_type = new_value_sp->GetCompilerType();
   if (!return_value_type) {
-    error.SetErrorString("Null clang type for return value.");
+    error = Status::FromErrorString("Null clang type for return value.");
     return error;
   }
 
@@ -259,7 +259,7 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     Status data_error;
     const uint64_t byte_size = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
           data_error.AsCString());
       return error;
@@ -276,7 +276,7 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             uint64_t raw_value = data.GetMaxU64(&offset, byte_size);
 
             if (!reg_ctx->WriteRegisterFromUnsigned(x0_info, raw_value))
-              error.SetErrorString("failed to write register x0");
+              error = Status::FromErrorString("failed to write register x0");
           } else {
             uint64_t raw_value = data.GetMaxU64(&offset, 8);
 
@@ -286,17 +286,18 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
               raw_value = data.GetMaxU64(&offset, byte_size - offset);
 
               if (!reg_ctx->WriteRegisterFromUnsigned(x1_info, raw_value))
-                error.SetErrorString("failed to write register x1");
+                error = Status::FromErrorString("failed to write register x1");
             }
           }
         } else {
-          error.SetErrorString("We don't support returning longer than 128 bit "
-                               "integer values at present.");
+          error = Status::FromErrorString(
+              "We don't support returning longer than 128 bit "
+              "integer values at present.");
         }
       } else if (type_flags & eTypeIsFloat) {
         if (type_flags & eTypeIsComplex) {
           // Don't handle complex yet.
-          error.SetErrorString(
+          error = Status::FromErrorString(
               "returning complex float values are not supported");
         } else {
           const RegisterInfo *v0_info = reg_ctx->GetRegisterInfoByName("v0", 0);
@@ -307,13 +308,16 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
               error = reg_value.SetValueFromData(*v0_info, data, 0, true);
               if (error.Success())
                 if (!reg_ctx->WriteRegister(v0_info, reg_value))
-                  error.SetErrorString("failed to write register v0");
+                  error =
+                      Status::FromErrorString("failed to write register v0");
             } else {
-              error.SetErrorString("returning float values longer than 128 "
-                                   "bits are not supported");
+              error = Status::FromErrorString(
+                  "returning float values longer than 128 "
+                  "bits are not supported");
             }
           } else
-            error.SetErrorString("v0 register is not available on this target");
+            error = Status::FromErrorString(
+                "v0 register is not available on this target");
         }
       }
     } else if (type_flags & eTypeIsVector) {
@@ -326,23 +330,20 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             error = reg_value.SetValueFromData(*v0_info, data, 0, true);
             if (error.Success()) {
               if (!reg_ctx->WriteRegister(v0_info, reg_value))
-                error.SetErrorString("failed to write register v0");
+                error = Status::FromErrorString("failed to write register v0");
             }
           }
         }
       }
     }
   } else {
-    error.SetErrorString("no registers are available");
+    error = Status::FromErrorString("no registers are available");
   }
 
   return error;
 }
 
-bool ABIMacOSX_arm64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABIMacOSX_arm64::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = arm64_dwarf::lr;
   uint32_t sp_reg_num = arm64_dwarf::sp;
   uint32_t pc_reg_num = arm64_dwarf::pc;
@@ -352,23 +353,17 @@ bool ABIMacOSX_arm64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   // Our previous Call Frame Address is the stack pointer
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // Our previous PC is in the LR
+  // Our previous PC is in the LR, all other registers are the same.
   row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
 
-  unwind_plan.AppendRow(row);
-
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("arm64 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("arm64 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABIMacOSX_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABIMacOSX_arm64::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = arm64_dwarf::fp;
   uint32_t pc_reg_num = arm64_dwarf::pc;
 
@@ -382,12 +377,13 @@ bool ABIMacOSX_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("arm64-apple-darwin default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("arm64-apple-darwin default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says
@@ -814,11 +810,11 @@ addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
     mask = process_sp->GetCodeAddressMask();
     if (pc & pac_sign_extension) {
       addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
-      if (highmem_mask)
+      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
         mask = highmem_mask;
     }
   }
-  if (mask == 0)
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
@@ -833,11 +829,11 @@ addr_t ABIMacOSX_arm64::FixDataAddress(addr_t pc) {
     mask = process_sp->GetDataAddressMask();
     if (pc & pac_sign_extension) {
       addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
-      if (highmem_mask)
+      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
         mask = highmem_mask;
     }
   }
-  if (mask == 0)
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);

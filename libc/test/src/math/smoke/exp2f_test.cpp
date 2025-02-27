@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/errno/libc_errno.h"
 #include "src/math/exp2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <stdint.h>
 
 using LlvmLibcExp2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcExp2fTest, SpecialNumbers) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp2f(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -43,16 +42,43 @@ TEST_F(LlvmLibcExp2fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp2fTest, Overflow) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000000U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(FPBits(0x43000000U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(FPBits(0x43000001U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcExp2fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(max_denormal));
+}
+
+#endif

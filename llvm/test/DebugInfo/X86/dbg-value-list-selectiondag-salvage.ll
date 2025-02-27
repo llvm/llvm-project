@@ -22,16 +22,16 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.anon = type { i32 }
 
-@b = dso_local local_unnamed_addr global %struct.anon* null, align 8, !dbg !0
+@b = dso_local local_unnamed_addr global ptr null, align 8, !dbg !0
 @c = dso_local local_unnamed_addr global i32 0, align 4, !dbg !6
 
 define dso_local void @d() local_unnamed_addr !dbg !17 {
 entry:
-  %0 = load %struct.anon*, %struct.anon** @b, align 8, !dbg !23
-  %add.ptr = getelementptr inbounds %struct.anon, %struct.anon* %0, i64 -1, i32 0, !dbg !28
-  call void @llvm.dbg.value(metadata !DIArgList(i32* %add.ptr), metadata !21, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value)), !dbg !29
-  %1 = load i32, i32* %add.ptr, align 4, !dbg !30
-  store i32 %1, i32* @c, align 4, !dbg !33
+  %0 = load ptr, ptr @b, align 8, !dbg !23
+  %add.ptr = getelementptr inbounds %struct.anon, ptr %0, i64 -1, i32 0, !dbg !28
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %add.ptr), metadata !21, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value)), !dbg !29
+  %1 = load i32, ptr %add.ptr, align 4, !dbg !30
+  store i32 %1, ptr @c, align 4, !dbg !33
   ret void, !dbg !34
 }
 

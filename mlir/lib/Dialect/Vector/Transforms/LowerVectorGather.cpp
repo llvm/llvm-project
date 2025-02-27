@@ -31,7 +31,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
@@ -55,6 +54,8 @@ namespace {
 /// ```
 ///
 /// When applied exhaustively, this will produce a sequence of 1-d gather ops.
+///
+/// Supports vector types with a fixed leading dimension.
 struct FlattenGather : OpRewritePattern<vector::GatherOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -64,6 +65,11 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
     if (resultTy.getRank() < 2)
       return rewriter.notifyMatchFailure(op, "already flat");
 
+    // Unrolling doesn't take vscale into account. Pattern is disabled for
+    // vectors with leading scalable dim(s).
+    if (resultTy.getScalableDims().front())
+      return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
+
     Location loc = op.getLoc();
     Value indexVec = op.getIndexVec();
     Value maskVec = op.getMask();
@@ -72,8 +78,7 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultTy, rewriter.getZeroAttr(resultTy));
 
-    Type subTy = VectorType::get(resultTy.getShape().drop_front(),
-                                 resultTy.getElementType());
+    VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
 
     for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
       int64_t thisIdx[1] = {i};
@@ -96,6 +101,87 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
   }
 };
 
+/// Rewrites a vector.gather of a strided MemRef as a gather of a non-strided
+/// MemRef with updated indices that model the strided access.
+///
+/// ```mlir
+///   %subview = memref.subview %M (...)
+///     : memref<100x3xf32> to memref<100xf32, strided<[3]>>
+///   %gather = vector.gather %subview[%idxs] (...) : memref<100xf32, strided<[3]>>
+/// ```
+/// ==>
+/// ```mlir
+///   %collapse_shape = memref.collapse_shape %M (...)
+///     : memref<100x3xf32> into memref<300xf32>
+///   %new_idxs = arith.muli %idxs, %c3 : vector<4xindex>
+///   %gather = vector.gather %collapse_shape[%new_idxs] (...)
+///     : memref<300xf32> (...)
+/// ```
+///
+/// ATM this is effectively limited to reading a 1D Vector from a 2D MemRef,
+/// but should be fairly straightforward to extend beyond that.
+struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::GatherOp op,
+                                PatternRewriter &rewriter) const override {
+    Value base = op.getBase();
+
+    // TODO: Strided accesses might be coming from other ops as well
+    auto subview = base.getDefiningOp<memref::SubViewOp>();
+    if (!subview)
+      return failure();
+
+    auto sourceType = subview.getSource().getType();
+
+    // TODO: Allow ranks > 2.
+    if (sourceType.getRank() != 2)
+      return failure();
+
+    // Get strides
+    auto layout = subview.getResult().getType().getLayout();
+    auto stridedLayoutAttr = llvm::dyn_cast<StridedLayoutAttr>(layout);
+    if (!stridedLayoutAttr)
+      return failure();
+
+    // TODO: Allow the access to be strided in multiple dimensions.
+    if (stridedLayoutAttr.getStrides().size() != 1)
+      return failure();
+
+    int64_t srcTrailingDim = sourceType.getShape().back();
+
+    // Assume that the stride matches the trailing dimension of the source
+    // memref.
+    // TODO: Relax this assumption.
+    if (stridedLayoutAttr.getStrides()[0] != srcTrailingDim)
+      return failure();
+
+    // 1. Collapse the input memref so that it's "flat".
+    SmallVector<ReassociationIndices> reassoc = {{0, 1}};
+    Value collapsed = rewriter.create<memref::CollapseShapeOp>(
+        op.getLoc(), subview.getSource(), reassoc);
+
+    // 2. Generate new gather indices that will model the
+    // strided access.
+    IntegerAttr stride = rewriter.getIndexAttr(srcTrailingDim);
+    VectorType vType = op.getIndexVec().getType();
+    Value mulCst = rewriter.create<arith::ConstantOp>(
+        op.getLoc(), vType, DenseElementsAttr::get(vType, stride));
+
+    Value newIdxs =
+        rewriter.create<arith::MulIOp>(op.getLoc(), op.getIndexVec(), mulCst);
+
+    // 3. Create an updated gather op with the collapsed input memref and the
+    // updated indices.
+    Value newGather = rewriter.create<vector::GatherOp>(
+        op.getLoc(), op.getResult().getType(), collapsed, op.getIndices(),
+        newIdxs, op.getMask(), op.getPassThru());
+    rewriter.replaceOp(op, newGather);
+
+    return success();
+  }
+};
+
 /// Turns 1-d `vector.gather` into a scalarized sequence of `vector.loads` or
 /// `tensor.extract`s. To avoid out-of-bounds memory accesses, these
 /// loads/extracts are made conditional using `scf.if` ops.
@@ -108,6 +194,9 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     if (resultTy.getRank() != 1)
       return rewriter.notifyMatchFailure(op, "unsupported rank");
 
+    if (resultTy.isScalable())
+      return rewriter.notifyMatchFailure(op, "not a fixed-width vector");
+
     Location loc = op.getLoc();
     Type elemTy = resultTy.getElementType();
     // Vector type with a single element. Used to generate `vector.loads`.
@@ -115,6 +204,18 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
     Value condMask = op.getMask();
     Value base = op.getBase();
+
+    // vector.load requires the most minor memref dim to have unit stride
+    // (unless reading exactly 1 element)
+    if (auto memType = dyn_cast<MemRefType>(base.getType())) {
+      if (auto stridesAttr =
+              dyn_cast_if_present<StridedLayoutAttr>(memType.getLayout())) {
+        if (stridesAttr.getStrides().back() != 1 &&
+            resultTy.getNumElements() != 1)
+          return failure();
+      }
+    }
+
     Value indexVec = rewriter.createOrFold<arith::IndexCastOp>(
         loc, op.getIndexVectorType().clone(rewriter.getIndexType()),
         op.getIndexVec());
@@ -168,6 +269,6 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
 void mlir::vector::populateVectorGatherLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<FlattenGather, Gather1DToConditionalLoads>(patterns.getContext(),
-                                                          benefit);
+  patterns.add<FlattenGather, RemoveStrideFromGatherSource,
+               Gather1DToConditionalLoads>(patterns.getContext(), benefit);
 }

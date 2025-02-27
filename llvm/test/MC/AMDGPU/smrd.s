@@ -1,9 +1,7 @@
-// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN  %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck --check-prefix=GCN %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck --check-prefixes=GCN,CI %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=VI %s
 
-// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti  %s 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=fiji  %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
 
@@ -111,7 +109,7 @@ s_load_dwordx4 ttmp[4:7], ttmp[2:3], ttmp4
 
 s_load_dwordx4 s[100:103], s[2:3], s4
 // GCN: s_load_dwordx4 s[100:103], s[2:3], s4 ; encoding: [0x04,0x02,0xb2,0xc0]
-// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: s[100:103] register not available on this GPU
 
 s_load_dwordx8 s[8:15], s[2:3], 1
 // GCN: s_load_dwordx8 s[8:15], s[2:3], 0x1 ; encoding: [0x01,0x03,0xc4,0xc0]
@@ -123,7 +121,7 @@ s_load_dwordx8 s[8:15], s[2:3], s4
 
 s_load_dwordx8 s[96:103], s[2:3], s4
 // GCN: s_load_dwordx8 s[96:103], s[2:3], s4 ; encoding: [0x04,0x02,0xf0,0xc0]
-// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: s[96:103] register not available on this GPU
 
 s_load_dwordx16 s[16:31], s[2:3], 1
 // GCN: s_load_dwordx16 s[16:31], s[2:3], 0x1 ; encoding: [0x01,0x03,0x08,0xc1]
@@ -135,7 +133,7 @@ s_load_dwordx16 s[16:31], s[2:3], s4
 
 s_load_dwordx16 s[88:103], s[2:3], s4
 // GCN: s_load_dwordx16 s[88:103], s[2:3], s4 ; encoding: [0x04,0x02,0x2c,0xc1]
-// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: s[88:103] register not available on this GPU
 
 s_buffer_load_dword s1, s[4:7], 1
 // GCN: s_buffer_load_dword s1, s[4:7], 0x1 ; encoding: [0x01,0x85,0x00,0xc2]
@@ -195,7 +193,7 @@ s_buffer_load_dwordx4 ttmp[8:11], ttmp[4:7], ttmp4
 
 s_buffer_load_dwordx4 s[100:103], s[4:7], s4
 // GCN: s_buffer_load_dwordx4 s[100:103], s[4:7], s4 ; encoding: [0x04,0x04,0xb2,0xc2]
-// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: s[100:103] register not available on this GPU
 
 s_buffer_load_dwordx8 s[8:15], s[4:7], 1
 // GCN: s_buffer_load_dwordx8 s[8:15], s[4:7], 0x1 ; encoding: [0x01,0x05,0xc4,0xc2]
@@ -207,7 +205,7 @@ s_buffer_load_dwordx8 s[8:15], s[4:7], s4
 
 s_buffer_load_dwordx8 s[96:103], s[4:7], s4
 // GCN: s_buffer_load_dwordx8 s[96:103], s[4:7], s4 ; encoding: [0x04,0x04,0xf0,0xc2]
-// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: s[96:103] register not available on this GPU
 
 s_buffer_load_dwordx16 s[16:31], s[4:7], 1
 // GCN: s_buffer_load_dwordx16 s[16:31], s[4:7], 0x1 ; encoding: [0x01,0x05,0x08,0xc3]
@@ -219,7 +217,7 @@ s_buffer_load_dwordx16 s[16:31], s[4:7], s4
 
 s_buffer_load_dwordx16 s[88:103], s[4:7], s4
 // GCN: s_buffer_load_dwordx16 s[88:103], s[4:7], s4 ; encoding: [0x04,0x04,0x2c,0xc3]
-// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: s[88:103] register not available on this GPU
 
 s_dcache_inv
 // GCN: s_dcache_inv ; encoding: [0x00,0x00,0xc0,0xc7]

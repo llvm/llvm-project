@@ -4,39 +4,39 @@
 %"struct.std::array" = type { [32 x i8] }
 
 ; Function Attrs: nounwind uwtable
-define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv() unnamed_addr #0 align 2 {
+define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv(i1 %arg) unnamed_addr #0 align 2 {
 ; CHECK-LABEL: @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_END50_I:%.*]], label [[IF_THEN22_I:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END50_I:%.*]], label [[IF_THEN22_I:%.*]]
 ; CHECK:       if.then22.i:
 ; CHECK-NEXT:    [[SUB_I:%.*]] = add nsw i32 undef, -1
 ; CHECK-NEXT:    [[CONV31_I:%.*]] = and i32 undef, [[SUB_I]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[CONV31_I]], i32 0
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[SHUFFLE1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[SHR_4_I_I:%.*]] = lshr i32 [[CONV31_I]], 5
-; CHECK-NEXT:    [[SHR_5_I_I:%.*]] = lshr i32 [[CONV31_I]], 6
-; CHECK-NEXT:    [[SHR_6_I_I:%.*]] = lshr i32 [[CONV31_I]], 7
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[CONV31_I]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <8 x i32> [[SHUFFLE]], <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i32> poison, i32 [[SUB_I]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i32> [[TMP5]], <16 x i32> [[TMP6]], <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i32> [[TMP7]], i32 [[SHR_4_I_I]], i32 5
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i32> [[TMP8]], i32 [[SHR_5_I_I]], i32 6
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i32> [[TMP9]], i32 [[SHR_6_I_I]], i32 7
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x i32> [[TMP10]], <16 x i32> [[TMP11]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc <16 x i32> [[TMP12]] to <16 x i8>
-; CHECK-NEXT:    [[TMP14:%.*]] = and <16 x i8> [[TMP13]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    store <16 x i8> [[TMP14]], ptr undef, align 1
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[SHR_I_I:%.*]] = lshr i32 [[CONV31_I]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[CONV31_I]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[TMP3]], <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr <8 x i32> [[TMP5]], <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[SUB_I]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> poison, i8 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[SHR_I_I]] to i8
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i32> [[TMP6]] to <8 x i8>
+; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v8i8(<16 x i8> [[TMP10]], <8 x i8> [[TMP11]], i64 8)
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[TMP4]] to <4 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v4i8(<16 x i8> [[TMP12]], <4 x i8> [[TMP13]], i64 4)
+; CHECK-NEXT:    [[TMP15:%.*]] = trunc <2 x i32> [[TMP2]] to <2 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v2i8(<16 x i8> [[TMP14]], <2 x i8> [[TMP15]], i64 2)
+; CHECK-NEXT:    [[TMP17:%.*]] = and <16 x i8> [[TMP16]], splat (i8 1)
+; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr undef, align 1
+; CHECK-NEXT:    ret void
 ; CHECK:       if.end50.i:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %if.end50.i, label %if.then22.i
+  br i1 %arg, label %if.end50.i, label %if.then22.i
 
 if.then22.i:                                      ; preds = %entry
   %sub.i = add nsw i32 undef, -1
@@ -119,7 +119,7 @@ if.then22.i:                                      ; preds = %entry
   %conv.15.i.i = and i8 %15, 1
   %arrayidx.i.i7.15.i.i = getelementptr inbounds %"struct.std::array", ptr undef, i64 0, i32 0, i64 15
   store i8 %conv.15.i.i, ptr %arrayidx.i.i7.15.i.i, align 1
-  unreachable
+  ret void
 
 if.end50.i:                                       ; preds = %entry
   ret void

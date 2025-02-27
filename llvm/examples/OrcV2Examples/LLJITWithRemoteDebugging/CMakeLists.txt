@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   ExecutionEngine
   IRReader
   JITLink
+  OrcDebugging
   OrcJIT
   OrcShared
   OrcTargetProcess
@@ -19,6 +20,4 @@ if (LLVM_INCLUDE_UTILS)
     DEPENDS
       llvm-jitlink-executor
   )
-
-  export_executable_symbols(LLJITWithRemoteDebugging)
 endif()

@@ -28,9 +28,10 @@
 //  };
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -39,30 +40,30 @@
 #include "../CustomTestLayouts.h"
 
 // Calculated expected size of an mdspan
-// Note this expectes that only default_accessor is empty
-template<class MDS>
+// Note this expects that only default_accessor is empty
+template <class MDS>
 constexpr size_t expected_size() {
   size_t sizeof_dht = sizeof(typename MDS::data_handle_type);
-  size_t result = sizeof_dht;
-  if(MDS::rank_dynamic() > 0) {
+  size_t result     = sizeof_dht;
+  if (MDS::rank_dynamic() > 0) {
     size_t alignof_idx = alignof(typename MDS::index_type);
-    size_t sizeof_idx = sizeof(typename MDS::index_type);
+    size_t sizeof_idx  = sizeof(typename MDS::index_type);
     // add alignment if necessary
-    result += sizeof_dht%alignof_idx == 0?0:alignof_idx - (sizeof_dht%alignof_idx);
+    result += sizeof_dht % alignof_idx == 0 ? 0 : alignof_idx - (sizeof_dht % alignof_idx);
     // add sizeof stored extents
     result += MDS::rank_dynamic() * sizeof_idx;
   }
   using A = typename MDS::accessor_type;
-  if(!std::is_same_v<A, std::default_accessor<typename MDS::element_type>>) {
+  if (!std::is_same_v<A, std::default_accessor<typename MDS::element_type>>) {
     size_t alignof_acc = alignof(A);
-    size_t sizeof_acc = sizeof(A);
+    size_t sizeof_acc  = sizeof(A);
     // add alignment if necessary
-    result += result%alignof_acc == 0?0:alignof_acc - (result%alignof_acc);
+    result += result % alignof_acc == 0 ? 0 : alignof_acc - (result % alignof_acc);
     // add sizeof stored accessor
     result += sizeof_acc;
   }
   // add alignment of the mdspan itself
-  result += result%alignof(MDS) == 0?0:alignof(MDS) - (result%alignof(MDS));
+  result += result % alignof(MDS) == 0 ? 0 : alignof(MDS) - (result % alignof(MDS));
   return result;
 }
 
@@ -136,9 +137,9 @@ template <class T, class L, class A>
 void mixin_extents() {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types<T, std::extents<int>, L, A>();
-  test_mdspan_types<T, std::extents<char, D>, L, A>();
-  test_mdspan_types<T, std::dextents<char, 7>, L, A>();
-  test_mdspan_types<T, std::dextents<char, 9>, L, A>();
+  test_mdspan_types<T, std::extents<signed char, D>, L, A>();
+  test_mdspan_types<T, std::dextents<signed char, 7>, L, A>();
+  test_mdspan_types<T, std::dextents<signed char, 9>, L, A>();
   test_mdspan_types<T, std::extents<unsigned, 7>, L, A>();
   test_mdspan_types<T, std::extents<unsigned, D, D, D>, L, A>();
   test_mdspan_types<T, std::extents<size_t, D, 7, D>, L, A>();

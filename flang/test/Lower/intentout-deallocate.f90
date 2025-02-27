@@ -1,6 +1,6 @@
 ! Test correct deallocation of intent(out) allocatables.
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false -polymorphic-type %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
-! RUN: bbc -emit-hlfir -polymorphic-type %s -o - -I nw | FileCheck %s --check-prefixes=CHECK,HLFIR
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
+! RUN: bbc -emit-hlfir %s -o - -I nw | FileCheck %s --check-prefixes=CHECK,HLFIR
 
 module mod1
   type, bind(c) :: t1
@@ -123,24 +123,24 @@ contains
 ! on the caller side.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub4()
-! FIR: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>> {bindc_name = "t", uniq_name = "_QMmod1Fsub4Et"}
+! FIR: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>> {bindc_name = "t", uniq_name = "_QMmod1Fsub4Et"}
 ! HLFIR: %[[BOX:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub4Et"
 ! CHECK-NOT: fir.call @_FortranAAllocatableDeallocate
-! CHECK: fir.call @_QMmod1Psub5(%[[BOX]]{{[#0]*}}) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>) -> ()
+! CHECK: fir.call @_QMmod1Psub5(%[[BOX]]{{[#0]*}}) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>) -> ()
 
 ! Check deallocation of allocatble intent(out) on the callee side. Deallocation
 ! is done with a runtime call.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub5(
-! FIR-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>> {fir.bindc_name = "t"})
+! FIR-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>> {fir.bindc_name = "t"})
 ! HLFIR: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub5Et"
-! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]]{{[#1]*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>
-! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>) -> !fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>
-! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>) -> i64
+! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]]{{[#1]*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>) -> !fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>) -> i64
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
 ! CHECK: fir.if %[[IS_ALLOCATED]] {
-! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]]{{[#1]*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]]{{[#1]*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
   subroutine sub6()
@@ -152,11 +152,11 @@ contains
 ! Deallocation is done with a runtime call.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub6()
-! FIR: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>> {bindc_name = "t", uniq_name = "_QMmod1Fsub6Et"}
+! FIR: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>> {bindc_name = "t", uniq_name = "_QMmod1Fsub6Et"}
 ! HLFIR: %[[BOX:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub6Et"
-! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]]{{[#1]*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]]{{[#1]*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK: fir.call @sub7(%[[BOX]]{{[#0]*}}) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>) -> ()
+! CHECK: fir.call @sub7(%[[BOX]]{{[#0]*}}) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>) -> ()
 
   subroutine sub8()
     integer, allocatable :: a(:)

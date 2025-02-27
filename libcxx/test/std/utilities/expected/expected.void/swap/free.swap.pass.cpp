@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -28,13 +29,13 @@ void swap(NotSwappable&, NotSwappable&) = delete;
 // !is_swappable_v<E>
 static_assert(!std::is_swappable_v<std::expected<void, NotSwappable>>);
 
-struct NotMoveContructible {
-  NotMoveContructible(NotMoveContructible&&) = delete;
-  friend void swap(NotMoveContructible&, NotMoveContructible&) {}
+struct NotMoveConstructible {
+  NotMoveConstructible(NotMoveConstructible&&) = delete;
+  friend void swap(NotMoveConstructible&, NotMoveConstructible&) {}
 };
 
 // !is_move_constructible_v<E>
-static_assert(!std::is_swappable_v<std::expected<void, NotMoveContructible>>);
+static_assert(!std::is_swappable_v<std::expected<void, NotMoveConstructible>>);
 
 // Test noexcept
 struct MoveMayThrow {

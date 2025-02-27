@@ -11,6 +11,18 @@
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-MEDIUM
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-PIC
+; RUN: llc -mtriple=riscv32 -code-model=small -verify-machineinstrs -riscv-min-jump-table-entries=7 < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I-SMALL-7-ENTRIES
+; RUN: llc -mtriple=riscv32 -code-model=medium -verify-machineinstrs -riscv-min-jump-table-entries=7 < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I-MEDIUM-7-ENTRIES
+; RUN: llc -mtriple=riscv32 -relocation-model=pic -verify-machineinstrs -riscv-min-jump-table-entries=7 < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I-PIC-7-ENTRIES
+; RUN: llc -mtriple=riscv64 -code-model=small -verify-machineinstrs -riscv-min-jump-table-entries=7 < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-SMALL-7-ENTRIES
+; RUN: llc -mtriple=riscv64 -code-model=medium -verify-machineinstrs -riscv-min-jump-table-entries=7 < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-MEDIUM-7-ENTRIES
+; RUN: llc -mtriple=riscv64 -relocation-model=pic -verify-machineinstrs -riscv-min-jump-table-entries=7 < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-PIC-7-ENTRIES
 
 define void @below_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-LABEL: below_threshold:
@@ -77,7 +89,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-SMALL-NEXT:    slli a0, a0, 2
 ; RV32I-SMALL-NEXT:    lui a2, %hi(.LJTI1_0)
 ; RV32I-SMALL-NEXT:    addi a2, a2, %lo(.LJTI1_0)
-; RV32I-SMALL-NEXT:    add a0, a0, a2
+; RV32I-SMALL-NEXT:    add a0, a2, a0
 ; RV32I-SMALL-NEXT:    lw a0, 0(a0)
 ; RV32I-SMALL-NEXT:    jr a0
 ; RV32I-SMALL-NEXT:  .LBB1_2: # %bb1
@@ -112,7 +124,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi0:
 ; RV32I-MEDIUM-NEXT:    auipc a2, %pcrel_hi(.LJTI1_0)
 ; RV32I-MEDIUM-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
-; RV32I-MEDIUM-NEXT:    add a0, a0, a2
+; RV32I-MEDIUM-NEXT:    add a0, a2, a0
 ; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
 ; RV32I-MEDIUM-NEXT:    jr a0
 ; RV32I-MEDIUM-NEXT:  .LBB1_2: # %bb1
@@ -147,9 +159,9 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-PIC-NEXT:  .Lpcrel_hi0:
 ; RV32I-PIC-NEXT:    auipc a2, %pcrel_hi(.LJTI1_0)
 ; RV32I-PIC-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
-; RV32I-PIC-NEXT:    add a0, a0, a2
+; RV32I-PIC-NEXT:    add a0, a2, a0
 ; RV32I-PIC-NEXT:    lw a0, 0(a0)
-; RV32I-PIC-NEXT:    add a0, a0, a2
+; RV32I-PIC-NEXT:    add a0, a2, a0
 ; RV32I-PIC-NEXT:    jr a0
 ; RV32I-PIC-NEXT:  .LBB1_2: # %bb1
 ; RV32I-PIC-NEXT:    li a0, 4
@@ -182,7 +194,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-SMALL-NEXT:    slli a0, a0, 2
 ; RV64I-SMALL-NEXT:    lui a2, %hi(.LJTI1_0)
 ; RV64I-SMALL-NEXT:    addi a2, a2, %lo(.LJTI1_0)
-; RV64I-SMALL-NEXT:    add a0, a0, a2
+; RV64I-SMALL-NEXT:    add a0, a2, a0
 ; RV64I-SMALL-NEXT:    lw a0, 0(a0)
 ; RV64I-SMALL-NEXT:    jr a0
 ; RV64I-SMALL-NEXT:  .LBB1_2: # %bb1
@@ -217,7 +229,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi0:
 ; RV64I-MEDIUM-NEXT:    auipc a2, %pcrel_hi(.LJTI1_0)
 ; RV64I-MEDIUM-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
-; RV64I-MEDIUM-NEXT:    add a0, a0, a2
+; RV64I-MEDIUM-NEXT:    add a0, a2, a0
 ; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
 ; RV64I-MEDIUM-NEXT:    jr a0
 ; RV64I-MEDIUM-NEXT:  .LBB1_2: # %bb1
@@ -252,9 +264,9 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-PIC-NEXT:  .Lpcrel_hi0:
 ; RV64I-PIC-NEXT:    auipc a2, %pcrel_hi(.LJTI1_0)
 ; RV64I-PIC-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
-; RV64I-PIC-NEXT:    add a0, a0, a2
+; RV64I-PIC-NEXT:    add a0, a2, a0
 ; RV64I-PIC-NEXT:    lw a0, 0(a0)
-; RV64I-PIC-NEXT:    add a0, a0, a2
+; RV64I-PIC-NEXT:    add a0, a2, a0
 ; RV64I-PIC-NEXT:    jr a0
 ; RV64I-PIC-NEXT:  .LBB1_2: # %bb1
 ; RV64I-PIC-NEXT:    li a0, 4
@@ -277,6 +289,270 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-PIC-NEXT:    sw a0, 0(a1)
 ; RV64I-PIC-NEXT:  .LBB1_9: # %exit
 ; RV64I-PIC-NEXT:    ret
+;
+; RV32I-SMALL-7-ENTRIES-LABEL: above_threshold:
+; RV32I-SMALL-7-ENTRIES:       # %bb.0: # %entry
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a2, 3
+; RV32I-SMALL-7-ENTRIES-NEXT:    blt a2, a0, .LBB1_5
+; RV32I-SMALL-7-ENTRIES-NEXT:  # %bb.1: # %entry
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a2, 1
+; RV32I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_9
+; RV32I-SMALL-7-ENTRIES-NEXT:  # %bb.2: # %entry
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a2, 2
+; RV32I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_11
+; RV32I-SMALL-7-ENTRIES-NEXT:  # %bb.3: # %entry
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a2, 3
+; RV32I-SMALL-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV32I-SMALL-7-ENTRIES-NEXT:  # %bb.4: # %bb3
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a0, 2
+; RV32I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-SMALL-7-ENTRIES-NEXT:  .LBB1_5: # %entry
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a2, 4
+; RV32I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_10
+; RV32I-SMALL-7-ENTRIES-NEXT:  # %bb.6: # %entry
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a2, 5
+; RV32I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_12
+; RV32I-SMALL-7-ENTRIES-NEXT:  # %bb.7: # %entry
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a2, 6
+; RV32I-SMALL-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV32I-SMALL-7-ENTRIES-NEXT:  # %bb.8: # %bb6
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a0, 200
+; RV32I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-SMALL-7-ENTRIES-NEXT:  .LBB1_9: # %bb1
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a0, 4
+; RV32I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-SMALL-7-ENTRIES-NEXT:  .LBB1_10: # %bb4
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a0, 1
+; RV32I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-SMALL-7-ENTRIES-NEXT:  .LBB1_11: # %bb2
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a0, 3
+; RV32I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-SMALL-7-ENTRIES-NEXT:  .LBB1_12: # %bb5
+; RV32I-SMALL-7-ENTRIES-NEXT:    li a0, 100
+; RV32I-SMALL-7-ENTRIES-NEXT:  .LBB1_13: # %exit
+; RV32I-SMALL-7-ENTRIES-NEXT:    sw a0, 0(a1)
+; RV32I-SMALL-7-ENTRIES-NEXT:  .LBB1_14: # %exit
+; RV32I-SMALL-7-ENTRIES-NEXT:    ret
+;
+; RV32I-MEDIUM-7-ENTRIES-LABEL: above_threshold:
+; RV32I-MEDIUM-7-ENTRIES:       # %bb.0: # %entry
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a2, 3
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    blt a2, a0, .LBB1_5
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  # %bb.1: # %entry
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a2, 1
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_9
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  # %bb.2: # %entry
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a2, 2
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_11
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  # %bb.3: # %entry
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a2, 3
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  # %bb.4: # %bb3
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a0, 2
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_5: # %entry
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a2, 4
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_10
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  # %bb.6: # %entry
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a2, 5
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_12
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  # %bb.7: # %entry
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a2, 6
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  # %bb.8: # %bb6
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a0, 200
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_9: # %bb1
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a0, 4
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_10: # %bb4
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a0, 1
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_11: # %bb2
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a0, 3
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_12: # %bb5
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    li a0, 100
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_13: # %exit
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    sw a0, 0(a1)
+; RV32I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_14: # %exit
+; RV32I-MEDIUM-7-ENTRIES-NEXT:    ret
+;
+; RV32I-PIC-7-ENTRIES-LABEL: above_threshold:
+; RV32I-PIC-7-ENTRIES:       # %bb.0: # %entry
+; RV32I-PIC-7-ENTRIES-NEXT:    li a2, 3
+; RV32I-PIC-7-ENTRIES-NEXT:    blt a2, a0, .LBB1_5
+; RV32I-PIC-7-ENTRIES-NEXT:  # %bb.1: # %entry
+; RV32I-PIC-7-ENTRIES-NEXT:    li a2, 1
+; RV32I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_9
+; RV32I-PIC-7-ENTRIES-NEXT:  # %bb.2: # %entry
+; RV32I-PIC-7-ENTRIES-NEXT:    li a2, 2
+; RV32I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_11
+; RV32I-PIC-7-ENTRIES-NEXT:  # %bb.3: # %entry
+; RV32I-PIC-7-ENTRIES-NEXT:    li a2, 3
+; RV32I-PIC-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV32I-PIC-7-ENTRIES-NEXT:  # %bb.4: # %bb3
+; RV32I-PIC-7-ENTRIES-NEXT:    li a0, 2
+; RV32I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-PIC-7-ENTRIES-NEXT:  .LBB1_5: # %entry
+; RV32I-PIC-7-ENTRIES-NEXT:    li a2, 4
+; RV32I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_10
+; RV32I-PIC-7-ENTRIES-NEXT:  # %bb.6: # %entry
+; RV32I-PIC-7-ENTRIES-NEXT:    li a2, 5
+; RV32I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_12
+; RV32I-PIC-7-ENTRIES-NEXT:  # %bb.7: # %entry
+; RV32I-PIC-7-ENTRIES-NEXT:    li a2, 6
+; RV32I-PIC-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV32I-PIC-7-ENTRIES-NEXT:  # %bb.8: # %bb6
+; RV32I-PIC-7-ENTRIES-NEXT:    li a0, 200
+; RV32I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-PIC-7-ENTRIES-NEXT:  .LBB1_9: # %bb1
+; RV32I-PIC-7-ENTRIES-NEXT:    li a0, 4
+; RV32I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-PIC-7-ENTRIES-NEXT:  .LBB1_10: # %bb4
+; RV32I-PIC-7-ENTRIES-NEXT:    li a0, 1
+; RV32I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-PIC-7-ENTRIES-NEXT:  .LBB1_11: # %bb2
+; RV32I-PIC-7-ENTRIES-NEXT:    li a0, 3
+; RV32I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV32I-PIC-7-ENTRIES-NEXT:  .LBB1_12: # %bb5
+; RV32I-PIC-7-ENTRIES-NEXT:    li a0, 100
+; RV32I-PIC-7-ENTRIES-NEXT:  .LBB1_13: # %exit
+; RV32I-PIC-7-ENTRIES-NEXT:    sw a0, 0(a1)
+; RV32I-PIC-7-ENTRIES-NEXT:  .LBB1_14: # %exit
+; RV32I-PIC-7-ENTRIES-NEXT:    ret
+;
+; RV64I-SMALL-7-ENTRIES-LABEL: above_threshold:
+; RV64I-SMALL-7-ENTRIES:       # %bb.0: # %entry
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a2, 3
+; RV64I-SMALL-7-ENTRIES-NEXT:    blt a2, a0, .LBB1_5
+; RV64I-SMALL-7-ENTRIES-NEXT:  # %bb.1: # %entry
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a2, 1
+; RV64I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_9
+; RV64I-SMALL-7-ENTRIES-NEXT:  # %bb.2: # %entry
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a2, 2
+; RV64I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_11
+; RV64I-SMALL-7-ENTRIES-NEXT:  # %bb.3: # %entry
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a2, 3
+; RV64I-SMALL-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV64I-SMALL-7-ENTRIES-NEXT:  # %bb.4: # %bb3
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a0, 2
+; RV64I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-SMALL-7-ENTRIES-NEXT:  .LBB1_5: # %entry
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a2, 4
+; RV64I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_10
+; RV64I-SMALL-7-ENTRIES-NEXT:  # %bb.6: # %entry
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a2, 5
+; RV64I-SMALL-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_12
+; RV64I-SMALL-7-ENTRIES-NEXT:  # %bb.7: # %entry
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a2, 6
+; RV64I-SMALL-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV64I-SMALL-7-ENTRIES-NEXT:  # %bb.8: # %bb6
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a0, 200
+; RV64I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-SMALL-7-ENTRIES-NEXT:  .LBB1_9: # %bb1
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a0, 4
+; RV64I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-SMALL-7-ENTRIES-NEXT:  .LBB1_10: # %bb4
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a0, 1
+; RV64I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-SMALL-7-ENTRIES-NEXT:  .LBB1_11: # %bb2
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a0, 3
+; RV64I-SMALL-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-SMALL-7-ENTRIES-NEXT:  .LBB1_12: # %bb5
+; RV64I-SMALL-7-ENTRIES-NEXT:    li a0, 100
+; RV64I-SMALL-7-ENTRIES-NEXT:  .LBB1_13: # %exit
+; RV64I-SMALL-7-ENTRIES-NEXT:    sw a0, 0(a1)
+; RV64I-SMALL-7-ENTRIES-NEXT:  .LBB1_14: # %exit
+; RV64I-SMALL-7-ENTRIES-NEXT:    ret
+;
+; RV64I-MEDIUM-7-ENTRIES-LABEL: above_threshold:
+; RV64I-MEDIUM-7-ENTRIES:       # %bb.0: # %entry
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a2, 3
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    blt a2, a0, .LBB1_5
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  # %bb.1: # %entry
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a2, 1
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_9
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  # %bb.2: # %entry
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a2, 2
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_11
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  # %bb.3: # %entry
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a2, 3
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  # %bb.4: # %bb3
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a0, 2
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_5: # %entry
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a2, 4
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_10
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  # %bb.6: # %entry
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a2, 5
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_12
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  # %bb.7: # %entry
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a2, 6
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  # %bb.8: # %bb6
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a0, 200
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_9: # %bb1
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a0, 4
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_10: # %bb4
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a0, 1
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_11: # %bb2
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a0, 3
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_12: # %bb5
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    li a0, 100
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_13: # %exit
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    sw a0, 0(a1)
+; RV64I-MEDIUM-7-ENTRIES-NEXT:  .LBB1_14: # %exit
+; RV64I-MEDIUM-7-ENTRIES-NEXT:    ret
+;
+; RV64I-PIC-7-ENTRIES-LABEL: above_threshold:
+; RV64I-PIC-7-ENTRIES:       # %bb.0: # %entry
+; RV64I-PIC-7-ENTRIES-NEXT:    li a2, 3
+; RV64I-PIC-7-ENTRIES-NEXT:    blt a2, a0, .LBB1_5
+; RV64I-PIC-7-ENTRIES-NEXT:  # %bb.1: # %entry
+; RV64I-PIC-7-ENTRIES-NEXT:    li a2, 1
+; RV64I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_9
+; RV64I-PIC-7-ENTRIES-NEXT:  # %bb.2: # %entry
+; RV64I-PIC-7-ENTRIES-NEXT:    li a2, 2
+; RV64I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_11
+; RV64I-PIC-7-ENTRIES-NEXT:  # %bb.3: # %entry
+; RV64I-PIC-7-ENTRIES-NEXT:    li a2, 3
+; RV64I-PIC-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV64I-PIC-7-ENTRIES-NEXT:  # %bb.4: # %bb3
+; RV64I-PIC-7-ENTRIES-NEXT:    li a0, 2
+; RV64I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-PIC-7-ENTRIES-NEXT:  .LBB1_5: # %entry
+; RV64I-PIC-7-ENTRIES-NEXT:    li a2, 4
+; RV64I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_10
+; RV64I-PIC-7-ENTRIES-NEXT:  # %bb.6: # %entry
+; RV64I-PIC-7-ENTRIES-NEXT:    li a2, 5
+; RV64I-PIC-7-ENTRIES-NEXT:    beq a0, a2, .LBB1_12
+; RV64I-PIC-7-ENTRIES-NEXT:  # %bb.7: # %entry
+; RV64I-PIC-7-ENTRIES-NEXT:    li a2, 6
+; RV64I-PIC-7-ENTRIES-NEXT:    bne a0, a2, .LBB1_14
+; RV64I-PIC-7-ENTRIES-NEXT:  # %bb.8: # %bb6
+; RV64I-PIC-7-ENTRIES-NEXT:    li a0, 200
+; RV64I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-PIC-7-ENTRIES-NEXT:  .LBB1_9: # %bb1
+; RV64I-PIC-7-ENTRIES-NEXT:    li a0, 4
+; RV64I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-PIC-7-ENTRIES-NEXT:  .LBB1_10: # %bb4
+; RV64I-PIC-7-ENTRIES-NEXT:    li a0, 1
+; RV64I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-PIC-7-ENTRIES-NEXT:  .LBB1_11: # %bb2
+; RV64I-PIC-7-ENTRIES-NEXT:    li a0, 3
+; RV64I-PIC-7-ENTRIES-NEXT:    j .LBB1_13
+; RV64I-PIC-7-ENTRIES-NEXT:  .LBB1_12: # %bb5
+; RV64I-PIC-7-ENTRIES-NEXT:    li a0, 100
+; RV64I-PIC-7-ENTRIES-NEXT:  .LBB1_13: # %exit
+; RV64I-PIC-7-ENTRIES-NEXT:    sw a0, 0(a1)
+; RV64I-PIC-7-ENTRIES-NEXT:  .LBB1_14: # %exit
+; RV64I-PIC-7-ENTRIES-NEXT:    ret
 entry:
   switch i32 %in, label %exit [
     i32 1, label %bb1

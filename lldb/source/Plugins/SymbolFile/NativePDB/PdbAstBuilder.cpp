@@ -618,7 +618,7 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
 
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),
-      lldb::eLanguageTypeC_plus_plus, &metadata);
+      lldb::eLanguageTypeC_plus_plus, metadata);
 
   lldbassert(ct.IsValid());
 
@@ -1137,7 +1137,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   }
 
   if (!params.empty() && params.size() == param_count)
-    m_clang.SetFunctionParameters(&function_decl, params);
+    function_decl.setParams(params);
 }
 
 clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
@@ -1264,9 +1264,9 @@ void PdbAstBuilder::ParseNamespace(clang::DeclContext &context) {
 
     clang::NamespaceDecl *ns = llvm::cast<clang::NamespaceDecl>(context);
     llvm::StringRef ns_name = ns->getName();
-    if (ns_name.startswith(qname)) {
+    if (ns_name.starts_with(qname)) {
       ns_name = ns_name.drop_front(qname.size());
-      if (ns_name.startswith("::"))
+      if (ns_name.starts_with("::"))
         GetOrCreateType(tid);
     }
   }

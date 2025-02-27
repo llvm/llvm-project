@@ -39,7 +39,7 @@ clean:
 ; CHECK-REF: .cfi_lsda 27, .Lexception0
 ; CHECK-REF: .hidden	DW.ref.__gxx_personality_v0
 ; CHECK-REF: .weak	DW.ref.__gxx_personality_v0
-; CHECK-REF: .section	.data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
+; CHECK-REF: .section	.data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 ; CHECK-REF-NEXT: .p2align	3
 ; CHECK-REF-NEXT: .type	DW.ref.__gxx_personality_v0,@object
 ; CHECK-REF-NEXT: .size	DW.ref.__gxx_personality_v0, 8

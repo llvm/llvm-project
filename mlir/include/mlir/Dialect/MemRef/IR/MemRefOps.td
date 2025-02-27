@@ -14,6 +14,7 @@ include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
@@ -447,12 +448,6 @@ def MemRef_CastOp : MemRef_Op<"cast", [
     ]> {
   let summary = "memref cast operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `memref.cast` ssa-use `:` type `to` type
-    ```
-
     The `memref.cast` operation converts a memref from one type to an equivalent
     type with a compatible shape. The source and destination types are
     compatible if:
@@ -583,7 +578,8 @@ def MemRef_DimOp : MemRef_Op<"dim", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     MemRefsNormalizable,
     ConditionallySpeculatable, NoMemoryEffect,
-    ShapedDimOpInterface]> {
+    ShapedDimOpInterface,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>]> {
   let summary = "dimension index operation";
   let description = [{
     The `dim` operation takes a memref and a dimension operand of type `index`.
@@ -647,7 +643,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
   let summary = "non-blocking DMA operation that starts a transfer";
   let description = [{
     Syntax:
-    
+
     ```
     operation ::= `memref.dma_start` ssa-use`[`ssa-use-list`]` `,`
                    ssa-use`[`ssa-use-list`]` `,` ssa-use `,`
@@ -712,6 +708,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
   let extraClassDeclaration = [{
     // Returns the source MemRefType for this DMA operation.
     Value getSrcMemRef() { return getOperand(0); }
+    OpOperand &getSrcMemRefMutable() { return getOperation()->getOpOperand(0); }
     // Returns the rank (number of indices) of the source MemRefType.
     unsigned getSrcMemRefRank() {
       return ::llvm::cast<MemRefType>(getSrcMemRef().getType()).getRank();
@@ -724,6 +721,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
 
     // Returns the destination MemRefType for this DMA operations.
     Value getDstMemRef() { return getOperand(1 + getSrcMemRefRank()); }
+    OpOperand &getDstMemRefMutable() { return getOperation()->getOpOperand(1 + getSrcMemRefRank()); }
     // Returns the rank (number of indices) of the destination MemRefType.
     unsigned getDstMemRefRank() {
       return ::llvm::cast<MemRefType>(getDstMemRef().getType()).getRank();
@@ -750,6 +748,9 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     // Returns the Tag MemRef for this DMA operation.
     Value getTagMemRef() {
       return getOperand(1 + getSrcMemRefRank() + 1 + getDstMemRefRank() + 1);
+    }
+    OpOperand &getTagMemRefMutable() {
+      return getOperation()->getOpOperand(1 + getSrcMemRefRank() + 1 + getDstMemRefRank() + 1);
     }
 
     // Returns the rank (number of indices) of the tag MemRefType.
@@ -807,11 +808,11 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     void getEffects(
         SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>> &
         effects) {
-      effects.emplace_back(MemoryEffects::Read::get(), getSrcMemRef(),
+      effects.emplace_back(MemoryEffects::Read::get(), &getSrcMemRefMutable(),
                            SideEffects::DefaultResource::get());
-      effects.emplace_back(MemoryEffects::Write::get(), getDstMemRef(),
+      effects.emplace_back(MemoryEffects::Write::get(), &getDstMemRefMutable(),
                            SideEffects::DefaultResource::get());
-      effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
+      effects.emplace_back(MemoryEffects::Read::get(), &getTagMemRefMutable(),
                            SideEffects::DefaultResource::get());
     }
   }];
@@ -858,7 +859,7 @@ def MemRef_DmaWaitOp : MemRef_Op<"dma_wait"> {
     void getEffects(
         SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>> &
         effects) {
-      effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
+      effects.emplace_back(MemoryEffects::Read::get(), &getTagMemRefMutable(),
                            SideEffects::DefaultResource::get());
     }
   }];
@@ -898,7 +899,7 @@ def MemRef_ExtractAlignedPointerAsIndexOp :
   }];
 
   let arguments = (ins
-    AnyStridedMemRef:$source
+    AnyRankedOrUnrankedMemRef:$source
   );
   let results = (outs Index:$aligned_pointer);
 
@@ -1408,6 +1409,10 @@ def MemRef_ReinterpretCastOp
       "OpFoldResult":$offset, "ArrayRef<OpFoldResult>":$sizes,
       "ArrayRef<OpFoldResult>":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a ReinterpretCastOp and infer the result type.
+    OpBuilder<(ins "Value":$source, "OpFoldResult":$offset,
+      "ArrayRef<OpFoldResult>":$sizes, "ArrayRef<OpFoldResult>":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a ReinterpretCastOp with static entries.
     OpBuilder<(ins "MemRefType":$resultType, "Value":$source,
       "int64_t":$offset, "ArrayRef<int64_t>":$sizes,
@@ -1526,7 +1531,8 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
   }];
 
   let arguments = (ins AnyRankedOrUnrankedMemRef:$source,
-                       MemRefRankOf<[AnySignlessInteger, Index], [1]>:$shape);
+                       Arg<MemRefRankOf<[AnySignlessInteger, Index], [1]>,
+                       "dynamically-sized shape", [MemRead]>:$shape);
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
   let builders = [OpBuilder<
@@ -1554,7 +1560,6 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
 class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     MemRef_Op<mnemonic, !listconcat(traits,
       [Pure, ViewLikeOpInterface])>,
-    Arguments<(ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyStridedMemRef:$result)>{
 
   code commonExtraClassDeclaration = [{
@@ -1579,17 +1584,14 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     Value getViewSource() { return getSrc(); }
   }];
 
-  let assemblyFormat = [{
-    $src $reassociation attr-dict `:` type($src) `into` type($result)
-  }];
-
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
 def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
   let summary = "operation to produce a memref with a higher rank.";
   let description = [{
     The `memref.expand_shape` op produces a new view with a higher rank whose
@@ -1604,13 +1606,9 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
     Example:
 
     ```mlir
-    %r = memref.expand_shape %0 [[0, 1], [2]]
-        : memref<?x?xf32> into memref<?x5x?xf32>
+    %r = memref.expand_shape %0 [[0, 1], [2]] output_shape [%sz0, %sz1, 32]
+        : memref<?x32xf32> into memref<?x?x32xf32>
     ```
-
-    At most one dimension of a reassociation group (e.g., [0, 1] above) may be
-    dynamic in the result type. Otherwise, the op would be ambiguous, as it
-    would not be clear how the source dimension is extended.
 
     If an op can be statically proven to be invalid (e.g, an expansion from
     `memref<10xf32>` to `memref<2x6xf32>`), it is rejected by the verifier. If
@@ -1628,41 +1626,80 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
     there must be a dynamic result dimension in the corresponding reassociation
     group. Same for strides.
 
+    The representation for the output shape supports a partially-static
+    specification via attributes specified through the `static_output_shape`
+    argument.  A special sentinel value `ShapedType::kDynamic` encodes that the
+    corresponding entry has a dynamic value.  There must be exactly as many SSA
+    inputs in `output_shape` as there are `ShapedType::kDynamic` entries in
+    `static_output_shape`.
+
     Note: This op currently assumes that the inner strides are of the
     source/result layout map are the faster-varying ones.
+  }];
+
+  let arguments = (ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation,
+                       Variadic<Index>:$output_shape,
+                       DenseI64ArrayAttr:$static_output_shape);
+
+  let assemblyFormat = [{
+    $src $reassociation `output_shape`
+    custom<DynamicIndexList>($output_shape, $static_output_shape) attr-dict `:`
+    type($src) `into` type($result)
   }];
 
   let builders = [
     // Builders using ReassociationIndices.
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationIndices>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
-    [{
-      build($_builder, $_state, resultType, src, attrs);
-      $_state.addAttribute("reassociation",
-                          getReassociationIndicesAttribute($_builder, reassociation));
-    }]>,
+      "ArrayRef<OpFoldResult>":$outputShape)>,
+
+    // It will infer output shape using inferOutputShape() method.
+    OpBuilder<(ins "Type":$resultType, "Value":$src,
+      "ArrayRef<ReassociationIndices>":$reassociation)>,
 
     // Builder using ReassociationExprs.
     OpBuilder<(ins "Type":$resultType, "Value":$src,
+      "ArrayRef<ReassociationExprs>":$reassociation),
+    [{
+      auto reassociationIndices =
+          convertReassociationMapsToIndices(reassociation);
+      build($_builder, $_state, resultType, src, reassociationIndices);
+    }]>,
+
+    OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
+      "ArrayRef<OpFoldResult>":$outputShape),
     [{
       auto reassociationMaps =
-          convertReassociationMapsToIndices($_builder, reassociation);
-      build($_builder, $_state, resultType, src, reassociationMaps, attrs);
+          convertReassociationMapsToIndices(reassociation);
+      build($_builder, $_state, resultType, src, reassociationMaps,
+            outputShape);
     }]>,
+
+    // Builder that infers the result layout map. The result shape must be
+    // specified. Otherwise, the op may be ambiguous. The output shape for
+    // the op will be inferred using the inferOutputShape() method.
+    OpBuilder<(ins "ArrayRef<int64_t>":$resultShape, "Value":$src,
+               "ArrayRef<ReassociationIndices>":$reassociation)>,
 
     // Builder that infers the result layout map. The result shape must be
     // specified. Otherwise, the op may be ambiguous.
     OpBuilder<(ins "ArrayRef<int64_t>":$resultShape, "Value":$src,
-               "ArrayRef<ReassociationIndices>":$reassociation)>
+               "ArrayRef<ReassociationIndices>":$reassociation,
+               "ArrayRef<OpFoldResult>":$outputShape)>
   ];
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     static FailureOr<MemRefType> computeExpandedType(
         MemRefType srcType, ArrayRef<int64_t> resultShape,
         ArrayRef<ReassociationIndices> reassociation);
+
+    // Infer the output shape for a memref.expand_shape when it is possible
+    // to do so.
+    static FailureOr<SmallVector<OpFoldResult>> inferOutputShape(
+        OpBuilder &b, Location loc, MemRefType expandedType,
+        ArrayRef<ReassociationIndices> reassociation,
+        ArrayRef<OpFoldResult> inputShape);
   }];
 
   let hasVerifier = 1;
@@ -1713,6 +1750,12 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
     source/result layout map are the faster-varying ones.
   }];
 
+  let arguments = (ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation);
+
+  let assemblyFormat = [{
+    $src $reassociation attr-dict `:` type($src) `into` type($result)
+  }];
+
   let builders = [
     // Builders for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
@@ -1724,7 +1767,7 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       auto reassociationMaps =
-          convertReassociationMapsToIndices($_builder, reassociation);
+          convertReassociationMapsToIndices(reassociation);
       build($_builder, $_state, src, reassociationMaps, attrs);
     }]>,
 
@@ -1733,16 +1776,16 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
       "ArrayRef<ReassociationIndices>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      build($_builder, $_state, resultType, src, attrs);
       $_state.addAttribute("reassociation",
                           getReassociationIndicesAttribute($_builder, reassociation));
+      build($_builder, $_state, resultType, src, attrs);
     }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       auto reassociationMaps =
-          convertReassociationMapsToIndices($_builder, reassociation);
+          convertReassociationMapsToIndices(reassociation);
       build($_builder, $_state, resultType, src, reassociationMaps, attrs);
     }]>
   ];
@@ -2038,14 +2081,14 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     /// A subview result type can be fully inferred from the source type and the
     /// static representation of offsets, sizes and strides. Special sentinels
     /// encode the dynamic case.
-    static Type inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<int64_t> staticOffsets,
-                                ArrayRef<int64_t> staticSizes,
-                                ArrayRef<int64_t> staticStrides);
-    static Type inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<OpFoldResult> staticOffsets,
-                                ArrayRef<OpFoldResult> staticSizes,
-                                ArrayRef<OpFoldResult> staticStrides);
+    static MemRefType inferResultType(MemRefType sourceMemRefType,
+                                      ArrayRef<int64_t> staticOffsets,
+                                      ArrayRef<int64_t> staticSizes,
+                                      ArrayRef<int64_t> staticStrides);
+    static MemRefType inferResultType(MemRefType sourceMemRefType,
+                                      ArrayRef<OpFoldResult> staticOffsets,
+                                      ArrayRef<OpFoldResult> staticSizes,
+                                      ArrayRef<OpFoldResult> staticStrides);
 
     /// A rank-reducing result type can be inferred from the desired result
     /// shape. Only the layout map is inferred.
@@ -2054,16 +2097,16 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     /// and the desired sizes. In case there are more "ones" among the sizes
     /// than the difference in source/result rank, it is not clear which dims of
     /// size one should be dropped.
-    static Type inferRankReducedResultType(ArrayRef<int64_t> resultShape,
-                                           MemRefType sourceMemRefType,
-                                           ArrayRef<int64_t> staticOffsets,
-                                           ArrayRef<int64_t> staticSizes,
-                                           ArrayRef<int64_t> staticStrides);
-    static Type inferRankReducedResultType(ArrayRef<int64_t> resultShape,
-                                           MemRefType sourceMemRefType,
-                                           ArrayRef<OpFoldResult> staticOffsets,
-                                           ArrayRef<OpFoldResult> staticSizes,
-                                           ArrayRef<OpFoldResult> staticStrides);
+    static MemRefType inferRankReducedResultType(
+        ArrayRef<int64_t> resultShape, MemRefType sourceMemRefType,
+        ArrayRef<int64_t> staticOffsets,
+        ArrayRef<int64_t> staticSizes,
+        ArrayRef<int64_t> staticStrides);
+    static MemRefType inferRankReducedResultType(
+        ArrayRef<int64_t> resultShape, MemRefType sourceMemRefType,
+        ArrayRef<OpFoldResult> staticOffsets,
+        ArrayRef<OpFoldResult> staticSizes,
+        ArrayRef<OpFoldResult> staticStrides);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.

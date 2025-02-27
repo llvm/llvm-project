@@ -20,13 +20,19 @@ class GISelInstProfileBuilder;
 /// Defines a builder that does CSE of MachineInstructions using GISelCSEInfo.
 /// Eg usage.
 ///
+/// \code
+///    GISelCSEInfo *Info =
+///        &getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEInfo();
+///    CSEMIRBuilder CB(Builder.getState());
+///    CB.setCSEInfo(Info);
+///    auto A = CB.buildConstant(s32, 42);
+///    auto B = CB.buildConstant(s32, 42);
+///    assert(A == B);
+///    unsigned CReg = MRI.createGenericVirtualRegister(s32);
+///    auto C = CB.buildConstant(CReg, 42);
+///    assert(C->getOpcode() == TargetOpcode::COPY);
+/// \endcode
 ///
-/// GISelCSEInfo *Info =
-/// &getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEInfo(); CSEMIRBuilder
-/// CB(Builder.getState()); CB.setCSEInfo(Info); auto A = CB.buildConstant(s32,
-/// 42); auto B = CB.buildConstant(s32, 42); assert(A == B); unsigned CReg =
-/// MRI.createGenericVirtualRegister(s32); auto C = CB.buildConstant(CReg, 42);
-/// assert(C->getOpcode() == TargetOpcode::COPY);
 /// Explicitly passing in a register would materialize a copy if possible.
 /// CSEMIRBuilder also does trivial constant folding for binary ops.
 class CSEMIRBuilder : public MachineIRBuilder {

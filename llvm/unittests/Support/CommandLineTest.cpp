@@ -28,7 +28,6 @@
 #include <fstream>
 #include <stdlib.h>
 #include <string>
-#include <tuple>
 
 using namespace llvm;
 using llvm::unittest::TempDir;
@@ -521,7 +520,6 @@ TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
 
   const char *args[] = {"prog", "sc1", "-sc2"};
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_FALSE(Errs.empty());
 }
 
@@ -586,6 +584,11 @@ TEST(CommandLineTest, AddToAllSubCommands) {
                            cl::init(false));
   StackSubCommand SC2("sc2", "Second subcommand");
 
+  EXPECT_TRUE(cl::SubCommand::getTopLevel().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(cl::SubCommand::getAll().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC1.OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC2.OptionsMap.contains("everywhere"));
+
   const char *args[] = {"prog", "-everywhere"};
   const char *args2[] = {"prog", "sc1", "-everywhere"};
   const char *args3[] = {"prog", "sc2", "-everywhere"};
@@ -612,7 +615,6 @@ TEST(CommandLineTest, AddToAllSubCommands) {
   EXPECT_TRUE(AllOpt);
 
   // Since all parsing succeeded, the error message should be empty.
-  OS.flush();
   EXPECT_TRUE(Errs.empty());
 }
 
@@ -653,14 +655,12 @@ TEST(CommandLineTest, RemoveFromRegularSubCommand) {
   EXPECT_FALSE(RemoveOption);
   EXPECT_TRUE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
   EXPECT_TRUE(RemoveOption);
-  OS.flush();
   EXPECT_TRUE(Errs.empty());
 
   RemoveOption.removeArgument();
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_FALSE(Errs.empty());
 }
 
@@ -1113,7 +1113,6 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], AFileExp.c_str());
 
-#if !defined(_AIX) && !defined(__MVS__)
   std::string ADirExp = std::string("@") + std::string(ADir.path());
   Argv = {"clang", ADirExp.c_str()};
   Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
@@ -1121,7 +1120,6 @@ TEST(CommandLineTest, BadResponseFile) {
   ASSERT_EQ(2U, Argv.size());
   ASSERT_STREQ(Argv[0], "clang");
   ASSERT_STREQ(Argv[1], ADirExp.c_str());
-#endif
 }
 
 TEST(CommandLineTest, SetDefaultValue) {
@@ -1275,15 +1273,15 @@ TEST(CommandLineTest, PositionalEatArgsError) {
 
   std::string Errs;
   raw_string_ostream OS(Errs);
-  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS));
   EXPECT_TRUE(Errs.empty()); Errs.clear();
 
   cl::ResetAllOptionOccurrences();
-  EXPECT_TRUE(cl::ParseCommandLineOptions(6, args4, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(6, args4, StringRef(), &OS));
   EXPECT_EQ(PosEatArgs.size(), 1u);
   EXPECT_EQ(PosEatArgs2.size(), 2u);
   EXPECT_TRUE(Errs.empty());
@@ -1347,29 +1345,32 @@ struct AutoDeleteFile {
   }
 };
 
+static std::string interceptStdout(std::function<void()> F) {
+  outs().flush(); // flush any output from previous tests
+  AutoDeleteFile File;
+  {
+    OutputRedirector Stdout(fileno(stdout));
+    if (!Stdout.Valid)
+      return "";
+    File.FilePath = Stdout.FilePath;
+    F();
+    outs().flush();
+  }
+  auto Buffer = MemoryBuffer::getFile(File.FilePath);
+  if (!Buffer)
+    return "";
+  return Buffer->get()->getBuffer().str();
+}
+
 template <void (*Func)(const cl::Option &)>
 class PrintOptionTestBase : public ::testing::Test {
 public:
   // Return std::string because the output of a failing EXPECT check is
   // unreadable for StringRef. It also avoids any lifetime issues.
   template <typename... Ts> std::string runTest(Ts... OptionAttributes) {
-    outs().flush();  // flush any output from previous tests
-    AutoDeleteFile File;
-    {
-      OutputRedirector Stdout(fileno(stdout));
-      if (!Stdout.Valid)
-        return "";
-      File.FilePath = Stdout.FilePath;
-
-      StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
-                                          OptionAttributes...);
-      Func(TestOption);
-      outs().flush();
-    }
-    auto Buffer = MemoryBuffer::getFile(File.FilePath);
-    if (!Buffer)
-      return "";
-    return Buffer->get()->getBuffer().str();
+    StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
+                                        OptionAttributes...);
+    return interceptStdout([&]() { Func(TestOption); });
   }
 
   enum class OptionValue { Val };
@@ -1870,7 +1871,7 @@ TEST(CommandLineTest, LongOptions) {
   //
 
   EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS));
   EXPECT_TRUE(OptA);
   EXPECT_FALSE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
@@ -1878,7 +1879,7 @@ TEST(CommandLineTest, LongOptions) {
   cl::ResetAllOptionOccurrences();
 
   EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS));
   EXPECT_TRUE(OptA);
   EXPECT_FALSE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
@@ -1888,7 +1889,7 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `-ab` and `--ab` are treated the same and appear more than
   // once.  Also, `val1` is unexpected.
   EXPECT_FALSE(
-      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS));
   outs()<< Errs << "\n";
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
@@ -1901,13 +1902,13 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `-ab` is treated as `-a -b`, so `-a` is seen twice, and
   // `val1` is unexpected.
   EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
+                                           &OS, nullptr, true));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
   // Works because `-a` is treated differently than `--ab`.
   EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
+                                           &OS, nullptr, true));
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
@@ -1917,7 +1918,6 @@ TEST(CommandLineTest, LongOptions) {
   EXPECT_TRUE(OptA);
   EXPECT_TRUE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
-  OS.flush();
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 }
@@ -1936,12 +1936,10 @@ TEST(CommandLineTest, OptionErrorMessage) {
   raw_string_ostream OS(Errs);
 
   OptA.error("custom error", OS);
-  OS.flush();
   EXPECT_NE(Errs.find("for the -a option:"), std::string::npos);
   Errs.clear();
 
   OptLong.error("custom error", OS);
-  OS.flush();
   EXPECT_NE(Errs.find("for the --long option:"), std::string::npos);
   Errs.clear();
 
@@ -1964,7 +1962,6 @@ TEST(CommandLineTest, OptionErrorMessageSuggest) {
   raw_string_ostream OS(Errs);
 
   EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_NE(Errs.find("prog: Did you mean '--aluminium'?\n"),
             std::string::npos);
   Errs.clear();
@@ -1987,7 +1984,6 @@ TEST(CommandLineTest, OptionErrorMessageSuggestNoHidden) {
   raw_string_ostream OS(Errs);
 
   EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_NE(Errs.find("prog: Did you mean '--aluminium'?\n"),
             std::string::npos);
   Errs.clear();
@@ -2077,7 +2073,6 @@ TEST(CommandLineTest, ConsumeAfterOnePositional) {
   std::string Errs;
   raw_string_ostream OS(Errs);
   EXPECT_TRUE(cl::ParseCommandLineOptions(4, Args, StringRef(), &OS));
-  OS.flush();
   EXPECT_EQ("input", Input);
   EXPECT_EQ(ExtraArgs.size(), 2u);
   EXPECT_EQ(ExtraArgs[0], "arg1");
@@ -2100,7 +2095,6 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
   std::string Errs;
   raw_string_ostream OS(Errs);
   EXPECT_TRUE(cl::ParseCommandLineOptions(5, Args, StringRef(), &OS));
-  OS.flush();
   EXPECT_EQ("input1", Input1);
   EXPECT_EQ("input2", Input2);
   EXPECT_EQ(ExtraArgs.size(), 2u);
@@ -2204,6 +2198,124 @@ TEST(CommandLineTest, DefaultValue) {
   EXPECT_EQ("str-init-value", StrInitOption);
   EXPECT_TRUE(StrInitOption.Default.hasValue());
   EXPECT_EQ(1, StrInitOption.getNumOccurrences());
+}
+
+TEST(CommandLineTest, HelpWithoutSubcommands) {
+  // Check that the help message does not contain the "[subcommand]" placeholder
+  // and the "SUBCOMMANDS" section if there are no subcommands.
+  cl::ResetCommandLineParser();
+  StackOption<bool> Opt("opt", cl::init(false));
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout([]() { cl::PrintHelpMessage(); });
+  EXPECT_NE(std::string::npos, Output.find("USAGE: prog [options]")) << Output;
+  EXPECT_EQ(std::string::npos, Output.find("SUBCOMMANDS:")) << Output;
+  cl::ResetCommandLineParser();
+}
+
+TEST(CommandLineTest, HelpWithSubcommands) {
+  // Check that the help message contains the "[subcommand]" placeholder in the
+  // "USAGE" line and describes subcommands.
+  cl::ResetCommandLineParser();
+  StackSubCommand SC1("sc1", "First Subcommand");
+  StackSubCommand SC2("sc2", "Second Subcommand");
+  StackOption<bool> SC1Opt("sc1", cl::sub(SC1), cl::init(false));
+  StackOption<bool> SC2Opt("sc2", cl::sub(SC2), cl::init(false));
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout([]() { cl::PrintHelpMessage(); });
+  EXPECT_NE(std::string::npos,
+            Output.find("USAGE: prog [subcommand] [options]"))
+      << Output;
+  EXPECT_NE(std::string::npos, Output.find("SUBCOMMANDS:")) << Output;
+  EXPECT_NE(std::string::npos, Output.find("sc1 - First Subcommand")) << Output;
+  EXPECT_NE(std::string::npos, Output.find("sc2 - Second Subcommand"))
+      << Output;
+  cl::ResetCommandLineParser();
+}
+
+TEST(CommandLineTest, UnknownCommands) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("foo", "Foo subcommand");
+  StackSubCommand SC2("bar", "Bar subcommand");
+  StackOption<bool> SC1Opt("put", cl::sub(SC1));
+  StackOption<bool> SC2Opt("get", cl::sub(SC2));
+  StackOption<bool> TopOpt1("peek");
+  StackOption<bool> TopOpt2("set");
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *Args1[] = {"prog", "baz", "--get"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args1), Args1, StringRef(), &OS));
+  EXPECT_EQ(Errs,
+            "prog: Unknown subcommand 'baz'.  Try: 'prog --help'\n"
+            "prog: Did you mean 'bar'?\n"
+            "prog: Unknown command line argument '--get'.  Try: 'prog --help'\n"
+            "prog: Did you mean '--set'?\n");
+
+  // Do not show a suggestion if the subcommand is not similar to any known.
+  Errs.clear();
+  const char *Args2[] = {"prog", "faz"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args2), Args2, StringRef(), &OS));
+  EXPECT_EQ(Errs, "prog: Unknown subcommand 'faz'.  Try: 'prog --help'\n");
+}
+
+TEST(CommandLineTest, SubCommandGroups) {
+  // Check that options in subcommand groups are associated with expected
+  // subcommands.
+
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("sc1", "SC1 subcommand");
+  StackSubCommand SC2("sc2", "SC2 subcommand");
+  StackSubCommand SC3("sc3", "SC3 subcommand");
+  cl::SubCommandGroup Group12 = {&SC1, &SC2};
+
+  StackOption<bool> Opt12("opt12", cl::sub(Group12), cl::init(false));
+  StackOption<bool> Opt3("opt3", cl::sub(SC3), cl::init(false));
+
+  // The "--opt12" option is expected to be added to both subcommands in the
+  // group, but not to the top-level "no subcommand" pseudo-subcommand or the
+  // "sc3" subcommand.
+  EXPECT_EQ(1U, SC1.OptionsMap.size());
+  EXPECT_TRUE(SC1.OptionsMap.contains("opt12"));
+
+  EXPECT_EQ(1U, SC2.OptionsMap.size());
+  EXPECT_TRUE(SC2.OptionsMap.contains("opt12"));
+
+  EXPECT_FALSE(cl::SubCommand::getTopLevel().OptionsMap.contains("opt12"));
+  EXPECT_FALSE(SC3.OptionsMap.contains("opt12"));
+}
+
+TEST(CommandLineTest, HelpWithEmptyCategory) {
+  cl::ResetCommandLineParser();
+
+  cl::OptionCategory Category1("First Category");
+  cl::OptionCategory Category2("Second Category");
+  StackOption<int> Opt1("opt1", cl::cat(Category1));
+  StackOption<int> Opt2("opt2", cl::cat(Category2));
+  cl::HideUnrelatedOptions(Category2);
+
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout(
+      []() { cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true); });
+  EXPECT_EQ(std::string::npos, Output.find("First Category"))
+      << "An empty category should not be printed";
+
+  Output = interceptStdout(
+      []() { cl::PrintHelpMessage(/*Hidden=*/true, /*Categorized=*/true); });
+  EXPECT_EQ(std::string::npos, Output.find("First Category"))
+      << "An empty category should not be printed";
+
+  cl::ResetCommandLineParser();
 }
 
 } // anonymous namespace

@@ -240,7 +240,7 @@ define <12 x double> @fneg_with_multiple_uses(<15 x double> %a, <20 x double> %b
 ; CHECK-LABEL: @fneg_with_multiple_uses(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <15 x double> [[A:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> [[A_NEG]], <20 x double> [[B:%.*]], i32 3, i32 5, i32 4)
-; CHECK-NEXT:    [[RES_2:%.*]] = shufflevector <15 x double> [[A_NEG]], <15 x double> undef, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[RES_2:%.*]] = shufflevector <15 x double> [[A_NEG]], <15 x double> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[RES_3:%.*]] = fadd <12 x double> [[RES_2]], [[RES]]
 ; CHECK-NEXT:    ret <12 x double> [[RES_3]]
 ;
@@ -265,8 +265,8 @@ define <12 x double> @fneg_with_multiple_uses_2(<15 x double> %a, <20 x double> 
   ret <12 x double> %res
 }
 ; negation should be moved to the second operand given it has the smallest operand count
-define <72 x double> @chain_of_matrix_mutliplies(<27 x double> %a, <3 x double> %b, <8 x double> %c) {
-; CHECK-LABEL: @chain_of_matrix_mutliplies(
+define <72 x double> @chain_of_matrix_multiplies(<27 x double> %a, <3 x double> %b, <8 x double> %c) {
+; CHECK-LABEL: @chain_of_matrix_multiplies(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[B:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A:%.*]], <3 x double> [[TMP1]], i32 9, i32 3, i32 1)
 ; CHECK-NEXT:    [[RES_2:%.*]] = tail call <72 x double> @llvm.matrix.multiply.v72f64.v9f64.v8f64(<9 x double> [[RES]], <8 x double> [[C:%.*]], i32 9, i32 1, i32 8)
@@ -280,8 +280,8 @@ define <72 x double> @chain_of_matrix_mutliplies(<27 x double> %a, <3 x double> 
 
 ; first negation should be moved to %a
 ; second negation should be moved to the result of the second multipication
-define <6 x double> @chain_of_matrix_mutliplies_with_two_negations(<3 x double> %a, <5 x double> %b, <10 x double> %c) {
-; CHECK-LABEL: @chain_of_matrix_mutliplies_with_two_negations(
+define <6 x double> @chain_of_matrix_multiplies_with_two_negations(<3 x double> %a, <5 x double> %b, <10 x double> %c) {
+; CHECK-LABEL: @chain_of_matrix_multiplies_with_two_negations(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[A:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <15 x double> @llvm.matrix.multiply.v15f64.v3f64.v5f64(<3 x double> [[TMP1]], <5 x double> [[B:%.*]], i32 3, i32 1, i32 5)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <6 x double> @llvm.matrix.multiply.v6f64.v15f64.v10f64(<15 x double> [[RES]], <10 x double> [[C:%.*]], i32 3, i32 5, i32 2)
@@ -296,8 +296,8 @@ define <6 x double> @chain_of_matrix_mutliplies_with_two_negations(<3 x double> 
 }
 
 ; negation should be propagated to the result of the second matrix multiplication
-define <6 x double> @chain_of_matrix_mutliplies_propagation(<15 x double> %a, <20 x double> %b, <8 x double> %c){
-; CHECK-LABEL: @chain_of_matrix_mutliplies_propagation(
+define <6 x double> @chain_of_matrix_multiplies_propagation(<15 x double> %a, <20 x double> %b, <8 x double> %c){
+; CHECK-LABEL: @chain_of_matrix_multiplies_propagation(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> [[A:%.*]], <20 x double> [[B:%.*]], i32 3, i32 5, i32 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <6 x double> @llvm.matrix.multiply.v6f64.v12f64.v8f64(<12 x double> [[TMP1]], <8 x double> [[C:%.*]], i32 3, i32 4, i32 2)
 ; CHECK-NEXT:    [[RES_2:%.*]] = fneg <6 x double> [[TMP2]]

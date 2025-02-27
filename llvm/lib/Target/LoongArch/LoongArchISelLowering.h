@@ -21,15 +21,18 @@
 
 namespace llvm {
 class LoongArchSubtarget;
-struct LoongArchRegisterInfo;
 namespace LoongArchISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
   // TODO: add more LoongArchISDs
   CALL,
+  CALL_MEDIUM,
+  CALL_LARGE,
   RET,
   TAIL,
+  TAIL_MEDIUM,
+  TAIL_LARGE,
 
   // 32-bit shifts, directly matching the semantics of the named LoongArch
   // instructions.
@@ -39,6 +42,12 @@ enum NodeType : unsigned {
 
   ROTL_W,
   ROTR_W,
+
+  // unsigned 32-bit integer division
+  DIV_W,
+  MOD_W,
+  DIV_WU,
+  MOD_WU,
 
   // FPR<->GPR transfer operations
   MOVGR2FR_W_LA64,
@@ -59,6 +68,7 @@ enum NodeType : unsigned {
   REVB_2H,
   REVB_2W,
   BITREV_4B,
+  BITREV_8B,
   BITREV_W,
 
   // Intrinsic operations start ============================================
@@ -113,6 +123,17 @@ enum NodeType : unsigned {
 
   // Vector Shuffle
   VREPLVE,
+  VSHUF,
+  VPICKEV,
+  VPICKOD,
+  VPACKEV,
+  VPACKOD,
+  VILVL,
+  VILVH,
+  VSHUF4I,
+  VREPLVEI,
+  VREPLGR2VR,
+  XVPERMI,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -123,6 +144,10 @@ enum NodeType : unsigned {
   VANY_ZERO,
   VALL_NONZERO,
   VANY_NONZERO,
+
+  // Floating point approximate reciprocal operation
+  FRECIPE,
+  FRSQRTE
 
   // Intrinsic operations end =============================================
 };
@@ -158,7 +183,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
@@ -170,6 +195,7 @@ public:
   bool hasAndNot(SDValue Y) const override;
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
                                       Value *AlignedAddr, Value *Incr,
@@ -199,9 +225,22 @@ public:
   Register
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
+  bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
+    return true;
+  }
+
+  SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+                          int &RefinementSteps, bool &UseOneConstNR,
+                          bool Reciprocal) const override;
+
+  SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+                           int &RefinementSteps) const override;
+
   ISD::NodeType getExtendForAtomicOps() const override {
     return ISD::SIGN_EXTEND;
   }
+
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
 
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
@@ -220,6 +259,7 @@ public:
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+  bool signExtendConstant(const ConstantInt *CI) const override;
 
   bool hasAndNotCompare(SDValue Y) const override;
 
@@ -230,13 +270,25 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
+  bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
+    return false;
+  }
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
+  bool shouldExtendTypeInLibCall(EVT Type) const override;
+
+  bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
+                              Align &PrefAlign) const override;
+
+  bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
                                    unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
                                    ISD::ArgFlagsTy ArgFlags, CCState &State,
-                                   bool IsFixed, bool IsReg, Type *OrigTy);
+                                   bool IsFixed, bool IsRet, Type *OrigTy);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -247,11 +299,14 @@ private:
                          LoongArchCCAssignFn Fn) const;
 
   template <class NodeTy>
-  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, CodeModel::Model M,
+                  bool IsLocal = true) const;
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                           unsigned Opc, bool Large = false) const;
+                           unsigned Opc, bool UseGOT, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                             unsigned Opc, bool Large = false) const;
+  SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
+                         unsigned Opc, bool Large = false) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
@@ -276,6 +331,12 @@ private:
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
@@ -298,6 +359,8 @@ private:
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
+
+  bool softPromoteHalfType() const override { return true; }
 };
 
 } // end namespace llvm

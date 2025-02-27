@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}gs_const:
 ; GCN-NOT: v_cmpx
@@ -55,7 +55,7 @@ define amdgpu_gs void @false() {
 ; GCN: v_cmp_lt_i32
 ; GCN: v_cmp_lt_i32
 ; GCN: s_or_b64 s[0:1]
-; GCN: s_xor_b64 s[0:1], s[0:1], exec
+; GCN: s_and{{n2|_not1}}_b64 s[0:1], exec, s[0:1]
 ; GCN: s_and{{n2|_not1}}_b64 s[2:3], s[2:3], s[0:1]
 ; GCN: s_and_b64 exec, exec, s[2:3]
 define amdgpu_gs void @and(i32 %a, i32 %b, i32 %c, i32 %d) {
@@ -238,7 +238,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; GCN: v_cmp_neq_f32_e32 vcc, 0
 ; GCN-DAG: s_wqm_b64 s[2:3], vcc
 ; GCN-DAG: s_mov_b64 s[0:1], exec
-; GCN: s_xor_b64 s[2:3], s[2:3], exec
+; GCN: s_and{{n2|_not1}}_b64 s[2:3], exec, s[2:3]
 ; GCN: s_and{{n2|_not1}}_b64 s[0:1], s[0:1], s[2:3]
 ; GCN: s_and_b64 exec, exec, s[0:1]
 define amdgpu_ps float @wqm(float %a) {
@@ -314,7 +314,7 @@ bb33:                                             ; preds = %bb
 
 bb35:                                             ; preds = %bb33, %.entry
   %tmp36 = phi float [ %tmp34, %bb33 ], [ 1.000000e+00, %.entry ]
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %tmp36, float %tmp36, float %tmp36, float %tmp36, i1 immarg true, i1 immarg true) #3
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp36, float %tmp36, float %tmp36, float %tmp36, i1 true, i1 true) #3
   ret void
 }
 

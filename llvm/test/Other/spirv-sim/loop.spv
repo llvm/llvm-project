@@ -1,0 +1,58 @@
+; RUN: %if spirv-tools %{ spirv-as %s -o - | spirv-val - %}
+; RUN: spirv-sim --function=simple --wave=4 --expects=0,2,2,4 -i %s
+               OpCapability Shader
+               OpCapability GroupNonUniform
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %WaveIndex
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %simple "simple"
+               OpName %main "main"
+                OpDecorate %WaveIndex BuiltIn SubgroupLocalInvocationId
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+       %bool = OpTypeBool
+      %int_2 = OpConstant %int 2
+      %int_5 = OpConstant %int 5
+      %int_6 = OpConstant %int 6
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+       %void = OpTypeVoid
+  %main_type = OpTypeFunction %void
+%simple_type = OpTypeFunction %int
+  %uint_iptr = OpTypePointer Input %uint
+  %uint_fptr = OpTypePointer Function %uint
+  %WaveIndex = OpVariable %uint_iptr Input
+       %main = OpFunction %void None %main_type
+      %unused = OpLabel
+               OpReturn
+               OpFunctionEnd
+     %simple = OpFunction %int None %simple_type
+      %entry = OpLabel
+; uint i = 0;
+          %i = OpVariable %uint_fptr Function
+          %1 = OpLoad %uint %WaveIndex
+               OpStore %i %uint_0
+               OpBranch %header
+     %header = OpLabel
+          %2 = OpLoad %uint %i
+          %3 = OpULessThan %bool %2 %1
+               OpLoopMerge %merge %continue None
+               OpBranchConditional %3 %body %merge
+; while (i < WaveGetLaneIndex()) {
+;     i += 2;
+; }
+       %body = OpLabel
+               OpBranch %continue
+   %continue = OpLabel
+          %4 = OpIAdd %uint %2 %uint_2
+               OpStore %i %4
+               OpBranch %header
+      %merge = OpLabel
+; return (int) i;
+          %5 = OpLoad %uint %i
+          %6 = OpBitcast %int %5
+               OpReturnValue %6
+               OpFunctionEnd
+
+

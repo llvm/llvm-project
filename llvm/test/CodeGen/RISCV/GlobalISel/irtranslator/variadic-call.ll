@@ -20,7 +20,7 @@ define i32 @main() {
   ; RV32I-NEXT:   $x11 = COPY [[C1]](s32)
   ; RV32I-NEXT:   $x12 = COPY [[C2]](s32)
   ; RV32I-NEXT:   $x13 = COPY [[C3]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-plt) @foo, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @foo, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
   ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -40,7 +40,7 @@ define i32 @main() {
   ; RV64I-NEXT:   $x11 = COPY [[C2]](s64)
   ; RV64I-NEXT:   $x12 = COPY [[C3]](s64)
   ; RV64I-NEXT:   $x13 = COPY [[C4]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-plt) @foo, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @foo, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
   ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s64) = G_ASSERT_SEXT [[COPY]], 32

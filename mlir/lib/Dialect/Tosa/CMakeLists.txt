@@ -12,13 +12,15 @@ add_mlir_dialect_library(MLIRTosaDialect
   MLIRTosaDialectBytecodeIncGen
   MLIRTosaOpsIncGen
   MLIRTosaInterfacesIncGen
+  MLIRTosaEnumsIncGen
+  MLIRTosaAvailabilityIncGen
+  MLIRShardingInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRDialect
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
-  MLIRQuantDialect
   MLIRQuantUtils
   MLIRSideEffectInterfaces
   MLIRTensorDialect

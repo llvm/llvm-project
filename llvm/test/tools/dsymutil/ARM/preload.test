@@ -8,7 +8,7 @@ RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/preload/fo
 RUN: llvm-nm %p/../Inputs/private/tmp/preload/foo | FileCheck %s
 RUN: llvm-nm %t.dSYM/Contents/Resources/DWARF/foo | FileCheck %s
 
-RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/preload/foo -o %t.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/preload/foo -o %t.dSYM
 RUN: llvm-nm %p/../Inputs/private/tmp/preload/foo | FileCheck %s
 RUN: llvm-nm %t.dSYM/Contents/Resources/DWARF/foo | FileCheck %s
 

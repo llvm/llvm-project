@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/thread.h"
 
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include <process.h>

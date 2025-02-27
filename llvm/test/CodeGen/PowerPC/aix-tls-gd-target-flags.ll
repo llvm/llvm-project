@@ -8,11 +8,11 @@
 define signext i32 @foo() {
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-lo) @a, $x2 :: (load (s64) from got)
+  ; CHECK-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgdm) @a, $x2 :: (load (s64) from got)
   ; CHECK-NEXT:   [[LDtoc1:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgd) @a, $x2 :: (load (s64) from got)
   ; CHECK-NEXT:   [[TLSGDAIX8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = TLSGDAIX8 killed [[LDtoc1]], killed [[LDtoc]]
   ; CHECK-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, killed [[TLSGDAIX8_]] :: (dereferenceable load (s32) from @a)
-  ; CHECK-NEXT:   [[LDtoc2:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-lo) @b, $x2 :: (load (s64) from got)
+  ; CHECK-NEXT:   [[LDtoc2:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgdm) @b, $x2 :: (load (s64) from got)
   ; CHECK-NEXT:   [[LDtoc3:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgd) @b, $x2 :: (load (s64) from got)
   ; CHECK-NEXT:   [[TLSGDAIX8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = TLSGDAIX8 killed [[LDtoc3]], killed [[LDtoc2]]
   ; CHECK-NEXT:   [[LWZ1:%[0-9]+]]:gprc = LWZ 0, killed [[TLSGDAIX8_1]] :: (dereferenceable load (s32) from @b)
@@ -21,8 +21,8 @@ define signext i32 @foo() {
   ; CHECK-NEXT:   $x3 = COPY [[EXTSW_32_64_]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
-  %0 = load i32, i32* @a, align 4
-  %1 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @a, align 4
+  %1 = load i32, ptr @b, align 4
   %add = add nsw i32 %1, %0
   ret i32 %add
 }

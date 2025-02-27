@@ -1237,9 +1237,11 @@ declare i32 @llvm.amdgcn.workitem.id.z() #1
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable willreturn }
 
+!llvm.module.flags = !{!6}
 !0 = !{i32 64, i32 1, i32 1}
 !1 = !{i32 1, i32 64, i32 1}
 !2 = !{i32 1, i32 1, i32 64}
 !3 = !{i32 32, i32 2, i32 1}
 !4 = !{i32 1, i32 32, i32 2}
 !5 = !{i32 32, i32 1, i32 2}
+!6 = !{i32 1, !"amdhsa_code_object_version", i32 500}

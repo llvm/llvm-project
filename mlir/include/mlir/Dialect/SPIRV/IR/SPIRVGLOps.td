@@ -116,13 +116,6 @@ def SPIRV_GLFAbsOp : SPIRV_GLUnaryArithmeticOp<"FAbs", 4, SPIRV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    abs-op ::= ssa-id `=` `spirv.GL.FAbs` ssa-use `:`
-               float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -145,13 +138,6 @@ def SPIRV_GLSAbsOp : SPIRV_GLUnaryArithmeticOp<"SAbs", 5, SPIRV_Integer> {
     types. Result Type and operand types must have the same number of components
     with the same component width. Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    abs-op ::= ssa-id `=` `spirv.GL.SAbs` ssa-use `:`
-               integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -176,13 +162,6 @@ def SPIRV_GLCeilOp : SPIRV_GLUnaryArithmeticOp<"Ceil", 9, SPIRV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    ceil-op ::= ssa-id `=` `spirv.GL.Ceil` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -206,15 +185,6 @@ def SPIRV_GLCosOp : SPIRV_GLUnaryArithmeticOp<"Cos", 14, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    cos-op ::= ssa-id `=` `spirv.GL.Cos` ssa-use `:`
-               restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -238,15 +208,6 @@ def SPIRV_GLSinOp : SPIRV_GLUnaryArithmeticOp<"Sin", 13, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    sin-op ::= ssa-id `=` `spirv.GL.Sin` ssa-use `:`
-               restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -270,15 +231,6 @@ def SPIRV_GLTanOp : SPIRV_GLUnaryArithmeticOp<"Tan", 15, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    tan-op ::= ssa-id `=` `spirv.GL.Tan` ssa-use `:`
-               restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -304,15 +256,7 @@ def SPIRV_GLAsinOp : SPIRV_GLUnaryArithmeticOp<"Asin", 16, SPIRV_Float16or32> {
 
     Result Type and the type of x must be the same type. Results are computed
     per component.
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    asin-op ::= ssa-id `=` `spirv.GL.Asin` ssa-use `:`
-                restricted-float-scalar-vector-type
-    ```
+
     #### Example:
 
     ```mlir
@@ -338,15 +282,7 @@ def SPIRV_GLAcosOp : SPIRV_GLUnaryArithmeticOp<"Acos", 17, SPIRV_Float16or32> {
 
     Result Type and the type of x must be the same type. Results are computed
     per component.
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    acos-op ::= ssa-id `=` `spirv.GL.Acos` ssa-use `:`
-                restricted-float-scalar-vector-type
-    ```
+
     #### Example:
 
     ```mlir
@@ -372,15 +308,7 @@ def SPIRV_GLAtanOp : SPIRV_GLUnaryArithmeticOp<"Atan", 18, SPIRV_Float16or32> {
 
     Result Type and the type of x must be the same type. Results are computed
     per component.
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    atan-op ::= ssa-id `=` `spirv.GL.Atan` ssa-use `:`
-                restricted-float-scalar-vector-type
-    ```
+
     #### Example:
 
     ```mlir
@@ -404,15 +332,6 @@ def SPIRV_GLExpOp : SPIRV_GLUnaryArithmeticOp<"Exp", 27, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are
     computed per component.";
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    exp-op ::= ssa-id `=` `spirv.GL.Exp` ssa-use `:`
-               restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -437,13 +356,6 @@ def SPIRV_GLFloorOp : SPIRV_GLUnaryArithmeticOp<"Floor", 8, SPIRV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spirv.GL.Floor` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -470,13 +382,6 @@ def SPIRV_GLRoundOp: SPIRV_GLUnaryArithmeticOp<"Round", 1, SPIRV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    round-op ::= ssa-id `=` `spirv.GL.Round` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -502,13 +407,6 @@ def SPIRV_GLRoundEvenOp: SPIRV_GLUnaryArithmeticOp<"RoundEven", 2, SPIRV_Float> 
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    round-even-op ::= ssa-id `=` `spirv.GL.RoundEven` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -532,13 +430,6 @@ def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_F
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    rsqrt-op ::= ssa-id `=` `spirv.GL.InverseSqrt` ssa-use `:`
-                 float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -563,15 +454,6 @@ def SPIRV_GLLogOp : SPIRV_GLUnaryArithmeticOp<"Log", 28, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    log-op ::= ssa-id `=` `spirv.GL.Log` ssa-use `:`
-               restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -596,13 +478,6 @@ def SPIRV_GLFMaxOp : SPIRV_GLBinaryArithmeticOp<"FMax", 40, SPIRV_Float> {
     Result Type and the type of all operands must be the same
     type. Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fmax-op ::= ssa-id `=` `spirv.GL.FMax` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -626,13 +501,6 @@ def SPIRV_GLUMaxOp : SPIRV_GLBinaryArithmeticOp<"UMax", 41, SPIRV_Integer> {
     components with the same component width. Results are computed per
     component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spirv.GL.UMax` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -656,13 +524,6 @@ def SPIRV_GLSMaxOp : SPIRV_GLBinaryArithmeticOp<"SMax", 42, SPIRV_Integer> {
     components with the same component width. Results are computed per
     component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spirv.GL.SMax` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -687,13 +548,6 @@ def SPIRV_GLFMinOp : SPIRV_GLBinaryArithmeticOp<"FMin", 37, SPIRV_Float> {
     Result Type and the type of all operands must be the same type. Results are
     computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fmin-op ::= ssa-id `=` `spirv.GL.FMin` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -717,13 +571,6 @@ def SPIRV_GLUMinOp : SPIRV_GLBinaryArithmeticOp<"UMin", 38, SPIRV_Integer> {
     components with the same component width. Results are computed per
     component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spirv.GL.UMin` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -747,13 +594,6 @@ def SPIRV_GLSMinOp : SPIRV_GLBinaryArithmeticOp<"SMin", 39, SPIRV_Integer> {
     components with the same component width. Results are computed per
     component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spirv.GL.SMin` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -779,15 +619,6 @@ def SPIRV_GLPowOp : SPIRV_GLBinaryArithmeticOp<"Pow", 26, SPIRV_Float16or32> {
     Result Type and the type of all operands must be the same type. Results are
     computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    pow-op ::= ssa-id `=` `spirv.GL.Pow` ssa-use `:`
-               restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -811,13 +642,6 @@ def SPIRV_GLFSignOp : SPIRV_GLUnaryArithmeticOp<"FSign", 6, SPIRV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    sign-op ::= ssa-id `=` `spirv.GL.FSign` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -840,13 +664,6 @@ def SPIRV_GLSSignOp : SPIRV_GLUnaryArithmeticOp<"SSign", 7, SPIRV_Integer> {
     types. Result Type and operand types must have the same number of components
     with the same component width. Results are computed per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    sign-op ::= ssa-id `=` `spirv.GL.SSign` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -870,13 +687,6 @@ def SPIRV_GLSqrtOp : SPIRV_GLUnaryArithmeticOp<"Sqrt", 31, SPIRV_Float> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    sqrt-op ::= ssa-id `=` `spirv.GL.Sqrt` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -900,15 +710,6 @@ def SPIRV_GLSinhOp : SPIRV_GLUnaryArithmeticOp<"Sinh", 19, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    sinh-op ::= ssa-id `=` `spirv.GL.Sinh` ssa-use `:`
-                restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -932,15 +733,6 @@ def SPIRV_GLCoshOp : SPIRV_GLUnaryArithmeticOp<"Cosh", 20, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    cosh-op ::= ssa-id `=` `spirv.GL.Cosh` ssa-use `:`
-                restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -964,15 +756,6 @@ def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32> {
     Result Type and the type of x must be the same type. Results are computed
     per component.
 
-    <!-- End of AutoGen section -->
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    tanh-op ::= ssa-id `=` `spirv.GL.Tanh` ssa-use `:`
-                restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -1134,16 +917,6 @@ def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [Pure]> {
     The operand x must be a scalar or vector whose component type is
     floating-point.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    integer-scalar-vector-type ::= integer-type |
-                                 `vector<` integer-literal `x` integer-type `>`
-    frexpstruct-op ::= ssa-id `=` `spirv.GL.FrexpStruct` ssa-use `:`
-                                  `!spirv.struct<` float-scalar-vector-type `,`
-                                                  integer-scalar-vector-type `>`
-    ```
     #### Example:
 
     ```mlir
@@ -1255,6 +1028,122 @@ def SPIRV_GLFMixOp :
 
   let hasVerifier = 0;
 }
+
+// -----
+
+def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [
+    Pure,
+    AllTypesMatch<["p0", "p1"]>,
+    TypesMatchWith<"result type must match operand element type",
+                  "p0", "result",
+                  "::mlir::getElementTypeOrSelf($_self)">
+  ]> {
+  let summary = "Return distance between two points";
+
+  let description = [{
+    Result is the distance between p0 and p1, i.e., length(p0 - p1).
+
+    The operands must all be a scalar or vector whose component type is floating-point.
+
+    Result Type must be a scalar of the same type as the component type of the operands.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Distance %0, %1 : vector<3xf32>, vector<3xf32> -> f32
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$p0,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$p1
+  );
+
+  let results = (outs
+    SPIRV_Float:$result
+  );
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($p0) `,` type($p1) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_GLCrossOp : SPIRV_GLBinaryArithmeticOp<"Cross", 68, SPIRV_Float> {
+  let summary = "Return the cross product of two 3-component vectors";
+
+  let description = [{
+    Result is the cross product of x and y, i.e., the resulting components are, in order:
+
+    x[1] * y[2] - y[1] * x[2]
+
+    x[2] * y[0] - y[2] * x[0]
+
+    x[0] * y[1] - y[0] * x[1]
+
+    All the operands must be vectors of 3 components of a floating-point type.
+
+    Result Type and the type of all operands must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Cross %0, %1 : vector<3xf32>
+    %3 = spirv.GL.Cross %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNormalizeOp : SPIRV_GLUnaryArithmeticOp<"Normalize", 69, SPIRV_Float> {
+  let summary = "Normalizes a vector operand";
+
+  let description = [{
+    Result is the vector in the same direction as x but with a length of 1.
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of x must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Normalize %0 : vector<3xf32>
+    %3 = spirv.GL.Normalize %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
+  let summary = "Calculate reflection direction vector";
+
+  let description = [{
+    For the incident vector I and surface orientation N, the result is the reflection direction:
+
+    I - 2 * dot(N, I) * N
+
+    N must already be normalized in order to achieve the desired result.
+
+    The operands must all be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of all operands must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Reflect %0, %1 : f32
+    %3 = spirv.GL.Reflect %0, %1 : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
 
 def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> {
   let summary = "Unsigned-integer most-significant bit";

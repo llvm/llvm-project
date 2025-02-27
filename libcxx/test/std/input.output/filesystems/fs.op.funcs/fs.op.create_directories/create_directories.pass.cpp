@@ -6,26 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
-// This test requires the dylib support introduced in D92769.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
+// This test requires the dylib support introduced in e4ed349c7658.
+// XFAIL: using-built-library-before-llvm-12
 
 // <filesystem>
 
 // bool create_directories(const path& p);
 // bool create_directories(const path& p, error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "assert_macros.h"
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 static void test_signatures()

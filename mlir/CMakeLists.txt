@@ -1,5 +1,6 @@
 # MLIR project.
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "MLIR")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -15,7 +16,7 @@ endif()
 
 # Must go below project(..)
 include(GNUInstallDirs)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 
 if(MLIR_STANDALONE_BUILD)
   find_package(LLVM CONFIG REQUIRED)
@@ -26,15 +27,19 @@ if(MLIR_STANDALONE_BUILD)
 
   include_directories(${LLVM_INCLUDE_DIRS})
 
-  set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
-  if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
-    add_subdirectory(${UNITTEST_DIR} third-party/unittest)
-  endif()
-
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
     "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
+  # These definitions are needed to fill SHLIBDIR in tests.
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+  if(WIN32 OR CYGWIN)
+    # DLL platform -- put DLLs into bin.
+    set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
+  else()
+    set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  endif()
   set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
 endif()
 
@@ -70,6 +75,12 @@ endif()
 check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
 append_if(C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION "-Werror=implicit-function-declaration" CMAKE_C_FLAGS)
 
+# Warn on undefined macros. This is often an indication that an include to
+# `mlir-config.h` or similar is missing.
+check_c_compiler_flag("-Wundef" C_SUPPORTS_WUNDEF)
+append_if(C_SUPPORTS_WUNDEF "-Wundef" CMAKE_C_FLAGS)
+append_if(C_SUPPORTS_WUNDEF "-Wundef" CMAKE_CXX_FLAGS)
+
 # Forbid mismatch between declaration and definition for class vs struct. This is
 # harmless on Unix systems, but it'll be a ticking bomb for MSVC/Windows systems
 # where it creeps into the ABI.
@@ -77,25 +88,33 @@ check_c_compiler_flag("-Werror=mismatched-tags" C_SUPPORTS_WERROR_MISMATCHED_TAG
 append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_C_FLAGS)
 append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_CXX_FLAGS)
 
-# Silence a false positive GCC -Wunused-but-set-parameter warning in constexpr
-# cases, by marking SelectedCase as used. See
-# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827 for details. The issue is
-# fixed in GCC 10.
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0")
-  check_cxx_compiler_flag("-Wno-unused-but-set-parameter" CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER)
-  append_if(CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER "-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  # Silence a false positive GCC -Wunused-but-set-parameter warning in
+  # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
+  # for details
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
+    check_cxx_compiler_flag("-Wno-unused-but-set-parameter" CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER)
+    append_if(CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER "-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
+  endif()
+  # Silence a false positive GCC -Wdeprecated-copy warning in cases where
+  # a copy operator is defined through "using" a base class copy operator.
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0")
+    check_cxx_compiler_flag("-Wno-deprecated-copy" CXX_SUPPORTS_WNO_DEPRECTAED_COPY)
+    append_if(CXX_SUPPORTS_WNO_DEPRECTAED_COPY "-Wno-deprecated-copy" CMAKE_CXX_FLAGS)
+  endif()
 endif()
 
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
 # mlir-generic-headers are dialect-independent.
 add_custom_target(mlir-generic-headers)
-set_target_properties(mlir-generic-headers PROPERTIES FOLDER "Misc")
+set_target_properties(mlir-generic-headers PROPERTIES FOLDER "MLIR/Resources")
 # mlir-headers may be dialect-dependent.
 add_custom_target(mlir-headers)
-set_target_properties(mlir-headers PROPERTIES FOLDER "Misc")
+set_target_properties(mlir-headers PROPERTIES FOLDER "MLIR/Resources")
 add_dependencies(mlir-headers mlir-generic-headers)
 add_custom_target(mlir-doc)
+set_target_properties(mlir-doc PROPERTIES FOLDER "MLIR/Docs")
 
 # Only enable execution engine if the native target is available.
 if(${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
@@ -104,16 +123,6 @@ else()
   set(MLIR_ENABLE_EXECUTION_ENGINE 0)
 endif()
 
-# Build the CUDA conversions and run according tests if the NVPTX backend
-# is available
-if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_CUDA_CONVERSIONS 1)
-else()
-  set(MLIR_ENABLE_CUDA_CONVERSIONS 0)
-endif()
-# TODO: we should use a config.h file like LLVM does
-add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_ENABLE_CUDA_CONVERSIONS})
-
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available.
 if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
@@ -121,17 +130,17 @@ if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
 else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
-add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ENABLE_ROCM_CONVERSIONS})
 
-set(MLIR_ENABLE_DEPRECATED_GPU_SERIALIZATION 0 CACHE BOOL "Enable deprecated GPU serialization passes")
-set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the mlir CUDA runner")
-set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the mlir ROCm runner")
-set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the mlir Sycl runner")
-set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the mlir SPIR-V cpu runner")
-set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the mlir Vulkan runner")
+set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the MLIR CUDA runner")
+set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the MLIR ROCm runner")
+set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the MLIR SYCL runner")
+set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the MLIR SPIR-V cpu runner")
+set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the MLIR Vulkan runner")
 set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
     "Statically link the nvptxlibrary instead of calling ptxas as a subprocess \
     for compiling PTX to cubin")
+
+set(MLIR_ENABLE_PDL_IN_PATTERNMATCH 1 CACHE BOOL "Enable PDL in PatternMatch")
 
 option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."
@@ -148,6 +157,9 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
+set(MLIR_LINK_MLIR_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+    "Link tools against libMLIR.so")
+
 configure_file(
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Config/mlir-config.h.cmake
   ${MLIR_INCLUDE_DIR}/mlir/Config/mlir-config.h)
@@ -157,35 +169,53 @@ configure_file(
 # Requires:
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
+# By default, find_package and probing for installed pybind11 is performed.
+# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to
+# disable all package setup and control it themselves.
 #-------------------------------------------------------------------------------
 
+set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir"
+  CACHE STRING "nanobind domain for MLIR python bindings.")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
        "Prime the python detection by searching for a full 'Development' \
        component first (temporary while diagnosing environment specific Python \
        detection issues)")
+set(MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES 0 CACHE BOOL
+       "Performs python dev package configuration sufficient to use all MLIR \
+       python features. Super-projects that wish to control their own setup \
+       must perform an appropriate find_package of Python3 with \
+       'Development.Module' and ensure that find_package(pybind11) is \
+       satisfied (and keep up to date as requirements evolve).")
+
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
+  # Note that both upstream and downstreams often call this macro. It gates
+  # internally on the MLIR_CONFIGURE_PYTHON_DEV_PACKAGES option.
   mlir_configure_python_dev_packages()
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories( "include")
-include_directories( ${MLIR_INCLUDE_DIR})
+include_directories(BEFORE
+  "include"
+  ${MLIR_INCLUDE_DIR}
+  )
 
 # Adding tools/mlir-tblgen here as calling add_tablegen sets some variables like
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
-add_subdirectory(tools/mlir-tblgen)
 add_subdirectory(tools/mlir-linalg-ods-gen)
 add_subdirectory(tools/mlir-pdll)
-
+add_subdirectory(tools/mlir-tblgen)
+add_subdirectory(tools/mlir-src-sharder)
 set(MLIR_TABLEGEN_EXE "${MLIR_TABLEGEN_EXE}" CACHE INTERNAL "")
 set(MLIR_TABLEGEN_TARGET "${MLIR_TABLEGEN_TARGET}" CACHE INTERNAL "")
 set(MLIR_PDLL_TABLEGEN_EXE "${MLIR_PDLL_TABLEGEN_EXE}" CACHE INTERNAL "")
 set(MLIR_PDLL_TABLEGEN_TARGET "${MLIR_PDLL_TABLEGEN_TARGET}" CACHE INTERNAL "")
+set(MLIR_SRC_SHARDER_TABLEGEN_EXE "${MLIR_SRC_SHARDER_TABLEGEN_EXE}" CACHE INTERNAL "")
+set(MLIR_SRC_SHARDER_TABLEGEN_TARGET "${MLIR_SRC_SHARDER_TABLEGEN_TARGET}" CACHE INTERNAL "")
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)
@@ -195,7 +225,8 @@ add_subdirectory(lib/CAPI)
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_custom_target(MLIRUnitTests)
-  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
+  set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR/Tests")
+  if (TARGET llvm_gtest)
     add_subdirectory(unittests)
   else()
     message(WARNING "gtest not found, unittests will not be available")
@@ -255,7 +286,7 @@ endif()
 
 # Custom target to install all mlir libraries
 add_custom_target(mlir-libraries)
-set_target_properties(mlir-libraries PROPERTIES FOLDER "Misc")
+set_target_properties(mlir-libraries PROPERTIES FOLDER "MLIR/Metatargets")
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-mlir-libraries

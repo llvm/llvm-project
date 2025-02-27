@@ -11,40 +11,62 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GCMetadata.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
 #include <string>
 
 using namespace llvm;
 
-namespace {
+bool GCStrategyMap::invalidate(Module &M, const PreservedAnalyses &PA,
+                               ModuleAnalysisManager::Invalidator &) {
+  for (const auto &F : M) {
+    if (F.isDeclaration() || !F.hasGC())
+      continue;
+    if (!StrategyMap.contains(F.getGC()))
+      return true;
+  }
+  return false;
+}
 
-class Printer : public FunctionPass {
-  static char ID;
+AnalysisKey CollectorMetadataAnalysis::Key;
 
-  raw_ostream &OS;
+CollectorMetadataAnalysis::Result
+CollectorMetadataAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  Result R;
+  auto &Map = R.StrategyMap;
+  for (auto &F : M) {
+    if (F.isDeclaration() || !F.hasGC())
+      continue;
+    if (auto GCName = F.getGC(); !Map.contains(GCName))
+      Map[GCName] = getGCStrategy(GCName);
+  }
+  return R;
+}
 
-public:
-  explicit Printer(raw_ostream &OS) : FunctionPass(ID), OS(OS) {}
+AnalysisKey GCFunctionAnalysis::Key;
 
-  StringRef getPassName() const override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+GCFunctionAnalysis::Result
+GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+  assert(!F.isDeclaration() && "Can only get GCFunctionInfo for a definition!");
+  assert(F.hasGC() && "Function doesn't have GC!");
 
-  bool runOnFunction(Function &F) override;
-  bool doFinalization(Module &M) override;
-};
-
-} // end anonymous namespace
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  assert(
+      MAMProxy.cachedResultExists<CollectorMetadataAnalysis>(*F.getParent()) &&
+      "This pass need module analysis `collector-metadata`!");
+  auto &Map =
+      MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent())
+          ->StrategyMap;
+  GCFunctionInfo Info(F, *Map[F.getGC()]);
+  return Info;
+}
 
 INITIALIZE_PASS(GCModuleInfo, "collector-metadata",
-                "Create Garbage Collector Module Metadata", false, false)
+                "Create Garbage Collector Module Metadata", false, true)
 
 // -----------------------------------------------------------------------------
 
@@ -52,6 +74,12 @@ GCFunctionInfo::GCFunctionInfo(const Function &F, GCStrategy &S)
     : F(F), S(S), FrameSize(~0LL) {}
 
 GCFunctionInfo::~GCFunctionInfo() = default;
+
+bool GCFunctionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                                FunctionAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<GCFunctionAnalysis>();
+  return !PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>();
+}
 
 // -----------------------------------------------------------------------------
 
@@ -83,58 +111,6 @@ void GCModuleInfo::clear() {
 }
 
 // -----------------------------------------------------------------------------
-
-char Printer::ID = 0;
-
-FunctionPass *llvm::createGCInfoPrinter(raw_ostream &OS) {
-  return new Printer(OS);
-}
-
-StringRef Printer::getPassName() const {
-  return "Print Garbage Collector Information";
-}
-
-void Printer::getAnalysisUsage(AnalysisUsage &AU) const {
-  FunctionPass::getAnalysisUsage(AU);
-  AU.setPreservesAll();
-  AU.addRequired<GCModuleInfo>();
-}
-
-bool Printer::runOnFunction(Function &F) {
-  if (F.hasGC())
-    return false;
-
-  GCFunctionInfo *FD = &getAnalysis<GCModuleInfo>().getFunctionInfo(F);
-
-  OS << "GC roots for " << FD->getFunction().getName() << ":\n";
-  for (GCFunctionInfo::roots_iterator RI = FD->roots_begin(),
-                                      RE = FD->roots_end();
-       RI != RE; ++RI)
-    OS << "\t" << RI->Num << "\t" << RI->StackOffset << "[sp]\n";
-
-  OS << "GC safe points for " << FD->getFunction().getName() << ":\n";
-  for (GCFunctionInfo::iterator PI = FD->begin(), PE = FD->end(); PI != PE;
-       ++PI) {
-
-    OS << "\t" << PI->Label->getName() << ": " << "post-call"
-       << ", live = {";
-
-    ListSeparator LS(",");
-    for (const GCRoot &R : make_range(FD->live_begin(PI), FD->live_end(PI)))
-      OS << LS << " " << R.Num;
-
-    OS << " }\n";
-  }
-
-  return false;
-}
-
-bool Printer::doFinalization(Module &M) {
-  GCModuleInfo *GMI = getAnalysisIfAvailable<GCModuleInfo>();
-  assert(GMI && "Printer didn't require GCModuleInfo?!");
-  GMI->clear();
-  return false;
-}
 
 GCStrategy *GCModuleInfo::getGCStrategy(const StringRef Name) {
   // TODO: Arguably, just doing a linear search would be faster for small N

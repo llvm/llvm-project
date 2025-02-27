@@ -21,11 +21,14 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -125,8 +128,8 @@ template <class T> struct DataRegion {
 };
 
 template <class ELFT>
-std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
-                                const typename ELFT::Shdr &Sec) {
+static std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
+                                       const typename ELFT::Shdr &Sec) {
   auto TableOrErr = Obj.sections();
   if (TableOrErr)
     return "[index " + std::to_string(&Sec - &TableOrErr->front()) + "]";
@@ -149,8 +152,8 @@ static std::string describe(const ELFFile<ELFT> &Obj,
 }
 
 template <class ELFT>
-std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
-                                 const typename ELFT::Phdr &Phdr) {
+static std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
+                                        const typename ELFT::Phdr &Phdr) {
   auto Headers = Obj.program_headers();
   if (Headers)
     return ("[index " + Twine(&Phdr - &Headers->front()) + "]").str();
@@ -161,6 +164,91 @@ std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
 
 static inline Error defaultWarningHandler(const Twine &Msg) {
   return createError(Msg);
+}
+
+template <class ELFT>
+static bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
+                                const typename ELFT::Shdr &Sec) {
+  // SHT_NOBITS sections don't need to have an offset inside the segment.
+  if (Sec.sh_type == ELF::SHT_NOBITS)
+    return true;
+
+  if (Sec.sh_offset < Phdr.p_offset)
+    return false;
+
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0)
+    return (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz);
+  return Sec.sh_offset + Sec.sh_size <= Phdr.p_offset + Phdr.p_filesz;
+}
+
+// Check that an allocatable section belongs to a virtual address
+// space of a segment.
+template <class ELFT>
+static bool checkSectionVMA(const typename ELFT::Phdr &Phdr,
+                            const typename ELFT::Shdr &Sec) {
+  if (!(Sec.sh_flags & ELF::SHF_ALLOC))
+    return true;
+
+  if (Sec.sh_addr < Phdr.p_vaddr)
+    return false;
+
+  bool IsTbss =
+      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
+  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties.
+  bool IsTbssInNonTLS = IsTbss && Phdr.p_type != ELF::PT_TLS;
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0 || IsTbssInNonTLS)
+    return Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz;
+  return Sec.sh_addr + Sec.sh_size <= Phdr.p_vaddr + Phdr.p_memsz;
+}
+
+template <class ELFT>
+static bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
+                               const typename ELFT::Shdr &Sec) {
+  return checkSectionOffsets<ELFT>(Phdr, Sec) &&
+         checkSectionVMA<ELFT>(Phdr, Sec);
+}
+
+// HdrHandler is called once with the number of relocations and whether the
+// relocations have addends. EntryHandler is called once per decoded relocation.
+template <bool Is64>
+static Error decodeCrel(
+    ArrayRef<uint8_t> Content,
+    function_ref<void(uint64_t /*relocation count*/, bool /*explicit addends*/)>
+        HdrHandler,
+    function_ref<void(Elf_Crel_Impl<Is64>)> EntryHandler) {
+  DataExtractor Data(Content, true, 8); // endian and address size are unused
+  DataExtractor::Cursor Cur(0);
+  const uint64_t Hdr = Data.getULEB128(Cur);
+  size_t Count = Hdr / 8;
+  const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
+  const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
+  using uint = typename Elf_Crel_Impl<Is64>::uint;
+  uint Offset = 0, Addend = 0;
+  HdrHandler(Count, Hdr & ELF::CREL_HDR_ADDEND);
+  uint32_t SymIdx = 0, Type = 0;
+  for (; Count; --Count) {
+    // The delta offset and flags member may be larger than uint64_t. Special
+    // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
+    // ULEB128 bytes encode the remaining delta offset bits.
+    const uint8_t B = Data.getU8(Cur);
+    Offset += B >> FlagBits;
+    if (B >= 0x80)
+      Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
+    // Delta symidx/type/addend members (SLEB128).
+    if (B & 1)
+      SymIdx += Data.getSLEB128(Cur);
+    if (B & 2)
+      Type += Data.getSLEB128(Cur);
+    if (B & 4 & Hdr)
+      Addend += Data.getSLEB128(Cur);
+    if (!Cur)
+      break;
+    EntryHandler(
+        {Offset << Shift, SymIdx, Type, std::make_signed_t<uint>(Addend)});
+  }
+  return Cur.takeError();
 }
 
 template <class ELFT>
@@ -277,6 +365,11 @@ public:
 
   std::vector<Elf_Rel> decode_relrs(Elf_Relr_Range relrs) const;
 
+  Expected<uint64_t> getCrelHeader(ArrayRef<uint8_t> Content) const;
+  using RelsOrRelas = std::pair<std::vector<Elf_Rel>, std::vector<Elf_Rela>>;
+  Expected<RelsOrRelas> decodeCrel(ArrayRef<uint8_t> Content) const;
+  Expected<RelsOrRelas> crels(const Elf_Shdr &Sec) const;
+
   Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr &Sec) const;
 
   /// Iterate over program header table.
@@ -308,7 +401,7 @@ public:
   ///  be checked after iteration ends.
   Elf_Note_Iterator notes_begin(const Elf_Phdr &Phdr, Error &Err) const {
     assert(Phdr.p_type == ELF::PT_NOTE && "Phdr is not of type PT_NOTE");
-    ErrorAsOutParameter ErrAsOutParam(&Err);
+    ErrorAsOutParameter ErrAsOutParam(Err);
     if (Phdr.p_offset + Phdr.p_filesz > getBufSize()) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Phdr.p_offset) +
@@ -336,7 +429,7 @@ public:
   ///  be checked after iteration ends.
   Elf_Note_Iterator notes_begin(const Elf_Shdr &Shdr, Error &Err) const {
     assert(Shdr.sh_type == ELF::SHT_NOTE && "Shdr is not of type SHT_NOTE");
-    ErrorAsOutParameter ErrAsOutParam(&Err);
+    ErrorAsOutParameter ErrAsOutParam(Err);
     if (Shdr.sh_offset + Shdr.sh_size > getBufSize()) {
       Err =
           createError("invalid offset (0x" + Twine::utohexstr(Shdr.sh_offset) +
@@ -413,8 +506,12 @@ public:
   /// within the text section that the SHT_LLVM_BB_ADDR_MAP section \p Sec
   /// is associated with. If the current ELFFile is relocatable, a corresponding
   /// \p RelaSec must be passed in as an argument.
+  /// Optional out variable to collect all PGO Analyses. New elements are only
+  /// added if no error occurs. If not provided, the PGO Analyses are decoded
+  /// then ignored.
   Expected<std::vector<BBAddrMap>>
-  decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr) const;
+  decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr,
+                  std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
 
   /// Returns a map from every section matching \p IsMatch to its relocation
   /// section, or \p nullptr if it has no relocation section. This function
@@ -1270,6 +1367,11 @@ inline uint32_t hashGnu(StringRef Name) {
     H = (H << 5) + H + C;
   return H;
 }
+
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF32LE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF32BE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF64LE>;
+extern template class LLVM_TEMPLATE_ABI llvm::object::ELFFile<ELF64BE>;
 
 } // end namespace object
 } // end namespace llvm

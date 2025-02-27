@@ -55,7 +55,7 @@ TEST(CompilerInstance, SanityCheckForFileManager) {
   llvm::ArrayRef<char> fileContent = sf->content();
   EXPECT_FALSE(fileContent.size() == 0);
   EXPECT_TRUE(
-      llvm::StringRef(fileContent.data()).startswith("InputSourceFile"));
+      llvm::StringRef(fileContent.data()).starts_with("InputSourceFile"));
 
   // 4. Delete the test file
   ec = llvm::sys::fs::remove(inputFile);
@@ -90,6 +90,6 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
 
   // 6. Verify that the reported diagnostic wasn't lost and did end up in the
   // output stream
-  ASSERT_EQ(diagnosticsOS.str(), "error: expected no crash\n");
+  ASSERT_EQ(diagnosticOutput, "error: expected no crash\n");
 }
 } // namespace

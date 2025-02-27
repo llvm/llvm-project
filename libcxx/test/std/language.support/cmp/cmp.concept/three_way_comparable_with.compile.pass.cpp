@@ -12,6 +12,7 @@
 // concept three_way_comparable_with = // see below
 
 #include <compare>
+#include <cstddef>
 
 #include "compare_types.h"
 

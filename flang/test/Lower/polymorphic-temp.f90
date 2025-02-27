@@ -1,5 +1,5 @@
 ! Test creation of temporary from polymorphic enities
-! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module poly_tmp
   type p1
@@ -46,7 +46,7 @@ contains
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TEMP_RES0]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.ptr<none>>) -> !fir.box<none>
 ! CHECK: %[[C2_I64:.*]] = fir.convert %[[C2]] : (i32) -> i64
-! CHECK: %{{.*}} = fir.call @_FortranASpread(%[[RES_BOX_NONE]], %[[P_BOX_NONE]], %[[C1]], %[[C2_I64]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranASpread(%[[RES_BOX_NONE]], %[[P_BOX_NONE]], %[[C1]], %[[C2_I64]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> ()
 ! CHECK: %[[LOAD_RES:.*]] = fir.load %[[TEMP_RES0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
 ! CHECK: %[[RES_ADDR:.*]] = fir.box_addr %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.heap<!fir.array<?xnone>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.class<!fir.array<?xnone>>
@@ -57,7 +57,7 @@ contains
 ! CHECK: %[[EMBOX_PA_1:.*]] = fir.embox %[[COORD_PA_1]] source_box %[[LOAD_PA]] : (!fir.ref<none>, !fir.class<!fir.ptr<!fir.array<?xnone>>>) -> !fir.class<none>
 ! CHECK: %[[RES1_BOX_NONE:.*]] = fir.convert %[[TEMP_RES1]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[PA1_BOX_NONE:.*]] = fir.convert %[[EMBOX_PA_1]] : (!fir.class<none>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranASpread(%[[RES1_BOX_NONE]], %[[PA1_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranASpread(%[[RES1_BOX_NONE]], %[[PA1_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> ()
 
   subroutine test_temp_from_intrinsic_reshape(i)
     class(*), allocatable :: a(:,:)
@@ -73,12 +73,12 @@ contains
 ! CHECK: fir.store %[[EMBOX_WITH_SOURCE]] to %[[TMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[I]] : (!fir.class<!fir.array<20x20xnone>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAReshape(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranAReshape(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK: %[[LOAD_RES:.*]] = fir.load %[[TMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 ! CHECK: %[[RANK:.*]] = arith.constant 2 : i32
 ! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[RES_BOX_NONE]], %[[RANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
+! CHECK: fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[RES_BOX_NONE]], %[[RANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
 
   subroutine check(r)
     class(p1) :: r(:)
@@ -100,7 +100,7 @@ contains
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[I]] : (!fir.class<!fir.array<20x20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %[[MASK_BOX_NONE:.*]] = fir.convert %[[EMBOXED_MASK]] : (!fir.box<!fir.array<20x20x!fir.logical<4>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAPack(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %[[MASK_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranAPack(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %[[MASK_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
   subroutine check_rank2(r)
     class(p1), intent(in) :: r(:,:)
@@ -119,7 +119,7 @@ contains
 ! CHECK: %[[V_BOX_NONE:.*]] = fir.convert %[[V]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %[[M_BOX_NONE:.*]] = fir.convert %[[M]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK: %[[F_BOX_NONE:.*]] = fir.convert %[[F]] : (!fir.class<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAUnpack(%[[TMP_BOX_NONE]], %[[V_BOX_NONE]], %[[M_BOX_NONE]], %[[F_BOX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranAUnpack(%[[TMP_BOX_NONE]], %[[V_BOX_NONE]], %[[M_BOX_NONE]], %[[F_BOX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
   subroutine check_cshift(r)
     class(p1) :: r(:)
@@ -139,7 +139,7 @@ contains
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[ARRAY_NONE:.*]] = fir.convert %[[ARRAY]] : (!fir.class<!fir.array<20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %[[SHIFT_I64:.*]] = fir.convert %[[LOAD_SHIFT]] : (i32) -> i64
-! CHECK: %{{.*}} = fir.call @_FortranACshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranACshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> ()
 
   subroutine test_temp_from_intrinsic_eoshift(a, shift, b)
     class(p1), intent(in) :: a(20)
@@ -157,7 +157,7 @@ contains
 ! CHECK: %[[ARRAY_NONE:.*]] = fir.convert %[[ARRAY]] : (!fir.class<!fir.array<20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %[[SHIFT_I64:.*]] = fir.convert %[[LOAD_SHIFT]] : (i32) -> i64
 ! CHECK: %[[BOUNDARY_NONE:.*]] = fir.convert %[[BOUNDARY]] : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAEoshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %[[BOUNDARY_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranAEoshiftVector(%[[RES_BOX_NONE]], %[[ARRAY_NONE]], %[[SHIFT_I64]], %[[BOUNDARY_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
   subroutine test_temp_from_intrinsic_transfer(source, mold)
     class(p1), intent(in) :: source(:)
@@ -171,7 +171,7 @@ contains
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[SOURCE_NONE:.*]] = fir.convert %[[SOURCE]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
 ! CHECK: %[[MOLD_NONE:.*]] = fir.convert %[[MOLD]] : (!fir.class<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranATransfer(%[[RES_BOX_NONE]], %[[SOURCE_NONE]], %[[MOLD_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranATransfer(%[[RES_BOX_NONE]], %[[SOURCE_NONE]], %[[MOLD_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
   subroutine test_temp_from_intrinsic_transpose(matrix)
     class(p1), intent(in) :: matrix(:,:)
@@ -183,7 +183,7 @@ contains
 ! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[MATRIX_NONE:.*]] = fir.convert %[[MATRIX]] : (!fir.class<!fir.array<?x?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranATranspose(%[[RES_BOX_NONE]], %[[MATRIX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranATranspose(%[[RES_BOX_NONE]], %[[MATRIX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
   subroutine check_scalar(a)
     class(p1), intent(in) :: a

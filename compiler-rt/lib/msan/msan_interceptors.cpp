@@ -37,7 +37,6 @@
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 
 #if SANITIZER_NETBSD
@@ -60,8 +59,8 @@ using __sanitizer::atomic_uintptr_t;
 
 DECLARE_REAL(SIZE_T, strlen, const char *s)
 DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
-DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
-DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
+DECLARE_REAL(void *, memcpy, void *dest, const void *src, SIZE_T n)
+DECLARE_REAL(void *, memset, void *dest, int c, SIZE_T n)
 
 // True if this is a nested interceptor.
 static THREADLOCAL int in_interceptor_scope;
@@ -185,10 +184,7 @@ INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
 #if !SANITIZER_NETBSD
 INTERCEPTOR(void *, __libc_memalign, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  void *ptr = msan_memalign(alignment, size, &stack);
-  if (ptr)
-    DTLS_on_libc_memalign(ptr, size);
-  return ptr;
+  return msan_memalign(alignment, size, &stack);
 }
 #define MSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN INTERCEPT_FUNCTION(__libc_memalign)
 #else
@@ -243,23 +239,37 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
 #define MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE
 #endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-// This function actually returns a struct by value, but we can't unpoison a
-// temporary! The following is equivalent on all supported platforms but
-// aarch64 (which uses a different register for sret value).  We have a test
-// to confirm that.
-INTERCEPTOR(void, mallinfo, __sanitizer_struct_mallinfo *sret) {
-#ifdef __aarch64__
-  uptr r8;
-  asm volatile("mov %0,x8" : "=r" (r8));
-  sret = reinterpret_cast<__sanitizer_struct_mallinfo*>(r8);
-#endif
-  REAL(memset)(sret, 0, sizeof(*sret));
+#if (!SANITIZER_FREEBSD && !SANITIZER_NETBSD) || __GLIBC_PREREQ(2, 33)
+template <class T>
+static NOINLINE void clear_mallinfo(T *sret) {
+  ENSURE_MSAN_INITED();
+  internal_memset(sret, 0, sizeof(*sret));
   __msan_unpoison(sret, sizeof(*sret));
 }
-#define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
+#endif
+
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+// Interceptors use NRVO and assume that sret will be pre-allocated in
+// caller frame.
+INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo,) {
+  __sanitizer_struct_mallinfo sret;
+  clear_mallinfo(&sret);
+  return sret;
+}
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
 #else
-#define MSAN_MAYBE_INTERCEPT_MALLINFO
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO
+#endif
+
+#if __GLIBC_PREREQ(2, 33)
+INTERCEPTOR(__sanitizer_struct_mallinfo2, mallinfo2) {
+  __sanitizer_struct_mallinfo2 sret;
+  clear_mallinfo(&sret);
+  return sret;
+}
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2 INTERCEPT_FUNCTION(mallinfo2)
+#else
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2
 #endif
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
@@ -1212,7 +1222,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **retval,
 }
 #endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 extern char *tzname[2];
 
@@ -1241,7 +1251,7 @@ struct InterceptorContext {
   }
 };
 
-static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
+alignas(64) static char interceptor_placeholder[sizeof(InterceptorContext)];
 InterceptorContext *interceptor_ctx() {
   return reinterpret_cast<InterceptorContext*>(&interceptor_placeholder[0]);
 }
@@ -1310,24 +1320,6 @@ static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso) {
     res = REAL(__cxa_atexit)(MSanCxaAtExitWrapper, r, dso);
   }
   return res;
-}
-
-static void BeforeFork() {
-  StackDepotLockAll();
-  ChainedOriginDepotLockAll();
-}
-
-static void AfterFork() {
-  ChainedOriginDepotUnlockAll();
-  StackDepotUnlockAll();
-}
-
-INTERCEPTOR(int, fork, void) {
-  ENSURE_MSAN_INITED();
-  BeforeFork();
-  int pid = REAL(fork)();
-  AfterFork();
-  return pid;
 }
 
 // NetBSD ships with openpty(3) in -lutil, that needs to be prebuilt explicitly
@@ -1766,6 +1758,8 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
+  __interception::DoesNotSupportStaticLinking();
+
   new(interceptor_ctx()) InterceptorContext();
 
   InitializeCommonInterceptors();
@@ -1784,6 +1778,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;
   MSAN_MAYBE_INTERCEPT_MALLINFO;
+  MSAN_MAYBE_INTERCEPT_MALLINFO2;
   MSAN_MAYBE_INTERCEPT_MALLOPT;
   MSAN_MAYBE_INTERCEPT_MALLOC_STATS;
   INTERCEPT_FUNCTION(fread);
@@ -1918,7 +1913,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(atexit);
   INTERCEPT_FUNCTION(__cxa_atexit);
   INTERCEPT_FUNCTION(shmat);
-  INTERCEPT_FUNCTION(fork);
   MSAN_MAYBE_INTERCEPT_OPENPTY;
   MSAN_MAYBE_INTERCEPT_FORKPTY;
 

@@ -83,7 +83,7 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
       LLVM_DEBUG(dbgs() << "[lowerConstantExpressions] " << *CE);
       auto ReplInst = CE->getAsInstruction();
       auto InsPoint = II->getParent() == &*FBegin ? II : &FBegin->back();
-      ReplInst->insertBefore(InsPoint);
+      ReplInst->insertBefore(InsPoint->getIterator());
       LLVM_DEBUG(dbgs() << " -> " << *ReplInst << '\n');
       std::vector<Instruction *> Users;
       // Do not replace use during iteration of use. Do it in another loop.
@@ -97,7 +97,7 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
       for (auto &User : Users) {
         if (ReplInst->getParent() == User->getParent() &&
             User->comesBefore(ReplInst))
-          ReplInst->moveBefore(User);
+          ReplInst->moveBefore(User->getIterator());
         User->replaceUsesOfWith(CE, ReplInst);
       }
       return ReplInst;
@@ -127,7 +127,8 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
             ReplList.push_back(Inst);
           Repl = InsertElementInst::Create(
               (Repl ? Repl : PoisonValue::get(Vec->getType())), V,
-              ConstantInt::get(Type::getInt32Ty(Ctx), Idx++), "", InsPoint);
+              ConstantInt::get(Type::getInt32Ty(Ctx), Idx++), "",
+              InsPoint->getIterator());
         }
         WorkList.splice(WorkList.begin(), ReplList);
         return Repl;
@@ -177,8 +178,8 @@ void SPIRVRegularizer::visitCallInst(CallInst &CI) {
   StringRef DemangledName(NameStr);
 
   // TODO: add support for other builtins.
-  if (DemangledName.startswith("fmin") || DemangledName.startswith("fmax") ||
-      DemangledName.startswith("min") || DemangledName.startswith("max"))
+  if (DemangledName.starts_with("fmin") || DemangledName.starts_with("fmax") ||
+      DemangledName.starts_with("min") || DemangledName.starts_with("max"))
     visitCallScalToVec(&CI, MangledName, DemangledName);
   free(NameStr);
 }
@@ -234,11 +235,12 @@ void SPIRVRegularizer::visitCallScalToVec(CallInst *CI, StringRef MangledName,
   // %call = OpExtInst %v2uint %1 s_min %14 %11
   auto ConstInt = ConstantInt::get(IntegerType::get(CI->getContext(), 32), 0);
   PoisonValue *PVal = PoisonValue::get(Arg0Ty);
-  Instruction *Inst =
-      InsertElementInst::Create(PVal, CI->getOperand(1), ConstInt, "", CI);
+  Instruction *Inst = InsertElementInst::Create(
+      PVal, CI->getOperand(1), ConstInt, "", CI->getIterator());
   ElementCount VecElemCount = cast<VectorType>(Arg0Ty)->getElementCount();
   Constant *ConstVec = ConstantVector::getSplat(VecElemCount, ConstInt);
-  Value *NewVec = new ShuffleVectorInst(Inst, PVal, ConstVec, "", CI);
+  Value *NewVec =
+      new ShuffleVectorInst(Inst, PVal, ConstVec, "", CI->getIterator());
   CI->setOperand(1, NewVec);
   CI->replaceUsesOfWith(OldF, NewF);
   CI->mutateFunctionType(NewF->getFunctionType());

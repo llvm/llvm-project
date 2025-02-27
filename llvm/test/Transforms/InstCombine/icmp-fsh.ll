@@ -45,7 +45,7 @@ define i1 @rotl_eq_n1(i8 %x, i8 %y) {
 
 define <2 x i1> @rotl_ne_n1(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @rotl_ne_n1(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], splat (i5 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
@@ -53,49 +53,49 @@ define <2 x i1> @rotl_ne_n1(<2 x i5> %x, <2 x i5> %y) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @rotl_ne_n1_undef(<2 x i5> %x, <2 x i5> %y) {
-; CHECK-LABEL: @rotl_ne_n1_undef(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 undef>
+define <2 x i1> @rotl_ne_n1_poison(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @rotl_ne_n1_poison(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 poison>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
-  %r = icmp ne <2 x i5> %rot, <i5 -1, i5 undef>
+  %r = icmp ne <2 x i5> %rot, <i5 -1, i5 poison>
   ret <2 x i1> %r
 }
 
-define <2 x i1> @rotl_eq_0_undef(<2 x i5> %x, <2 x i5> %y) {
-; CHECK-LABEL: @rotl_eq_0_undef(
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], <i5 0, i5 undef>
+define <2 x i1> @rotl_eq_0_poison(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @rotl_eq_0_poison(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], <i5 0, i5 poison>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
-  %r = icmp eq <2 x i5> %rot, <i5 0, i5 undef>
+  %r = icmp eq <2 x i5> %rot, <i5 0, i5 poison>
   ret <2 x i1> %r
 }
 
 ; negative test - wrong constant value
 
-define <2 x i1> @rotl_eq_1_undef(<2 x i5> %x, <2 x i5> %y) {
-; CHECK-LABEL: @rotl_eq_1_undef(
+define <2 x i1> @rotl_eq_1_poison(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @rotl_eq_1_poison(
 ; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[ROT]], <i5 undef, i5 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[ROT]], <i5 poison, i5 1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
-  %r = icmp eq <2 x i5> %rot, <i5 undef, i5 1>
+  %r = icmp eq <2 x i5> %rot, <i5 poison, i5 1>
   ret <2 x i1> %r
 }
 
 ; negative test - wrong predicate
 
-define <2 x i1> @rotl_sgt_0_undef(<2 x i5> %x, <2 x i5> %y) {
-; CHECK-LABEL: @rotl_sgt_0_undef(
+define <2 x i1> @rotl_sgt_0_poison(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @rotl_sgt_0_poison(
 ; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i5> [[ROT]], <i5 0, i5 undef>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i5> [[ROT]], <i5 0, i5 poison>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
-  %r = icmp sgt <2 x i5> %rot, <i5 0, i5 undef>
+  %r = icmp sgt <2 x i5> %rot, <i5 0, i5 poison>
   ret <2 x i1> %r
 }
 

@@ -124,6 +124,31 @@ _Static_assert(__atomic_always_lock_free(4, &i64), "");
 _Static_assert(!__atomic_always_lock_free(8, &i32), "");
 _Static_assert(__atomic_always_lock_free(8, &i64), "");
 
+// Validate use with fake pointers constants. This mechanism is used to allow
+// validating atomicity of a given size and alignment.
+_Static_assert(__atomic_is_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_is_lock_free(1, (void*)-1), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)-2), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_is_lock_free(4, (void*)-4), "");
+
+_Static_assert(__atomic_always_lock_free(1, (void*)1), "");
+_Static_assert(__atomic_always_lock_free(1, (void*)-1), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)2), "");
+_Static_assert(!__atomic_always_lock_free(4, (void*)-2), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)4), "");
+_Static_assert(__atomic_always_lock_free(4, (void*)-4), "");
+
+// Ensure that "weird" constants don't cause trouble.
+_Static_assert(__atomic_always_lock_free(1, "string"), "");
+_Static_assert(!__atomic_always_lock_free(2, "string"), "");
+_Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
+void dummyfn();
+_Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
+
+
+
 #define _AS1 __attribute__((address_space(1)))
 #define _AS2 __attribute__((address_space(2)))
 
@@ -259,11 +284,29 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   const volatile int flag_k = 0;
   volatile int flag = 0;
-  (void)(int)__atomic_test_and_set(&flag_k, memory_order_seq_cst); // expected-warning {{passing 'const volatile int *' to parameter of type 'volatile void *'}}
+  (void)(int)__atomic_test_and_set(&flag_k, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const volatile int *' invalid)}}
   (void)(int)__atomic_test_and_set(&flag, memory_order_seq_cst);
-  __atomic_clear(&flag_k, memory_order_seq_cst); // expected-warning {{passing 'const volatile int *' to parameter of type 'volatile void *'}}
+  __atomic_clear(&flag_k, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const volatile int *' invalid)}}
   __atomic_clear(&flag, memory_order_seq_cst);
   (int)__atomic_clear(&flag, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
+  __atomic_clear(0x8000, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  __atomic_clear(&flag, memory_order_consume); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __atomic_clear(&flag, memory_order_acquire); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __atomic_clear(&flag, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
+  _Bool lock;
+  __atomic_test_and_set(lock, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer}}
+  __atomic_clear(lock, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer}}
+
+  // These intrinsics accept any non-const pointer type (including
+  // pointer-to-incomplete), and access the first byte.
+  __atomic_test_and_set((void*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((char*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((int*)0x8000, memory_order_seq_cst);
+  __atomic_test_and_set((struct incomplete*)0x8000, memory_order_seq_cst);
+  __atomic_clear((void*)0x8000, memory_order_seq_cst);
+  __atomic_clear((char*)0x8000, memory_order_seq_cst);
+  __atomic_clear((int*)0x8000, memory_order_seq_cst);
+  __atomic_clear((struct incomplete*)0x8000, memory_order_seq_cst);
 
   __c11_atomic_init(ci, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
   __c11_atomic_store(ci, 0, memory_order_release); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
@@ -339,18 +382,18 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__c11_atomic_load(Ap, memory_order_relaxed);
   (void)__c11_atomic_load(Ap, memory_order_acquire);
   (void)__c11_atomic_load(Ap, memory_order_consume);
-  (void)__c11_atomic_load(Ap, memory_order_release); // expected-warning {{memory order argument to atomic operation is invalid}}
-  (void)__c11_atomic_load(Ap, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, memory_order_release); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, memory_order_acq_rel); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_load(Ap, memory_order_seq_cst);
   (void)__c11_atomic_load(Ap, val);
-  (void)__c11_atomic_load(Ap, -1); // expected-warning {{memory order argument to atomic operation is invalid}}
-  (void)__c11_atomic_load(Ap, 42); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, -1); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_load(Ap, 42); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
 
   (void)__c11_atomic_store(Ap, val, memory_order_relaxed);
-  (void)__c11_atomic_store(Ap, val, memory_order_acquire); // expected-warning {{memory order argument to atomic operation is invalid}}
-  (void)__c11_atomic_store(Ap, val, memory_order_consume); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_store(Ap, val, memory_order_acquire); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_store(Ap, val, memory_order_consume); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_store(Ap, val, memory_order_release);
-  (void)__c11_atomic_store(Ap, val, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_store(Ap, val, memory_order_acq_rel); // expected-warning-re {{{{^}}memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_store(Ap, val, memory_order_seq_cst);
 
   (void)__c11_atomic_fetch_add(Ap, 1, memory_order_relaxed);
@@ -427,19 +470,35 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__c11_atomic_exchange(Ap, val, memory_order_acq_rel);
   (void)__c11_atomic_exchange(Ap, val, memory_order_seq_cst);
 
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_relaxed, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_acquire, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_consume, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_release, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_acq_rel, memory_order_relaxed);
-  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_consume);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_seq_cst, -1); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_relaxed, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_strong(Ap, p, val, memory_order_acquire, memory_order_seq_cst);
 
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_relaxed, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_acquire, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_consume, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_release, memory_order_relaxed);
   (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_acq_rel, memory_order_relaxed);
-  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_consume);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, -1); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_relaxed, memory_order_acquire);
+  (void)__c11_atomic_compare_exchange_weak(Ap, p, val, memory_order_acquire, memory_order_seq_cst);
 
   (void)__atomic_load_n(p, memory_order_relaxed);
   (void)__atomic_load_n(p, memory_order_acquire);
@@ -595,19 +654,94 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_exchange(p, p, p, memory_order_acq_rel);
   (void)__atomic_exchange(p, p, p, memory_order_seq_cst);
 
+  (void)__atomic_compare_exchange(p, p, p, 0, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_relaxed, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_acquire, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_consume, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_release, memory_order_relaxed);
   (void)__atomic_compare_exchange(p, p, p, 0, memory_order_acq_rel, memory_order_relaxed);
-  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_relaxed);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_acquire);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_consume);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__atomic_compare_exchange(p, p, p, 0, memory_order_seq_cst, -1); // expected-warning {{memory order argument to atomic operation is invalid}}
 
+  (void)__atomic_compare_exchange_n(p, p, val, 0, -1, memory_order_relaxed); // expected-warning {{success memory order argument to atomic operation is invalid}}
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_relaxed, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_acquire, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_consume, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_release, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_acq_rel, memory_order_relaxed);
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_relaxed);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_acquire);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_consume);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_release); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_acq_rel); // expected-warning {{failure memory order argument to atomic operation is invalid}}
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_seq_cst);
+  (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, -1); // expected-warning {{memory order argument to atomic operation is invalid}}
+}
+
+struct Z {
+  char z[];
+};
+
+void zeroSizeArgError(struct Z *a, struct Z *b, struct Z *c) {
+  __atomic_exchange(b, b, c, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_exchange(b, b, c, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_load(a, b, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_store(a, b, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_relaxed, memory_order_relaxed); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_acq_rel, memory_order_acq_rel); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_acquire, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_consume, memory_order_consume); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_release, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+  __atomic_compare_exchange(a, b, c, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{address argument to atomic builtin must be a pointer to a non-zero-sized object}}
+
+}
+
+struct IncompleteTy IncA, IncB, IncC; // expected-error 3{{tentative definition has type 'struct IncompleteTy' that is never completed}} \
+                                      // expected-note 27{{forward declaration of 'struct IncompleteTy'}}
+void incompleteTypeArgError() {
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_relaxed, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_acq_rel, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_acquire, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_consume, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_release, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+
 }
 
 void nullPointerWarning(void) {

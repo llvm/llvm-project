@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -29,13 +30,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  enum AddrSpace {
-    Generic = 0,
-    Global = 1,
-    Local = 3,
-    Constant = 4,
-    Private = 5
-  };
   static const LangASMap AMDGPUDefIsGenMap;
   static const LangASMap AMDGPUDefIsPrivMap;
 
@@ -106,7 +100,8 @@ public:
       return 32;
     unsigned TargetAS = getTargetAddressSpace(AS);
 
-    if (TargetAS == Private || TargetAS == Local)
+    if (TargetAS == llvm::AMDGPUAS::PRIVATE_ADDRESS ||
+        TargetAS == llvm::AMDGPUAS::LOCAL_ADDRESS)
       return 32;
 
     return 64;
@@ -114,6 +109,19 @@ public:
 
   uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
+  }
+
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
+    // The flat address space AS(0) is a superset of all the other address
+    // spaces used by the backend target.
+    return A == B ||
+           ((A == LangAS::Default ||
+             (isTargetAddressSpace(A) &&
+              toTargetAddressSpace(A) == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
+            isTargetAddressSpace(B) &&
+            toTargetAddressSpace(B) >= llvm::AMDGPUAS::FLAT_ADDRESS &&
+            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS &&
+            toTargetAddressSpace(B) != llvm::AMDGPUAS::REGION_ADDRESS);
   }
 
   uint64_t getMaxPointerWidth() const override {
@@ -127,7 +135,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   /// Accepted register names: (n, m is unsigned integer, n < m)
@@ -173,11 +181,7 @@ public:
       return true;
     }
 
-    bool HasLeftParen = false;
-    if (S.front() == '{') {
-      HasLeftParen = true;
-      S = S.drop_front();
-    }
+    bool HasLeftParen = S.consume_front("{");
     if (S.empty())
       return false;
     if (S.front() != 'v' && S.front() != 's' && S.front() != 'a') {
@@ -203,30 +207,23 @@ public:
       Name = S.data() - 1;
       return true;
     }
-    bool HasLeftBracket = false;
-    if (!S.empty() && S.front() == '[') {
-      HasLeftBracket = true;
-      S = S.drop_front();
-    }
+    bool HasLeftBracket = S.consume_front("[");
     unsigned long long N;
     if (S.empty() || consumeUnsignedInteger(S, 10, N))
       return false;
-    if (!S.empty() && S.front() == ':') {
+    if (S.consume_front(":")) {
       if (!HasLeftBracket)
         return false;
-      S = S.drop_front();
       unsigned long long M;
       if (consumeUnsignedInteger(S, 10, M) || N >= M)
         return false;
     }
     if (HasLeftBracket) {
-      if (S.empty() || S.front() != ']')
+      if (!S.consume_front("]"))
         return false;
-      S = S.drop_front();
     }
-    if (S.empty() || S.front() != '}')
+    if (!S.consume_front("}"))
       return false;
-    S = S.drop_front();
     if (!S.empty())
       return false;
     // Found {vn}, {sn}, {an}, {v[n]}, {s[n]}, {a[n]}, {v[n:m]}, {s[n:m]}
@@ -260,7 +257,7 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeatureVec) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
@@ -376,7 +373,7 @@ public:
   }
 
   std::optional<LangAS> getConstantAddressSpace() const override {
-    return getLangASFromTargetAS(Constant);
+    return getLangASFromTargetAS(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
   const llvm::omp::GV &getGridValue() const override {
@@ -392,7 +389,7 @@ public:
 
   /// \returns Target specific vtbl ptr address space.
   unsigned getVtblPtrAddressSpace() const override {
-    return static_cast<unsigned>(Constant);
+    return static_cast<unsigned>(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
   /// \returns If a target requires an address within a target specific address
@@ -405,9 +402,9 @@ public:
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     const unsigned DWARF_Private = 1;
     const unsigned DWARF_Local = 2;
-    if (AddressSpace == Private) {
+    if (AddressSpace == llvm::AMDGPUAS::PRIVATE_ADDRESS) {
       return DWARF_Private;
-    } else if (AddressSpace == Local) {
+    } else if (AddressSpace == llvm::AMDGPUAS::LOCAL_ADDRESS) {
       return DWARF_Local;
     } else {
       return std::nullopt;
@@ -430,8 +427,10 @@ public:
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
     // FIXME: Also should handle region.
-    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private)
-      ? ~0 : 0;
+    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
+            AS == LangAS::sycl_local || AS == LangAS::sycl_private)
+               ? ~0
+               : 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;
@@ -476,6 +475,14 @@ public:
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    // This is imprecise as the value can vary between 64, 128 (even 256!) bytes
+    // depending on the level of cache and the target architecture. We select
+    // the size that corresponds to the largest L1 cache line for all
+    // architectures.
+    return std::make_pair(128, 128);
+  }
 };
 
 } // namespace targets

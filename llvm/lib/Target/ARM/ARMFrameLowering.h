@@ -41,12 +41,12 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
-  bool keepFramePointer(const MachineFunction &MF) const override;
+  bool keepFramePointer(const MachineFunction &MF) const;
 
   bool enableCalleeSaveSkip(const MachineFunction &MF) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
   bool isFPReserved(const MachineFunction &MF) const;
+  bool requiresAAPCSFrameRecord(const MachineFunction &MF) const;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
@@ -58,6 +58,13 @@ public:
                       BitVector &SavedRegs) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
+
+  /// Update the IsRestored flag on LR if it is spilled, based on the return
+  /// instructions.
+  static void updateLRRestored(MachineFunction &MF);
+
+  void processFunctionBeforeFrameFinalized(
+      MachineFunction &MF, RegScavenger *RS = nullptr) const override;
 
   void adjustForSegmentedStacks(MachineFunction &MF,
                                 MachineBasicBlock &MBB) const override;
@@ -79,16 +86,18 @@ public:
   const SpillSlot *
   getCalleeSavedSpillSlots(unsigned &NumEntries) const override;
 
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 private:
   void emitPushInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     ArrayRef<CalleeSavedInfo> CSI, unsigned StmOpc,
-                    unsigned StrOpc, bool NoGap, bool (*Func)(unsigned, bool),
-                    unsigned NumAlignedDPRCS2Regs, unsigned MIFlags = 0) const;
+                    unsigned StrOpc, bool NoGap,
+                    function_ref<bool(unsigned)> Func) const;
   void emitPopInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    MutableArrayRef<CalleeSavedInfo> CSI, unsigned LdmOpc,
                    unsigned LdrOpc, bool isVarArg, bool NoGap,
-                   bool (*Func)(unsigned, bool),
-                   unsigned NumAlignedDPRCS2Regs) const;
+                   function_ref<bool(unsigned)> Func) const;
 
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,

@@ -1,0 +1,46 @@
+# RUN: llc -mtriple=aarch64 -run-pass=prologepilog %s -o - | FileCheck %s
+--- |
+  define i32 @_Z4funcv() {
+  entry:
+    %array = alloca [1073741824 x i32], align 4
+    %arrayidx = getelementptr inbounds [1073741824 x i32], ptr %array, i64 0, i64 20
+    store i32 7, ptr %arrayidx, align 4
+    call void @_Z5func2v()
+    %arrayidx1 = getelementptr inbounds [1073741824 x i32], ptr %array, i64 0, i64 20
+    %0 = load i32, ptr %arrayidx1, align 4
+    ret i32 %0
+  }
+ 
+  declare void @_Z5func2v()
+...
+---
+name:            _Z4funcv
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+frameInfo:
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, name: array, size: 4294967296, alignment: 4, local-offset: -4294967296 }
+machineFunctionInfo: {}
+body:             |
+  bb.1.entry:
+    renamable $w8 = MOVi32imm 7
+    STRWui killed renamable $w8, %stack.0.array, 20 :: (store (s32) into %ir.arrayidx)
+    ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    BL @_Z5func2v, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    renamable $w0 = LDRWui %stack.0.array, 20 :: (dereferenceable load (s32) from %ir.arrayidx1)
+    ; CHECK: early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2
+    RET_ReallyLR implicit killed $w0
+
+...

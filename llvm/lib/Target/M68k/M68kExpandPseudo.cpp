@@ -80,6 +80,13 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   default:
     return false;
 
+  case M68k::MOVI8di:
+    return TII->ExpandMOVI(MIB, MVT::i8);
+  case M68k::MOVI16ri:
+    return TII->ExpandMOVI(MIB, MVT::i16);
+  case M68k::MOVI32ri:
+    return TII->ExpandMOVI(MIB, MVT::i32);
+
   case M68k::MOVXd16d8:
     return TII->ExpandMOVX_RR(MIB, MVT::i16, MVT::i8);
   case M68k::MOVXd32d8:
@@ -161,6 +168,16 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16rf), MVT::i32,
                                 MVT::i16);
 
+  case M68k::MOVSXd16q8:
+    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dq), MVT::i16,
+                                MVT::i8);
+  case M68k::MOVSXd32q8:
+    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dq), MVT::i32,
+                                MVT::i8);
+  case M68k::MOVSXd32q16:
+    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV16dq), MVT::i32,
+                                MVT::i16);
+
   case M68k::MOVZXd16q8:
     return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i16,
                                 MVT::i8);
@@ -176,31 +193,23 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case M68k::MOV8dc:
     return TII->ExpandCCR(MIB, /*IsToCCR=*/false);
 
-  case M68k::MOVM8jm_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32jm), /*IsRM=*/false);
   case M68k::MOVM16jm_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32jm), /*IsRM=*/false);
+    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM16jm), /*IsRM=*/false);
   case M68k::MOVM32jm_P:
     return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32jm), /*IsRM=*/false);
 
-  case M68k::MOVM8pm_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32pm), /*IsRM=*/false);
   case M68k::MOVM16pm_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32pm), /*IsRM=*/false);
+    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM16pm), /*IsRM=*/false);
   case M68k::MOVM32pm_P:
     return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32pm), /*IsRM=*/false);
 
-  case M68k::MOVM8mj_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32mj), /*IsRM=*/true);
   case M68k::MOVM16mj_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32mj), /*IsRM=*/true);
+    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM16mj), /*IsRM=*/true);
   case M68k::MOVM32mj_P:
     return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32mj), /*IsRM=*/true);
 
-  case M68k::MOVM8mp_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32mp), /*IsRM=*/true);
   case M68k::MOVM16mp_P:
-    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32mp), /*IsRM=*/true);
+    return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM16mp), /*IsRM=*/true);
   case M68k::MOVM32mp_P:
     return TII->ExpandMOVEM(MIB, TII->get(M68k::MOVM32mp), /*IsRM=*/true);
 
@@ -252,12 +261,11 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return true;
   }
   case M68k::RET: {
-    // Adjust stack to erase error code
-    int64_t StackAdj = MBBI->getOperand(0).getImm();
-    MachineInstrBuilder MIB;
-
-    if (StackAdj == 0) {
-      MIB = BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
+    if (MBB.getParent()->getFunction().getCallingConv() ==
+        CallingConv::M68k_INTR) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTE));
+    } else if (int64_t StackAdj = MBBI->getOperand(0).getImm(); StackAdj == 0) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
     } else {
       // Copy return address from stack to a free address(A0 or A1) register
       // TODO check if pseudo expand uses free address register

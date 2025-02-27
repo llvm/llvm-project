@@ -21,7 +21,7 @@ define zeroext i16 @test_mm512_kunpackb(<8 x i64> %__A, <8 x i64> %__B, <8 x i64
 ; X86-NEXT:    kunpckbw %k0, %k1, %k1
 ; X86-NEXT:    vpcmpneqd 72(%ebp), %zmm3, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -35,7 +35,7 @@ define zeroext i16 @test_mm512_kunpackb(<8 x i64> %__A, <8 x i64> %__B, <8 x i64
 ; X64-NEXT:    kunpckbw %k0, %k1, %k1
 ; X64-NEXT:    vpcmpneqd %zmm5, %zmm4, %k0 {%k1}
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -367,7 +367,7 @@ define zeroext i16 @test_mm512_testn_epi32_mask(<8 x i64> %__A, <8 x i64> %__B) 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
@@ -385,7 +385,7 @@ define zeroext i16 @test_mm512_mask_testn_epi32_mask(i16 zeroext %__U, <8 x i64>
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vptestnmd %zmm0, %zmm1, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -394,7 +394,7 @@ define zeroext i16 @test_mm512_mask_testn_epi32_mask(i16 zeroext %__U, <8 x i64>
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vptestnmd %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -412,7 +412,7 @@ define zeroext i8 @test_mm512_testn_epi64_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vptestnmq %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
@@ -429,7 +429,7 @@ define zeroext i8 @test_mm512_mask_testn_epi64_mask(i8 zeroext %__U, <8 x i64> %
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vptestnmq %zmm0, %zmm1, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -438,7 +438,7 @@ define zeroext i8 @test_mm512_mask_testn_epi64_mask(i8 zeroext %__U, <8 x i64> %
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vptestnmq %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -457,7 +457,7 @@ define zeroext i16 @test_mm512_mask_test_epi32_mask(i16 zeroext %__U, <8 x i64> 
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vptestmd %zmm0, %zmm1, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -466,7 +466,7 @@ define zeroext i16 @test_mm512_mask_test_epi32_mask(i16 zeroext %__U, <8 x i64> 
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vptestmd %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -486,7 +486,7 @@ define zeroext i8 @test_mm512_mask_test_epi64_mask(i8 zeroext %__U, <8 x i64> %_
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vptestmq %zmm0, %zmm1, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -495,7 +495,7 @@ define zeroext i8 @test_mm512_mask_test_epi64_mask(i8 zeroext %__U, <8 x i64> %_
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vptestmq %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -2218,7 +2218,7 @@ declare <8 x i16> @llvm.x86.avx512.mask.pmov.qw.512(<8 x i64>, <8 x i16>, i8)
 define <8 x i64> @test_mm512_ternarylogic_epi32(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C) {
 ; CHECK-LABEL: test_mm512_ternarylogic_epi32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpternlogd $4, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 & ~(zmm0 | zmm2)
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
@@ -2236,13 +2236,13 @@ define <8 x i64> @test_mm512_mask_ternarylogic_epi32(<8 x i64> %__A, i16 zeroext
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $4, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = zmm1 & ~(zmm0 | zmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_ternarylogic_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $4, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = zmm1 & ~(zmm0 | zmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
@@ -2260,13 +2260,13 @@ define <8 x i64> @test_mm512_maskz_ternarylogic_epi32(i16 zeroext %__U, <8 x i64
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $4, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X86-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = zmm1 & ~(zmm0 | zmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_ternarylogic_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $4, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = zmm1 & ~(zmm0 | zmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__A to <16 x i32>
@@ -2282,7 +2282,7 @@ entry:
 define <8 x i64> @test_mm512_ternarylogic_epi64(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C) {
 ; CHECK-LABEL: test_mm512_ternarylogic_epi64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpternlogq $4, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 & ~(zmm0 | zmm2)
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, i32 4)
@@ -2296,13 +2296,13 @@ define <8 x i64> @test_mm512_mask_ternarylogic_epi64(<8 x i64> %__A, i8 zeroext 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $4, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} = zmm1 & ~(zmm0 | zmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_ternarylogic_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $4, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} = zmm1 & ~(zmm0 | zmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, i32 4)
@@ -2316,13 +2316,13 @@ define <8 x i64> @test_mm512_maskz_ternarylogic_epi64(i8 zeroext %__U, <8 x i64>
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $4, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X86-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = zmm1 & ~(zmm0 | zmm2)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_ternarylogic_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $4, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = zmm1 & ~(zmm0 | zmm2)
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, i32 4)
@@ -6864,7 +6864,7 @@ define i64 @test_mm512_mask_reduce_and_epi64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; X86-NEXT:    vpand %ymm0, %ymm1, %ymm0
@@ -6880,7 +6880,7 @@ define i64 @test_mm512_mask_reduce_and_epi64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X64-LABEL: test_mm512_mask_reduce_and_epi64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X64-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; X64-NEXT:    vpand %ymm0, %ymm1, %ymm0
@@ -7200,7 +7200,7 @@ define i32 @test_mm512_mask_reduce_and_epi32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; X86-NEXT:    vpand %ymm0, %ymm1, %ymm0
@@ -7217,7 +7217,7 @@ define i32 @test_mm512_mask_reduce_and_epi32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X64-LABEL: test_mm512_mask_reduce_and_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X64-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; X64-NEXT:    vpand %ymm0, %ymm1, %ymm0
@@ -8176,7 +8176,7 @@ define i64 @test_mm512_mask_reduce_min_epu64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[4,5,6,7,0,1,2,3]
 ; X86-NEXT:    vpminuq %zmm0, %zmm1, %zmm0
@@ -8192,7 +8192,7 @@ define i64 @test_mm512_mask_reduce_min_epu64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X64-LABEL: test_mm512_mask_reduce_min_epu64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X64-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[4,5,6,7,0,1,2,3]
 ; X64-NEXT:    vpminuq %zmm0, %zmm1, %zmm0
@@ -8778,7 +8778,7 @@ define i32 @test_mm512_mask_reduce_min_epu32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; X86-NEXT:    vpminud %ymm0, %ymm1, %ymm0
@@ -8795,7 +8795,7 @@ define i32 @test_mm512_mask_reduce_min_epu32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X64-LABEL: test_mm512_mask_reduce_min_epu32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X64-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; X64-NEXT:    vpminud %ymm0, %ymm1, %ymm0

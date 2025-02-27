@@ -18,6 +18,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
+#include "lldb/Host/Config.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
@@ -32,6 +33,7 @@
 #include <bitset>
 #include <clocale>
 #include <csignal>
+#include <future>
 #include <string>
 #include <thread>
 #include <utility>
@@ -59,12 +61,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -74,7 +77,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class LLDBOptTable : public opt::GenericOptTable {
 public:
-  LLDBOptTable() : opt::GenericOptTable(InfoTable) {}
+  LLDBOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -187,7 +191,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   if (args.hasArg(OPT_no_use_colors)) {
     m_debugger.SetUseColor(false);
     WithColor::setAutoDetectFunction(disable_color);
-    m_option_data.m_debug_mode = true;
   }
 
   if (args.hasArg(OPT_version)) {
@@ -441,29 +444,17 @@ int Driver::MainLoop() {
   m_debugger.SetInputFileHandle(stdin, false);
 
   m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
+  m_debugger.SetShowInlineDiagnostics(true);
 
-  struct winsize window_size;
-  if ((isatty(STDIN_FILENO) != 0) &&
-      ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if (window_size.ws_col > 0)
-      m_debugger.SetTerminalWidth(window_size.ws_col);
-  }
+  // Set the terminal dimensions.
+  UpdateWindowSize();
 
   SBCommandInterpreter sb_interpreter = m_debugger.GetCommandInterpreter();
 
   // Process lldbinit files before handling any options from the command line.
   SBCommandReturnObject result;
   sb_interpreter.SourceInitFileInGlobalDirectory(result);
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
-  }
-
   sb_interpreter.SourceInitFileInHomeDirectory(result, m_option_data.m_repl);
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
-  }
 
   // Source the local .lldbinit file if it exists and we're allowed to source.
   // Here we want to always print the return object because it contains the
@@ -533,11 +524,6 @@ int Driver::MainLoop() {
     // We're in repl mode and after-file-load commands were specified.
     WithColor::warning() << "commands specified to run after file load (via -o "
                             "or -s) are ignored in REPL mode.\n";
-  }
-
-  if (m_option_data.m_debug_mode) {
-    result.PutError(m_debugger.GetErrorFile());
-    result.PutOutput(m_debugger.GetOutputFile());
   }
 
   const bool handle_events = true;
@@ -637,18 +623,22 @@ int Driver::MainLoop() {
   return sb_interpreter.GetQuitStatus();
 }
 
-void Driver::ResizeWindow(unsigned short col) {
-  GetDebugger().SetTerminalWidth(col);
-}
-
-void sigwinch_handler(int signo) {
+void Driver::UpdateWindowSize() {
   struct winsize window_size;
   if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if ((window_size.ws_col > 0) && g_driver != nullptr) {
-      g_driver->ResizeWindow(window_size.ws_col);
-    }
+    if (window_size.ws_col > 0)
+      m_debugger.SetTerminalWidth(window_size.ws_col);
+#ifndef _WIN32
+    if (window_size.ws_row > 0)
+      m_debugger.SetTerminalHeight(window_size.ws_row);
+#endif
   }
+}
+
+void sigwinch_handler(int signo) {
+  if (g_driver != nullptr)
+    g_driver->UpdateWindowSize();
 }
 
 void sigint_handler(int signo) {
@@ -746,6 +736,14 @@ int main(int argc, char const *argv[]) {
   // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
   // destruction.
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+#if !defined(__APPLE__)
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash backtrace.\n");
+#else
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash report from "
+                        "~/Library/Logs/DiagnosticReports/.\n");
+#endif
 
   // Parse arguments.
   LLDBOptTable T;
@@ -813,6 +811,18 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  SBDebugger::Terminate();
+  // When terminating the debugger we have to wait on all the background tasks
+  // to complete, which can take a while. Print a message when this takes longer
+  // than 1 second.
+  {
+    std::future<void> future =
+        std::async(std::launch::async, []() { SBDebugger::Terminate(); });
+
+    if (future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout)
+      fprintf(stderr, "Waiting for background tasks to complete...\n");
+
+    future.wait();
+  }
+
   return exit_code;
 }

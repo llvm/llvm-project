@@ -2,12 +2,30 @@
 ; RUN: opt < %s -passes=sccp -S | FileCheck %s
 ; PR1938
 
-define i32 @main() {
+define i32 @main(i1 %arg) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[K:%.*]], [[BB_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[K]] = add i32 [[INDVAR]], 1
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CHECK:       cond_true:
+; CHECK-NEXT:    [[TMP97:%.*]] = icmp slt i32 [[K]], 10
+; CHECK-NEXT:    br i1 [[TMP97]], label [[BB_BACKEDGE]], label [[BB12:%.*]]
+; CHECK:       bb.backedge:
+; CHECK-NEXT:    br label [[BB]]
+; CHECK:       cond_false:
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 [[K]], 10
+; CHECK-NEXT:    br i1 [[TMP9]], label [[BB_BACKEDGE]], label [[BB12]]
+; CHECK:       bb12:
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[K]], 10
+; CHECK-NEXT:    br i1 [[TMP14]], label [[COND_NEXT18:%.*]], label [[COND_TRUE17:%.*]]
+; CHECK:       cond_true17:
+; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
+; CHECK:       cond_next18:
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   br label %bb
@@ -15,7 +33,7 @@ entry:
 bb:
   %indvar = phi i32 [ 0, %entry ], [ %k, %bb.backedge ]
   %k = add i32 %indvar, 1
-  br i1 undef, label %cond_true, label %cond_false
+  br i1 %arg, label %cond_true, label %cond_false
 
 cond_true:
   %tmp97 = icmp slt i32 %k, 10

@@ -25,13 +25,6 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// RedundantDbgInstElimination - This pass removes redundant dbg intrinsics
-// without modifying the CFG of the function.  It is a FunctionPass.
-//
-Pass *createRedundantDbgInstEliminationPass();
-
-//===----------------------------------------------------------------------===//
-//
 // DeadCodeElimination - This pass is more powerful than DeadInstElimination,
 // because it is worklist driven that can potentially revisit instructions when
 // their other instructions become dead, to eliminate chains of dead
@@ -60,6 +53,14 @@ Pass *createLoopStrengthReducePass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopTermFold -  This pass attempts to eliminate the last use of an IV in
+// a loop terminator instruction by rewriting it in terms of another IV.
+// Expected to be run immediately after LSR.
+//
+Pass *createLoopTermFoldPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
 Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
@@ -67,21 +68,6 @@ Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
                            int Count = -1, int AllowPartial = -1,
                            int Runtime = -1, int UpperBound = -1,
                            int AllowPeeling = -1);
-
-//===----------------------------------------------------------------------===//
-//
-// LoopRotate - This pass is a simple loop rotating pass.
-//
-Pass *createLoopRotatePass(int MaxHeaderSize = -1, bool PrepareForLTO = false);
-
-//===----------------------------------------------------------------------===//
-//
-// DemoteRegisterToMemoryPass - This pass is used to demote registers to memory
-// references. In basically undoes the PromoteMemoryToRegister pass to make cfg
-// hacking easier.
-//
-FunctionPass *createDemoteRegisterToMemoryPass();
-extern char &DemoteRegisterToMemoryID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -164,19 +150,6 @@ Pass *createMergeICmpsLegacyPass();
 //
 FunctionPass *createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
 extern char &InferAddressSpacesID;
-
-//===----------------------------------------------------------------------===//
-//
-// TLSVariableHoist - This pass reduce duplicated TLS address call.
-//
-FunctionPass *createTLSVariableHoistPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LowerConstantIntrinsicss - Expand any remaining llvm.objectsize and
-// llvm.is.constant intrinsic calls, even for the unknown cases.
-//
-FunctionPass *createLowerConstantIntrinsicsPass();
 
 //===----------------------------------------------------------------------===//
 //

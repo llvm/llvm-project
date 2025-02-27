@@ -72,7 +72,7 @@ void caller(void (*f)(void)) {
 // CHECK: [[CONT5]]:
 // CHECK:   ret void
 
-// CHECK: define weak void @__cfi_check(i64 %[[TYPE:.*]], ptr %[[ADDR:.*]], ptr %[[DATA:.*]]) align 4096
+// CHECK: define weak void @__cfi_check(i64 noundef %[[TYPE:.*]], ptr noundef %[[ADDR:.*]], ptr noundef %[[DATA:.*]]){{.*}} align 4096
 // CHECK-NOT: }
 // CHECK: call void @__cfi_check_fail(ptr %[[DATA]], ptr %[[ADDR]])
 // CHECK-NEXT: ret void

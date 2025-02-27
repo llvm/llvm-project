@@ -14,6 +14,7 @@
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
@@ -68,9 +69,36 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
       else
         FieldLocs.insert({Field, &createStorageLocation(
                                      Field->getType().getNonReferenceType())});
-    return arena().create<RecordStorageLocation>(Type, std::move(FieldLocs));
+
+    RecordStorageLocation::SyntheticFieldMap SyntheticFields;
+    for (const auto &Entry : getSyntheticFields(Type))
+      SyntheticFields.insert(
+          {Entry.getKey(),
+           &createStorageLocation(Entry.getValue().getNonReferenceType())});
+
+    return createRecordStorageLocation(Type, std::move(FieldLocs),
+                                       std::move(SyntheticFields));
   }
   return arena().create<ScalarStorageLocation>(Type);
+}
+
+// Returns the keys for a given `StringMap`.
+// Can't use `StringSet` as the return type as it doesn't support `operator==`.
+template <typename T>
+static llvm::DenseSet<llvm::StringRef> getKeys(const llvm::StringMap<T> &Map) {
+  return llvm::DenseSet<llvm::StringRef>(Map.keys().begin(), Map.keys().end());
+}
+
+RecordStorageLocation &DataflowAnalysisContext::createRecordStorageLocation(
+    QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+    RecordStorageLocation::SyntheticFieldMap SyntheticFields) {
+  assert(Type->isRecordType());
+  assert(containsSameFields(getModeledFields(Type), FieldLocs));
+  assert(getKeys(getSyntheticFields(Type)) == getKeys(SyntheticFields));
+
+  RecordStorageLocationCreated = true;
+  return arena().create<RecordStorageLocation>(Type, std::move(FieldLocs),
+                                               std::move(SyntheticFields));
 }
 
 StorageLocation &
@@ -132,8 +160,9 @@ Atom
 DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
                                             Atom SecondToken) {
   Atom Token = arena().makeFlowConditionToken();
-  FlowConditionDeps[Token].insert(FirstToken);
-  FlowConditionDeps[Token].insert(SecondToken);
+  auto &TokenDeps = FlowConditionDeps[Token];
+  TokenDeps.insert(FirstToken);
+  TokenDeps.insert(SecondToken);
   addFlowConditionConstraint(Token,
                              arena().makeOr(arena().makeAtomRef(FirstToken),
                                             arena().makeAtomRef(SecondToken)));
@@ -142,11 +171,14 @@ DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
 
 Solver::Result DataflowAnalysisContext::querySolver(
     llvm::SetVector<const Formula *> Constraints) {
-  return S->solve(Constraints.getArrayRef());
+  return S.solve(Constraints.getArrayRef());
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
                                                    const Formula &F) {
+  if (F.isLiteral(true))
+    return true;
+
   // Returns true if and only if truth assignment of the flow condition implies
   // that `F` is also true. We prove whether or not this property holds by
   // reducing the problem to satisfiability checking. In other words, we attempt
@@ -161,6 +193,9 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
 
 bool DataflowAnalysisContext::flowConditionAllows(Atom Token,
                                                   const Formula &F) {
+  if (F.isLiteral(false))
+    return false;
+
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
   Constraints.insert(&F);
@@ -255,8 +290,8 @@ void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
   }
 }
 
-const ControlFlowContext *
-DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
+const AdornedCFG *
+DataflowAnalysisContext::getAdornedCFG(const FunctionDecl *F) {
   // Canonicalize the key:
   F = F->getDefinition();
   if (F == nullptr)
@@ -265,11 +300,11 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   if (It != FunctionContexts.end())
     return &It->second;
 
-  if (F->hasBody()) {
-    auto CFCtx = ControlFlowContext::build(*F);
+  if (F->doesThisDeclarationHaveABody()) {
+    auto ACFG = AdornedCFG::build(*F);
     // FIXME: Handle errors.
-    assert(CFCtx);
-    auto Result = FunctionContexts.insert({F, std::move(*CFCtx)});
+    assert(ACFG);
+    auto Result = FunctionContexts.insert({F, std::move(*ACFG)});
     return &Result.first->second;
   }
 
@@ -304,10 +339,10 @@ static std::unique_ptr<Logger> makeLoggerFromCommandLine() {
   return Logger::html(std::move(StreamFactory));
 }
 
-DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
-                                                 Options Opts)
-    : S(std::move(S)), A(std::make_unique<Arena>()), Opts(Opts) {
-  assert(this->S != nullptr);
+DataflowAnalysisContext::DataflowAnalysisContext(
+    Solver &S, std::unique_ptr<Solver> &&OwnedSolver, Options Opts)
+    : S(S), OwnedSolver(std::move(OwnedSolver)), A(std::make_unique<Arena>()),
+      Opts(Opts) {
   // If the -dataflow-log command-line flag was set, synthesize a logger.
   // This is ugly but provides a uniform method for ad-hoc debugging dataflow-
   // based tools.
@@ -326,44 +361,3 @@ DataflowAnalysisContext::~DataflowAnalysisContext() = default;
 
 } // namespace dataflow
 } // namespace clang
-
-using namespace clang;
-
-const Expr &clang::dataflow::ignoreCFGOmittedNodes(const Expr &E) {
-  const Expr *Current = &E;
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
-    Current = EWC->getSubExpr();
-    assert(Current != nullptr);
-  }
-  Current = Current->IgnoreParens();
-  assert(Current != nullptr);
-  return *Current;
-}
-
-const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
-  if (auto *E = dyn_cast<Expr>(&S))
-    return ignoreCFGOmittedNodes(*E);
-  return S;
-}
-
-// FIXME: Does not precisely handle non-virtual diamond inheritance. A single
-// field decl will be modeled for all instances of the inherited field.
-static void getFieldsFromClassHierarchy(QualType Type,
-                                        clang::dataflow::FieldSet &Fields) {
-  if (Type->isIncompleteType() || Type->isDependentType() ||
-      !Type->isRecordType())
-    return;
-
-  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
-    Fields.insert(Field);
-  if (auto *CXXRecord = Type->getAsCXXRecordDecl())
-    for (const CXXBaseSpecifier &Base : CXXRecord->bases())
-      getFieldsFromClassHierarchy(Base.getType(), Fields);
-}
-
-/// Gets the set of all fields in the type.
-clang::dataflow::FieldSet clang::dataflow::getObjectFields(QualType Type) {
-  FieldSet Fields;
-  getFieldsFromClassHierarchy(Type, Fields);
-  return Fields;
-}

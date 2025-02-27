@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-metadata-emit < %s | FileCheck %s --check-prefix=DXILMD
+; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s --check-prefix=DXILMD
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-unknown-shadermodel6.7-library"
@@ -11,4 +11,4 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 
 !hlsl.cbufs = !{!1}
 
-!1 = !{ptr @A.cb., !"A.cb.ty", i32 13, i32 2, i32 0}
+!1 = !{ptr @A.cb., !"A.cb.ty", i32 13, i1 false, i32 2, i32 0}

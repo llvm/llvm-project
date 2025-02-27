@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations |  FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
   ;
   ; Test that InstrRefBasedLDV / livedebugvalues doesn't crash when it sees
   ; illegal instruction referencing debug-info. This can be caused by

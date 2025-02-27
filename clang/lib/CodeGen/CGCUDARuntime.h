@@ -17,9 +17,11 @@
 
 #include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/GlobalValue.h"
 
 namespace llvm {
+class CallBase;
 class Function;
 class GlobalVariable;
 }
@@ -52,24 +54,16 @@ public:
       Texture,  // Builtin texture
     };
 
-    /// The kind flag for an offloading entry.
-    enum OffloadEntryKindFlag : uint32_t {
-      /// Mark the entry as a global entry. This indicates the presense of a
-      /// kernel if the size field is zero and a variable otherwise.
-      OffloadGlobalEntry = 0x0,
-      /// Mark the entry as a managed global variable.
-      OffloadGlobalManagedEntry = 0x1,
-      /// Mark the entry as a surface variable.
-      OffloadGlobalSurfaceEntry = 0x2,
-      /// Mark the entry as a texture variable.
-      OffloadGlobalTextureEntry = 0x3,
-    };
-
   private:
+    LLVM_PREFERRED_TYPE(DeviceVarKind)
     unsigned Kind : 2;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Extern : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Constant : 1;   // Constant variable.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Managed : 1;    // Managed variable.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Normalized : 1; // Normalized texture.
     int SurfTexType;         // Type of surface/texutre.
 
@@ -89,9 +83,10 @@ public:
   CGCUDARuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGCUDARuntime();
 
-  virtual RValue EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
-                                        const CUDAKernelCallExpr *E,
-                                        ReturnValueSlot ReturnValue);
+  virtual RValue
+  EmitCUDAKernelCallExpr(CodeGenFunction &CGF, const CUDAKernelCallExpr *E,
+                         ReturnValueSlot ReturnValue,
+                         llvm::CallBase **CallOrInvoke = nullptr);
 
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;

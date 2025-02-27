@@ -1,9 +1,11 @@
-// RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
+// RUN: llvm-tblgen -I %S/Inputs -I %p/../../../include -gen-global-isel-combiner \
 // RUN:     -gicombiner-stop-after-parse -combiners=MyCombiner %s | \
 // RUN: FileCheck %s
 
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"
+
+include "test-intrinsics.td"
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
@@ -63,7 +65,7 @@ def InstTest0 : GICombineRule<
 
 // CHECK:      (CombineRule name:InstTest1 id:3 root:d
 // CHECK-NEXT:   (MatchDatas
-// CHECK-NEXT:      (MatchDataInfo pattern_symbol:r0 type:'Register' var_name:MDInfo0)
+// CHECK-NEXT:      (MatchDataDef symbol:r0 type:Register)
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (MatchPats
 // CHECK-NEXT:     <match_root>d:(CodeGenInstructionPattern COPY operands:[<def>$a, i32:$b])
@@ -88,7 +90,7 @@ def InstTest1 : GICombineRule<
 
 // CHECK:      (CombineRule name:InstTest2 id:4 root:d
 // CHECK-NEXT:   (MatchDatas
-// CHECK-NEXT:     (MatchDataInfo pattern_symbol:r0 type:'Register' var_name:MDInfo0)
+// CHECK-NEXT:     (MatchDataDef symbol:r0 type:Register)
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (MatchPats
 // CHECK-NEXT:     <match_root>__InstTest2_match_0:(CodeGenInstructionPattern COPY operands:[<def>$d, (i32 0):$x])
@@ -114,7 +116,6 @@ def InstTest2 : GICombineRule<
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (ApplyPats
 // CHECK-NEXT:     <apply_root>__InOutInstTest0_apply_0:(CodeGenInstructionPattern G_TRUNC operands:[<def>$dst, $src])
-// CHECK-NEXT:     __InOutInstTest0_apply_1:(CXXPattern apply code:"APPLY ${src}")
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (OperandTable MatchPats
 // CHECK-NEXT:     dst -> __InOutInstTest0_match_0
@@ -130,7 +131,7 @@ def InOutInstTest0 : GICombineRule<
   (defs root:$dst),
   (match (COPY $dst, $tmp),
          (G_ZEXT $tmp, $src)),
-  (apply (G_TRUNC $dst, $src), "APPLY ${src}")>;
+  (apply (G_TRUNC $dst, $src))>;
 
 def MatchICst: GICombinePatFrag<
     (outs),
@@ -154,7 +155,6 @@ def MatchICst: GICombinePatFrag<
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (ApplyPats
 // CHECK-NEXT:     <apply_root>__PatFragTest0_apply_0:(CodeGenInstructionPattern COPY operands:[<def>$dst, (i32 0)])
-// CHECK-NEXT:     __PatFragTest0_apply_1:(CXXPattern apply code:"APPLY ${src}")
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (OperandTable MatchPats
 // CHECK-NEXT:     cst -> <live-in>
@@ -167,7 +167,7 @@ def MatchICst: GICombinePatFrag<
 def PatFragTest0 : GICombineRule<
   (defs root:$dst),
   (match (G_ZEXT $dst, $cst), (MatchICst $cst, (i32 0))),
-  (apply (COPY $dst, (i32 0)), "APPLY ${src}")>;
+  (apply (COPY $dst, (i32 0)))>;
 
 def MatchFooPerms: GICombinePatFrag<
     (outs),
@@ -203,7 +203,6 @@ def MatchFooPerms: GICombinePatFrag<
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (ApplyPats
 // CHECK-NEXT:     <apply_root>__PatFragTest1_apply_0:(CodeGenInstructionPattern COPY operands:[<def>$dst, (i32 0)])
-// CHECK-NEXT:     __PatFragTest1_apply_1:(CXXPattern apply code:"APPLY ${src}")
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (OperandTable MatchPats
 // CHECK-NEXT:     cst -> <live-in>
@@ -250,7 +249,7 @@ def PatFragTest1 : GICombineRule<
          (MatchFooPerms $cst, (i32 0)):$b,
          (MatchFooPerms $cst, (i32 0)):$c
   ),
-  (apply (COPY $dst, (i32 0)), "APPLY ${src}")>;
+  (apply (COPY $dst, (i32 0)))>;
 
 // CHECK:      (CombineRule name:VariadicsInTest id:8 root:dst
 // CHECK-NEXT:   (MatchPats
@@ -342,6 +341,48 @@ def MIFlagsTest : GICombineRule<
   (match (G_ZEXT $dst, $src, (MIFlags FmReassoc, (not FmNoNans, FmArcp))):$mi),
   (apply (G_MUL $dst, $src, $src, (MIFlags $mi, FmReassoc, (not FmNsz, FmArcp))))>;
 
+// CHECK-NEXT: (CombineRule name:IntrinTest0 id:12 root:a
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__IntrinTest0_match_0:(CodeGenInstructionPattern G_INTRINSIC operands:[<def>$a, $b] intrinsic(@llvm.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__IntrinTest0_apply_0:(CodeGenInstructionPattern G_INTRINSIC_W_SIDE_EFFECTS operands:[<def>$a, $b] intrinsic(@llvm.sideeffects.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     a -> __IntrinTest0_match_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     a -> __IntrinTest0_apply_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def IntrinTest0 : GICombineRule<
+  (defs root:$a),
+  (match (int_1in_1out $a, $b)),
+  (apply (int_sideeffects_1in_1out $a, $b))>;
+
+// CHECK:      (CombineRule name:IntrinTest1 id:13 root:a
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__IntrinTest1_match_0:(CodeGenInstructionPattern G_INTRINSIC_CONVERGENT operands:[<def>$a, $b] intrinsic(@llvm.convergent.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__IntrinTest1_apply_0:(CodeGenInstructionPattern G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS operands:[<def>$a, $b] intrinsic(@llvm.convergent.sideeffects.1in.1out))
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     a -> __IntrinTest1_match_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     a -> __IntrinTest1_apply_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def IntrinTest1 : GICombineRule<
+  (defs root:$a),
+  (match (int_convergent_1in_1out $a, $b)),
+  (apply (int_convergent_sideeffects_1in_1out $a, $b))>;
+
 def MyCombiner: GICombiner<"GenMyCombiner", [
   WipOpcodeTest0,
   WipOpcodeTest1,
@@ -354,5 +395,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   VariadicsInTest,
   VariadicsOutTest,
   TypeOfTest,
-  MIFlagsTest
+  MIFlagsTest,
+  IntrinTest0,
+  IntrinTest1
 ]>;

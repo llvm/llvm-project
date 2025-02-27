@@ -163,7 +163,7 @@ define i32 @sub_ashr_and_i32_extra_use_ashr(i32 %x, i32 %y, ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    store i32 [[SHR]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 0
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub nsw i32 %y, %x

@@ -33,6 +33,15 @@ func.func @inline_notation() -> i32 {
 // CHECK-LABEL: func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 func.func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 
+// CHECK-LABEL: func.func private @filelocrange_attr1(i1 {foo.loc_attr = loc("mysource.cc":10:0)})
+func.func private @filelocrange_attr1(i1 {foo.loc_attr = loc("mysource.cc":10)})
+// CHECK-LABEL: func.func private @filelocrange_attr2(i1 {foo.loc_attr = loc("mysource.cc":10:8)})
+func.func private @filelocrange_attr2(i1 {foo.loc_attr = loc("mysource.cc":10:8)})
+// CHECK-LABEL: func.func private @filelocrange_attr3(i1 {foo.loc_attr = loc("mysource.cc":10:8 to :12)})
+func.func private @filelocrange_attr3(i1 {foo.loc_attr = loc("mysource.cc":10:8 to :12)})
+// CHECK-LABEL: func.func private @filelocrange_attr4(i1 {foo.loc_attr = loc("mysource.cc":10:8 to 12:4)})
+func.func private @filelocrange_attr4(i1 {foo.loc_attr = loc("mysource.cc":10:8 to 12:4)})
+
   // Check that locations get properly escaped.
 // CHECK-LABEL: func @escape_strings()
 func.func @escape_strings() {
@@ -87,5 +96,12 @@ func.func @location_name_child_is_name() {
 // CHECK: test.attr_with_loc("foo" loc("foo_loc"))
 func.func @optional_location_specifier() {
   test.attr_with_loc("foo" loc("foo_loc"))
+  return
+}
+
+// CHECK-LABEL: @dialect_location
+// CHECK: test.attr_with_loc("dialectLoc" loc(#test.custom_location<"foo.mlir" * 32>))
+func.func @dialect_location() {
+  test.attr_with_loc("dialectLoc" loc(#test.custom_location<"foo.mlir"*32>))
   return
 }

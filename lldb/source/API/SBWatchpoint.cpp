@@ -86,7 +86,7 @@ SBError SBWatchpoint::GetError() {
   SBError sb_error;
   lldb::WatchpointSP watchpoint_sp(GetSP());
   if (watchpoint_sp) {
-    sb_error.SetError(watchpoint_sp->GetError());
+    sb_error.SetError(watchpoint_sp->GetError().Clone());
   }
   return sb_error;
 }
@@ -142,9 +142,9 @@ void SBWatchpoint::SetEnabled(bool enabled) {
     const bool notify = true;
     if (process_sp) {
       if (enabled)
-        process_sp->EnableWatchpoint(watchpoint_sp.get(), notify);
+        process_sp->EnableWatchpoint(watchpoint_sp, notify);
       else
-        process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
+        process_sp->DisableWatchpoint(watchpoint_sp, notify);
     } else {
       watchpoint_sp->SetEnabled(enabled, notify);
     }

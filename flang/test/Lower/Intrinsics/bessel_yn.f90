@@ -42,27 +42,27 @@ subroutine test_transformational_real4(x, n1, n2, r)
   ! ALL-DAG: %[[x:.*]] = fir.load %[[argx]] : !fir.ref<f32>
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[argn1]] : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[argn2]] : !fir.ref<i32>
-  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] : f32
+  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] {{.*}} : f32
   ! ALL-DAG: %[[n1ltn2:.*]] = arith.cmpi slt, %[[n1]], %[[n2]] : i32
   ! ALL-DAG: %[[n1eqn2:.*]] = arith.cmpi eq, %[[n1]], %[[n2]] : i32
   ! ALL: fir.if %[[xeq0]] {
   ! ALL: %[[resxeq0:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYnX0_4(%[[resxeq0]], %[[n1]], %[[n2]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYnX0_4(%[[resxeq0]], %[[n1]], %[[n2]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: } else {
   ! ALL-NEXT: fir.if %[[n1ltn2]] {
   ! ALL-DAG: %[[n1_1:.*]] = arith.addi %[[n1]], %[[one]] : i32
   ! ALL-DAG: %[[bn1:.*]] = fir.call @ynf(%[[n1]], %[[x]]) {{.*}} : (i32, f32) -> f32
   ! ALL-DAG: %[[bn1_1:.*]] = fir.call @ynf(%[[n1_1]], %[[x]]) {{.*}} : (i32, f32) -> f32
   ! ALL-DAG: %[[resn1ltn2:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYn_4(%[[resn1ltn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[bn1_1]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f32, f32, f32, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYn_4(%[[resn1ltn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[bn1_1]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f32, f32, f32, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: } else {
   ! ALL-NEXT: fir.if %[[n1eqn2]] {
   ! ALL-DAG: %[[bn1:.*]] = fir.call @ynf(%[[n1]], %[[x]]) {{.*}} : (i32, f32) -> f32
   ! ALL-DAG: %[[resn1eqn2:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYn_4(%[[resn1eqn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f32, f32, f32, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYn_4(%[[resn1eqn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f32, f32, f32, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: } else {
   ! ALL-DAG: %[[resn1gtn2:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYn_4(%[[resn1gtn2]], %[[n1]], %[[n2]], %[[x]], %[[zero]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f32, f32, f32, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYn_4(%[[resn1gtn2]], %[[n1]], %[[n2]], %[[x]], %[[zero]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f32, f32, f32, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: }
   ! ALL-NEXT: }
   ! ALL-NEXT: }
@@ -85,27 +85,27 @@ subroutine test_transformational_real8(x, n1, n2, r)
   ! ALL-DAG: %[[x:.*]] = fir.load %[[argx]] : !fir.ref<f64>
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[argn1]] : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[argn2]] : !fir.ref<i32>
-  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] : f64
+  ! ALL-DAG: %[[xeq0:.*]] = arith.cmpf ueq, %[[x]], %[[zero]] {{.*}} : f64
   ! ALL-DAG: %[[n1ltn2:.*]] = arith.cmpi slt, %[[n1]], %[[n2]] : i32
   ! ALL-DAG: %[[n1eqn2:.*]] = arith.cmpi eq, %[[n1]], %[[n2]] : i32
   ! ALL: fir.if %[[xeq0]] {
   ! ALL: %[[resxeq0:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYnX0_8(%[[resxeq0]], %[[n1]], %[[n2]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYnX0_8(%[[resxeq0]], %[[n1]], %[[n2]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: } else {
   ! ALL-NEXT: fir.if %[[n1ltn2]] {
   ! ALL-DAG: %[[n1_1:.*]] = arith.addi %[[n1]], %[[one]] : i32
   ! ALL-DAG: %[[bn1:.*]] = fir.call @yn(%[[n1]], %[[x]]) {{.*}} : (i32, f64) -> f64
   ! ALL-DAG: %[[bn1_1:.*]] = fir.call @yn(%[[n1_1]], %[[x]]) {{.*}} : (i32, f64) -> f64
   ! ALL-DAG: %[[resn1ltn2:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYn_8(%[[resn1ltn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[bn1_1]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f64, f64, f64, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYn_8(%[[resn1ltn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[bn1_1]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f64, f64, f64, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: } else {
   ! ALL-NEXT: fir.if %[[n1eqn2]] {
   ! ALL-DAG: %[[bn1:.*]] = fir.call @yn(%[[n1]], %[[x]]) {{.*}} : (i32, f64) -> f64
   ! ALL-DAG: %[[resn1eqn2:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYn_8(%[[resn1eqn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f64, f64, f64, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYn_8(%[[resn1eqn2]], %[[n1]], %[[n2]], %[[x]], %[[bn1]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f64, f64, f64, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: } else {
   ! ALL-DAG: %[[resn1gtn2:.*]] = fir.convert %[[r]] {{.*}}
-  ! ALL: fir.call @_FortranABesselYn_8(%[[resn1gtn2]], %[[n1]], %[[n2]], %[[x]], %[[zero]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f64, f64, f64, !fir.ref<i8>, i32) -> none
+  ! ALL: fir.call @_FortranABesselYn_8(%[[resn1gtn2]], %[[n1]], %[[n2]], %[[x]], %[[zero]], %[[zero]], {{.*}}, {{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, f64, f64, f64, !fir.ref<i8>, i32) -> ()
   ! ALL-NEXT: }
   ! ALL-NEXT: }
   ! ALL-NEXT: }

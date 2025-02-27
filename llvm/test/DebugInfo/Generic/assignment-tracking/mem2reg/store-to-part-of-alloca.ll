@@ -1,6 +1,7 @@
 ; RUN: opt -passes=mem2reg -S %s -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=mem2reg -S %s -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
-; CHECK: llvm.dbg.value(metadata i64 0, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
+; CHECK: #dbg_value(i64 0, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
 
 ;; The store has a debug intrinsic attached to it with a fragment size
 ;; different to the base alloca debug intrinsic fragment size. Check that

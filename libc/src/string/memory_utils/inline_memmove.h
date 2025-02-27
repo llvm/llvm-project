@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H
 
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include <stddef.h> // size_t, ptrdiff_t
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
@@ -42,21 +44,21 @@
 #error "Unsupported architecture"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE constexpr bool inline_memmove_no_small_size(void *, const void *,
                                                         size_t) {
   return false;
 }
 
-LIBC_INLINE bool inline_memmove_small_size(void *dst, const void *src,
-                                           size_t count) {
+[[gnu::flatten]] LIBC_INLINE bool
+inline_memmove_small_size(void *dst, const void *src, size_t count) {
   return LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE(
       reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
 }
 
-LIBC_INLINE void inline_memmove_follow_up(void *dst, const void *src,
-                                          size_t count) {
+[[gnu::flatten]] LIBC_INLINE void
+inline_memmove_follow_up(void *dst, const void *src, size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP(
       reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
 }
@@ -67,6 +69,6 @@ LIBC_INLINE void inline_memmove(void *dst, const void *src, size_t count) {
   inline_memmove_follow_up(dst, src, count);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif /* LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H */

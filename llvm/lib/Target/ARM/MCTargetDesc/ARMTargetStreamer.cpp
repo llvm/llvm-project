@@ -92,11 +92,11 @@ void ARMTargetStreamer::emitCantUnwind() {}
 void ARMTargetStreamer::emitPersonality(const MCSymbol *Personality) {}
 void ARMTargetStreamer::emitPersonalityIndex(unsigned Index) {}
 void ARMTargetStreamer::emitHandlerData() {}
-void ARMTargetStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
+void ARMTargetStreamer::emitSetFP(MCRegister FpReg, MCRegister SpReg,
                                   int64_t Offset) {}
-void ARMTargetStreamer::emitMovSP(unsigned Reg, int64_t Offset) {}
+void ARMTargetStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {}
 void ARMTargetStreamer::emitPad(int64_t Offset) {}
-void ARMTargetStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+void ARMTargetStreamer::emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                                     bool isVector) {}
 void ARMTargetStreamer::emitUnwindRaw(int64_t StackOffset,
                                       const SmallVectorImpl<uint8_t> &Opcodes) {
@@ -115,6 +115,7 @@ void ARMTargetStreamer::emitFPU(ARM::FPUKind FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *SRE) {}
+void ARMTargetStreamer::emitThumbFunc(MCSymbol *Symbol) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}
 
 void ARMTargetStreamer::emitARMWinCFIAllocStack(unsigned Size, bool Wide) {}
@@ -177,7 +178,7 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   switchVendor("aeabi");
 
   const StringRef CPUString = STI.getCPU();
-  if (!CPUString.empty() && !CPUString.startswith("generic")) {
+  if (!CPUString.empty() && !CPUString.starts_with("generic")) {
     // FIXME: remove krait check when GNU tools support krait cpu
     if (STI.hasFeature(ARM::ProcKrait)) {
       emitTextAttribute(ARMBuildAttrs::CPU_name, "cortex-a9");
@@ -329,5 +330,7 @@ llvm::createARMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
     return createARMObjectTargetELFStreamer(S);
   if (TT.isOSBinFormatCOFF())
     return createARMObjectTargetWinCOFFStreamer(S);
+  if (TT.isOSBinFormatMachO())
+    return createARMObjectTargetMachOStreamer(S);
   return new ARMTargetStreamer(S);
 }

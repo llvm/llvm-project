@@ -16,6 +16,7 @@
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_fuchsia.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
@@ -62,6 +63,9 @@ const char *StackTracePrinter::StripFunctionName(const char *function) {
 #if !SANITIZER_SYMBOLIZER_MARKUP
 
 StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
+  if (common_flags()->enable_symbolizer_markup)
+    return new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
+
   return new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
 }
 
@@ -148,12 +152,12 @@ static void MaybeBuildIdToBuffer(const AddressInfo &info, bool PrefixSpace,
                                  InternalScopedString *buffer) {
   if (info.uuid_size) {
     if (PrefixSpace)
-      buffer->AppendF(" ");
-    buffer->AppendF("(BuildId: ");
+      buffer->Append(" ");
+    buffer->Append("(BuildId: ");
     for (uptr i = 0; i < info.uuid_size; ++i) {
       buffer->AppendF("%02x", info.uuid[i]);
     }
-    buffer->AppendF(")");
+    buffer->Append(")");
   }
 }
 
@@ -188,7 +192,7 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
       buffer->AppendF("%u", frame_no);
       break;
     case 'p':
-      buffer->AppendF("0x%zx", address);
+      buffer->AppendF("%p", (void *)address);
       break;
     case 'm':
       buffer->AppendF("%s", StripPathPrefix(info->module, strip_path_prefix));
@@ -245,7 +249,7 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
 #endif
       } else {
-        buffer->AppendF("(<unknown module>)");
+        buffer->Append("(<unknown module>)");
       }
       break;
     case 'M':
@@ -265,7 +269,7 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
       break;
     default:
       Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
-             (void *)p);
+             (const void *)p);
       Die();
     }
   }
@@ -319,7 +323,7 @@ void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
         break;
       default:
         Report("Unsupported specifier in stack frame format: %c (%p)!\n", *p,
-               (void *)p);
+               (const void *)p);
         Die();
     }
   }
@@ -335,7 +339,7 @@ void StackTracePrinter::RenderSourceLocation(InternalScopedString *buffer,
     buffer->AppendF("%s(%d", StripPathPrefix(file, strip_path_prefix), line);
     if (column > 0)
       buffer->AppendF(",%d", column);
-    buffer->AppendF(")");
+    buffer->Append(")");
     return;
   }
 

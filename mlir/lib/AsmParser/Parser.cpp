@@ -34,7 +34,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
@@ -42,6 +41,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Alignment.h"
@@ -271,6 +271,17 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
   return emitWrongTokenError(message);
 }
 
+/// Parses a quoted string token if present.
+ParseResult Parser::parseOptionalString(std::string *string) {
+  if (!getToken().is(Token::string))
+    return failure();
+
+  if (string)
+    *string = getToken().getStringValue();
+  consumeToken();
+  return success();
+}
+
 /// Parse an optional integer value from the stream.
 OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   // Parse `false` and `true` keywords as 0 and 1 respectively.
@@ -308,38 +319,97 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   return success();
 }
 
+/// Parse an optional integer value only in decimal format from the stream.
+OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
+  Token curToken = getToken();
+  if (curToken.isNot(Token::integer, Token::minus)) {
+    return std::nullopt;
+  }
+
+  bool negative = consumeIf(Token::minus);
+  Token curTok = getToken();
+  if (parseToken(Token::integer, "expected integer value")) {
+    return failure();
+  }
+
+  StringRef spelling = curTok.getSpelling();
+  // If the integer is in hexadecimal return only the 0. The lexer has already
+  // moved past the entire hexidecimal encoded integer so we reset the lex
+  // pointer to just past the 0 we actualy want to consume.
+  if (spelling[0] == '0' && spelling.size() > 1 &&
+      llvm::toLower(spelling[1]) == 'x') {
+    result = 0;
+    state.lex.resetPointer(spelling.data() + 1);
+    consumeToken();
+    return success();
+  }
+
+  if (spelling.getAsInteger(10, result))
+    return emitError(curTok.getLoc(), "integer value too large");
+
+  // Make sure we have a zero at the top so we return the right signedness.
+  if (result.isNegative())
+    result = result.zext(result.getBitWidth() + 1);
+
+  // Process the negative sign if present.
+  if (negative)
+    result.negate();
+
+  return success();
+}
+
+ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
+                                          const Token &tok, bool isNegative,
+                                          const llvm::fltSemantics &semantics) {
+  // Check for a floating point value.
+  if (tok.is(Token::floatliteral)) {
+    auto val = tok.getFloatingPointValue();
+    if (!val)
+      return emitError(tok.getLoc()) << "floating point value too large";
+
+    result.emplace(isNegative ? -*val : *val);
+    bool unused;
+    result->convert(semantics, APFloat::rmNearestTiesToEven, &unused);
+    return success();
+  }
+
+  // Check for a hexadecimal float value.
+  if (tok.is(Token::integer))
+    return parseFloatFromIntegerLiteral(result, tok, isNegative, semantics);
+
+  return emitError(tok.getLoc()) << "expected floating point literal";
+}
+
 /// Parse a floating point value from an integer literal token.
-ParseResult Parser::parseFloatFromIntegerLiteral(
-    std::optional<APFloat> &result, const Token &tok, bool isNegative,
-    const llvm::fltSemantics &semantics, size_t typeSizeInBits) {
-  SMLoc loc = tok.getLoc();
+ParseResult
+Parser::parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
+                                     const Token &tok, bool isNegative,
+                                     const llvm::fltSemantics &semantics) {
   StringRef spelling = tok.getSpelling();
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (!isHex) {
-    return emitError(loc, "unexpected decimal integer literal for a "
-                          "floating point value")
+    return emitError(tok.getLoc(), "unexpected decimal integer literal for a "
+                                   "floating point value")
                .attachNote()
            << "add a trailing dot to make the literal a float";
   }
   if (isNegative) {
-    return emitError(loc, "hexadecimal float literal should not have a "
-                          "leading minus");
+    return emitError(tok.getLoc(),
+                     "hexadecimal float literal should not have a "
+                     "leading minus");
   }
 
-  std::optional<uint64_t> value = tok.getUInt64IntegerValue();
-  if (!value)
-    return emitError(loc, "hexadecimal float constant out of range for type");
-
-  if (&semantics == &APFloat::IEEEdouble()) {
-    result = APFloat(semantics, APInt(typeSizeInBits, *value));
-    return success();
+  APInt intValue;
+  tok.getSpelling().getAsInteger(isHex ? 0 : 10, intValue);
+  auto typeSizeInBits = APFloat::semanticsSizeInBits(semantics);
+  if (intValue.getActiveBits() > typeSizeInBits) {
+    return emitError(tok.getLoc(),
+                     "hexadecimal float constant out of range for type");
   }
 
-  APInt apInt(typeSizeInBits, *value);
-  if (apInt != *value)
-    return emitError(loc, "hexadecimal float constant out of range for type");
-  result = APFloat(semantics, apInt);
-
+  APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
+                       intValue.getRawData());
+  result.emplace(semantics, truncatedValue);
   return success();
 }
 
@@ -353,15 +423,25 @@ ParseResult Parser::parseOptionalKeyword(StringRef *keyword) {
   return success();
 }
 
+ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
+  StringRef keyword;
+  if (succeeded(parseOptionalKeyword(&keyword))) {
+    *result = keyword.str();
+    return success();
+  }
+
+  return parseOptionalString(result);
+}
+
 //===----------------------------------------------------------------------===//
 // Resource Parsing
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
-                            StringRef &name) {
+                            std::string &name) {
   assert(dialect && "expected valid dialect interface");
   SMLoc nameLoc = getToken().getLoc();
-  if (failed(parseOptionalKeyword(&name)))
+  if (failed(parseOptionalKeywordOrString(&name)))
     return emitError("expected identifier key for 'resource' entry");
   auto &resources = getState().symbols.dialectResources;
 
@@ -392,7 +472,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
     return emitError() << "dialect '" << dialect->getNamespace()
                        << "' does not expect resource handles";
   }
-  StringRef resourceName;
+  std::string resourceName;
   return parseResourceHandle(interface, resourceName);
 }
 
@@ -596,7 +676,8 @@ public:
 
   /// Parse a location alias, that is a sequence looking like: #loc42
   /// The alias may have already be defined or may be defined later, in which
-  /// case an OpaqueLoc is used a placeholder.
+  /// case an OpaqueLoc is used a placeholder. The caller must ensure that the
+  /// token is actually an alias, which means it must not contain a dot.
   ParseResult parseLocationAlias(LocationAttr &loc);
 
   /// This is the structure of a result specifier in the assembly syntax,
@@ -739,6 +820,12 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
+  /// Operations that define the placeholders. These are kept until the end of
+  /// of the lifetime of the parser because some custom parsers may store
+  /// references to them in local state and use them after forward references
+  /// have been resolved.
+  DenseSet<Operation *> forwardRefOps;
+
   /// Deffered locations: when parsing `loc(#loc42)` we add an entry to this
   /// map. After parsing the definition `#loc42 = ...` we'll patch back users
   /// of this location.
@@ -766,11 +853,11 @@ OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
 }
 
 OperationParser::~OperationParser() {
-  for (auto &fwd : forwardRefPlaceholders) {
+  for (Operation *op : forwardRefOps) {
     // Drop all uses of undefined forward declared reference and destroy
     // defining operation.
-    fwd.first.dropAllUses();
-    fwd.first.getDefiningOp()->destroy();
+    op->dropAllUses();
+    op->destroy();
   }
   for (const auto &scope : forwardRef) {
     for (const auto &fwd : scope) {
@@ -926,7 +1013,6 @@ ParseResult OperationParser::addDefinition(UnresolvedOperand useInfo,
     // the actual definition instead, delete the forward ref, and remove it
     // from our set of forward references we track.
     existing.replaceAllUsesWith(value);
-    existing.getDefiningOp()->destroy();
     forwardRefPlaceholders.erase(existing);
 
     // If a definition of the value already exists, replace it in the assembly
@@ -1113,6 +1199,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
       /*attributes=*/std::nullopt, /*properties=*/nullptr, /*successors=*/{},
       /*numRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
+  forwardRefOps.insert(op);
   return op->getResult(0);
 }
 
@@ -1209,7 +1296,7 @@ ParseResult OperationParser::parseOperation() {
         resultIt += std::get<1>(record);
       }
       state.asmState->finalizeOperationDefinition(
-          op, nameTok.getLocRange(), /*endLoc=*/getToken().getLoc(),
+          op, nameTok.getLocRange(), /*endLoc=*/getLastToken().getEndLoc(),
           asmResultGroups);
     }
 
@@ -1225,8 +1312,9 @@ ParseResult OperationParser::parseOperation() {
 
     // Add this operation to the assembly state if it was provided to populate.
   } else if (state.asmState) {
-    state.asmState->finalizeOperationDefinition(op, nameTok.getLocRange(),
-                                                /*endLoc=*/getToken().getLoc());
+    state.asmState->finalizeOperationDefinition(
+        op, nameTok.getLocRange(),
+        /*endLoc=*/getLastToken().getEndLoc());
   }
 
   return success();
@@ -1500,8 +1588,9 @@ Operation *OperationParser::parseGenericOperation(Block *insertBlock,
   // If we are populating the parser asm state, finalize this operation
   // definition.
   if (state.asmState)
-    state.asmState->finalizeOperationDefinition(op, nameToken.getLocRange(),
-                                                /*endLoc=*/getToken().getLoc());
+    state.asmState->finalizeOperationDefinition(
+        op, nameToken.getLocRange(),
+        /*endLoc=*/getLastToken().getEndLoc());
   return op;
 }
 
@@ -1880,9 +1969,11 @@ public:
 
     Token tok = parser.getToken();
 
-    // Check to see if we are parsing a location alias.
-    // Otherwise, we parse the location directly.
-    if (tok.is(Token::hash_identifier)) {
+    // Check to see if we are parsing a location alias. We are parsing a
+    // location alias if the token is a hash identifier *without* a dot in it -
+    // the dot signifies a dialect attribute. Otherwise, we parse the location
+    // directly.
+    if (tok.is(Token::hash_identifier) && !tok.getSpelling().contains('.')) {
       if (parser.parseLocationAlias(directLoc))
         return failure();
     } else if (parser.parseLocationInstance(directLoc)) {
@@ -2049,11 +2140,9 @@ ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
   Token tok = getToken();
   consumeToken(Token::hash_identifier);
   StringRef identifier = tok.getSpelling().drop_front();
-  if (identifier.contains('.')) {
-    return emitError(tok.getLoc())
-           << "expected location, but found dialect attribute: '#" << identifier
-           << "'";
-  }
+  assert(!identifier.contains('.') &&
+         "unexpected dialect attribute token, expected alias");
+
   if (state.asmState)
     state.asmState->addAttrAliasUses(identifier, tok.getLocRange());
 
@@ -2083,10 +2172,11 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
     return failure();
   Token tok = getToken();
 
-  // Check to see if we are parsing a location alias.
-  // Otherwise, we parse the location directly.
+  // Check to see if we are parsing a location alias. We are parsing a location
+  // alias if the token is a hash identifier *without* a dot in it - the dot
+  // signifies a dialect attribute. Otherwise, we parse the location directly.
   LocationAttr directLoc;
-  if (tok.is(Token::hash_identifier)) {
+  if (tok.is(Token::hash_identifier) && !tok.getSpelling().contains('.')) {
     if (parseLocationAlias(directLoc))
       return failure();
   } else if (parseLocationInstance(directLoc)) {
@@ -2099,7 +2189,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (auto *op = llvm::dyn_cast_if_present<Operation *>(opOrArgument))
     op->setLoc(directLoc);
   else
-    opOrArgument.get<BlockArgument>().setLoc(directLoc);
+    cast<BlockArgument>(opOrArgument).setLoc(directLoc);
   return success();
 }
 
@@ -2144,6 +2234,14 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
 
   // Parse the first block directly to allow for it to be unnamed.
   auto owningBlock = std::make_unique<Block>();
+  auto failureCleanup = llvm::make_scope_exit([&] {
+    if (owningBlock) {
+      // If parsing failed, as indicated by the fact that `owningBlock` still
+      // owns the block, drop all forward references from preceding operations
+      // to definitions within the parsed block.
+      owningBlock->dropAllDefinedValueUses();
+    }
+  });
   Block *block = owningBlock.get();
 
   // If this block is not defined in the source file, add a definition for it
@@ -2375,13 +2473,14 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
 //===----------------------------------------------------------------------===//
 
 ParseResult OperationParser::codeCompleteSSAUse() {
-  std::string detailData;
-  llvm::raw_string_ostream detailOS(detailData);
   for (IsolatedSSANameScope &scope : isolatedNameScopes) {
     for (auto &it : scope.values) {
       if (it.second.empty())
         continue;
       Value frontValue = it.second.front().value;
+
+      std::string detailData;
+      llvm::raw_string_ostream detailOS(detailData);
 
       // If the value isn't a forward reference, we also add the name of the op
       // to the detail.
@@ -2403,7 +2502,7 @@ ParseResult OperationParser::codeCompleteSSAUse() {
         detailOS << ", ...";
 
       state.codeCompleteContext->appendSSAValueCompletion(
-          it.getKey(), std::move(detailOS.str()));
+          it.getKey(), std::move(detailData));
     }
   }
 
@@ -2466,8 +2565,8 @@ private:
 /// textual format.
 class ParsedResourceEntry : public AsmParsedResourceEntry {
 public:
-  ParsedResourceEntry(StringRef key, SMLoc keyLoc, Token value, Parser &p)
-      : key(key), keyLoc(keyLoc), value(value), p(p) {}
+  ParsedResourceEntry(std::string key, SMLoc keyLoc, Token value, Parser &p)
+      : key(std::move(key)), keyLoc(keyLoc), value(value), p(p) {}
   ~ParsedResourceEntry() override = default;
 
   StringRef getKey() const final { return key; }
@@ -2477,7 +2576,7 @@ public:
   AsmResourceEntryKind getKind() const final {
     if (value.isAny(Token::kw_true, Token::kw_false))
       return AsmResourceEntryKind::Bool;
-    return value.getSpelling().startswith("\"0x")
+    return value.getSpelling().starts_with("\"0x")
                ? AsmResourceEntryKind::Blob
                : AsmResourceEntryKind::String;
   }
@@ -2543,7 +2642,7 @@ public:
   }
 
 private:
-  StringRef key;
+  std::string key;
   SMLoc keyLoc;
   Token value;
   Parser &p;
@@ -2672,7 +2771,7 @@ ParseResult TopLevelOperationParser::parseDialectResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      StringRef key;
+      std::string key;
       if (failed(parseResourceHandle(handler, key)) ||
           parseToken(Token::colon, "expected ':'"))
         return failure();
@@ -2699,8 +2798,8 @@ ParseResult TopLevelOperationParser::parseExternalResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      StringRef key;
-      if (failed(parseOptionalKeyword(&key)))
+      std::string key;
+      if (failed(parseOptionalKeywordOrString(&key)))
         return emitError(
             "expected identifier key for 'external_resources' entry");
       if (parseToken(Token::colon, "expected ':'"))

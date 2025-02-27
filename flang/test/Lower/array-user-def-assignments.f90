@@ -75,7 +75,7 @@ end module
 ! CHECK:     %[[V_9:[0-9]+]] = arith.subi %[[C_100]], %[[C_1]] : index
 ! CHECK:     %[[V_10:[0-9]+]] = fir.do_loop %arg1 = %[[C_0]] to %[[V_9]] step %[[C_1]] unordered iter_args(%arg2 = %[[V_2]]) -> (!fir.array<100xf32>) {
 ! CHECK:       %[[V_11:[0-9]+]] = fir.array_fetch %[[V_8]], %arg1 : (!fir.array<100xf32>, index) -> f32
-! CHECK:       %[[V_12:[0-9]+]] = arith.cmpf olt, %[[V_11]], %[[C_st]] : f32
+! CHECK:       %[[V_12:[0-9]+]] = arith.cmpf olt, %[[V_11]], %[[C_st]] {{.*}} : f32
 ! CHECK:       %[[V_13:[0-9]+]]:2 = fir.array_modify %arg2, %arg1 : (!fir.array<100xf32>, index) -> (!fir.ref<f32>, !fir.array<100xf32>)
 ! CHECK:       %[[V_14:[0-9]+]] = fir.convert %[[V_12:[0-9]+]] : (i1) -> !fir.logical<4>
 ! CHECK:       fir.store %[[V_14]] to %[[V_0:[0-9]+]] : !fir.ref<!fir.logical<4>>
@@ -267,7 +267,7 @@ end subroutine
 ! CHECK:       %[[V_11:[0-9]+]] = arith.subi %[[V_10]], %[[C_1_0]] : index
 ! CHECK:       %[[V_12:[0-9]+]] = fir.array_fetch %[[V_5]], %[[V_11:[0-9]+]] : (!fir.array<10xf32>, index) -> f32
 ! CHECK:       %[[C_st:[-0-9a-z_]+]] = arith.constant 0.000000e+00 : f32
-! CHECK:       %[[V_13:[0-9]+]] = arith.cmpf olt, %[[V_12]], %[[C_st]] : f32
+! CHECK:       %[[V_13:[0-9]+]] = arith.cmpf olt, %[[V_12]], %[[C_st]] {{.*}} : f32
 ! CHECK:       %[[C_1_1:[-0-9a-z_]+]] = arith.constant 1 : index
 ! CHECK:       %[[V_14:[0-9]+]] = fir.load %[[V_1:[0-9]+]] : !fir.ref<i32>
 ! CHECK:       %[[V_15:[0-9]+]] = fir.convert %[[V_14:[0-9]+]] : (i32) -> i64
@@ -372,7 +372,7 @@ end subroutine
 ! CHECK:       %[[V_18:[0-9]+]] = fir.convert %[[V_17:[0-9]+]] : (!fir.logical<4>) -> i1
 ! CHECK:       %[[V_19:[0-9]+]] = fir.if %[[V_18]] -> (!fir.array<10xf32>) {
 ! CHECK:         %[[V_20:[0-9]+]] = fir.array_fetch %[[V_12]], %arg3 : (!fir.array<10xf32>, index) -> f32
-! CHECK:         %[[V_21:[0-9]+]] = arith.cmpf olt, %[[V_20]], %[[C_st]] : f32
+! CHECK:         %[[V_21:[0-9]+]] = arith.cmpf olt, %[[V_20]], %[[C_st]] {{.*}} : f32
 ! CHECK:         %[[V_22:[0-9]+]]:2 = fir.array_modify %arg4, %arg3 : (!fir.array<10xf32>, index) -> (!fir.ref<f32>, !fir.array<10xf32>)
 ! CHECK:         %[[V_23:[0-9]+]] = fir.convert %[[V_21:[0-9]+]] : (i1) -> !fir.logical<4>
 ! CHECK:         fir.store %[[V_23]] to %[[V_0:[0-9]+]] : !fir.ref<!fir.logical<4>>
@@ -442,7 +442,7 @@ end subroutine
 ! CHECK:     %[[V_6:[0-9]+]] = fir.do_loop %arg2 = %[[V_2]] to %[[V_3]] step %[[C_1]] unordered iter_args(%arg3 = %[[V_5]]) -> (!fir.array<10x!fir.logical<4>>) {
 ! CHECK:       %[[V_7:[0-9]+]] = fir.convert %arg2 : (index) -> i32
 ! CHECK:       fir.store %[[V_7]] to %[[V_1:[0-9]+]] : !fir.ref<i32>
-! CHECK:       %[[V_8:[0-9]+]] = fir.call @_QPreturns_alloc(%[[V_1]]) fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.heap<f32>>
+! CHECK:       %[[V_8:[0-9]+]] = fir.call @_QPreturns_alloc(%[[V_1]]) proc_attrs<pure> fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.heap<f32>>
 ! CHECK:       fir.save_result %[[V_8]] to %[[V_0:[0-9]+]] : !fir.box<!fir.heap<f32>>, !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:       %[[V_9:[0-9]+]] = fir.load %[[V_0:[0-9]+]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:       %[[V_10:[0-9]+]] = fir.box_addr %[[V_9:[0-9]+]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>

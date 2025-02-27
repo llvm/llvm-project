@@ -10,18 +10,18 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_1]
 ; CHECK-NEXT:    adrp x8, .LCPI0_2
 ; CHECK-NEXT:    ushl v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI0_2]
-; CHECK-NEXT:    adrp x8, .LCPI0_3
 ; CHECK-NEXT:    umull v1.4s, v1.4h, v2.4h
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
-; CHECK-NEXT:    sub v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    umull v2.4s, v2.4h, v3.4h
+; CHECK-NEXT:    fneg d2, d2
+; CHECK-NEXT:    sub v3.4h, v0.4h, v1.4h
+; CHECK-NEXT:    umull v2.4s, v3.4h, v2.4h
 ; CHECK-NEXT:    shrn v2.4h, v2.4s, #16
 ; CHECK-NEXT:    add v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_3]
-; CHECK-NEXT:    adrp x8, .LCPI0_4
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_2]
+; CHECK-NEXT:    adrp x8, .LCPI0_3
 ; CHECK-NEXT:    ushl v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_4]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_3]
 ; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
   %1 = urem <4 x i16> %x, <i16 95, i16 124, i16 98, i16 1003>

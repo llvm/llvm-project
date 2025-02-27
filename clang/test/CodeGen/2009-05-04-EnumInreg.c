@@ -14,4 +14,4 @@ enum kobject_action {
 struct kobject;
 
 // CHECK: i32 inreg %action
-int kobject_uevent(struct kobject *kobj, enum kobject_action action) {}
+void kobject_uevent(struct kobject *kobj, enum kobject_action action) {}

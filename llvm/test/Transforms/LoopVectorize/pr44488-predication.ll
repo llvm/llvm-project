@@ -20,7 +20,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[TMP1]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
 ; CHECK:       pred.srem.if:
@@ -37,7 +37,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.continue2:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP6]], [[PRED_SREM_CONTINUE]] ], [ [[TMP9]], [[PRED_SREM_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> <i16 5786, i16 5786>, <2 x i16> [[TMP10]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> splat (i16 5786), <2 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
@@ -64,7 +64,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    store i16 [[COND6]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INC7]] = add nsw i16 [[I_07]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC7]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RV:%.*]] = load i16, ptr @v_39, align 1
 ; CHECK-NEXT:    ret i16 [[RV]]

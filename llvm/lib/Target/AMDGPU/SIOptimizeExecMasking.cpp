@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SIOptimizeExecMasking.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -23,7 +24,7 @@ using namespace llvm;
 
 namespace {
 
-class SIOptimizeExecMasking : public MachineFunctionPass {
+class SIOptimizeExecMasking {
   MachineFunction *MF = nullptr;
   const GCNSubtarget *ST = nullptr;
   const SIRegisterInfo *TRI = nullptr;
@@ -62,10 +63,15 @@ class SIOptimizeExecMasking : public MachineFunctionPass {
   bool optimizeOrSaveexecXorSequences();
 
 public:
+  bool run(MachineFunction &MF);
+};
+
+class SIOptimizeExecMaskingLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  SIOptimizeExecMasking() : MachineFunctionPass(ID) {
-    initializeSIOptimizeExecMaskingPass(*PassRegistry::getPassRegistry());
+  SIOptimizeExecMaskingLegacy() : MachineFunctionPass(ID) {
+    initializeSIOptimizeExecMaskingLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -82,15 +88,28 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SIOptimizeExecMasking, DEBUG_TYPE,
+PreservedAnalyses
+SIOptimizeExecMaskingPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &) {
+  SIOptimizeExecMasking Impl;
+
+  if (!Impl.run(MF))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+INITIALIZE_PASS_BEGIN(SIOptimizeExecMaskingLegacy, DEBUG_TYPE,
                       "SI optimize exec mask operations", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_END(SIOptimizeExecMasking, DEBUG_TYPE,
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_END(SIOptimizeExecMaskingLegacy, DEBUG_TYPE,
                     "SI optimize exec mask operations", false, false)
 
-char SIOptimizeExecMasking::ID = 0;
+char SIOptimizeExecMaskingLegacy::ID = 0;
 
-char &llvm::SIOptimizeExecMaskingID = SIOptimizeExecMasking::ID;
+char &llvm::SIOptimizeExecMaskingLegacyID = SIOptimizeExecMaskingLegacy::ID;
 
 /// If \p MI is a copy from exec, return the register copied to.
 Register SIOptimizeExecMasking::isCopyFromExec(const MachineInstr &MI) const {
@@ -313,7 +332,7 @@ MachineBasicBlock::reverse_iterator SIOptimizeExecMasking::findExecCopy(
   return E;
 }
 
-// XXX - Seems LivePhysRegs doesn't work correctly since it will incorrectly
+// XXX - Seems LiveRegUnits doesn't work correctly since it will incorrectly
 // report the register as unavailable because a super-register with a lane mask
 // is unavailable.
 static bool isLiveOut(const MachineBasicBlock &MBB, unsigned Reg) {
@@ -383,7 +402,7 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
                                                    MCRegister Reg,
                                                    bool UseLiveOuts,
                                                    bool IgnoreStart) const {
-  LivePhysRegs LR(*TRI);
+  LiveRegUnits LR(*TRI);
   if (UseLiveOuts)
     LR.addLiveOuts(*Stop.getParent());
 
@@ -396,7 +415,7 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
     LR.stepBackward(*A);
   }
 
-  return !LR.available(*MRI, Reg);
+  return !LR.available(Reg) || MRI->isReserved(Reg);
 }
 
 // Determine if a register Reg is not re-defined and still in use
@@ -503,12 +522,12 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
           SaveExecInst = &*J;
           LLVM_DEBUG(dbgs() << "Found save exec op: " << *SaveExecInst << '\n');
           continue;
-        } else {
-          LLVM_DEBUG(dbgs()
-                     << "Instruction does not read exec copy: " << *J << '\n');
-          break;
         }
-      } else if (ReadsCopyFromExec && !SaveExecInst) {
+        LLVM_DEBUG(dbgs() << "Instruction does not read exec copy: " << *J
+                          << '\n');
+        break;
+      }
+      if (ReadsCopyFromExec && !SaveExecInst) {
         // Make sure no other instruction is trying to use this copy, before it
         // will be rewritten by the saveexec, i.e. hasOneUse. There may have
         // been another use, such as an inserted spill. For example:
@@ -600,7 +619,7 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
                          VCmp.getDebugLoc(), TII->get(NewOpcode));
 
   auto TryAddImmediateValueFromNamedOperand =
-      [&](unsigned OperandName) -> void {
+      [&](AMDGPU::OpName OperandName) -> void {
     if (auto *Mod = TII->getNamedOperand(VCmp, OperandName))
       Builder.addImm(Mod->getImm());
   };
@@ -786,10 +805,14 @@ bool SIOptimizeExecMasking::optimizeOrSaveexecXorSequences() {
   return Changed;
 }
 
-bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
+bool SIOptimizeExecMaskingLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  return SIOptimizeExecMasking().run(MF);
+}
+
+bool SIOptimizeExecMasking::run(MachineFunction &MF) {
   this->MF = &MF;
   ST = &MF.getSubtarget<GCNSubtarget>();
   TRI = ST->getRegisterInfo();

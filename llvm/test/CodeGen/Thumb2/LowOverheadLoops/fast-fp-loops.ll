@@ -9,12 +9,12 @@ define arm_aapcs_vfpcc void @fast_float_mul(ptr nocapture %a, ptr nocapture read
 ; CHECK-NEXT:    beq.w .LBB0_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
 ; CHECK-NEXT:    add.w r4, r2, r3, lsl #2
-; CHECK-NEXT:    add.w lr, r0, r3, lsl #2
 ; CHECK-NEXT:    cmp r4, r0
-; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    cmp lr, r2
-; CHECK-NEXT:    csel r12, zr, r4, ls
-; CHECK-NEXT:    cmp lr, r1
+; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
+; CHECK-NEXT:    cset r12, hi
+; CHECK-NEXT:    cmp r4, r2
+; CHECK-NEXT:    csel r12, zr, r12, ls
+; CHECK-NEXT:    cmp r4, r1
 ; CHECK-NEXT:    add.w r4, r1, r3, lsl #2
 ; CHECK-NEXT:    cset lr, hi
 ; CHECK-NEXT:    cmp r4, r0
@@ -24,8 +24,8 @@ define arm_aapcs_vfpcc void @fast_float_mul(ptr nocapture %a, ptr nocapture read
 ; CHECK-NEXT:    cmpeq.w r12, #0
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    subs r4, r3, #1
 ; CHECK-NEXT:    and r12, r3, #3
+; CHECK-NEXT:    subs r4, r3, #1
 ; CHECK-NEXT:    cmp r4, #3
 ; CHECK-NEXT:    bhs .LBB0_6
 ; CHECK-NEXT:  @ %bb.3:
@@ -166,7 +166,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul = fmul fast float %i14, %i13
   %arrayidx2 = getelementptr inbounds float, ptr %a, i32 %i.09
   store float %mul, ptr %arrayidx2, align 4
-  %inc = or i32 %i.09, 1
+  %inc = or disjoint i32 %i.09, 1
   %arrayidx.1 = getelementptr inbounds float, ptr %b, i32 %inc
   %i15 = load float, ptr %arrayidx.1, align 4
   %arrayidx1.1 = getelementptr inbounds float, ptr %c, i32 %inc
@@ -174,7 +174,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.1 = fmul fast float %i16, %i15
   %arrayidx2.1 = getelementptr inbounds float, ptr %a, i32 %inc
   store float %mul.1, ptr %arrayidx2.1, align 4
-  %inc.1 = or i32 %i.09, 2
+  %inc.1 = or disjoint i32 %i.09, 2
   %arrayidx.2 = getelementptr inbounds float, ptr %b, i32 %inc.1
   %i17 = load float, ptr %arrayidx.2, align 4
   %arrayidx1.2 = getelementptr inbounds float, ptr %c, i32 %inc.1
@@ -182,7 +182,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.2 = fmul fast float %i18, %i17
   %arrayidx2.2 = getelementptr inbounds float, ptr %a, i32 %inc.1
   store float %mul.2, ptr %arrayidx2.2, align 4
-  %inc.2 = or i32 %i.09, 3
+  %inc.2 = or disjoint i32 %i.09, 3
   %arrayidx.3 = getelementptr inbounds float, ptr %b, i32 %inc.2
   %i19 = load float, ptr %arrayidx.3, align 4
   %arrayidx1.3 = getelementptr inbounds float, ptr %c, i32 %inc.2

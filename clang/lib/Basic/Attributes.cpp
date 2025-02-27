@@ -17,6 +17,9 @@
 #include "clang/Basic/ParsedAttrInfo.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace clang;
 
 static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
@@ -30,10 +33,11 @@ static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
 
 int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
                         const IdentifierInfo *Scope, const IdentifierInfo *Attr,
-                        const TargetInfo &Target, const LangOptions &LangOpts) {
+                        const TargetInfo &Target, const LangOptions &LangOpts,
+                        bool CheckPlugins) {
   StringRef Name = Attr->getName();
   // Normalize the attribute name, __foo__ becomes foo.
-  if (Name.size() >= 4 && Name.startswith("__") && Name.endswith("__"))
+  if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
     Name = Name.substr(2, Name.size() - 4);
 
   // Normalize the scope name, but only for gnu and clang attributes.
@@ -47,19 +51,32 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
   // attributes. We support those, but not through the typical attribute
   // machinery that goes through TableGen. We support this in all OpenMP modes
   // so long as double square brackets are enabled.
-  if (LangOpts.OpenMP && ScopeName == "omp")
-    return (Name == "directive" || Name == "sequence") ? 1 : 0;
+  //
+  // Other OpenMP attributes (e.g. [[omp::assume]]) are handled via the
+  // regular attribute parsing machinery.
+  if (LangOpts.OpenMP && ScopeName == "omp" &&
+      (Name == "directive" || Name == "sequence"))
+    return 1;
 
   int res = hasAttributeImpl(Syntax, Name, ScopeName, Target, LangOpts);
   if (res)
     return res;
 
-  // Check if any plugin provides this attribute.
-  for (auto &Ptr : getAttributePluginInstances())
-    if (Ptr->hasSpelling(Syntax, Name))
-      return 1;
+  if (CheckPlugins) {
+    // Check if any plugin provides this attribute.
+    for (auto &Ptr : getAttributePluginInstances())
+      if (Ptr->hasSpelling(Syntax, Name))
+        return 1;
+  }
 
   return 0;
+}
+
+int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
+                        const IdentifierInfo *Scope, const IdentifierInfo *Attr,
+                        const TargetInfo &Target, const LangOptions &LangOpts) {
+  return hasAttribute(Syntax, Scope, Attr, Target, LangOpts,
+                      /*CheckPlugins=*/true);
 }
 
 const char *attr::getSubjectMatchRuleSpelling(attr::SubjectMatchRule Rule) {
@@ -103,8 +120,8 @@ static StringRef normalizeAttrName(const IdentifierInfo *Name,
        (NormalizedScopeName.empty() || NormalizedScopeName == "gnu" ||
         NormalizedScopeName == "clang"));
   StringRef AttrName = Name->getName();
-  if (ShouldNormalize && AttrName.size() >= 4 && AttrName.startswith("__") &&
-      AttrName.endswith("__"))
+  if (ShouldNormalize && AttrName.size() >= 4 && AttrName.starts_with("__") &&
+      AttrName.ends_with("__"))
     AttrName = AttrName.slice(2, AttrName.size() - 2);
 
   return AttrName;
@@ -144,17 +161,44 @@ AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
   return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
 }
 
+AttributeCommonInfo::AttrArgsInfo
+AttributeCommonInfo::getCXX11AttrArgsInfo(const IdentifierInfo *Name) {
+  StringRef AttrName =
+      normalizeAttrName(Name, /*NormalizedScopeName*/ "", Syntax::AS_CXX11);
+#define CXX11_ATTR_ARGS_INFO
+  return llvm::StringSwitch<AttributeCommonInfo::AttrArgsInfo>(AttrName)
+#include "clang/Basic/CXX11AttributeInfo.inc"
+      .Default(AttributeCommonInfo::AttrArgsInfo::None);
+#undef CXX11_ATTR_ARGS_INFO
+}
+
 std::string AttributeCommonInfo::getNormalizedFullName() const {
   return static_cast<std::string>(
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
+}
+
+static AttributeCommonInfo::Scope
+getScopeFromNormalizedScopeName(StringRef ScopeName) {
+  return llvm::StringSwitch<AttributeCommonInfo::Scope>(ScopeName)
+      .Case("", AttributeCommonInfo::Scope::NONE)
+      .Case("clang", AttributeCommonInfo::Scope::CLANG)
+      .Case("gnu", AttributeCommonInfo::Scope::GNU)
+      .Case("gsl", AttributeCommonInfo::Scope::GSL)
+      .Case("hlsl", AttributeCommonInfo::Scope::HLSL)
+      .Case("msvc", AttributeCommonInfo::Scope::MSVC)
+      .Case("omp", AttributeCommonInfo::Scope::OMP)
+      .Case("riscv", AttributeCommonInfo::Scope::RISCV);
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());
-  StringRef Scope = normalizeAttrScopeName(getScopeName(), Syntax);
-  StringRef Name = normalizeAttrName(getAttrName(), Scope, Syntax);
+  StringRef ScopeName = normalizeAttrScopeName(getScopeName(), Syntax);
+  StringRef Name = normalizeAttrName(getAttrName(), ScopeName, Syntax);
+
+  AttributeCommonInfo::Scope ComputedScope =
+      getScopeFromNormalizedScopeName(ScopeName);
 
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }

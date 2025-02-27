@@ -14,30 +14,21 @@
 
 namespace scudo {
 
-static int appendChar(char **Buffer, const char *BufferEnd, char C) {
-  if (*Buffer < BufferEnd) {
-    **Buffer = C;
-    (*Buffer)++;
-  }
-  return 1;
-}
-
 // Appends number in a given Base to buffer. If its length is less than
 // |MinNumberLength|, it is padded with leading zeroes or spaces, depending
 // on the value of |PadWithZero|.
-static int appendNumber(char **Buffer, const char *BufferEnd, u64 AbsoluteValue,
-                        u8 Base, u8 MinNumberLength, bool PadWithZero,
-                        bool Negative, bool Upper) {
+void ScopedString::appendNumber(u64 AbsoluteValue, u8 Base, u8 MinNumberLength,
+                                bool PadWithZero, bool Negative, bool Upper) {
   constexpr uptr MaxLen = 30;
   RAW_CHECK(Base == 10 || Base == 16);
   RAW_CHECK(Base == 10 || !Negative);
   RAW_CHECK(AbsoluteValue || !Negative);
   RAW_CHECK(MinNumberLength < MaxLen);
-  int Res = 0;
   if (Negative && MinNumberLength)
     --MinNumberLength;
-  if (Negative && PadWithZero)
-    Res += appendChar(Buffer, BufferEnd, '-');
+  if (Negative && PadWithZero) {
+    String.push_back('-');
+  }
   uptr NumBuffer[MaxLen];
   int Pos = 0;
   do {
@@ -55,34 +46,32 @@ static int appendNumber(char **Buffer, const char *BufferEnd, u64 AbsoluteValue,
   Pos--;
   for (; Pos >= 0 && NumBuffer[Pos] == 0; Pos--) {
     char c = (PadWithZero || Pos == 0) ? '0' : ' ';
-    Res += appendChar(Buffer, BufferEnd, c);
+    String.push_back(c);
   }
   if (Negative && !PadWithZero)
-    Res += appendChar(Buffer, BufferEnd, '-');
+    String.push_back('-');
   for (; Pos >= 0; Pos--) {
     char Digit = static_cast<char>(NumBuffer[Pos]);
     Digit = static_cast<char>((Digit < 10) ? '0' + Digit
                                            : (Upper ? 'A' : 'a') + Digit - 10);
-    Res += appendChar(Buffer, BufferEnd, Digit);
+    String.push_back(Digit);
   }
-  return Res;
 }
 
-static int appendUnsigned(char **Buffer, const char *BufferEnd, u64 Num,
-                          u8 Base, u8 MinNumberLength, bool PadWithZero,
-                          bool Upper) {
-  return appendNumber(Buffer, BufferEnd, Num, Base, MinNumberLength,
-                      PadWithZero, /*Negative=*/false, Upper);
+void ScopedString::appendUnsigned(u64 Num, u8 Base, u8 MinNumberLength,
+                                  bool PadWithZero, bool Upper) {
+  appendNumber(Num, Base, MinNumberLength, PadWithZero, /*Negative=*/false,
+               Upper);
 }
 
-static int appendSignedDecimal(char **Buffer, const char *BufferEnd, s64 Num,
-                               u8 MinNumberLength, bool PadWithZero) {
+void ScopedString::appendSignedDecimal(s64 Num, u8 MinNumberLength,
+                                       bool PadWithZero) {
   const bool Negative = (Num < 0);
   const u64 UnsignedNum = (Num == INT64_MIN)
                               ? static_cast<u64>(INT64_MAX) + 1
                               : static_cast<u64>(Negative ? -Num : Num);
-  return appendNumber(Buffer, BufferEnd, UnsignedNum, 10, MinNumberLength,
-                      PadWithZero, Negative, /*Upper=*/false);
+  appendNumber(UnsignedNum, 10, MinNumberLength, PadWithZero, Negative,
+               /*Upper=*/false);
 }
 
 // Use the fact that explicitly requesting 0 Width (%0s) results in UB and
@@ -90,44 +79,45 @@ static int appendSignedDecimal(char **Buffer, const char *BufferEnd, s64 Num,
 // Width == 0 - no Width requested
 // Width  < 0 - left-justify S within and pad it to -Width chars, if necessary
 // Width  > 0 - right-justify S, not implemented yet
-static int appendString(char **Buffer, const char *BufferEnd, int Width,
-                        int MaxChars, const char *S) {
+void ScopedString::appendString(int Width, int MaxChars, const char *S) {
   if (!S)
     S = "<null>";
-  int Res = 0;
+  int NumChars = 0;
   for (; *S; S++) {
-    if (MaxChars >= 0 && Res >= MaxChars)
+    if (MaxChars >= 0 && NumChars >= MaxChars)
       break;
-    Res += appendChar(Buffer, BufferEnd, *S);
+    String.push_back(*S);
+    NumChars++;
   }
-  // Only the left justified strings are supported.
-  while (Width < -Res)
-    Res += appendChar(Buffer, BufferEnd, ' ');
-  return Res;
+  if (Width < 0) {
+    // Only left justification supported.
+    Width = -Width - NumChars;
+    while (Width-- > 0)
+      String.push_back(' ');
+  }
 }
 
-static int appendPointer(char **Buffer, const char *BufferEnd, u64 ptr_value) {
-  int Res = 0;
-  Res += appendString(Buffer, BufferEnd, 0, -1, "0x");
-  Res += appendUnsigned(Buffer, BufferEnd, ptr_value, 16,
-                        SCUDO_POINTER_FORMAT_LENGTH, /*PadWithZero=*/true,
-                        /*Upper=*/false);
-  return Res;
+void ScopedString::appendPointer(u64 ptr_value) {
+  appendString(0, -1, "0x");
+  appendUnsigned(ptr_value, 16, SCUDO_POINTER_FORMAT_LENGTH,
+                 /*PadWithZero=*/true,
+                 /*Upper=*/false);
 }
 
-static int formatString(char *Buffer, uptr BufferLength, const char *Format,
-                        va_list Args) {
+void ScopedString::vappend(const char *Format, va_list &Args) {
+  // Since the string contains the '\0' terminator, put our size before it
+  // so that push_back calls work correctly.
+  DCHECK(String.size() > 0);
+  String.resize(String.size() - 1);
+
   static const char *PrintfFormatsHelp =
-      "Supported formatString formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
+      "Supported formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
       "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
   RAW_CHECK(Format);
-  RAW_CHECK(BufferLength > 0);
-  const char *BufferEnd = &Buffer[BufferLength - 1];
   const char *Cur = Format;
-  int Res = 0;
   for (; *Cur; Cur++) {
     if (*Cur != '%') {
-      Res += appendChar(&Buffer, BufferEnd, *Cur);
+      String.push_back(*Cur);
       continue;
     }
     Cur++;
@@ -162,7 +152,7 @@ static int formatString(char *Buffer, uptr BufferLength, const char *Format,
       DVal = HaveLL  ? va_arg(Args, s64)
              : HaveZ ? va_arg(Args, sptr)
                      : va_arg(Args, int);
-      Res += appendSignedDecimal(&Buffer, BufferEnd, DVal, Width, PadWithZero);
+      appendSignedDecimal(DVal, Width, PadWithZero);
       break;
     }
     case 'u':
@@ -172,27 +162,25 @@ static int formatString(char *Buffer, uptr BufferLength, const char *Format,
              : HaveZ ? va_arg(Args, uptr)
                      : va_arg(Args, unsigned);
       const bool Upper = (*Cur == 'X');
-      Res += appendUnsigned(&Buffer, BufferEnd, UVal, (*Cur == 'u') ? 10 : 16,
-                            Width, PadWithZero, Upper);
+      appendUnsigned(UVal, (*Cur == 'u') ? 10 : 16, Width, PadWithZero, Upper);
       break;
     }
     case 'p': {
       RAW_CHECK_MSG(!HaveFlags, PrintfFormatsHelp);
-      Res += appendPointer(&Buffer, BufferEnd, va_arg(Args, uptr));
+      appendPointer(va_arg(Args, uptr));
       break;
     }
     case 's': {
       RAW_CHECK_MSG(!HaveLength, PrintfFormatsHelp);
       // Only left-justified Width is supported.
       CHECK(!HaveWidth || LeftJustified);
-      Res += appendString(&Buffer, BufferEnd, LeftJustified ? -Width : Width,
-                          Precision, va_arg(Args, char *));
+      appendString(LeftJustified ? -Width : Width, Precision,
+                   va_arg(Args, char *));
       break;
     }
     case 'c': {
       RAW_CHECK_MSG(!HaveFlags, PrintfFormatsHelp);
-      Res +=
-          appendChar(&Buffer, BufferEnd, static_cast<char>(va_arg(Args, int)));
+      String.push_back(static_cast<char>(va_arg(Args, int)));
       break;
     }
     // In Scudo, `s64`/`u64` are supposed to use `lld` and `llu` respectively.
@@ -207,19 +195,17 @@ static int formatString(char *Buffer, uptr BufferLength, const char *Format,
 
       if (*Cur == 'd') {
         DVal = va_arg(Args, s64);
-        Res +=
-            appendSignedDecimal(&Buffer, BufferEnd, DVal, Width, PadWithZero);
+        appendSignedDecimal(DVal, Width, PadWithZero);
       } else {
         UVal = va_arg(Args, u64);
-        Res += appendUnsigned(&Buffer, BufferEnd, UVal, 10, Width, PadWithZero,
-                              false);
+        appendUnsigned(UVal, 10, Width, PadWithZero, false);
       }
 
       break;
     }
     case '%': {
       RAW_CHECK_MSG(!HaveFlags, PrintfFormatsHelp);
-      Res += appendChar(&Buffer, BufferEnd, '%');
+      String.push_back('%');
       break;
     }
     default: {
@@ -227,35 +213,13 @@ static int formatString(char *Buffer, uptr BufferLength, const char *Format,
     }
     }
   }
-  RAW_CHECK(Buffer <= BufferEnd);
-  appendChar(&Buffer, BufferEnd + 1, '\0');
-  return Res;
-}
-
-int formatString(char *Buffer, uptr BufferLength, const char *Format, ...) {
-  va_list Args;
-  va_start(Args, Format);
-  int Res = formatString(Buffer, BufferLength, Format, Args);
-  va_end(Args);
-  return Res;
-}
-
-void ScopedString::vappend(const char *Format, va_list Args) {
-  va_list ArgsCopy;
-  va_copy(ArgsCopy, Args);
-  // formatString doesn't currently support a null buffer or zero buffer length,
-  // so in order to get the resulting formatted string length, we use a one-char
-  // buffer.
-  char C[1];
-  const uptr AdditionalLength =
-      static_cast<uptr>(formatString(C, sizeof(C), Format, Args)) + 1;
-  const uptr Length = length();
-  String.resize(Length + AdditionalLength);
-  const uptr FormattedLength = static_cast<uptr>(formatString(
-      String.data() + Length, String.size() - Length, Format, ArgsCopy));
-  RAW_CHECK(data()[length()] == '\0');
-  RAW_CHECK(FormattedLength + 1 == AdditionalLength);
-  va_end(ArgsCopy);
+  String.push_back('\0');
+  if (String.back() != '\0') {
+    // String truncated, make sure the string is terminated properly.
+    // This can happen if there is no more memory when trying to resize
+    // the string.
+    String.back() = '\0';
+  }
 }
 
 void ScopedString::append(const char *Format, ...) {

@@ -44,7 +44,7 @@ static WasmYAML::Table makeTable(uint32_t Index,
                                  const wasm::WasmTableType &Type) {
   WasmYAML::Table T;
   T.Index = Index;
-  T.ElemType = Type.ElemType;
+  T.ElemType = (uint32_t)Type.ElemType;
   T.TableLimits = makeLimits(Type.Limits);
   return T;
 }
@@ -61,6 +61,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     DylinkSec->TableSize = Info.TableSize;
     DylinkSec->TableAlignment = Info.TableAlignment;
     DylinkSec->Needed = Info.Needed;
+    DylinkSec->RuntimePath = Info.RuntimePath;
     for (const auto &Imp : Info.ImportInfo)
       DylinkSec->ImportInfo.push_back({Imp.Module, Imp.Field, Imp.Flags});
     for (const auto &Exp : Info.ExportInfo)
@@ -124,7 +125,8 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     }
 
     uint32_t SymbolIndex = 0;
-    for (const wasm::WasmSymbolInfo &Symbol : Obj.linkingData().SymbolTable) {
+    for (const object::SymbolRef &Sym : Obj.symbols()) {
+      const wasm::WasmSymbolInfo &Symbol = Obj.getWasmSymbol(Sym).Info;
       WasmYAML::SymbolInfo Info;
       Info.Index = SymbolIndex++;
       Info.Kind = static_cast<uint32_t>(Symbol.Kind);
@@ -205,7 +207,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     std::unique_ptr<WasmYAML::Section> S;
     switch (WasmSec.Type) {
     case wasm::WASM_SEC_CUSTOM: {
-      if (WasmSec.Name.startswith("reloc.")) {
+      if (WasmSec.Name.starts_with("reloc.")) {
         // Relocations are attached the sections they apply to rather than
         // being represented as a custom section in the YAML output.
         continue;
@@ -334,7 +336,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         WasmYAML::ElemSegment Seg;
         Seg.Flags = Segment.Flags;
         Seg.TableNumber = Segment.TableNumber;
-        Seg.ElemKind = Segment.ElemKind;
+        Seg.ElemKind = (uint32_t)Segment.ElemKind;
         Seg.Offset.Extended = Segment.Offset.Extended;
         if (Seg.Offset.Extended) {
           Seg.Offset.Body = yaml::BinaryRef(Segment.Offset.Body);

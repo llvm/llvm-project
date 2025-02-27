@@ -18,10 +18,10 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cassert>
 
 using namespace llvm;
 
@@ -39,8 +39,16 @@ MCOperand MipsMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   MipsMCExpr::MipsExprKind TargetKind = MipsMCExpr::MEK_None;
   bool IsGpOff = false;
   const MCSymbol *Symbol;
+  SmallString<128> Name;
+  unsigned TargetFlags = MO.getTargetFlags();
 
-  switch(MO.getTargetFlags()) {
+  if (TargetFlags & MipsII::MO_DLLIMPORT) {
+    // Handle dllimport linkage
+    Name += "__imp_";
+    TargetFlags &= ~MipsII::MO_DLLIMPORT;
+  }
+
+  switch (TargetFlags) {
   default:
     llvm_unreachable("Invalid target flag!");
   case MipsII::MO_NO_FLAG:
@@ -126,7 +134,8 @@ MCOperand MipsMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     break;
 
   case MachineOperand::MO_GlobalAddress:
-    Symbol = AsmPrinter.getSymbol(MO.getGlobal());
+    AsmPrinter.getNameWithPrefix(Name, MO.getGlobal());
+    Symbol = Ctx->getOrCreateSymbol(Name);
     Offset += MO.getOffset();
     break;
 

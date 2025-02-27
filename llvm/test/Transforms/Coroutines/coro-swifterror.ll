@@ -50,7 +50,7 @@ define ptr @g(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    store ptr null, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    call void @maybeThrow(ptr nonnull swifterror [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[DOTSPILL_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[BUFFER]], i32 0, i32 1
+; CHECK-NEXT:    [[DOTSPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[BUFFER]], i32 4
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTSPILL_ADDR]], align 4
 ; CHECK-NEXT:    call void @logError(ptr [[TMP1]])
 ; CHECK-NEXT:    ret ptr @g.resume.0

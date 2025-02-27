@@ -1,9 +1,8 @@
 add_mlir_dialect_library(MLIRTensorTransforms
   BufferizableOpInterfaceImpl.cpp
-  Bufferize.cpp
+  ConcatOpPatterns.cpp
   EmptyOpPatterns.cpp
   ExtractSliceFromReshapeUtils.cpp
-  FoldIntoPackAndUnpackPatterns.cpp
   FoldTensorSubsetOps.cpp
   IndependenceTransforms.cpp
   MergeConsecutiveInsertExtractSlicePatterns.cpp
@@ -23,8 +22,8 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRAffineTransforms
   MLIRAffineUtils
   MLIRArithDialect
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
+  MLIRArithUtils
+  MLIRDialectUtils
   MLIRIR
   MLIRLinalgDialect
   MLIRMemRefDialect
@@ -36,5 +35,6 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRTilingInterface
   MLIRTransforms
   MLIRVectorDialect
+  MLIRVectorUtils
   MLIRValueBoundsOpInterface
 )

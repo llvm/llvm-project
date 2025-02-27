@@ -75,9 +75,9 @@ static int handle(MemoryBuffer &inputBuf, StringRef input) {
   for (line_iterator i(inputBuf, /*SkipBlanks=*/false, '\0'); !i.is_at_eof();) {
     const int64_t lineNo = i.line_number();
     const StringRef line = *i++;
-    const size_t markerLen = line.startswith("//") ? 6 : 5;
+    const size_t markerLen = line.starts_with("//") ? 6 : 5;
     if (!(line.size() >= markerLen &&
-          line.substr(markerLen - 4).startswith("--- ")))
+          line.substr(markerLen - 4).starts_with("--- ")))
       continue;
     separator = line.substr(0, markerLen);
     const StringRef partName = line.substr(markerLen);
@@ -123,7 +123,7 @@ static int handle(MemoryBuffer &inputBuf, StringRef input) {
     if (ec)
       fatal(input, ec.message());
     auto f = std::make_unique<ToolOutputFile>(partPath.str(), ec,
-                                              llvm::sys::fs::OF_None);
+                                              llvm::sys::fs::OF_Text);
     if (!f)
       fatal(input, ec.message());
 
@@ -156,7 +156,7 @@ int main(int argc, const char **argv) {
   if (output.empty())
     fatal("", "output directory is not specified");
   ErrorOr<std::unique_ptr<MemoryBuffer>> bufferOrErr =
-      MemoryBuffer::getFileOrSTDIN(input);
+      MemoryBuffer::getFileOrSTDIN(input, /*IsText=*/true);
   if (std::error_code ec = bufferOrErr.getError())
     fatal(input, ec.message());
 

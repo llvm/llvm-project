@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -57,9 +58,9 @@ constexpr bool test() {
   //
   // See https://github.com/llvm/llvm-project/issues/68552 and the linked PR.
   {
-    auto f1 = [] -> std::expected<std::optional<int>, long> { return 0; };
+    auto f1 = []() -> std::expected<std::optional<int>, long> { return 0; };
 
-    auto f2 = [&f1] -> std::expected<std::optional<int>, int> {
+    auto f2 = [&f1]() -> std::expected<std::optional<int>, int> {
       return f1().transform_error([](auto) { return 0; });
     };
 

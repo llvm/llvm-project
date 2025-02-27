@@ -1,20 +1,20 @@
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=mixed -triple powerpc-unknown-unknown -S \
+// RUN:   -faltivec-src-compat=mixed -triple powerpc-unknown-unknown \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=MIXED
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=mixed -triple powerpc64le-unknown-unknown -S \
+// RUN:   -faltivec-src-compat=mixed -triple powerpc64le-unknown-unknown \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=MIXED
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=xl -triple powerpc-unknown-unknown -S \
+// RUN:   -faltivec-src-compat=xl -triple powerpc-unknown-unknown \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=XL
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=xl -triple powerpc64le-unknown-unknown -S \
+// RUN:   -faltivec-src-compat=xl -triple powerpc64le-unknown-unknown \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=XL
 // RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=gcc -triple powerpc-unknown-unknown -S \
+// RUN:   -faltivec-src-compat=gcc -triple powerpc-unknown-unknown \
 // RUN:   -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=GCC
 // RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=gcc -triple powerpc64le-unknown-unknown -S \
+// RUN:   -faltivec-src-compat=gcc -triple powerpc64le-unknown-unknown \
 // RUN:   -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=GCC
 // RUN: %clang -mcpu=pwr8 -faltivec-src-compat=mixed --target=powerpc-unknown-unknown \
 // RUN:   -S -emit-llvm %s -o - | FileCheck %s --check-prefix=MIXED
@@ -50,7 +50,7 @@ void test_vector_bool_pixel_init(void) {
   // vector bool char initialization
   vbi8_1 = (vector bool char)('a');
   // MIXED: <i8 97, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
-  // XL: <i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97, i8 97>
+  // XL: splat (i8 97)
   // GCC: error: invalid conversion between vector type '__vector __bool unsigned char' (vector of 16 'unsigned char' values) and integer type 'unsigned char' of different size
   char c = 'c';
   vbi8_2 = (vector bool char)(c);
@@ -64,7 +64,7 @@ void test_vector_bool_pixel_init(void) {
   // vector bool short initialization
   vbi16_1 = (vector bool short)(5);
   // MIXED: <i16 5, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
-  // XL: <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+  // XL: splat (i16 5)
   // GCC: error: invalid conversion between vector type '__vector __bool unsigned short' (vector of 8 'unsigned short' values) and integer type 'unsigned short' of different size
   short si16 = 55;
   vbi16_2 = (vector bool short)(si16);
@@ -78,7 +78,7 @@ void test_vector_bool_pixel_init(void) {
   // vector bool int initialization
   vbi32_1 = (vector bool int)(9);
   // MIXED: <i32 9, i32 0, i32 0, i32 0>
-  // XL: <i32 9, i32 9, i32 9, i32 9>
+  // XL: splat (i32 9)
   // GCC: error: invalid conversion between vector type '__vector __bool unsigned int' (vector of 4 'unsigned int' values) and integer type 'unsigned int' of different size
   int si32 = 99;
   vbi32_2 = (vector bool int)(si32);
@@ -92,7 +92,7 @@ void test_vector_bool_pixel_init(void) {
   // vector bool long long initialization
   vbi64_1 = (vector bool long long)(13);
   // MIXED: <i64 13, i64 0>
-  // XL: <i64 13, i64 13>
+  // XL: splat (i64 13)
   // GCC: error: invalid conversion between vector type '__vector __bool unsigned long long' (vector of 2 'unsigned long long' values) and integer type 'unsigned long long' of different size
   long long si64 = 1313;
   vbi64_2 = (vector bool long long)(si64);
@@ -106,6 +106,6 @@ void test_vector_bool_pixel_init(void) {
   // vector pixel initialization
   p1 = (vector pixel)(1);
   // MIXED: <i16 1, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
-  // XL: <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  // XL: splat (i16 1)
   // GCC: error: invalid conversion between vector type '__vector __pixel ' (vector of 8 'unsigned short' values) and integer type 'unsigned short' of different size
 }

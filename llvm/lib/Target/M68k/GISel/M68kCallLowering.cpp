@@ -25,6 +25,27 @@
 
 using namespace llvm;
 
+namespace {
+
+struct M68kFormalArgHandler : public M68kIncomingValueHandler {
+  M68kFormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : M68kIncomingValueHandler(MIRBuilder, MRI) {}
+};
+
+struct CallReturnHandler : public M68kIncomingValueHandler {
+  CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                    MachineInstrBuilder &MIB)
+      : M68kIncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+
+private:
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        const CCValAssign &VA) override;
+
+  MachineInstrBuilder &MIB;
+};
+
+} // end anonymous namespace
+
 M68kCallLowering::M68kCallLowering(const M68kTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
@@ -82,7 +103,7 @@ bool M68kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   const M68kTargetLowering &TLI = *getTLI<M68kTargetLowering>();
   CCAssignFn *AssignFn =
       TLI.getCCAssignFn(F.getCallingConv(), true, F.isVarArg());
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   if (!VRegs.empty()) {
     SmallVector<ArgInfo, 8> SplitArgs;
     ArgInfo OrigArg{VRegs, Val->getType(), 0};
@@ -104,7 +125,7 @@ bool M68kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                             FunctionLoweringInfo &FLI) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = F.getDataLayout();
   auto &TLI = *getTLI<M68kTargetLowering>();
 
   SmallVector<ArgInfo, 8> SplitArgs;
@@ -119,7 +140,7 @@ bool M68kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFn =
       TLI.getCCAssignFn(F.getCallingConv(), false, F.isVarArg());
   IncomingValueAssigner ArgAssigner(AssignFn);
-  FormalArgHandler ArgHandler(MIRBuilder, MRI);
+  M68kFormalArgHandler ArgHandler(MIRBuilder, MRI);
   return determineAndHandleAssignments(ArgHandler, ArgAssigner, SplitArgs,
                                        MIRBuilder, F.getCallingConv(),
                                        F.isVarArg());
@@ -170,7 +191,7 @@ bool M68kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   const M68kTargetLowering &TLI = *getTLI<M68kTargetLowering>();
   const M68kSubtarget &STI = MF.getSubtarget<M68kSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();

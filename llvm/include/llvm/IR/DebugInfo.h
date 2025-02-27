@@ -34,21 +34,27 @@ namespace llvm {
 class DbgDeclareInst;
 class DbgValueInst;
 class DbgVariableIntrinsic;
-class DPValue;
+class DbgVariableRecord;
 class Instruction;
 class Module;
 
 /// Finds dbg.declare intrinsics declaring local variables as living in the
 /// memory that 'V' points to.
-TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
+TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
+/// As above, for DVRDeclares.
+TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
+/// As above, for DVRValues.
+TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
-void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
-                   Value *V, SmallVectorImpl<DPValue *> *DPValues = nullptr);
+void findDbgValues(
+    SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V,
+    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
 
 /// Finds the debug info intrinsics describing a value.
-void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts,
-                  Value *V, SmallVectorImpl<DPValue *> *DPValues = nullptr);
+void findDbgUsers(
+    SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V,
+    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
 
 /// Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
@@ -56,6 +62,7 @@ DISubprogram *getDISubprogram(const MDNode *Scope);
 /// Produce a DebugLoc to use for each dbg.declare that is promoted to a
 /// dbg.value.
 DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII);
+DebugLoc getDebugValueLoc(DbgVariableRecord *DVR);
 
 /// Strip debug info in the module if it exists.
 ///
@@ -102,10 +109,13 @@ public:
   /// Process a single instruction and collect debug info anchors.
   void processInstruction(const Module &M, const Instruction &I);
 
-  /// Process DbgVariableIntrinsic.
-  void processVariable(const Module &M, const DbgVariableIntrinsic &DVI);
+  /// Process a DILocalVariable.
+  void processVariable(const Module &M, const DILocalVariable *DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
+  /// Process a DbgRecord (e.g, treat a DbgVariableRecord like a
+  /// DbgVariableIntrinsic).
+  void processDbgRecord(const Module &M, const DbgRecord &DR);
 
   /// Process subprogram.
   void processSubprogram(DISubprogram *SP);
@@ -188,6 +198,12 @@ inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
   return getAssignmentInsts(DAI->getAssignID());
 }
 
+inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
+  assert(DVR->isDbgAssign() &&
+         "Can't get assignment instructions for non-assign DVR!");
+  return getAssignmentInsts(DVR->getAssignID());
+}
+
 //
 // Utilities for enumerating llvm.dbg.assign intrinsic from an assignment ID.
 //
@@ -220,6 +236,13 @@ inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
     return make_range(Value::user_iterator(), Value::user_iterator());
 }
 
+inline SmallVector<DbgVariableRecord *>
+getDVRAssignmentMarkers(const Instruction *Inst) {
+  if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
+    return cast<DIAssignID>(ID)->getAllDbgVariableRecordUsers();
+  return {};
+}
+
 /// Delete the llvm.dbg.assign intrinsics linked to \p Inst.
 void deleteAssignmentMarkers(const Instruction *Inst);
 
@@ -240,8 +263,16 @@ void deleteAll(Function *F);
 /// Result contains a zero-sized fragment if there's no intersect.
 bool calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
+    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
     std::optional<DIExpression::FragmentInfo> &Result);
+bool calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
+    std::optional<DIExpression::FragmentInfo> &Result);
+
+/// Replace DIAssignID uses and attachments with IDs from \p Map.
+/// If an ID is unmapped a new ID is generated and added to \p Map.
+void remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map, Instruction &I);
 
 /// Helper struct for trackAssignments, below. We don't use the similar
 /// DebugVariable class because trackAssignments doesn't (yet?) understand
@@ -255,6 +286,8 @@ struct VarRecord {
 
   VarRecord(DbgVariableIntrinsic *DVI)
       : Var(DVI->getVariable()), DL(getDebugValueLoc(DVI)) {}
+  VarRecord(DbgVariableRecord *DVR)
+      : Var(DVR->getVariable()), DL(getDebugValueLoc(DVR)) {}
   VarRecord(DILocalVariable *Var, DILocation *DL) : Var(Var), DL(DL) {}
   friend bool operator<(const VarRecord &LHS, const VarRecord &RHS) {
     return std::tie(LHS.Var, LHS.DL) < std::tie(RHS.Var, RHS.DL);

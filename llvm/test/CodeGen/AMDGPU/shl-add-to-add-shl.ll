@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck %s
 
 ; Check transformation shl (or|add x, c2), c1 => or|add (shl x, c1), (c2 << c1)
 ; Only one shift if expected, GEP shall not produce a separate shift

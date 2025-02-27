@@ -10,32 +10,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-class VCIXSuffix<string range> {
-  list<string> suffix = !cond(!eq(range, "c"): ["e8mf8", "e8mf4", "e8mf2", "e8m1", "e8m2", "e8m4", "e8m8"],
-                              !eq(range, "s"): ["e16mf4", "e16mf2", "e16m1", "e16m2", "e16m4", "e16m8"],
-                              !eq(range, "i"): ["e32mf2", "e32m1", "e32m2", "e32m4", "e32m8"],
-                              !eq(range, "l"): ["e64m1", "e64m2", "e64m4", "e64m8"]);
-}
-
 let TargetPrefix = "riscv" in {
-  // Output: (vector_out) or ()
+  // Output: (vector_out)
   // Input: (bit<27-26>, bit<24-20>, scalar_in, vl) or
-  //        (bit<27-26>, bit<24-20>, bit<11-7>, scalar_in, vl)
-  class RISCVSFCustomVC_X<bit HasDst, bit HasSE, bit ImmScalar>
-        : Intrinsic<!if(HasDst, [llvm_anyvector_ty], []),
-                    !listconcat(!if(HasDst, [llvm_anyint_ty, LLVMMatchType<1>],
-                                            [llvm_anyint_ty, LLVMMatchType<0>, LLVMMatchType<0>]),
-                                [llvm_any_ty, llvm_anyint_ty]),
+  class RISCVSFCustomVC_X<bit HasSE, bit ImmScalar>
+        : Intrinsic<[llvm_anyvector_ty],
+                    [llvm_anyint_ty, LLVMMatchType<1>, llvm_any_ty, llvm_anyint_ty],
                     !listconcat([IntrNoMem, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>],    // bit<27-26> and bit<24-20>
-                                !if(HasDst, [], [ImmArg<ArgIndex<2>>]),                   // Vd or bit<11-7>
-                                !if(ImmScalar, !if(HasDst, [ImmArg<ArgIndex<2>>],
-                                                           [ImmArg<ArgIndex<3>>]), []),   // ScalarOperand
+                                !if(ImmScalar, [ImmArg<ArgIndex<2>>], []),                // ScalarOperand
                                 !if(HasSE, [IntrHasSideEffects], []))>,
           RISCVVIntrinsic {
     let ScalarOperand = !cond(ImmScalar: NoScalarOperand,
-                              HasDst: 2,
+                              true: 2);
+    let VLOperand = 3;
+  }
+  // Output: ()
+  // Input: (bit<27-26>, bit<24-20>, bit<11-7>, scalar_in, sew, log2lmul, vl)
+  class RISCVSFCustomVC_X_WO_Suffix<bit ImmScalar>
+        : Intrinsic<[],
+                    [llvm_anyint_ty, LLVMMatchType<0>, LLVMMatchType<0>,
+                     llvm_any_ty, LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty],
+                    !listconcat([IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>,
+                                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
+                                 ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>],    // bit<27-26>, bit<24-20>, bit<11-7>, sew, log2lmul
+                                !if(ImmScalar, [ImmArg<ArgIndex<3>>], []))>,   // ScalarOperand
+          RISCVVIntrinsic {
+    let ScalarOperand = !cond(ImmScalar: NoScalarOperand,
                               true: 3);
-    let VLOperand = !if(HasDst, 3, 4);
+    let VLOperand = 6;
   }
   // Output: (vector_out) or ()
   // Input: (bit<27-26>, vector_in, vector_in/scalar_in, vl) or
@@ -90,14 +92,9 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVSFCustomVC_X<list<string> type> {
     foreach t = type in {
       defvar ImmScalar = !eq(t, "i");
-      defvar range = ["c", "s", "i", "l"];
-      foreach r = range in {
-        foreach s = VCIXSuffix<r>.suffix in {
-          def "int_riscv_sf_vc_" # t # "_se_" # s : RISCVSFCustomVC_X<HasDst=0, HasSE=1, ImmScalar=ImmScalar>;
-        }
-      }
-      def "int_riscv_sf_vc_v_" # t # "_se" : RISCVSFCustomVC_X<HasDst=1, HasSE=1, ImmScalar=ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t         : RISCVSFCustomVC_X<HasDst=1, HasSE=0, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_" # t # "_se"   : RISCVSFCustomVC_X_WO_Suffix<ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "_se" : RISCVSFCustomVC_X<HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t         : RISCVSFCustomVC_X<HasSE=0, ImmScalar=ImmScalar>;
     }
   }
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
@@ -16,7 +16,7 @@
 // path lexically_relative(const path& p) const;
 // path lexically_proximate(const path& p) const;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <string>
 
 #include "../../path_helper.h"
@@ -24,6 +24,7 @@
 #include "concat_macros.h"
 #include "count_new.h"
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 int main(int, char**) {
   // clang-format off
@@ -40,9 +41,11 @@ int main(int, char**) {
 #ifdef _WIN32
       {"//net/", "//net", ""},
       {"//net", "//net/", ""},
+      {"C:\\a\\b", "C:/a", "b"},
 #else
       {"//net/", "//net", "."},
       {"//net", "//net/", "."},
+      {"C:\\a\\b", "C:/a", "../../C:\\a\\b"},
 #endif
       {"//base", "a", ""},
       {"a", "a", "."},

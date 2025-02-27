@@ -67,13 +67,13 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ; CHECK-LINUX-NEXT: ret
 
 ; CHECK-LINUX-LABEL: OUTLINED_FUNCTION_EPILOG_x19x20x21x22x30x29:
-; CHECK-LINUX:      mov     x16, x30
-; CHECK-LINUX-NEXT: ldp     x20, x19, [sp, #32]
+; CHECK-LINUX:      ldp     x20, x19, [sp, #32]
+; CHECK-LINUX-NEXT: mov     x16, x30
 ; CHECK-LINUX-NEXT: ldp     x22, x21, [sp, #16]
 ; CHECK-LINUX-NEXT: ldp     x29, x30, [sp], #48
 ; CHECK-LINUX-NEXT: ret     x16
 
 ; nothing to check - hit assert if not bailing out for swiftasync
-define void @swift_async(i8* swiftasync %ctx) minsize "frame-pointer"="all" {
+define void @swift_async(ptr swiftasync %ctx) minsize "frame-pointer"="all" {
   ret void
 }

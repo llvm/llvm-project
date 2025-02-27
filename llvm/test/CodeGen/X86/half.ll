@@ -81,8 +81,7 @@ define float @test_extend32(ptr %addr) #0 {
 ;
 ; BWON-F16C-LABEL: test_extend32:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    movzwl (%rdi), %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
+; BWON-F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
@@ -113,8 +112,7 @@ define double @test_extend64(ptr %addr) #0 {
 ;
 ; BWON-F16C-LABEL: test_extend64:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    movzwl (%rdi), %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
+; BWON-F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    retq
@@ -148,8 +146,7 @@ define void @test_trunc32(float %in, ptr %addr) #0 {
 ; BWON-F16C-LABEL: test_trunc32:
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rdi)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_trunc32:
@@ -220,8 +217,7 @@ define i64 @test_fptosi_i64(ptr %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_fptosi_i64:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    movzwl (%rdi), %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
+; BWON-F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvttss2si %xmm0, %rax
 ; BWON-F16C-NEXT:    retq
@@ -268,8 +264,7 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rsi)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_sitofp_i64:
@@ -312,8 +307,7 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_fptoui_i64:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    movzwl (%rdi), %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
+; BWON-F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvttss2si %xmm0, %rcx
 ; BWON-F16C-NEXT:    movq %rcx, %rdx
@@ -334,7 +328,7 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-I686-NEXT:    jae .LBB9_2
 ; CHECK-I686-NEXT:  # %bb.1:
@@ -402,8 +396,7 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; BWON-F16C-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; BWON-F16C-NEXT:  .LBB10_3:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rsi)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_uitofp_i64:
@@ -807,8 +800,6 @@ define half @test_f80trunc_nodagcombine() #0 {
 ; BWON-F16C-NEXT:    pushq %rax
 ; BWON-F16C-NEXT:    callq test_floatret@PLT
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    popq %rax
 ; BWON-F16C-NEXT:    retq
 ;
@@ -851,16 +842,13 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ;
 ; BWON-F16C-LABEL: test_sitofp_fadd_i32:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    movzwl (%rsi), %eax
-; BWON-F16C-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %eax, %xmm1
+; BWON-F16C-NEXT:    vpinsrw $0, (%rsi), %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtsi2ss %edi, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; BWON-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
@@ -918,9 +906,6 @@ define half @PR40273(half) #0 {
 ;
 ; BWON-F16C-LABEL: PR40273:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    xorl %eax, %eax
 ; BWON-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -972,9 +957,6 @@ define void @brcond(half %0) #0 {
 ;
 ; BWON-F16C-LABEL: brcond:
 ; BWON-F16C:       # %bb.0: # %entry
-; BWON-F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm0
@@ -1028,14 +1010,9 @@ define half @test_sqrt(half %0) #0 {
 ;
 ; BWON-F16C-LABEL: test_sqrt:
 ; BWON-F16C:       # %bb.0: # %entry
-; BWON-F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_sqrt:
@@ -1066,12 +1043,12 @@ define void @main.158() #0 {
 ; CHECK-LIBCALL-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-LIBCALL-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
-; CHECK-LIBCALL-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-LIBCALL-NEXT:    movss {{.*#+}} xmm1 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-LIBCALL-NEXT:    ucomiss %xmm0, %xmm1
 ; CHECK-LIBCALL-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-LIBCALL-NEXT:    jae .LBB20_2
 ; CHECK-LIBCALL-NEXT:  # %bb.1: # %entry
-; CHECK-LIBCALL-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-LIBCALL-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-LIBCALL-NEXT:  .LBB20_2: # %entry
 ; CHECK-LIBCALL-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
@@ -1082,37 +1059,33 @@ define void @main.158() #0 {
 ; BWON-F16C-LABEL: main.158:
 ; BWON-F16C:       # %bb.0: # %entry
 ; BWON-F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; BWON-F16C-NEXT:    vucomiss %xmm0, %xmm1
-; BWON-F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm1
+; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
+; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm2 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm2
 ; BWON-F16C-NEXT:    jae .LBB20_2
 ; BWON-F16C-NEXT:  # %bb.1: # %entry
-; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; BWON-F16C-NEXT:  .LBB20_2: # %entry
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rax)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: main.158:
 ; CHECK-I686:       # %bb.0: # %entry
 ; CHECK-I686-NEXT:    subl $12, %esp
-; CHECK-I686-NEXT:    pxor %xmm0, %xmm0
-; CHECK-I686-NEXT:    movd %xmm0, (%esp)
+; CHECK-I686-NEXT:    movl $0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-I686-NEXT:    jae .LBB20_2
 ; CHECK-I686-NEXT:  # %bb.1: # %entry
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-I686-NEXT:  .LBB20_2: # %entry
 ; CHECK-I686-NEXT:    movss %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
@@ -1138,81 +1111,66 @@ entry:
 define void @main.45() #0 {
 ; CHECK-LIBCALL-LABEL: main.45:
 ; CHECK-LIBCALL:       # %bb.0: # %entry
-; CHECK-LIBCALL-NEXT:    pushq %rbp
 ; CHECK-LIBCALL-NEXT:    pushq %r15
 ; CHECK-LIBCALL-NEXT:    pushq %r14
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
-; CHECK-LIBCALL-NEXT:    pushq %rax
+; CHECK-LIBCALL-NEXT:    subq $16, %rsp
 ; CHECK-LIBCALL-NEXT:    pinsrw $0, (%rax), %xmm0
-; CHECK-LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-LIBCALL-NEXT:    movd %eax, %xmm1
-; CHECK-LIBCALL-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
+; CHECK-LIBCALL-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,0,0,0,4,5,6,7]
+; CHECK-LIBCALL-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-LIBCALL-NEXT:    movq %xmm1, %rbx
 ; CHECK-LIBCALL-NEXT:    movq %rbx, %r14
 ; CHECK-LIBCALL-NEXT:    shrq $48, %r14
 ; CHECK-LIBCALL-NEXT:    movq %rbx, %r15
 ; CHECK-LIBCALL-NEXT:    shrq $32, %r15
-; CHECK-LIBCALL-NEXT:    movl %ebx, %ebp
-; CHECK-LIBCALL-NEXT:    shrl $16, %ebp
+; CHECK-LIBCALL-NEXT:    shrl $16, %ebx
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-LIBCALL-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-LIBCALL-NEXT:    movl $32256, %eax # imm = 0x7E00
-; CHECK-LIBCALL-NEXT:    cmovpl %eax, %ebp
-; CHECK-LIBCALL-NEXT:    cmovpl %eax, %r15d
-; CHECK-LIBCALL-NEXT:    cmovpl %eax, %r14d
-; CHECK-LIBCALL-NEXT:    cmovpl %eax, %ebx
-; CHECK-LIBCALL-NEXT:    movw %bx, (%rax)
+; CHECK-LIBCALL-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; CHECK-LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-LIBCALL-NEXT:    movl $32256, %ecx # imm = 0x7E00
+; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %eax
+; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %ebx
+; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %r15d
+; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %r14d
 ; CHECK-LIBCALL-NEXT:    movw %r14w, (%rax)
 ; CHECK-LIBCALL-NEXT:    movw %r15w, (%rax)
-; CHECK-LIBCALL-NEXT:    movw %bp, (%rax)
-; CHECK-LIBCALL-NEXT:    addq $8, %rsp
+; CHECK-LIBCALL-NEXT:    movw %bx, (%rax)
+; CHECK-LIBCALL-NEXT:    movw %ax, (%rax)
+; CHECK-LIBCALL-NEXT:    addq $16, %rsp
 ; CHECK-LIBCALL-NEXT:    popq %rbx
 ; CHECK-LIBCALL-NEXT:    popq %r14
 ; CHECK-LIBCALL-NEXT:    popq %r15
-; CHECK-LIBCALL-NEXT:    popq %rbp
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: main.45:
 ; BWON-F16C:       # %bb.0: # %entry
-; BWON-F16C-NEXT:    movzwl (%rax), %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
-; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,0,0,4,5,6,7]
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    xorl %eax, %eax
-; BWON-F16C-NEXT:    vucomiss %xmm0, %xmm0
-; BWON-F16C-NEXT:    movl $65535, %ecx # imm = 0xFFFF
-; BWON-F16C-NEXT:    cmovnpl %eax, %ecx
-; BWON-F16C-NEXT:    vmovd %ecx, %xmm0
+; BWON-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; BWON-F16C-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm1
+; BWON-F16C-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; BWON-F16C-NEXT:    vcmpunordps %xmm2, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vpackssdw %xmm1, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vpblendvb %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vmovq %xmm0, (%rax)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: main.45:
 ; CHECK-I686:       # %bb.0: # %entry
-; CHECK-I686-NEXT:    pushl %edi
 ; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $20, %esp
+; CHECK-I686-NEXT:    subl $8, %esp
 ; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
-; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-I686-NEXT:    movd %eax, %xmm0
-; CHECK-I686-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; CHECK-I686-NEXT:    movd %xmm0, %esi
-; CHECK-I686-NEXT:    movl %esi, %edi
-; CHECK-I686-NEXT:    shrl $16, %edi
-; CHECK-I686-NEXT:    movw %ax, (%esp)
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
+; CHECK-I686-NEXT:    movw %si, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-I686-NEXT:    movl $32256, %eax # imm = 0x7E00
-; CHECK-I686-NEXT:    cmovpl %eax, %esi
-; CHECK-I686-NEXT:    cmovpl %eax, %edi
-; CHECK-I686-NEXT:    movw %di, (%eax)
-; CHECK-I686-NEXT:    movw %si, (%eax)
-; CHECK-I686-NEXT:    addl $20, %esp
+; CHECK-I686-NEXT:    cmovnpl %esi, %eax
+; CHECK-I686-NEXT:    movw %ax, (%eax)
+; CHECK-I686-NEXT:    addl $8, %esp
 ; CHECK-I686-NEXT:    popl %esi
-; CHECK-I686-NEXT:    popl %edi
 ; CHECK-I686-NEXT:    retl
 entry:
   %0 = load half, ptr undef, align 8
@@ -1345,18 +1303,10 @@ define half @pr61271(half %0, half %1) #0 {
 ;
 ; BWON-F16C-LABEL: pr61271:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; BWON-F16C-NEXT:    vpextrw $0, %xmm1, %ecx
-; BWON-F16C-NEXT:    movzwl %cx, %ecx
-; BWON-F16C-NEXT:    vmovd %ecx, %xmm0
-; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; BWON-F16C-NEXT:    vminss %xmm1, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: pr61271:
@@ -1617,142 +1567,80 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; BWON-F16C-LABEL: maxnum_v8f16:
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; BWON-F16C-NEXT:    vpextrw $0, %xmm2, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm2
+; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm3
+; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; BWON-F16C-NEXT:    vpextrw $0, %xmm3, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm3
-; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
-; BWON-F16C-NEXT:    vucomiss %xmm2, %xmm3
+; BWON-F16C-NEXT:    vucomiss %xmm3, %xmm2
 ; BWON-F16C-NEXT:    ja .LBB26_2
 ; BWON-F16C-NEXT:  # %bb.1:
-; BWON-F16C-NEXT:    vmovaps %xmm2, %xmm3
+; BWON-F16C-NEXT:    vmovaps %xmm3, %xmm2
 ; BWON-F16C-NEXT:  .LBB26_2:
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm2
 ; BWON-F16C-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
-; BWON-F16C-NEXT:    vpextrw $0, %xmm3, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm3
+; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm4
+; BWON-F16C-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
-; BWON-F16C-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; BWON-F16C-NEXT:    vpextrw $0, %xmm4, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm4
-; BWON-F16C-NEXT:    vcvtph2ps %xmm4, %xmm4
-; BWON-F16C-NEXT:    vucomiss %xmm3, %xmm4
+; BWON-F16C-NEXT:    vucomiss %xmm4, %xmm3
 ; BWON-F16C-NEXT:    ja .LBB26_4
 ; BWON-F16C-NEXT:  # %bb.3:
-; BWON-F16C-NEXT:    vmovaps %xmm3, %xmm4
+; BWON-F16C-NEXT:    vmovaps %xmm4, %xmm3
 ; BWON-F16C-NEXT:  .LBB26_4:
-; BWON-F16C-NEXT:    vmovd %xmm2, %eax
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm4, %xmm2
-; BWON-F16C-NEXT:    vmovd %xmm2, %ecx
-; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; BWON-F16C-NEXT:    vpextrw $0, %xmm2, %edx
-; BWON-F16C-NEXT:    movzwl %dx, %edx
-; BWON-F16C-NEXT:    vmovd %edx, %xmm2
-; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; BWON-F16C-NEXT:    vpextrw $0, %xmm3, %edx
-; BWON-F16C-NEXT:    movzwl %dx, %edx
-; BWON-F16C-NEXT:    vmovd %edx, %xmm3
-; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
-; BWON-F16C-NEXT:    vucomiss %xmm2, %xmm3
+; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; BWON-F16C-NEXT:    vcvtph2ps %xmm4, %xmm5
+; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; BWON-F16C-NEXT:    vcvtph2ps %xmm4, %xmm4
+; BWON-F16C-NEXT:    vucomiss %xmm5, %xmm4
 ; BWON-F16C-NEXT:    ja .LBB26_6
 ; BWON-F16C-NEXT:  # %bb.5:
-; BWON-F16C-NEXT:    vmovaps %xmm2, %xmm3
+; BWON-F16C-NEXT:    vmovaps %xmm5, %xmm4
 ; BWON-F16C-NEXT:  .LBB26_6:
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm2
-; BWON-F16C-NEXT:    vmovd %xmm2, %edx
-; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; BWON-F16C-NEXT:    vpextrw $0, %xmm2, %esi
-; BWON-F16C-NEXT:    movzwl %si, %esi
-; BWON-F16C-NEXT:    vmovd %esi, %xmm2
-; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; BWON-F16C-NEXT:    vpextrw $0, %xmm3, %esi
-; BWON-F16C-NEXT:    movzwl %si, %esi
-; BWON-F16C-NEXT:    vmovd %esi, %xmm3
-; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
-; BWON-F16C-NEXT:    vucomiss %xmm2, %xmm3
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
+; BWON-F16C-NEXT:    vcvtph2ps %xmm5, %xmm5
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm6 = xmm0[1,0]
+; BWON-F16C-NEXT:    vcvtph2ps %xmm6, %xmm6
+; BWON-F16C-NEXT:    vucomiss %xmm5, %xmm6
 ; BWON-F16C-NEXT:    ja .LBB26_8
 ; BWON-F16C-NEXT:  # %bb.7:
-; BWON-F16C-NEXT:    vmovaps %xmm2, %xmm3
+; BWON-F16C-NEXT:    vmovaps %xmm5, %xmm6
 ; BWON-F16C-NEXT:  .LBB26_8:
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm2
-; BWON-F16C-NEXT:    vmovd %xmm2, %esi
-; BWON-F16C-NEXT:    vpsrlq $48, %xmm1, %xmm2
-; BWON-F16C-NEXT:    vpextrw $0, %xmm2, %edi
-; BWON-F16C-NEXT:    movzwl %di, %edi
-; BWON-F16C-NEXT:    vmovd %edi, %xmm2
-; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vpsrlq $48, %xmm0, %xmm3
-; BWON-F16C-NEXT:    vpextrw $0, %xmm3, %edi
-; BWON-F16C-NEXT:    movzwl %di, %edi
-; BWON-F16C-NEXT:    vmovd %edi, %xmm3
-; BWON-F16C-NEXT:    vcvtph2ps %xmm3, %xmm6
-; BWON-F16C-NEXT:    vucomiss %xmm2, %xmm6
+; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm1[3,3,3,3,4,5,6,7]
+; BWON-F16C-NEXT:    vcvtph2ps %xmm5, %xmm7
+; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm0[3,3,3,3,4,5,6,7]
+; BWON-F16C-NEXT:    vcvtph2ps %xmm5, %xmm5
+; BWON-F16C-NEXT:    vucomiss %xmm7, %xmm5
 ; BWON-F16C-NEXT:    ja .LBB26_10
 ; BWON-F16C-NEXT:  # %bb.9:
-; BWON-F16C-NEXT:    vmovaps %xmm2, %xmm6
+; BWON-F16C-NEXT:    vmovaps %xmm7, %xmm5
 ; BWON-F16C-NEXT:  .LBB26_10:
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm2
-; BWON-F16C-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm3
-; BWON-F16C-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm4
-; BWON-F16C-NEXT:    vpinsrw $0, %esi, %xmm0, %xmm5
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm6, %xmm6
-; BWON-F16C-NEXT:    vmovd %xmm6, %eax
-; BWON-F16C-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm1[1,1,3,3]
-; BWON-F16C-NEXT:    vpextrw $0, %xmm6, %ecx
-; BWON-F16C-NEXT:    movzwl %cx, %ecx
-; BWON-F16C-NEXT:    vmovd %ecx, %xmm6
-; BWON-F16C-NEXT:    vcvtph2ps %xmm6, %xmm6
+; BWON-F16C-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm1[1,1,3,3]
+; BWON-F16C-NEXT:    vcvtph2ps %xmm7, %xmm8
 ; BWON-F16C-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm0[1,1,3,3]
-; BWON-F16C-NEXT:    vpextrw $0, %xmm7, %ecx
-; BWON-F16C-NEXT:    movzwl %cx, %ecx
-; BWON-F16C-NEXT:    vmovd %ecx, %xmm7
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm7, %xmm7
-; BWON-F16C-NEXT:    vucomiss %xmm6, %xmm7
+; BWON-F16C-NEXT:    vucomiss %xmm8, %xmm7
 ; BWON-F16C-NEXT:    ja .LBB26_12
 ; BWON-F16C-NEXT:  # %bb.11:
-; BWON-F16C-NEXT:    vmovaps %xmm6, %xmm7
+; BWON-F16C-NEXT:    vmovaps %xmm8, %xmm7
 ; BWON-F16C-NEXT:  .LBB26_12:
 ; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm6[0],xmm4[0],xmm6[1],xmm4[1],xmm6[2],xmm4[2],xmm6[3],xmm4[3]
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm5, %xmm4
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm7, %xmm5
-; BWON-F16C-NEXT:    vmovd %xmm5, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm5
-; BWON-F16C-NEXT:    vpextrw $0, %xmm1, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm6
-; BWON-F16C-NEXT:    vcvtph2ps %xmm6, %xmm6
-; BWON-F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm7
-; BWON-F16C-NEXT:    vcvtph2ps %xmm7, %xmm7
-; BWON-F16C-NEXT:    vucomiss %xmm6, %xmm7
+; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm7
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm6
+; BWON-F16C-NEXT:    vucomiss %xmm7, %xmm6
 ; BWON-F16C-NEXT:    ja .LBB26_14
 ; BWON-F16C-NEXT:  # %bb.13:
-; BWON-F16C-NEXT:    vmovaps %xmm6, %xmm7
+; BWON-F16C-NEXT:    vmovaps %xmm7, %xmm6
 ; BWON-F16C-NEXT:  .LBB26_14:
 ; BWON-F16C-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm7, %xmm4
-; BWON-F16C-NEXT:    vmovd %xmm4, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
-; BWON-F16C-NEXT:    vpsrld $16, %xmm1, %xmm1
-; BWON-F16C-NEXT:    vpextrw $0, %xmm1, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm1
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm6, %xmm4
+; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,1,1,4,5,6,7]
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vpsrld $16, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; BWON-F16C-NEXT:    movzwl %ax, %eax
-; BWON-F16C-NEXT:    vmovd %eax, %xmm0
+; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm0
 ; BWON-F16C-NEXT:    ja .LBB26_16
@@ -1760,8 +1648,6 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; BWON-F16C-NEXT:    vmovaps %xmm1, %xmm0
 ; BWON-F16C-NEXT:  .LBB26_16:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
 ; BWON-F16C-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; BWON-F16C-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -2118,7 +2004,7 @@ define void @pr63114() {
 ; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
 ; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
 ; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm0
-; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
+; CHECK-LIBCALL-NEXT:    movq {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
 ; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm0
 ; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
 ; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm0
@@ -2183,7 +2069,7 @@ define void @pr63114() {
 ; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
 ; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
 ; CHECK-I686-NEXT:    pand %xmm1, %xmm0
-; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
+; CHECK-I686-NEXT:    movq {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
 ; CHECK-I686-NEXT:    por %xmm2, %xmm0
 ; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
 ; CHECK-I686-NEXT:    pand %xmm3, %xmm0

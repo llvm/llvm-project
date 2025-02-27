@@ -40,10 +40,9 @@ public:
   };
 
 protected:
-  GlobalObject(Type *Ty, ValueTy VTy, Use *Ops, unsigned NumOps,
-               LinkageTypes Linkage, const Twine &Name,
-               unsigned AddressSpace = 0)
-      : GlobalValue(Ty, VTy, Ops, NumOps, Linkage, Name, AddressSpace) {
+  GlobalObject(Type *Ty, ValueTy VTy, AllocInfo AllocInfo, LinkageTypes Linkage,
+               const Twine &Name, unsigned AddressSpace = 0)
+      : GlobalValue(Ty, VTy, AllocInfo, Linkage, Name, AddressSpace) {
     setGlobalValueSubClassData(0);
   }
   ~GlobalObject();
@@ -51,6 +50,7 @@ protected:
   Comdat *ObjComdat = nullptr;
   enum {
     LastAlignmentBit = 5,
+    LastCodeModelBit = 8,
     HasSectionHashEntryBit,
 
     GlobalObjectBits,
@@ -124,6 +124,12 @@ public:
   /// appropriate default object file section.
   void setSection(StringRef S);
 
+  /// Set the section prefix for this global object.
+  void setSectionPrefix(StringRef Prefix);
+
+  /// Get the section prefix for this global object.
+  std::optional<StringRef> getSectionPrefix() const;
+
   bool hasComdat() const { return getComdat() != nullptr; }
   const Comdat *getComdat() const { return ObjComdat; }
   Comdat *getComdat() { return ObjComdat; }
@@ -132,6 +138,7 @@ public:
   using Value::addMetadata;
   using Value::clearMetadata;
   using Value::eraseMetadata;
+  using Value::eraseMetadataIf;
   using Value::getAllMetadata;
   using Value::getMetadata;
   using Value::hasMetadata;

@@ -21,22 +21,22 @@ define dso_local void @func1(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v
 ; CHECK-NEXT:    .cfi_offset w22, -32
 ; CHECK-NEXT:    .cfi_offset w29, -48
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    add x10, sp, #176
 ; CHECK-NEXT:    add x8, sp, #48
-; CHECK-NEXT:    add x9, sp, #112
-; CHECK-NEXT:    add x10, sp, #144
-; CHECK-NEXT:    add x11, sp, #176
+; CHECK-NEXT:    add x9, sp, #144
 ; CHECK-NEXT:    add x20, sp, #176
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x10]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x11]
-; CHECK-NEXT:    ldp x9, x8, [sp, #328]
-; CHECK-NEXT:    ldp x11, x10, [sp, #312]
 ; CHECK-NEXT:    ldr x15, [sp, #104]
-; CHECK-NEXT:    ldp x13, x12, [sp, #296]
+; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x10]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #112
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x9]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
 ; CHECK-NEXT:    ldur q4, [sp, #88]
-; CHECK-NEXT:    ldp x18, x14, [sp, #280]
+; CHECK-NEXT:    ldp x9, x8, [sp, #328]
 ; CHECK-NEXT:    ldr x19, [sp, #272]
+; CHECK-NEXT:    ldp x11, x10, [sp, #312]
+; CHECK-NEXT:    ldp x13, x12, [sp, #296]
+; CHECK-NEXT:    ldp x18, x14, [sp, #280]
 ; CHECK-NEXT:    ldp x16, x17, [sp, #208]
 ; CHECK-NEXT:    ldp x21, x22, [sp, #352]
 ; CHECK-NEXT:    st1d { z3.d }, p0, [x20]

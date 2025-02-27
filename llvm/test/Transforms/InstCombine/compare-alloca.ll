@@ -75,7 +75,7 @@ define i1 @alloca_argument_compare_escaped_through_store(ptr %arg, ptr %ptr) {
 ; CHECK-LABEL: @alloca_argument_compare_escaped_through_store(
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[ALLOC]], [[ARG:%.*]]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[ALLOC]], i32 1
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOC]], i32 8
 ; CHECK-NEXT:    store ptr [[P]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -218,7 +218,7 @@ declare void @unknown(ptr)
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
+; CHECK-NEXT:    call void @unknown(ptr nonnull captures(none) [[M1]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
@@ -231,7 +231,7 @@ define i1 @consistent_nocapture_inttoptr() {
 define i1 @consistent_nocapture_offset() {
 ; CHECK-LABEL: @consistent_nocapture_offset(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
+; CHECK-NEXT:    call void @unknown(ptr nonnull captures(none) [[M1]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4
@@ -247,7 +247,7 @@ define i1 @consistent_nocapture_offset() {
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
 ; CHECK-NEXT:    [[M1:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    call void @unknown(ptr nocapture nonnull [[M1]])
+; CHECK-NEXT:    call void @unknown(ptr nonnull captures(none) [[M1]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i8, i32 4

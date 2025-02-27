@@ -22,10 +22,12 @@
 //  ...
 //  }
 
-#include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <cstddef>
+#include <mdspan>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -78,7 +80,7 @@ void test() {
 int main(int, char**) {
   test<int>();
   test<unsigned>();
-  test<char>();
+  test<signed char>();
   test<long long>();
   test<size_t>();
   return 0;

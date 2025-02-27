@@ -604,7 +604,7 @@ body:             |
     %2 = LI 48
     %5 = COPY %0.sub_32
     %8 = SRW killed %5, killed %2
-    ; CHECK: LI 0
+    ; CHECK: LI8 0
     ; CHECK-LATE: li 3, 0
     $x3 = EXTSW_32_64 %8
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -722,7 +722,7 @@ body:             |
     %3 = COPY %0.sub_32
     %4 = SRAW killed %3, killed %2, implicit-def dead $carry
     ; CHECK: LI 48
-    ; CHECK: SRAW killed %3, killed %2, implicit-def dead $carry
+    ; CHECK: SRAW8 killed %7, killed %9, implicit-def $carry, implicit-def dead $carry 
     ; CHECK-LATE: sraw 3, 3, 4
     %5 = EXTSW_32_64 killed %4
     $x3 = COPY %5
@@ -779,7 +779,7 @@ body:             |
     %2 = LI 80
     %3 = COPY %0.sub_32
     %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK: SRAW8_rec killed %10, killed %12, implicit-def $carry, implicit-def $cr0, implicit-def dead $carry, implicit-def $cr0
     ; CHECK-LATE: sraw. 3, 3, 4
     %5 = COPY killed $cr0
     %6 = ISEL %2, %4, %5.sub_eq

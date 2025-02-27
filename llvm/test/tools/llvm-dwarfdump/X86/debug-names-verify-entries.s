@@ -2,8 +2,8 @@
 
 # CHECK: error: Name Index @ 0x0: Unable to get string associated with name 1.
 # CHECK: error: Name Index @ 0x0: Entry @ 0x73 contains an invalid CU index (47).
-# CHECK: error: Name Index @ 0x0: Entry @ 0x79 references a non-existing DIE @ 0x3fa.
-# CHECK: error: Name Index @ 0x0: Entry @ 0x85: mismatched CU of DIE @ 0x30: index - 0x0; debug_info - 0x1e.
+# CHECK: error: Name Index @ 0x0: Entry @ 0x79 references a DIE @ 0x3fa when CU or TU ends at 0x1e.
+# CHECK: error: Name Index @ 0x0: Entry @ 0x85 references a DIE @ 0x30 when CU or TU ends at 0x1e.
 # CHECK: error: Name Index @ 0x0: Entry @ 0x8b: mismatched Tag of DIE @ 0x17: index - DW_TAG_subprogram; debug_info - DW_TAG_variable.
 # CHECK: error: Name Index @ 0x0: Entry @ 0x91: mismatched Name of DIE @ 0x35: index - foo; debug_info - bar, _Z3bar.
 # CHECK: error: Name Index @ 0x0: Name 2 (foo): Incorrectly terminated entry list.

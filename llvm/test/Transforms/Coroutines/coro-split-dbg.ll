@@ -1,6 +1,7 @@
 ; Make sure that coro-split correctly deals with debug information.
 ; The test here is simply that it does not result in bad IR that will crash opt.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -disable-output
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -disable-output
 source_filename = "coro.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // REQUIRES: !system-windows
 
 // Test flush-denormals-to-zero enabled uses oclc_daz_opt_on
@@ -133,10 +132,21 @@
 // RUN:   %S/opencl.cl \
 // RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,COMMON-DEFAULT,GFX900-DEFAULT,GFX900,WAVE64 %s
 
+// RUN: %clang -### -target amdgcn-amd-amdhsa \
+// RUN:   -x cl -mcpu=gfx908:xnack+ -fsanitize=address \
+// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck  --check-prefixes=ASAN,COMMON %s
 
+// RUN: %clang -### -target amdgcn-amd-amdhsa \
+// RUN:   -x cl -mcpu=gfx908:xnack+ \
+// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck  --check-prefixes=NOASAN %s
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/opencl.bc"
+// ASAN-SAME: "-mlink-bitcode-file" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ocml.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ockl.bc"
 
@@ -169,6 +179,11 @@
 // COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_on.bc"
 // COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_off.bc"
 // COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
+
+// ASAN-SAME: "-fsanitize=address"
+
+// NOASAN-NOT: "-fsanitize=address"
+// NOASAN-NOT: amdgcn/bitcode/asanrtl.bc
 
 // WAVE64: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_wavefrontsize64_on.bc"
 // WAVE32: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_wavefrontsize64_off.bc"

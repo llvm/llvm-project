@@ -5,33 +5,33 @@
 ! DEFINE: %{output} = -emit-llvm -flang-deprecated-no-hlfir -o /dev/null 2>&1
 
 ! Check fc1 can handle -Rpass
-! RUN: %flang_fc1 %s -O1 -Rpass %{output} 2>&1 | FileCheck %s --check-prefix=REMARKS
+! RUN: %flang_fc1 %s -O1 -vectorize-loops -Rpass %{output} 2>&1 | FileCheck %s --check-prefix=REMARKS
 
 ! Check that we can override -Rpass= with -Rno-pass.
-! RUN: %flang_fc1 %s -O1 -Rpass -Rno-pass %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang_fc1 %s -O1 -vectorize-loops -Rpass -Rno-pass %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check -Rno-pass, -Rno-pass-analysis, -Rno-pass-missed nothing emitted
-! RUN: %flang %s -O1 -Rno-pass -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-missed -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-analysis -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 -Rno-pass -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 -Rno-pass-missed -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 -Rno-pass-analysis -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check valid -Rpass regex
-! RUN: %flang %s -O1 -Rpass=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 -Rpass=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-missed regex
-! RUN: %flang %s -O1 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-analysis regex
-! RUN: %flang %s -O1 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
 
 ! Check full -Rpass message is emitted
-! RUN: %flang %s -O1 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS
+! RUN: %flang %s -O2 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS
 
 ! Check full -Rpass-missed message is emitted
-! RUN: %flang %s -O1 -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED
+! RUN: %flang %s -O2 -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED
 
 ! Check full -Rpass-analysis message is emitted
-! RUN: %flang %s -O1 -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS
+! RUN: %flang %s -O2 -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 ! REMARKS: remark:
 ! NO-REMARKS-NOT: remark:
@@ -41,28 +41,24 @@
 ! Once we start filtering, this is reduced to 1 one of the loop passes.
 
 ! PASS-REGEX-LOOP-ONLY-NOT:     optimization-remark.f90:77:7: remark: hoisting load [-Rpass=licm]
-! PASS-REGEX-LOOP-ONLY:         optimization-remark.f90:83:5: remark: Loop deleted because it is invariant [-Rpass=loop-delete]
+! PASS-REGEX-LOOP-ONLY:         optimization-remark.f90:79:5: remark: Loop deleted because it is invariant [-Rpass=loop-delete]
 
 ! MISSED-REGEX-LOOP-ONLY-NOT:   optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]
-! MISSED-REGEX-LOOP-ONLY:       optimization-remark.f90:76:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+! MISSED-REGEX-LOOP-ONLY:       optimization-remark.f90:72:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
 
 
-! ANALYSIS-REGEX-LOOP-ONLY:     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-! ANALYSIS-REGEX-LOOP-ONLY:     Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
+! ANALYSIS-REGEX-LOOP-ONLY:     optimization-remark.f90:74:7: remark: loop not vectorized: unsafe dependent memory operations in loop
 ! ANALYSIS-REGEX-LOOP-ONLY-NOT: remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}} [-Rpass-analysis=size-info]
 
-! PASS:                         optimization-remark.f90:77:7: remark: hoisting load [-Rpass=licm]
-! PASS:                         optimization-remark.f90:83:5: remark: Loop deleted because it is invariant [-Rpass=loop-delete]
+! PASS:                         optimization-remark.f90:79:5: remark: Loop deleted because it is invariant [-Rpass=loop-delete]
 
-! MISSED:                       optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]
-! MISSED:                       optimization-remark.f90:76:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
-! MISSED-NOT:                   optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+! MISSED:                       optimization-remark.f90:73:7: remark: failed to hoist load with loop-invariant address
+! MISSED:                       optimization-remark.f90:72:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+! MISSED-NOT:                   optimization-remark.f90:75:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ! MISSED-NOT:                   Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
 
-! ANALYSIS:                     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-! ANALYSIS:                     Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
-! ANALYSIS:                     remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}} [-Rpass-analysis=size-info]
-! ANALYSIS-NOT:                 optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]
+! ANALYSIS:                     optimization-remark.f90:74:7: remark: loop not vectorized: unsafe dependent memory operations in loop.
+! ANALYSIS:                     remark: {{.*}} instructions in function [-Rpass-analysis=asm-printer]
 
 subroutine swap_real(a1, a2)
    implicit none

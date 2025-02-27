@@ -39,14 +39,21 @@ using namespace mlir;
 using namespace mlir::math;
 using namespace mlir::vector;
 
-// Returns vector shape if the type is a vector. Returns an empty shape if it is
-// not a vector.
-static ArrayRef<int64_t> vectorShape(Type type) {
-  auto vectorType = dyn_cast<VectorType>(type);
-  return vectorType ? vectorType.getShape() : ArrayRef<int64_t>();
+// Helper to encapsulate a vector's shape (including scalable dims).
+struct VectorShape {
+  ArrayRef<int64_t> sizes;
+  ArrayRef<bool> scalableFlags;
+};
+
+// Returns vector shape if the type is a vector, otherwise return nullopt.
+static std::optional<VectorShape> vectorShape(Type type) {
+  if (auto vectorType = dyn_cast<VectorType>(type)) {
+    return VectorShape{vectorType.getShape(), vectorType.getScalableDims()};
+  }
+  return std::nullopt;
 }
 
-static ArrayRef<int64_t> vectorShape(Value value) {
+static std::optional<VectorShape> vectorShape(Value value) {
   return vectorShape(value.getType());
 }
 
@@ -55,17 +62,18 @@ static ArrayRef<int64_t> vectorShape(Value value) {
 //----------------------------------------------------------------------------//
 
 // Broadcasts scalar type into vector type (iff shape is non-scalar).
-static Type broadcast(Type type, ArrayRef<int64_t> shape) {
+static Type broadcast(Type type, std::optional<VectorShape> shape) {
   assert(!isa<VectorType>(type) && "must be scalar type");
-  return !shape.empty() ? VectorType::get(shape, type) : type;
+  return shape ? VectorType::get(shape->sizes, type, shape->scalableFlags)
+               : type;
 }
 
 // Broadcasts scalar value into vector (iff shape is non-scalar).
 static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
-                       ArrayRef<int64_t> shape) {
+                       std::optional<VectorShape> shape) {
   assert(!isa<VectorType>(value.getType()) && "must be scalar value");
   auto type = broadcast(value.getType(), shape);
-  return !shape.empty() ? builder.create<BroadcastOp>(type, value) : value;
+  return shape ? builder.create<BroadcastOp>(type, value) : value;
 }
 
 //----------------------------------------------------------------------------//
@@ -110,7 +118,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   // Maybe expand operands to the higher rank vector shape that we'll use to
   // iterate over and extract one dimensional vectors.
-  SmallVector<int64_t> expandedShape(inputShape.begin(), inputShape.end());
+  SmallVector<int64_t> expandedShape(inputShape);
   SmallVector<Value> expandedOperands(operands);
 
   if (expansionDim > 1) {
@@ -165,6 +173,10 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 // Helper functions to create constants.
 //----------------------------------------------------------------------------//
 
+static Value boolCst(ImplicitLocOpBuilder &builder, bool value) {
+  return builder.create<arith::ConstantOp>(builder.getBoolAttr(value));
+}
+
 static Value floatCst(ImplicitLocOpBuilder &builder, float value,
                       Type elementType) {
   assert((elementType.isF16() || elementType.isF32()) &&
@@ -215,7 +227,7 @@ static Value clamp(ImplicitLocOpBuilder &builder, Value value, Value lowerBound,
 static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
                                      bool isPositive = false) {
   assert(getElementTypeOrSelf(arg).isF32() && "arg must be f32 type");
-  ArrayRef<int64_t> shape = vectorShape(arg);
+  std::optional<VectorShape> shape = vectorShape(arg);
 
   auto bcast = [&](Value value) -> Value {
     return broadcast(builder, value, shape);
@@ -255,7 +267,7 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
 // Computes exp2 for an i32 argument.
 static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
   assert(getElementTypeOrSelf(arg).isInteger(32) && "arg must be i32 type");
-  ArrayRef<int64_t> shape = vectorShape(arg);
+  std::optional<VectorShape> shape = vectorShape(arg);
 
   auto bcast = [&](Value value) -> Value {
     return broadcast(builder, value, shape);
@@ -281,7 +293,7 @@ Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
   Type elementType = getElementTypeOrSelf(x);
   assert((elementType.isF32() || elementType.isF16()) &&
          "x must be f32 or f16 type");
-  ArrayRef<int64_t> shape = vectorShape(x);
+  std::optional<VectorShape> shape = vectorShape(x);
 
   if (coeffs.empty())
     return broadcast(builder, floatCst(builder, 0.0f, elementType), shape);
@@ -379,7 +391,7 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
   if (!getElementTypeOrSelf(operand).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   Value abs = builder.create<math::AbsFOp>(operand);
@@ -478,7 +490,7 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
-  ArrayRef<int64_t> shape = vectorShape(op.getResult());
+  std::optional<VectorShape> shape = vectorShape(op.getResult());
 
   // Compute atan in the valid range.
   auto div = builder.create<arith::DivFOp>(y, x);
@@ -544,7 +556,7 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -632,7 +644,7 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -779,7 +791,7 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -810,6 +822,184 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
 }
 
 //----------------------------------------------------------------------------//
+// Asin approximation.
+//----------------------------------------------------------------------------//
+
+// Approximates asin(x).
+// This approximation is based on the following stackoverflow post:
+// https://stackoverflow.com/a/42683455
+namespace {
+struct AsinPolynomialApproximation : public OpRewritePattern<math::AsinOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::AsinOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+LogicalResult
+AsinPolynomialApproximation::matchAndRewrite(math::AsinOp op,
+                                             PatternRewriter &rewriter) const {
+  Value operand = op.getOperand();
+  Type elementType = getElementTypeOrSelf(operand);
+
+  if (!(elementType.isF32() || elementType.isF16()))
+    return rewriter.notifyMatchFailure(op,
+                                       "only f32 and f16 type is supported.");
+  std::optional<VectorShape> shape = vectorShape(operand);
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, shape);
+  };
+
+  auto fma = [&](Value a, Value b, Value c) -> Value {
+    return builder.create<math::FmaOp>(a, b, c);
+  };
+
+  auto mul = [&](Value a, Value b) -> Value {
+    return builder.create<arith::MulFOp>(a, b);
+  };
+
+  auto sub = [&](Value a, Value b) -> Value {
+    return builder.create<arith::SubFOp>(a, b);
+  };
+
+  auto abs = [&](Value a) -> Value { return builder.create<math::AbsFOp>(a); };
+
+  auto sqrt = [&](Value a) -> Value { return builder.create<math::SqrtOp>(a); };
+
+  auto scopy = [&](Value a, Value b) -> Value {
+    return builder.create<math::CopySignOp>(a, b);
+  };
+
+  auto sel = [&](Value a, Value b, Value c) -> Value {
+    return builder.create<arith::SelectOp>(a, b, c);
+  };
+
+  Value abso = abs(operand);
+  Value aa = mul(operand, operand);
+  Value opp = sqrt(sub(bcast(floatCst(builder, 1.0, elementType)), aa));
+
+  Value gt =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, aa,
+                                    bcast(floatCst(builder, 0.5, elementType)));
+
+  Value x = sel(gt, opp, abso);
+
+  // Asin(x) approximation for x = [-9/16, 9/16]:
+  Value s = mul(x, x);
+  Value q = mul(s, s);
+  Value r = bcast(floatCst(builder, 5.5579749017470502e-2, elementType));
+  Value t = bcast(floatCst(builder, -6.2027913464120114e-2, elementType));
+
+  r = fma(r, q, bcast(floatCst(builder, 5.4224464349245036e-2, elementType)));
+  t = fma(t, q, bcast(floatCst(builder, -1.1326992890324464e-2, elementType)));
+  r = fma(r, q, bcast(floatCst(builder, 1.5268872539397656e-2, elementType)));
+  t = fma(t, q, bcast(floatCst(builder, 1.0493798473372081e-2, elementType)));
+  r = fma(r, q, bcast(floatCst(builder, 1.4106045900607047e-2, elementType)));
+  t = fma(t, q, bcast(floatCst(builder, 1.7339776384962050e-2, elementType)));
+  r = fma(r, q, bcast(floatCst(builder, 2.2372961589651054e-2, elementType)));
+  t = fma(t, q, bcast(floatCst(builder, 3.0381912707941005e-2, elementType)));
+  r = fma(r, q, bcast(floatCst(builder, 4.4642857881094775e-2, elementType)));
+  t = fma(t, q, bcast(floatCst(builder, 7.4999999991367292e-2, elementType)));
+  r = fma(r, s, t);
+  r = fma(r, s, bcast(floatCst(builder, 1.6666666666670193e-1, elementType)));
+  t = mul(x, s);
+  r = fma(r, t, x);
+
+  Value rsub = sub(bcast(floatCst(builder, 1.57079632679, elementType)), r);
+  r = sel(gt, rsub, r);
+  r = scopy(r, operand);
+
+  rewriter.replaceOp(op, r);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
+// Acos approximation.
+//----------------------------------------------------------------------------//
+
+// Approximates acos(x).
+// This approximation is based on the following stackoverflow post:
+// https://stackoverflow.com/a/42683455
+namespace {
+struct AcosPolynomialApproximation : public OpRewritePattern<math::AcosOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::AcosOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+LogicalResult
+AcosPolynomialApproximation::matchAndRewrite(math::AcosOp op,
+                                             PatternRewriter &rewriter) const {
+  Value operand = op.getOperand();
+  Type elementType = getElementTypeOrSelf(operand);
+
+  if (!(elementType.isF32() || elementType.isF16()))
+    return rewriter.notifyMatchFailure(op,
+                                       "only f32 and f16 type is supported.");
+  std::optional<VectorShape> shape = vectorShape(operand);
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, shape);
+  };
+
+  auto fma = [&](Value a, Value b, Value c) -> Value {
+    return builder.create<math::FmaOp>(a, b, c);
+  };
+
+  auto mul = [&](Value a, Value b) -> Value {
+    return builder.create<arith::MulFOp>(a, b);
+  };
+
+  Value negOperand = builder.create<arith::NegFOp>(operand);
+  Value zero = bcast(floatCst(builder, 0.0, elementType));
+  Value half = bcast(floatCst(builder, 0.5, elementType));
+  Value negOne = bcast(floatCst(builder, -1.0, elementType));
+  Value selR =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, operand, zero);
+  Value r = builder.create<arith::SelectOp>(selR, negOperand, operand);
+  Value chkConst = bcast(floatCst(builder, -0.5625, elementType));
+  Value firstPred =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, r, chkConst);
+
+  Value trueVal =
+      fma(bcast(floatCst(builder, 9.3282184640716537e-1, elementType)),
+          bcast(floatCst(builder, 1.6839188885261840e+0, elementType)),
+          builder.create<math::AsinOp>(r));
+
+  Value falseVal = builder.create<math::SqrtOp>(fma(half, r, half));
+  falseVal = builder.create<math::AsinOp>(falseVal);
+  falseVal = mul(bcast(floatCst(builder, 2.0, elementType)), falseVal);
+
+  r = builder.create<arith::SelectOp>(firstPred, trueVal, falseVal);
+
+  // Check whether the operand lies in between [-1.0, 0.0).
+  Value greaterThanNegOne =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGE, operand, negOne);
+
+  Value lessThanZero =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operand, zero);
+
+  Value betweenNegOneZero =
+      builder.create<arith::AndIOp>(greaterThanNegOne, lessThanZero);
+
+  trueVal = fma(bcast(floatCst(builder, 1.8656436928143307e+0, elementType)),
+                bcast(floatCst(builder, 1.6839188885261840e+0, elementType)),
+                builder.create<arith::NegFOp>(r));
+
+  Value finalVal =
+      builder.create<arith::SelectOp>(betweenNegOneZero, trueVal, r);
+
+  rewriter.replaceOp(op, finalVal);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 // Erf approximation.
 //----------------------------------------------------------------------------//
 
@@ -829,7 +1019,7 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   if (!(elementType.isF32() || elementType.isF16()))
     return rewriter.notifyMatchFailure(op,
                                        "only f32 and f16 type is supported.");
-  ArrayRef<int64_t> shape = vectorShape(operand);
+  std::optional<VectorShape> shape = vectorShape(operand);
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -932,6 +1122,103 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   return success();
 }
 
+// Approximates erfc(x) with p((x - 2) / (x + 2)), where p is a 9 degree
+// polynomial.This approximation is based on the following stackoverflow post:
+// https://stackoverflow.com/questions/35966695/vectorizable-implementation-of-complementary-error-function-erfcf
+// The stackoverflow post is in turn based on:
+// M. M. Shepherd and J. G. Laframboise, "Chebyshev Approximation of
+// (1+2x)exp(x^2)erfc x in 0 <= x < INF", Mathematics of Computation, Vol. 36,
+// No. 153, January 1981, pp. 249-253.
+//
+// Maximum error: 2.65 ulps
+LogicalResult
+ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
+                                             PatternRewriter &rewriter) const {
+  Value x = op.getOperand();
+  Type et = getElementTypeOrSelf(x);
+
+  if (!et.isF32())
+    return rewriter.notifyMatchFailure(op, "only f32 type is supported.");
+  std::optional<VectorShape> shape = vectorShape(x);
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, shape);
+  };
+
+  Value trueValue = bcast(boolCst(builder, true));
+  Value zero = bcast(floatCst(builder, 0.0f, et));
+  Value one = bcast(floatCst(builder, 1.0f, et));
+  Value onehalf = bcast(floatCst(builder, 0.5f, et));
+  Value neg4 = bcast(floatCst(builder, -4.0f, et));
+  Value neg2 = bcast(floatCst(builder, -2.0f, et));
+  Value pos2 = bcast(floatCst(builder, 2.0f, et));
+  Value posInf = bcast(floatCst(builder, INFINITY, et));
+  Value clampVal = bcast(floatCst(builder, 10.0546875f, et));
+
+  Value a = builder.create<math::AbsFOp>(x);
+  Value p = builder.create<arith::AddFOp>(a, pos2);
+  Value r = builder.create<arith::DivFOp>(one, p);
+  Value q = builder.create<math::FmaOp>(neg4, r, one);
+  Value t = builder.create<math::FmaOp>(builder.create<arith::AddFOp>(q, one),
+                                        neg2, a);
+  Value e = builder.create<math::FmaOp>(builder.create<arith::NegFOp>(a), q, t);
+  q = builder.create<math::FmaOp>(r, e, q);
+
+  p = bcast(floatCst(builder, -0x1.a4a000p-12f, et));        // -4.01139259e-4
+  Value c1 = bcast(floatCst(builder, -0x1.42a260p-10f, et)); // -1.23075210e-3
+  p = builder.create<math::FmaOp>(p, q, c1);
+  Value c2 = bcast(floatCst(builder, 0x1.585714p-10f, et)); //  1.31355342e-3
+  p = builder.create<math::FmaOp>(p, q, c2);
+  Value c3 = bcast(floatCst(builder, 0x1.1adcc4p-07f, et)); // 8.63227434e-3
+  p = builder.create<math::FmaOp>(p, q, c3);
+  Value c4 = bcast(floatCst(builder, -0x1.081b82p-07f, et)); // -8.05991981e-3
+  p = builder.create<math::FmaOp>(p, q, c4);
+  Value c5 = bcast(floatCst(builder, -0x1.bc0b6ap-05f, et)); // -5.42046614e-2
+  p = builder.create<math::FmaOp>(p, q, c5);
+  Value c6 = bcast(floatCst(builder, 0x1.4ffc46p-03f, et)); //  1.64055392e-1
+  p = builder.create<math::FmaOp>(p, q, c6);
+  Value c7 = bcast(floatCst(builder, -0x1.540840p-03f, et)); // -1.66031361e-1
+  p = builder.create<math::FmaOp>(p, q, c7);
+  Value c8 = bcast(floatCst(builder, -0x1.7bf616p-04f, et)); // -9.27639827e-2
+  p = builder.create<math::FmaOp>(p, q, c8);
+  Value c9 = bcast(floatCst(builder, 0x1.1ba03ap-02f, et)); // 2.76978403e-1
+  p = builder.create<math::FmaOp>(p, q, c9);
+
+  Value d = builder.create<math::FmaOp>(pos2, a, one);
+  r = builder.create<arith::DivFOp>(one, d);
+  q = builder.create<math::FmaOp>(p, r, r);
+  Value negfa = builder.create<arith::NegFOp>(a);
+  Value fmaqah = builder.create<math::FmaOp>(q, negfa, onehalf);
+  Value psubq = builder.create<arith::SubFOp>(p, q);
+  e = builder.create<math::FmaOp>(fmaqah, pos2, psubq);
+  r = builder.create<math::FmaOp>(e, r, q);
+
+  Value s = builder.create<arith::MulFOp>(a, a);
+  e = builder.create<math::ExpOp>(builder.create<arith::NegFOp>(s));
+
+  t = builder.create<math::FmaOp>(builder.create<arith::NegFOp>(a), a, s);
+  r = builder.create<math::FmaOp>(
+      r, e,
+      builder.create<arith::MulFOp>(builder.create<arith::MulFOp>(r, e), t));
+
+  Value isNotLessThanInf = builder.create<arith::XOrIOp>(
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, a, posInf),
+      trueValue);
+  r = builder.create<arith::SelectOp>(isNotLessThanInf,
+                                      builder.create<arith::AddFOp>(x, x), r);
+  Value isGreaterThanClamp =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, a, clampVal);
+  r = builder.create<arith::SelectOp>(isGreaterThanClamp, zero, r);
+
+  Value isNegative =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, x, zero);
+  r = builder.create<arith::SelectOp>(
+      isNegative, builder.create<arith::SubFOp>(pos2, r), r);
+
+  rewriter.replaceOp(op, r);
+  return success();
+}
 //----------------------------------------------------------------------------//
 // Exp approximation.
 //----------------------------------------------------------------------------//
@@ -939,7 +1226,7 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
 namespace {
 
 Value clampWithNormals(ImplicitLocOpBuilder &builder,
-                       const llvm::ArrayRef<int64_t> shape, Value value,
+                       const std::optional<VectorShape> shape, Value value,
                        float lowerBound, float upperBound) {
   assert(!std::isnan(lowerBound));
   assert(!std::isnan(upperBound));
@@ -1016,20 +1303,20 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
   // 2^-126.
 
   // Constants.
-  Value cst_half = bcast(f32Cst(builder, 0.5f));
-  Value cst_one = bcast(f32Cst(builder, 1.0f));
+  Value cstHalf = bcast(f32Cst(builder, 0.5f));
+  Value cstOne = bcast(f32Cst(builder, 1.0f));
 
   // 1/log(2)
-  Value cst_log2ef = bcast(f32Cst(builder, 1.44269504088896341f));
+  Value cstLog2ef = bcast(f32Cst(builder, 1.44269504088896341f));
 
-  Value cst_exp_c1 = bcast(f32Cst(builder, -0.693359375f));
-  Value cst_exp_c2 = bcast(f32Cst(builder, 2.12194440e-4f));
-  Value cst_exp_p0 = bcast(f32Cst(builder, 1.9875691500E-4f));
-  Value cst_exp_p1 = bcast(f32Cst(builder, 1.3981999507E-3f));
-  Value cst_exp_p2 = bcast(f32Cst(builder, 8.3334519073E-3f));
-  Value cst_exp_p3 = bcast(f32Cst(builder, 4.1665795894E-2f));
-  Value cst_exp_p4 = bcast(f32Cst(builder, 1.6666665459E-1f));
-  Value cst_exp_p5 = bcast(f32Cst(builder, 5.0000001201E-1f));
+  Value cstExpC1 = bcast(f32Cst(builder, -0.693359375f));
+  Value cstExpC2 = bcast(f32Cst(builder, 2.12194440e-4f));
+  Value cstExpP0 = bcast(f32Cst(builder, 1.9875691500E-4f));
+  Value cstExpP1 = bcast(f32Cst(builder, 1.3981999507E-3f));
+  Value cstExpP2 = bcast(f32Cst(builder, 8.3334519073E-3f));
+  Value cstExpP3 = bcast(f32Cst(builder, 4.1665795894E-2f));
+  Value cstExpP4 = bcast(f32Cst(builder, 1.6666665459E-1f));
+  Value cstExpP5 = bcast(f32Cst(builder, 5.0000001201E-1f));
 
   // Our computations below aren't particularly sensitive to the exact choices
   // here, so we choose values a bit larger/smaller than
@@ -1038,7 +1325,7 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
   //   log(2^-126) = -87.337...
   Value x = op.getOperand();
   x = clampWithNormals(builder, shape, x, -87.8f, 88.8f);
-  Value n = floor(fmla(x, cst_log2ef, cst_half));
+  Value n = floor(fmla(x, cstLog2ef, cstHalf));
 
   // When we eventually do the multiplication in e^a * 2^n, we need to handle
   // the case when n > 127, the max fp32 exponent (so 2^n == inf) but e^a < 1
@@ -1082,24 +1369,24 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
   n = clampWithNormals(builder, shape, n, -127.0f, 127.0f);
 
   // Computes x = x - n' * log(2), the value for `a`
-  x = fmla(cst_exp_c1, n, x);
-  x = fmla(cst_exp_c2, n, x);
+  x = fmla(cstExpC1, n, x);
+  x = fmla(cstExpC2, n, x);
 
   // Polynomial to compute z = e^a, accurate for a in (-0.5, 0.5).
-  Value z = fmla(x, cst_exp_p0, cst_exp_p1);
-  z = fmla(z, x, cst_exp_p2);
-  z = fmla(z, x, cst_exp_p3);
-  z = fmla(z, x, cst_exp_p4);
-  z = fmla(z, x, cst_exp_p5);
+  Value z = fmla(x, cstExpP0, cstExpP1);
+  z = fmla(z, x, cstExpP2);
+  z = fmla(z, x, cstExpP3);
+  z = fmla(z, x, cstExpP4);
+  z = fmla(z, x, cstExpP5);
   z = fmla(z, mul(x, x), x);
-  z = add(cst_one, z);
+  z = add(cstOne, z);
 
   // Convert n' to an i32.  This is safe because we clamped it above.
-  auto i32_vec = broadcast(builder.getI32Type(), shape);
-  Value n_i32 = builder.create<arith::FPToSIOp>(i32_vec, n);
+  auto i32Vec = broadcast(builder.getI32Type(), shape);
+  Value nI32 = builder.create<arith::FPToSIOp>(i32Vec, n);
 
   // Creates the value 2^n' if -126 <= n' <= 127 and 0 if n' = -127.
-  Value pow2 = exp2I32(builder, n_i32);
+  Value pow2 = exp2I32(builder, nI32);
 
   // Return z * 2^n' if -126 <= n' <= 127 and 0 if n = -127.
   Value ret = mul(z, pow2);
@@ -1131,7 +1418,7 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -1201,7 +1488,7 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -1328,7 +1615,7 @@ CbrtApproximation::matchAndRewrite(math::CbrtOp op,
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-  ArrayRef<int64_t> shape = vectorShape(operand);
+  std::optional<VectorShape> shape = vectorShape(operand);
 
   Type floatTy = getElementTypeOrSelf(operand.getType());
   Type intTy = b.getIntegerType(floatTy.getIntOrFloatBitWidth());
@@ -1417,10 +1704,10 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   // Only support already-vectorized rsqrt's.
-  if (shape.empty() || shape.back() % 8 != 0)
+  if (!shape || shape->sizes.empty() || shape->sizes.back() % 8 != 0)
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
@@ -1471,27 +1758,146 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
 
 //----------------------------------------------------------------------------//
 
+void mlir::populatePolynomialApproximateTanhPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<TanhApproximation>(patterns.getContext());
+}
+
+void mlir::populatePolynomialApproximateErfPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<ErfPolynomialApproximation>(patterns.getContext());
+}
+
+void mlir::populatePolynomialApproximateErfcPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<ErfcPolynomialApproximation>(patterns.getContext());
+}
+
+template <typename OpType>
+static void
+populateMathF32ExpansionPattern(RewritePatternSet &patterns,
+                                llvm::function_ref<bool(StringRef)> predicate) {
+  if (predicate(OpType::getOperationName())) {
+    patterns.add<ReuseF32Expansion<OpType>>(patterns.getContext());
+  }
+}
+
+void mlir::populateMathF32ExpansionPatterns(
+    RewritePatternSet &patterns,
+    llvm::function_ref<bool(StringRef)> predicate) {
+  populateMathF32ExpansionPattern<math::AcosOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::AcoshOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::AsinOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::AsinhOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::AtanOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::Atan2Op>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::AtanhOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::CbrtOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::CosOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::CoshOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::ErfOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::ErfcOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::ExpOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::Exp2Op>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::ExpM1Op>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::LogOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::Log10Op>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::Log1pOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::Log2Op>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::PowFOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::RsqrtOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::SinOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::SinhOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::SqrtOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::TanOp>(patterns, predicate);
+  populateMathF32ExpansionPattern<math::TanhOp>(patterns, predicate);
+}
+
+template <typename OpType, typename PatternType>
+static void populateMathPolynomialApproximationPattern(
+    RewritePatternSet &patterns,
+    llvm::function_ref<bool(StringRef)> predicate) {
+  if (predicate(OpType::getOperationName())) {
+    patterns.add<PatternType>(patterns.getContext());
+  }
+}
+
+void mlir::populateMathPolynomialApproximationPatterns(
+    RewritePatternSet &patterns,
+    llvm::function_ref<bool(StringRef)> predicate) {
+  populateMathPolynomialApproximationPattern<AcosOp,
+                                             AcosPolynomialApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<AsinOp,
+                                             AsinPolynomialApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<AtanOp, AtanApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<Atan2Op, Atan2Approximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<CbrtOp, CbrtApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<
+      CosOp, SinAndCosApproximation<false, math::CosOp>>(patterns, predicate);
+  populateMathPolynomialApproximationPattern<ErfOp, ErfPolynomialApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<ErfcOp,
+                                             ErfcPolynomialApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<ExpOp, ExpApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<ExpM1Op, ExpM1Approximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<LogOp, LogApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<Log2Op, Log2Approximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<Log1pOp, Log1pApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<RsqrtOp, RsqrtApproximation>(
+      patterns, predicate);
+  populateMathPolynomialApproximationPattern<
+      SinOp, SinAndCosApproximation<true, math::SinOp>>(patterns, predicate);
+  populateMathPolynomialApproximationPattern<TanhOp, TanhApproximation>(
+      patterns, predicate);
+}
+
 void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options) {
-  // Patterns for leveraging existing f32 lowerings on other data types.
-  patterns
-      .add<ReuseF32Expansion<math::AtanOp>, ReuseF32Expansion<math::Atan2Op>,
-           ReuseF32Expansion<math::TanhOp>, ReuseF32Expansion<math::LogOp>,
-           ReuseF32Expansion<math::Log2Op>, ReuseF32Expansion<math::Log1pOp>,
-           ReuseF32Expansion<math::ErfOp>, ReuseF32Expansion<math::ExpOp>,
-           ReuseF32Expansion<math::ExpM1Op>, ReuseF32Expansion<math::CbrtOp>,
-           ReuseF32Expansion<math::SinOp>, ReuseF32Expansion<math::CosOp>>(
-          patterns.getContext());
+  mlir::populateMathF32ExpansionPatterns(patterns, [](StringRef name) -> bool {
+    return llvm::is_contained(
+        {math::AtanOp::getOperationName(), math::Atan2Op::getOperationName(),
+         math::TanhOp::getOperationName(), math::LogOp::getOperationName(),
+         math::Log2Op::getOperationName(), math::Log1pOp::getOperationName(),
+         math::ErfOp::getOperationName(), math::ErfcOp::getOperationName(),
+         math::ExpOp::getOperationName(), math::ExpM1Op::getOperationName(),
+         math::CbrtOp::getOperationName(), math::SinOp::getOperationName(),
+         math::CosOp::getOperationName()},
+        name);
+  });
 
-  patterns.add<AtanApproximation, Atan2Approximation, TanhApproximation,
-               LogApproximation, Log2Approximation, Log1pApproximation,
-               ErfPolynomialApproximation, ExpApproximation, ExpM1Approximation,
-               CbrtApproximation, SinAndCosApproximation<true, math::SinOp>,
-               SinAndCosApproximation<false, math::CosOp>>(
-      patterns.getContext());
+  populateMathPolynomialApproximationPatterns(
+      patterns, [](StringRef name) -> bool {
+        return llvm::is_contained(
+            {math::AtanOp::getOperationName(),
+             math::Atan2Op::getOperationName(),
+             math::TanhOp::getOperationName(), math::LogOp::getOperationName(),
+             math::Log2Op::getOperationName(),
+             math::Log1pOp::getOperationName(), math::ErfOp::getOperationName(),
+             math::ErfcOp::getOperationName(), math::AsinOp::getOperationName(),
+             math::AcosOp::getOperationName(), math::ExpOp::getOperationName(),
+             math::ExpM1Op::getOperationName(),
+             math::CbrtOp::getOperationName(), math::SinOp::getOperationName(),
+             math::CosOp::getOperationName()},
+            name);
+      });
+
   if (options.enableAvx2) {
-    patterns.add<RsqrtApproximation, ReuseF32Expansion<math::RsqrtOp>>(
-        patterns.getContext());
+    auto predicateRsqrt = [](StringRef name) {
+      return name == math::RsqrtOp::getOperationName();
+    };
+    mlir::populateMathF32ExpansionPatterns(patterns, predicateRsqrt);
+    mlir::populateMathPolynomialApproximationPatterns(patterns, predicateRsqrt);
   }
 }

@@ -159,11 +159,11 @@ end
 
 ! CHECK-LABEL: func @_QPimpliedformat
 subroutine impliedformat
-  ! CHECK: BeginExternalListInput(%c-1
+  ! CHECK: BeginExternalListInput
   ! CHECK: InputReal32
   ! CHECK: EndIoStatement(%3) {{.*}}: (!fir.ref<i8>) -> i32
   read*, x
-  ! CHECK: BeginExternalListOutput(%c-1
+  ! CHECK: BeginExternalListOutput
   ! CHECK: OutputReal32
   ! CHECK: EndIoStatement
   print*, x

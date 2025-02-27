@@ -3,6 +3,7 @@
 import gc
 import io
 import itertools
+from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import arith
@@ -583,14 +584,24 @@ def testOperationPrint():
         r"""
     func.func @f1(%arg0: i32) -> i32 {
       %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
+      %1 = arith.constant dense_resource<resource1> : tensor<3xi64>
       return %arg0 : i32
     }
+
+    {-#
+      dialect_resources: {
+          builtin: {
+            resource1: "0x08000000010000000000000002000000000000000300000000000000"
+          }
+        }
+      #-}
   """,
         ctx,
     )
 
     # Test print to stdout.
     # CHECK: return %arg0 : i32
+    # CHECK: resource1: "0x08
     module.operation.print()
 
     # Test print to text file.
@@ -607,7 +618,14 @@ def testOperationPrint():
     module.operation.write_bytecode(bytecode_stream, desired_version=1)
     bytecode = bytecode_stream.getvalue()
     assert bytecode.startswith(b"ML\xefR"), "Expected bytecode to start with MLïR"
-    module_roundtrip = Module.parse(bytecode, ctx)
+    with NamedTemporaryFile() as tmpfile:
+        module.operation.write_bytecode(str(tmpfile.name), desired_version=1)
+        tmpfile.seek(0)
+        assert tmpfile.read().startswith(
+            b"ML\xefR"
+        ), "Expected bytecode to start with MLïR"
+    ctx2 = Context()
+    module_roundtrip = Module.parse(bytecode, ctx2)
     f = io.StringIO()
     module_roundtrip.operation.print(file=f)
     roundtrip_value = f.getvalue()
@@ -631,15 +649,23 @@ def testOperationPrint():
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     module.operation.print(state)
 
-    # Test get_asm with options.
+    # Test print with options.
     # CHECK: value = dense_resource<__elided__> : tensor<4xi32>
-    # CHECK: "func.return"(%arg0) : (i32) -> () -:4:7
+    # CHECK: "func.return"(%arg0) : (i32) -> () -:5:7
+    # CHECK-NOT: resource1: "0x08
     module.operation.print(
         large_elements_limit=2,
         enable_debug_info=True,
         pretty_debug_info=True,
         print_generic_op_form=True,
         use_local_scope=True,
+    )
+
+    # Test print with skip_regions option
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: func.return
+    module.body.operations[0].print(
+        skip_regions=True,
     )
 
 
@@ -1015,3 +1041,78 @@ def testOperationParse():
         print(
             f"op_with_source_name: {o.get_asm(enable_debug_info=True, use_local_scope=True)}"
         )
+
+
+# CHECK-LABEL: TEST: testOpWalk
+@run
+def testOpWalk():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(
+        r"""
+    builtin.module {
+      func.func @f() {
+        func.return
+      }
+    }
+  """,
+        ctx,
+    )
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.ADVANCE
+
+    # Test post-order walk (default).
+    # CHECK-NEXT:  Post-order
+    # CHECK-NEXT:  func.return
+    # CHECK-NEXT:  func.func
+    # CHECK-NEXT:  builtin.module
+    print("Post-order")
+    module.operation.walk(callback)
+
+    # Test pre-order walk.
+    # CHECK-NEXT:  Pre-order
+    # CHECK-NEXT:  builtin.module
+    # CHECK-NEXT:  func.fun
+    # CHECK-NEXT:  func.return
+    print("Pre-order")
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test interrput.
+    # CHECK-NEXT:  Interrupt post-order
+    # CHECK-NEXT:  func.return
+    print("Interrupt post-order")
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.INTERRUPT
+
+    module.operation.walk(callback)
+
+    # Test skip.
+    # CHECK-NEXT:  Skip pre-order
+    # CHECK-NEXT:  builtin.module
+    print("Skip pre-order")
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.SKIP
+
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test exception.
+    # CHECK: Exception
+    # CHECK-NEXT: func.return
+    # CHECK-NEXT: Exception raised
+    print("Exception")
+
+    def callback(op):
+        print(op.name)
+        raise ValueError
+        return WalkResult.ADVANCE
+
+    try:
+        module.operation.walk(callback)
+    except RuntimeError:
+        print("Exception raised")

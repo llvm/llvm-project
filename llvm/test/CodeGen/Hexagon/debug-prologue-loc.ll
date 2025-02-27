@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 
 ; Broken after r326208.
 ; XFAIL: *
@@ -12,16 +12,16 @@ define i32 @f0(i32 %a0, i32 %a1) #0 !dbg !5 {
 b0:
   %v0 = alloca i32, align 4
   %v1 = alloca i32, align 4
-  %v2 = alloca i32*, align 4
-  store i32 %a0, i32* %v0, align 4
-  call void @llvm.dbg.declare(metadata i32* %v0, metadata !9, metadata !DIExpression()), !dbg !10
-  store i32 %a1, i32* %v1, align 4
-  call void @llvm.dbg.declare(metadata i32* %v1, metadata !11, metadata !DIExpression()), !dbg !12
-  call void @llvm.dbg.declare(metadata i32** %v2, metadata !13, metadata !DIExpression()), !dbg !15
-  store i32* %v1, i32** %v2, align 4, !dbg !15
-  %v3 = load i32, i32* %v0, align 4, !dbg !16
-  %v4 = load i32*, i32** %v2, align 4, !dbg !17
-  %v5 = call i32 @f1(i32* %v4), !dbg !18
+  %v2 = alloca ptr, align 4
+  store i32 %a0, ptr %v0, align 4
+  call void @llvm.dbg.declare(metadata ptr %v0, metadata !9, metadata !DIExpression()), !dbg !10
+  store i32 %a1, ptr %v1, align 4
+  call void @llvm.dbg.declare(metadata ptr %v1, metadata !11, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.declare(metadata ptr %v2, metadata !13, metadata !DIExpression()), !dbg !15
+  store ptr %v1, ptr %v2, align 4, !dbg !15
+  %v3 = load i32, ptr %v0, align 4, !dbg !16
+  %v4 = load ptr, ptr %v2, align 4, !dbg !17
+  %v5 = call i32 @f1(ptr %v4), !dbg !18
   %v6 = add nsw i32 %v3, %v5, !dbg !19
   ret i32 %v6, !dbg !20
 }
@@ -30,11 +30,11 @@ b0:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-define i32 @f1(i32* %a0) #0 !dbg !21 {
+define i32 @f1(ptr %a0) #0 !dbg !21 {
 b0:
-  %v0 = alloca i32*, align 4
-  store i32* %a0, i32** %v0, align 4
-  call void @llvm.dbg.declare(metadata i32** %v0, metadata !24, metadata !DIExpression()), !dbg !25
+  %v0 = alloca ptr, align 4
+  store ptr %a0, ptr %v0, align 4
+  call void @llvm.dbg.declare(metadata ptr %v0, metadata !24, metadata !DIExpression()), !dbg !25
   ret i32 0, !dbg !26
 }
 

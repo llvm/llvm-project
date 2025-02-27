@@ -1,4 +1,6 @@
 # REQUIRES: riscv
+# RUN: llvm-mc -filetype=obj -triple=riscv64 /dev/null -o %t2.o
+# RUN: ld.lld -shared -soname=t2 %t2.o -o %t2.so
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -riscv-asm-relax-branches=0 %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=RELOC %s
 
@@ -6,7 +8,7 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PC %s
 # RUN: llvm-readelf -x .data %t | FileCheck --check-prefixes=HEX,HEX-WITHOUT-PLT %s
 
-# RUN: ld.lld -e absolute %t.o -o %t --export-dynamic
+# RUN: ld.lld -e absolute %t.o -o %t %t2.so
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PLT %s
 # RUN: llvm-readelf -x .data %t | FileCheck --check-prefixes=HEX,HEX-WITH-PLT %s
 
@@ -18,8 +20,8 @@
 # RELOC-NEXT: 0x4 R_RISCV_LO12_I target 0x1
 
 # CHECK-LABEL: <absolute>:
-# CHECK-NEXT:  lui t0, 0
-# CHECK-NEXT:  addi t0, t0, 1
+# CHECK-NEXT:  lui t0, 0x0
+# CHECK-NEXT:  addi t0, t0, 0x1
 absolute:
   lui t0, %hi(target+1)
   addi t0, t0, %lo(target+1)
@@ -32,13 +34,13 @@ absolute:
 
 ## 1048559 should be -0x11.
 # CHECK-LABEL: <relative>:
-# CHECK-NEXT:  11{{...}}: auipc a1, 1048559
-# PC-NEXT:     addi a1, a1, -352
-# PLT-NEXT:    addi a1, a1, -792
+# CHECK-NEXT:  11{{...}}: auipc a1, 0xfffef
+# PC-NEXT:     addi a1, a1, -0x160
+# PLT-NEXT:    addi a1, a1, -0x290
 # CHECK-LABEL: <.Lpcrel_hi1>:
-# CHECK-NEXT:  11{{...}}: auipc t1, 1048559
-# PC-NEXT:     sd a2, -358(t1)
-# PLT-NEXT:    sd a2, -798(t1)
+# CHECK-NEXT:  11{{...}}: auipc t1, 0xfffef
+# PC-NEXT:     sd a2, -0x166(t1)
+# PLT-NEXT:    sd a2, -0x296(t1)
 relative:
   la a1, target
   sd a2, target+2, t1
@@ -51,7 +53,7 @@ relative:
 # RELOC-NEXT: 0x24 R_RISCV_BRANCH target 0x0
 
 # PC-LABEL:    <branch>:
-# PC-NEXT:     auipc ra, 0
+# PC-NEXT:     auipc ra, 0x0
 # PC-NEXT:     jalr ra
 # PC-NEXT:     [[#%x,ADDR:]]:
 # PC-SAME:                    j 0x[[#ADDR]]
@@ -61,8 +63,8 @@ relative:
 ## If .dynsym exists, an undefined weak symbol is preemptible.
 ## We create a PLT entry and redirect the reference to it.
 # PLT-LABEL:   <branch>:
-# PLT-NEXT:    auipc ra, 0
-# PLT-NEXT:    jalr 56(ra)
+# PLT-NEXT:    auipc ra, 0x0
+# PLT-NEXT:    jalr 0x30(ra)
 # PLT-NEXT:    [[#%x,ADDR:]]:
 # PLT-SAME:                   j 0x[[#ADDR]]
 # PLT-NEXT:    [[#%x,ADDR:]]:
@@ -84,12 +86,8 @@ branch:
 ## A plt entry is created for target, so this is the offset between the
 ## plt entry and this address.
 ##
-##   S = 0x11360 (the address of the plt entry for target)
-##   A = 0
-##   P = 0x1343c (the address of `.`)
-##
-##   S - A + P = -0x0x20dc = 0xffffdf24
-# HEX-WITH-PLT-SAME: 24dfffff
+##   S - A + P = -0x0x20ec = 0xffffdf14
+# HEX-WITH-PLT-SAME: 14dfffff
 
 .data
 .p2align 3

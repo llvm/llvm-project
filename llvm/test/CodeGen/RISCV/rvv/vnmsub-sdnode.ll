@@ -458,13 +458,14 @@ define <vscale x 1 x i64> @vnmsub_vx_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vnmsub.vv v8, v10, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsub_vx_nxv1i64:
@@ -495,13 +496,14 @@ define <vscale x 2 x i64> @vnmsub_vx_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vnmsac.vv v8, v10, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsub_vx_nxv2i64:
@@ -532,13 +534,14 @@ define <vscale x 4 x i64> @vnmsub_vx_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vnmsub.vv v8, v16, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsub_vx_nxv4i64:
@@ -570,13 +573,14 @@ define <vscale x 8 x i64> @vnmsub_vx_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
 ; RV32-NEXT:    vnmsac.vv v8, v16, v24
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsub_vx_nxv8i64:
@@ -597,7 +601,7 @@ define <vscale x 4 x i32> @combine_mul_sub_imm1(<vscale x 4 x i32> %a, <vscale x
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vnmsub.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %x = sub <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), %a
+  %x = sub <vscale x 4 x i32> splat (i32 1), %a
   %y = mul <vscale x 4 x i32> %x, %b
   ret <vscale x 4 x i32> %y
 }
@@ -608,7 +612,7 @@ define <vscale x 4 x i32> @combine_mul_sub_imm1_2(<vscale x 4 x i32> %a, <vscale
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vnmsub.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %x = sub <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), %a
+  %x = sub <vscale x 4 x i32> splat (i32 1), %a
   %y = mul <vscale x 4 x i32> %b, %x
   ret <vscale x 4 x i32> %y
 }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // REQUIRES: long_tests
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
@@ -19,14 +19,14 @@
 // bool copy_file(const path& from, const path& to, copy_options options,
 //           error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 #include <cstdio>
 #include <string>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 // This test is intended to test 'sendfile's 2gb limit for a single call, and
@@ -72,7 +72,7 @@ static void large_file() {
   // the data at the end of the source file.
   std::string out_data(additional_size, 'z');
   {
-    std::FILE* dest_file = std::fopen(dest.string().c_str(), "rb");
+    std::FILE* dest_file = std::fopen(dest.string().c_str(), "r");
     assert(dest_file != nullptr);
     assert(std::fseek(dest_file, sendfile_size_limit, SEEK_SET) == 0);
     assert(std::fread(&out_data[0], sizeof(out_data[0]), additional_size, dest_file) == additional_size);

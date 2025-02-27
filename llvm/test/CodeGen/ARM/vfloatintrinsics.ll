@@ -29,6 +29,12 @@ define %v2f32 @test_v2f32.cos(%v2f32 %a) {
   %1 = call %v2f32 @llvm.cos.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
+; CHECK-LABEL: test_v2f32.tan:{{.*}}
+define %v2f32 @test_v2f32.tan(%v2f32 %a) {
+  ; CHECK: tan
+  %1 = call %v2f32 @llvm.tan.v2f32(%v2f32 %a)
+  ret %v2f32 %1
+}
 ; CHECK-LABEL: test_v2f32.pow:{{.*}}
 define %v2f32 @test_v2f32.pow(%v2f32 %a, %v2f32 %b) {
   ; CHECK: pow
@@ -112,6 +118,7 @@ declare %v2f32 @llvm.sqrt.v2f32(%v2f32) #0
 declare %v2f32 @llvm.powi.v2f32.i32(%v2f32, i32) #0
 declare %v2f32 @llvm.sin.v2f32(%v2f32) #0
 declare %v2f32 @llvm.cos.v2f32(%v2f32) #0
+declare %v2f32 @llvm.tan.v2f32(%v2f32) #0
 declare %v2f32 @llvm.pow.v2f32(%v2f32, %v2f32) #0
 declare %v2f32 @llvm.exp.v2f32(%v2f32) #0
 declare %v2f32 @llvm.exp2.v2f32(%v2f32) #0
@@ -151,6 +158,12 @@ define %v4f32 @test_v4f32.sin(%v4f32 %a) {
 define %v4f32 @test_v4f32.cos(%v4f32 %a) {
   ; CHECK: cos
   %1 = call %v4f32 @llvm.cos.v4f32(%v4f32 %a)
+  ret %v4f32 %1
+}
+; CHECK-LABEL: test_v4f32.tan:{{.*}}
+define %v4f32 @test_v4f32.tan(%v4f32 %a) {
+  ; CHECK: tan
+  %1 = call %v4f32 @llvm.tan.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }
 ; CHECK-LABEL: test_v4f32.pow:{{.*}}
@@ -236,6 +249,7 @@ declare %v4f32 @llvm.sqrt.v4f32(%v4f32) #0
 declare %v4f32 @llvm.powi.v4f32.i32(%v4f32, i32) #0
 declare %v4f32 @llvm.sin.v4f32(%v4f32) #0
 declare %v4f32 @llvm.cos.v4f32(%v4f32) #0
+declare %v4f32 @llvm.tan.v4f32(%v4f32) #0
 declare %v4f32 @llvm.pow.v4f32(%v4f32, %v4f32) #0
 declare %v4f32 @llvm.exp.v4f32(%v4f32) #0
 declare %v4f32 @llvm.exp2.v4f32(%v4f32) #0
@@ -275,6 +289,12 @@ define %v2f64 @test_v2f64.sin(%v2f64 %a) {
 define %v2f64 @test_v2f64.cos(%v2f64 %a) {
   ; CHECK: cos
   %1 = call %v2f64 @llvm.cos.v2f64(%v2f64 %a)
+  ret %v2f64 %1
+}
+; CHECK-LABEL: test_v2f64.tan:{{.*}}
+define %v2f64 @test_v2f64.tan(%v2f64 %a) {
+  ; CHECK: tan
+  %1 = call %v2f64 @llvm.tan.v2f64(%v2f64 %a)
   ret %v2f64 %1
 }
 ; CHECK-LABEL: test_v2f64.pow:{{.*}}
@@ -361,6 +381,7 @@ declare %v2f64 @llvm.sqrt.v2f64(%v2f64) #0
 declare %v2f64 @llvm.powi.v2f64.i32(%v2f64, i32) #0
 declare %v2f64 @llvm.sin.v2f64(%v2f64) #0
 declare %v2f64 @llvm.cos.v2f64(%v2f64) #0
+declare %v2f64 @llvm.tan.v2f64(%v2f64) #0
 declare %v2f64 @llvm.pow.v2f64(%v2f64, %v2f64) #0
 declare %v2f64 @llvm.exp.v2f64(%v2f64) #0
 declare %v2f64 @llvm.exp2.v2f64(%v2f64) #0

@@ -11,17 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Timing.h"
+#include "mlir/Support/RawOstreamExtras.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace Fortran::frontend;
@@ -76,7 +83,7 @@ static std::string getOutputFilePath(llvm::StringRef outputFilename,
   if (!extension.empty() && (inputFilename != "-")) {
     llvm::SmallString<128> path(inputFilename);
     llvm::sys::path::replace_extension(path, extension);
-    outFile = std::string(path.str());
+    outFile = std::string(path);
   }
 
   return outFile;
@@ -143,12 +150,9 @@ void CompilerInstance::clearOutputFiles(bool eraseFiles) {
 }
 
 bool CompilerInstance::executeAction(FrontendAction &act) {
-  auto &invoc = this->getInvocation();
+  CompilerInvocation &invoc = this->getInvocation();
 
   llvm::Triple targetTriple{llvm::Triple(invoc.getTargetOpts().triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
-    invoc.getDefaultKinds().set_quadPrecisionKind(10);
-  }
 
   // Set some sane defaults for the frontend.
   invoc.setDefaultFortranOpts();
@@ -156,10 +160,31 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   invoc.setFortranOpts();
   // Set the encoding to read all input files in based on user input.
   allSources->set_encoding(invoc.getFortranOpts().encoding);
-  // Create the semantics context and set semantic options.
-  invoc.setSemanticsOpts(*this->allCookedSources);
+  if (!setUpTargetMachine())
+    return false;
+  // Create the semantics context
+  semaContext = invoc.getSemanticsCtx(*allCookedSources, getTargetMachine());
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
+
+  if (invoc.getEnableTimers()) {
+    llvm::TimePassesIsEnabled = true;
+
+    timingStreamMLIR = std::make_unique<Fortran::support::string_ostream>();
+    timingStreamLLVM = std::make_unique<Fortran::support::string_ostream>();
+    timingStreamCodeGen = std::make_unique<Fortran::support::string_ostream>();
+
+    timingMgr.setEnabled(true);
+    timingMgr.setDisplayMode(mlir::DefaultTimingManager::DisplayMode::Tree);
+    timingMgr.setOutput(
+        Fortran::support::createTimingFormatterText(*timingStreamMLIR));
+
+    // Creating a new TimingScope will automatically start the timer. Since this
+    // is the top-level timer, this is ok because it will end up capturing the
+    // time for all the bookkeeping and other tasks that take place between
+    // parsing, lowering etc. for which finer-grained timers will be created.
+    timingScopeRoot = timingMgr.getRootScope();
+  }
 
   // Run the frontend action `act` for every input file.
   for (const FrontendInputFile &fif : getFrontendOpts().inputs) {
@@ -170,6 +195,34 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
       act.endSourceFile();
     }
   }
+
+  if (timingMgr.isEnabled()) {
+    timingScopeRoot.stop();
+
+    // Write the timings to the associated output stream and clear all timers.
+    // We need to provide another stream because the TimingManager will attempt
+    // to print in its destructor even if it has been cleared. By the time that
+    // destructor runs, the output streams will have been destroyed, so give it
+    // a null stream.
+    timingMgr.print();
+    timingMgr.setOutput(
+        Fortran::support::createTimingFormatterText(mlir::thread_safe_nulls()));
+
+    // This prints the timings in "reverse" order, starting from code
+    // generation, followed by LLVM-IR optimizations, then MLIR optimizations
+    // and transformations and the frontend. If any of the steps are disabled,
+    // for instance because code generation was not performed, the strings
+    // will be empty.
+    if (!timingStreamCodeGen->str().empty())
+      llvm::errs() << timingStreamCodeGen->str() << "\n";
+
+    if (!timingStreamLLVM->str().empty())
+      llvm::errs() << timingStreamLLVM->str() << "\n";
+
+    if (!timingStreamMLIR->str().empty())
+      llvm::errs() << timingStreamMLIR->str() << "\n";
+  }
+
   return !getDiagnostics().getClient()->getNumErrors();
 }
 
@@ -196,4 +249,141 @@ CompilerInstance::createDiagnostics(clang::DiagnosticOptions *opts,
     diags->setClient(new TextDiagnosticPrinter(llvm::errs(), opts));
   }
   return diags;
+}
+
+// Get feature string which represents combined explicit target features
+// for AMD GPU and the target features specified by the user
+static std::string
+getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
+                                           const TargetOptions &targetOpts,
+                                           const llvm::Triple triple) {
+  llvm::StringRef cpu = targetOpts.cpu;
+  llvm::StringMap<bool> implicitFeaturesMap;
+  // Get the set of implicit target features
+  llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, implicitFeaturesMap);
+
+  // Add target features specified by the user
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    std::string userKeyString = userFeature.substr(1);
+    implicitFeaturesMap[userKeyString] = (userFeature[0] == '+');
+  }
+
+  auto HasError =
+      llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap);
+  if (HasError.first) {
+    unsigned diagID = diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                            "Unsupported feature ID: %0");
+    diags.Report(diagID) << HasError.second;
+    return std::string();
+  }
+
+  llvm::SmallVector<std::string> featuresVec;
+  for (auto &implicitFeatureItem : implicitFeaturesMap) {
+    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
+                           implicitFeatureItem.first().str())
+                              .str());
+  }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
+// Get feature string which represents combined explicit target features
+// for NVPTX and the target features specified by the user/
+// TODO: Have a more robust target conf like `clang/lib/Basic/Targets/NVPTX.cpp`
+static std::string
+getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
+                                          const TargetOptions &targetOpts,
+                                          const llvm::Triple triple) {
+  llvm::StringRef cpu = targetOpts.cpu;
+  llvm::StringMap<bool> implicitFeaturesMap;
+  std::string errorMsg;
+  bool ptxVer = false;
+
+  // Add target features specified by the user
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
+    // Check if the user provided a PTX version
+    if (userKeyString.starts_with("ptx"))
+      ptxVer = true;
+  }
+
+  // Set the default PTX version to `ptx61` if none was provided.
+  // TODO: set the default PTX version based on the chip.
+  if (!ptxVer)
+    implicitFeaturesMap["ptx61"] = true;
+
+  // Set the compute capability.
+  implicitFeaturesMap[cpu.str()] = true;
+
+  llvm::SmallVector<std::string> featuresVec;
+  for (auto &implicitFeatureItem : implicitFeaturesMap) {
+    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
+                           implicitFeatureItem.first().str())
+                              .str());
+  }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
+std::string CompilerInstance::getTargetFeatures() {
+  const TargetOptions &targetOpts = getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  // Clang does not append all target features to the clang -cc1 invocation.
+  // Some target features are parsed implicitly by clang::TargetInfo child
+  // class. Clang::TargetInfo classes are the basic clang classes and
+  // they cannot be reused by Flang.
+  // That's why we need to extract implicit target features and add
+  // them to the target features specified by the user
+  if (triple.isAMDGPU()) {
+    return getExplicitAndImplicitAMDGPUTargetFeatures(getDiagnostics(),
+                                                      targetOpts, triple);
+  } else if (triple.isNVPTX()) {
+    return getExplicitAndImplicitNVPTXTargetFeatures(getDiagnostics(),
+                                                     targetOpts, triple);
+  }
+  return llvm::join(targetOpts.featuresAsWritten.begin(),
+                    targetOpts.featuresAsWritten.end(), ",");
+}
+
+bool CompilerInstance::setUpTargetMachine() {
+  const TargetOptions &targetOpts = getInvocation().getTargetOpts();
+  const std::string &theTriple = targetOpts.triple;
+
+  // Create `Target`
+  std::string error;
+  const llvm::Target *theTarget =
+      llvm::TargetRegistry::lookupTarget(theTriple, error);
+  if (!theTarget) {
+    getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
+        << error;
+    return false;
+  }
+  // Create `TargetMachine`
+  const auto &CGOpts = getInvocation().getCodeGenOpts();
+  std::optional<llvm::CodeGenOptLevel> OptLevelOrNone =
+      llvm::CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
+  assert(OptLevelOrNone && "Invalid optimization level!");
+  llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
+  std::string featuresStr = getTargetFeatures();
+  std::optional<llvm::CodeModel::Model> cm = getCodeModel(CGOpts.CodeModel);
+
+  llvm::TargetOptions tOpts = llvm::TargetOptions();
+  tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
+
+  targetMachine.reset(theTarget->createTargetMachine(
+      theTriple, /*CPU=*/targetOpts.cpu,
+      /*Features=*/featuresStr, /*Options=*/tOpts,
+      /*Reloc::Model=*/CGOpts.getRelocationModel(),
+      /*CodeModel::Model=*/cm, OptLevel));
+  assert(targetMachine && "Failed to create TargetMachine");
+  if (cm.has_value()) {
+    const llvm::Triple triple(theTriple);
+    if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+        triple.getArch() == llvm::Triple::x86_64) {
+      targetMachine->setLargeDataThreshold(CGOpts.LargeDataThreshold);
+    }
+  }
+  return true;
 }

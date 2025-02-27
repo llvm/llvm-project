@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 declare double @llvm.cos.f64(double)
 declare double @llvm.exp.f64(double)
 declare double @llvm.exp2.f64(double)

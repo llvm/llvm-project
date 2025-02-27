@@ -22,32 +22,32 @@
 namespace llvm {
 
 /// This class implements a glob pattern matcher similar to the one found in
-/// bash, but with some key differences. Namely, that \p "*" matches all
+/// bash, but with some key differences. Namely, that `*` matches all
 /// characters and does not exclude path separators.
 ///
-/// * \p "?" matches a single character.
-/// * \p "*" matches zero or more characters.
-/// * \p "[<chars>]" matches one character in the bracket. Character ranges,
-///   e.g., \p "[a-z]", and negative sets via \p "[^ab]" or \p "[!ab]" are also
+/// * `?` matches a single character.
+/// * `*` matches zero or more characters.
+/// * `[<chars>]` matches one character in the bracket. Character ranges,
+///   e.g., `[a-z]`, and negative sets via `[^ab]` or `[!ab]` are also
 ///   supported.
-/// * \p "{<glob>,...}" matches one of the globs in the list. Nested brace
+/// * `{<glob>,...}` matches one of the globs in the list. Nested brace
 ///   expansions are not supported. If \p MaxSubPatterns is empty then
-///   brace expansions are not supported and characters \p "{,}" are treated as
+///   brace expansions are not supported and characters `{,}` are treated as
 ///   literals.
-/// * \p "\" escapes the next character so it is treated as a literal.
-///
+/// * `\` escapes the next character so it is treated as a literal.
 ///
 /// Some known edge cases are:
-/// * \p "]" is allowed as the first character in a character class, i.e.,
-///   \p "[]]" is valid and matches the literal \p "]".
-/// * The empty character class, i.e., \p "[]", is invalid.
-/// * Empty or singleton brace expansions, e.g., \p "{}", \p "{a}", are invalid.
-/// * \p "}" and \p "," that are not inside a brace expansion are taken as
-///   literals, e.g., \p ",}" is valid but \p "{" is not.
+/// * The literal `]` is allowed as the first character in a character class,
+///    i.e., `[]]` is valid and matches the literal `]`.
+/// * The empty character class, i.e., `[]`, is invalid.
+/// * Empty or singleton brace expansions, e.g., `{}`, `{a}`, are invalid.
+/// * The literals `}` and `,` that are not inside a brace expansion are taken
+///   as literals, e.g., `,}` is valid but `{` is not.
 ///
-///
-/// For example, \p "*[/\\]foo.{c,cpp}" will match (unix or windows) paths to
-/// all files named \p "foo.c" or \p "foo.cpp".
+/// Examples:
+/// * `*[/\\]foo.{c,cpp}` will match (unix or windows) paths to files named
+///   `foo.c` or `foo.cpp`.
+/// * `_Z{N,NK,}S[tabsoid]*` will match mangled C++ standard library functions.
 class GlobPattern {
 public:
   /// \param Pat the pattern to match against

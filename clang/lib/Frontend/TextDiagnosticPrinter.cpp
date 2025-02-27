@@ -36,7 +36,7 @@ TextDiagnosticPrinter::~TextDiagnosticPrinter() {
 void TextDiagnosticPrinter::BeginSourceFile(const LangOptions &LO,
                                             const Preprocessor *PP) {
   // Build the TextDiagnostic utility.
-  TextDiag.reset(new TextDiagnostic(OS, LO, &*DiagOpts));
+  TextDiag.reset(new TextDiagnostic(OS, LO, &*DiagOpts, PP));
 }
 
 void TextDiagnosticPrinter::EndSourceFile() {
@@ -70,17 +70,21 @@ static void printDiagnosticOptions(raw_ostream &OS,
     // flag it as such. Note that diagnostics could also have been mapped by a
     // pragma, but we don't currently have a way to distinguish this.
     if (Level == DiagnosticsEngine::Error &&
-        DiagnosticIDs::isBuiltinWarningOrExtension(Info.getID()) &&
-        !DiagnosticIDs::isDefaultMappingAsError(Info.getID())) {
+        Info.getDiags()->getDiagnosticIDs()->isWarningOrExtension(
+            Info.getID()) &&
+        !Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
+            Info.getID())) {
       OS << " [-Werror";
       Started = true;
     }
 
-    StringRef Opt = DiagnosticIDs::getWarningOptionForDiag(Info.getID());
+    StringRef Opt =
+        Info.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+            Info.getID());
     if (!Opt.empty()) {
       OS << (Started ? "," : " [")
          << (Level == DiagnosticsEngine::Remark ? "-R" : "-W") << Opt;
-      StringRef OptValue = Info.getDiags()->getFlagValue();
+      StringRef OptValue = Info.getFlagValue();
       if (!OptValue.empty())
         OS << "=" << OptValue;
       Started = true;

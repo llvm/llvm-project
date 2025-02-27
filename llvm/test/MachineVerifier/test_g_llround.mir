@@ -14,10 +14,14 @@ body:             |
     %ptr:_(p0) = COPY $x0
     %vector:_(<2 x s64>) = COPY $q0
 
-    ; CHECK: Bad machine code: All register operands must have scalar types
-    ; CHECK: instruction: %no_ptrs:_(s64) = G_LROUND %ptr:_(p0)
-    %no_ptrs:_(s64) = G_LROUND %ptr:_(p0)
+    ; CHECK: Bad machine code: Source operand must not be a pointer type
+    ; CHECK: instruction: %no_ptrs:_(s32) = G_LLROUND %ptr:_(p0)
+    %no_ptrs:_(s32) = G_LLROUND %ptr:_(p0)
 
-    ; CHECK: Bad machine code: All register operands must have scalar types
-    ; CHECK: instruction: %no_vectors:_(s64) = G_LROUND %vector:_(<2 x s64>)
-    %no_vectors:_(s64) = G_LROUND %vector:_(<2 x s64>)
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
+    ; CHECK: instruction: %no_vectors:_(s32) = G_LLROUND %vector:_(<2 x s64>)
+    %no_vectors:_(s32) = G_LLROUND %vector:_(<2 x s64>)
+
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
+    ; CHECK: instruction: %inv_vectors:_(<3 x s32>) = G_LLROUND %vector:_(<2 x s64>)
+    %inv_vectors:_(<3 x s32>) = G_LLROUND %vector:_(<2 x s64>)

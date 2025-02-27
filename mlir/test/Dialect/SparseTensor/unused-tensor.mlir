@@ -28,8 +28,8 @@
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 4 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<2x4xf64>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_2]] : memref<2x4xf64>
+// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : tensor<2x4xf64>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<2x4xf64>
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_7]] {
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_6]] to %[[VAL_3]] step %[[VAL_7]] {
 // CHECK:               scf.for %[[VAL_12:.*]] = %[[VAL_6]] to %[[VAL_5]] step %[[VAL_7]] {

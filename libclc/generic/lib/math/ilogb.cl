@@ -22,8 +22,8 @@
  */
 
 #include <clc/clc.h>
-#include "../clcmacro.h"
-#include "math.h"
+#include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
 _CLC_OVERLOAD _CLC_DEF int ilogb(float x) {
     uint ux = as_uint(x);
@@ -71,3 +71,15 @@ _CLC_OVERLOAD _CLC_DEF int ilogb(double x) {
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, int, ilogb, double);
 
 #endif // cl_khr_fp64
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF int ilogb(half x) {
+    return ilogb((float)x);
+}
+
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, int, ilogb, half);
+
+#endif

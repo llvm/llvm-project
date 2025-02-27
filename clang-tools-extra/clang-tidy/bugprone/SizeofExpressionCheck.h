@@ -13,7 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-/// Find suspicious usages of sizeof expression.
+/// Find suspicious usages of sizeof expressions.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-expression.html
@@ -30,6 +30,8 @@ private:
   const bool WarnOnSizeOfThis;
   const bool WarnOnSizeOfCompareToConstant;
   const bool WarnOnSizeOfPointerToAggregate;
+  const bool WarnOnSizeOfPointer;
+  const bool WarnOnOffsetDividedBySizeOf;
 };
 
 } // namespace clang::tidy::bugprone

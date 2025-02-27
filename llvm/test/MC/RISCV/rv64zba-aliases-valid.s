@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zba -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zba -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc %s  -triple=riscv64 -mattr=+zba \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zba < %s \
-# RUN:     | llvm-objdump -d -r -M no-aliases --mattr=+zba - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -r -M no-aliases --mattr=+zba - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zba < %s \
-# RUN:     | llvm-objdump -d -r --mattr=+zba - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -r --mattr=+zba - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
 
 # The following check prefixes are used in this test:

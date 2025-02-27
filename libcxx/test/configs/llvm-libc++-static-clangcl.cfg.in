@@ -3,12 +3,26 @@
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
+dbg_include = ''
+runtime_library = '@CMAKE_MSVC_RUNTIME_LIBRARY@'
+if runtime_library == '' or runtime_library.endswith('DLL'):
+    fms_runtime_lib = 'dll'
+    cxx_lib = 'msvcprt'
+else:
+    fms_runtime_lib = 'static'
+    cxx_lib = 'libcpmt'
+
+if '@CMAKE_BUILD_TYPE@'.upper() == 'DEBUG':
+    dbg_include = ' -D_DEBUG -include set_windows_crt_report_mode.h'
+    fms_runtime_lib += '_dbg'
+    cxx_lib += 'd'
+
 config.substitutions.append(('%{flags}', '--driver-mode=g++'))
 config.substitutions.append(('%{compile_flags}',
-    '-fms-runtime-lib=' + config.fms_runtime_lib + ' -nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_STDIO_ISO_WIDE_SPECIFIERS -DNOMINMAX' + config.dbg_include
+    '-fms-runtime-lib=' + fms_runtime_lib + ' -nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_STDIO_ISO_WIDE_SPECIFIERS -DNOMINMAX' + dbg_include
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib -L %{lib} -llibc++ -l' + config.cxx_lib
+    '-nostdlib -L %{lib-dir} -llibc++ -l' + cxx_lib
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T -- '

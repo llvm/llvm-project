@@ -8,8 +8,6 @@ Sections:
     Features:
       - Prefix:        USED
         Name:          "foo"
-      - Prefix:        REQUIRED
-        Name:          "bar"
       - Prefix:        DISALLOWED
         Name:          ""
 ...
@@ -19,7 +17,5 @@ Sections:
 # CHECK-NEXT:       Features:
 # CHECK-NEXT:         - Prefix:        USED
 # CHECK-NEXT:           Name:          foo
-# CHECK-NEXT:         - Prefix:        REQUIRED
-# CHECK-NEXT:           Name:          bar
 # CHECK-NEXT:         - Prefix:        DISALLOWED
 # CHECK-NEXT:           Name:          ''

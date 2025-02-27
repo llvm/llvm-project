@@ -33,7 +33,7 @@
 static std::atomic<kmp_int32> kmp_node_id_seed = 0;
 #endif
 
-static void __kmp_init_node(kmp_depnode_t *node) {
+static void __kmp_init_node(kmp_depnode_t *node, bool on_stack) {
   node->dn.successors = NULL;
   node->dn.task = NULL; // will point to the right task
   // once dependences have been processed
@@ -41,7 +41,11 @@ static void __kmp_init_node(kmp_depnode_t *node) {
     node->dn.mtx_locks[i] = NULL;
   node->dn.mtx_num_locks = 0;
   __kmp_init_lock(&node->dn.lock);
-  KMP_ATOMIC_ST_RLX(&node->dn.nrefs, 1); // init creates the first reference
+  // Init creates the first reference.  Bit 0 indicates that this node
+  // resides on the stack.  The refcount is incremented and decremented in
+  // steps of two, maintaining use of even numbers for heap nodes and odd
+  // numbers for stack nodes.
+  KMP_ATOMIC_ST_RLX(&node->dn.nrefs, on_stack ? 3 : 2);
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
   node->dn.id = KMP_ATOMIC_INC(&kmp_node_id_seed);
 #endif
@@ -51,7 +55,7 @@ static void __kmp_init_node(kmp_depnode_t *node) {
 }
 
 static inline kmp_depnode_t *__kmp_node_ref(kmp_depnode_t *node) {
-  KMP_ATOMIC_INC(&node->dn.nrefs);
+  KMP_ATOMIC_ADD(&node->dn.nrefs, 2);
   return node;
 }
 
@@ -739,7 +743,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
           &(current_task->ompt_task_info.task_data),
           &(current_task->ompt_task_info.frame),
           &(new_taskdata->ompt_task_info.task_data),
-          ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
+          TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
 
@@ -825,7 +829,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
         (kmp_depnode_t *)__kmp_thread_malloc(thread, sizeof(kmp_depnode_t));
 #endif
 
-    __kmp_init_node(node);
+    __kmp_init_node(node, /*on_stack=*/false);
     new_taskdata->td_depnode = node;
 
     if (__kmp_check_deps(gtid, node, new_task, &current_task->td_dephash,
@@ -1007,7 +1011,7 @@ void __kmpc_omp_taskwait_deps_51(ident_t *loc_ref, kmp_int32 gtid,
   }
 
   kmp_depnode_t node = {0};
-  __kmp_init_node(&node);
+  __kmp_init_node(&node, /*on_stack=*/true);
 
   if (!__kmp_check_deps(gtid, &node, NULL, &current_task->td_dephash,
                         DEP_BARRIER, ndeps, dep_list, ndeps_noalias,
@@ -1018,6 +1022,16 @@ void __kmpc_omp_taskwait_deps_51(ident_t *loc_ref, kmp_int32 gtid,
 #if OMPT_SUPPORT
     __ompt_taskwait_dep_finish(current_task, taskwait_task_data);
 #endif /* OMPT_SUPPORT */
+
+    // There may still be references to this node here, due to task stealing.
+    // Wait for them to be released.
+    kmp_int32 nrefs;
+    while ((nrefs = node.dn.nrefs) > 3) {
+      KMP_DEBUG_ASSERT((nrefs & 1) == 1);
+      KMP_YIELD(TRUE);
+    }
+    KMP_DEBUG_ASSERT(nrefs == 3);
+
     return;
   }
 
@@ -1029,6 +1043,18 @@ void __kmpc_omp_taskwait_deps_51(ident_t *loc_ref, kmp_int32 gtid,
                        &thread_finished USE_ITT_BUILD_ARG(NULL),
                        __kmp_task_stealing_constraint);
   }
+
+  // Wait until the last __kmp_release_deps is finished before we free the
+  // current stack frame holding the "node" variable; once its nrefs count
+  // reaches 3 (meaning 1, since bit zero of the refcount indicates a stack
+  // rather than a heap address), we're sure nobody else can try to reference
+  // it again.
+  kmp_int32 nrefs;
+  while ((nrefs = node.dn.nrefs) > 3) {
+    KMP_DEBUG_ASSERT((nrefs & 1) == 1);
+    KMP_YIELD(TRUE);
+  }
+  KMP_DEBUG_ASSERT(nrefs == 3);
 
 #if OMPT_SUPPORT
   __ompt_taskwait_dep_finish(current_task, taskwait_task_data);

@@ -13,7 +13,7 @@ declare ptr @strchr(ptr, i32)
 
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 6), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hello, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -35,7 +35,7 @@ define void @test_simplify2() {
 
 define void @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hello, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -58,7 +58,7 @@ define void @test_simplify4(i32 %chr) {
 
 define void @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @hello, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -86,7 +86,7 @@ define i1 @test_simplify7(i32 %C) {
 ; CHECK-LABEL: @test_simplify7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 255
-; CHECK-NEXT:    [[MEMCHR_BOUNDS:%.*]] = icmp ult i16 [[TMP2]], 16
+; CHECK-NEXT:    [[MEMCHR_BOUNDS:%.*]] = icmp samesign ult i16 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i16 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9217
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0

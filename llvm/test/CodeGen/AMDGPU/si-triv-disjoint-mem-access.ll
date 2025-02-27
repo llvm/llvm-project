@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=bonaire -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=bonaire -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx900 -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 %struct.lds = type { [64 x ptr], [16 x i8] }
 @stored_lds_struct = addrspace(3) global %struct.lds undef, align 16

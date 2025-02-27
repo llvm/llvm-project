@@ -1,24 +1,26 @@
-// RUN: tco %s | FileCheck %s
+// RUN: %if aarch64-registered-target %{tco --target=aarch64-unknown-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-AARCH64 %}
+// RUN: %if x86-registered-target %{tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-X86 %}
+// RUN: %if powerpc-registered-target %{tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefixes=CHECK,CHECK-PPC %}
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy()
-// CHECK:         %[[VAL_0:.*]] = alloca i32, i64 1, align 4
+// CHECK-AARCH64: %[[VAL_3:.*]] = alloca [36 x i8], i64 1, align 1
+// CHECK-X86:     %[[VAL_3:.*]] = alloca [32 x i8], i64 1, align 1
+// CHECK-PPC:     %[[VAL_3:.*]] = alloca [4{{[0-8]+}} x i8], i64 1, align 1
 // CHECK:         %[[VAL_1:.*]] = alloca { ptr }, i64 1, align 8
+// CHECK:         %[[VAL_0:.*]] = alloca i32, i64 1, align 4
 // CHECK:         %[[VAL_2:.*]] = getelementptr { ptr }, ptr %[[VAL_1]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_0]], ptr %[[VAL_2]], align 8
 // CHECK:         store i32 1, ptr %[[VAL_0]], align 4
-// CHECK:         %[[VAL_3:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK:         call void @llvm.init.trampoline(ptr %[[VAL_3]], ptr @_QFtest_proc_dummyPtest_proc_dummy_a, ptr %[[VAL_1]])
 // CHECK:         %[[VAL_6:.*]] = call ptr @llvm.adjust.trampoline(ptr %[[VAL_3]])
 // CHECK:         call void @_QPtest_proc_dummy_other(ptr %[[VAL_6]])
 
 // CHECK-LABEL: define void @_QFtest_proc_dummyPtest_proc_dummy_a(ptr
-// CHECK-SAME:              %[[VAL_0:.*]], ptr nest %[[VAL_1:.*]])
+// CHECK-SAME:              captures(none) %[[VAL_0:.*]], ptr nest captures(none) %[[VAL_1:.*]])
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy_other(ptr
 // CHECK-SAME:              %[[VAL_0:.*]])
-// CHECK:         %[[VAL_1:.*]] = alloca i32, i64 1, align 4
-// CHECK:         store i32 4, ptr %[[VAL_1]], align 4
-// CHECK:         call void %[[VAL_0]](ptr %[[VAL_1]])
+// CHECK:         call void %[[VAL_0]](ptr %{{.*}})
 
 func.func @_QPtest_proc_dummy() {
   %c0_i32 = arith.constant 0 : i32
@@ -61,9 +63,12 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 }
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy_char()
-// CHECK:         %[[VAL_0:.*]] = alloca [40 x i8], i64 1, align 1
-// CHECK:         %[[VAL_1:.*]] = alloca [10 x i8], i64 1, align 1
+// CHECK-AARCH64: %[[VAL_20:.*]] = alloca [36 x i8], i64 1, align 1
+// CHECK-X86:     %[[VAL_20:.*]] = alloca [32 x i8], i64 1, align 1
+// CHECK-PPC:     %[[VAL_20:.*]] = alloca [4{{[0-8]+}} x i8], i64 1, align 1
 // CHECK:         %[[VAL_2:.*]] = alloca { { ptr, i64 } }, i64 1, align 8
+// CHECK:         %[[VAL_1:.*]] = alloca [10 x i8], i64 1, align 1
+// CHECK:         %[[VAL_0:.*]] = alloca [40 x i8], i64 1, align 1
 // CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i32 0, i32 0
 // CHECK:         %[[VAL_5:.*]] = insertvalue { ptr, i64 } undef, ptr %[[VAL_1]], 0
 // CHECK:         %[[VAL_6:.*]] = insertvalue { ptr, i64 } %[[VAL_5]], i64 10, 1
@@ -75,7 +80,6 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_15:.*]] = icmp sgt i64 %[[VAL_13]], 0
 // CHECK:         %[[VAL_18:.*]] = getelementptr [10 x [1 x i8]], ptr %[[VAL_1]], i32 0, i64 %[[VAL_11]]
 // CHECK:         store [1 x i8] c" ", ptr %[[VAL_18]], align 1
-// CHECK:         %[[VAL_20:.*]] = alloca [32 x i8], i64 1, align 1
 // CHECK:         call void @llvm.init.trampoline(ptr %[[VAL_20]], ptr @_QFtest_proc_dummy_charPgen_message, ptr %[[VAL_2]])
 // CHECK:         %[[VAL_23:.*]] = call ptr @llvm.adjust.trampoline(ptr %[[VAL_20]])
 // CHECK:         %[[VAL_25:.*]] = insertvalue { ptr, i64 } undef, ptr %[[VAL_23]], 0
@@ -88,7 +92,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         call void @llvm.stackrestore.p0(ptr %[[VAL_27]])
 
 // CHECK-LABEL: define { ptr, i64 } @_QFtest_proc_dummy_charPgen_message(ptr
-// CHECK-SAME:                %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest %[[VAL_2:.*]])
+// CHECK-SAME:                captures(none) %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr nest captures(none) %[[VAL_2:.*]])
 // CHECK:         %[[VAL_3:.*]] = getelementptr { { ptr, i64 } }, ptr %[[VAL_2]], i32 0, i32 0
 // CHECK:         %[[VAL_4:.*]] = load { ptr, i64 }, ptr %[[VAL_3]], align 8
 // CHECK:         %[[VAL_5:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 0

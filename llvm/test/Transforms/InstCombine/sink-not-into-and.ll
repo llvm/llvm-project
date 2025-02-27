@@ -40,7 +40,7 @@ define i1 @n1(i1 %i1, i32 %v2, i32 %v3) {
 define i1 @n2(i32 %v0, i32 %v1, i1 %i2) {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[I3:%.*]] = and i1 [[I1]], [[I2:%.*]]
+; CHECK-NEXT:    [[I3:%.*]] = and i1 [[I2:%.*]], [[I1]]
 ; CHECK-NEXT:    [[I4:%.*]] = xor i1 [[I3]], true
 ; CHECK-NEXT:    ret i1 [[I4]]
 ;

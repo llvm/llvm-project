@@ -24,6 +24,14 @@ def verbose: F<"verbose">,
   HelpText<"Enable verbose mode.">,
   Group<grp_general>;
 
+def quiet: F<"quiet">,
+  HelpText<"Enable quiet mode.">,
+  Group<grp_general>;
+def: Flag<["-"], "q">,
+  Alias<quiet>,
+  HelpText<"Alias for --quiet">,
+  Group<grp_general>;
+
 def keep_func_for_static: F<"keep-function-for-static">,
   HelpText<"Make a static variable keep the enclosing function even if it would have been omitted otherwise.">,
   Group<grp_general>;
@@ -55,6 +63,10 @@ def no_output: F<"no-output">,
 
 def no_swiftmodule_timestamp: F<"no-swiftmodule-timestamp">,
   HelpText<"Don't check timestamp for swiftmodule files.">,
+  Group<grp_general>;
+
+def no_object_timestamp: F<"no-object-timestamp">,
+  HelpText<"Don't check timestamp for object files.">,
   Group<grp_general>;
 
 def no_odr: F<"no-odr">,
@@ -121,24 +133,18 @@ def: Joined<["--", "-"], "oso-prepend-path=">, Alias<oso_prepend_path>;
 
 def object_prefix_map: Separate<["--", "-"], "object-prefix-map">,
     MetaVarName<"<prefix=remapped>">,
-    HelpText<"Remap object file paths (but no source paths) before processing."
-             "Use this for Clang objects where the module cache location was"
-             "remapped using -fdebug-prefix-map; to help dsymutil"
+    HelpText<"Remap object file paths (but no source paths) before processing. "
+             "Use this for Clang objects where the module cache location was "
+             "remapped using -fdebug-prefix-map; to help dsymutil "
              "find the Clang module cache.">,
     Group<grp_general>;
 def: Joined<["--", "-"], "object-prefix-map=">, Alias<object_prefix_map>;
 
-def symbolmap: Separate<["--", "-"], "symbol-map">,
-  MetaVarName<"<bcsymbolmap>">,
-  HelpText<"Updates the existing dSYMs inplace using symbol map specified.">,
-  Group<grp_general>;
-def: Joined<["--", "-"], "symbol-map=">, Alias<symbolmap>;
-
 def arch: Separate<["--", "-"], "arch">,
   MetaVarName<"<arch>">,
-  HelpText<"Link DWARF debug information only for specified CPU architecture"
-           "types. This option can be specified multiple times, once for each"
-           "desired architecture. All CPU architectures will be linked by"
+  HelpText<"Link DWARF debug information only for specified CPU architecture "
+           "types. This option can be specified multiple times, once for each "
+           "desired architecture. All CPU architectures will be linked by "
            "default.">,
   Group<grp_general>;
 def: Joined<["--", "-"], "arch=">, Alias<arch>;
@@ -198,13 +204,13 @@ def remarks_drop_without_debug: Flag<["--", "-"], "remarks-drop-without-debug">,
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'apple'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
 
 def build_variant_suffix: Separate<["--", "-"], "build-variant-suffix">,
   MetaVarName<"<suffix=buildvariant>">,
-  HelpText<"Specify the build variant suffix used to build the executabe file.">,
+  HelpText<"Specify the build variant suffix used to build the executable file.">,
   Group<grp_general>;
 def: Joined<["--", "-"], "build-variant-suffix=">, Alias<build_variant_suffix>;
 

@@ -180,7 +180,7 @@ for.body:                                         ; preds = %for.body, %entry
 
   %a = load ptr, ptr %Aidx , align 8
   %c = getelementptr i8, ptr %a, i64 57
-  %c.i64p = ptrtoint i8* %c to i64
+  %c.i64p = ptrtoint ptr %c to i64
   store i64 %c.i64p, ptr %Cidx, align 8
 
   %exitcond = icmp eq i64 %indvars.iv.next, %N
@@ -217,7 +217,7 @@ define void @f4(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %N) {
 ; CHECK-NEXT:    [[STORE_FORWARD_CAST]] = bitcast i32 [[A_P1]] to <2 x half>
 ; CHECK-NEXT:    store i32 [[A_P1]], ptr [[AIDX_NEXT]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = load <2 x half>, ptr [[AIDX]], align 4
-; CHECK-NEXT:    [[C:%.*]] = fmul <2 x half> [[STORE_FORWARDED]], <half 0xH4000, half 0xH4000>
+; CHECK-NEXT:    [[C:%.*]] = fmul <2 x half> [[STORE_FORWARDED]], splat (half 0xH4000)
 ; CHECK-NEXT:    [[C_INT:%.*]] = bitcast <2 x half> [[C]] to i32
 ; CHECK-NEXT:    store i32 [[C_INT]], ptr [[CIDX]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
@@ -241,7 +241,7 @@ for.body:                                         ; preds = %for.body, %entry
   %a_p1 = add i32 %b, 2
   store i32 %a_p1, ptr %Aidx_next, align 4
 
-  %a = load <2 x half>, <2 x half>* %Aidx, align 4
+  %a = load <2 x half>, ptr %Aidx, align 4
   %c = fmul <2 x half> %a, <half 2.0, half 2.0>
   %c.int = bitcast <2 x half> %c to i32
   store i32 %c.int, ptr %Cidx, align 4
@@ -297,7 +297,7 @@ for.body:                                         ; preds = %for.body, %entry
 
   %a = load ptr, ptr %Aidx , align 8
   %c = getelementptr i8, ptr %a, i32 57
-  %c.i64p = ptrtoint i8* %c to i32
+  %c.i64p = ptrtoint ptr %c to i32
   store i32 %c.i64p, ptr %Cidx, align 8
 
   %exitcond = icmp eq i64 %indvars.iv.next, %N

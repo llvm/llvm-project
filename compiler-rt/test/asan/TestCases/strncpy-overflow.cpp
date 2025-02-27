@@ -6,14 +6,15 @@
 // REQUIRES: compiler-rt-optimized
 // REQUIRES: stable-runtime
 
-#include <string.h>
+#include "defines.h"
 #include <stdlib.h>
+#include <string.h>
 
 // We need a way to prevent the optimize from eliminating the
 // strncpy below (which otherwises writes to dead storage).  We
 // need the read to be out-of-line to prevent memory forwarding
 // from making the memory dead again.
-int sink_memory(int N, char *p) __attribute__((noinline));
+int ATTRIBUTE_NOINLINE sink_memory(int N, char *p);
 int sink_memory(int N, char *p) {
   int sum = 0;
   for (int i = 0; i < N; i++)
@@ -33,6 +34,6 @@ int main(int argc, char **argv) {
   // CHECK: {{0x.* is located 0 bytes after 9-byte region}}
   // CHECK: {{allocated by thread T0 here:}}
   // CHECK: {{    #0 0x.* in .*malloc}}
-  // CHECK: {{    #1 0x.* in main .*strncpy-overflow.cpp:}}[[@LINE-8]]
+  // CHECK: {{    #[1-3] 0x.* in main .*strncpy-overflow.cpp:}}[[@LINE-8]]
   return rval + sink_memory(9, short_buffer);
 }

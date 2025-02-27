@@ -33,8 +33,10 @@ static void extractSpecialGlobalsFromModule(Oracle &O,
 
   for (StringRef Name : SpecialGlobalNames) {
     if (auto *Used = Program.getNamedGlobal(Name)) {
-      Used->replaceAllUsesWith(getDefaultValue(Used->getType()));
-      Used->eraseFromParent();
+      if (!O.shouldKeep()) {
+        Used->replaceAllUsesWith(getDefaultValue(Used->getType()));
+        Used->eraseFromParent();
+      }
     }
   }
 }

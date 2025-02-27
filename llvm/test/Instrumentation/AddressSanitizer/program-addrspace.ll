@@ -16,7 +16,7 @@ target datalayout = "P1"
 
 define i1 @b(i64 %c) addrspace(1) {
   %cast = inttoptr i64 %c to ptr addrspace(42)
-  %cmp = icmp ugt ptr addrspace(42) %cast, getelementptr inbounds ([1 x i32], ptr addrspace(42) @a, i64 0, i64 0)
+  %cmp = icmp ugt ptr addrspace(42) %cast, @a
   ret i1 %cmp
 }
 

@@ -67,7 +67,7 @@ class CppDataFormatterTestCase(TestBase):
         )
 
         # gcc4.2 on Mac OS X skips typedef chains in the DWARF output
-        if self.getCompiler() in ["clang", "llvm-gcc"]:
+        if self.getCompiler() in ["clang"]:
             self.expect(
                 "frame variable",
                 patterns=[

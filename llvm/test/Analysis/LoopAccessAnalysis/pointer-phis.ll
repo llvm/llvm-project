@@ -501,14 +501,6 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:            %lv3 = load i16, ptr %c.sink, align 2 ->
 ; CHECK-NEXT:            store i16 %add, ptr %c.sink, align 1
 ; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %lv = load i16, ptr %A, align 1 ->
-; CHECK-NEXT:            store i16 %lv, ptr %A, align 1
-; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i16 %lv, ptr %A, align 1 ->
-; CHECK-NEXT:            %lv2 = load i16, ptr %A, align 1
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP10:0x[0-9a-f]+]]):

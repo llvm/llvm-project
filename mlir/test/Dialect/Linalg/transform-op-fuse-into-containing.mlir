@@ -365,7 +365,7 @@ module {
       // linalg.generic is tileable. The op is tiled and fused.
       %fused, %containing = transform.structured.fuse_into_containing_op %0 into %1
         : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
-      transform.test_print_remark_at_operand %containing, "new containing op" : !transform.any_op
+      transform.debug.emit_remark_at %containing, "new containing op" : !transform.any_op
       transform.yield
     }
   }

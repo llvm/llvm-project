@@ -17,7 +17,6 @@
 #define LLVM_ADT_APFIXEDPOINT_H
 
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
@@ -115,6 +114,15 @@ public:
   }
   bool operator!=(FixedPointSemantics Other) const { return !(*this == Other); }
 
+  /// Convert the semantics to a 32-bit unsigned integer.
+  /// The result is dependent on the host endianness and not stable across LLVM
+  /// versions. See getFromOpaqueInt() to convert it back to a
+  /// FixedPointSemantics object.
+  uint32_t toOpaqueInt() const;
+  /// Create a FixedPointSemantics object from an integer created via
+  /// toOpaqueInt().
+  static FixedPointSemantics getFromOpaqueInt(uint32_t);
+
 private:
   unsigned Width          : WidthBitWidth;
   signed int LsbWeight    : LsbWeightBitWidth;
@@ -160,7 +168,9 @@ public:
   }
 
   APFixedPoint(uint64_t Val, const FixedPointSemantics &Sema)
-      : APFixedPoint(APInt(Sema.getWidth(), Val, Sema.isSigned()), Sema) {}
+      : APFixedPoint(APInt(Sema.getWidth(), Val, Sema.isSigned(),
+                           /*implicitTrunc=*/true),
+                     Sema) {}
 
   // Zero initialization.
   APFixedPoint(const FixedPointSemantics &Sema) : APFixedPoint(0, Sema) {}
@@ -235,7 +245,7 @@ public:
   std::string toString() const {
     SmallString<40> S;
     toString(S);
-    return std::string(S.str());
+    return std::string(S);
   }
 
   void print(raw_ostream &) const;
@@ -260,6 +270,7 @@ public:
 
   static APFixedPoint getMax(const FixedPointSemantics &Sema);
   static APFixedPoint getMin(const FixedPointSemantics &Sema);
+  static APFixedPoint getEpsilon(const FixedPointSemantics &Sema);
 
   /// Given a floating point semantic, return the next floating point semantic
   /// with a larger exponent and larger or equal mantissa.

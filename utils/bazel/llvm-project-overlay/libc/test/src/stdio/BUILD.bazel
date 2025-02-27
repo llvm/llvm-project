@@ -61,7 +61,6 @@ libc_test(
     ],
     deps = [
         "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_platform_defs",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -120,4 +119,56 @@ libc_test(
     libc_function_deps = [
         "//libc:vfprintf",
     ],
+)
+
+libc_test(
+    name = "remove_test",
+    srcs = ["remove_test.cpp"],
+    libc_function_deps = [
+        "//libc:remove",
+        "//libc:open",
+        "//libc:mkdirat",
+        "//libc:access",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "sscanf_test",
+    srcs = ["sscanf_test.cpp"],
+    libc_function_deps = [
+        "//libc:sscanf",
+    ],
+    deps = [
+        "//libc:__support_cpp_limits",
+        "//libc:__support_fputil_fp_bits",
+        "//libc:hdr_stdio_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "fscanf_test",
+    srcs = ["fscanf_test.cpp"],
+    libc_function_deps = [
+        "//libc:fscanf",
+    ],
+    deps = ["//libc:__support_cpp_string_view"],
+)
+
+libc_test(
+    name = "vsscanf_test",
+    srcs = ["vsscanf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vsscanf",
+    ],
+)
+
+libc_test(
+    name = "vfscanf_test",
+    srcs = ["vfscanf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vfscanf",
+    ],
+    deps = ["//libc:__support_cpp_string_view"],
 )

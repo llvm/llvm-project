@@ -5,6 +5,8 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a14 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a15 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a16 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v2 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3 -S %s | FileCheck --check-prefix=INTERLEAVE-4-VLA %s
 
 ; Tests for selecting interleave counts for loops with loads and stores.
 
@@ -33,20 +35,14 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4:       vector.body:
 ; INTERLEAVE-4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; INTERLEAVE-4-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 16
-; INTERLEAVE-4-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 32
-; INTERLEAVE-4-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 48
 ; INTERLEAVE-4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP1]]
-; INTERLEAVE-4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP2]]
-; INTERLEAVE-4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP3]]
-; INTERLEAVE-4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP4]]
 ; INTERLEAVE-4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 0
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP9]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 16
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP10]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 32
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i8>, ptr [[TMP11]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 48
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP9]], align 1
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP10]], align 1
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i8>, ptr [[TMP11]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD6:%.*]] = load <16 x i8>, ptr [[TMP12]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP13:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; INTERLEAVE-4-NEXT:    [[TMP14:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD4]], [[BROADCAST_SPLAT]]
@@ -61,16 +57,13 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-NEXT:    [[TMP23:%.*]] = select <16 x i1> [[TMP15]], <16 x i8> [[BROADCAST_SPLAT]], <16 x i8> [[TMP19]]
 ; INTERLEAVE-4-NEXT:    [[TMP24:%.*]] = select <16 x i1> [[TMP16]], <16 x i8> [[BROADCAST_SPLAT]], <16 x i8> [[TMP20]]
 ; INTERLEAVE-4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP1]]
-; INTERLEAVE-4-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP2]]
-; INTERLEAVE-4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP3]]
-; INTERLEAVE-4-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP4]]
 ; INTERLEAVE-4-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 0
-; INTERLEAVE-4-NEXT:    store <16 x i8> [[TMP21]], ptr [[TMP29]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 16
-; INTERLEAVE-4-NEXT:    store <16 x i8> [[TMP22]], ptr [[TMP30]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 32
-; INTERLEAVE-4-NEXT:    store <16 x i8> [[TMP23]], ptr [[TMP31]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i32 48
+; INTERLEAVE-4-NEXT:    store <16 x i8> [[TMP21]], ptr [[TMP29]], align 1
+; INTERLEAVE-4-NEXT:    store <16 x i8> [[TMP22]], ptr [[TMP30]], align 1
+; INTERLEAVE-4-NEXT:    store <16 x i8> [[TMP23]], ptr [[TMP31]], align 1
 ; INTERLEAVE-4-NEXT:    store <16 x i8> [[TMP24]], ptr [[TMP32]], align 1
 ; INTERLEAVE-4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; INTERLEAVE-4-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -151,12 +144,10 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-2:       vector.body:
 ; INTERLEAVE-2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; INTERLEAVE-2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 16
 ; INTERLEAVE-2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP1]]
-; INTERLEAVE-2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP2]]
 ; INTERLEAVE-2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
-; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 16
+; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP6]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP7:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; INTERLEAVE-2-NEXT:    [[TMP8:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD4]], [[BROADCAST_SPLAT]]
@@ -165,10 +156,9 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-2-NEXT:    [[TMP11:%.*]] = select <16 x i1> [[TMP7]], <16 x i8> [[BROADCAST_SPLAT]], <16 x i8> [[TMP9]]
 ; INTERLEAVE-2-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP8]], <16 x i8> [[BROADCAST_SPLAT]], <16 x i8> [[TMP10]]
 ; INTERLEAVE-2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP1]]
-; INTERLEAVE-2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP2]]
 ; INTERLEAVE-2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
-; INTERLEAVE-2-NEXT:    store <16 x i8> [[TMP11]], ptr [[TMP15]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 16
+; INTERLEAVE-2-NEXT:    store <16 x i8> [[TMP11]], ptr [[TMP15]], align 1
 ; INTERLEAVE-2-NEXT:    store <16 x i8> [[TMP12]], ptr [[TMP16]], align 1
 ; INTERLEAVE-2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; INTERLEAVE-2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -224,6 +214,12 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-2-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; INTERLEAVE-2:       exit:
 ; INTERLEAVE-2-NEXT:    ret void
+;
+; INTERLEAVE-4-VLA-LABEL: @interleave_single_load_store(
+; INTERLEAVE-4-VLA:       call <vscale x 16 x i8> @llvm.smax.nxv16i8(
+; INTERLEAVE-4-VLA-NEXT:  call <vscale x 16 x i8> @llvm.smax.nxv16i8(
+; INTERLEAVE-4-VLA-NEXT:  call <vscale x 16 x i8> @llvm.smax.nxv16i8(
+; INTERLEAVE-4-VLA-NEXT:  call <vscale x 16 x i8> @llvm.smax.nxv16i8(
 ;
 entry:
   br label %loop

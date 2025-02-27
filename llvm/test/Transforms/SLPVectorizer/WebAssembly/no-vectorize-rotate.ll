@@ -18,7 +18,7 @@ define void @foo(<2 x i64> %x, <4 x i32> %y, ptr %out) #0 {
 ; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i32> [[Y]], i64 3
 ; CHECK-NEXT:    [[CONV17:%.*]] = zext i32 [[E]] to i64
 ; CHECK-NEXT:    [[F:%.*]] = tail call i64 @llvm.fshl.i64(i64 [[D]], i64 [[D]], i64 [[CONV17]])
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, ptr [[OUT]], i32 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i32 8
 ; CHECK-NEXT:    store i64 [[F]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    ret void
 ;

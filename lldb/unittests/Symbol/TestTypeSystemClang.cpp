@@ -13,6 +13,7 @@
 #include "lldb/Core/Declaration.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/lldb-enumerations.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -231,6 +232,37 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
 }
 
+TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
+  // Test that we can access type-info of builtin Clang AST
+  // types without crashing even when the target triple is
+  // empty.
+
+  TypeSystemClang ast("empty triple AST", llvm::Triple{});
+
+  // This test only makes sense if the builtin ASTContext types were
+  // not initialized.
+  ASSERT_TRUE(ast.getASTContext().VoidPtrTy.isNull());
+
+  EXPECT_FALSE(ast.GetBuiltinTypeByName(ConstString("int")).IsValid());
+  EXPECT_FALSE(ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
+                      "char", dwarf::DW_ATE_signed_char, 8)
+                   .IsValid());
+  EXPECT_FALSE(ast.GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint, 8)
+                   .IsValid());
+  EXPECT_FALSE(ast.GetPointerSizedIntType(/*is_signed=*/false));
+  EXPECT_FALSE(ast.GetIntTypeFromBitSize(8, /*is_signed=*/false));
+
+  CompilerType record_type = ast.CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "Record",
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  TypeSystemClang::StartTagDeclarationDefinition(record_type);
+  EXPECT_EQ(ast.AddFieldToRecordType(record_type, "field", record_type,
+                                     eAccessPublic, /*bitfield_bit_size=*/8),
+            nullptr);
+  TypeSystemClang::CompleteTagDeclarationDefinition(record_type);
+}
+
 TEST_F(TestTypeSystemClang, TestDisplayName) {
   TypeSystemClang ast("some name", llvm::Triple());
   EXPECT_EQ("some name", ast.getDisplayName());
@@ -281,6 +313,16 @@ TEST_F(TestTypeSystemClang, TestGetEnumIntegerTypeBasicTypes) {
   }
 }
 
+TEST_F(TestTypeSystemClang, TestEnumerationValueSign) {
+  CompilerType enum_type = m_ast->CreateEnumerationType(
+      "my_enum_signed", m_ast->GetTranslationUnitDecl(),
+      OptionalClangModuleID(), Declaration(),
+      m_ast->GetBasicType(lldb::eBasicTypeSignedChar), false);
+  auto *enum_decl = m_ast->AddEnumerationValueToEnumerationType(
+      enum_type, Declaration(), "minus_one", -1, 8);
+  EXPECT_TRUE(enum_decl->getInitVal().isSigned());
+}
+
 TEST_F(TestTypeSystemClang, TestOwningModule) {
   auto holder =
       std::make_unique<clang_utils::TypeSystemClangHolder>("module_ast");
@@ -296,14 +338,14 @@ TEST_F(TestTypeSystemClang, TestOwningModule) {
   CompilerType record_type = ast.CreateRecordType(
       nullptr, OptionalClangModuleID(200), lldb::eAccessPublic, "FooRecord",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   auto *rd = TypeSystemClang::GetAsRecordDecl(record_type);
   EXPECT_FALSE(!rd);
   EXPECT_EQ(rd->getOwningModuleID(), 200u);
 
   CompilerType class_type =
       ast.CreateObjCClass("objc_class", ast.GetTranslationUnitDecl(),
-                          OptionalClangModuleID(300), false, false);
+                          OptionalClangModuleID(300), false);
   auto *cd = TypeSystemClang::GetAsObjCInterfaceDecl(class_type);
   EXPECT_FALSE(!cd);
   EXPECT_EQ(cd->getOwningModuleID(), 300u);
@@ -317,7 +359,7 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(100), lldb::eAccessPublic, "FooRecord",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   // Clang builtin type and record type should pass
   EXPECT_TRUE(ClangUtil::IsClangType(bool_type));
   EXPECT_TRUE(ClangUtil::IsClangType(record_type));
@@ -330,7 +372,7 @@ TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "FooRecord",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   QualType qt;
 
   qt = ClangUtil::GetQualType(record_type);
@@ -403,7 +445,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType empty_base = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyBase",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_base);
   TypeSystemClang::CompleteTagDeclarationDefinition(empty_base);
 
@@ -415,7 +457,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType non_empty_base = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "NonEmptyBase",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(non_empty_base);
   FieldDecl *non_empty_base_field_decl = m_ast->AddFieldToRecordType(
       non_empty_base, "MyField", int_type, eAccessPublic, 0);
@@ -432,7 +474,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType empty_derived = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived);
   std::unique_ptr<clang::CXXBaseSpecifier> non_empty_base_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -455,7 +497,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType empty_derived2 = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived2",
       llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, nullptr);
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived2);
   std::unique_ptr<CXXBaseSpecifier> non_empty_vbase_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -483,7 +525,17 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   infos.InsertArg("I", TemplateArgument(m_ast->getASTContext(), arg,
                                         m_ast->getASTContext().IntTy));
 
-  // template<typename T, int I> struct foo;
+  llvm::APFloat float_arg(5.5f);
+  infos.InsertArg("F", TemplateArgument(m_ast->getASTContext(),
+                                        m_ast->getASTContext().FloatTy,
+                                        clang::APValue(float_arg)));
+
+  llvm::APFloat double_arg(-15.2);
+  infos.InsertArg("D", TemplateArgument(m_ast->getASTContext(),
+                                        m_ast->getASTContext().DoubleTy,
+                                        clang::APValue(double_arg)));
+
+  // template<typename T, int I, float F, double D> struct foo;
   ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
       m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), eAccessPublic,
       "foo", llvm::to_underlying(clang::TagTypeKind::Struct), infos);
@@ -513,6 +565,10 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
 
   CompilerType int_type(m_ast->weak_from_this(),
                         m_ast->getASTContext().IntTy.getAsOpaquePtr());
+  CompilerType float_type(m_ast->weak_from_this(),
+                          m_ast->getASTContext().FloatTy.getAsOpaquePtr());
+  CompilerType double_type(m_ast->weak_from_this(),
+                           m_ast->getASTContext().DoubleTy.getAsOpaquePtr());
   for (CompilerType t : {type, typedef_type, auto_type}) {
     SCOPED_TRACE(t.GetTypeName().AsCString());
 
@@ -535,8 +591,32 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
     auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1,
                                                      expand_pack);
     ASSERT_NE(std::nullopt, result);
-    EXPECT_EQ(arg, result->value);
+    EXPECT_EQ(arg, result->value.GetAPSInt());
     EXPECT_EQ(int_type, result->type);
+
+    EXPECT_EQ(
+        m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 2, expand_pack),
+        eTemplateArgumentKindStructuralValue);
+    EXPECT_EQ(
+        m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 2, expand_pack),
+        CompilerType());
+    auto float_result = m_ast->GetIntegralTemplateArgument(
+        t.GetOpaqueQualType(), 2, expand_pack);
+    ASSERT_NE(std::nullopt, float_result);
+    EXPECT_EQ(float_arg, float_result->value.GetAPFloat());
+    EXPECT_EQ(float_type, float_result->type);
+
+    EXPECT_EQ(
+        m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 3, expand_pack),
+        eTemplateArgumentKindStructuralValue);
+    EXPECT_EQ(
+        m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 3, expand_pack),
+        CompilerType());
+    auto double_result = m_ast->GetIntegralTemplateArgument(
+        t.GetOpaqueQualType(), 3, expand_pack);
+    ASSERT_NE(std::nullopt, double_result);
+    EXPECT_EQ(double_arg, double_result->value.GetAPFloat());
+    EXPECT_EQ(double_type, double_result->type);
   }
 }
 
@@ -925,7 +1005,6 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   // Create an interface decl and mark it as having external storage.
   CompilerType c = m_ast->CreateObjCClass("A", m_ast->GetTranslationUnitDecl(),
                                           OptionalClangModuleID(),
-                                          /*IsForwardDecl*/ false,
                                           /*IsInternal*/ false);
   ObjCInterfaceDecl *interface = m_ast->GetAsObjCInterfaceDecl(c);
   m_ast->SetHasExternalStorage(c.GetOpaqueQualType(), true);
@@ -941,8 +1020,7 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   bool artificial = false;
   bool objc_direct = false;
   clang::ObjCMethodDecl *method = TypeSystemClang::AddMethodToObjCObjectType(
-      c, "-[A foo]", func_type, lldb::eAccessPublic, artificial, variadic,
-      objc_direct);
+      c, "-[A foo]", func_type, artificial, variadic, objc_direct);
   ASSERT_NE(method, nullptr);
 
   // The interface decl should still have external lexical storage.
@@ -999,4 +1077,46 @@ TEST_F(TestTypeSystemClang, GetDeclContextByNameWhenMissingSymbolFile) {
       m_ast->DeclContextFindDeclByName(nullptr, ConstString("SomeName"), true);
 
   EXPECT_TRUE(decls.empty());
+}
+
+TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
+  // Tests that AddMethodToCXXRecordType creates ParmVarDecl's with
+  // a correct clang::DeclContext.
+
+  llvm::StringRef class_name = "S";
+  CompilerType t = clang_utils::createRecord(*m_ast, class_name);
+  m_ast->StartTagDeclarationDefinition(t);
+
+  CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  const bool is_virtual = false;
+  const bool is_static = false;
+  const bool is_inline = false;
+  const bool is_explicit = true;
+  const bool is_attr_used = false;
+  const bool is_artificial = false;
+
+  llvm::SmallVector<CompilerType> param_types{
+      m_ast->GetBasicType(lldb::eBasicTypeInt),
+      m_ast->GetBasicType(lldb::eBasicTypeShort)};
+  CompilerType function_type = m_ast->CreateFunctionType(
+      return_type, param_types.data(), /*num_params*/ param_types.size(),
+      /*variadic=*/false, /*quals*/ 0U);
+  m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), "myFunc", nullptr, function_type,
+      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+      is_explicit, is_attr_used, is_artificial);
+
+  // Complete the definition and check the created record.
+  m_ast->CompleteTagDeclarationDefinition(t);
+
+  auto *record = llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(t));
+
+  auto method_it = record->method_begin();
+  ASSERT_NE(method_it, record->method_end());
+
+  EXPECT_EQ(method_it->getNumParams(), param_types.size());
+
+  // DeclContext of each parameter should be the CXXMethodDecl itself.
+  EXPECT_EQ(method_it->getParamDecl(0)->getDeclContext(), *method_it);
+  EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
 }

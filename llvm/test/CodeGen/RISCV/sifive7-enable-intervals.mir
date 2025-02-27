@@ -1,0 +1,57 @@
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-x280 -run-pass=machine-scheduler      \
+# RUN:  -debug-only=machine-scheduler -misched-dump-schedule-trace             \
+# RUN:  -misched-prera-direction=topdown -o - %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# The purpose of this test is to show that the VADD instructions are issued so
+# that the SiFive7VA is saturated.
+---
+name:            add_m2
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $v8m2, $v10m2, $v12m2, $v14m2, $x10
+
+    %4:gprnox0 = COPY $x10
+    %3:vrm2 = COPY $v14m2
+    %2:vrm2 = COPY $v12m2
+    %1:vrm2 = COPY $v10m2
+    %0:vrm2 = COPY $v8m2
+    dead $x0 = PseudoVSETVLI %4, 217 /* e64, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+    %5:vrm2 = PseudoVADD_VV_M2 undef %5, %0, %1, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    %6:vrm2 = PseudoVADD_VV_M2 undef %6, %3, %2, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    %7:vrm2 = PseudoVADD_VV_M2 undef %7, %5, %6, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    $v8m2 = COPY %7
+    PseudoRET implicit $v8m2
+
+# CHECK: *** Final schedule for %bb.0 ***
+# CHECK-NEXT:  * Schedule table (TopDown):
+# CHECK-NEXT:   i: issue
+# CHECK-NEXT:   x: resource booked
+# CHECK-NEXT: Cycle              | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
+# CHECK-NEXT: SU(0)              | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeAB | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(1)              | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeAB | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(2)              |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeAB |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(3)              |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeAB |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(4)              |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeAB |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(5)              |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:       SiFive7PipeA |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:      SiFive7PipeAB |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(7)              |    |    |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:         SiFive7VCQ |    |    |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:          SiFive7VA |    |    |    |    |    | x  | x  | x  | x  |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(6)              |    |    |    |    |    |    |    |    | i  |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:         SiFive7VCQ |    |    |    |    |    |    |    |    | x  |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:          SiFive7VA |    |    |    |    |    |    |    |    |    | x  | x  | x  | x  |    |    |    |    |
+# CHECK-NEXT: SU(8)              |    |    |    |    |    |    |    |    |    |    |    |    | i  |    |    |    |    |
+# CHECK-NEXT:         SiFive7VCQ |    |    |    |    |    |    |    |    |    |    |    |    | x  |    |    |    |    |
+# CHECK-NEXT:          SiFive7VA |    |    |    |    |    |    |    |    |    |    |    |    |    | x  | x  | x  | x  |
+# CHECK-NEXT: SU(9)              |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    | i  |
+# CHECK-NEXT:      SiFive7PipeAB |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    | x  |
+
+...

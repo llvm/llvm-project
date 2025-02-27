@@ -12,12 +12,13 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 
 namespace llvm {
 
 class LPMUpdater;
 class Loop;
-class Pass;
 class StringRef;
 class raw_ostream;
 
@@ -77,6 +78,14 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
+};
+
+/// A marker analysis to determine if SimpleLoopUnswitch should run again on a
+/// given loop.
+struct ShouldRunExtraSimpleLoopUnswitch
+    : public ShouldRunExtraPasses<ShouldRunExtraSimpleLoopUnswitch>,
+      public AnalysisInfoMixin<ShouldRunExtraSimpleLoopUnswitch> {
+  static AnalysisKey Key;
 };
 
 } // end namespace llvm

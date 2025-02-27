@@ -12,20 +12,11 @@
 
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/BinaryContext.h"
-#include "bolt/Core/BinaryFunction.h"
+#include "bolt/Utils/NameResolver.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 namespace bolt {
-
-/// Hashing a 64-bit integer to a 16-bit one.
-uint16_t hash_64_to_16(const uint64_t Hash) {
-  uint16_t Res = (uint16_t)(Hash & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 16) & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 32) & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 48) & 0xFFFF);
-  return Res;
-}
 
 std::string hashInteger(uint64_t Value) {
   std::string HashString;
@@ -154,7 +145,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
       continue;
     }
 
-    std::string Mnemonic = BC.InstPrinter->getMnemonic(&Inst).first;
+    std::string Mnemonic = BC.InstPrinter->getMnemonic(Inst).first;
     llvm::erase_if(Mnemonic, [](unsigned char ch) { return std::isspace(ch); });
     Opcodes.insert(Mnemonic);
   }
@@ -162,6 +153,51 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
   std::string HashString;
   for (const std::string &Opcode : Opcodes)
     HashString.append(Opcode);
+  return HashString;
+}
+
+/// An even looser hash level relative to $ hashBlockLoose to use with stale
+/// profile matching, composed of the names of a block's called functions in
+/// lexicographic order.
+std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
+  // The hash is computed by creating a string of all lexicographically ordered
+  // called function names.
+  std::vector<std::string> FunctionNames;
+  for (const MCInst &Instr : BB) {
+    // Skip non-call instructions.
+    if (!BC.MIB->isCall(Instr))
+      continue;
+    const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+    if (!CallSymbol)
+      continue;
+    FunctionNames.push_back(std::string(CallSymbol->getName()));
+  }
+  std::sort(FunctionNames.begin(), FunctionNames.end());
+  std::string HashString;
+  for (const std::string &FunctionName : FunctionNames)
+    HashString.append(FunctionName);
+
+  return HashString;
+}
+
+/// The same as the $hashBlockCalls function, but for profiled functions.
+std::string
+hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>
+                   &IdToYamlFunction,
+               const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+  std::vector<std::string> FunctionNames;
+  for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
+    auto It = IdToYamlFunction.find(CallSiteInfo.DestId);
+    if (It == IdToYamlFunction.end())
+      continue;
+    StringRef Name = NameResolver::dropNumNames(It->second->Name);
+    FunctionNames.push_back(std::string(Name));
+  }
+  std::sort(FunctionNames.begin(), FunctionNames.end());
+  std::string HashString;
+  for (const std::string &FunctionName : FunctionNames)
+    HashString.append(FunctionName);
+
   return HashString;
 }
 

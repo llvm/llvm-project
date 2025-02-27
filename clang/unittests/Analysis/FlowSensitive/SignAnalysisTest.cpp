@@ -133,7 +133,7 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
                     LatticeTransferState &State) {
   auto &A = State.Env.arena();
   const Formula *Comp;
-  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValue(*BO))) {
+  if (BoolValue *V = State.Env.get<BoolValue>(*BO)) {
     Comp = &V->formula();
   } else {
     Comp = &A.makeAtomRef(A.makeAtom());
@@ -364,18 +364,17 @@ public:
     LatticeTransferState State(L, Env);
     TransferMatchSwitch(Elt, getASTContext(), State);
   }
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override;
+  void join(QualType Type, const Value &Val1, const Environment &Env1,
+            const Value &Val2, const Environment &Env2, Value &MergedVal,
+            Environment &MergedEnv) override;
 
 private:
   CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };
 
-// Copied from crubit.
-BoolValue &mergeBoolValues(BoolValue &Bool1, const Environment &Env1,
-                           BoolValue &Bool2, const Environment &Env2,
-                           Environment &MergedEnv) {
+BoolValue &joinBoolValues(BoolValue &Bool1, const Environment &Env1,
+                          BoolValue &Bool2, const Environment &Env2,
+                          Environment &JoinedEnv) {
   if (&Bool1 == &Bool2) {
     return Bool1;
   }
@@ -383,41 +382,40 @@ BoolValue &mergeBoolValues(BoolValue &Bool1, const Environment &Env1,
   auto &B1 = Bool1.formula();
   auto &B2 = Bool2.formula();
 
-  auto &A = MergedEnv.arena();
-  auto &MergedBool = MergedEnv.makeAtomicBoolValue();
+  auto &A = JoinedEnv.arena();
+  auto &JoinedBool = JoinedEnv.makeAtomicBoolValue();
 
   // If `Bool1` and `Bool2` is constrained to the same true / false value,
-  // `MergedBool` can be constrained similarly without needing to consider the
-  // path taken - this simplifies the flow condition tracked in `MergedEnv`.
+  // `JoinedBool` can be constrained similarly without needing to consider the
+  // path taken - this simplifies the flow condition tracked in `JoinedEnv`.
   // Otherwise, information about which path was taken is used to associate
-  // `MergedBool` with `Bool1` and `Bool2`.
+  // `JoinedBool` with `Bool1` and `Bool2`.
   if (Env1.proves(B1) && Env2.proves(B2)) {
-    MergedEnv.assume(MergedBool.formula());
+    JoinedEnv.assume(JoinedBool.formula());
   } else if (Env1.proves(A.makeNot(B1)) && Env2.proves(A.makeNot(B2))) {
-    MergedEnv.assume(A.makeNot(MergedBool.formula()));
+    JoinedEnv.assume(A.makeNot(JoinedBool.formula()));
   }
-  return MergedBool;
+  return JoinedBool;
 }
 
-bool SignPropagationAnalysis::merge(QualType Type, const Value &Val1,
-                                    const Environment &Env1, const Value &Val2,
-                                    const Environment &Env2, Value &MergedVal,
-                                    Environment &MergedEnv) {
+void SignPropagationAnalysis::join(QualType Type, const Value &Val1,
+                                   const Environment &Env1, const Value &Val2,
+                                   const Environment &Env2, Value &JoinedVal,
+                                   Environment &JoinedEnv) {
   if (!Type->isIntegerType())
-    return false;
+    return;
   SignProperties Ps1 = getSignProperties(Val1, Env1);
   SignProperties Ps2 = getSignProperties(Val2, Env2);
   if (!Ps1.Neg || !Ps2.Neg)
-    return false;
-  BoolValue &MergedNeg =
-      mergeBoolValues(*Ps1.Neg, Env1, *Ps2.Neg, Env2, MergedEnv);
-  BoolValue &MergedZero =
-      mergeBoolValues(*Ps1.Zero, Env1, *Ps2.Zero, Env2, MergedEnv);
-  BoolValue &MergedPos =
-      mergeBoolValues(*Ps1.Pos, Env1, *Ps2.Pos, Env2, MergedEnv);
-  setSignProperties(MergedVal,
-                    SignProperties{&MergedNeg, &MergedZero, &MergedPos});
-  return true;
+    return;
+  BoolValue &JoinedNeg =
+      joinBoolValues(*Ps1.Neg, Env1, *Ps2.Neg, Env2, JoinedEnv);
+  BoolValue &JoinedZero =
+      joinBoolValues(*Ps1.Zero, Env1, *Ps2.Zero, Env2, JoinedEnv);
+  BoolValue &JoinedPos =
+      joinBoolValues(*Ps1.Pos, Env1, *Ps2.Pos, Env2, JoinedEnv);
+  setSignProperties(JoinedVal,
+                    SignProperties{&JoinedNeg, &JoinedZero, &JoinedPos});
 }
 
 template <typename Matcher>
@@ -891,6 +889,33 @@ TEST(SignAnalysisTest, BinaryEQ) {
         EXPECT_TRUE(isZero(A, ASTCtx, EnvZ));
         // p
         EXPECT_TRUE(isPositive(A, ASTCtx, EnvP));
+      },
+      LangStandard::lang_cxx17);
+}
+
+TEST(SignAnalysisTest, ComplexLoopCondition) {
+  std::string Code = R"(
+    int foo();
+    void fun() {
+      int a, b;
+      while ((a = foo()) > 0 && (b = foo()) > 0) {
+        a;
+        b;
+        // [[p]]
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *A = findValueDecl(ASTCtx, "a");
+        const ValueDecl *B = findValueDecl(ASTCtx, "b");
+
+        EXPECT_TRUE(isPositive(A, ASTCtx, Env));
+        EXPECT_TRUE(isPositive(B, ASTCtx, Env));
       },
       LangStandard::lang_cxx17);
 }

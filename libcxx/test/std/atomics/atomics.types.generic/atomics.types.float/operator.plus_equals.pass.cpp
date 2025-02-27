@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
-// XFAIL: LIBCXX-AIX-FIXME
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
-// Hangs with msan.
-// UNSUPPORTED: msan
+// XFAIL: !has-64-bit-atomics
+
+// Older versions of clang have a bug with atomic builtins affecting double and long double.
+// Fixed by 5fdd0948.
+// XFAIL: target=powerpc-ibm-{{.*}} && clang-18
 
 // floating-point-type operator+=(floating-point-type) volatile noexcept;
 // floating-point-type operator+=(floating-point-type) noexcept;
@@ -19,6 +19,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "test_helper.h"
@@ -39,7 +40,7 @@ void test_impl() {
 
   // +=
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     std::same_as<T> decltype(auto) r = a += T(1.2);
     assert(r == T(3.1) + T(1.2));
     assert(a.load() == T(3.1) + T(1.2));
@@ -75,7 +76,7 @@ void test_impl() {
       return res;
     };
 
-    assert(at.load() == times(1.234, number_of_threads * loop));
+    assert(at.load() == times(T(1.234), number_of_threads * loop));
   }
 
   // memory_order::seq_cst
@@ -98,7 +99,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

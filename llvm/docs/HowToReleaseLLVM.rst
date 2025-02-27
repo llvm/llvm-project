@@ -40,16 +40,16 @@ Release                         Approx. Date
 =============================== =========================
 *release branch: even releases* *4th Tue in January*
 *release branch: odd releases*  *4th Tue in July*
-X.0.0-rc1                       3 days after branch.
-X.0.0-rc2                       2 weeks after branch.
-X.0.0-rc3                       4 weeks after branch
-**X.0.0-final**                 **6 weeks after branch**
-**X.0.1**                       **8 weeks after branch**
-**X.0.2**                       **10 weeks after branch**
-**X.0.3**                       **12 weeks after branch**
-**X.0.4**                       **14 weeks after branch**
-**X.0.5**                       **16 weeks after branch**
-**X.0.6 (if necessary)**        **18 weeks after branch**
+X.1.0-rc1                       3 days after branch.
+X.1.0-rc2                       2 weeks after branch.
+X.1.0-rc3                       4 weeks after branch
+**X.1.0-final**                 **6 weeks after branch**
+**X.1.1**                       **8 weeks after branch**
+**X.1.2**                       **10 weeks after branch**
+**X.1.3**                       **12 weeks after branch**
+**X.1.4**                       **14 weeks after branch**
+**X.1.5**                       **16 weeks after branch**
+**X.1.6 (if necessary)**        **18 weeks after branch**
 =============================== =========================
 
 Release Process Summary
@@ -77,7 +77,7 @@ Release Process Summary
 
 * Announce bug fix release schedule to the LLVM community and update the website.
 
-* Do bug-fix releases every two weeks until X.0.5 or X.0.6 (if necessary).
+* Do bug-fix releases every two weeks until X.1.5 or X.1.6 (if necessary).
 
 Release Process
 ===============
@@ -123,6 +123,9 @@ Branch the Git trunk using the following procedure:
    version bump.  The branch's name is release/X.x where ``X`` is the major version
    number and ``x`` is just the letter ``x``.
 
+#. On the newly-created release branch, immediately bump the version
+   to X.1.0git (where ``X`` is the major version of the branch.)
+
 #. All tags and branches need to be created in both the llvm/llvm-project and
    llvm/llvm-test-suite repos.
 
@@ -141,8 +144,17 @@ Tag release candidates:
 
   $ git tag -sa llvmorg-X.Y.Z-rcN
 
-The Release Manager must supply pre-packaged source tarballs for users.  This can
-be done with the export.sh script in utils/release.
+The pre-packaged source tarballs will be automatically generated via the
+"Release Sources" workflow on GitHub.  This workflow will create an artifact
+containing all the release tarballs and the artifact attestation.  The
+Release Manager should download the artifact, verify the tarballs, sign them,
+and then upload them to the release page.
+
+::
+
+  $ unzip artifact.zip
+  $ gh auth login
+  $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
 
 Tarballs, release binaries,  or any other release artifacts must be uploaded to
 GitHub.  This can be done using the github-upload-release.py script in utils/release.
@@ -151,12 +163,6 @@ GitHub.  This can be done using the github-upload-release.py script in utils/rel
 
   $ github-upload-release.py upload --token <github-token> --release X.Y.Z-rcN --files <release_files>
 
-::
-
-  $ ./export.sh -release X.Y.Z -rc $RC
-
-This will generate source tarballs for each LLVM project being validated, which
-can be uploaded to github for further testing.
 
 Build The Binary Distribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -322,17 +328,17 @@ Release Patch Rules
 Below are the rules regarding patching the release branch:
 
 #. Patches applied to the release branch may only be applied by the release
-   manager, the official release testers or the code owners with approval from
+   manager, the official release testers or the maintainers with approval from
    the release manager.
 
-#. Release managers are encouraged, but not required, to get approval from code
-   owners before approving patches.  If there is no code owner or the code owner
-   is unreachable then release managers can ask approval from patch reviewers or
-   other developers active in that area.
+#. Release managers are encouraged, but not required, to get approval from a
+   maintainer before approving patches.  If there are no reachable maintainers
+   then release managers can ask approval from patch reviewers or other
+   developers active in that area.
 
 #. *Before RC1* Patches should be limited to bug fixes, important optimization
    improvements, or completion of features that were started before the branch
-   was created.  As with all phases, release managers and code owners can reject
+   was created.  As with all phases, release managers and maintainers can reject
    patches that are deemed too invasive.
 
 #. *Before RC2* Patches should be limited to bug fixes or backend specific
@@ -343,8 +349,7 @@ Below are the rules regarding patching the release branch:
 
 #. *Bug fix releases* Patches should be limited to bug fixes or very safe
    and critical performance improvements.  Patches must maintain both API and
-   ABI compatibility with the previous major release.
-
+   ABI compatibility with the X.1.0 release.
 
 Release Final Tasks
 -------------------
@@ -406,13 +411,13 @@ Announce the Release
 ^^^^^^^^^^^^^^^^^^^^
 
 Create a new post in the `Announce Category <https://discourse.llvm.org/c/announce>`_
-once all the release tasks are complete.  For X.0.0 releases, make sure to include a
-link to the release notes in the post.  For X.0.1+ releases, generate a changelog
+once all the release tasks are complete.  For X.1.0 releases, make sure to include a
+link to the release notes in the post.  For X.1.1+ releases, generate a changelog
 using this command and add it to the post.
 
 ::
 
-  $ git log --format="- %aN: [%s (%h)](https://github.com/llvm/llvm-project/commit/%H)" llvmorg-X.0.N-1..llvmorg-X.0.N
+  $ git log --format="- %aN: [%s (%h)](https://github.com/llvm/llvm-project/commit/%H)" llvmorg-X.1.N-1..llvmorg-X.1.N
 
 Once the release has been announced add a link to the announcement on the llvm
 homepage (from the llvm-www repo) in the "Release Emails" section.

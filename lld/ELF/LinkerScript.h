@@ -10,12 +10,14 @@
 #define LLD_ELF_LINKER_SCRIPT_H
 
 #include "Config.h"
+#include "InputSection.h"
 #include "Writer.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
@@ -33,6 +35,8 @@ class OutputSection;
 class SectionBase;
 class ThunkSection;
 struct OutputDesc;
+struct SectionClass;
+struct SectionClassDesc;
 
 // This represents an r-value in the linker script.
 struct ExprValue {
@@ -76,7 +80,8 @@ enum SectionsCommandKind {
   AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  ByteKind,  // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  ClassKind, // CLASS(class_name)
 };
 
 struct SectionCommand {
@@ -181,7 +186,7 @@ public:
         sortOuter(SortSectionPolicy::Default),
         sortInner(SortSectionPolicy::Default) {}
 
-  bool excludesFile(const InputFile *file) const;
+  bool excludesFile(const InputFile &file) const;
 
   StringMatcher sectionPat;
   SortSectionPolicy sortOuter;
@@ -189,6 +194,7 @@ public:
 };
 
 class InputSectionDescription : public SectionCommand {
+  enum class MatchType { Trivial, WholeArchive, ArchivesExcluded } matchType;
   SingleStringMatcher filePat;
 
   // Cache of the most recent input argument and result of matchesFile().
@@ -196,19 +202,40 @@ class InputSectionDescription : public SectionCommand {
 
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
-                          uint64_t withoutFlags = 0)
-      : SectionCommand(InputSectionKind), filePat(filePattern),
-        withFlags(withFlags), withoutFlags(withoutFlags) {}
+                          uint64_t withoutFlags = 0, StringRef classRef = {})
+      : SectionCommand(InputSectionKind), matchType(MatchType::Trivial),
+        filePat(filePattern), classRef(classRef), withFlags(withFlags),
+        withoutFlags(withoutFlags) {
+    assert((filePattern.empty() || classRef.empty()) &&
+           "file pattern and class reference are mutually exclusive");
+
+    // The matching syntax for whole archives and files outside of an archive
+    // can't be handled by SingleStringMatcher, and instead are handled
+    // manually within matchesFile()
+    if (!filePattern.empty()) {
+      if (filePattern.back() == ':') {
+        matchType = MatchType::WholeArchive;
+        filePat = filePattern.drop_back();
+      } else if (filePattern.front() == ':') {
+        matchType = MatchType::ArchivesExcluded;
+        filePat = filePattern.drop_front();
+      }
+    }
+  }
 
   static bool classof(const SectionCommand *c) {
     return c->kind == InputSectionKind;
   }
 
-  bool matchesFile(const InputFile *file) const;
+  bool matchesFile(const InputFile &file) const;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
   SmallVector<SectionPattern, 0> sectionPatterns;
+
+  // If present, input section matching uses class membership instead of file
+  // and section patterns (mutually exclusive).
+  StringRef classRef;
 
   // Includes InputSections and MergeInputSections. Used temporarily during
   // assignment of input sections to output sections.
@@ -254,6 +281,16 @@ struct InsertCommand {
   StringRef where;
 };
 
+// A NOCROSSREFS/NOCROSSREFS_TO command that prohibits references between
+// certain output sections.
+struct NoCrossRefCommand {
+  SmallVector<StringRef, 0> outputSections;
+
+  // When true, this describes a NOCROSSREFS_TO command that probits references
+  // to the first output section from any of the other sections.
+  bool toFirst = false;
+};
+
 struct PhdrsCommand {
   StringRef name;
   unsigned type = llvm::ELF::PT_NULL;
@@ -268,7 +305,7 @@ class LinkerScript final {
   // that must be reinitialized for each call to the above functions, and must
   // not be used outside of the scope of a call to the above functions.
   struct AddressState {
-    AddressState();
+    AddressState(const LinkerScript &);
     OutputSection *outSec = nullptr;
     MemoryRegion *memRegion = nullptr;
     MemoryRegion *lmaRegion = nullptr;
@@ -276,9 +313,13 @@ class LinkerScript final {
     uint64_t tbssAddr = 0;
   };
 
+  Ctx &ctx;
+  SmallVector<std::unique_ptr<OutputDesc>, 0> descPool;
   llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
+  StringRef getOutputSectionName(const InputSectionBase *s) const;
   void addSymbol(SymbolAssignment *cmd);
+  void declareSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
   void setDot(Expr e, const Twine &loc, bool inSec);
   void expandOutputSection(uint64_t size);
@@ -286,7 +327,7 @@ class LinkerScript final {
 
   SmallVector<InputSectionBase *, 0>
   computeInputSections(const InputSectionDescription *,
-                       ArrayRef<InputSectionBase *>);
+                       ArrayRef<InputSectionBase *>, const SectionBase &outCmd);
 
   SmallVector<InputSectionBase *, 0> createInputSectionList(OutputSection &cmd);
 
@@ -297,7 +338,7 @@ class LinkerScript final {
   std::pair<MemoryRegion *, MemoryRegion *>
   findMemoryRegion(OutputSection *sec, MemoryRegion *hint);
 
-  void assignOffsets(OutputSection *sec);
+  bool assignOffsets(OutputSection *sec);
 
   // This captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
@@ -307,11 +348,15 @@ class LinkerScript final {
   // LinkerScript.
   AddressState *state = nullptr;
 
-  OutputSection *aether;
+  std::unique_ptr<OutputSection> aether;
 
-  uint64_t dot;
+  uint64_t dot = 0;
 
 public:
+  // OutputSection may be incomplete. Avoid inline ctor/dtor.
+  LinkerScript(Ctx &ctx);
+  ~LinkerScript();
+
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
 
@@ -327,17 +372,17 @@ public:
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
-  SmallVector<PhdrEntry *, 0> createPhdrs();
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs();
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
-  const Defined *assignAddresses();
-  void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
+  std::pair<const OutputSection *, const Defined *> assignAddresses();
+  bool spillSections();
+  void erasePotentialSpillSections();
+  void allocateHeaders(SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
   void declareSymbols();
-
-  bool isDiscarded(const OutputSection *sec) const;
 
   // Used to handle INSERT AFTER statements.
   void processInsertCommands();
@@ -345,8 +390,25 @@ public:
   // Describe memory region usage.
   void printMemoryUsage(raw_ostream &os);
 
+  // Record a pending error during an assignAddresses invocation.
+  // assignAddresses is executed more than once. Therefore, lld::error should be
+  // avoided to not report duplicate errors.
+  void recordError(const Twine &msg);
+
   // Check backward location counter assignment and memory region/LMA overflows.
   void checkFinalScriptConditions() const;
+
+  // Add symbols that are referenced in the linker script to the symbol table.
+  // Symbols referenced in a PROVIDE command are only added to the symbol table
+  // if the PROVIDE command actually provides the symbol.
+  // It also adds the symbols referenced by the used PROVIDE symbols to the
+  // linker script referenced symbols list.
+  void addScriptReferencedSymbolsToSymTable();
+
+  // Returns true if the PROVIDE symbol should be added to the link.
+  // A PROVIDE symbol is added to the link only if it satisfies an
+  // undefined reference.
+  bool shouldAddProvideSym(StringRef symName);
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
@@ -358,7 +420,7 @@ public:
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
-  std::string backwardDotErr;
+  SmallVector<SmallString<0>, 0> recordedErrors;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
@@ -377,11 +439,36 @@ public:
   // OutputSections specified by OVERWRITE_SECTIONS.
   SmallVector<OutputDesc *, 0> overwriteSections;
 
+  // NOCROSSREFS(_TO) commands.
+  SmallVector<NoCrossRefCommand, 0> noCrossRefs;
+
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;
-};
 
-LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;
+  // Stores the mapping: PROVIDE symbol -> symbols referred in the PROVIDE
+  // expression. For example, if the PROVIDE command is:
+  //
+  // PROVIDE(v = a + b + c);
+  //
+  // then provideMap should contain the mapping: 'v' -> ['a', 'b', 'c']
+  llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
+  // Store defined symbols that should ignore PROVIDE commands.
+  llvm::DenseSet<Symbol *> unusedProvideSyms;
+
+  // List of potential spill locations (PotentialSpillSection) for an input
+  // section.
+  struct PotentialSpillList {
+    // Never nullptr.
+    PotentialSpillSection *head;
+    PotentialSpillSection *tail;
+  };
+  llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
+
+  // Named lists of input sections that can be collectively referenced in output
+  // section descriptions. Multiple references allow for sections to spill from
+  // one output section to another.
+  llvm::DenseMap<llvm::CachedHashStringRef, SectionClassDesc *> sectionClasses;
+};
 
 } // end namespace lld::elf
 

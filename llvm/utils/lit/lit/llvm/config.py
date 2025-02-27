@@ -13,6 +13,17 @@ from lit.llvm.subst import ToolSubst
 lit_path_displayed = False
 
 
+def user_is_root():
+    # os.getuid() is not available on all platforms
+    try:
+        if os.getuid() == 0:
+            return True
+    except:
+        pass
+
+    return False
+
+
 class LLVMConfig(object):
     def __init__(self, lit_config, config):
         self.lit_config = lit_config
@@ -46,6 +57,13 @@ class LLVMConfig(object):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
+        if platform.system() == "OS/390":
+            self.with_environment("_BPXK_AUTOCVT", "ON")
+            self.with_environment("_TAG_REDIR_IN", "TXT")
+            self.with_environment("_TAG_REDIR_OUT", "TXT")
+            self.with_environment("_TAG_REDIR_ERR", "TXT")
+            self.with_environment("_CEE_RUNOPTS", "FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)")
+
         # Choose between lit's internal shell pipeline runner and a real shell.
         # If LIT_USE_INTERNAL_SHELL is in the environment, we use that as an
         # override.
@@ -65,6 +83,7 @@ class LLVMConfig(object):
                 "UBSAN_SYMBOLIZER_PATH" "ASAN_OPTIONS",
                 "HWASAN_OPTIONS",
                 "MSAN_OPTIONS",
+                "RTSAN_OPTIONS",
                 "TSAN_OPTIONS",
                 "UBSAN_OPTIONS",
             ]
@@ -72,9 +91,6 @@ class LLVMConfig(object):
 
         # Running on Darwin OS
         if platform.system() == "Darwin":
-            # FIXME: lld uses the first, other projects use the second.
-            # We should standardize on the former.
-            features.add("system-linker-mach-o")
             features.add("system-darwin")
         elif platform.system() == "Windows":
             # For tests that require Windows to run.
@@ -113,6 +129,8 @@ class LLVMConfig(object):
             features.add("msan")
         if "undefined" in sanitizers:
             features.add("ubsan")
+        if "thread" in sanitizers:
+            features.add("tsan")
 
         have_zlib = getattr(config, "have_zlib", None)
         if have_zlib:
@@ -151,8 +169,17 @@ class LLVMConfig(object):
                 features.add("target-aarch64")
             elif re.match(r"^arm.*", target_triple):
                 features.add("target-arm")
-            if re.match(r'^ppc64le.*-linux', target_triple):
-                features.add('target=powerpc64le-linux')
+            elif re.match(r"^ppc64le.*-linux", target_triple):
+                features.add("target=powerpc64le-linux")
+            elif re.match(r"^riscv64-.*-elf", target_triple):
+                features.add("target-riscv64")
+            elif re.match(r"^riscv32-.*-elf.", target_triple):
+                features.add("target-riscv32")
+            elif re.match(r"^loongarch64.*", target_triple):
+                features.add("target-loongarch64")
+
+        if not user_is_root():
+            features.add("non-root-user")
 
         use_gmalloc = lit_config.params.get("use_gmalloc", None)
         if lit.util.pythonize_bool(use_gmalloc):
@@ -166,10 +193,7 @@ class LLVMConfig(object):
 
     def _find_git_windows_unix_tools(self, tools_needed):
         assert sys.platform == "win32"
-        if sys.version_info.major >= 3:
-            import winreg
-        else:
-            import _winreg as winreg
+        import winreg
 
         # Search both the 64 and 32-bit hives, as well as HKLM + HKCU
         masks = [0, winreg.KEY_WOW64_64KEY]
@@ -567,7 +591,10 @@ class LLVMConfig(object):
             if getattr(self.config, pp, None)
         ]
 
-        self.with_environment("LD_LIBRARY_PATH", lib_paths, append_path=True)
+        if platform.system() == "AIX":
+            self.with_environment("LIBPATH", lib_paths, append_path=True)
+        else:
+            self.with_environment("LD_LIBRARY_PATH", lib_paths, append_path=True)
 
         shl = getattr(self.config, "llvm_shlib_dir", None)
         pext = getattr(self.config, "llvm_plugin_ext", None)
@@ -632,15 +659,25 @@ class LLVMConfig(object):
             self.add_tool_substitutions(tool_substitutions)
             self.config.substitutions.append(("%resource_dir", builtin_include_dir))
 
-        self.config.substitutions.append(
-            (
-                "%itanium_abi_triple",
-                self.make_itanium_abi_triple(self.config.target_triple),
+        # There will be no default target triple if one was not specifically
+        # set, and the host's architecture is not an enabled target.
+        if self.config.target_triple:
+            self.config.substitutions.append(
+                (
+                    "%itanium_abi_triple",
+                    self.make_itanium_abi_triple(self.config.target_triple),
+                )
             )
-        )
-        self.config.substitutions.append(
-            ("%ms_abi_triple", self.make_msabi_triple(self.config.target_triple))
-        )
+            self.config.substitutions.append(
+                ("%ms_abi_triple", self.make_msabi_triple(self.config.target_triple))
+            )
+        else:
+            if not self.lit_config.quiet:
+                self.lit_config.note(
+                    "No default target triple was found, some tests may fail as a result."
+                )
+            self.config.substitutions.append(("%itanium_abi_triple", ""))
+            self.config.substitutions.append(("%ms_abi_triple", ""))
 
         # The host triple might not be set, at least if we're compiling clang
         # from an already installed llvm.

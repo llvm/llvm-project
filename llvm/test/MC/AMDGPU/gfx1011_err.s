@@ -17,7 +17,7 @@ v_dot8c_i32_i4 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
-// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 v_fma_legacy_f32 v0, v1, v2, v3
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

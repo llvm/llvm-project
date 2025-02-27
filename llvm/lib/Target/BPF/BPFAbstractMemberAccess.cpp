@@ -89,6 +89,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <stack>
@@ -102,13 +103,13 @@ uint32_t BPFCoreSharedInfo::SeqNum;
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                                   Instruction *Input,
                                                   Instruction *Before) {
-  Function *Fn = Intrinsic::getDeclaration(
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::bpf_passthrough, {Input->getType(), Input->getType()});
   Constant *SeqNumVal = ConstantInt::get(Type::getInt32Ty(BB->getContext()),
                                          BPFCoreSharedInfo::SeqNum++);
 
   auto *NewInst = CallInst::Create(Fn, {SeqNumVal, Input});
-  NewInst->insertBefore(Before);
+  NewInst->insertBefore(Before->getIterator());
   return NewInst;
 }
 } // namespace llvm
@@ -171,8 +172,6 @@ private:
   bool IsValidAIChain(const MDNode *ParentMeta, uint32_t ParentAI,
                       const MDNode *ChildMeta);
   bool removePreserveAccessIndexIntrinsic(Function &F);
-  void replaceWithGEP(std::vector<CallInst *> &CallList,
-                      uint32_t NumOfZerosIndex, uint32_t DIIndex);
   bool HasPreserveFieldInfoCall(CallInfoStack &CallStack);
   void GetStorageBitRange(DIDerivedType *MemberTy, Align RecordAlignment,
                           uint32_t &StartBitOffset, uint32_t &EndBitOffset);
@@ -184,7 +183,6 @@ private:
                                  std::string &AccessKey, MDNode *&BaseMeta);
   MDNode *computeAccessKey(CallInst *Call, CallInfo &CInfo,
                            std::string &AccessKey, bool &IsInt32Ret);
-  uint64_t getConstant(const Value *IndexValue);
   bool transformGEPChain(CallInst *Call, CallInfo &CInfo);
 };
 
@@ -223,10 +221,9 @@ bool BPFAbstractMemberAccess::run(Function &F) {
 
 void BPFAbstractMemberAccess::ResetMetadata(struct CallInfo &CInfo) {
   if (auto Ty = dyn_cast<DICompositeType>(CInfo.Metadata)) {
-    if (AnonRecords.find(Ty) != AnonRecords.end()) {
-      if (AnonRecords[Ty] != nullptr)
-        CInfo.Metadata = AnonRecords[Ty];
-    }
+    auto It = AnonRecords.find(Ty);
+    if (It != AnonRecords.end() && It->second != nullptr)
+      CInfo.Metadata = It->second;
   }
 }
 
@@ -236,18 +233,12 @@ void BPFAbstractMemberAccess::CheckCompositeType(DIDerivedType *ParentTy,
       ParentTy->getTag() != dwarf::DW_TAG_typedef)
     return;
 
-  if (AnonRecords.find(CTy) == AnonRecords.end()) {
-    AnonRecords[CTy] = ParentTy;
-    return;
-  }
-
+  auto [It, Inserted] = AnonRecords.try_emplace(CTy, ParentTy);
   // Two or more typedef's may point to the same anon record.
   // If this is the case, set the typedef DIType to be nullptr
   // to indicate the duplication case.
-  DIDerivedType *CurrTy = AnonRecords[CTy];
-  if (CurrTy == ParentTy)
-    return;
-  AnonRecords[CTy] = nullptr;
+  if (!Inserted && It->second != ParentTy)
+    It->second = nullptr;
 }
 
 void BPFAbstractMemberAccess::CheckDerivedType(DIDerivedType *ParentTy,
@@ -312,7 +303,7 @@ static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
         DimSize *= CI->getSExtValue();
       }
   }
@@ -325,6 +316,12 @@ static Type *getBaseElementType(const CallInst *Call) {
   return Call->getParamElementType(0);
 }
 
+static uint64_t getConstant(const Value *IndexValue) {
+  const ConstantInt *CV = dyn_cast<ConstantInt>(IndexValue);
+  assert(CV);
+  return CV->getValue().getZExtValue();
+}
+
 /// Check whether a call is a preserve_*_access_index intrinsic call or not.
 bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
                                                           CallInfo &CInfo) {
@@ -334,7 +331,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   const auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
   if (!GV)
     return false;
-  if (GV->getName().startswith("llvm.preserve.array.access.index")) {
+  if (GV->getName().starts_with("llvm.preserve.array.access.index")) {
     CInfo.Kind = BPFPreserveArrayAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -344,7 +341,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.RecordAlignment = DL->getABITypeAlign(getBaseElementType(Call));
     return true;
   }
-  if (GV->getName().startswith("llvm.preserve.union.access.index")) {
+  if (GV->getName().starts_with("llvm.preserve.union.access.index")) {
     CInfo.Kind = BPFPreserveUnionAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -354,7 +351,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.Base = Call->getArgOperand(0);
     return true;
   }
-  if (GV->getName().startswith("llvm.preserve.struct.access.index")) {
+  if (GV->getName().starts_with("llvm.preserve.struct.access.index")) {
     CInfo.Kind = BPFPreserveStructAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -365,7 +362,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.RecordAlignment = DL->getABITypeAlign(getBaseElementType(Call));
     return true;
   }
-  if (GV->getName().startswith("llvm.bpf.preserve.field.info")) {
+  if (GV->getName().starts_with("llvm.bpf.preserve.field.info")) {
     CInfo.Kind = BPFPreserveFieldInfoAI;
     CInfo.Metadata = nullptr;
     // Check validity of info_kind as clang did not check this.
@@ -375,7 +372,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.AccessIndex = InfoKind;
     return true;
   }
-  if (GV->getName().startswith("llvm.bpf.preserve.type.info")) {
+  if (GV->getName().starts_with("llvm.bpf.preserve.type.info")) {
     CInfo.Kind = BPFPreserveFieldInfoAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -391,7 +388,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       CInfo.AccessIndex = BTF::TYPE_SIZE;
     return true;
   }
-  if (GV->getName().startswith("llvm.bpf.preserve.enum.value")) {
+  if (GV->getName().starts_with("llvm.bpf.preserve.enum.value")) {
     CInfo.Kind = BPFPreserveFieldInfoAI;
     CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     if (!CInfo.Metadata)
@@ -409,26 +406,37 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   return false;
 }
 
-void BPFAbstractMemberAccess::replaceWithGEP(std::vector<CallInst *> &CallList,
-                                             uint32_t DimensionIndex,
-                                             uint32_t GEPIndex) {
-  for (auto *Call : CallList) {
-    uint32_t Dimension = 1;
-    if (DimensionIndex > 0)
-      Dimension = getConstant(Call->getArgOperand(DimensionIndex));
+static void replaceWithGEP(CallInst *Call, uint32_t DimensionIndex,
+                           uint32_t GEPIndex) {
+  uint32_t Dimension = 1;
+  if (DimensionIndex > 0)
+    Dimension = getConstant(Call->getArgOperand(DimensionIndex));
 
-    Constant *Zero =
-        ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
-    SmallVector<Value *, 4> IdxList;
-    for (unsigned I = 0; I < Dimension; ++I)
-      IdxList.push_back(Zero);
-    IdxList.push_back(Call->getArgOperand(GEPIndex));
+  Constant *Zero =
+      ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
+  SmallVector<Value *, 4> IdxList;
+  for (unsigned I = 0; I < Dimension; ++I)
+    IdxList.push_back(Zero);
+  IdxList.push_back(Call->getArgOperand(GEPIndex));
 
-    auto *GEP = GetElementPtrInst::CreateInBounds(
-        getBaseElementType(Call), Call->getArgOperand(0), IdxList, "", Call);
-    Call->replaceAllUsesWith(GEP);
-    Call->eraseFromParent();
-  }
+  auto *GEP = GetElementPtrInst::CreateInBounds(getBaseElementType(Call),
+                                                Call->getArgOperand(0), IdxList,
+                                                "", Call->getIterator());
+  Call->replaceAllUsesWith(GEP);
+  Call->eraseFromParent();
+}
+
+void BPFCoreSharedInfo::removeArrayAccessCall(CallInst *Call) {
+  replaceWithGEP(Call, 1, 2);
+}
+
+void BPFCoreSharedInfo::removeStructAccessCall(CallInst *Call) {
+  replaceWithGEP(Call, 0, 1);
+}
+
+void BPFCoreSharedInfo::removeUnionAccessCall(CallInst *Call) {
+  Call->replaceAllUsesWith(Call->getArgOperand(0));
+  Call->eraseFromParent();
 }
 
 bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
@@ -463,12 +471,12 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
   // . addr = preserve_struct_access_index(base, gep_index, di_index)
   //   is transformed to
   //     addr = GEP(base, 0, gep_index)
-  replaceWithGEP(PreserveArrayIndexCalls, 1, 2);
-  replaceWithGEP(PreserveStructIndexCalls, 0, 1);
-  for (auto *Call : PreserveUnionIndexCalls) {
-    Call->replaceAllUsesWith(Call->getArgOperand(0));
-    Call->eraseFromParent();
-  }
+  for (CallInst *Call : PreserveArrayIndexCalls)
+    BPFCoreSharedInfo::removeArrayAccessCall(Call);
+  for (CallInst *Call : PreserveStructIndexCalls)
+    BPFCoreSharedInfo::removeStructAccessCall(Call);
+  for (CallInst *Call : PreserveUnionIndexCalls)
+    BPFCoreSharedInfo::removeUnionAccessCall(Call);
 
   return Found;
 }
@@ -631,12 +639,6 @@ void BPFAbstractMemberAccess::collectAICallChains(Function &F) {
 
       traceAICall(Call, CInfo);
     }
-}
-
-uint64_t BPFAbstractMemberAccess::getConstant(const Value *IndexValue) {
-  const ConstantInt *CV = dyn_cast<ConstantInt>(IndexValue);
-  assert(CV);
-  return CV->getValue().getZExtValue();
 }
 
 /// Get the start and the end of storage offset for \p MemberTy.
@@ -1083,9 +1085,11 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
     // Load the global variable which represents the returned field info.
     LoadInst *LDInst;
     if (IsInt32Ret)
-      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "", Call);
+      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
+                            Call->getIterator());
     else
-      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                            Call->getIterator());
 
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
@@ -1105,21 +1109,22 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // The original Call inst is removed.
 
   // Load the global variable.
-  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                              Call->getIterator());
 
   // Generate a BitCast
   auto *BCInst =
       new BitCastInst(Base, PointerType::getUnqual(BB->getContext()));
-  BCInst->insertBefore(Call);
+  BCInst->insertBefore(Call->getIterator());
 
   // Generate a GetElementPtr
   auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(BB->getContext()),
                                         BCInst, LDInst);
-  GEP->insertBefore(Call);
+  GEP->insertBefore(Call->getIterator());
 
   // Generate a BitCast
   auto *BCInst2 = new BitCastInst(GEP, Call->getType());
-  BCInst2->insertBefore(Call);
+  BCInst2->insertBefore(Call->getIterator());
 
   // For the following code,
   //    Block0:

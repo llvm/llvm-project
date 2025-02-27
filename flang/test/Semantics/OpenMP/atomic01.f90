@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! Semantic checks for OpenMP 5.0 standard 2.17.7 atomic Construct.
 
 use omp_lib
@@ -12,193 +14,193 @@ use omp_lib
 ! At most one memory-order-clause may appear on the construct.
 
 !READ
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the READ directive
   !$omp atomic seq_cst seq_cst read
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the READ directive
   !$omp atomic read seq_cst seq_cst
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the READ directive
   !$omp atomic seq_cst read seq_cst
     i = j
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQUIRE clause can appear on the READ directive
   !$omp atomic acquire acquire read
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQUIRE clause can appear on the READ directive
   !$omp atomic read acquire acquire
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQUIRE clause can appear on the READ directive
   !$omp atomic acquire read acquire
     i = j
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the READ directive
   !$omp atomic relaxed relaxed read
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the READ directive
   !$omp atomic read relaxed relaxed
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the READ directive
   !$omp atomic relaxed read relaxed
     i = j
 
 !UPDATE
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the UPDATE directive
   !$omp atomic seq_cst seq_cst update
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the UPDATE directive
   !$omp atomic update seq_cst seq_cst
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the UPDATE directive
   !$omp atomic seq_cst update seq_cst
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the UPDATE directive
   !$omp atomic release release update
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the UPDATE directive
   !$omp atomic update release release
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the UPDATE directive
   !$omp atomic release update release
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the UPDATE directive
   !$omp atomic relaxed relaxed update
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the UPDATE directive
   !$omp atomic update relaxed relaxed
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the UPDATE directive
   !$omp atomic relaxed update relaxed
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
 !CAPTURE
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the CAPTURE directive
   !$omp atomic seq_cst seq_cst capture
     i = j
     j = k
   !$omp end atomic
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the CAPTURE directive
   !$omp atomic capture seq_cst seq_cst
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the CAPTURE directive
   !$omp atomic seq_cst capture seq_cst
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the CAPTURE directive
   !$omp atomic release release capture
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the CAPTURE directive
   !$omp atomic capture release release
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the CAPTURE directive
   !$omp atomic release capture release
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the CAPTURE directive
   !$omp atomic relaxed relaxed capture
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the CAPTURE directive
   !$omp atomic capture relaxed relaxed
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the CAPTURE directive
   !$omp atomic relaxed capture relaxed
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQ_REL clause can appear on the CAPTURE directive
   !$omp atomic acq_rel acq_rel capture
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQ_REL clause can appear on the CAPTURE directive
   !$omp atomic capture acq_rel acq_rel
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQ_REL clause can appear on the CAPTURE directive
   !$omp atomic acq_rel capture acq_rel
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQUIRE clause can appear on the CAPTURE directive
   !$omp atomic acquire acquire capture
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQUIRE clause can appear on the CAPTURE directive
   !$omp atomic capture acquire acquire
     i = j
     j = k
   !$omp end atomic
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one ACQUIRE clause can appear on the CAPTURE directive
   !$omp atomic acquire capture acquire
     i = j
@@ -206,57 +208,57 @@ use omp_lib
   !$omp end atomic
 
 !WRITE
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the WRITE directive
   !$omp atomic seq_cst seq_cst write
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the WRITE directive
   !$omp atomic write seq_cst seq_cst
     i = j
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the WRITE directive
   !$omp atomic seq_cst write seq_cst
     i = j
 
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the WRITE directive
   !$omp atomic release release write
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the WRITE directive
   !$omp atomic write release release
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the WRITE directive
   !$omp atomic release write release
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the WRITE directive
   !$omp atomic relaxed relaxed write
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the WRITE directive
   !$omp atomic write relaxed relaxed
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the WRITE directive
   !$omp atomic relaxed write relaxed
     i = j
 
 !No atomic-clause
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
   !$omp atomic relaxed relaxed
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
   !$omp atomic seq_cst seq_cst
   !ERROR: Invalid or missing operator in atomic update statement
     i = j
-  !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
+  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
   !ERROR: At most one RELEASE clause can appear on the ATOMIC directive
   !$omp atomic release release
   !ERROR: Invalid or missing operator in atomic update statement

@@ -19,7 +19,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -216,13 +215,36 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
   (*module)->setAttr(
-      "addressing_model",
+      module->getAddressingModelAttrName(),
       opBuilder.getAttr<spirv::AddressingModelAttr>(
           static_cast<spirv::AddressingModel>(operands.front())));
-  (*module)->setAttr("memory_model",
+
+  (*module)->setAttr(module->getMemoryModelAttrName(),
                      opBuilder.getAttr<spirv::MemoryModelAttr>(
                          static_cast<spirv::MemoryModel>(operands.back())));
 
+  return success();
+}
+
+template <typename AttrTy, typename EnumAttrTy, typename EnumTy>
+LogicalResult deserializeCacheControlDecoration(
+    Location loc, OpBuilder &opBuilder,
+    DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
+    StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
+  if (words.size() != 4) {
+    return emitError(loc, "OpDecoration with ")
+           << decorationName << "needs a cache control integer literal and a "
+           << cacheControlKind << " cache control literal";
+  }
+  unsigned cacheLevel = words[2];
+  auto cacheControlAttr = static_cast<EnumTy>(words[3]);
+  auto value = opBuilder.getAttr<AttrTy>(cacheLevel, cacheControlAttr);
+  SmallVector<Attribute> attrs;
+  if (auto attrList =
+          llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
+    llvm::append_range(attrs, attrList);
+  attrs.push_back(value);
+  decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
   return success();
 }
 
@@ -239,8 +261,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   if (decorationName.empty()) {
     return emitError(unknownLoc, "invalid Decoration code : ") << words[1];
   }
-  auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
-  auto symbol = opBuilder.getStringAttr(attrName);
+  auto symbol = getSymbolDecoration(decorationName);
   switch (static_cast<spirv::Decoration>(words[1])) {
   case spirv::Decoration::FPFastMathMode:
     if (words.size() != 3) {
@@ -250,6 +271,15 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     decorations[words[0]].set(
         symbol, FPFastMathModeAttr::get(opBuilder.getContext(),
                                         static_cast<FPFastMathMode>(words[2])));
+    break;
+  case spirv::Decoration::FPRoundingMode:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single integer literal";
+    }
+    decorations[words[0]].set(
+        symbol, FPRoundingModeAttr::get(opBuilder.getContext(),
+                                        static_cast<FPRoundingMode>(words[2])));
     break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
@@ -293,11 +323,12 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     auto linkageTypeAttr = opBuilder.getAttr<::mlir::spirv::LinkageTypeAttr>(
         static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
     auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
-        linkageName, linkageTypeAttr);
+        StringAttr::get(context, linkageName), linkageTypeAttr);
     decorations[words[0]].set(symbol, llvm::dyn_cast<Attribute>(linkageAttr));
     break;
   }
   case spirv::Decoration::Aliased:
+  case spirv::Decoration::AliasedPointer:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
   case spirv::Decoration::Flat:
@@ -308,6 +339,9 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::NoUnsignedWrap:
   case spirv::Decoration::RelaxedPrecision:
   case spirv::Decoration::Restrict:
+  case spirv::Decoration::RestrictPointer:
+  case spirv::Decoration::NoContraction:
+  case spirv::Decoration::Constant:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -327,6 +361,24 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     decorations[words[0]].set(
         symbol, opBuilder.getI32IntegerAttr(static_cast<int32_t>(words[2])));
     break;
+  case spirv::Decoration::CacheControlLoadINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlLoadINTELAttr, LoadCacheControlAttr, LoadCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "load");
+    if (failed(res))
+      return res;
+    break;
+  }
+  case spirv::Decoration::CacheControlStoreINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlStoreINTELAttr, StoreCacheControlAttr, StoreCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "store");
+    if (failed(res))
+      return res;
+    break;
+  }
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
   }
@@ -366,6 +418,46 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
                      "unexpected trailing words in OpMemberName instruction");
   }
   memberNameMap[words[0]][words[1]] = name;
+  return success();
+}
+
+LogicalResult spirv::Deserializer::setFunctionArgAttrs(
+    uint32_t argID, SmallVectorImpl<Attribute> &argAttrs, size_t argIndex) {
+  if (!decorations.contains(argID)) {
+    argAttrs[argIndex] = DictionaryAttr::get(context, {});
+    return success();
+  }
+
+  spirv::DecorationAttr foundDecorationAttr;
+  for (NamedAttribute decAttr : decorations[argID]) {
+    for (auto decoration :
+         {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
+          spirv::Decoration::AliasedPointer,
+          spirv::Decoration::RestrictPointer}) {
+
+      if (decAttr.getName() !=
+          getSymbolDecoration(stringifyDecoration(decoration)))
+        continue;
+
+      if (foundDecorationAttr)
+        return emitError(unknownLoc,
+                         "more than one Aliased/Restrict decorations for "
+                         "function argument with result <id> ")
+               << argID;
+
+      foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
+      break;
+    }
+  }
+
+  if (!foundDecorationAttr)
+    return emitError(unknownLoc, "unimplemented decoration support for "
+                                 "function argument with result <id> ")
+           << argID;
+
+  NamedAttribute attr(StringAttr::get(context, spirv::DecorationAttr::name),
+                      foundDecorationAttr);
+  argAttrs[argIndex] = DictionaryAttr::get(context, attr);
   return success();
 }
 
@@ -430,6 +522,9 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
     logger.indent();
   });
 
+  SmallVector<Attribute> argAttrs;
+  argAttrs.resize(functionType.getNumInputs());
+
   // Parse the op argument instructions
   if (functionType.getNumInputs()) {
     for (size_t i = 0, e = functionType.getNumInputs(); i != e; ++i) {
@@ -463,10 +558,20 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
         return emitError(unknownLoc, "duplicate definition of result <id> ")
                << operands[1];
       }
+      if (failed(setFunctionArgAttrs(operands[1], argAttrs, i))) {
+        return failure();
+      }
+
       auto argValue = funcOp.getArgument(i);
       valueMap[operands[1]] = argValue;
     }
   }
+
+  if (llvm::any_of(argAttrs, [](Attribute attr) {
+        auto argAttr = cast<DictionaryAttr>(attr);
+        return !argAttr.empty();
+      }))
+    funcOp.setArgAttrsAttr(ArrayAttr::get(context, argAttrs));
 
   // entryBlock is needed to access the arguments, Once that is done, we can
   // erase the block for functions with 'Import' LinkageAttributes, since these
@@ -637,14 +742,22 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
 
   // Initializer.
   FlatSymbolRefAttr initializer = nullptr;
+
   if (wordIndex < operands.size()) {
-    auto initializerOp = getGlobalVariable(operands[wordIndex]);
-    if (!initializerOp) {
+    Operation *op = nullptr;
+
+    if (auto initOp = getGlobalVariable(operands[wordIndex]))
+      op = initOp;
+    else if (auto initOp = getSpecConstant(operands[wordIndex]))
+      op = initOp;
+    else if (auto initOp = getSpecConstantComposite(operands[wordIndex]))
+      op = initOp;
+    else
       return emitError(unknownLoc, "unknown <id> ")
              << operands[wordIndex] << "used as initializer";
-    }
+
+    initializer = SymbolRefAttr::get(op);
     wordIndex++;
-    initializer = SymbolRefAttr::get(initializerOp.getOperation());
   }
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,
@@ -778,12 +891,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processArrayType(operands);
   case spirv::Opcode::OpTypeCooperativeMatrixKHR:
     return processCooperativeMatrixTypeKHR(operands);
-  case spirv::Opcode::OpTypeCooperativeMatrixNV:
-    return processCooperativeMatrixTypeNV(operands);
   case spirv::Opcode::OpTypeFunction:
     return processFunctionType(operands);
-  case spirv::Opcode::OpTypeJointMatrixINTEL:
-    return processJointMatrixType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
   case spirv::Opcode::OpTypeSampledImage:
@@ -952,71 +1061,6 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
 
   typeMap[operands[0]] =
       spirv::CooperativeMatrixType::get(elementTy, rows, columns, *scope, *use);
-  return success();
-}
-
-LogicalResult spirv::Deserializer::processCooperativeMatrixTypeNV(
-    ArrayRef<uint32_t> operands) {
-  if (operands.size() != 5) {
-    return emitError(unknownLoc, "OpTypeCooperativeMatrixNV must have element "
-                                 "type and row x column parameters");
-  }
-
-  Type elementTy = getType(operands[1]);
-  if (!elementTy) {
-    return emitError(unknownLoc,
-                     "OpTypeCooperativeMatrixNV references undefined <id> ")
-           << operands[1];
-  }
-
-  std::optional<spirv::Scope> scope =
-      spirv::symbolizeScope(getConstantInt(operands[2]).getInt());
-  if (!scope) {
-    return emitError(
-               unknownLoc,
-               "OpTypeCooperativeMatrixNV references undefined scope <id> ")
-           << operands[2];
-  }
-
-  unsigned rows = getConstantInt(operands[3]).getInt();
-  unsigned columns = getConstantInt(operands[4]).getInt();
-
-  typeMap[operands[0]] =
-      spirv::CooperativeMatrixNVType::get(elementTy, *scope, rows, columns);
-  return success();
-}
-
-LogicalResult
-spirv::Deserializer::processJointMatrixType(ArrayRef<uint32_t> operands) {
-  if (operands.size() != 6) {
-    return emitError(unknownLoc, "OpTypeJointMatrix must have element "
-                                 "type and row x column parameters");
-  }
-
-  Type elementTy = getType(operands[1]);
-  if (!elementTy) {
-    return emitError(unknownLoc, "OpTypeJointMatrix references undefined <id> ")
-           << operands[1];
-  }
-
-  auto scope = spirv::symbolizeScope(getConstantInt(operands[5]).getInt());
-  if (!scope) {
-    return emitError(unknownLoc,
-                     "OpTypeJointMatrix references undefined scope <id> ")
-           << operands[5];
-  }
-  auto matrixLayout =
-      spirv::symbolizeMatrixLayout(getConstantInt(operands[4]).getInt());
-  if (!matrixLayout) {
-    return emitError(unknownLoc,
-                     "OpTypeJointMatrix references undefined scope <id> ")
-           << operands[4];
-  }
-  unsigned rows = getConstantInt(operands[2]).getInt();
-  unsigned columns = getConstantInt(operands[3]).getInt();
-
-  typeMap[operands[0]] = spirv::JointMatrixINTELType::get(
-      elementTy, scope.value(), rows, columns, matrixLayout.value());
   return success();
 }
 
@@ -1283,7 +1327,8 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
       } words = {operands[2], operands[3]};
       value = APInt(64, llvm::bit_cast<uint64_t>(words), /*isSigned=*/true);
     } else if (bitwidth <= 32) {
-      value = APInt(bitwidth, operands[2], /*isSigned=*/true);
+      value = APInt(bitwidth, operands[2], /*isSigned=*/true,
+                    /*implicitTrunc=*/true);
     }
 
     auto attr = opBuilder.getIntegerAttr(intType, value);
@@ -1799,7 +1844,7 @@ ControlFlowStructurizer::createSelectionOp(uint32_t selectionControl) {
 
   auto control = static_cast<spirv::SelectionControl>(selectionControl);
   auto selectionOp = builder.create<spirv::SelectionOp>(location, control);
-  selectionOp.addMergeBlock();
+  selectionOp.addMergeBlock(builder);
 
   return selectionOp;
 }
@@ -1811,7 +1856,7 @@ spirv::LoopOp ControlFlowStructurizer::createLoopOp(uint32_t loopControl) {
 
   auto control = static_cast<spirv::LoopControl>(loopControl);
   auto loopOp = builder.create<spirv::LoopOp>(location, control);
-  loopOp.addEntryAndMergeBlock();
+  loopOp.addEntryAndMergeBlock(builder);
 
   return loopOp;
 }
@@ -2113,6 +2158,53 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   return success();
 }
 
+LogicalResult spirv::Deserializer::splitConditionalBlocks() {
+  // Create a copy, so we can modify keys in the original.
+  BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
+  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
+       it != e; ++it) {
+    auto &[block, mergeInfo] = *it;
+
+    // Skip processing loop regions. For loop regions continueBlock is non-null.
+    if (mergeInfo.continueBlock)
+      continue;
+
+    if (!block->mightHaveTerminator())
+      continue;
+
+    Operation *terminator = block->getTerminator();
+    assert(terminator);
+
+    if (!isa<spirv::BranchConditionalOp>(terminator))
+      continue;
+
+    // Do not split blocks that only contain a conditional branch, i.e., block
+    // size is <= 1.
+    if (block->begin() != block->end() &&
+        std::next(block->begin()) != block->end()) {
+      Block *newBlock = block->splitBlock(terminator);
+      OpBuilder builder(block, block->end());
+      builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
+
+      // If the split block was a merge block of another region we need to
+      // update the map.
+      for (auto it = blockMergeInfo.begin(); it != blockMergeInfo.end(); ++it) {
+        auto &[ignore, mergeInfo] = *it;
+        if (mergeInfo.mergeBlock == block) {
+          mergeInfo.mergeBlock = newBlock;
+        }
+      }
+
+      // After splitting we need to update the map to use the new block as a
+      // header.
+      blockMergeInfo.erase(block);
+      blockMergeInfo.try_emplace(newBlock, mergeInfo);
+    }
+  }
+
+  return success();
+}
+
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
   LLVM_DEBUG({
     logger.startLine()
@@ -2120,6 +2212,18 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     logger.indent();
   });
 
+  LLVM_DEBUG({
+    logger.startLine() << "[cf] split conditional blocks\n";
+    logger.startLine() << "\n";
+  });
+
+  if (failed(splitConditionalBlocks())) {
+    return failure();
+  }
+
+  // TODO: This loop is non-deterministic. Iteration order may vary between runs
+  // for the same shader as the key to the map is a pointer. See:
+  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;

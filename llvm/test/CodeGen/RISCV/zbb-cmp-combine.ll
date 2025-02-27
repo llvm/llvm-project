@@ -218,18 +218,23 @@ define i1 @flo(float %c, float %a, float %b) {
 ; CHECK-RV64I-NEXT:    mv s1, a0
 ; CHECK-RV64I-NEXT:    mv a0, a1
 ; CHECK-RV64I-NEXT:    mv a1, s1
-; CHECK-RV64I-NEXT:    call __gesf2@plt
+; CHECK-RV64I-NEXT:    call __gesf2
 ; CHECK-RV64I-NEXT:    mv s2, a0
 ; CHECK-RV64I-NEXT:    mv a0, s0
 ; CHECK-RV64I-NEXT:    mv a1, s1
-; CHECK-RV64I-NEXT:    call __gesf2@plt
+; CHECK-RV64I-NEXT:    call __gesf2
 ; CHECK-RV64I-NEXT:    or a0, s2, a0
 ; CHECK-RV64I-NEXT:    slti a0, a0, 0
 ; CHECK-RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64I-NEXT:    .cfi_restore ra
+; CHECK-RV64I-NEXT:    .cfi_restore s0
+; CHECK-RV64I-NEXT:    .cfi_restore s1
+; CHECK-RV64I-NEXT:    .cfi_restore s2
 ; CHECK-RV64I-NEXT:    addi sp, sp, 32
+; CHECK-RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64I-NEXT:    ret
 ;
 ; CHECK-RV64IF-LABEL: flo:
@@ -264,18 +269,23 @@ define i1 @dlo(double %c, double %a, double %b) {
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    call __gedf2@plt
+; CHECK-NEXT:    call __gedf2
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    call __gedf2@plt
+; CHECK-NEXT:    call __gedf2
 ; CHECK-NEXT:    or a0, s2, a0
 ; CHECK-NEXT:    slti a0, a0, 0
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
+; CHECK-NEXT:    .cfi_restore s2
 ; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %l0 = fcmp ult double %a, %c
   %l1 = fcmp ult double %b, %c
@@ -315,4 +325,3 @@ define i1 @no_same_ops(i64 %c, i64 %a, i64 %b) {
   %res = or i1 %l0, %l1
   ret i1 %res
 }
-

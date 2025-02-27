@@ -1,0 +1,91 @@
+name: Release Documentation
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: true
+        type: string
+      upload:
+        description: 'Upload documentation'
+        required: false
+        type: boolean
+
+  workflow_call:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: true
+        type: string
+      upload:
+        description: 'Upload documentation'
+        required: false
+        type: boolean
+
+jobs:
+  release-documentation:
+    name: Build and Upload Release Documentation
+    runs-on: ubuntu-latest
+    env:
+      upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Setup Python env
+        uses: actions/setup-python@v5
+        with:
+          cache: 'pip'
+          cache-dependency-path: './llvm/docs/requirements.txt'
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+              graphviz \
+              python3-github \
+              ninja-build \
+              texlive-font-utils
+          pip3 install --user -r ./llvm/docs/requirements.txt
+
+      - name: Build Documentation
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
+
+      - name: Create Release Notes Artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
+        with:
+          name: release-notes
+          path: docs-build/html-export/
+
+      - name: Clone www-releases
+        if: env.upload
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: ${{ github.repository_owner }}/www-releases
+          ref: main
+          fetch-depth: 0
+          path: www-releases
+          persist-credentials: false
+
+      - name: Upload Release Notes
+        if: env.upload
+        env:
+          GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
+        run: |
+          mkdir -p www-releases/${{ inputs.release-version }}
+          mv ./docs-build/html-export/* www-releases/${{ inputs.release-version }}
+          cd www-releases
+          git checkout -b ${{ inputs.release-version }}
+          git add ${{ inputs.release-version }}
+          git config user.email "llvmbot@llvm.org"
+          git config user.name "llvmbot"
+          git commit -a -m "Add ${{ inputs.release-version }} documentation"
+          git push --force  "https://$GH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
+          gh pr create -f -B main -H ${{ inputs.release-version }} -R llvmbot/www-releases

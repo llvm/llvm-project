@@ -1,5 +1,5 @@
-import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 
 tablegen("Opts") {
   visibility = [ ":sancov" ]

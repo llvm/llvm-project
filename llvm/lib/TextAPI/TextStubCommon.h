@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_TEXT_STUB_COMMON_H
 #define LLVM_TEXTAPI_TEXT_STUB_COMMON_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/TextAPI/Architecture.h"

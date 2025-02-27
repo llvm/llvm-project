@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; This tests a bug where LegalizeDAG was not checking the target's
 ; BooleanContents value and always using one for true, when expanding

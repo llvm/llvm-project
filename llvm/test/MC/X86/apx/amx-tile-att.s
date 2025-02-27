@@ -1,0 +1,55 @@
+# RUN: llvm-mc -triple x86_64 --show-encoding %s | FileCheck %s
+# RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR-COUNT-10: error:
+# ERROR-NOT: error:
+
+## ldtilecfg
+
+# CHECK: {evex}	ldtilecfg	123(%rax,%rbx,4)
+# CHECK: encoding: [0x62,0xf2,0x7c,0x08,0x49,0x44,0x98,0x7b]
+         {evex}	ldtilecfg	123(%rax,%rbx,4)
+
+# CHECK: ldtilecfg	291(%r28,%r29,4)
+# CHECK: encoding: [0x62,0x9a,0x78,0x08,0x49,0x84,0xac,0x23,0x01,0x00,0x00]
+         ldtilecfg	291(%r28,%r29,4)
+
+## sttilecfg
+
+# CHECK: {evex}	sttilecfg	123(%rax,%rbx,4)
+# CHECK: encoding: [0x62,0xf2,0x7d,0x08,0x49,0x44,0x98,0x7b]
+         {evex}	sttilecfg	123(%rax,%rbx,4)
+
+# CHECK: sttilecfg	291(%r28,%r29,4)
+# CHECK: encoding: [0x62,0x9a,0x79,0x08,0x49,0x84,0xac,0x23,0x01,0x00,0x00]
+         sttilecfg	291(%r28,%r29,4)
+
+## tileloadd
+
+# CHECK: {evex}	tileloadd	123(%rax,%rbx,4), %tmm6
+# CHECK: encoding: [0x62,0xf2,0x7f,0x08,0x4b,0x74,0x98,0x7b]
+         {evex}	tileloadd	123(%rax,%rbx,4), %tmm6
+
+# CHECK: tileloadd	291(%r28,%r29,4), %tmm6
+# CHECK: encoding: [0x62,0x9a,0x7b,0x08,0x4b,0xb4,0xac,0x23,0x01,0x00,0x00]
+         tileloadd	291(%r28,%r29,4), %tmm6
+
+## tileloaddt1
+
+# CHECK: {evex}	tileloaddt1	123(%rax,%rbx,4), %tmm6
+# CHECK: encoding: [0x62,0xf2,0x7d,0x08,0x4b,0x74,0x98,0x7b]
+         {evex}	tileloaddt1	123(%rax,%rbx,4), %tmm6
+
+# CHECK: tileloaddt1	291(%r28,%r29,4), %tmm6
+# CHECK: encoding: [0x62,0x9a,0x79,0x08,0x4b,0xb4,0xac,0x23,0x01,0x00,0x00]
+         tileloaddt1	291(%r28,%r29,4), %tmm6
+
+## tilestored
+
+# CHECK: {evex}	tilestored	%tmm6, 123(%rax,%rbx,4)
+# CHECK: encoding: [0x62,0xf2,0x7e,0x08,0x4b,0x74,0x98,0x7b]
+         {evex}	tilestored	%tmm6, 123(%rax,%rbx,4)
+
+# CHECK: tilestored	%tmm6, 291(%r28,%r29,4)
+# CHECK: encoding: [0x62,0x9a,0x7a,0x08,0x4b,0xb4,0xac,0x23,0x01,0x00,0x00]
+         tilestored	%tmm6, 291(%r28,%r29,4)

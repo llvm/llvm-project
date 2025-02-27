@@ -28,68 +28,6 @@ static const char *unknown = "unknown";
 static int trace_level = 5;
 #endif
 
-/* LOG_ID_BITS  = ( 1 + floor( log_2( max( log_per_phy - 1, 1 ))))
- * APIC_ID      = (PHY_ID << LOG_ID_BITS) | LOG_ID
- * PHY_ID       = APIC_ID >> LOG_ID_BITS
- */
-int __kmp_get_physical_id(int log_per_phy, int apic_id) {
-  int index_lsb, index_msb, temp;
-
-  if (log_per_phy > 1) {
-    index_lsb = 0;
-    index_msb = 31;
-
-    temp = log_per_phy;
-    while ((temp & 1) == 0) {
-      temp >>= 1;
-      index_lsb++;
-    }
-
-    temp = log_per_phy;
-    while ((temp & 0x80000000) == 0) {
-      temp <<= 1;
-      index_msb--;
-    }
-
-    /* If >1 bits were set in log_per_phy, choose next higher power of 2 */
-    if (index_lsb != index_msb)
-      index_msb++;
-
-    return ((int)(apic_id >> index_msb));
-  }
-
-  return apic_id;
-}
-
-/*
- * LOG_ID_BITS  = ( 1 + floor( log_2( max( log_per_phy - 1, 1 ))))
- * APIC_ID      = (PHY_ID << LOG_ID_BITS) | LOG_ID
- * LOG_ID       = APIC_ID & (( 1 << LOG_ID_BITS ) - 1 )
- */
-int __kmp_get_logical_id(int log_per_phy, int apic_id) {
-  unsigned current_bit;
-  int bits_seen;
-
-  if (log_per_phy <= 1)
-    return (0);
-
-  bits_seen = 0;
-
-  for (current_bit = 1; log_per_phy != 0; current_bit <<= 1) {
-    if (log_per_phy & current_bit) {
-      log_per_phy &= ~current_bit;
-      bits_seen++;
-    }
-  }
-
-  /* If exactly 1 bit was set in log_per_phy, choose next lower power of 2 */
-  if (bits_seen == 1) {
-    current_bit >>= 1;
-  }
-
-  return ((int)((current_bit - 1) & apic_id));
-}
-
 static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
     char const *frequency // I: Float number and unit: MHz, GHz, or TGz.
 ) {
@@ -122,7 +60,6 @@ static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
 void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
   struct kmp_cpuid buf;
   int max_arg;
-  int log_per_phy;
 #ifdef KMP_DEBUG
   int cflush_size;
 #endif
@@ -227,11 +164,8 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
 
     if ((buf.edx >> 28) & 1) {
       /* Bits 23-16: Logical Processors per Physical Processor (1 for P4) */
-      log_per_phy = data[2];
       p->apic_id = data[3]; /* Bits 31-24: Processor Initial APIC ID (X) */
-      KA_TRACE(trace_level, (" HT(%d TPUs)", log_per_phy));
-      p->physical_id = __kmp_get_physical_id(log_per_phy, p->apic_id);
-      p->logical_id = __kmp_get_logical_id(log_per_phy, p->apic_id);
+      KA_TRACE(trace_level, (" HT(%d TPUs)", data[2]));
     }
 #ifdef KMP_DEBUG
     if ((buf.edx >> 29) & 1) {
@@ -294,6 +228,8 @@ void __kmp_expand_host_name(char *buffer, size_t size) {
     if (!GetComputerNameA(buffer, &s))
       KMP_STRCPY_S(buffer, size, unknown);
   }
+#elif KMP_OS_WASI
+  KMP_STRCPY_S(buffer, size, unknown);
 #else
   buffer[size - 2] = 0;
   if (gethostname(buffer, size) || buffer[size - 2] != 0)

@@ -7323,18 +7323,18 @@ define <8 x i32>@test_int_x86_avx512_maskz_psrav8_si(<8 x i32> %x0, <8 x i32> %x
 define <8 x i32>@test_int_x86_avx512_mask_psrav8_si_const() {
 ; X86-LABEL: test_int_x86_avx512_mask_psrav8_si_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0 # EVEX TO VEX Compression ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
-; X86-NEXT:    # encoding: [0xc5,0xfd,0x6f,0x05,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
+; X86-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x21,0x05,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x46,0x05,A,A,A,A]
 ; X86-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_psrav8_si_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 # EVEX TO VEX Compression ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
-; X64-NEXT:    # encoding: [0xc5,0xfd,0x6f,0x05,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
+; X64-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x21,0x05,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x46,0x05,A,A,A,A]
 ; X64-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    retq # encoding: [0xc3]
@@ -8636,18 +8636,18 @@ define <2 x i64>@test_int_x86_avx512_maskz_psrav_q_128(<2 x i64> %x0, <2 x i64> 
 define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128_const(i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_psrav_q_128_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # EVEX TO VEX Compression xmm0 = [2,0,4294967287,4294967295]
-; X86-NEXT:    # encoding: [0xc5,0xf9,0x6f,0x05,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [2,18446744073709551607]
+; X86-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x22,0x05,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    vpsravq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x46,0x05,A,A,A,A]
 ; X86-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_psrav_q_128_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # EVEX TO VEX Compression xmm0 = [2,18446744073709551607]
-; X64-NEXT:    # encoding: [0xc5,0xf9,0x6f,0x05,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [2,18446744073709551607]
+; X64-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x22,0x05,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    vpsravq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x46,0x05,A,A,A,A]
 ; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    retq # encoding: [0xc3]
@@ -12346,6 +12346,7 @@ define <4 x i32>@test_int_x86_avx512_pternlog_d_128(<4 x i32> %x0, <4 x i32> %x1
 ; CHECK-LABEL: test_int_x86_avx512_pternlog_d_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm0 # encoding: [0x62,0xf3,0x75,0x08,0x25,0xc2,0x21]
+; CHECK-NEXT:    # xmm0 = ~(xmm1 | (xmm0 ^ xmm2))
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33, i8 -1)
   ret <4 x i32> %res
@@ -12357,12 +12358,14 @@ define <4 x i32>@test_int_x86_avx512_mask_pternlog_d_128(<4 x i32> %x0, <4 x i32
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf3,0x75,0x09,0x25,0xc2,0x21]
+; X86-NEXT:    # xmm0 {%k1} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_pternlog_d_128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf3,0x75,0x09,0x25,0xc2,0x21]
+; X64-NEXT:    # xmm0 {%k1} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33, i8 %x4)
   ret <4 x i32> %res
@@ -12376,12 +12379,14 @@ define <4 x i32>@test_int_x86_avx512_maskz_pternlog_d_128(<4 x i32> %x0, <4 x i3
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x75,0x89,0x25,0xc2,0x21]
+; X86-NEXT:    # xmm0 {%k1} {z} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_maskz_pternlog_d_128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x75,0x89,0x25,0xc2,0x21]
+; X64-NEXT:    # xmm0 {%k1} {z} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.maskz.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33, i8 %x4)
   ret <4 x i32> %res
@@ -12393,6 +12398,7 @@ define <8 x i32>@test_int_x86_avx512_pternlog_d_256(<8 x i32> %x0, <8 x i32> %x1
 ; CHECK-LABEL: test_int_x86_avx512_pternlog_d_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf3,0x75,0x28,0x25,0xc2,0x21]
+; CHECK-NEXT:    # ymm0 = ~(ymm1 | (ymm0 ^ ymm2))
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.mask.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33, i8 -1)
   ret <8 x i32> %res
@@ -12404,12 +12410,14 @@ define <8 x i32>@test_int_x86_avx512_mask_pternlog_d_256(<8 x i32> %x0, <8 x i32
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf3,0x75,0x29,0x25,0xc2,0x21]
+; X86-NEXT:    # ymm0 {%k1} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_pternlog_d_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf3,0x75,0x29,0x25,0xc2,0x21]
+; X64-NEXT:    # ymm0 {%k1} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.mask.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33, i8 %x4)
   ret <8 x i32> %res
@@ -12423,12 +12431,14 @@ define <8 x i32>@test_int_x86_avx512_maskz_pternlog_d_256(<8 x i32> %x0, <8 x i3
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf3,0x75,0xa9,0x25,0xc2,0x21]
+; X86-NEXT:    # ymm0 {%k1} {z} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_maskz_pternlog_d_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf3,0x75,0xa9,0x25,0xc2,0x21]
+; X64-NEXT:    # ymm0 {%k1} {z} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.maskz.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33, i8 %x4)
   ret <8 x i32> %res
@@ -12440,6 +12450,7 @@ define <2 x i64>@test_int_x86_avx512_pternlog_q_128(<2 x i64> %x0, <2 x i64> %x1
 ; CHECK-LABEL: test_int_x86_avx512_pternlog_q_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm0 # encoding: [0x62,0xf3,0xf5,0x08,0x25,0xc2,0x21]
+; CHECK-NEXT:    # xmm0 = ~(xmm1 | (xmm0 ^ xmm2))
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33, i8 -1)
   ret <2 x i64> %res
@@ -12451,12 +12462,14 @@ define <2 x i64>@test_int_x86_avx512_mask_pternlog_q_128(<2 x i64> %x0, <2 x i64
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf3,0xf5,0x09,0x25,0xc2,0x21]
+; X86-NEXT:    # xmm0 {%k1} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_pternlog_q_128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf3,0xf5,0x09,0x25,0xc2,0x21]
+; X64-NEXT:    # xmm0 {%k1} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33, i8 %x4)
   ret <2 x i64> %res
@@ -12470,12 +12483,14 @@ define <2 x i64>@test_int_x86_avx512_maskz_pternlog_q_128(<2 x i64> %x0, <2 x i6
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0xf5,0x89,0x25,0xc2,0x21]
+; X86-NEXT:    # xmm0 {%k1} {z} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_maskz_pternlog_q_128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0xf5,0x89,0x25,0xc2,0x21]
+; X64-NEXT:    # xmm0 {%k1} {z} = ~(xmm1 | (xmm0 ^ xmm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.maskz.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33, i8 %x4)
   ret <2 x i64> %res
@@ -12487,6 +12502,7 @@ define <4 x i64>@test_int_x86_avx512_pternlog_q_256(<4 x i64> %x0, <4 x i64> %x1
 ; CHECK-LABEL: test_int_x86_avx512_pternlog_q_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf3,0xf5,0x28,0x25,0xc2,0x21]
+; CHECK-NEXT:    # ymm0 = ~(ymm1 | (ymm0 ^ ymm2))
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx512.mask.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33, i8 -1)
   ret <4 x i64> %res
@@ -12498,12 +12514,14 @@ define <4 x i64>@test_int_x86_avx512_mask_pternlog_q_256(<4 x i64> %x0, <4 x i64
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf3,0xf5,0x29,0x25,0xc2,0x21]
+; X86-NEXT:    # ymm0 {%k1} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_pternlog_q_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf3,0xf5,0x29,0x25,0xc2,0x21]
+; X64-NEXT:    # ymm0 {%k1} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx512.mask.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33, i8 %x4)
   ret <4 x i64> %res
@@ -12517,12 +12535,14 @@ define <4 x i64>@test_int_x86_avx512_maskz_pternlog_q_256(<4 x i64> %x0, <4 x i6
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf3,0xf5,0xa9,0x25,0xc2,0x21]
+; X86-NEXT:    # ymm0 {%k1} {z} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_maskz_pternlog_q_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf3,0xf5,0xa9,0x25,0xc2,0x21]
+; X64-NEXT:    # ymm0 {%k1} {z} = ~(ymm1 | (ymm0 ^ ymm2))
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx512.maskz.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33, i8 %x4)
   ret <4 x i64> %res

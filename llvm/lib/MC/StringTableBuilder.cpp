@@ -150,7 +150,7 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
     StringRef Previous;
     for (StringPair *P : Strings) {
       StringRef S = P->first.val();
-      if (Previous.endswith(S)) {
+      if (Previous.ends_with(S)) {
         size_t Pos = Size - S.size() - (K != RAW);
         if (isAligned(Alignment, Pos)) {
           P->second = Pos;

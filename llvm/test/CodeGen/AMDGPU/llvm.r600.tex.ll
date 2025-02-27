@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+;RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ;CHECK: TEX_SAMPLE T{{[0-9]+\.XYZW, T[0-9]+\.XYZW}} RID:0 SID:0 CT:NNNN
 ;CHECK: TEX_SAMPLE T{{[0-9]+\.XYZW, T[0-9]+\.XYZW}} RID:0 SID:0 CT:NNNN

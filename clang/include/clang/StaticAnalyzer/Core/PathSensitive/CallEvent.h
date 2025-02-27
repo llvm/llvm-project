@@ -59,6 +59,7 @@ namespace ento {
 
 enum CallEventKind {
   CE_Function,
+  CE_CXXStaticOperator,
   CE_CXXMember,
   CE_CXXMemberOperator,
   CE_CXXDestructor,
@@ -689,6 +690,11 @@ protected:
       ValueList &Values,
       RegionAndSymbolInvalidationTraits *ETraits) const override;
 
+  /// Returns the decl refered to by the "dynamic type" of the current object
+  /// and if the class can be a sub-class or not.
+  /// If the Pointer is null, the flag has no meaning.
+  std::pair<const CXXRecordDecl *, bool> getDeclForDynamicType() const;
+
 public:
   /// Returns the expression representing the implicit 'this' object.
   virtual const Expr *getCXXThisExpr() const { return nullptr; }
@@ -706,6 +712,77 @@ public:
   static bool classof(const CallEvent *CA) {
     return CA->getKind() >= CE_BEG_CXX_INSTANCE_CALLS &&
            CA->getKind() <= CE_END_CXX_INSTANCE_CALLS;
+  }
+};
+
+/// Represents a static C++ operator call.
+///
+/// "A" in this example.
+/// However, "B" and "C" are represented by SimpleFunctionCall.
+/// \code
+///   struct S {
+///     int pad;
+///     static void operator()(int x, int y);
+///   };
+///   S s{10};
+///   void (*fptr)(int, int) = &S::operator();
+///
+///   s(1, 2);  // A
+///   S::operator()(1, 2);  // B
+///   fptr(1, 2); // C
+/// \endcode
+class CXXStaticOperatorCall : public SimpleFunctionCall {
+  friend class CallEventManager;
+
+protected:
+  CXXStaticOperatorCall(const CXXOperatorCallExpr *CE, ProgramStateRef St,
+                        const LocationContext *LCtx,
+                        CFGBlock::ConstCFGElementRef ElemRef)
+      : SimpleFunctionCall(CE, St, LCtx, ElemRef) {}
+  CXXStaticOperatorCall(const CXXStaticOperatorCall &Other) = default;
+
+  void cloneTo(void *Dest) const override {
+    new (Dest) CXXStaticOperatorCall(*this);
+  }
+
+public:
+  const CXXOperatorCallExpr *getOriginExpr() const override {
+    return cast<CXXOperatorCallExpr>(SimpleFunctionCall::getOriginExpr());
+  }
+
+  unsigned getNumArgs() const override {
+    // Ignore the object parameter that is not used for static member functions.
+    assert(getOriginExpr()->getNumArgs() > 0);
+    return getOriginExpr()->getNumArgs() - 1;
+  }
+
+  const Expr *getArgExpr(unsigned Index) const override {
+    // Ignore the object parameter that is not used for static member functions.
+    return getOriginExpr()->getArg(Index + 1);
+  }
+
+  std::optional<unsigned>
+  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const override {
+    // Ignore the object parameter that is not used for static member functions.
+    if (ASTArgumentIndex == 0)
+      return std::nullopt;
+    return ASTArgumentIndex - 1;
+  }
+
+  unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const override {
+    // Account for the object parameter for the static member function.
+    return CallArgumentIndex + 1;
+  }
+
+  OverloadedOperatorKind getOverloadedOperator() const {
+    return getOriginExpr()->getOperator();
+  }
+
+  Kind getKind() const override { return CE_CXXStaticOperator; }
+  StringRef getKindAsString() const override { return "CXXStaticOperatorCall"; }
+
+  static bool classof(const CallEvent *CA) {
+    return CA->getKind() == CE_CXXStaticOperator;
   }
 };
 

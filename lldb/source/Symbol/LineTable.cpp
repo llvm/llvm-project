@@ -21,15 +21,13 @@ using namespace lldb_private;
 LineTable::LineTable(CompileUnit *comp_unit)
     : m_comp_unit(comp_unit), m_entries() {}
 
-LineTable::LineTable(CompileUnit *comp_unit,
-                     std::vector<std::unique_ptr<LineSequence>> &&sequences)
+LineTable::LineTable(CompileUnit *comp_unit, std::vector<Sequence> &&sequences)
     : m_comp_unit(comp_unit), m_entries() {
-  LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
+  LessThanBinaryPredicate less_than_bp(this);
   llvm::stable_sort(sequences, less_than_bp);
-  for (const auto &sequence : sequences) {
-    LineSequenceImpl *seq = static_cast<LineSequenceImpl *>(sequence.get());
-    m_entries.insert(m_entries.end(), seq->m_entries.begin(),
-                     seq->m_entries.end());
+  for (const Sequence &seq : sequences) {
+    m_entries.insert(m_entries.end(), seq.m_entries.begin(),
+                     seq.m_entries.end());
   }
 }
 
@@ -46,7 +44,7 @@ void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
               is_start_of_basic_block, is_prologue_end, is_epilogue_begin,
               is_terminal_entry);
 
-  LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
+  LessThanBinaryPredicate less_than_bp(this);
   entry_collection::iterator pos =
       llvm::upper_bound(m_entries, entry, less_than_bp);
 
@@ -58,25 +56,14 @@ void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
   //  Dump (&s, Address::DumpStyleFileAddress);
 }
 
-LineSequence::LineSequence() = default;
-
-void LineTable::LineSequenceImpl::Clear() { m_entries.clear(); }
-
-std::unique_ptr<LineSequence> LineTable::CreateLineSequenceContainer() {
-  return std::make_unique<LineTable::LineSequenceImpl>();
-}
-
 void LineTable::AppendLineEntryToSequence(
-    LineSequence *sequence, lldb::addr_t file_addr, uint32_t line,
-    uint16_t column, uint16_t file_idx, bool is_start_of_statement,
-    bool is_start_of_basic_block, bool is_prologue_end, bool is_epilogue_begin,
-    bool is_terminal_entry) {
-  assert(sequence != nullptr);
-  LineSequenceImpl *seq = reinterpret_cast<LineSequenceImpl *>(sequence);
+    Sequence &sequence, lldb::addr_t file_addr, uint32_t line, uint16_t column,
+    uint16_t file_idx, bool is_start_of_statement, bool is_start_of_basic_block,
+    bool is_prologue_end, bool is_epilogue_begin, bool is_terminal_entry) {
   Entry entry(file_addr, line, column, file_idx, is_start_of_statement,
               is_start_of_basic_block, is_prologue_end, is_epilogue_begin,
               is_terminal_entry);
-  entry_collection &entries = seq->m_entries;
+  entry_collection &entries = sequence.m_entries;
   // Replace the last entry if the address is the same, otherwise append it. If
   // we have multiple line entries at the same address, this indicates illegal
   // DWARF so this "fixes" the line table to be correct. If not fixed this can
@@ -102,28 +89,26 @@ void LineTable::AppendLineEntryToSequence(
     entries.push_back(entry);
 }
 
-void LineTable::InsertSequence(LineSequence *sequence) {
-  assert(sequence != nullptr);
-  LineSequenceImpl *seq = reinterpret_cast<LineSequenceImpl *>(sequence);
-  if (seq->m_entries.empty())
+void LineTable::InsertSequence(Sequence sequence) {
+  if (sequence.m_entries.empty())
     return;
-  Entry &entry = seq->m_entries.front();
+  const Entry &entry = sequence.m_entries.front();
 
   // If the first entry address in this sequence is greater than or equal to
   // the address of the last item in our entry collection, just append.
   if (m_entries.empty() ||
       !Entry::EntryAddressLessThan(entry, m_entries.back())) {
-    m_entries.insert(m_entries.end(), seq->m_entries.begin(),
-                     seq->m_entries.end());
+    m_entries.insert(m_entries.end(), sequence.m_entries.begin(),
+                     sequence.m_entries.end());
     return;
   }
 
   // Otherwise, find where this belongs in the collection
   entry_collection::iterator begin_pos = m_entries.begin();
   entry_collection::iterator end_pos = m_entries.end();
-  LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
+  LessThanBinaryPredicate less_than_bp(this);
   entry_collection::iterator pos =
-      upper_bound(begin_pos, end_pos, entry, less_than_bp);
+      std::upper_bound(begin_pos, end_pos, entry, less_than_bp);
 
   // We should never insert a sequence in the middle of another sequence
   if (pos != begin_pos) {
@@ -139,15 +124,11 @@ void LineTable::InsertSequence(LineSequence *sequence) {
     assert(prev_pos->is_terminal_entry);
   }
 #endif
-  m_entries.insert(pos, seq->m_entries.begin(), seq->m_entries.end());
+  m_entries.insert(pos, sequence.m_entries.begin(), sequence.m_entries.end());
 }
 
-LineTable::Entry::LessThanBinaryPredicate::LessThanBinaryPredicate(
-    LineTable *line_table)
-    : m_line_table(line_table) {}
-
-bool LineTable::Entry::LessThanBinaryPredicate::
-operator()(const LineTable::Entry &a, const LineTable::Entry &b) const {
+bool LineTable::LessThanBinaryPredicate::operator()(const Entry &a,
+                                                    const Entry &b) const {
 #define LT_COMPARE(a, b)                                                       \
   if (a != b)                                                                  \
   return a < b
@@ -166,12 +147,9 @@ operator()(const LineTable::Entry &a, const LineTable::Entry &b) const {
 #undef LT_COMPARE
 }
 
-bool LineTable::Entry::LessThanBinaryPredicate::
-operator()(const std::unique_ptr<LineSequence> &sequence_a,
-           const std::unique_ptr<LineSequence> &sequence_b) const {
-  auto *seq_a = static_cast<const LineSequenceImpl *>(sequence_a.get());
-  auto *seq_b = static_cast<const LineSequenceImpl *>(sequence_b.get());
-  return (*this)(seq_a->m_entries.front(), seq_b->m_entries.front());
+bool LineTable::LessThanBinaryPredicate::operator()(
+    const Sequence &seq_a, const Sequence &seq_b) const {
+  return (*this)(seq_a.m_entries.front(), seq_b.m_entries.front());
 }
 
 uint32_t LineTable::GetSize() const { return m_entries.size(); }
@@ -183,6 +161,50 @@ bool LineTable::GetLineEntryAtIndex(uint32_t idx, LineEntry &line_entry) {
   }
   line_entry.Clear();
   return false;
+}
+
+uint32_t LineTable::lower_bound(const Address &so_addr) const {
+  if (so_addr.GetModule() != m_comp_unit->GetModule())
+    return GetSize();
+
+  Entry search_entry;
+  search_entry.file_addr = so_addr.GetFileAddress();
+  if (search_entry.file_addr == LLDB_INVALID_ADDRESS)
+    return GetSize();
+
+  // This is not a typo. upper_bound returns the first entry which definitely
+  // does not contain this address, which means the entry before it *might*
+  // contain it -- if it is not a termination entry.
+  auto pos =
+      llvm::upper_bound(m_entries, search_entry, Entry::EntryAddressLessThan);
+
+  if (pos != m_entries.begin() && !std::prev(pos)->is_terminal_entry)
+    --pos;
+
+  return std::distance(m_entries.begin(), pos);
+}
+
+std::pair<uint32_t, uint32_t>
+LineTable::GetLineEntryIndexRange(const AddressRange &range) const {
+  uint32_t first = lower_bound(range.GetBaseAddress());
+  if (first >= GetSize() || range.GetByteSize() == 0)
+    return {first, first};
+
+  Entry search_entry;
+  search_entry.file_addr =
+      range.GetBaseAddress().GetFileAddress() + range.GetByteSize();
+
+  // lower_bound returns the first entry which starts on or after the given
+  // address, which is exactly what we want -- *except* if the entry is a
+  // termination entry (in that case, we want the one after it).
+  auto pos =
+      std::lower_bound(std::next(m_entries.begin(), first), m_entries.end(),
+                       search_entry, Entry::EntryAddressLessThan);
+  if (pos != m_entries.end() && pos->file_addr == search_entry.file_addr &&
+      pos->is_terminal_entry)
+    ++pos;
+
+  return {first, std::distance(m_entries.begin(), pos)};
 }
 
 bool LineTable::FindLineEntryByAddress(const Address &so_addr,
@@ -199,7 +221,7 @@ bool LineTable::FindLineEntryByAddress(const Address &so_addr,
     if (search_entry.file_addr != LLDB_INVALID_ADDRESS) {
       entry_collection::const_iterator begin_pos = m_entries.begin();
       entry_collection::const_iterator end_pos = m_entries.end();
-      entry_collection::const_iterator pos = lower_bound(
+      entry_collection::const_iterator pos = std::lower_bound(
           begin_pos, end_pos, search_entry, Entry::EntryAddressLessThan);
       if (pos != end_pos) {
         if (pos != begin_pos) {
@@ -288,10 +310,10 @@ bool LineTable::ConvertEntryAtIndexToLineEntry(uint32_t idx,
   else
     line_entry.range.SetByteSize(0);
 
-  line_entry.file =
-      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
-  line_entry.original_file =
-      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
+  line_entry.file_sp =
+      m_comp_unit->GetSupportFiles().GetSupportFileAtIndex(entry.file_idx);
+  line_entry.original_file_sp =
+      m_comp_unit->GetSupportFiles().GetSupportFileAtIndex(entry.file_idx);
   line_entry.line = entry.line;
   line_entry.column = entry.column;
   line_entry.is_start_of_statement = entry.is_start_of_statement;
@@ -357,13 +379,13 @@ void LineTable::Dump(Stream *s, Target *target, Address::DumpStyle style,
                      Address::DumpStyle fallback_style, bool show_line_ranges) {
   const size_t count = m_entries.size();
   LineEntry line_entry;
-  FileSpec prev_file;
+  SupportFileSP prev_file;
   for (size_t idx = 0; idx < count; ++idx) {
     ConvertEntryAtIndexToLineEntry(idx, line_entry);
-    line_entry.Dump(s, target, prev_file != line_entry.original_file, style,
-                    fallback_style, show_line_ranges);
+    line_entry.Dump(s, target, !prev_file->Equal(*line_entry.original_file_sp),
+                    style, fallback_style, show_line_ranges);
     s->EOL();
-    prev_file = line_entry.original_file;
+    prev_file = line_entry.original_file_sp;
   }
 }
 
@@ -405,7 +427,7 @@ size_t LineTable::GetContiguousFileAddressRanges(FileAddressRanges &file_ranges,
 
 LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
   std::unique_ptr<LineTable> line_table_up(new LineTable(m_comp_unit));
-  LineSequenceImpl sequence;
+  Sequence sequence;
   const size_t count = m_entries.size();
   LineEntry line_entry;
   const FileRangeMap::Entry *file_range_entry = nullptr;
@@ -467,8 +489,7 @@ LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
       sequence.m_entries.back().is_terminal_entry = true;
 
       // Append the sequence since we just terminated the previous one
-      line_table_up->InsertSequence(&sequence);
-      sequence.Clear();
+      line_table_up->InsertSequence(std::move(sequence));
     }
 
     // Now link the current entry
@@ -483,8 +504,7 @@ LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
     // insert this sequence into our new line table.
     if (!sequence.m_entries.empty() &&
         sequence.m_entries.back().is_terminal_entry) {
-      line_table_up->InsertSequence(&sequence);
-      sequence.Clear();
+      line_table_up->InsertSequence(std::move(sequence));
       prev_entry_was_linked = false;
     } else {
       prev_entry_was_linked = file_range_entry != nullptr;

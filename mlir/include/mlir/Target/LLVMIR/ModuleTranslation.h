@@ -23,12 +23,13 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace llvm {
 class BasicBlock;
-class IRBuilderBase;
 class Function;
+class IRBuilderBase;
+class OpenMPIRBuilder;
 class Value;
 } // namespace llvm
 
@@ -57,7 +58,8 @@ class ComdatSelectorOp;
 /// needs to look up block and function mappings.
 class ModuleTranslation {
   friend std::unique_ptr<llvm::Module>
-  mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef);
+  mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef,
+                                bool);
 
 public:
   /// Stores the mapping between a function name and its LLVM IR representation.
@@ -166,6 +168,12 @@ public:
   /// attribute.
   void setLoopMetadata(Operation *op, llvm::Instruction *inst);
 
+  /// Sets the disjoint flag attribute for the exported instruction `value`
+  /// given the original operation `op`. Asserts if the operation does
+  /// not implement the disjoint flag interface, and asserts if the value
+  /// is an instruction that implements the disjoint flag.
+  void setDisjointFlag(Operation *op, llvm::Value *value);
+
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
 
@@ -181,6 +189,12 @@ public:
     return globalsMapping.lookup(op);
   }
 
+  /// Finds an LLVM IR global value that corresponds to the given MLIR operation
+  /// defining a global alias value.
+  llvm::GlobalValue *lookupAlias(Operation *op) {
+    return aliasesMapping.lookup(op);
+  }
+
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
@@ -191,8 +205,22 @@ public:
   /// Translates the given location.
   llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
+  /// Translates the given LLVM DWARF expression metadata.
+  llvm::DIExpression *translateExpression(LLVM::DIExpressionAttr attr);
+
+  /// Translates the given LLVM global variable expression metadata.
+  llvm::DIGlobalVariableExpression *
+  translateGlobalVariableExpression(LLVM::DIGlobalVariableExpressionAttr attr);
+
   /// Translates the given LLVM debug info metadata.
   llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);
+
+  /// Translates the given LLVM rounding mode metadata.
+  llvm::RoundingMode translateRoundingMode(LLVM::RoundingMode rounding);
+
+  /// Translates the given LLVM FP exception behavior metadata.
+  llvm::fp::ExceptionBehavior
+  translateFPExceptionBehavior(LLVM::FPExceptionBehavior exceptionBehavior);
 
   /// Translates the contents of the given block to LLVM IR using this
   /// translator. The LLVM IR basic block corresponding to the given block is
@@ -202,7 +230,15 @@ public:
   /// PHI nodes are constructed for block arguments but are _not_ connected to
   /// the predecessors that may not exist yet.
   LogicalResult convertBlock(Block &bb, bool ignoreArguments,
-                             llvm::IRBuilderBase &builder);
+                             llvm::IRBuilderBase &builder) {
+    return convertBlockImpl(bb, ignoreArguments, builder,
+                            /*recordInsertions=*/false);
+  }
+
+  /// Translates parameter attributes of a call and adds them to the returned
+  /// AttrBuilder. Returns failure if any of the translations failed.
+  FailureOr<llvm::AttrBuilder> convertParameterAttrs(CallOpInterface callOp,
+                                                     DictionaryAttr paramAttrs);
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
@@ -254,13 +290,12 @@ public:
   /// Calls `callback` for every ModuleTranslation stack frame of type `T`
   /// starting from the top of the stack.
   template <typename T>
-  WalkResult
-  stackWalk(llvm::function_ref<WalkResult(const T &)> callback) const {
+  WalkResult stackWalk(llvm::function_ref<WalkResult(T &)> callback) {
     static_assert(std::is_base_of<StackFrame, T>::value,
                   "expected T derived from StackFrame");
     if (!callback)
       return WalkResult::skip();
-    for (const std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
+    for (std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
       if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
         WalkResult result = callback(*ptr);
         if (result.wasInterrupted())
@@ -292,12 +327,22 @@ private:
   ~ModuleTranslation();
 
   /// Converts individual components.
-  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder);
+  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder,
+                                 bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
-  LogicalResult convertGlobals();
+
+  /// Handle conversion for both globals and global aliases.
+  ///
+  /// - Create named global variables that correspond to llvm.mlir.global
+  /// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
+  /// - Create global alias that correspond to llvm.mlir.alias.
+  LogicalResult convertGlobalsAndAliases();
   LogicalResult convertOneFunction(LLVMFuncOp func);
+  LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
+                                 llvm::IRBuilderBase &builder,
+                                 bool recordInsertions);
 
   /// Returns the LLVM metadata corresponding to the given mlir LLVM dialect
   /// TBAATagAttr.
@@ -307,11 +352,21 @@ private:
   /// metadata nodes for them.
   LogicalResult createTBAAMetadata();
 
-  /// Translates dialect attributes attached to the given operation.
-  LogicalResult convertDialectAttributes(Operation *op);
+  /// Process the ident LLVM Metadata, if it exists.
+  LogicalResult createIdentMetadata();
 
-  /// Translates parameter attributes and adds them to the returned AttrBuilder.
-  llvm::AttrBuilder convertParameterAttrs(DictionaryAttr paramAttrs);
+  /// Process the llvm.commandline LLVM Metadata, if it exists.
+  LogicalResult createCommandlineMetadata();
+
+  /// Translates dialect attributes attached to the given operation.
+  LogicalResult
+  convertDialectAttributes(Operation *op,
+                           ArrayRef<llvm::Instruction *> instructions);
+
+  /// Translates parameter attributes of a function and adds them to the
+  /// returned AttrBuilder. Returns failure if any of the translations failed.
+  FailureOr<llvm::AttrBuilder>
+  convertParameterAttrs(LLVMFuncOp func, int argIdx, DictionaryAttr paramAttrs);
 
   /// Original and translated module.
   Operation *mlirModule;
@@ -327,6 +382,10 @@ private:
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// Mappings between llvm.mlir.alias definitions and corresponding global
+  /// aliases.
+  DenseMap<Operation *, llvm::GlobalValue *> aliasesMapping;
 
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;
@@ -394,6 +453,17 @@ llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
                                     llvm::Intrinsic::ID intrinsic,
                                     ArrayRef<llvm::Value *> args = {},
                                     ArrayRef<llvm::Type *> tys = {});
+
+/// Creates a call to a LLVM IR intrinsic defined by LLVM_IntrOpBase. This
+/// resolves the overloads, and maps mixed MLIR value and attribute arguments to
+/// LLVM values.
+llvm::CallInst *createIntrinsicCall(
+    llvm::IRBuilderBase &builder, ModuleTranslation &moduleTranslation,
+    Operation *intrOp, llvm::Intrinsic::ID intrinsic, unsigned numResults,
+    ArrayRef<unsigned> overloadedResults, ArrayRef<unsigned> overloadedOperands,
+    ArrayRef<unsigned> immArgPositions,
+    ArrayRef<StringLiteral> immArgAttrNames);
+
 } // namespace detail
 
 } // namespace LLVM

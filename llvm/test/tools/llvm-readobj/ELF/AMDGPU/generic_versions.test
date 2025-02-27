@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %t -DABI_VERSION=4 -DGENERICVER=EF_AMDGPU_GENERIC_VERSION_V1
+# RUN: llvm-readelf -h %t | FileCheck %s --check-prefixes=V1
+
+# RUN: yaml2obj %s -o %t -DABI_VERSION=4 -DGENERICVER=EF_AMDGPU_GENERIC_VERSION_V32
+# RUN: llvm-readelf -h %t | FileCheck %s --check-prefixes=V32
+
+# RUN: yaml2obj %s -o %t -DABI_VERSION=4 -DGENERICVER=EF_AMDGPU_GENERIC_VERSION_V126
+# RUN: llvm-readelf -h %t | FileCheck %s --check-prefixes=V126
+
+# RUN: yaml2obj %s -o %t -DABI_VERSION=4 -DGENERICVER=EF_AMDGPU_GENERIC_VERSION_V255
+# RUN: llvm-readelf -h %t | FileCheck %s --check-prefixes=V255
+
+# V1: generic_v1
+# V32: generic_v32
+# V126: generic_v126
+# V255: generic_v255
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  ABIVersion:      [[ABI_VERSION]]
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX900, [[GENERICVER]] ]

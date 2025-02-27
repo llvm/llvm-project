@@ -19,6 +19,8 @@ class ASTResultSynthesizer;
 class ASTStructExtractor;
 class Address;
 class AddressRange;
+class AddressRanges;
+class AddressRangeList;
 class AddressResolver;
 class ArchSpec;
 class Architecture;
@@ -39,7 +41,6 @@ class BreakpointOptions;
 class BreakpointPrecondition;
 class BreakpointResolver;
 class BreakpointSite;
-class BreakpointSiteList;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
@@ -174,6 +175,7 @@ class Queue;
 class QueueImpl;
 class QueueItem;
 class REPL;
+class RealpathPrefixes;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
 class RegisterContext;
@@ -181,13 +183,16 @@ class RegisterTypeBuilder;
 class RegisterValue;
 class RegularExpression;
 class RichManglingContext;
+class SaveCoreOptions;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
 class ScriptedMetadata;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
+class ScriptedStopHookInterface;
 class ScriptedThreadInterface;
+class ScriptedThreadPlanInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -203,16 +208,19 @@ class StackFrameRecognizer;
 class StackFrameRecognizerManager;
 class StackID;
 class Status;
+class SaveCoreOptions;
 class StopInfo;
 class Stoppoint;
 class StoppointCallbackContext;
 class Stream;
 class StreamFile;
 class StreamString;
+class LockableStreamFile;
 class StringList;
 class StringTableReader;
 class StructuredDataImpl;
 class StructuredDataPlugin;
+class SupportFile;
 class Symbol;
 class SymbolContext;
 class SymbolContextList;
@@ -226,6 +234,7 @@ class Symtab;
 class SyntheticChildren;
 class SyntheticChildrenFrontEnd;
 class SystemRuntime;
+class Progress;
 class Target;
 class TargetList;
 class TargetProperties;
@@ -259,9 +268,11 @@ class TypeImpl;
 class TypeList;
 class TypeListImpl;
 class TypeMap;
+class TypeQuery;
 class TypeMemberFunctionImpl;
 class TypeMemberImpl;
 class TypeNameSpecifierImpl;
+class TypeResults;
 class TypeSummaryImpl;
 class TypeSummaryOptions;
 class TypeSystem;
@@ -289,11 +300,14 @@ class VariableList;
 class Watchpoint;
 class WatchpointList;
 class WatchpointOptions;
+class WatchpointResource;
+class WatchpointResourceCollection;
 class WatchpointSetOptions;
 struct CompilerContext;
 struct LineEntry;
 struct PropertyDefinition;
 struct ScriptSummaryFormat;
+struct StatisticsOptions;
 struct StringSummaryFormat;
 template <unsigned N> class StreamBuffer;
 
@@ -303,6 +317,7 @@ template <unsigned N> class StreamBuffer;
 namespace lldb {
 
 typedef std::shared_ptr<lldb_private::ABI> ABISP;
+typedef std::unique_ptr<lldb_private::AddressRange> AddressRangeUP;
 typedef std::shared_ptr<lldb_private::Baton> BatonSP;
 typedef std::shared_ptr<lldb_private::Block> BlockSP;
 typedef std::shared_ptr<lldb_private::Breakpoint> BreakpointSP;
@@ -396,8 +411,12 @@ typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
     ScriptedPlatformInterfaceUP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
+typedef std::shared_ptr<lldb_private::ScriptedStopHookInterface>
+    ScriptedStopHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
+    ScriptedThreadPlanInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;
@@ -413,7 +432,9 @@ typedef std::unique_ptr<lldb_private::StackFrameRecognizerManager>
     StackFrameRecognizerManagerUP;
 typedef std::shared_ptr<lldb_private::StopInfo> StopInfoSP;
 typedef std::shared_ptr<lldb_private::Stream> StreamSP;
+typedef std::unique_ptr<lldb_private::Stream> StreamUP;
 typedef std::shared_ptr<lldb_private::StreamFile> StreamFileSP;
+typedef std::shared_ptr<lldb_private::LockableStreamFile> LockableStreamFileSP;
 typedef std::shared_ptr<lldb_private::StringSummaryFormat>
     StringTypeSummaryImplSP;
 typedef std::unique_ptr<lldb_private::StructuredDataImpl> StructuredDataImplUP;
@@ -459,6 +480,7 @@ typedef std::shared_ptr<lldb_private::TypeSummaryImpl> TypeSummaryImplSP;
 typedef std::shared_ptr<lldb_private::TypeSummaryOptions> TypeSummaryOptionsSP;
 typedef std::shared_ptr<lldb_private::ScriptedSyntheticChildren>
     ScriptedSyntheticChildrenSP;
+typedef std::shared_ptr<lldb_private::SupportFile> SupportFileSP;
 typedef std::shared_ptr<lldb_private::UnixSignals> UnixSignalsSP;
 typedef std::weak_ptr<lldb_private::UnixSignals> UnixSignalsWP;
 typedef std::shared_ptr<lldb_private::UnwindAssembly> UnwindAssemblySP;
@@ -469,6 +491,7 @@ typedef std::shared_ptr<lldb_private::Variable> VariableSP;
 typedef std::shared_ptr<lldb_private::VariableList> VariableListSP;
 typedef std::shared_ptr<lldb_private::ValueObjectList> ValueObjectListSP;
 typedef std::shared_ptr<lldb_private::Watchpoint> WatchpointSP;
+typedef std::shared_ptr<lldb_private::WatchpointResource> WatchpointResourceSP;
 
 } // namespace lldb
 

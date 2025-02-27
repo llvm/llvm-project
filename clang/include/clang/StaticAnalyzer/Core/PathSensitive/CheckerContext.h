@@ -69,6 +69,7 @@ public:
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
   ExplodedNode *getPredecessor() { return Pred; }
+  const ProgramPoint getLocation() const { return Location; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
   /// Check if the checker changed the state of the execution; ex: added
@@ -366,18 +367,30 @@ public:
     return getCalleeName(FunDecl);
   }
 
-  /// Returns true if the callee is an externally-visible function in the
-  /// top-level namespace, such as \c malloc.
+  /// Returns true if the given function is an externally-visible function in
+  /// the top-level namespace, such as \c malloc.
   ///
   /// If a name is provided, the function must additionally match the given
   /// name.
   ///
-  /// Note that this deliberately excludes C++ library functions in the \c std
-  /// namespace, but will include C library functions accessed through the
-  /// \c std namespace. This also does not check if the function is declared
-  /// as 'extern "C"', or if it uses C++ name mangling.
+  /// Note that this also accepts functions from the \c std namespace (because
+  /// headers like <cstdlib> declare them there) and does not check if the
+  /// function is declared as 'extern "C"' or if it uses C++ name mangling.
   static bool isCLibraryFunction(const FunctionDecl *FD,
                                  StringRef Name = StringRef());
+
+  /// In builds that use source hardening (-D_FORTIFY_SOURCE), many standard
+  /// functions are implemented as macros that expand to calls of hardened
+  /// functions that take additional arguments compared to the "usual"
+  /// variant and perform additional input validation. For example, a `memcpy`
+  /// call may expand to `__memcpy_chk()` or `__builtin___memcpy_chk()`.
+  ///
+  /// This method returns true if `FD` declares a fortified variant of the
+  /// standard library function `Name`.
+  ///
+  /// NOTE: This method relies on heuristics; extend it if you need to handle a
+  /// hardened variant that's not yet covered by it.
+  static bool isHardenedVariantOf(const FunctionDecl *FD, StringRef Name);
 
   /// Depending on wither the location corresponds to a macro, return
   /// either the macro name or the token spelling.

@@ -72,11 +72,11 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .cfi_offset 22, -8
 ; CHECK-NEXT:    addi.w $fp, $sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    st.w $zero, $fp, -16
 ; CHECK-NEXT:    st.w $zero, $fp, -12
+; CHECK-NEXT:    st.w $zero, $fp, -16
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    beqz $zero, .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
 ; CHECK-NEXT:    beqz $a0, .LBB0_4
@@ -85,10 +85,9 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:    st.w $a0, $fp, -16
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
-; CHECK-NEXT:    ori $a0, $zero, 1
-; CHECK-NEXT:    st.w $a0, $fp, -16
 ; CHECK-NEXT:    ori $a0, $zero, 3
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ori $a0, $zero, 4
@@ -96,10 +95,10 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
 ; CHECK-NEXT:    bnez $a0, .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    ori $a0, $zero, 2
-; CHECK-NEXT:    st.w $a0, $fp, -20
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -16
+; CHECK-NEXT:    ori $a0, $zero, 2
+; CHECK-NEXT:    st.w $a0, $fp, -20
 ; CHECK-NEXT:    ori $a0, $zero, 3
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ori $a0, $zero, 4
@@ -121,24 +120,23 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .cfi_offset 22, -8
 ; CHECK-NEXT:    addi.w $fp, $sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(x)
-; CHECK-NEXT:    addi.w $a0, $a0, %pc_lo12(x)
-; CHECK-NEXT:    ori $a1, $zero, 1
-; CHECK-NEXT:    st.w $a1, $a0, 0
 ; CHECK-NEXT:    st.w $zero, $fp, -12
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(x)
+; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:    st.w $a1, $fp, -16
-; CHECK-NEXT:    ori $a0, $zero, 2
-; CHECK-NEXT:    st.w $a0, $fp, -20
-; CHECK-NEXT:    ori $a2, $zero, 3
-; CHECK-NEXT:    st.w $a2, $fp, -24
-; CHECK-NEXT:    ori $a3, $zero, 4
-; CHECK-NEXT:    st.w $a3, $fp, -28
+; CHECK-NEXT:    ori $a2, $zero, 2
+; CHECK-NEXT:    st.w $a2, $fp, -20
+; CHECK-NEXT:    ori $a3, $zero, 3
+; CHECK-NEXT:    st.w $a3, $fp, -24
+; CHECK-NEXT:    ori $a4, $zero, 4
+; CHECK-NEXT:    st.w $a4, $fp, -28
+; CHECK-NEXT:    st.w $a1, $a0, %pc_lo12(x)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    st.w $a0, $fp, -20
 ; CHECK-NEXT:    st.w $a1, $fp, -16
-; CHECK-NEXT:    st.w $a2, $fp, -24
-; CHECK-NEXT:    st.w $a3, $fp, -28
+; CHECK-NEXT:    st.w $a2, $fp, -20
+; CHECK-NEXT:    st.w $a3, $fp, -24
+; CHECK-NEXT:    st.w $a4, $fp, -28
 ; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload

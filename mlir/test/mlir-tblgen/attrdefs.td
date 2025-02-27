@@ -63,6 +63,7 @@ def C_IndexAttr : TestAttr<"Index"> {
 }
 
 def A_SimpleAttrA : TestAttr<"SimpleA"> {
+  let attrName = "test.simple";
 // DECL: class SimpleAAttr : public ::mlir::Attribute
 }
 
@@ -85,7 +86,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 
 // DECL-LABEL: class CompoundAAttr : public ::mlir::Attribute
 // DECL: static CompoundAAttr getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static ::llvm::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return {"cmpnd_a"};
 // DECL: }
@@ -123,6 +124,7 @@ def D_SingleParameterAttr : TestAttr<"SingleParameter"> {
     ins
     "int": $num
   );
+  let attrName = "test.single_parameter";
 // DECL-LABEL: struct SingleParameterAttrStorage;
 // DECL-LABEL: class SingleParameterAttr
 // DECL-SAME:  detail::SingleParameterAttrStorage
@@ -130,6 +132,7 @@ def D_SingleParameterAttr : TestAttr<"SingleParameter"> {
 
 def F_ParamWithAccessorTypeAttr : TestAttr<"ParamWithAccessorType"> {
   let parameters = (ins AttrParameter<"std::string", "", "StringRef">:$param);
+  let attrName = "test.param_with_accessor_type";
 }
 
 // DECL-LABEL: class ParamWithAccessorTypeAttr
@@ -142,6 +145,7 @@ def G_BuilderWithReturnTypeAttr : TestAttr<"BuilderWithReturnType"> {
   let parameters = (ins "int":$a);
   let genVerifyDecl = 1;
   let builders = [AttrBuilder<(ins), [{ return {}; }], "::mlir::Attribute">];
+  let attrName = "test.builder_with_return_type";
 }
 
 // DECL-LABEL: class BuilderWithReturnTypeAttr
@@ -158,6 +162,7 @@ def H_TestExtraClassAttr : TestAttr<"TestExtraClass"> {
       return i+1;
     }
   }];
+  let attrName = "test.test_extra_class";
 }
 
 // DECL-LABEL: TestExtraClassAttr : public ::mlir::Attribute

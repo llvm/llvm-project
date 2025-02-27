@@ -1,4 +1,4 @@
-; RUN: not --crash llc -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
 ; CHECK: invalid type for register "m0".
 

@@ -247,37 +247,37 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // Call to SUM with 1D COMPLEX array is not replaced.
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
-  func.func @sum_1d_complex(%arg0: !fir.ref<!fir.array<10x!fir.complex<4>>> {fir.bindc_name = "a"}) -> !fir.complex<4> {
-    %0 = fir.alloca !fir.complex<4>
+  func.func @sum_1d_complex(%arg0: !fir.ref<!fir.array<10xcomplex<f32>>> {fir.bindc_name = "a"}) -> complex<f32> {
+    %0 = fir.alloca complex<f32>
     %c10 = arith.constant 10 : index
-    %1 = fir.alloca !fir.complex<4> {bindc_name = "sum_1d_complex", uniq_name = "_QFsum_1d_complexEsum_1d_complex"}
+    %1 = fir.alloca complex<f32> {bindc_name = "sum_1d_complex", uniq_name = "_QFsum_1d_complexEsum_1d_complex"}
     %2 = fir.shape %c10 : (index) -> !fir.shape<1>
-    %3 = fir.embox %arg0(%2) : (!fir.ref<!fir.array<10x!fir.complex<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.complex<4>>>
+    %3 = fir.embox %arg0(%2) : (!fir.ref<!fir.array<10xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.array<10xcomplex<f32>>>
     %4 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
     %5 = fir.address_of(@_QQclX2E2F6973756D5F362E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
-    %6 = fir.convert %0 : (!fir.ref<!fir.complex<4>>) -> !fir.ref<complex<f32>>
-    %7 = fir.convert %3 : (!fir.box<!fir.array<10x!fir.complex<4>>>) -> !fir.box<none>
+    %6 = fir.convert %0 : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
+    %7 = fir.convert %3 : (!fir.box<!fir.array<10xcomplex<f32>>>) -> !fir.box<none>
     %8 = fir.convert %5 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
     %9 = fir.convert %c0 : (index) -> i32
     %10 = fir.convert %4 : (!fir.box<i1>) -> !fir.box<none>
-    %11 = fir.call @_FortranACppSumComplex4(%6, %7, %8, %c5_i32, %9, %10) : (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none
-    %12 = fir.load %0 : !fir.ref<!fir.complex<4>>
-    fir.store %12 to %1 : !fir.ref<!fir.complex<4>>
-    %13 = fir.load %1 : !fir.ref<!fir.complex<4>>
-    return %13 : !fir.complex<4>
+    fir.call @_FortranACppSumComplex4(%6, %7, %8, %c5_i32, %9, %10) : (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> ()
+    %12 = fir.load %0 : !fir.ref<complex<f32>>
+    fir.store %12 to %1 : !fir.ref<complex<f32>>
+    %13 = fir.load %1 : !fir.ref<complex<f32>>
+    return %13 : complex<f32>
   }
-  func.func private @_FortranACppSumComplex4(!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none attributes {fir.runtime}
+  func.func private @_FortranACppSumComplex4(!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> () attributes {fir.runtime}
   fir.global linkonce @_QQclX2E2F6973756D5F362E66393000 constant : !fir.char<1,13> {
     %0 = fir.string_lit "./isum_6.f90\00"(13) : !fir.char<1,13>
     fir.has_value %0 : !fir.char<1,13>
   }
 }
 
-// CHECK-LABEL:   func.func @sum_1d_complex(%{{.*}}: !fir.ref<!fir.array<10x!fir.complex<4>>> {fir.bindc_name = "a"}) -> !fir.complex<4> {
+// CHECK-LABEL:   func.func @sum_1d_complex(%{{.*}}: !fir.ref<!fir.array<10xcomplex<f32>>> {fir.bindc_name = "a"}) -> complex<f32> {
 // CHECK-NOT:       fir.call @_FortranACppSumComplex4x1_simplified({{.*}})
-// CHECK:           fir.call @_FortranACppSumComplex4({{.*}}) : (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none
+// CHECK:           fir.call @_FortranACppSumComplex4({{.*}}) : (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> ()
 // CHECK-NOT:       fir.call @_FortranACppSumComplex4x1_simplified({{.*}})
 
 // -----
@@ -422,13 +422,13 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %file = fir.address_of(@filename) : !fir.ref<!fir.char<1,16>>
     %file_ref = fir.convert %file : (!fir.ref<!fir.char<1,16>>) -> !fir.ref<i8>
     %absent_none = fir.convert %absent : (!fir.box<i1>) -> !fir.box<none>
-    %res = fir.call @_FortranASumDim(%box_none, %box_none2, %c1_i32, %file_ref, %lineno, %absent_none) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+    fir.call @_FortranASumDim(%box_none, %box_none2, %c1_i32, %file_ref, %lineno, %absent_none) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> ()
     func.return
   }
 }
 
 // Just check that SOMETHING is being output.
-// CHECK-LABEL @sum_dim() {
+// CHECK-LABEL: @sum_dim() {
 // CHECK: return
 
 
@@ -459,7 +459,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 }
 
 // Just check that SOMETHING is being output.
-// CHECK-LABEL @sum_1d_unknown() {
+// CHECK-LABEL: @sum_1d_unknown(
 // CHECK: return
 
 // -----
@@ -1236,7 +1236,7 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.log
   %11 = fir.convert %5 : (!fir.box<!fir.array<10x10x!fir.logical<4>>>) -> !fir.box<none>
   %12 = fir.convert %c4 : (index) -> i32
   %13 = fir.convert %9 : (!fir.ref<!fir.char<1,15>>) -> !fir.ref<i8>
-  %14 = fir.call @_FortranACountDim(%10, %11, %c2_i32, %12, %13, %c11_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranACountDim(%10, %11, %c2_i32, %12, %13, %c11_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> ()
   %15 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c0_2 = arith.constant 0 : index
   %16:3 = fir.box_dims %15, %c0_2 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -1256,13 +1256,13 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.log
   %22 = fir.load %1 : !fir.ref<!fir.array<10xi32>>
   return %22 : !fir.array<10xi32>
 }
-func.func private @_FortranACountDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+func.func private @_FortranACountDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> () attributes {fir.runtime}
 
 // CHECK-LABEL:   func.func @_QMtestPcount_generate_mask(
 // CHECK-SAME:                                           %[[A:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "mask"}) -> !fir.array<10xi32> {
-// CHECK-NOT        fir.call @_FortranACountDimLogical4_simplified({{.*}})
-// CHECK:           %[[RES:.*]] = fir.call @_FortranACountDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
-// CHECK-NOT        fir.call @_FortranACountDimLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountDimLogical4_simplified({{.*}})
+// CHECK:           fir.call @_FortranACountDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> ()
+// CHECK-NOT:       fir.call @_FortranACountDimLogical4_simplified({{.*}})
 
 // -----
 // Ensure count isn't simplified for unknown dimension arrays
@@ -1285,9 +1285,9 @@ func.func private @_FortranACount(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
 
 // CHECK-LABEL:   func.func @_QPmc(
 // CHECK-SAME:                     %[[VAL_0:.*]]: !fir.box<!fir.array<?x?x?x!fir.logical<4>>> {fir.bindc_name = "m"}) -> i32 {
-// CHECK-NOT        fir.call @_FortranACountLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountLogical4_simplified({{.*}})
 // CHECK:           %[[RES:.*]] = fir.call @_FortranACount({{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
-// CHECK-NOT        fir.call @_FortranACountLogical4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACountLogical4_simplified({{.*}})
 
 // -----
 // Ensure Any is simplified in correct usage
@@ -1419,7 +1419,7 @@ func.func @_QPtestAny_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %10 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
   %11 = fir.convert %5 : (!fir.box<!fir.array<10x10x!fir.logical<4>>>) -> !fir.box<none>
   %12 = fir.convert %9 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
-  %13 = fir.call @_FortranAAnyDim(%10, %11, %c2_i32, %12, %c3_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAAnyDim(%10, %11, %c2_i32, %12, %c3_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   %14 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
   %c0_2 = arith.constant 0 : index
   %15:3 = fir.box_dims %14, %c0_2 : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
@@ -1439,13 +1439,13 @@ func.func @_QPtestAny_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %21 = fir.load %1 : !fir.ref<!fir.array<10x!fir.logical<4>>>
   return %21 : !fir.array<10x!fir.logical<4>>
 }
-func.func private @_FortranAAnyDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+func.func private @_FortranAAnyDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> () attributes {fir.runtime}
 
 // CHECK-LABEL:   func.func @_QPtestAny_DimArg(
 // CHECK-SAME:                          %[[ARR:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.array<10x!fir.logical<4>> {
-// CHECK-NOT        fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
-// CHECK:           fir.call @_FortranAAnyDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
-// CHECK-NOT        fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
+// CHECK:           fir.call @_FortranAAnyDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
+// CHECK-NOT:       fir.call @_FortranAAnyDimLogical4x1_simplified({{.*}})
 
 // -----
 // Ensure Any is not simplified for unknown dimension arrays
@@ -1468,9 +1468,9 @@ func.func private @_FortranAAny(!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1 at
 
 // CHECK-LABEL:   func.func @_QPtestAny_UnknownDim(
 // CHECK-SAME:                          %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.logical<4> {
-// CHECK-NOT        fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranAAny({{.*}}) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
-// CHECK-NOT        fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAnyLogical4x1_simplified({{.*}})
 
 // -----
 // Check that multi-rank Any cases are properly simplified
@@ -1658,7 +1658,7 @@ func.func @_QPtestAll_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %10 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
   %11 = fir.convert %5 : (!fir.box<!fir.array<10x10x!fir.logical<4>>>) -> !fir.box<none>
   %12 = fir.convert %9 : (!fir.ref<!fir.char<1,48>>) -> !fir.ref<i8>
-  %13 = fir.call @_FortranAAllDim(%10, %11, %c1_i32, %12, %c3_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAAllDim(%10, %11, %c1_i32, %12, %c3_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   %14 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
   %c0_2 = arith.constant 0 : index
   %15:3 = fir.box_dims %14, %c0_2 : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
@@ -1678,13 +1678,13 @@ func.func @_QPtestAll_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %21 = fir.load %1 : !fir.ref<!fir.array<10x!fir.logical<4>>>
   return %21 : !fir.array<10x!fir.logical<4>>
 }
-func.func private @_FortranAAllDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+func.func private @_FortranAAllDim(!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> () attributes {fir.runtime}
 
 // CHECK-LABEL:   func.func @_QPtestAll_DimArg(
 // CHECK-SAME:                          %[[ARR:.*]]: !fir.ref<!fir.array<10x10x!fir.logical<4>>> {fir.bindc_name = "a"}) -> !fir.array<10x!fir.logical<4>> {
-// CHECK-NOT        fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
-// CHECK:           fir.call @_FortranAAllDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
-// CHECK-NOT        fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
+// CHECK:           fir.call @_FortranAAllDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
+// CHECK-NOT:       fir.call @_FortranAAllDimLogical4x1_simplified({{.*}})
 
 // -----
 // Check Minloc simplifies correctly for 1D case with 1D mask, I32 input
@@ -1714,7 +1714,7 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %14 = fir.convert %c4 : (index) -> i32
   %15 = fir.convert %11 : (!fir.ref<!fir.char<1,55>>) -> !fir.ref<i8>
   %16 = fir.convert %7 : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
-  %17 = fir.call @_FortranAMinlocInteger4(%12, %13, %14, %15, %c5_i32, %16, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocInteger4(%12, %13, %14, %15, %c5_i32, %16, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %18 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c0_1 = arith.constant 0 : index
   %19:3 = fir.box_dims %18, %c0_1 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -1760,6 +1760,7 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:           %[[OUTARR:.*]] = fir.allocmem !fir.array<1xi32>
 // CHECK:           %[[OUTARR_SHAPE:.*]] = fir.shape %[[OUTARR_SIZE]] : (index) -> !fir.shape<1>
 // CHECK:           %[[BOX_OUTARR:.*]] = fir.embox %[[OUTARR]](%[[OUTARR_SHAPE]]) : (!fir.heap<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<1xi32>>>
+// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
 // CHECK:           %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
 // CHECK:           fir.store %[[INIT_OUT_IDX]] to %[[OUTARR_ITEM0]] : !fir.ref<i32>
@@ -1768,7 +1769,6 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:           %[[FLAG_SET:.*]] = arith.constant 1 : i32
 // CHECK:           %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
 // CHECK:           fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
 // CHECK:           %[[MAX:.*]] = arith.constant 2147483647 : i32
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DIM_INDEX0:.*]] = arith.constant 0 : index
@@ -1779,11 +1779,16 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (!fir.logical<4>) -> i1
 // CHECK:             %[[IF_MASK:.*]] = fir.if %[[MASK_IF_ITEM]] -> (i32) {
-// CHECK:               fir.store %[[FLAG_SET]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
+// CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i32
+// CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:               %[[INARR_ITEMVAL:.*]] = fir.load %[[INARR_ITEM]] : !fir.ref<i32>
 // CHECK:               %[[NEW_MIN:.*]] = arith.cmpi slt, %[[INARR_ITEMVAL]], %[[MIN]] : i32
-// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[NEW_MIN]] -> (i32) {
+// CHECK:               %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
+// CHECK:               %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK:               %[[ORCOND:.*]] = arith.ori %[[NEW_MIN]], %[[ISFIRSTNOT]] : i1
+// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[ORCOND]] -> (i32) {
+// CHECK:                 fir.store %[[FLAG_SET2]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK:                 %[[ONE:.*]] = arith.constant 1 : i32
 // CHECK:                 %[[OUTARR_IDX:.*]] = arith.constant 0 : index
 // CHECK:                 %[[OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
@@ -1799,17 +1804,6 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:               fir.result %[[MIN]] : i32
 // CHECK:             }
 // CHECK:             fir.result %[[IF_MASK:.*]] : i32
-// CHECK:           }
-// CHECK:           %[[FLAG_VAL:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:           %[[FLAG_WAS_SET:.*]] = arith.cmpi eq, %[[FLAG_VAL]], %[[FLAG_SET]] : i32
-// CHECK:           fir.if %[[FLAG_WAS_SET]] {
-// CHECK:             %[[TEST_MAX:.*]] = arith.constant 2147483647 : i32
-// CHECK:             %[[INIT_NOT_CHANGED:.*]] = arith.cmpi eq, %[[TEST_MAX]], %[[DO_LOOP:.*]] : i32
-// CHECK:             fir.if %[[INIT_NOT_CHANGED]] {
-// CHECK:               %[[FLAG_OUTARR_IDX:.*]] = arith.constant 0 : index
-// CHECK:               %[[FLAG_OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[FLAG_OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
-// CHECK:               fir.store %[[FLAG_SET]] to %[[FLAG_OUTARR_ITEM]] : !fir.ref<i32>
-// CHECK:             }
 // CHECK:           }
 // CHECK:           %[[REF_BOX_OUTARR:.*]] = fir.convert %[[REF_BOX_OUTARR_NONE]] : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
 // CHECK:           fir.store %[[BOX_OUTARR]] to %[[REF_BOX_OUTARR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
@@ -1843,7 +1837,7 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
   %12 = fir.convert %5 : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<none>
   %13 = fir.convert %10 : (!fir.ref<!fir.char<1,62>>) -> !fir.ref<i8>
   %14 = fir.convert %6 : (!fir.box<i1>) -> !fir.box<none>
-  %15 = fir.call @_FortranAMinlocInteger4(%11, %12, %c8_i32, %13, %c4_i32, %14, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocInteger4(%11, %12, %c8_i32, %13, %c4_i32, %14, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %16 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi64>>>>
   %c0_1 = arith.constant 0 : index
   %17:3 = fir.box_dims %16, %c0_1 : (!fir.box<!fir.heap<!fir.array<?xi64>>>, index) -> (index, index, index)
@@ -1902,10 +1896,16 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
 // CHECK:           %[[EXTENT1:.*]] = arith.subi %[[DIMS1]]#1, %[[C_INDEX1]] : index
 // CHECK:           %[[DOLOOP0:.*]] = fir.do_loop %[[ITER0:.*]] = %[[C_INDEX0]] to %[[EXTENT1]] step %[[C_INDEX1]] iter_args(%[[MIN0:.*]] = %[[MAX]]) -> (i32) {
 // CHECK:             %[[DOLOOP1:.*]] = fir.do_loop %[[ITER1:.*]] = %[[C_INDEX0]] to %[[EXTENT0]] step %[[C_INDEX1]] iter_args(%[[MIN1:.*]] = %[[MIN0]]) -> (i32) {
+// CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i64
+// CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i64>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER1]], %[[ITER0]] : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:               %[[INARR_ITEMVAL:.*]] = fir.load %[[INARR_ITEM]] : !fir.ref<i32>
 // CHECK:               %[[NEW_MIN:.*]] = arith.cmpi slt, %[[INARR_ITEMVAL]], %[[MIN1]] : i32
-// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[NEW_MIN]] -> (i32) {
+// CHECK:               %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i64) -> i1
+// CHECK:               %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK:               %[[ORCOND:.*]] = arith.ori %[[NEW_MIN]], %[[ISFIRSTNOT]] : i1
+// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[ORCOND]] -> (i32) {
+// CHECK:                 fir.store %[[FLAG_SET2]] to %[[FLAG_ALLOC]] : !fir.ref<i64>
 // CHECK:                 %[[ONE:.*]] = arith.constant 1 : i64
 // CHECK:                 %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
 // CHECK:                 %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<2xi64>>>, index) -> !fir.ref<i64>
@@ -1924,20 +1924,6 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
 // CHECK:               fir.result %[[IF_NEW_MIN:.*]] : i32
 // CHECK:             }
 // CHECK:             fir.result %[[DOLOOP1:.*]] : i32
-// CHECK:           }
-// CHECK:           %[[FLAG_VAL:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i64>
-// CHECK:           %[[FLAG_WAS_SET:.*]] = arith.cmpi eq, %[[FLAG_VAL]], %[[FLAG_SET]] : i64
-// CHECK:           fir.if %[[FLAG_WAS_SET]] {
-// CHECK:             %[[TEST_MAX:.*]] = arith.constant 2147483647 : i32
-// CHECK:             %[[INIT_NOT_CHANGED:.*]] = arith.cmpi eq, %[[TEST_MAX]], %[[DO_LOOP:.*]] : i32
-// CHECK:             fir.if %[[INIT_NOT_CHANGED]] {
-// CHECK:               %[[FLAG_OUTARR_IDX0:.*]] = arith.constant 0 : index
-// CHECK:               %[[FLAG_OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[FLAG_OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<2xi64>>>, index) -> !fir.ref<i64>
-// CHECK:               fir.store %[[FLAG_SET]] to %[[FLAG_OUTARR_ITEM0]] : !fir.ref<i64>
-// CHECK:               %[[FLAG_OUTARR_IDX1:.*]] = arith.constant 1 : index
-// CHECK:               %[[FLAG_OUTARR_ITEM1:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[FLAG_OUTARR_IDX1]] : (!fir.box<!fir.heap<!fir.array<2xi64>>>, index) -> !fir.ref<i64>
-// CHECK:               fir.store %[[FLAG_SET]] to %[[FLAG_OUTARR_ITEM1]] : !fir.ref<i64
-// CHECK:             }
 // CHECK:           }
 // CHECK:           %[[REF_BOX_OUTARR:.*]] = fir.convert %[[REF_BOX_OUTARR_NONE]] : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<2xi64>>>>
 // CHECK:           fir.store %[[BOX_OUTARR]] to %[[REF_BOX_OUTARR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<2xi64>>>>
@@ -1971,7 +1957,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %13 = fir.convert %c4 : (index) -> i32
   %14 = fir.convert %10 : (!fir.ref<!fir.char<1,65>>) -> !fir.ref<i8>
   %15 = fir.convert %6 : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
-  %16 = fir.call @_FortranAMinlocReal8(%11, %12, %13, %14, %c6_i32, %15, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocReal8(%11, %12, %13, %14, %c6_i32, %15, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %17 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c0_0 = arith.constant 0 : index
   %18:3 = fir.box_dims %17, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -2020,16 +2006,25 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:             %[[FLAG_SET:.*]] = arith.constant 1 : i32
 // CHECK:             %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
 // CHECK:             fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:             %[[MAX:.*]] = arith.constant 1.7976931348623157E+308 : f64
+// CHECK:             %[[MAX:.*]] = arith.constant 0x7FF0000000000000 : f64
 // CHECK:             %[[C_INDEX1:.*]] = arith.constant 1 : index
 // CHECK:             %[[DIM_INDEX:.*]] = arith.constant 0 : index
 // CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 // CHECK:             %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
 // CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) {
+// CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i32
+// CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:               %[[INARR_ITEMVAL:.*]] = fir.load %[[INARR_ITEM]] : !fir.ref<f64>
-// CHECK:               %[[NEW_MIN:.*]] = arith.cmpf olt, %[[INARR_ITEMVAL]], %[[MIN]] : f64
-// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[NEW_MIN]] -> (f64) {
+// CHECK:               %[[NEW_MIN:.*]] = arith.cmpf olt, %[[INARR_ITEMVAL]], %arg4 fastmath<contract> : f64
+// CHECK:               %[[CONDRED:.*]] = arith.cmpf une, %arg4, %arg4 fastmath<contract> : f64
+// CHECK:               %[[CONDELEM:.*]] = arith.cmpf oeq, %[[INARR_ITEMVAL]], %[[INARR_ITEMVAL]] fastmath<contract> : f64
+// CHECK:               %[[ANDCOND:.*]] = arith.andi %[[CONDRED]], %[[CONDELEM]] : i1
+// CHECK:               %[[NEW_MIN2:.*]] = arith.ori %[[NEW_MIN]], %[[ANDCOND]] : i1
+// CHECK:               %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
+// CHECK:               %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK:               %[[ORCOND:.*]] = arith.ori %[[NEW_MIN2]], %[[ISFIRSTNOT]] : i1
+// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[ORCOND]] -> (f64) {
 // CHECK:                 %[[ONE:.*]] = arith.constant 1 : i32
 // CHECK:                 %[[OUTARR_IDX:.*]] = arith.constant 0 : index
 // CHECK:                 %[[OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
@@ -2041,18 +2036,6 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:                 fir.result %[[MIN]] : f64
 // CHECK:               }
 // CHECK:               fir.result %[[IF_NEW_MIN:.*]] : f64
-// CHECK:             }
-// CHECK:           }
-// CHECK:           %[[FLAG_CHECK:.*]] = arith.constant 1 : i32
-// CHECK:           %[[FLAG_VAL:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:           %[[FLAG_WAS_SET:.*]] = arith.cmpi eq, %[[FLAG_VAL]], %[[FLAG_CHECK]] : i32
-// CHECK:           fir.if %[[FLAG_WAS_SET]] {
-// CHECK:             %[[TEST_MAX:.*]] = arith.constant 1.7976931348623157E+308 : f64
-// CHECK:             %[[INIT_NOT_CHANGED:.*]] = arith.cmpf oeq, %[[TEST_MAX]], %[[INIT_RES:.*]] : f64
-// CHECK:             fir.if %[[INIT_NOT_CHANGED]] {
-// CHECK:               %[[FLAG_OUTARR_IDX:.*]] = arith.constant 0 : index
-// CHECK:               %[[FLAG_OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[FLAG_OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
-// CHECK:               fir.store %[[FLAG_CHECK]] to %[[FLAG_OUTARR_ITEM]] : !fir.ref<i32>
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[REF_BOX_OUTARR:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
@@ -2087,7 +2070,7 @@ func.func @_QPtestminloc_doesntwork1d_back(%arg0: !fir.ref<!fir.array<10xi32>> {
   %13 = fir.convert %c4 : (index) -> i32
   %14 = fir.convert %10 : (!fir.ref<!fir.char<1,62>>) -> !fir.ref<i8>
   %15 = fir.convert %6 : (!fir.box<i1>) -> !fir.box<none>
-  %16 = fir.call @_FortranAMinlocInteger4(%11, %12, %13, %14, %c4_i32, %15, %true) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocInteger4(%11, %12, %13, %14, %c4_i32, %15, %true) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %17 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c0_0 = arith.constant 0 : index
   %18:3 = fir.box_dims %17, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -2111,17 +2094,17 @@ func.func @_QPtestminloc_doesntwork1d_back(%arg0: !fir.ref<!fir.array<10xi32>> {
 // CHECK-LABEL:   func.func @_QPtestminloc_doesntwork1d_back(
 // CHECK-SAME:                                               %[[ARR:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
 // CHECK-NOT:         fir.call @_FortranAMinlocInteger4x1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
-// CHECK:             fir.call @_FortranAMinlocInteger4({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK:             fir.call @_FortranAMinlocInteger4({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NOT:         fir.call @_FortranAMinlocInteger4x1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
 
 // -----
-// Check Minloc is not simplified when DIM arg is set
+// Check Minloc is simplified when DIM arg is set so long as the result is scalar
 
-func.func @_QPtestminloc_doesntwork1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
+func.func @_QPtestminloc_1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
   %0 = fir.alloca !fir.box<!fir.heap<i32>>
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
-  %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_doesntwork1d_dim", uniq_name = "_QFtestminloc_doesntwork1d_dimEtestminloc_doesntwork1d_dim"}
+  %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_1d_dim", uniq_name = "_QFtestminloc_1d_dimEtestminloc_1d_dim"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
   %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
@@ -2140,7 +2123,7 @@ func.func @_QPtestminloc_doesntwork1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {f
   %12 = fir.convert %c4 : (index) -> i32
   %13 = fir.convert %9 : (!fir.ref<!fir.char<1,61>>) -> !fir.ref<i8>
   %14 = fir.convert %6 : (!fir.box<i1>) -> !fir.box<none>
-  %15 = fir.call @_FortranAMinlocDim(%10, %11, %12, %c1_i32, %13, %c4_i32, %14, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocDim(%10, %11, %12, %c1_i32, %13, %c4_i32, %14, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %16 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<i32>>>
   %17 = fir.box_addr %16 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
   %18 = fir.load %17 : !fir.heap<i32>
@@ -2156,11 +2139,62 @@ func.func @_QPtestminloc_doesntwork1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {f
   %21 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %21 : !fir.array<1xi32>
 }
-// CHECK-LABEL:   func.func @_QPtestminloc_doesntwork1d_dim(
+// CHECK-LABEL:   func.func @_QPtestminloc_1d_dim(
 // CHECK-SAME:                                             %[[ARR:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
-// CHECK-NOT:         fir.call @_FortranAMinlocDimx1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
-// CHECK:             fir.call @_FortranAMinlocDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
-// CHECK-NOT:         fir.call @_FortranAMinlocDimx1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
+// CHECK:             fir.call @_FortranAMinlocDimx1_i32_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
+
+// CHECK-LABEL:  func.func private @_FortranAMinlocDimx1_i32_i32_contract_simplified(%arg0: !fir.ref<!fir.box<none>>, %arg1: !fir.box<none>, %arg2: !fir.box<none>) attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK-NEXT:    %[[V0:.*]] = fir.alloca i32
+// CHECK-NEXT:    %c0_i32 = arith.constant 0 : i32
+// CHECK-NEXT:    %c1 = arith.constant 1 : index
+// CHECK-NEXT:    %[[V1:.*]] = fir.allocmem !fir.array<1xi32>
+// CHECK-NEXT:    %[[V2:.*]] = fir.shape %c1 : (index) -> !fir.shape<1>
+// CHECK-NEXT:    %[[V3:.*]] = fir.embox %[[V1]](%[[V2]]) : (!fir.heap<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<1xi32>>>
+// CHECK-NEXT:    %c0 = arith.constant 0 : index
+// CHECK-NEXT:    %[[V4:.*]] = fir.coordinate_of %[[V3]], %c0 : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
+// CHECK-NEXT:    fir.store %c0_i32 to %[[V4]] : !fir.ref<i32>
+// CHECK-NEXT:    %c0_0 = arith.constant 0 : index
+// CHECK-NEXT:    %[[V5:.*]] = fir.convert %arg1 : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK-NEXT:    %c1_i32 = arith.constant 1 : i32
+// CHECK-NEXT:    %c0_i32_1 = arith.constant 0 : i32
+// CHECK-NEXT:    fir.store %c0_i32_1 to %[[V0]] : !fir.ref<i32>
+// CHECK-NEXT:    %c2147483647_i32 = arith.constant 2147483647 : i32
+// CHECK-NEXT:    %c1_2 = arith.constant 1 : index
+// CHECK-NEXT:    %c0_3 = arith.constant 0 : index
+// CHECK-NEXT:    %[[V6:.*]]:3 = fir.box_dims %[[V5]], %c0_3 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK-NEXT:    %[[V7:.*]] = arith.subi %[[V6]]#1, %c1_2 : index
+// CHECK-NEXT:    %[[V8:.*]] = fir.do_loop %arg3 = %c0_0 to %[[V7]] step %c1_2 iter_args(%arg4 = %c2147483647_i32) -> (i32) {
+// CHECK-NEXT:      %c1_i32_4 = arith.constant 1 : i32
+// CHECK-NEXT:      %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
+// CHECK-NEXT:      %[[V12:.*]] = fir.coordinate_of %[[V5]], %arg3 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK-NEXT:      %[[V13:.*]] = fir.load %[[V12]] : !fir.ref<i32>
+// CHECK-NEXT:      %[[V14:.*]] = arith.cmpi slt, %[[V13]], %arg4 : i32
+// CHECK-NEXT:      %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
+// CHECK-NEXT:      %true = arith.constant true
+// CHECK-NEXT:      %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK-NEXT:      %[[ORCOND:.*]] = arith.ori %[[V14]], %[[ISFIRSTNOT]] : i1
+// CHECK-NEXT:      %[[V15:.*]] = fir.if %[[ORCOND]] -> (i32) {
+// CHECK-NEXT:        fir.store %c1_i32_4 to %[[V0]] : !fir.ref<i32>
+// CHECK-NEXT:        %c1_i32_5 = arith.constant 1 : i32
+// CHECK-NEXT:        %c0_6 = arith.constant 0 : index
+// CHECK-NEXT:        %[[V16:.*]] = fir.coordinate_of %[[V3]], %c0_6 : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
+// CHECK-NEXT:        %[[V17:.*]] = fir.convert %arg3 : (index) -> i32
+// CHECK-NEXT:        %[[V18:.*]] = arith.addi %[[V17]], %c1_i32_5 : i32
+// CHECK-NEXT:        fir.store %[[V18]] to %[[V16]] : !fir.ref<i32>
+// CHECK-NEXT:        fir.result %[[V13]] : i32
+// CHECK-NEXT:      } else {
+// CHECK-NEXT:        fir.result %arg4 : i32
+// CHECK-NEXT:      }
+// CHECK-NEXT:      fir.result %[[V15]] : i32
+// CHECK-NEXT:    }
+// CHECK-NEXT:    %[[V11:.*]] = fir.convert %arg0 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK-NEXT:    %[[V12:.*]] = fir.convert %[[V1]] : (!fir.heap<!fir.array<1xi32>>) -> !fir.heap<i32>
+// CHECK-NEXT:    %[[V13:.*]] = fir.embox %[[V12]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+// CHECK-NEXT:    fir.store %[[V13]] to %[[V11]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+
+
 
 // -----
 // Check Minloc is not simplified when dimension of inputArr is unknown
@@ -2186,7 +2220,7 @@ func.func @_QPtestminloc_doesntwork1d_unknownsize(%arg0: !fir.box<!fir.array<?xi
   %11 = fir.convert %c4 : (index) -> i32
   %12 = fir.convert %8 : (!fir.ref<!fir.char<1,69>>) -> !fir.ref<i8>
   %13 = fir.convert %4 : (!fir.box<i1>) -> !fir.box<none>
-  %14 = fir.call @_FortranAMinlocInteger4(%9, %10, %11, %12, %c4_i32, %13, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocInteger4(%9, %10, %11, %12, %c4_i32, %13, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %15 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c0_0 = arith.constant 0 : index
   %16:3 = fir.box_dims %15, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -2209,7 +2243,7 @@ func.func @_QPtestminloc_doesntwork1d_unknownsize(%arg0: !fir.box<!fir.array<?xi
 // CHECK-LABEL:   func.func @_QPtestminloc_doesntwork1d_unknownsize(
 // CHECK-SAME:                                                      %[[ARR:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
 // CHECK-NOT:         fir.call @_FortranAMinlocInteger4x1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
-// CHECK:             fir.call @_FortranAMinlocInteger4({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK:             fir.call @_FortranAMinlocInteger4({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NOT:         fir.call @_FortranAMinlocInteger4x1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
 
 // -----
@@ -2241,7 +2275,7 @@ func.func @_QPtestminloc_doesntwork1d_chars(%arg0: !fir.boxchar<1> {fir.bindc_na
   %15 = fir.convert %c4 : (index) -> i32
   %16 = fir.convert %12 : (!fir.ref<!fir.char<1,41>>) -> !fir.ref<i8>
   %17 = fir.convert %8 : (!fir.box<i1>) -> !fir.box<none>
-  %18 = fir.call @_FortranAMinlocCharacter(%13, %14, %15, %16, %c4_i32, %17, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocCharacter(%13, %14, %15, %16, %c4_i32, %17, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %19 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c0_0 = arith.constant 0 : index
   %20:3 = fir.box_dims %19, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -2265,7 +2299,7 @@ func.func @_QPtestminloc_doesntwork1d_chars(%arg0: !fir.boxchar<1> {fir.bindc_na
 // CHECK-LABEL:   func.func @_QPtestminloc_doesntwork1d_chars(
 // CHECK-SAME:                                                %[[ARR:.*]]: !fir.boxchar<1> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
 // CHECK-NOT:         fir.call @_FortranAMinlocCharacterx1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
-// CHECK:             fir.call @_FortranAMinlocCharacter({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK:             fir.call @_FortranAMinlocCharacter({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NOT:         fir.call @_FortranAMinlocCharacterx1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
 
 // -----
@@ -2322,7 +2356,7 @@ func.func @_QPtestminloc_doesntwork1d_unknownmask(%arg0: !fir.ref<!fir.array<10x
   %33 = fir.convert %c4 : (index) -> i32
   %34 = fir.convert %30 : (!fir.ref<!fir.char<1,41>>) -> !fir.ref<i8>
   %35 = fir.convert %26 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
-  %36 = fir.call @_FortranAMinlocInteger4(%31, %32, %33, %34, %c7_i32, %35, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  fir.call @_FortranAMinlocInteger4(%31, %32, %33, %34, %c7_i32, %35, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   %37 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %c0_2 = arith.constant 0 : index
   %38:3 = fir.box_dims %37, %c0_2 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -2346,5 +2380,242 @@ func.func @_QPtestminloc_doesntwork1d_unknownmask(%arg0: !fir.ref<!fir.array<10x
 // CHECK-LABEL:   func.func @_QPtestminloc_doesntwork1d_unknownmask(
 // CHECK-SAME:                                                      %[[ARR:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
 // CHECK-NOT:         fir.call @_FortranAMinlocInteger4x1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
-// CHECK:             fir.call @_FortranAMinlocInteger4({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK:             fir.call @_FortranAMinlocInteger4({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NOT:         fir.call @_FortranAMinlocInteger4x1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
+
+// -----
+// Check Maxloc simplifies similarly to minloc
+func.func @_QPtestmaxloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.array<10x!fir.logical<4>>> {fir.bindc_name = "b"}) -> !fir.array<1xi32> {
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+  %c10 = arith.constant 10 : index
+  %c10_0 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testmaxloc_works1d", uniq_name = "_QFtestmaxloc_works1dEtestmaxloc_works1d"}
+  %2 = fir.shape %c1 : (index) -> !fir.shape<1>
+  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
+  %4 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+  %6 = fir.shape %c10_0 : (index) -> !fir.shape<1>
+  %7 = fir.embox %arg1(%6) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
+  %c4 = arith.constant 4 : index
+  %false = arith.constant false
+  %8 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+  %c0 = arith.constant 0 : index
+  %9 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %10 = fir.embox %8(%9) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+  fir.store %10 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %11 = fir.address_of(@_QQclXea5bcf7f706678e1796661f8916f3379) : !fir.ref<!fir.char<1,55>>
+  %c5_i32 = arith.constant 5 : i32
+  %12 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+  %13 = fir.convert %5 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
+  %14 = fir.convert %c4 : (index) -> i32
+  %15 = fir.convert %11 : (!fir.ref<!fir.char<1,55>>) -> !fir.ref<i8>
+  %16 = fir.convert %7 : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
+  fir.call @_FortranAMaxlocInteger4(%12, %13, %14, %15, %c5_i32, %16, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
+  %18 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %c0_1 = arith.constant 0 : index
+  %19:3 = fir.box_dims %18, %c0_1 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+  %20 = fir.box_addr %18 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+  %21 = fir.shape_shift %19#0, %19#1 : (index, index) -> !fir.shapeshift<1>
+  %22 = fir.array_load %20(%21) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
+  %c1_2 = arith.constant 1 : index
+  %c0_3 = arith.constant 0 : index
+  %23 = arith.subi %c1, %c1_2 : index
+  %24 = fir.do_loop %arg2 = %c0_3 to %23 step %c1_2 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
+    %26 = fir.array_fetch %22, %arg2 : (!fir.array<?xi32>, index) -> i32
+    %27 = fir.array_update %arg3, %26, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
+    fir.result %27 : !fir.array<1xi32>
+  }
+  fir.array_merge_store %3, %24 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
+  fir.freemem %20 : !fir.heap<!fir.array<?xi32>>
+  %25 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
+  return %25 : !fir.array<1xi32>
+}
+
+// CHECK-LABEL:   func.func @_QPtestmaxloc_works1d(
+// CHECK-SAME:                                     %[[INARR:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"},
+// CHECK-SAME:                                     %[[MASK:.*]]: !fir.ref<!fir.array<10x!fir.logical<4>>> {fir.bindc_name = "b"}) -> !fir.array<1xi32> {
+// CHECK:           %[[OUTARR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+// CHECK:           %[[SIZE10_0:.*]] = arith.constant 10 : index
+// CHECK:           %[[SIZE10_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[INARR_SHAPE:.*]] = fir.shape %[[SIZE10_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[BOX_INARR:.*]] = fir.embox %[[INARR]](%[[INARR_SHAPE]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+// CHECK:           %[[MASK_SHAPE:.*]] = fir.shape %[[SIZE10_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[BOX_MASK:.*]] = fir.embox %[[MASK]](%[[MASK_SHAPE]]) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
+// CHECK:           %[[REF_BOX_OUTARR_NONE:.*]] = fir.convert %[[OUTARR]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:           %[[BOX_INARR_NONE:.*]] = fir.convert %[[BOX_INARR]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
+// CHECK:           %[[BOX_MASK_NONE:.*]] = fir.convert %[[BOX_MASK]] : (!fir.box<!fir.array<10x!fir.logical<4>>>) -> !fir.box<none>
+// CHECK:           fir.call @_FortranAMaxlocInteger4x1_Logical4x1_i32_contract_simplified(%[[REF_BOX_OUTARR_NONE]], %[[BOX_INARR_NONE]], %[[BOX_MASK_NONE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
+
+// CHECK-LABEL:   func.func private @_FortranAMaxlocInteger4x1_Logical4x1_i32_contract_simplified(
+// CHECK-SAME:             %[[REF_BOX_OUTARR_NONE:.*]]: !fir.ref<!fir.box<none>>,
+// CHECK-SAME:             %[[BOX_INARR_NONE:.*]]: !fir.box<none>,
+// CHECK-SAME:             %[[BOX_MASK_NONE:.*]]: !fir.box<none>) attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[FLAG_ALLOC:.*]] = fir.alloca i32
+// CHECK:           %[[INIT_OUT_IDX:.*]] = arith.constant 0 : i32
+// CHECK:           %[[OUTARR_SIZE:.*]] = arith.constant 1 : index
+// CHECK:           %[[OUTARR:.*]] = fir.allocmem !fir.array<1xi32>
+// CHECK:           %[[OUTARR_SHAPE:.*]] = fir.shape %[[OUTARR_SIZE]] : (index) -> !fir.shape<1>
+// CHECK:           %[[BOX_OUTARR:.*]] = fir.embox %[[OUTARR]](%[[OUTARR_SHAPE]]) : (!fir.heap<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<1xi32>>>
+// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
+// CHECK:           %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
+// CHECK:           %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
+// CHECK:           fir.store %[[INIT_OUT_IDX]] to %[[OUTARR_ITEM0]] : !fir.ref<i32>
+// CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[BOX_INARR:.*]] = fir.convert %[[BOX_INARR_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[FLAG_SET:.*]] = arith.constant 1 : i32
+// CHECK:           %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
+// CHECK:           fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
+// CHECK:           %[[MAX:.*]] = arith.constant -2147483648 : i32
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIM_INDEX0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
+// CHECK:           %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (i32) {
+// CHECK:             %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[ITER]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+// CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
+// CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (!fir.logical<4>) -> i1
+// CHECK:             %[[IF_MASK:.*]] = fir.if %[[MASK_IF_ITEM]] -> (i32) {
+// CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i32
+// CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
+// CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:               %[[INARR_ITEMVAL:.*]] = fir.load %[[INARR_ITEM]] : !fir.ref<i32>
+// CHECK:               %[[NEW_MIN:.*]] = arith.cmpi sgt, %[[INARR_ITEMVAL]], %[[MIN]] : i32
+// CHECK:               %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
+// CHECK:               %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK:               %[[ORCOND:.*]] = arith.ori %[[NEW_MIN]], %[[ISFIRSTNOT]] : i1
+// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[ORCOND]] -> (i32) {
+// CHECK:                 fir.store %[[FLAG_SET2]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
+// CHECK:                 %[[ONE:.*]] = arith.constant 1 : i32
+// CHECK:                 %[[OUTARR_IDX:.*]] = arith.constant 0 : index
+// CHECK:                 %[[OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[ITER_I32:.*]] = fir.convert %[[ITER]] : (index) -> i32
+// CHECK:                 %[[FORTRAN_IDX:.*]] = arith.addi %[[ITER_I32]], %[[ONE]] : i32
+// CHECK:                 fir.store %[[FORTRAN_IDX]] to %[[OUTARR_ITEM]] : !fir.ref<i32>
+// CHECK:                 fir.result %[[INARR_ITEMVAL]] : i32
+// CHECK:               } else {
+// CHECK:                 fir.result %[[MIN]] : i32
+// CHECK:               }
+// CHECK:               fir.result %[[IF_NEW_MIN:.*]] : i32
+// CHECK:             } else {
+// CHECK:               fir.result %[[MIN]] : i32
+// CHECK:             }
+// CHECK:             fir.result %[[IF_MASK:.*]] : i32
+// CHECK:           }
+// CHECK:           %[[REF_BOX_OUTARR:.*]] = fir.convert %[[REF_BOX_OUTARR_NONE]] : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
+// CHECK:           fir.store %[[BOX_OUTARR]] to %[[REF_BOX_OUTARR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
+// CHECK:           return
+// CHECK:         }
+
+// -----
+// Check Maxloc simplifies correctly for 1D case with scalar mask and f64 input
+
+func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"}) -> !fir.array<1xi32> {
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testmaxloc_works1d_scalarmask_f64", uniq_name = "_QFtestmaxloc_works1d_scalarmask_f64Etestminloc_works1d_scalarmask_f64"}
+  %2 = fir.shape %c1 : (index) -> !fir.shape<1>
+  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
+  %4 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
+  %6 = fir.embox %arg1 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+  %c4 = arith.constant 4 : index
+  %false = arith.constant false
+  %7 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+  %c0 = arith.constant 0 : index
+  %8 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %9 = fir.embox %7(%8) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+  fir.store %9 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %10 = fir.address_of(@_QQclX66951c28c5b8bab5cdb25c1ac762b978) : !fir.ref<!fir.char<1,65>>
+  %c6_i32 = arith.constant 6 : i32
+  %11 = fir.convert %0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+  %12 = fir.convert %5 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
+  %13 = fir.convert %c4 : (index) -> i32
+  %14 = fir.convert %10 : (!fir.ref<!fir.char<1,65>>) -> !fir.ref<i8>
+  %15 = fir.convert %6 : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
+  fir.call @_FortranAMaxlocReal8(%11, %12, %13, %14, %c6_i32, %15, %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
+  %17 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %c0_0 = arith.constant 0 : index
+  %18:3 = fir.box_dims %17, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+  %19 = fir.box_addr %17 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+  %20 = fir.shape_shift %18#0, %18#1 : (index, index) -> !fir.shapeshift<1>
+  %21 = fir.array_load %19(%20) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
+  %c1_1 = arith.constant 1 : index
+  %c0_2 = arith.constant 0 : index
+  %22 = arith.subi %c1, %c1_1 : index
+  %23 = fir.do_loop %arg2 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
+    %25 = fir.array_fetch %21, %arg2 : (!fir.array<?xi32>, index) -> i32
+    %26 = fir.array_update %arg3, %25, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
+    fir.result %26 : !fir.array<1xi32>
+  }
+  fir.array_merge_store %3, %23 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
+  fir.freemem %19 : !fir.heap<!fir.array<?xi32>>
+  %24 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
+  return %24 : !fir.array<1xi32>
+}
+
+// CHECK-LABEL:   func.func @_QPtestmaxloc_works1d_scalarmask_f64(
+// CHECK-SAME:                                     %[[INARR:.*]]: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"},
+// CHECK-SAME:                                     %[[MASK:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"}) -> !fir.array<1xi32> {
+// CHECK:           fir.call @_FortranAMaxlocReal8x1_Logical4x0_i32_contract_simplified({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
+
+// CHECK-LABEL:   func.func private @_FortranAMaxlocReal8x1_Logical4x0_i32_contract_simplified(
+// CHECK-SAME:             %[[REF_BOX_OUTARR_NONE:.*]]: !fir.ref<!fir.box<none>>,
+// CHECK-SAME:             %[[BOX_INARR_NONE:.*]]: !fir.box<none>,
+// CHECK-SAME:             %[[BOX_MASK_NONE:.*]]: !fir.box<none>) attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[FLAG_ALLOC:.*]] = fir.alloca i32
+// CHECK:           %[[INIT_OUT_IDX:.*]] = arith.constant 0 : i32
+// CHECK:           %[[OUTARR_SIZE:.*]] = arith.constant 1 : index
+// CHECK:           %[[OUTARR:.*]] = fir.allocmem !fir.array<1xi32>
+// CHECK:           %[[OUTARR_SHAPE:.*]] = fir.shape %[[OUTARR_SIZE]] : (index) -> !fir.shape<1>
+// CHECK:           %[[BOX_OUTARR:.*]] = fir.embox %[[OUTARR]](%[[OUTARR_SHAPE]]) : (!fir.heap<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<1xi32>>>
+// CHECK:           %[[OUTARR_IDX0:.*]] = arith.constant 0 : index
+// CHECK:           %[[OUTARR_ITEM0:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX0]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
+// CHECK:           fir.store %[[INIT_OUT_IDX]] to %[[OUTARR_ITEM0]] : !fir.ref<i32>
+// CHECK:           %[[BOX_MASK:.*]] = fir.convert %[[BOX_MASK_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<1xi1>>
+// CHECK:           %[[MASK_IDX0:.*]] = arith.constant 0 : index
+// CHECK:           %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[MASK_IDX0]] : (!fir.box<!fir.array<1xi1>>, index) -> !fir.ref<i1>
+// CHECK:           %[[MASK:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<i1>
+// CHECK:           %[[INIT_RES:.*]] = fir.if %[[MASK]] -> (f64) {
+// CHECK:             %[[C_INDEX0:.*]] = arith.constant 0 : index
+// CHECK:             %[[BOX_INARR:.*]] = fir.convert %[[BOX_INARR_NONE]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>
+// CHECK:             %[[FLAG_SET:.*]] = arith.constant 1 : i32
+// CHECK:             %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
+// CHECK:             fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
+// CHECK:             %[[MAX:.*]] = arith.constant 0xFFF0000000000000 : f64
+// CHECK:             %[[C_INDEX1:.*]] = arith.constant 1 : index
+// CHECK:             %[[DIM_INDEX:.*]] = arith.constant 0 : index
+// CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+// CHECK:             %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
+// CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) {
+// CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i32
+// CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
+// CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+// CHECK:               %[[INARR_ITEMVAL:.*]] = fir.load %[[INARR_ITEM]] : !fir.ref<f64>
+// CHECK:               %[[NEW_MIN:.*]] = arith.cmpf ogt, %[[INARR_ITEMVAL]], %arg4 fastmath<contract> : f64
+// CHECK:               %[[CONDRED:.*]] = arith.cmpf une, %arg4, %arg4 fastmath<contract> : f64
+// CHECK:               %[[CONDELEM:.*]] = arith.cmpf oeq, %[[INARR_ITEMVAL]], %[[INARR_ITEMVAL]] fastmath<contract> : f64
+// CHECK:               %[[ANDCOND:.*]] = arith.andi %[[CONDRED]], %[[CONDELEM]] : i1
+// CHECK:               %[[NEW_MIN2:.*]] = arith.ori %[[NEW_MIN]], %[[ANDCOND]] : i1
+// CHECK:               %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
+// CHECK:               %[[ISFIRSTNOT:.*]] = arith.xori %[[ISFIRSTL]], %true : i1
+// CHECK:               %[[ORCOND:.*]] = arith.ori %[[NEW_MIN2]], %[[ISFIRSTNOT]] : i1
+// CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[ORCOND]] -> (f64) {
+// CHECK:                 %[[ONE:.*]] = arith.constant 1 : i32
+// CHECK:                 %[[OUTARR_IDX:.*]] = arith.constant 0 : index
+// CHECK:                 %[[OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
+// CHECK:                 %[[ITER_I32:.*]] = fir.convert %[[ITER]] : (index) -> i32
+// CHECK:                 %[[FORTRAN_IDX:.*]] = arith.addi %[[ITER_I32]], %[[ONE]] : i32
+// CHECK:                 fir.store %[[FORTRAN_IDX]] to %[[OUTARR_ITEM]] : !fir.ref<i32>
+// CHECK:                 fir.result %[[INARR_ITEMVAL]] : f64
+// CHECK:               } else {
+// CHECK:                 fir.result %[[MIN]] : f64
+// CHECK:               }
+// CHECK:               fir.result %[[IF_NEW_MIN:.*]] : f64
+// CHECK:             }
+// CHECK:           }
+// CHECK:           %[[REF_BOX_OUTARR:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
+// CHECK:           fir.store %[[BOX_OUTARR]] to %[[REF_BOX_OUTARR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
+// CHECK:           return
+// CHECK:         }

@@ -12,6 +12,7 @@ write_cmake_config("version") {
     "CLANG_VERSION_MAJOR=$llvm_version_major",
     "CLANG_VERSION_MINOR=$llvm_version_minor",
     "CLANG_VERSION_PATCHLEVEL=$llvm_version_patch",
+    "MAX_CLANG_ABI_COMPAT_VERSION=$llvm_version_major",
   ]
 }
 
@@ -25,6 +26,7 @@ diag_groups = [
   "CrossTU",
   "Driver",
   "Frontend",
+  "InstallAPI",
   "Lex",
   "Parse",
   "Refactoring",
@@ -39,6 +41,14 @@ foreach(diag_group, diag_groups) {
     ]
     td_file = "Diagnostic.td"
   }
+
+  clang_tablegen("Diagnostic${diag_group}Enums") {
+    args = [
+      "-gen-clang-diags-enums",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "Diagnostic.td"
+  }
 }
 group("diags_tablegen") {
   # DiagnosticGroups and DiagnosticIndexName are intentionally not part of this
@@ -46,7 +56,10 @@ group("diags_tablegen") {
   # but almost nothing needs DiagnosticGroups.inc or DiagnosticIndexName.inc.
   public_deps = []
   foreach(diag_group, diag_groups) {
-    public_deps += [ ":Diagnostic${diag_group}Kinds" ]
+    public_deps += [
+        ":Diagnostic${diag_group}Kinds",
+        ":Diagnostic${diag_group}Enums",
+    ]
   }
 }
 
@@ -67,14 +80,9 @@ clang_tablegen("AttrList") {
   td_file = "Attr.td"
 }
 
-clang_tablegen("AttrLeftSideCanPrintList") {
-  args = [ "-gen-clang-attr-can-print-left-list" ]
-  td_file = "Attr.td"
-}
-
-clang_tablegen("AttrLeftSideMustPrintList") {
-  args = [ "-gen-clang-attr-must-print-left-list" ]
-  td_file = "Attr.td"
+clang_tablegen("AttrParsedAttrList") {
+  args = [ "-gen-clang-attr-parsed-attr-list" ]
+  td_file = "../Basic/Attr.td"
 }
 
 clang_tablegen("AttrSubMatchRulesList") {
@@ -82,14 +90,55 @@ clang_tablegen("AttrSubMatchRulesList") {
   td_file = "Attr.td"
 }
 
-clang_tablegen("AttrTokenKinds") {
-  args = [ "-gen-clang-attr-token-kinds" ]
+clang_tablegen("RegularKeywordAttrInfo") {
+  args = [ "-gen-clang-regular-keyword-attr-info" ]
   td_file = "Attr.td"
 }
 
 clang_tablegen("AttrHasAttributeImpl") {
   args = [ "-gen-clang-attr-has-attribute-impl" ]
   td_file = "Attr.td"
+}
+
+clang_tablegen("CXX11AttributeInfo") {
+  args = [ "-gen-cxx11-attribute-info" ]
+  td_file = "../Basic/Attr.td"
+}
+
+clang_tablegen("Builtins") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsBPF") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsHexagon") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsNVPTX") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsRISCV") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsSPIRV") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsX86") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsX86_64") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinTemplates") {
+  args = [ "-gen-clang-builtin-templates" ]
 }
 
 # ARM CDE, MVE, and NEON.
@@ -100,6 +149,11 @@ clang_tablegen("arm_neon") {
 
 clang_tablegen("arm_fp16") {
   args = [ "-gen-arm-neon-sema" ]
+}
+
+clang_tablegen("arm_immcheck_types") {
+  args = [ "-gen-arm-immcheck-types" ]
+  td_file = "arm_sve.td"
 }
 
 clang_tablegen("arm_mve_builtins") {
@@ -142,6 +196,11 @@ clang_tablegen("arm_sve_sema_rangechecks") {
   td_file = "arm_sve.td"
 }
 
+clang_tablegen("arm_sve_streaming_attrs") {
+  args = [ "-gen-arm-sve-streaming-attrs" ]
+  td_file = "arm_sve.td"
+}
+
 clang_tablegen("arm_sme_builtins") {
   args = [ "-gen-arm-sme-builtins" ]
   td_file = "arm_sme.td"
@@ -154,6 +213,16 @@ clang_tablegen("arm_sme_builtin_cg") {
 
 clang_tablegen("arm_sme_sema_rangechecks") {
   args = [ "-gen-arm-sme-sema-rangechecks" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_streaming_attrs") {
+  args = [ "-gen-arm-sme-streaming-attrs" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_builtins_za_state") {
+  args = [ "-gen-arm-sme-builtin-za-state" ]
   td_file = "arm_sme.td"
 }
 

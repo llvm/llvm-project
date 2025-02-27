@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_CHAR_H
 #define _LIBCPP___FORMAT_FORMATTER_CHAR_H
 
-#include <__availability>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
@@ -21,7 +20,7 @@
 #include <__format/parser_std_format_spec.h>
 #include <__format/write_escaped.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_signed.h>
+#include <__type_traits/make_unsigned.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,22 +50,21 @@ public:
       return __formatter::__format_escaped_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 #  endif
 
-    if constexpr (sizeof(_CharT) <= sizeof(int))
-      // Promotes _CharT to an integral type. This reduces the number of
-      // instantiations of __format_integer reducing code size.
+    if constexpr (sizeof(_CharT) <= sizeof(unsigned))
       return __formatter::__format_integer(
-          static_cast<conditional_t<is_signed_v<_CharT>, int, unsigned>>(__value),
+          static_cast<unsigned>(static_cast<make_unsigned_t<_CharT>>(__value)),
           __ctx,
           __parser_.__get_parsed_std_specifications(__ctx));
     else
-      return __formatter::__format_integer(__value, __ctx, __parser_.__get_parsed_std_specifications(__ctx));
+      return __formatter::__format_integer(
+          static_cast<make_unsigned_t<_CharT>>(__value), __ctx, __parser_.__get_parsed_std_specifications(__ctx));
   }
 
   template <class _FormatContext>
   _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(char __value, _FormatContext& __ctx) const
     requires(same_as<_CharT, wchar_t>)
   {
-    return format(static_cast<wchar_t>(__value), __ctx);
+    return format(static_cast<wchar_t>(static_cast<unsigned char>(__value)), __ctx);
   }
 
 #  if _LIBCPP_STD_VER >= 23
@@ -79,17 +77,24 @@ public:
 template <>
 struct _LIBCPP_TEMPLATE_VIS formatter<char, char> : public __formatter_char<char> {};
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS formatter<char, wchar_t> : public __formatter_char<wchar_t> {};
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS formatter<wchar_t, wchar_t> : public __formatter_char<wchar_t> {
-};
+struct _LIBCPP_TEMPLATE_VIS formatter<wchar_t, wchar_t> : public __formatter_char<wchar_t> {};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_STD_VER >= 23
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<char> = true;
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<wchar_t> = true;
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#  endif   // _LIBCPP_STD_VER >= 23
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

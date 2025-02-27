@@ -1,0 +1,119 @@
+name: Build CI Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+
+jobs:
+  build-ci-container:
+    if: github.repository_owner == 'llvm'
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        include:
+          # The arch names should match the names used on dockerhub.
+          # See https://github.com/docker-library/official-images#architectures-other-than-amd64
+          - arch: amd64
+            runs-on: depot-ubuntu-22.04-16
+          - arch: arm64v8
+            runs-on: depot-ubuntu-22.04-arm-16
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci/
+      # podman is not installed by default on the ARM64 images.
+      - name: Install Podman
+        if: runner.arch == 'ARM64'
+        run: |
+          sudo apt-get install podman
+      - name: Write Variables
+        id: vars
+        run: |
+          tag=$(git rev-parse --short=12 HEAD)
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/${{ matrix.arch }}/ci-ubuntu-22.04"
+          echo "container-name=$container_name" >> $GITHUB_OUTPUT
+          echo "container-name-agent=$container_name-agent" >> $GITHUB_OUTPUT
+          echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
+          echo "container-name-agent-tag=$container_name-agent:$tag" >> $GITHUB_OUTPUT
+          echo "container-filename=$(echo $container_name:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
+          echo "container-agent-filename=$(echo $container_name-agent:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
+      - name: Build container
+        working-directory: ./.github/workflows/containers/github-action-ci/
+        run: |
+          podman build --target ci-container -t ${{ steps.vars.outputs.container-name-tag }} .
+          podman build --target ci-container-agent -t ${{ steps.vars.outputs.container-name-agent-tag }} .
+
+      # Save the container so we have it in case the push fails.  This also
+      # allows us to separate the push step into a different job so we can
+      # maintain minimal permissions while building the container.
+      - name: Save container image
+        run: |
+          podman save ${{ steps.vars.outputs.container-name-tag }}  >  ${{ steps.vars.outputs.container-filename }}
+          podman save ${{ steps.vars.outputs.container-name-agent-tag }} > ${{ steps.vars.outputs.container-agent-filename }}
+
+      - name: Upload container image
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: container-${{ matrix.arch }}
+          path: "*.tar"
+          retention-days: 14
+
+      - name: Test Container
+        run: |
+          for image in ${{ steps.vars.outputs.container-name-tag }}; do
+            # Use --pull=never to ensure we are testing the just built image.
+            podman run --pull=never --rm -it $image /usr/bin/bash -x -c 'cd $HOME && printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
+          done
+
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download container
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+
+      - name: Push Container
+        run: |
+          function push_container {
+            image_name=$1
+            latest_name=$(echo $image_name | sed 's/:[a-f0-9]\+$/:latest/g')
+            podman tag $image_name $latest_name
+            echo "Pushing $image_name ..."
+            podman push $image_name
+            echo "Pushing $latest_name ..."
+            podman push $latest_name
+          }
+
+          podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
+          for f in $(find . -iname *.tar); do
+            image_name=$(podman load -q -i $f | sed 's/Loaded image: //g')
+            push_container $image_name
+
+            if echo $image_name | grep '/amd64/'; then
+              # For amd64, create an alias with the arch component removed.
+              # This matches the convention used on dockerhub.
+              default_image_name=$(echo $(dirname $(dirname $image_name))/$(basename $image_name))
+              podman tag $image_name $default_image_name
+              push_container $default_image_name
+            fi
+          done

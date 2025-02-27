@@ -1,6 +1,6 @@
 // Member pointer to virtual function.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -o - -emit-llvm | FileCheck %s
 
 // CHECK:      define{{.*}} void @_Z4funcP1AMS_FvvE(ptr noundef %a, [2 x i64] %fn.coerce) local_unnamed_addr
 // CHECK-NEXT: entry:
@@ -14,7 +14,7 @@
 
 // The loading of the virtual function here should be replaced with a llvm.load.relative() call.
 // CHECK-NEXT:   [[vtable:%.+]] = load ptr, ptr [[this_adj]], align 8
-// CHECK-NEXT:   [[offset:%.+]] = add i64 [[fn_ptr]], -1
+// CHECK-NEXT:   [[offset:%.+]] = add nsw i64 [[fn_ptr]], -1
 // CHECK-NEXT:   [[ptr:%.+]] = tail call ptr @llvm.load.relative.i64(ptr [[vtable]], i64 [[offset]])
 // CHECK-NEXT:   br label %[[memptr_end:.+]]
 // CHECK:      [[nonvirt]]:

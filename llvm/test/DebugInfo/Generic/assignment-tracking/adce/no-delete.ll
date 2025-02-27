@@ -1,5 +1,7 @@
 ; RUN: opt %s -passes=adce -S -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=adce -S -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.c
 ;; void fun(int local) {}
@@ -10,8 +12,8 @@
 ;; attachments have been deleted) but still linked to an instruction are not
 ;; deleted by ADCE.
 
-; CHECK: llvm.dbg.assign
-; CHECK: llvm.dbg.assign
+; CHECK: #dbg_assign
+; CHECK: #dbg_assign
 
 define dso_local void @fun(i32 noundef %local) #0 !dbg !7 {
 entry:

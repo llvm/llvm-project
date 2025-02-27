@@ -14,7 +14,9 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGISEL_H
 #define LLVM_CODEGEN_SELECTIONDAGISEL_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/BasicBlock.h"
 #include <memory>
@@ -24,6 +26,7 @@ class AAResults;
 class AssumptionCache;
 class TargetInstrInfo;
 class TargetMachine;
+class SSPLayoutInfo;
 class SelectionDAGBuilder;
 class SDValue;
 class MachineRegisterInfo;
@@ -31,6 +34,7 @@ class MachineFunction;
 class OptimizationRemarkEmitter;
 class TargetLowering;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 class FunctionLoweringInfo;
 class SwiftErrorValueTracking;
 class GCFunctionInfo;
@@ -38,19 +42,24 @@ class ScheduleDAGSDNodes;
 
 /// SelectionDAGISel - This is the common base class used for SelectionDAG-based
 /// pattern-matching instruction selectors.
-class SelectionDAGISel : public MachineFunctionPass {
+class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   SwiftErrorValueTracking *SwiftError;
   MachineFunction *MF;
+  MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA = nullptr;
+  mutable std::optional<BatchAAResults> BatchAA;
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
+  SSPLayoutInfo *SP = nullptr;
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
+  TargetTransformInfo *TTI = nullptr;
+#endif
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -67,16 +76,25 @@ public:
   /// functions. Storing the filter result here so that we only need to do the
   /// filtering once.
   bool MatchFilterFuncName = false;
+  StringRef FuncName;
 
-  explicit SelectionDAGISel(char &ID, TargetMachine &tm,
+  explicit SelectionDAGISel(TargetMachine &tm,
                             CodeGenOptLevel OL = CodeGenOptLevel::Default);
-  ~SelectionDAGISel() override;
+  virtual ~SelectionDAGISel();
+
+  /// Returns a (possibly null) pointer to the current BatchAAResults.
+  BatchAAResults *getBatchAA() const {
+    if (BatchAA.has_value())
+      return &BatchAA.value();
+    return nullptr;
+  }
 
   const TargetLowering *getTargetLowering() const { return TLI; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void initializeAnalysisResults(MachineFunctionAnalysisManager &MFAM);
+  void initializeAnalysisResults(MachineFunctionPass &MFP);
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  virtual bool runOnMachineFunction(MachineFunction &mf);
 
   virtual void emitFunctionEntryCode() {}
 
@@ -124,60 +142,188 @@ public:
   enum BuiltinOpcodes {
     OPC_Scope,
     OPC_RecordNode,
-    OPC_RecordChild0, OPC_RecordChild1, OPC_RecordChild2, OPC_RecordChild3,
-    OPC_RecordChild4, OPC_RecordChild5, OPC_RecordChild6, OPC_RecordChild7,
+    OPC_RecordChild0,
+    OPC_RecordChild1,
+    OPC_RecordChild2,
+    OPC_RecordChild3,
+    OPC_RecordChild4,
+    OPC_RecordChild5,
+    OPC_RecordChild6,
+    OPC_RecordChild7,
     OPC_RecordMemRef,
     OPC_CaptureGlueInput,
     OPC_MoveChild,
-    OPC_MoveChild0, OPC_MoveChild1, OPC_MoveChild2, OPC_MoveChild3,
-    OPC_MoveChild4, OPC_MoveChild5, OPC_MoveChild6, OPC_MoveChild7,
+    OPC_MoveChild0,
+    OPC_MoveChild1,
+    OPC_MoveChild2,
+    OPC_MoveChild3,
+    OPC_MoveChild4,
+    OPC_MoveChild5,
+    OPC_MoveChild6,
+    OPC_MoveChild7,
+    OPC_MoveSibling,
+    OPC_MoveSibling0,
+    OPC_MoveSibling1,
+    OPC_MoveSibling2,
+    OPC_MoveSibling3,
+    OPC_MoveSibling4,
+    OPC_MoveSibling5,
+    OPC_MoveSibling6,
+    OPC_MoveSibling7,
     OPC_MoveParent,
     OPC_CheckSame,
-    OPC_CheckChild0Same, OPC_CheckChild1Same,
-    OPC_CheckChild2Same, OPC_CheckChild3Same,
+    OPC_CheckChild0Same,
+    OPC_CheckChild1Same,
+    OPC_CheckChild2Same,
+    OPC_CheckChild3Same,
     OPC_CheckPatternPredicate,
+    OPC_CheckPatternPredicate0,
+    OPC_CheckPatternPredicate1,
     OPC_CheckPatternPredicate2,
+    OPC_CheckPatternPredicate3,
+    OPC_CheckPatternPredicate4,
+    OPC_CheckPatternPredicate5,
+    OPC_CheckPatternPredicate6,
+    OPC_CheckPatternPredicate7,
+    OPC_CheckPatternPredicateTwoByte,
     OPC_CheckPredicate,
+    OPC_CheckPredicate0,
+    OPC_CheckPredicate1,
+    OPC_CheckPredicate2,
+    OPC_CheckPredicate3,
+    OPC_CheckPredicate4,
+    OPC_CheckPredicate5,
+    OPC_CheckPredicate6,
+    OPC_CheckPredicate7,
     OPC_CheckPredicateWithOperands,
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
     OPC_CheckType,
+    // Space-optimized forms that implicitly encode VT.
+    OPC_CheckTypeI32,
+    OPC_CheckTypeI64,
     OPC_CheckTypeRes,
     OPC_SwitchType,
-    OPC_CheckChild0Type, OPC_CheckChild1Type, OPC_CheckChild2Type,
-    OPC_CheckChild3Type, OPC_CheckChild4Type, OPC_CheckChild5Type,
-    OPC_CheckChild6Type, OPC_CheckChild7Type,
+    OPC_CheckChild0Type,
+    OPC_CheckChild1Type,
+    OPC_CheckChild2Type,
+    OPC_CheckChild3Type,
+    OPC_CheckChild4Type,
+    OPC_CheckChild5Type,
+    OPC_CheckChild6Type,
+    OPC_CheckChild7Type,
+
+    OPC_CheckChild0TypeI32,
+    OPC_CheckChild1TypeI32,
+    OPC_CheckChild2TypeI32,
+    OPC_CheckChild3TypeI32,
+    OPC_CheckChild4TypeI32,
+    OPC_CheckChild5TypeI32,
+    OPC_CheckChild6TypeI32,
+    OPC_CheckChild7TypeI32,
+
+    OPC_CheckChild0TypeI64,
+    OPC_CheckChild1TypeI64,
+    OPC_CheckChild2TypeI64,
+    OPC_CheckChild3TypeI64,
+    OPC_CheckChild4TypeI64,
+    OPC_CheckChild5TypeI64,
+    OPC_CheckChild6TypeI64,
+    OPC_CheckChild7TypeI64,
+
     OPC_CheckInteger,
-    OPC_CheckChild0Integer, OPC_CheckChild1Integer, OPC_CheckChild2Integer,
-    OPC_CheckChild3Integer, OPC_CheckChild4Integer,
-    OPC_CheckCondCode, OPC_CheckChild2CondCode,
+    OPC_CheckChild0Integer,
+    OPC_CheckChild1Integer,
+    OPC_CheckChild2Integer,
+    OPC_CheckChild3Integer,
+    OPC_CheckChild4Integer,
+    OPC_CheckCondCode,
+    OPC_CheckChild2CondCode,
     OPC_CheckValueType,
     OPC_CheckComplexPat,
-    OPC_CheckAndImm, OPC_CheckOrImm,
+    OPC_CheckComplexPat0,
+    OPC_CheckComplexPat1,
+    OPC_CheckComplexPat2,
+    OPC_CheckComplexPat3,
+    OPC_CheckComplexPat4,
+    OPC_CheckComplexPat5,
+    OPC_CheckComplexPat6,
+    OPC_CheckComplexPat7,
+    OPC_CheckAndImm,
+    OPC_CheckOrImm,
     OPC_CheckImmAllOnesV,
     OPC_CheckImmAllZerosV,
     OPC_CheckFoldableChainNode,
 
     OPC_EmitInteger,
+    // Space-optimized forms that implicitly encode integer VT.
+    OPC_EmitInteger8,
+    OPC_EmitInteger16,
+    OPC_EmitInteger32,
+    OPC_EmitInteger64,
     OPC_EmitStringInteger,
+    // Space-optimized forms that implicitly encode integer VT.
+    OPC_EmitStringInteger32,
     OPC_EmitRegister,
+    OPC_EmitRegisterI32,
+    OPC_EmitRegisterI64,
     OPC_EmitRegister2,
     OPC_EmitConvertToTarget,
+    OPC_EmitConvertToTarget0,
+    OPC_EmitConvertToTarget1,
+    OPC_EmitConvertToTarget2,
+    OPC_EmitConvertToTarget3,
+    OPC_EmitConvertToTarget4,
+    OPC_EmitConvertToTarget5,
+    OPC_EmitConvertToTarget6,
+    OPC_EmitConvertToTarget7,
     OPC_EmitMergeInputChains,
     OPC_EmitMergeInputChains1_0,
     OPC_EmitMergeInputChains1_1,
     OPC_EmitMergeInputChains1_2,
     OPC_EmitCopyToReg,
+    OPC_EmitCopyToReg0,
+    OPC_EmitCopyToReg1,
     OPC_EmitCopyToReg2,
+    OPC_EmitCopyToReg3,
+    OPC_EmitCopyToReg4,
+    OPC_EmitCopyToReg5,
+    OPC_EmitCopyToReg6,
+    OPC_EmitCopyToReg7,
+    OPC_EmitCopyToRegTwoByte,
     OPC_EmitNodeXForm,
     OPC_EmitNode,
     // Space-optimized forms that implicitly encode number of result VTs.
-    OPC_EmitNode0, OPC_EmitNode1, OPC_EmitNode2,
+    OPC_EmitNode0,
+    OPC_EmitNode1,
+    OPC_EmitNode2,
+    // Space-optimized forms that implicitly encode EmitNodeInfo.
+    OPC_EmitNode0None,
+    OPC_EmitNode1None,
+    OPC_EmitNode2None,
+    OPC_EmitNode0Chain,
+    OPC_EmitNode1Chain,
+    OPC_EmitNode2Chain,
     OPC_MorphNodeTo,
     // Space-optimized forms that implicitly encode number of result VTs.
-    OPC_MorphNodeTo0, OPC_MorphNodeTo1, OPC_MorphNodeTo2,
+    OPC_MorphNodeTo0,
+    OPC_MorphNodeTo1,
+    OPC_MorphNodeTo2,
+    // Space-optimized forms that implicitly encode EmitNodeInfo.
+    OPC_MorphNodeTo0None,
+    OPC_MorphNodeTo1None,
+    OPC_MorphNodeTo2None,
+    OPC_MorphNodeTo0Chain,
+    OPC_MorphNodeTo1Chain,
+    OPC_MorphNodeTo2Chain,
+    OPC_MorphNodeTo0GlueInput,
+    OPC_MorphNodeTo1GlueInput,
+    OPC_MorphNodeTo2GlueInput,
+    OPC_MorphNodeTo0GlueOutput,
+    OPC_MorphNodeTo1GlueOutput,
+    OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
-    // Contains offset in table for pattern being selected
+    // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
 
@@ -325,11 +471,16 @@ private:
   void Select_READ_REGISTER(SDNode *Op);
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
+  void Select_FAKE_USE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
   void Select_MEMBARRIER(SDNode *N);
+
+  void Select_CONVERGENCECTRL_ANCHOR(SDNode *N);
+  void Select_CONVERGENCECTRL_ENTRY(SDNode *N);
+  void Select_CONVERGENCECTRL_LOOP(SDNode *N);
 
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);
@@ -385,6 +536,31 @@ private:
                     bool isMorphNodeTo);
 };
 
+class SelectionDAGISelLegacy : public MachineFunctionPass {
+  std::unique_ptr<SelectionDAGISel> Selector;
+
+public:
+  SelectionDAGISelLegacy(char &ID, std::unique_ptr<SelectionDAGISel> S);
+
+  ~SelectionDAGISelLegacy() override = default;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class SelectionDAGISelPass : public PassInfoMixin<SelectionDAGISelPass> {
+  std::unique_ptr<SelectionDAGISel> Selector;
+
+protected:
+  SelectionDAGISelPass(std::unique_ptr<SelectionDAGISel> Selector)
+      : Selector(std::move(Selector)) {}
+
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
 }
 
 #endif /* LLVM_CODEGEN_SELECTIONDAGISEL_H */

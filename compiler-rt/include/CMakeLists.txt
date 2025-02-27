@@ -10,6 +10,7 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/lsan_interface.h
     sanitizer/msan_interface.h
     sanitizer/netbsd_syscall_hooks.h
+    sanitizer/rtsan_interface.h
     sanitizer/scudo_interface.h
     sanitizer/tsan_interface.h
     sanitizer/tsan_interface_atomic.h
@@ -25,6 +26,13 @@ if (COMPILER_RT_BUILD_MEMPROF)
     sanitizer/memprof_interface.h
     profile/MemProfData.inc
     )
+  if (NOT COMPILER_RT_BUILD_SANITIZERS)
+    set(MEMPROF_HEADERS
+      ${MEMPROF_HEADERS}
+      sanitizer/allocator_interface.h
+      sanitizer/common_interface_defs.h
+      )
+  endif()
 endif(COMPILER_RT_BUILD_MEMPROF)
 
 if (COMPILER_RT_BUILD_XRAY)
@@ -44,6 +52,7 @@ endif(COMPILER_RT_BUILD_ORC)
 if (COMPILER_RT_BUILD_PROFILE)
   set(PROFILE_HEADERS
     profile/InstrProfData.inc
+    profile/instr_prof_interface.h
     )
 endif(COMPILER_RT_BUILD_PROFILE)
 
@@ -71,7 +80,7 @@ endforeach( f )
 
 add_custom_target(compiler-rt-headers ALL DEPENDS ${out_files})
 add_dependencies(compiler-rt compiler-rt-headers)
-set_target_properties(compiler-rt-headers PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(compiler-rt-headers PROPERTIES FOLDER "Compiler-RT/Resources")
 
 # Install sanitizer headers.
 install(FILES ${SANITIZER_HEADERS}
@@ -89,6 +98,12 @@ if (COMPILER_RT_BUILD_MEMPROF)
     COMPONENT compiler-rt-headers
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     DESTINATION ${COMPILER_RT_INSTALL_INCLUDE_DIR}/sanitizer)
+  if (NOT COMPILER_RT_BUILD_SANITIZERS)
+    install(FILES sanitizer/allocator_interface.h sanitizer/common_interface_defs.h
+      COMPONENT compiler-rt-headers
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      DESTINATION ${COMPILER_RT_INSTALL_INCLUDE_DIR}/sanitizer)
+  endif()
 endif(COMPILER_RT_BUILD_MEMPROF)
 # Install xray headers.
 install(FILES ${XRAY_HEADERS}

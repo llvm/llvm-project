@@ -53,7 +53,7 @@ define void @mul_add_imm2() {
 entry:
   br label %for.body
 for.body:
-  br i1 undef, label %for.body, label %for.body8
+  br i1 poison, label %for.body, label %for.body8
 for.body8:
   %0 = mul i64 undef, -3
   %mul1971 = add i64 %0, -3

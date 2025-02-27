@@ -11,13 +11,13 @@ define i32 @PR63108() {
 ; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    je .LBB0_2
 ; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    movd {{.*#+}} xmm0 = [57339,0,0,0]
 ; SSE-NEXT:    jmp .LBB0_5
 ; SSE-NEXT:  .LBB0_2: # %vector.body.preheader
 ; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [57339,0,0,0]
+; SSE-NEXT:    movd {{.*#+}} xmm1 = [57339,0,0,0]
 ; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    .p2align 4, 0x90
+; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB0_3: # %vector.body
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
@@ -47,12 +47,12 @@ define i32 @PR63108() {
 ; AVX1-NEXT:    testb %al, %al
 ; AVX1-NEXT:    je .LBB0_2
 ; AVX1-NEXT:  # %bb.1:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [251,223,0,0,251,223,0,0,251,223,0,0,251,223,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX1-NEXT:    jmp .LBB0_5
 ; AVX1-NEXT:  .LBB0_2: # %vector.body.preheader
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [57339,0,0,0]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB0_3: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovaps %ymm0, %ymm1
@@ -87,9 +87,9 @@ define i32 @PR63108() {
 ; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [251,223,251,223,251,223,251,223,251,223,251,223,251,223,251,223]
 ; AVX2-NEXT:    jmp .LBB0_5
 ; AVX2-NEXT:  .LBB0_2: # %vector.body.preheader
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [57339,0,0,0]
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_3: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqa %ymm0, %ymm1
@@ -124,9 +124,9 @@ define i32 @PR63108() {
 ; AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [251,223,251,223,251,223,251,223,251,223,251,223,251,223,251,223]
 ; AVX512-NEXT:    jmp .LBB0_5
 ; AVX512-NEXT:  .LBB0_2: # %vector.body.preheader
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm0 = [57339,0,0,0]
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    .p2align 4, 0x90
+; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB0_3: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqa %ymm0, %ymm1

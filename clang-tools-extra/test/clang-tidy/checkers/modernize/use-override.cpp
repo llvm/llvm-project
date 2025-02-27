@@ -27,6 +27,7 @@ struct Base {
   virtual void f() = 0;
   virtual void f2() const = 0;
   virtual void g() = 0;
+  virtual void g2() = 0;
 
   virtual void j() const;
   virtual MustUseResultObject k();
@@ -126,6 +127,10 @@ public:
   virtual void t() throw();
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
   // CHECK-FIXES: {{^}}  void t() throw() override;
+
+  virtual       /*      */ void g2();
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual'
+  // CHECK-FIXES: {{^}}  /*      */ void g2() override;
 };
 
 // CHECK-MESSAGES-NOT: warning:
@@ -198,13 +203,13 @@ public:
   // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: prefer using
   // CHECK-FIXES: {{^}}  void j() const override
 
-  virtual MustUseResultObject k() {}  // Has an implicit attribute.
+  virtual MustUseResultObject k();  // Has an implicit attribute.
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: prefer using
-  // CHECK-FIXES: {{^}}  MustUseResultObject k() override {}
+  // CHECK-FIXES: {{^}}  MustUseResultObject k() override;
 
-  virtual bool l() MUST_USE_RESULT UNUSED {}
+  virtual bool l() MUST_USE_RESULT UNUSED;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  bool l() override MUST_USE_RESULT UNUSED {}
+  // CHECK-FIXES: {{^}}  bool l() override MUST_USE_RESULT UNUSED;
 
   virtual void r() &
   {}

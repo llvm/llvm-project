@@ -19,12 +19,12 @@
 template <int>
 class BadUserNoCookie {
 public:
-  BadUserNoCookie() { }
+  BadUserNoCookie() {}
 
-  BadUserNoCookie(BadUserNoCookie&&) = delete;
+  BadUserNoCookie(BadUserNoCookie&&)            = delete;
   BadUserNoCookie& operator=(BadUserNoCookie&&) = delete;
 
-  BadUserNoCookie(const BadUserNoCookie&) = default;
+  BadUserNoCookie(const BadUserNoCookie&)            = default;
   BadUserNoCookie& operator=(const BadUserNoCookie&) = default;
 };
 
@@ -33,9 +33,8 @@ int main(int, char**) {
 
   // Other diagnostics that might be seen as Clang tries to continue compiling:
   // expected-error@* 0-2 {{call to deleted constructor}}
-  // expected-error@* 0-2 {{no matching function for call to 'construct_at'}}
+  // expected-error@* 0-2 {{no matching function for call to '__construct_at'}}
   {
-
     std::vector<BadUserNoCookie<1> > x;
     x.emplace_back();
   }
