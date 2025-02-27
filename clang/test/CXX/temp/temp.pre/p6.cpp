@@ -1,4 +1,19 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: not %clang_cc1 -std=c++20 -fsyntax-only -fno-diagnostics-show-line-numbers -fcaret-diagnostics-max-lines=1 %s 2>&1 | FileCheck %s -strict-whitespace
+
+namespace GH46386 {
+  extern "C" { // expected-note {{extern "C" language linkage specification begins here}}
+
+  // CHECK:      error: templates must have C++ linkage
+  // CHECK-NEXT: {{^}}  void f(auto) {}
+  // CHECK-NEXT: {{^}}         ^~~~~{{$}}
+  void f(auto) {} // expected-error {{templates must have C++ linkage}}
+
+  void f(void) { // expected-note {{candidate function not viable: requires 0 arguments, but 1 was provided}}
+    f(1);        // expected-error {{no matching function for call to 'f'}}
+  }
+}
+}
 
 // Templates and partial and explicit specializations can't have C linkage.
 namespace extern_c_templates {
