@@ -827,7 +827,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // For the scalar case, we may not always execute the original predicated
   // block, Thus, scale the block's cost by the probability of executing it.
   if (VF.isScalar())
-    return ThenCost / getReciprocalPredBlockProb();
+    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
 
   return ThenCost;
 }
@@ -850,6 +850,11 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 VPlan::VPlan(Loop *L) {
   setEntry(createVPIRBasicBlock(L->getLoopPreheader()));
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
+
+  SmallVector<BasicBlock *> IRExitBlocks;
+  L->getExitBlocks(IRExitBlocks);
+  for (BasicBlock *EB : IRExitBlocks)
+    ExitBlocks.push_back(createVPIRBasicBlock(EB));
 }
 
 VPlan::~VPlan() {
@@ -869,7 +874,7 @@ VPlan::~VPlan() {
     }
     delete VPB;
   }
-  for (VPValue *VPV : VPLiveInsToFree)
+  for (VPValue *VPV : getLiveIns())
     delete VPV;
   if (BackedgeTakenCount)
     delete BackedgeTakenCount;
@@ -931,7 +936,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
-  auto *VPExitBlock = Plan->createVPIRBasicBlock(IRExitBlock);
+  VPIRBasicBlock *VPExitBlock = Plan->getExitBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
@@ -981,6 +986,14 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   } else {
     VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
   }
+}
+
+VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
+  auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
+    return VPIRBB->getIRBasicBlock() == IRBB;
+  });
+  assert(Iter != getExitBlocks().end() && "no exit block found");
+  return *Iter;
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
@@ -1232,7 +1245,7 @@ VPlan *VPlan::duplicate() {
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  for (VPValue *OldLiveIn : VPLiveInsToFree) {
+  for (VPValue *OldLiveIn : getLiveIns()) {
     Old2NewVPValues[OldLiveIn] =
         NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
@@ -1536,7 +1549,7 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignName(Plan.BackedgeTakenCount);
-  for (VPValue *LI : Plan.VPLiveInsToFree)
+  for (VPValue *LI : Plan.getLiveIns())
     assignName(LI);
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>

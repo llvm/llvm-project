@@ -281,6 +281,12 @@ private:
   ScanOptions ScanImpl;
 };
 
+struct AMDGPUInsertDelayAluPass
+    : public PassInfoMixin<AMDGPUInsertDelayAluPass> {
+  PreservedAnalyses run(MachineFunction &F,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
@@ -427,7 +433,7 @@ extern char &SIMemoryLegalizerID;
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;
 
-void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
+void initializeAMDGPUInsertDelayAluLegacyPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
 void initializeSIInsertHardClausesPass(PassRegistry &);

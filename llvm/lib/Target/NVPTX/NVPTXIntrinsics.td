@@ -789,6 +789,17 @@ def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
 
 def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
+//Applypriority intrinsics
+class APPLYPRIORITY_L2_INTRS<string addr> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$size),
+          StrJoin<".", ["applypriority", addr , "L2::evict_normal"]>.ret # " [$addr], $size;",
+          [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_applypriority", addr , "L2_evict_normal"]>.ret)
+          i64:$addr, i64:$size)]>,
+          Requires<[hasPTX<74>, hasSM<80>]>;
+
+def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"">;
+def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"global">;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
@@ -2718,23 +2729,23 @@ defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
 // Scalar
 
 multiclass LDU_G<string TyStr, NVPTXRegClass regclass> {
- def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
-               !strconcat("ldu.global.", TyStr),
+ def asi:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src, Offseti32imm:$offset),
+               "ldu.global." # TyStr # " \t$result, [$src$offset];",
                       []>, Requires<[hasLDU]>;
  def ari :  NVPTXInst<(outs regclass:$result), (ins MEMri:$src),
-               !strconcat("ldu.global.", TyStr),
+               "ldu.global." # TyStr # " \t$result, [$src];",
                       []>, Requires<[hasLDU]>;
  def ari64 :  NVPTXInst<(outs regclass:$result), (ins MEMri64:$src),
-               !strconcat("ldu.global.", TyStr),
+               "ldu.global." # TyStr # " \t$result, [$src];",
                         []>, Requires<[hasLDU]>;
 }
 
-defm INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32 \t$result, [$src];", Float32Regs>;
-defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
+defm INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8", Int16Regs>;
+defm INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16", Int16Regs>;
+defm INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32", Int32Regs>;
+defm INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64", Int64Regs>;
+defm INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32", Float32Regs>;
+defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64", Float64Regs>;
 
 // vector
 
@@ -2742,56 +2753,40 @@ defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
 multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
+                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
  def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri64:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins imemAny:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
+                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
+ def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
+                     (ins imemAny:$src, Offseti32imm:$offset),
+                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src$offset];", []>;
 }
 
 multiclass VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                             regclass:$dst4), (ins MEMri:$src),
-               !strconcat("ldu.global.", TyStr), []>;
+               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
  def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                             regclass:$dst4), (ins MEMri64:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins imemAny:$src),
-               !strconcat("ldu.global.", TyStr), []>;
+               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+ def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                            regclass:$dst4), (ins imemAny:$src, Offseti32imm:$offset),
+               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src$offset];", []>;
 }
 
-defm INT_PTX_LDU_G_v2i8_ELE
-  : VLDU_G_ELE_V2<"v2.u8 \t{{$dst1, $dst2}}, [$src];",  Int16Regs>;
-defm INT_PTX_LDU_G_v2i16_ELE
-  : VLDU_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
-defm INT_PTX_LDU_G_v2i32_ELE
-  : VLDU_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDU_G_v2f32_ELE
-  : VLDU_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
-defm INT_PTX_LDU_G_v2i64_ELE
-  : VLDU_G_ELE_V2<"v2.u64 \t{{$dst1, $dst2}}, [$src];", Int64Regs>;
-defm INT_PTX_LDU_G_v2f64_ELE
-  : VLDU_G_ELE_V2<"v2.f64 \t{{$dst1, $dst2}}, [$src];", Float64Regs>;
-defm INT_PTX_LDU_G_v4i8_ELE
-  : VLDU_G_ELE_V4<"v4.u8 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDU_G_v4i16_ELE
-  : VLDU_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int16Regs>;
-defm INT_PTX_LDU_G_v4i32_ELE
-  : VLDU_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int32Regs>;
-defm INT_PTX_LDU_G_v4f16_ELE
-  : VLDU_G_ELE_V4<"v4.b16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int16Regs>;
-defm INT_PTX_LDU_G_v4f16x2_ELE
-  : VLDU_G_ELE_V4<"v4.b32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int32Regs>;
-defm INT_PTX_LDU_G_v4f32_ELE
-  : VLDU_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Float32Regs>;
+defm INT_PTX_LDU_G_v2i8_ELE : VLDU_G_ELE_V2<"u8", Int16Regs>;
+defm INT_PTX_LDU_G_v2i16_ELE : VLDU_G_ELE_V2<"u16", Int16Regs>;
+defm INT_PTX_LDU_G_v2i32_ELE : VLDU_G_ELE_V2<"u32", Int32Regs>;
+defm INT_PTX_LDU_G_v2f32_ELE : VLDU_G_ELE_V2<"f32", Float32Regs>;
+defm INT_PTX_LDU_G_v2i64_ELE : VLDU_G_ELE_V2<"u64", Int64Regs>;
+defm INT_PTX_LDU_G_v2f64_ELE : VLDU_G_ELE_V2<"f64", Float64Regs>;
+
+defm INT_PTX_LDU_G_v4i8_ELE : VLDU_G_ELE_V4<"u8", Int16Regs>;
+defm INT_PTX_LDU_G_v4i16_ELE : VLDU_G_ELE_V4<"u16", Int16Regs>;
+defm INT_PTX_LDU_G_v4i32_ELE  : VLDU_G_ELE_V4<"u32", Int32Regs>;
+defm INT_PTX_LDU_G_v4f16_ELE   : VLDU_G_ELE_V4<"b16", Int16Regs>;
+defm INT_PTX_LDU_G_v4f16x2_ELE  : VLDU_G_ELE_V4<"b32", Int32Regs>;
+defm INT_PTX_LDU_G_v4f32_ELE  : VLDU_G_ELE_V4<"f32", Float32Regs>;
 
 
 //-----------------------------------
@@ -2803,29 +2798,23 @@ defm INT_PTX_LDU_G_v4f32_ELE
 // during the lifetime of the kernel.
 
 multiclass LDG_G<string TyStr, NVPTXRegClass regclass> {
- def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
-               !strconcat("ld.global.nc.", TyStr),
+ def asi:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src, Offseti32imm:$offset),
+               "ld.global.nc." # TyStr # " \t$result, [$src$offset];",
                       []>, Requires<[hasLDG]>;
  def ari :  NVPTXInst<(outs regclass:$result), (ins MEMri:$src),
-               !strconcat("ld.global.nc.", TyStr),
+               "ld.global.nc." # TyStr # " \t$result, [$src];",
                       []>, Requires<[hasLDG]>;
  def ari64 :  NVPTXInst<(outs regclass:$result), (ins MEMri64:$src),
-               !strconcat("ld.global.nc.", TyStr),
+               "ld.global.nc." # TyStr # " \t$result, [$src];",
                         []>, Requires<[hasLDG]>;
 }
 
-defm INT_PTX_LDG_GLOBAL_i8
-  : LDG_G<"u8 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDG_GLOBAL_i16
-  : LDG_G<"u16 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDG_GLOBAL_i32
-  : LDG_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDG_GLOBAL_i64
-  : LDG_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDG_GLOBAL_f32
-  : LDG_G<"f32 \t$result, [$src];", Float32Regs>;
-defm INT_PTX_LDG_GLOBAL_f64
-  : LDG_G<"f64 \t$result, [$src];", Float64Regs>;
+defm INT_PTX_LDG_GLOBAL_i8 : LDG_G<"u8", Int16Regs>;
+defm INT_PTX_LDG_GLOBAL_i16 : LDG_G<"u16", Int16Regs>;
+defm INT_PTX_LDG_GLOBAL_i32 : LDG_G<"u32", Int32Regs>;
+defm INT_PTX_LDG_GLOBAL_i64 : LDG_G<"u64", Int64Regs>;
+defm INT_PTX_LDG_GLOBAL_f32 : LDG_G<"f32", Float32Regs>;
+defm INT_PTX_LDG_GLOBAL_f64 : LDG_G<"f64", Float64Regs>;
 
 // vector
 
@@ -2833,54 +2822,39 @@ defm INT_PTX_LDG_GLOBAL_f64
 multiclass VLDG_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
+                     "ld.global.nc.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
  def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
                      (ins MEMri64:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins imemAny:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
+                     "ld.global.nc.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
+ def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
+                     (ins imemAny:$src, Offseti32imm:$offset),
+                     "ld.global.nc.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src$offset];", []>;
 }
 
 multiclass VLDG_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
-  def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                              regclass:$dst4), (ins Int32Regs:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                               regclass:$dst4), (ins Int64Regs:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
   def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                               regclass:$dst4), (ins MEMri:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
+               "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
   def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
                               regclass:$dst4), (ins MEMri64:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                             regclass:$dst4), (ins imemAny:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
+               "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+  def _asi: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                             regclass:$dst4), (ins imemAny:$src, Offseti32imm:$offset),
+               "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src$offset];", []>;
 }
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
-defm INT_PTX_LDG_G_v2i8_ELE
-  : VLDG_G_ELE_V2<"v2.u8 \t{{$dst1, $dst2}}, [$src];",  Int16Regs>;
-defm INT_PTX_LDG_G_v2i16_ELE
-  : VLDG_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v2i32_ELE
-  : VLDG_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v2f32_ELE
-  : VLDG_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
-defm INT_PTX_LDG_G_v2i64_ELE
-  : VLDG_G_ELE_V2<"v2.u64 \t{{$dst1, $dst2}}, [$src];", Int64Regs>;
-defm INT_PTX_LDG_G_v2f64_ELE
-  : VLDG_G_ELE_V2<"v2.f64 \t{{$dst1, $dst2}}, [$src];", Float64Regs>;
-defm INT_PTX_LDG_G_v4i8_ELE
-  : VLDG_G_ELE_V4<"v4.u8 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v4i16_ELE
-  : VLDG_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v4i32_ELE
-  : VLDG_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v4f32_ELE
-  : VLDG_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float32Regs>;
+defm INT_PTX_LDG_G_v2i8_ELE : VLDG_G_ELE_V2<"u8", Int16Regs>;
+defm INT_PTX_LDG_G_v2i16_ELE : VLDG_G_ELE_V2<"u16", Int16Regs>;
+defm INT_PTX_LDG_G_v2i32_ELE : VLDG_G_ELE_V2<"u32", Int32Regs>;
+defm INT_PTX_LDG_G_v2f32_ELE : VLDG_G_ELE_V2<"f32", Float32Regs>;
+defm INT_PTX_LDG_G_v2i64_ELE : VLDG_G_ELE_V2<"u64", Int64Regs>;
+defm INT_PTX_LDG_G_v2f64_ELE : VLDG_G_ELE_V2<"f64", Float64Regs>;
+
+defm INT_PTX_LDG_G_v4i8_ELE : VLDG_G_ELE_V4<"u8", Int16Regs>;
+defm INT_PTX_LDG_G_v4i16_ELE : VLDG_G_ELE_V4<"u16", Int16Regs>;
+defm INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"u32", Int32Regs>;
+defm INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"f32", Float32Regs>;
 
 
 multiclass NG_TO_G<string Str> {
@@ -7756,3 +7730,89 @@ def tcgen05_fence_after_thread_sync: NVPTXInst<(outs), (ins),
   Requires<[hasTcgen05Instructions]>;
 
 } // hasSideEffects
+
+// name class for tcgen05.{ld, st}
+class TCGEN05_LDST_INST_NAME<string Op, string shape, int lg2Count, bit packOrUnpack> {
+  string name = "TCGEN05_" # Op
+                # "_" # shape
+                # "_x" # !shl(1, lg2Count)
+                # !if(!eq(packOrUnpack, 1), !if(!eq(Op, "LD"), "_PACK", "_UNPACK"), "");
+}
+
+// reginfo class tcgen05.{ld, st}
+class TCGEN05_LDST_REGINFO<int Veclen> {
+  // create a list of types for load/store operands
+  list<NVPTXRegClass> regs = !listsplat(Int32Regs, Veclen);
+  // generate list of regnames for load/store operands
+  list<string> reg_names = !foreach(x, !range(0, Veclen), "r" # x);
+  string regstring = "{{" # !interleave(!foreach(n, !range(0, Veclen), "$r" # n), ", ") # "}}";
+  dag Ins = !dag(ins, regs, reg_names);
+  dag Outs = !dag(outs, regs, reg_names);
+}
+
+//
+// tcgen05.ld.sync.aligned.shape.x[1, 2, 4, 8, 16, 32, 64, 128][|.pack::16b].[b32]
+//
+
+class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
+        NVPTXInst<(outs), (ins), "?", []>,
+        Requires<[hasTcgen05Instructions]> {
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
+                                NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
+
+  let InOperandList = !con((ins Int32Regs:$taddr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)));
+  let OutOperandList = Info.Outs;
+  let AsmString = "tcgen05.ld.sync.aligned"
+                  # "." # Shape
+                  # ".x" # !shl(1, Num)
+                  # !if(!eq(Pack, 1), ".pack::16b", "")
+                  # ".b32 "
+                  # Info.regstring # ", "
+                  # "[$taddr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ";";
+}
+
+//
+// tcgen05.st.sync.aligned.shape.x[1, 2, 4, 8, 16, 32, 64, 128][|.unpack::16b].[b32]
+//
+
+class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
+        NVPTXInst<(outs), (ins), "?", []>,
+        Requires<[hasTcgen05Instructions]> {
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
+                                NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
+
+  let InOperandList = !con((ins Int32Regs:$taddr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)),
+                           Info.Ins);
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.st.sync.aligned"
+                  # "." # Shape
+                  # ".x" # !shl(1, Num)
+                  # !if(!eq(Unpack, 1), ".unpack::16b", "")
+                  # ".b32 [$taddr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ", " # Info.regstring
+                  # ";";
+}
+
+let isConvergent = true in {
+
+foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
+  foreach num = !range(0, 8) in {
+    foreach packOrUnpack = [false, true] in {
+      if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
+        def TCGEN05_LDST_INST_NAME<"LD", shape, num, packOrUnpack>.name :
+              TCGEN05_LD_INST<shape, num, packOrUnpack>;
+        def TCGEN05_LDST_INST_NAME<"ST", shape, num, packOrUnpack>.name :
+              TCGEN05_ST_INST<shape, num, packOrUnpack>;
+      }
+    }
+  }
+}
+
+} // isConvergent
