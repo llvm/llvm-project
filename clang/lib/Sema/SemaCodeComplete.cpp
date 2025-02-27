@@ -2410,6 +2410,29 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       Builder.AddChunk(CodeCompletionString::CK_RightBrace);
       Results.AddResult(Result(Builder.TakeString()));
 
+      // _Accept (expression) 
+      Builder.AddTypedTextChunk("_Accept");
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+      Builder.AddPlaceholderChunk("expression");
+      Builder.AddChunk(CodeCompletionString::CK_RightParen);
+      Results.AddResult(Result(Builder.TakeString()));
+
+      // _Accept (expression) { statements }
+      Builder.AddTypedTextChunk("_Accept");
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+      Builder.AddPlaceholderChunk("expression");
+      Builder.AddChunk(CodeCompletionString::CK_RightParen);
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddPlaceholderChunk("statements");
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+      Results.AddResult(Result(Builder.TakeString()));
+
+
       // do { statements } while ( expression );
       Builder.AddTypedTextChunk("do");
       Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);

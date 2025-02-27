@@ -1410,6 +1410,18 @@ public:
     return SemaRef.BuildAttributedStmt(AttrLoc, Attrs, SubStmt);
   }
 
+  /// Build a new "Accept" statement.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildAcceptStmt(SourceLocation AcceptLoc, IfStatementKind Kind,
+                           SourceLocation LParenLoc, Sema::ConditionResult Cond,
+                           SourceLocation RParenLoc, Stmt *Init, Stmt *Then,
+                           SourceLocation ElseLoc, Stmt *Else) {
+    return getSema().ActOnAcceptStmt(AcceptLoc, Kind, LParenLoc, Init, Cond, RParenLoc,
+                                 Then, ElseLoc, Else);
+  }
+
   /// Build a new "if" statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -8119,6 +8131,81 @@ TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S,
 
   return getDerived().RebuildAttributedStmt(S->getAttrLoc(), Attrs,
                                             SubStmt.get());
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformAcceptStmt(AcceptStmt *S) {
+  // Transform the initialization statement
+  StmtResult Init = getDerived().TransformStmt(S->getInit());
+  if (Init.isInvalid())
+    return StmtError();
+
+  Sema::ConditionResult Cond;
+  if (!S->isConsteval()) {
+    // Transform the condition
+    Cond = getDerived().TransformCondition(
+        S->getAcceptLoc(), S->getConditionVariable(), S->getCond(),
+        S->isConstexpr() ? Sema::ConditionKind::ConstexprIf
+                         : Sema::ConditionKind::Boolean);
+    if (Cond.isInvalid())
+      return StmtError();
+  }
+
+  // If this is a constexpr if, determine which arm we should instantiate.
+  std::optional<bool> ConstexprConditionValue;
+  if (S->isConstexpr())
+    ConstexprConditionValue = Cond.getKnownValue();
+
+  // Transform the "then" branch.
+  StmtResult Then;
+  if (!ConstexprConditionValue || *ConstexprConditionValue) {
+    EnterExpressionEvaluationContext Ctx(
+        getSema(), Sema::ExpressionEvaluationContext::ImmediateFunctionContext,
+        nullptr, Sema::ExpressionEvaluationContextRecord::EK_Other,
+        S->isNonNegatedConsteval());
+
+    Then = getDerived().TransformStmt(S->getThen());
+    if (Then.isInvalid())
+      return StmtError();
+  } else {
+    // Discarded branch is replaced with empty CompoundStmt so we can keep
+    // proper source location for start and end of original branch, so
+    // subsequent transformations like CoverageMapping work properly
+    Then = new (getSema().Context)
+        CompoundStmt(S->getThen()->getBeginLoc(), S->getThen()->getEndLoc());
+  }
+
+  // Transform the "else" branch.
+  StmtResult Else;
+  if (!ConstexprConditionValue || !*ConstexprConditionValue) {
+    EnterExpressionEvaluationContext Ctx(
+        getSema(), Sema::ExpressionEvaluationContext::ImmediateFunctionContext,
+        nullptr, Sema::ExpressionEvaluationContextRecord::EK_Other,
+        S->isNegatedConsteval());
+
+    Else = getDerived().TransformStmt(S->getElse());
+    if (Else.isInvalid())
+      return StmtError();
+  } else if (S->getElse() && ConstexprConditionValue &&
+             *ConstexprConditionValue) {
+    // Same thing here as with <then> branch, we are discarding it, we can't
+    // replace it with NULL nor NullStmt as we need to keep for source location
+    // range, for CoverageMapping
+    Else = new (getSema().Context)
+        CompoundStmt(S->getElse()->getBeginLoc(), S->getElse()->getEndLoc());
+  }
+
+  if (!getDerived().AlwaysRebuild() &&
+      Init.get() == S->getInit() &&
+      Cond.get() == std::make_pair(S->getConditionVariable(), S->getCond()) &&
+      Then.get() == S->getThen() &&
+      Else.get() == S->getElse())
+    return S;
+
+  return getDerived().RebuildAcceptStmt(
+      S->getAcceptLoc(), S->getStatementKind(), S->getLParenLoc(), Cond,
+      S->getRParenLoc(), Init.get(), Then.get(), S->getElseLoc(), Else.get());
 }
 
 template<typename Derived>

@@ -7327,7 +7327,8 @@ public:
   enum class ConditionKind {
     Boolean,     ///< A boolean condition, from 'if', 'while', 'for', or 'do'.
     ConstexprIf, ///< A constant boolean condition from 'if constexpr'.
-    Switch       ///< An integral condition for a 'switch' statement.
+    Switch,       ///< An integral condition for a 'switch' statement.
+    ACCEPT,       /// Special case for _Accept 
   };
 
   ConditionResult ActOnCondition(Scope *S, SourceLocation Loc, Expr *SubExpr,
@@ -10678,6 +10679,16 @@ public:
   /// the statement is rewritten to remove implicit nodes from the return
   /// value.
   bool checkAndRewriteMustTailAttr(Stmt *St, const Attr &MTA);
+
+  // Act On Accept Statement
+  StmtResult ActOnAcceptStmt(SourceLocation AcceptLoc, IfStatementKind StatementKind,
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
+  StmtResult BuildAcceptStmt(SourceLocation AcceptLoc, IfStatementKind StatementKind,
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
 
   StmtResult ActOnIfStmt(SourceLocation IfLoc, IfStatementKind StatementKind,
                          SourceLocation LParenLoc, Stmt *InitStmt,

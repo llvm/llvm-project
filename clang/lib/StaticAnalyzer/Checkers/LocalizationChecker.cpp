@@ -1209,6 +1209,8 @@ class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
 
     bool VisitIfStmt(IfStmt *I) override;
     bool EndVisitIfStmt(IfStmt *I);
+    bool EndVisitAcceptStmt(AcceptStmt *I);
+    bool TraverseAcceptStmt(AcceptStmt *x) override;
     bool TraverseIfStmt(IfStmt *x) override;
     bool VisitConditionalOperator(ConditionalOperator *C) override;
     bool TraverseConditionalOperator(ConditionalOperator *C) override;
@@ -1307,6 +1309,26 @@ bool PluralMisuseChecker::MethodCrawler::VisitObjCMessageExpr(
       reportPluralMisuseError(ME);
     }
   }
+  return true;
+}
+
+/// Override TraverseAcceptStmt so we know when we are done traversing an AcceptStmt
+bool PluralMisuseChecker::MethodCrawler::TraverseAcceptStmt(AcceptStmt *I) {
+  DynamicRecursiveASTVisitor::TraverseAcceptStmt(I);
+  return EndVisitAcceptStmt(I);
+}
+
+// so we override TraverseAcceptStmt and make a call to EndVisitAcceptStmt
+// after traversing the AcceptStmt
+bool PluralMisuseChecker::MethodCrawler::EndVisitAcceptStmt(AcceptStmt *I) {
+  MatchingStatements.pop_back();
+  if (!MatchingStatements.empty()) {
+    if (MatchingStatements.back() != nullptr) {
+      InMatchingStatement = true;
+      return true;
+    }
+  }
+  InMatchingStatement = false;
   return true;
 }
 

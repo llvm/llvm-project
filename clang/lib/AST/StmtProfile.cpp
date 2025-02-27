@@ -280,6 +280,11 @@ void StmtProfiler::VisitAttributedStmt(const AttributedStmt *S) {
   // TODO: maybe visit attributes?
 }
 
+void StmtProfiler::VisitAcceptStmt(const AcceptStmt *S) {
+  VisitStmt(S);
+  VisitDecl(S->getConditionVariable());
+}
+
 void StmtProfiler::VisitIfStmt(const IfStmt *S) {
   VisitStmt(S);
   VisitDecl(S->getConditionVariable());

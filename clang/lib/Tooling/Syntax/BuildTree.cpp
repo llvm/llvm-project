@@ -807,6 +807,30 @@ public:
     return true;
   }
 
+  bool TraverseAcceptStmt(AcceptStmt *S) {
+    bool Result = [&, this]() {
+      if (S->getInit() && !TraverseStmt(S->getInit())) {
+        return false;
+      }
+      // In cases where the condition is an initialized declaration in a
+      // statement, we want to preserve the declaration and ignore the
+      // implicit condition expression in the syntax tree.
+      if (S->hasVarStorage()) {
+        if (!TraverseStmt(S->getConditionVariableDeclStmt()))
+          return false;
+      } else if (S->getCond() && !TraverseStmt(S->getCond()))
+        return false;
+
+      if (S->getThen() && !TraverseStmt(S->getThen()))
+        return false;
+      if (S->getElse() && !TraverseStmt(S->getElse()))
+        return false;
+      return true;
+    }();
+    WalkUpFromAcceptStmt(S);
+    return Result;
+  }
+
   bool TraverseIfStmt(IfStmt *S) {
     bool Result = [&, this]() {
       if (S->getInit() && !TraverseStmt(S->getInit())) {
@@ -1457,6 +1481,20 @@ public:
     Builder.markStmtChild(S->getSubStmt(), syntax::NodeRole::BodyStatement);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::DefaultStatement, S);
+    return true;
+  }
+
+  bool WalkUpFromAcceptStmt(AcceptStmt *S) {
+    Builder.markChildToken(S->getAcceptLoc(), syntax::NodeRole::IntroducerKeyword);
+    Stmt *ConditionStatement = S->getCond();
+    if (S->hasVarStorage())
+      ConditionStatement = S->getConditionVariableDeclStmt();
+    Builder.markStmtChild(ConditionStatement, syntax::NodeRole::Condition);
+    Builder.markStmtChild(S->getThen(), syntax::NodeRole::ThenStatement);
+    Builder.markChildToken(S->getElseLoc(), syntax::NodeRole::ElseKeyword);
+    Builder.markStmtChild(S->getElse(), syntax::NodeRole::ElseStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::IfStatement, S);
     return true;
   }
 

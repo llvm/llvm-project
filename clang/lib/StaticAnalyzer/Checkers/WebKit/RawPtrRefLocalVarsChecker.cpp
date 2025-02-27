@@ -218,6 +218,12 @@ public:
         return true;
       }
 
+      bool TraverseAcceptStmt(AcceptStmt *IS) override {
+        if (!TFA.isTrivial(IS))
+          return DynamicRecursiveASTVisitor::TraverseAcceptStmt(IS);
+        return true;
+      }
+
       bool TraverseIfStmt(IfStmt *IS) override {
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);

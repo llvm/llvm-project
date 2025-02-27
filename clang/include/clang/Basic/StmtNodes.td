@@ -9,6 +9,7 @@ class StmtNode<StmtNode base, bit abstract = 0> : ASTNode, AttrSubject {
 def Stmt : StmtNode<?, 1>;
 def NullStmt : StmtNode<Stmt>;
 def CompoundStmt : StmtNode<Stmt>;
+def AcceptStmt : StmtNode<Stmt>;
 def IfStmt : StmtNode<Stmt>;
 def SwitchStmt : StmtNode<Stmt>;
 def WhileStmt : StmtNode<Stmt>;

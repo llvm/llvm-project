@@ -408,6 +408,7 @@ bool Parser::isNotExpressionStart() {
   if (K == tok::l_brace || K == tok::r_brace  ||
       K == tok::kw_for  || K == tok::kw_while ||
       K == tok::kw_if   || K == tok::kw_else  ||
+      K == tok::kw__Accept || K == tok::kw_or ||
       K == tok::kw_goto || K == tok::kw_try)
     return true;
   // If this is a decl-specifier, we can't be at the start of an expression.

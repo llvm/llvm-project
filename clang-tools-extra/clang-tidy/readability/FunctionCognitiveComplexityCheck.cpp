@@ -236,6 +236,75 @@ public:
     return ShouldContinue;
   }
 
+  bool TraverseAcceptStmt(AcceptStmt *Node, bool InElseIf = false) {
+    if (!Node)
+      return Base::TraverseAcceptStmt(Node);
+
+    {
+      CognitiveComplexity::Criteria Reasons =
+          CognitiveComplexity::Criteria::None;
+
+      // "If" increases cognitive complexity.
+      Reasons |= CognitiveComplexity::Criteria::Increment;
+      // "If" increases nesting level.
+      Reasons |= CognitiveComplexity::Criteria::IncrementNesting;
+
+      if (!InElseIf) {
+        // "If" receives a nesting increment commensurate with it's nested
+        // depth, if it is not part of "else if".
+        Reasons |= CognitiveComplexity::Criteria::PenalizeNesting;
+      }
+
+      CC.account(Node->getAcceptLoc(), CurrentNestingLevel, Reasons);
+    }
+
+    // If this AcceptStmt is *NOT* "else if", then only the body (i.e. "Then" and
+    // "Else") is traversed with increased Nesting level.
+    // However if this AcceptStmt *IS* "else if", then Nesting level is increased
+    // for the whole AcceptStmt (i.e. for "Init", "Cond", "Then" and "Else").
+
+    if (!InElseIf) {
+      if (!TraverseStmt(Node->getInit()))
+        return false;
+
+      if (!TraverseStmt(Node->getCond()))
+        return false;
+    } else {
+      if (!traverseStmtWithIncreasedNestingLevel(Node->getInit()))
+        return false;
+
+      if (!traverseStmtWithIncreasedNestingLevel(Node->getCond()))
+        return false;
+    }
+
+    // "Then" always increases nesting level.
+    if (!traverseStmtWithIncreasedNestingLevel(Node->getThen()))
+      return false;
+
+    if (!Node->getElse())
+      return true;
+
+    if (auto *E = dyn_cast<AcceptStmt>(Node->getElse()))
+      return TraverseAcceptStmt(E, true);
+
+    {
+      CognitiveComplexity::Criteria Reasons =
+          CognitiveComplexity::Criteria::None;
+
+      // "Else" increases cognitive complexity.
+      Reasons |= CognitiveComplexity::Criteria::Increment;
+      // "Else" increases nesting level.
+      Reasons |= CognitiveComplexity::Criteria::IncrementNesting;
+      // "Else" DOES NOT receive a nesting increment commensurate with it's
+      // nested depth.
+
+      CC.account(Node->getElseLoc(), CurrentNestingLevel, Reasons);
+    }
+
+    // "Else" always increases nesting level.
+    return traverseStmtWithIncreasedNestingLevel(Node->getElse());
+  }
+
   bool TraverseIfStmt(IfStmt *Node, bool InElseIf = false) {
     if (!Node)
       return Base::TraverseIfStmt(Node);

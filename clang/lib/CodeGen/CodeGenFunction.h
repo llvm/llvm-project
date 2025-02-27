@@ -3553,6 +3553,7 @@ public:
   void EmitAttributedStmt(const AttributedStmt &S);
   void EmitGotoStmt(const GotoStmt &S);
   void EmitIndirectGotoStmt(const IndirectGotoStmt &S);
+  void EmitAcceptStmt(const AcceptStmt &S);
   void EmitIfStmt(const IfStmt &S);
 
   void EmitWhileStmt(const WhileStmt &S, ArrayRef<const Attr *> Attrs = {});

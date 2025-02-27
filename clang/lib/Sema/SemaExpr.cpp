@@ -20395,6 +20395,14 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
 
   ExprResult Cond;
   switch (CK) {
+  case ConditionKind::ACCEPT:
+    if (getLangOpts().CPlusPlus) {
+        Cond = ExprResult(new (Context) CXXBoolLiteralExpr(true, Context.BoolTy, Loc));
+    } else {
+        llvm::APInt TrueValue(Context.getTypeSize(Context.BoolTy), 1);
+        Cond = ExprResult(IntegerLiteral::Create(Context, TrueValue, Context.BoolTy, Loc));
+    }
+    break;
   case ConditionKind::Boolean:
     Cond = CheckBooleanCondition(Loc, SubExpr);
     break;

@@ -2198,6 +2198,7 @@ private:
                                  SourceLocation Loc, Sema::ConditionKind CK,
                                  SourceLocation &LParenLoc,
                                  SourceLocation &RParenLoc);
+  StmtResult ParseAcceptStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);

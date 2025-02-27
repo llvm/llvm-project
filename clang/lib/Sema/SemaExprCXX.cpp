@@ -4074,6 +4074,8 @@ ExprResult Sema::CheckConditionVariable(VarDecl *ConditionVar,
       ConditionVar->getLocation());
 
   switch (CK) {
+  case ConditionKind::ACCEPT:
+    return ExprResult(new (Context) CXXBoolLiteralExpr(true, Context.BoolTy, StmtLoc));
   case ConditionKind::Boolean:
     return CheckBooleanCondition(StmtLoc, Condition.get());
 

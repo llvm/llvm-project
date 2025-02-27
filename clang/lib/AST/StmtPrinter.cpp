@@ -122,6 +122,7 @@ namespace {
     void PrintRawCompoundStmt(CompoundStmt *S);
     void PrintRawDecl(Decl *D);
     void PrintRawDeclStmt(const DeclStmt *S);
+    void PrintRawAcceptStmt(AcceptStmt *Accept);
     void PrintRawIfStmt(IfStmt *If);
     void PrintRawCXXCatchStmt(CXXCatchStmt *Catch);
     void PrintCallArgs(CallExpr *E);
@@ -131,7 +132,7 @@ namespace {
                                      bool ForceNoStmt = false);
     void PrintFPPragmas(CompoundStmt *S);
 
-    void PrintExpr(Expr *E) {
+    void PrintExpr(Expr *E) { 
       if (E)
         Visit(E);
       else
@@ -300,6 +301,64 @@ void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
   }
 
   PrintStmt(Node->getSubStmt(), 0);
+}
+
+void StmtPrinter::PrintRawAcceptStmt(AcceptStmt *Accept) {
+  if (Accept->isConsteval()) {
+    OS << "_Accept ";
+    if (Accept->isNegatedConsteval())
+      OS << "!";
+    OS << "consteval";
+    OS << NL;
+    PrintStmt(Accept->getThen());
+    if (Stmt *Else = Accept->getElse()) {
+      Indent();
+      OS << "else";
+      PrintStmt(Else);
+      OS << NL;
+    }
+    return;
+  }
+
+  OS << "_Accept (";
+  if (Accept->getInit())
+    PrintInitStmt(Accept->getInit(), 4);
+  if (const DeclStmt *DS = Accept->getConditionVariableDeclStmt())
+    PrintRawDeclStmt(DS);
+  else
+    PrintExpr(Accept->getCond());
+  OS << ')';
+
+  if (auto *CS = dyn_cast<CompoundStmt>(Accept->getThen())) {
+    OS << ' ';
+    PrintRawCompoundStmt(CS);
+    OS << (Accept->getElse() ? " " : NL);
+  } else {
+    OS << NL;
+    PrintStmt(Accept->getThen());
+    if (Accept->getElse()) Indent();
+  }
+
+  if (Stmt *Else = Accept->getElse()) {
+    OS << "else";
+
+    if (auto *CS = dyn_cast<CompoundStmt>(Else)) {
+      OS << ' ';
+      PrintRawCompoundStmt(CS);
+      OS << NL;
+    } else if (auto *ElseIf = dyn_cast<IfStmt>(Else)) {
+      OS << ' ';
+      PrintRawIfStmt(ElseIf);
+    } else {
+      OS << NL;
+      PrintStmt(Accept->getElse());
+    }
+  }
+}
+
+void StmtPrinter::VisitAcceptStmt(AcceptStmt *Accept) {
+  Indent();
+  PrintRawAcceptStmt(Accept);
 }
 
 void StmtPrinter::PrintRawIfStmt(IfStmt *If) {

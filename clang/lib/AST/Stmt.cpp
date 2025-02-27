@@ -921,6 +921,85 @@ void MSAsmStmt::initialize(const ASTContext &C, StringRef asmstr,
                  });
 }
 
+AcceptStmt::AcceptStmt(const ASTContext &Ctx, SourceLocation IL, IfStatementKind Kind,
+               Stmt *Init, VarDecl *Var, Expr *Cond, SourceLocation LPL,
+               SourceLocation RPL, Stmt *Then, SourceLocation EL, Stmt *Else)
+    : Stmt(IfStmtClass), LParenLoc(LPL), RParenLoc(RPL) {
+  bool HasElse = Else != nullptr;
+  bool HasVar = Var != nullptr;
+  bool HasInit = Init != nullptr;
+  AcceptStmtBits.HasElse = HasElse;
+  AcceptStmtBits.HasVar = HasVar;
+  AcceptStmtBits.HasInit = HasInit;
+
+  setStatementKind(Kind);
+
+  setCond(Cond);
+  setThen(Then);
+  if (HasElse)
+    setElse(Else);
+  if (HasVar)
+    setConditionVariable(Ctx, Var);
+  if (HasInit)
+    setInit(Init);
+
+  setAcceptLoc(IL);
+  if (HasElse)
+    setElseLoc(EL);
+}
+
+AcceptStmt::AcceptStmt(EmptyShell Empty, bool HasElse, bool HasVar, bool HasInit)
+    : Stmt(IfStmtClass, Empty) {
+  AcceptStmtBits.HasElse = HasElse;
+  AcceptStmtBits.HasVar = HasVar;
+  AcceptStmtBits.HasInit = HasInit;
+}
+
+AcceptStmt *AcceptStmt::Create(const ASTContext &Ctx, SourceLocation IL,
+                       IfStatementKind Kind, Stmt *Init, VarDecl *Var,
+                       Expr *Cond, SourceLocation LPL, SourceLocation RPL,
+                       Stmt *Then, SourceLocation EL, Stmt *Else) {
+  bool HasElse = Else != nullptr;
+  bool HasVar = Var != nullptr;
+  bool HasInit = Init != nullptr;
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(
+          NumMandatoryStmtPtr + HasElse + HasVar + HasInit, HasElse),
+      alignof(AcceptStmt));
+  return new (Mem)
+      AcceptStmt(Ctx, IL, Kind, Init, Var, Cond, LPL, RPL, Then, EL, Else);
+}
+
+AcceptStmt *AcceptStmt::CreateEmpty(const ASTContext &Ctx, bool HasElse, bool HasVar,
+                            bool HasInit) {
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(
+          NumMandatoryStmtPtr + HasElse + HasVar + HasInit, HasElse),
+      alignof(AcceptStmt));
+  return new (Mem) AcceptStmt(EmptyShell(), HasElse, HasVar, HasInit);
+}
+
+VarDecl *AcceptStmt::getConditionVariable() {
+  auto *DS = getConditionVariableDeclStmt();
+  if (!DS)
+    return nullptr;
+  return cast<VarDecl>(DS->getSingleDecl());
+}
+
+void AcceptStmt::setConditionVariable(const ASTContext &Ctx, VarDecl *V) {
+  assert(hasVarStorage() &&
+         "This if statement has no storage for a condition variable!");
+
+  if (!V) {
+    getTrailingObjects<Stmt *>()[varOffset()] = nullptr;
+    return;
+  }
+
+  SourceRange VarRange = V->getSourceRange();
+  getTrailingObjects<Stmt *>()[varOffset()] = new (Ctx)
+      DeclStmt(DeclGroupRef(V), VarRange.getBegin(), VarRange.getEnd());
+}
+
 IfStmt::IfStmt(const ASTContext &Ctx, SourceLocation IL, IfStatementKind Kind,
                Stmt *Init, VarDecl *Var, Expr *Cond, SourceLocation LPL,
                SourceLocation RPL, Stmt *Then, SourceLocation EL, Stmt *Else)

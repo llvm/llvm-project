@@ -803,6 +803,18 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
   EmitBranch(IndGotoBB);
 }
 
+void CodeGenFunction::EmitAcceptStmt(const AcceptStmt &S) {
+    // Generate IR for each member function in the Members list
+    for (Expr *Member : S.getMembers()) {
+        // llvm::Value *Function = EmitExprAsValue(Member).get(); //TODO 
+        // Emit IR to manage function acceptance
+    }
+
+    // Emit the optional body if it exists
+    if (S.getBody())
+        EmitStmt(S.getBody());
+}
+
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   const Stmt *Else = S.getElse();
 
