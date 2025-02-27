@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=52 -Werror
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp-version=52 -Werror
 
 subroutine f00(x)
   integer :: x
