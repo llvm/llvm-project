@@ -495,6 +495,10 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
 
+  // AMDGPU is always in LTO mode currently.
+  if (Triple.isAMDGPU())
+    CmdArgs.push_back("-flto");
+
   // Forward all of the `--offload-opt` and similar options to the device.
   for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
     CmdArgs.append(
