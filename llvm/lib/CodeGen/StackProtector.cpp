@@ -251,10 +251,21 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
   return NeedsProtector;
 }
 
+/// Maximum remaining allocation size obsorved for a phi node, and how often
+/// the allocation size has already been decreased. We only allow a limited
+/// number of decreases.
+struct PhiInfo {
+  TypeSize AllocSize;
+  unsigned NumDecreased = 0;
+  static constexpr unsigned MaxNumDecreased = 3;
+  PhiInfo(TypeSize AllocSize) : AllocSize(AllocSize) {}
+};
+using PhiMap = SmallDenseMap<const PHINode *, PhiInfo, 16>;
+
 /// Check whether a stack allocation has its address taken.
 static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
                             Module *M,
-                            SmallPtrSet<const PHINode *, 16> &VisitedPHIs) {
+                            PhiMap &VisitedPHIs) {
   const DataLayout &DL = M->getDataLayout();
   for (const User *U : AI->users()) {
     const auto *I = cast<Instruction>(U);
@@ -325,9 +336,20 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       // Keep track of what PHI nodes we have already visited to ensure
       // they are only visited once.
       const auto *PN = cast<PHINode>(I);
-      if (VisitedPHIs.insert(PN).second)
-        if (HasAddressTaken(PN, AllocSize, M, VisitedPHIs))
+      auto [It, Inserted] = VisitedPHIs.try_emplace(PN, AllocSize);
+      if (!Inserted) {
+        if (TypeSize::isKnownGE(AllocSize, It->second.AllocSize))
+          break;
+
+        // Check again with smaller size.
+        if (It->second.NumDecreased == PhiInfo::MaxNumDecreased)
           return true;
+
+        It->second.AllocSize = AllocSize;
+        ++It->second.NumDecreased;
+      }
+      if (HasAddressTaken(PN, AllocSize, M, VisitedPHIs))
+        return true;
       break;
     }
     case Instruction::Load:
@@ -377,7 +399,7 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
   // The set of PHI nodes visited when determining if a variable's reference has
   // been taken.  This set is maintained to ensure we don't visit the same PHI
   // node multiple times.
-  SmallPtrSet<const PHINode *, 16> VisitedPHIs;
+  PhiMap VisitedPHIs;
 
   unsigned SSPBufferSize = F->getFnAttributeAsParsedInteger(
       "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
