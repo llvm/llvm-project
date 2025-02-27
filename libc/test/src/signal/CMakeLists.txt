@@ -74,7 +74,6 @@ add_libc_unittest(
   SRCS
     signal_test.cpp
   DEPENDS
-    libc.hdr.types.sighandler_t
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.signal

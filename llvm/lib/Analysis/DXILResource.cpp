@@ -382,7 +382,14 @@ ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
 
 uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
   assert(isCBuffer() && "Not a CBuffer");
-  return cast<CBufferExtType>(HandleTy)->getCBufferSize();
+
+  Type *ElTy = cast<CBufferExtType>(HandleTy)->getResourceType();
+
+  if (auto *LayoutTy = dyn_cast<LayoutExtType>(ElTy))
+    return LayoutTy->getSize();
+
+  // TODO: What should we do with unannotated arrays?
+  return DL.getTypeAllocSize(ElTy);
 }
 
 dxil::SamplerType ResourceTypeInfo::getSamplerType() const {
@@ -749,6 +756,11 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
       NextID = 0;
     }
 
+    // We need to make sure the types of resource are ordered even if some are
+    // missing.
+    FirstCBuffer = std::min({FirstCBuffer, FirstSampler});
+    FirstUAV = std::min({FirstUAV, FirstCBuffer});
+
     // Adjust the resource binding to use the next ID.
     RBI.setBindingID(NextID++);
   }
@@ -768,6 +780,45 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
     CI->print(OS);
     OS << "\n";
   }
+}
+
+SmallVector<dxil::ResourceBindingInfo>
+DXILBindingMap::findByUse(const Value *Key) const {
+  if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
+    SmallVector<dxil::ResourceBindingInfo> Children;
+    for (const Value *V : Phi->operands()) {
+      Children.append(findByUse(V));
+    }
+    return Children;
+  }
+
+  const CallInst *CI = dyn_cast<CallInst>(Key);
+  if (!CI)
+    return {};
+
+  switch (CI->getIntrinsicID()) {
+  // Found the create, return the binding
+  case Intrinsic::dx_resource_handlefrombinding: {
+    const auto *It = find(CI);
+    assert(It != Infos.end() && "HandleFromBinding must be in resource map");
+    return {*It};
+  }
+  default:
+    break;
+  }
+
+  // Check if any of the parameters are the resource we are following. If so
+  // keep searching. If none of them are return an empty list
+  const Type *UseType = CI->getType();
+  SmallVector<dxil::ResourceBindingInfo> Children;
+  for (const Value *V : CI->args()) {
+    if (V->getType() != UseType)
+      continue;
+
+    Children.append(findByUse(V));
+  }
+
+  return Children;
 }
 
 //===----------------------------------------------------------------------===//

@@ -128,7 +128,7 @@ def libc_math_function(
 
     Args:
       name: The name of the function.
-      additional_deps: Other deps like helper cc_library targes used by the
+      additional_deps: Other deps like helper cc_library targets used by the
                        math function.
     """
     additional_deps = additional_deps or []

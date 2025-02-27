@@ -72,6 +72,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::atan2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::sincos:
   case Intrinsic::tan:
   case Intrinsic::sinh:
   case Intrinsic::cosh:
@@ -125,6 +126,12 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   // https://github.com/llvm/llvm-project/issues/112408
   switch (ID) {
   case Intrinsic::frexp:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
     return true;
   }
   return false;
@@ -179,6 +186,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::sincos:
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;

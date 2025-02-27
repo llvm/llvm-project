@@ -350,10 +350,11 @@ def warn_arm_interrupt_vfp_clobber : Warning<
   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
-def warn_interrupt_attribute_invalid : Warning<
-   "%select{MIPS|MSP430|RISC-V}0 'interrupt' attribute only applies to "
-   "functions that have %select{no parameters|a 'void' return type}1">,
-   InGroup<IgnoredAttributes>;
+def warn_interrupt_signal_attribute_invalid : Warning<
+  "%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
+  "attribute only applies to functions that have "
+  "%select{no parameters|a 'void' return type}2">,
+  InGroup<IgnoredAttributes>;
 def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
 def note_riscv_repeated_interrupt_attribute : Note<
@@ -490,7 +491,7 @@ def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 def warn_qual_base_type : Warning<
-  "'%0' qualifier%s1 on base class type %2 have no effect">,
+  "'%0' qualifier%s1 on base class type %2 %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 
 def warn_deprecated_redundant_constexpr_static_def : Warning<
@@ -712,13 +713,14 @@ def err_thread_non_global : Error<
 def err_thread_unsupported : Error<
   "thread-local storage is not supported for the current target">;
 
-// FIXME: Combine fallout warnings to just one warning.
-def warn_maybe_falloff_nonvoid_function : Warning<
-  "non-void function does not return a value in all control paths">,
+def warn_falloff_nonvoid : Warning<
+  "non-void "
+  "%enum_select<FalloffFunctionKind>{%Function{function}|%Block{block}|%Lambda{lambda}|%Coroutine{coroutine}}0"
+  " does not return a value%select{| in all control paths}1">,
   InGroup<ReturnType>;
-def warn_falloff_nonvoid_function : Warning<
-  "non-void function does not return a value">,
-  InGroup<ReturnType>;
+def err_falloff_nonvoid : Error<
+  "non-void %select{function|block|lambda|coroutine}0 "
+  "does not return a value%select{| in all control paths}1">;
 def warn_const_attr_with_pure_attr : Warning<
   "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
   InGroup<IgnoredAttributes>;
@@ -726,16 +728,6 @@ def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
 
-def err_maybe_falloff_nonvoid_block : Error<
-  "non-void block does not return a value in all control paths">;
-def err_falloff_nonvoid_block : Error<
-  "non-void block does not return a value">;
-def warn_maybe_falloff_nonvoid_coroutine : Warning<
-  "non-void coroutine does not return a value in all control paths">,
-  InGroup<ReturnType>;
-def warn_falloff_nonvoid_coroutine : Warning<
-  "non-void coroutine does not return a value">,
-  InGroup<ReturnType>;
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
   InGroup<MissingNoreturn>, DefaultIgnore;
@@ -3163,6 +3155,10 @@ def warn_auto_var_is_id : Warning<
   InGroup<DiagGroup<"auto-var-id">>;
 
 // Attributes
+def warn_attribute_form_ignored : Warning<
+  "%0 attribute ignored because Clang does not yet support this attribute signature">,
+  InGroup<IgnoredAttributes>;
+
 def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
@@ -3294,6 +3290,10 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def err_attribute_invalid_atomic_argument : Error<
+  "invalid argument '%0' to atomic attribute; valid options are: "
+  "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
+  "prefixed with 'no_')">;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
@@ -3832,6 +3832,9 @@ def warn_type_attribute_wrong_type : Warning<
   "'%0' only applies to %select{function|pointer|"
   "Objective-C object or block pointer}1 types; type here is %2">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_on_void_param: Warning<
+  "attribute %0 cannot be applied to a 'void' parameter">,
+  InGroup<IgnoredAttributes>;
 def err_type_attribute_wrong_type : Error<
   warn_type_attribute_wrong_type.Summary>;
 def warn_incomplete_encoded_type : Warning<
@@ -4130,6 +4133,24 @@ def warn_pt_guarded_return_by_reference : Warning<
   "returning the value that %1 points to by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
+
+// Thread safety warnings on pointer passing
+def warn_guarded_pass_pointer : Warning<
+  "passing pointer to variable %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_pt_guarded_pass_pointer : Warning<
+  "passing pointer %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_guarded_return_pointer : Warning<
+  "returning pointer to variable %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_pt_guarded_return_pointer : Warning<
+  "returning pointer %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
 
 // Imprecise thread safety warnings
 def warn_variable_requires_lock : Warning<
@@ -4511,6 +4532,12 @@ def err_attribute_cleanup_func_must_take_one_arg : Error<
 def err_attribute_cleanup_func_arg_incompatible_type : Error<
   "'cleanup' function %0 parameter has "
   "%diff{type $ which is incompatible with type $|incompatible type}1,2">;
+def err_attribute_malloc_arg_not_function : Error<
+  "'malloc' argument %select{for deallocator |%1 |%1 }0is not a %select{||single }0function">;
+def err_attribute_malloc_arg_not_function_with_pointer_arg : Error<
+  "'malloc' argument %0 must take a pointer type as its first argument">;
+def err_attribute_malloc_arg_refers_to_non_pointer_type : Error<
+  "'malloc' argument '%0' refers to non-pointer type %1 of %2">; // in GCC, this is a warning, not an error
 def err_attribute_regparm_wrong_platform : Error<
   "'regparm' is not valid on this platform">;
 def err_attribute_regparm_invalid_number : Error<
@@ -7131,7 +7158,7 @@ def note_precedence_conditional_first : Note<
 
 def warn_consecutive_comparison : Warning<
   "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
-  InGroup<Parentheses>;
+  InGroup<Parentheses>, DefaultError;
 
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
@@ -7409,6 +7436,11 @@ def warn_c23_compat_utf8_string : Warning<
 def note_cxx20_c23_compat_utf8_string_remove_u8 : Note<
   "remove 'u8' prefix to avoid a change of behavior; "
   "Clang encodes unprefixed narrow string literals as UTF-8">;
+def warn_c23_compat_restrict_on_array_of_pointers : Warning<
+  "'restrict' qualifier on an array of pointers is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def ext_restrict_on_array_of_pointers_c23 : Extension<
+  "'restrict' qualifier on an array of pointers is a C23 extension">, InGroup<C23>;
 def err_array_init_different_type : Error<
   "cannot initialize array %diff{of type $ with array of type $|"
   "with different type of array}0,1">;
@@ -7764,6 +7796,7 @@ def warn_format_nonliteral_noargs : Warning<
 def warn_format_nonliteral : Warning<
   "format string is not a string literal">,
   InGroup<FormatNonLiteral>, DefaultIgnore;
+def err_format_nonliteral : Error<"format string is not a string literal">;
 
 def err_unexpected_interface : Error<
   "unexpected interface name %0: expected expression">;
@@ -8397,14 +8430,6 @@ let CategoryName = "Lambda Issue" in {
     "lambda expression in default argument cannot capture any entity">;
   def err_lambda_incomplete_result : Error<
     "incomplete result type %0 in lambda expression">;
-  def err_noreturn_lambda_has_return_expr : Error<
-    "lambda declared 'noreturn' should not return">;
-  def warn_maybe_falloff_nonvoid_lambda : Warning<
-    "non-void lambda does not return a value in all control paths">,
-    InGroup<ReturnType>;
-  def warn_falloff_nonvoid_lambda : Warning<
-    "non-void lambda does not return a value">,
-    InGroup<ReturnType>;
   def err_access_lambda_capture : Error<
     // The ERRORs represent other special members that aren't constructors, in
     // hopes that someone will bother noticing and reporting if they appear
@@ -9193,6 +9218,8 @@ def err_cuda_device_exceptions : Error<
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, __shared__, and __managed__ variables">;
+def err_cuda_ctor_dtor_attrs
+    : Error<"CUDA does not support global %0 for __device__ functions">;
 def err_shared_var_init : Error<
     "initialization is not supported for __shared__ variables">;
 def err_cuda_vla : Error<
@@ -10072,6 +10099,8 @@ def note_previous_declaration_as : Note<
 
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;
+def warn_format_cmp_specifier_arity : Warning<
+  "%select{fewer|more}0 specifiers in format string than expected">, InGroup<FormatInsufficientArgs>;
 def warn_printf_data_arg_not_used : Warning<
   "data argument not used by format string">, InGroup<FormatExtraArgs>;
 def warn_format_invalid_conversion : Warning<
@@ -10189,6 +10218,27 @@ def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
 def note_printf_c_str: Note<"did you mean to call the %0 method?">;
 def note_format_security_fixit: Note<
   "treat the string as an argument to avoid this">;
+def warn_format_string_type_incompatible : Warning<
+  "passing '%0' format string where '%1' format string is expected">,
+  InGroup<Format>;
+def warn_format_cmp_role_mismatch : Warning<
+  "format argument is %select{a value|an indirect field width|an indirect "
+  "precision|an auxiliary value}0, but it should be %select{a value|an indirect "
+  "field width|an indirect precision|an auxiliary value}1">, InGroup<Format>;
+def warn_format_cmp_modifierfor_mismatch : Warning<
+  "format argument modifies specifier at position %0, but it should modify "
+  "specifier at position %1">, InGroup<Format>;
+def warn_format_cmp_sensitivity_mismatch : Warning<
+  "argument sensitivity is %select{unspecified|private|public|sensitive}0, but "
+  "it should be %select{unspecified|private|public|sensitive}1">, InGroup<Format>;
+def warn_format_cmp_specifier_mismatch : Warning<
+  "format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_sign_mismatch : Warning<
+  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_mismatch_pedantic : Extension<
+  warn_format_cmp_specifier_sign_mismatch.Summary>, InGroup<FormatPedantic>;
+def note_format_cmp_with : Note<
+  "comparing with this %select{specifier|format string}0">;
 
 def warn_null_arg : Warning<
   "null passed to a callee that requires a non-null argument">,
@@ -10592,11 +10642,16 @@ def err_ctor_dtor_returns_void : Error<
 def warn_noreturn_function_has_return_expr : Warning<
   "function %0 declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
-def warn_falloff_noreturn_function : Warning<
-  "function declared 'noreturn' should not return">,
+def warn_noreturn_has_return_expr : Warning<
+  "%select{function|block|lambda|coroutine}0 "
+  "declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
-def err_noreturn_block_has_return_expr : Error<
-  "block declared 'noreturn' should not return">;
+def err_noreturn_has_return_expr : Error<
+  "%select{function|block|lambda|coroutine}0 "
+  "declared 'noreturn' should not return">;
+def warn_noreturn_coroutine : Warning<
+  "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
+  InGroup<InvalidNoreturn>;
 def err_carries_dependency_missing_on_first_decl : Error<
   "%select{function|parameter}0 declared '[[carries_dependency]]' "
   "after its first declaration">;
@@ -12615,6 +12670,9 @@ def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
 def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used only on HLSL intangible type %1">;
+def err_hlsl_incorrect_num_initializers: Error<
+  "too %select{few|many}0 initializers in list for type %1 "
+  "(expected %2 but found %3)">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;

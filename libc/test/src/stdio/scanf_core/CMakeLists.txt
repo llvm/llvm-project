@@ -1,3 +1,8 @@
+if(NOT(LLVM_LIBC_FULL_BUILD))
+  # in overlay mode, use the system's file to test the reader.
+  set(use_system_file "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+endif()
+
 add_libc_unittest(
   parser_test
   SUITE
@@ -13,6 +18,13 @@ add_libc_unittest(
     libc.src.__support.arg_list
 )
 
+if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
+  (NOT LIBC_TARGET_OS_IS_GPU))
+  # Not all platforms have a file implementation. If file is unvailable, and a
+  # full build is requested, then we must skip all file based scanf sections.
+  return()
+endif()
+
 add_libc_unittest(
   reader_test
   SUITE
@@ -22,13 +34,9 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdio.scanf_core.reader
     libc.src.__support.CPP.string_view
+  COMPILE_OPTIONS
+    ${use_system_file}
 )
-
-if(NOT (TARGET libc.src.__support.File.file))
-  # Not all platforms have a file implementation. If file is unvailable,
-  # then we must skip all the parts that need file.
-  return()
-endif()
 
 add_libc_unittest(
   converter_test
@@ -40,4 +48,6 @@ add_libc_unittest(
     libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.converter
     libc.src.__support.CPP.string_view
+  COMPILE_OPTIONS
+    ${use_system_file}
 )

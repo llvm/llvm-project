@@ -1757,8 +1757,11 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
 DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
   // Assume if there is an abstract tree all the DIEs are already emitted.
   bool isAbstract = getAbstractScopeDIEs().count(LB->getSubprogram());
-  if (isAbstract && getAbstractScopeDIEs().count(LB))
-    return getAbstractScopeDIEs()[LB];
+  if (isAbstract) {
+    auto &DIEs = getAbstractScopeDIEs();
+    if (auto It = DIEs.find(LB); It != DIEs.end())
+      return It->second;
+  }
   assert(!isAbstract && "Missed lexical block DIE in abstract tree!");
 
   // Return a concrete DIE if it exists or nullptr otherwise.
@@ -1774,8 +1777,9 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);
-    if (getAbstractScopeDIEs().count(SPScope))
-      return getAbstractScopeDIEs()[SPScope];
+    const auto &DIEs = getAbstractScopeDIEs();
+    if (auto It = DIEs.find(SPScope); It != DIEs.end())
+      return It->second;
   }
   return DwarfUnit::getOrCreateContextDIE(Context);
 }

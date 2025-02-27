@@ -142,6 +142,7 @@ def hasLDU : Predicate<"Subtarget->hasLDU()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
+def hasArchAccelFeatures : Predicate<"Subtarget->hasArchAccelFeatures()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -2753,24 +2754,6 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 // Load / Store Handling
 //
 multiclass LD<NVPTXRegClass regclass> {
-  def _avar : NVPTXInst<
-    (outs regclass:$dst),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
-         i32imm:$fromWidth, imem:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t$dst, [$addr];", []>;
-  def _areg : NVPTXInst<
-    (outs regclass:$dst),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
-         i32imm:$fromWidth, Int32Regs:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t$dst, [$addr];", []>;
-  def _areg_64 : NVPTXInst<
-    (outs regclass:$dst),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
-         i32imm:$fromWidth, Int64Regs:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t$dst, [$addr];", []>;
   def _ari : NVPTXInst<
     (outs regclass:$dst),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
@@ -2801,24 +2784,6 @@ let mayLoad=1, hasSideEffects=0 in {
 }
 
 multiclass ST<NVPTXRegClass regclass> {
-  def _avar : NVPTXInst<
-    (outs),
-    (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, imem:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
-    " \t[$addr], $src;", []>;
-  def _areg : NVPTXInst<
-    (outs),
-    (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, Int32Regs:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
-    " \t[$addr], $src;", []>;
-  def _areg_64 : NVPTXInst<
-    (outs),
-    (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, Int64Regs:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
-    " \t[$addr], $src;", []>;
   def _ari : NVPTXInst<
     (outs),
     (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
@@ -2855,24 +2820,6 @@ let mayStore=1, hasSideEffects=0 in {
 // elementization happens at the machine instruction level, so the following
 // instructions never appear in the DAG.
 multiclass LD_VEC<NVPTXRegClass regclass> {
-  def _v2_avar : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2}}, [$addr];", []>;
-  def _v2_areg : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2}}, [$addr];", []>;
-  def _v2_areg_64 : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2}}, [$addr];", []>;
   def _v2_ari : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
@@ -2891,24 +2838,6 @@ multiclass LD_VEC<NVPTXRegClass regclass> {
          LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, Offseti32imm:$offset),
     "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr$offset];", []>;
-  def _v4_avar : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, imem:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
-  def _v4_areg : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
-  def _v4_areg_64 : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-         LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
   def _v4_ari : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
     (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
@@ -2938,27 +2867,6 @@ let mayLoad=1, hasSideEffects=0 in {
 }
 
 multiclass ST_VEC<NVPTXRegClass regclass> {
-  def _v2_avar : NVPTXInst<
-    (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
-         LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
-	 imem:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr], {{$src1, $src2}};", []>;
-  def _v2_areg : NVPTXInst<
-    (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
-         LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
-	 Int32Regs:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr], {{$src1, $src2}};", []>;
-  def _v2_areg_64 : NVPTXInst<
-    (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
-         LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
-	 Int64Regs:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr], {{$src1, $src2}};", []>;
   def _v2_ari : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
@@ -2980,27 +2888,6 @@ multiclass ST_VEC<NVPTXRegClass regclass> {
 	 imem:$addr, Offseti32imm:$offset),
     "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr$offset], {{$src1, $src2}};", []>;
-  def _v4_avar : NVPTXInst<
-    (outs),
-    (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-	 LdStCode:$Sign, i32imm:$fromWidth, imem:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
-  def _v4_areg : NVPTXInst<
-    (outs),
-    (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-	 LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
-  def _v4_areg_64 : NVPTXInst<
-    (outs),
-    (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
-	 LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
-    "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_ari : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,

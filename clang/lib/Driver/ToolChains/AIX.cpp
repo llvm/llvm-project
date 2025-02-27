@@ -230,6 +230,32 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // '-bnocdtors' that '-Wl' might forward.
   CmdArgs.push_back("-bcdtors:all:0:s");
 
+  if (Args.hasArg(options::OPT_rpath)) {
+    for (const auto &bopt : Args.getAllArgValues(options::OPT_b))
+      // Check -b opts prefix for "libpath:" or exact match for "nolibpath"
+      if (!bopt.rfind("libpath:", 0) || bopt == "nolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options) << "-rpath" << "-b" + bopt;
+
+    for (const auto &wlopt : Args.getAllArgValues(options::OPT_Wl_COMMA))
+      // Check -Wl, opts prefix for "-blibpath:" or exact match for
+      // "-bnolibpath"
+      if (!wlopt.rfind("-blibpath:", 0) || wlopt == "-bnolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options) << "-rpath" << "-Wl," + wlopt;
+
+    for (const auto &xopt : Args.getAllArgValues(options::OPT_Xlinker))
+      // Check -Xlinker opts prefix for "-blibpath:" or exact match for
+      // "-bnolibpath"
+      if (!xopt.rfind("-blibpath:", 0) || xopt == "-bnolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options)
+            << "-rpath" << "-Xlinker " + xopt;
+
+    std::string BlibPathStr = "";
+    for (const auto &dir : Args.getAllArgValues(options::OPT_rpath))
+      BlibPathStr += dir + ":";
+    BlibPathStr += "/usr/lib:/lib";
+    CmdArgs.push_back(Args.MakeArgString(Twine("-blibpath:") + BlibPathStr));
+  }
+
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 

@@ -111,7 +111,7 @@ set(riscv64_SOURCES
   xray_trampoline_s390x.S
   )
 # Enable vector instructions in the assembly file.
-set_source_files_properties(xray_trampoline_s390x.S PROPERTIES COMPILE_FLAGS -mvx)
+set_source_files_properties(xray_trampoline_s390x.S PROPERTIES COMPILE_FLAGS -march=z13)
 
 set(XRAY_SOURCE_ARCHS
   arm

@@ -95,11 +95,10 @@ set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
-              ${clang_opt_flags} --offload-device-only
-             -nocudalib -nogpulib -nogpuinc -nostdlibinc
-             -fopenmp -fopenmp-cuda-mode
-             -Wno-unknown-cuda-version -Wno-openmp-target
+set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
+             ${clang_opt_flags} -nogpulib -nostdlibinc
+             -fno-rtti -fno-exceptions -fconvergent-functions
+             -Wno-unknown-cuda-version
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include
@@ -123,8 +122,7 @@ function(compileDeviceRTLLibrary target_name target_triple)
     add_custom_command(OUTPUT ${outfile}
       COMMAND ${CLANG_TOOL}
       ${bc_flags}
-      -fopenmp-targets=${target_triple}
-      -Xopenmp-target=${target_triple} -march=
+      --target=${target_triple}
       ${target_bc_flags}
       -MD -MF ${depfile}
       ${infile} -o ${outfile}
@@ -242,10 +240,8 @@ function(compileDeviceRTLLibrary target_name target_triple)
     set(ide_target_name omptarget-ide-${target_name})
     add_library(${ide_target_name} STATIC EXCLUDE_FROM_ALL ${src_files})
     target_compile_options(${ide_target_name} PRIVATE
-      -fopenmp-targets=${target_triple} -Xopenmp-target=${target_triple} -march=
-      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable
-      -foffload-lto -fvisibility=hidden --offload-device-only
-      -nocudalib -nogpulib -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
+      -fvisibility=hidden --target=${target_triple}
+      -nogpulib -nostdlibinc -Wno-unknown-cuda-version
     )
     target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
     target_include_directories(${ide_target_name} PRIVATE

@@ -284,7 +284,7 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  bool hasDynsym = ctx.hasDynsym;
+  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -300,7 +300,7 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    if (hasDynsym)
+    if (maybePreemptible)
       sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
                            computeIsPreemptible(ctx, *sym);
   }
@@ -1531,8 +1531,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     // With Thunk Size much smaller than branch range we expect to
     // converge quickly; if we get to 30 something has gone wrong.
     if (changed && pass >= 30) {
-      Err(ctx) << (ctx.target->needsThunks ? "thunk creation not converged"
-                                           : "relaxation not converged");
+      Err(ctx) << "address assignment did not converge";
       break;
     }
 
@@ -1851,7 +1850,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // If the previous code block defines any non-hidden symbols (e.g.
   // __global_pointer$), they may be exported.
-  if (ctx.hasDynsym && ctx.arg.exportDynamic)
+  if (ctx.arg.exportDynamic)
     for (Symbol *sym : ctx.synthesizedSymbols)
       if (sym->computeBinding(ctx) != STB_LOCAL)
         sym->isExported = true;
@@ -1940,10 +1939,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (ctx.in.symTab)
         ctx.in.symTab->addSymbol(sym);
 
-      // computeBinding might localize a linker-synthesized hidden symbol
-      // (e.g. __global_pointer$) that was considered exported.
-      if (ctx.hasDynsym && (sym->isUndefined() || sym->isExported) &&
-          !sym->isLocal()) {
+      // computeBinding might localize a symbol that was considered exported
+      // but then synthesized as hidden (e.g. _DYNAMIC).
+      if ((sym->isExported || sym->isPreemptible) && !sym->isLocal()) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())

@@ -1,8 +1,8 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s --check-prefix %if target-byteorder-big-endian %{ CHECK-BE %} %else %{ CHECK-LE %}
 
 ; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s --check-prefix %if target-byteorder-big-endian %{ CHECK-BE %} %else %{ CHECK-LE %}
 
 ; Check for a variant part that has two members, one of which has a
 ; discriminant value.
@@ -22,7 +22,8 @@
 ;         CHECK: DW_AT_alignment
 ;         CHECK: DW_AT_data_member_location [DW_FORM_data1]	(0x00)
 ;     CHECK: DW_TAG_variant
-;       CHECK: DW_AT_discr_value [DW_FORM_block1]	(<0x10> 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 )
+;       CHECK-LE: DW_AT_discr_value [DW_FORM_block1]	(<0x10> 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 )
+;       CHECK-BE: DW_AT_discr_value [DW_FORM_block1]	(<0x10> 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 )
 ;       CHECK: DW_TAG_member
 ;         CHECK: DW_AT_type
 ;         CHECK: DW_AT_alignment

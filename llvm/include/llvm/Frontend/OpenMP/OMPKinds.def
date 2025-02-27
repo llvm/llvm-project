@@ -1269,6 +1269,40 @@ __OMP_TRAIT_PROPERTY(device, arch, x86_64)
 __OMP_TRAIT_PROPERTY(device, arch, amdgcn)
 __OMP_TRAIT_PROPERTY(device, arch, nvptx)
 __OMP_TRAIT_PROPERTY(device, arch, nvptx64)
+__OMP_TRAIT_PROPERTY(device, arch, spirv64)
+
+__OMP_TRAIT_SET(target_device)
+
+__OMP_TRAIT_SELECTOR(target_device, kind, true)
+
+__OMP_TRAIT_PROPERTY(target_device, kind, host)
+__OMP_TRAIT_PROPERTY(target_device, kind, nohost)
+__OMP_TRAIT_PROPERTY(target_device, kind, cpu)
+__OMP_TRAIT_PROPERTY(target_device, kind, gpu)
+__OMP_TRAIT_PROPERTY(target_device, kind, fpga)
+__OMP_TRAIT_PROPERTY(target_device, kind, any)
+
+__OMP_TRAIT_SELECTOR(target_device, device_num, true)
+
+__OMP_TRAIT_PROPERTY(target_device, device_num, number)
+
+__OMP_TRAIT_SELECTOR(target_device, arch, true)
+
+__OMP_TRAIT_PROPERTY(target_device, arch, arm)
+__OMP_TRAIT_PROPERTY(target_device, arch, armeb)
+__OMP_TRAIT_PROPERTY(target_device, arch, aarch64)
+__OMP_TRAIT_PROPERTY(target_device, arch, aarch64_be)
+__OMP_TRAIT_PROPERTY(target_device, arch, aarch64_32)
+__OMP_TRAIT_PROPERTY(target_device, arch, ppc)
+__OMP_TRAIT_PROPERTY(target_device, arch, ppcle)
+__OMP_TRAIT_PROPERTY(target_device, arch, ppc64)
+__OMP_TRAIT_PROPERTY(target_device, arch, ppc64le)
+__OMP_TRAIT_PROPERTY(target_device, arch, x86)
+__OMP_TRAIT_PROPERTY(target_device, arch, x86_64)
+__OMP_TRAIT_PROPERTY(target_device, arch, amdgcn)
+__OMP_TRAIT_PROPERTY(target_device, arch, nvptx)
+__OMP_TRAIT_PROPERTY(target_device, arch, nvptx64)
+__OMP_TRAIT_PROPERTY(target_device, arch, spirv64)
 
 __OMP_TRAIT_SET(implementation)
 
@@ -1311,12 +1345,16 @@ __OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, dispatch)
 // This allows us to issue warnings wrt. isa only if we match otherwise.
 __OMP_TRAIT_SELECTOR(device, isa, true)
 
+__OMP_TRAIT_SELECTOR(target_device, isa, true)
+
 // We use "__ANY" as a placeholder in the isa property to denote the
 // conceptual "any", not the literal `any` used in kind. The string we
 // we use is not important except that it will show up in diagnostics.
 OMP_TRAIT_PROPERTY(device_isa___ANY, device, device_isa,
                    "<any, entirely target dependent>")
 
+OMP_TRAIT_PROPERTY(target_device_isa___ANY, target_device, target_device_isa,
+                   "<any, entirely target dependent>")
 
 #undef OMP_TRAIT_SET
 #undef __OMP_TRAIT_SET
@@ -1374,6 +1412,7 @@ __OMP_ASSUME_CLAUSE(llvm::StringLiteral("contains"), false, true, false)
 __OMP_ASSUME_CLAUSE(llvm::StringLiteral("holds"), false, false, true)
 __OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_openmp"), false, false, false)
 __OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_openmp_routines"), false, false, false)
+__OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_openmp_constructs"), false, false, false)
 __OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_parallelism"), false, false, false)
 
 #undef __OMP_ASSUME_CLAUSE

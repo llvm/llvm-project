@@ -14,9 +14,9 @@
 #include "parse-tree.h"
 #include "tools.h"
 #include "unparse.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
@@ -209,6 +209,7 @@ public:
   NODE(CompilerDirective, Unrecognized)
   NODE(CompilerDirective, VectorAlways)
   NODE(CompilerDirective, Unroll)
+  NODE(CompilerDirective, UnrollAndJam)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
@@ -509,6 +510,7 @@ public:
   NODE_ENUM(OmpMapTypeModifier, Value)
   NODE(parser, OmpIteratorSpecifier)
   NODE(parser, OmpIterator)
+  NODE(parser, OmpAbsentClause)
   NODE(parser, OmpAffinityClause)
   NODE(OmpAffinityClause, Modifier)
   NODE(parser, OmpAlignment)
@@ -542,6 +544,7 @@ public:
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 #include "llvm/Frontend/OpenMP/OMP.inc"
   NODE(parser, OmpClauseList)
+  NODE(parser, OmpContainsClause)
   NODE(parser, OmpCriticalDirective)
   NODE(parser, OmpErrorDirective)
   NODE(parser, OmpNothingDirective)
@@ -584,6 +587,7 @@ public:
   NODE(parser, OmpExpectation)
   NODE_ENUM(OmpExpectation, Value)
   NODE(parser, OmpDirectiveNameModifier)
+  NODE(parser, OmpHoldsClause)
   NODE(parser, OmpIfClause)
   NODE(OmpIfClause, Modifier)
   NODE(parser, OmpLastprivateClause)
@@ -607,6 +611,9 @@ public:
   }
   NODE(parser, OmpObject)
   NODE(parser, OmpObjectList)
+  NODE(parser, OmpNoOpenMPClause)
+  NODE(parser, OmpNoOpenMPRoutinesClause)
+  NODE(parser, OmpNoParallelismClause)
   NODE(parser, OmpOrderClause)
   NODE(OmpOrderClause, Modifier)
   NODE_ENUM(OmpOrderClause, Ordering)
@@ -671,6 +678,10 @@ public:
   NODE(parser, OpenACCStandaloneDeclarativeConstruct)
   NODE(parser, OpenACCStandaloneConstruct)
   NODE(parser, OpenACCWaitConstruct)
+  NODE(parser, OpenMPAssumeConstruct)
+  NODE(parser, OpenMPDeclarativeAssumes)
+  NODE(parser, OmpAssumeDirective)
+  NODE(parser, OmpEndAssumeDirective)
   NODE(parser, OpenMPAtomicConstruct)
   NODE(parser, OpenMPBlockConstruct)
   NODE(parser, OpenMPCancelConstruct)

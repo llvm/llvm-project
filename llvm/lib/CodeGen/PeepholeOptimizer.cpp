@@ -421,12 +421,6 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    // Do not introduce new subregister uses in a reg_sequence. Until composing
-    // subregister indices is supported while folding, we're just blocking
-    // folding of subregister copies later in the function.
-    if (NewSubReg)
-      return false;
-
     MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
     MO.setReg(NewReg);
     MO.setSubReg(NewSubReg);
@@ -465,7 +459,8 @@ private:
   bool optimizeUncoalescableCopy(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeRecurrence(MachineInstr &PHI);
-  bool findNextSource(RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
+  bool findNextSource(const TargetRegisterClass *DefRC, unsigned DefSubReg,
+                      RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
   bool isMoveImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
                        DenseMap<Register, MachineInstr *> &ImmDefMIs);
   bool foldImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
@@ -991,8 +986,10 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
   return TII->optimizeCondBranch(MI);
 }
 
-/// Try to find the next source that share the same register file
-/// for the value defined by \p Reg and \p SubReg.
+/// Try to find a better source value that shares the same register file to
+/// replace \p RegSubReg in an instruction like
+/// `DefRC.DefSubReg = COPY RegSubReg`
+///
 /// When true is returned, the \p RewriteMap can be used by the client to
 /// retrieve all Def -> Use along the way up to the next source. Any found
 /// Use that is not itself a key for another entry, is the next source to
@@ -1002,17 +999,15 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
 /// share the same register file as \p Reg and \p SubReg. The client should
 /// then be capable to rewrite all intermediate PHIs to get the next source.
 /// \return False if no alternative sources are available. True otherwise.
-bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
+bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
+                                       unsigned DefSubReg,
+                                       RegSubRegPair RegSubReg,
                                        RewriteMapTy &RewriteMap) {
   // Do not try to find a new source for a physical register.
   // So far we do not have any motivating example for doing that.
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
   Register Reg = RegSubReg.Reg;
-  if (Reg.isPhysical())
-    return false;
-  const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
-
   SmallVector<RegSubRegPair, 4> SrcToLook;
   RegSubRegPair CurSrcPair = RegSubReg;
   SrcToLook.push_back(CurSrcPair);
@@ -1076,7 +1071,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
 
       // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
-      if (!TRI->shouldRewriteCopySrc(DefRC, RegSubReg.SubReg, SrcRC,
+      if (!TRI->shouldRewriteCopySrc(DefRC, DefSubReg, SrcRC,
                                      CurSrcPair.SubReg))
         continue;
 
@@ -1184,21 +1179,33 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
   bool Changed = false;
   // Get the right rewriter for the current copy.
   // Rewrite each rewritable source.
-  RegSubRegPair Src;
+  RegSubRegPair Dst;
   RegSubRegPair TrackPair;
-  while (CpyRewriter.getNextRewritableSource(Src, TrackPair)) {
+  while (CpyRewriter.getNextRewritableSource(TrackPair, Dst)) {
+    if (Dst.Reg.isPhysical()) {
+      // Do not try to find a new source for a physical register.
+      // So far we do not have any motivating example for doing that.
+      // Thus, instead of maintaining untested code, we will revisit that if
+      // that changes at some point.
+      continue;
+    }
+
+    const TargetRegisterClass *DefRC = MRI->getRegClass(Dst.Reg);
+
     // Keep track of PHI nodes and its incoming edges when looking for sources.
     RewriteMapTy RewriteMap;
     // Try to find a more suitable source. If we failed to do so, or get the
     // actual source, move to the next source.
-    if (!findNextSource(TrackPair, RewriteMap))
+    if (!findNextSource(DefRC, Dst.SubReg, TrackPair, RewriteMap))
       continue;
 
     // Get the new source to rewrite. TODO: Only enable handling of multiple
     // sources (PHIs) once we have a motivating example and testcases for it.
     RegSubRegPair NewSrc = getNewSource(MRI, TII, TrackPair, RewriteMap,
                                         /*HandleMultipleSources=*/false);
-    if (Src.Reg == NewSrc.Reg || NewSrc.Reg == 0)
+    assert(TrackPair.Reg != NewSrc.Reg &&
+           "should not rewrite source to original value");
+    if (!NewSrc.Reg)
       continue;
 
     // Rewrite source.
@@ -1325,9 +1332,14 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
     if (Def.Reg.isPhysical())
       return false;
 
+    // FIXME: Uncoalescable copies are treated differently by
+    // UncoalescableRewriter, and this probably should not share
+    // API. getNextRewritableSource really finds rewritable defs.
+    const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
+
     // If we do not know how to rewrite this definition, there is no point
     // in trying to kill this instruction.
-    if (!findNextSource(Def, RewriteMap))
+    if (!findNextSource(DefRC, Def.SubReg, Def, RewriteMap))
       return false;
 
     RewritePairs.push_back(Def);
@@ -1966,10 +1978,48 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 
   // We are looking at:
   // Def = REG_SEQUENCE v0, sub0, v1, sub1, ...
-  // Check if one of the operand defines the subreg we are interested in.
+  //
+  // Check if one of the operands exactly defines the subreg we are interested
+  // in.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
     if (RegSeqInput.SubIdx == DefSubReg)
       return ValueTrackerResult(RegSeqInput.Reg, RegSeqInput.SubReg);
+  }
+
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+
+  // If we did not find an exact match, see if we can do a composition to
+  // extract a sub-subregister.
+  for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
+    LaneBitmask DefMask = TRI->getSubRegIndexLaneMask(DefSubReg);
+    LaneBitmask ThisOpRegMask = TRI->getSubRegIndexLaneMask(RegSeqInput.SubIdx);
+
+    // Check that this extract reads a subset of this single reg_sequence input.
+    //
+    // FIXME: We should be able to filter this in terms of the indexes directly
+    // without checking the lanemasks.
+    if ((DefMask & ThisOpRegMask) != DefMask)
+      continue;
+
+    unsigned ReverseDefCompose =
+        TRI->reverseComposeSubRegIndices(RegSeqInput.SubIdx, DefSubReg);
+    if (!ReverseDefCompose)
+      continue;
+
+    unsigned ComposedDefInSrcReg1 =
+        TRI->composeSubRegIndices(RegSeqInput.SubReg, ReverseDefCompose);
+
+    // TODO: We should be able to defer checking if the result register class
+    // supports the index to continue looking for a rewritable source.
+    //
+    // TODO: Should we modify the register class to support the index?
+    const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
+    const TargetRegisterClass *SrcWithSubRC =
+        TRI->getSubClassWithSubReg(SrcRC, ComposedDefInSrcReg1);
+    if (SrcRC != SrcWithSubRC)
+      return ValueTrackerResult();
+
+    return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
   }
 
   // If the subreg we are tracking is super-defined by another subreg,
@@ -2074,11 +2124,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
 ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
   assert(Def->isPHI() && "Invalid definition");
   ValueTrackerResult Res;
-
-  // If we look for a different subreg, bail as we do not support composing
-  // subregs yet.
-  if (Def->getOperand(0).getSubReg() != DefSubReg)
-    return ValueTrackerResult();
 
   // Return all register sources for PHI instructions.
   for (unsigned i = 1, e = Def->getNumOperands(); i < e; i += 2) {
