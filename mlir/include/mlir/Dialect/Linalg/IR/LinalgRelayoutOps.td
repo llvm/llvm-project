@@ -204,7 +204,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
       return cast<ShapedType>(getInput().getType());
     }
     ShapedType getOutputType() {
-      return cast<ShapedType>(getDest().getType()); // getDest() 사용
+      return cast<ShapedType>(getDest().getType());
     }
     int64_t getInputRank() {
       return getInputType().getRank();

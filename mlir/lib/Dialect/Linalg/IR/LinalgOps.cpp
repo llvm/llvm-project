@@ -51,6 +51,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstdint>
 #include <optional>
 
 using namespace mlir;
@@ -4891,7 +4892,8 @@ LogicalResult PackOp::generateScalarImplementation(OpBuilder &builder,
   if (failed(reifyResultShapes(builder, outputShape))) {
     return getOperation()->emitOpError("failed to reify result shape");
   }
-  if (outputShape.size() != 1 || outputShape[0].size() != getOutputRank()) {
+  if (outputShape.size() != 1 ||
+      outputShape[0].size() != static_cast<size_t>(getOutputRank())) {
     return getOperation()->emitOpError(
                "expected shape of one result value of rank")
            << getOutputRank();
@@ -5253,14 +5255,14 @@ void UnPackOp::getAsmResultNames(
 LogicalResult UnPackOp::generateScalarImplementation(OpBuilder &builder,
                                                      Location loc,
                                                      ValueRange ivs) {
-  return llvm::success();
   OpBuilder::InsertionGuard g(builder);
   ReifiedRankedShapedTypeDims outputShape;
 
   if (failed(reifyResultShapes(builder, outputShape))) {
     return getOperation()->emitError("failed to reify result shapes");
   }
-  if (outputShape.size() != 1 || outputShape[0].size() != getOutputRank()) {
+  if (outputShape.size() != 1 ||
+      outputShape[0].size() != static_cast<size_t>(getOutputRank())) {
     return getOperation()->emitError(
                "expected shape of one result value of rank")
            << getOutputRank();
