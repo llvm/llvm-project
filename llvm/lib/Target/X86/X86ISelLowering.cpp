@@ -701,6 +701,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::f16, Promote);
     setOperationAction(ISD::FMUL, MVT::f16, Promote);
     setOperationAction(ISD::FDIV, MVT::f16, Promote);
+    setOperationAction(ISD::FABS, MVT::f16, Custom);
+    setOperationAction(ISD::FNEG, MVT::f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
