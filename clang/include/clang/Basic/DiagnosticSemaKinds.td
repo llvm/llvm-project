@@ -8979,17 +8979,17 @@ def err_typecheck_incompatible_ownership : Error<
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " changes retain/release properties of pointer">;
 def err_typecheck_incompatible_ptrauth : Error<
-  "%select{%diff{assigning $ to $|assigning to different types}1,0"
-  "|%diff{passing $ to parameter of type $|"
-  "passing to parameter of different type}0,1"
-  "|%diff{returning $ from a function with result type $|"
-  "returning from function with different return type}0,1"
-  "|%diff{converting $ to type $|converting between types}0,1"
-  "|%diff{initializing $ with an expression of type $|"
-  "initializing with expression of different type}0,1"
-  "|%diff{sending $ to parameter of type $|"
-  "sending to parameter of different type}0,1"
-  "|%diff{casting $ to type $|casting between types}0,1}2"
+  "%enum_select<AssignmentAction>{%Assigning{%diff{assigning $ to $|assigning to different types}1,0}"
+  "|%Passing{%diff{passing $ to parameter of type $|"
+  "passing to parameter of different type}0,1}"
+  "|%Returning{%diff{returning $ from a function with result type $|"
+  "returning from function with different return type}0,1}"
+  "|%Converting{%diff{converting $ to type $|converting between types}0,1}"
+  "|%Initializing{%diff{initializing $ with an expression of type $|"
+  "initializing with expression of different type}0,1}"
+  "|%Sending{%diff{sending $ to parameter of type $|"
+  "sending to parameter of different type}0,1}"
+  "|%Casting{%diff{casting $ to type $|casting between types}0,1}}2"
   " changes pointer authentication of pointee type">;
 def err_typecheck_comparison_of_distinct_blocks : Error<
   "comparison of distinct block types%diff{ ($ and $)|}0,1">;
