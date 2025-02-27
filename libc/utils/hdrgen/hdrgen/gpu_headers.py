@@ -6,7 +6,7 @@
 #
 # ==-------------------------------------------------------------------------==#
 
-from header import HeaderFile
+from hdrgen.header import HeaderFile
 
 
 class GpuHeaderFile(HeaderFile):

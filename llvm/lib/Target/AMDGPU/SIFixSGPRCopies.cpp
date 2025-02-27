@@ -669,6 +669,9 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
             if (!MO.isReg() || !MO.getReg().isVirtual())
               continue;
             const TargetRegisterClass *SrcRC = MRI->getRegClass(MO.getReg());
+            if (SrcRC == &AMDGPU::VReg_1RegClass)
+              continue;
+
             if (TRI->hasVectorRegisters(SrcRC)) {
               const TargetRegisterClass *DestRC =
                   TRI->getEquivalentSGPRClass(SrcRC);

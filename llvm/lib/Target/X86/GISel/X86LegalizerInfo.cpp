@@ -99,9 +99,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder(G_LROUND).libcall();
-
-  getActionDefinitionsBuilder(G_LLROUND).libcall();
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS, G_FCOSH, G_FACOS,
+                               G_FSIN, G_FSINH, G_FASIN, G_FTAN, G_FTANH,
+                               G_FATAN, G_FATAN2})
+      .libcall();
 
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {

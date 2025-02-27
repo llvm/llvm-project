@@ -1206,7 +1206,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // We already asserted this happens in non-FullLTOPostLink earlier.
   const bool IsPreLink = Phase != ThinOrFullLTOPhase::ThinLTOPostLink;
-  const bool IsPGOPreLink = PGOOpt && IsPreLink;
+  // Enable contextual profiling instrumentation.
+  const bool IsCtxProfGen =
+      IsPreLink && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
+  const bool IsPGOPreLink = !IsCtxProfGen && PGOOpt && IsPreLink;
   const bool IsPGOInstrGen =
       IsPGOPreLink && PGOOpt->Action == PGOOptions::IRInstr;
   const bool IsPGOInstrUse =
@@ -1217,9 +1220,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled()) &&
          "Enabling both instrumented PGO and contextual instrumentation is not "
          "supported.");
-  // Enable contextual profiling instrumentation.
-  const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
-                            PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
   const bool IsCtxProfUse =
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 

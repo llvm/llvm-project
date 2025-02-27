@@ -1374,6 +1374,14 @@ def HasVendorXqcilo
       AssemblerPredicate<(all_of FeatureVendorXqcilo),
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
+def FeatureVendorXqccmp
+    : RISCVExperimentalExtension<0, 1,
+                                 "Qualcomm 16-bit Push/Pop and Double Moves",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqccmp : Predicate<"Subtarget->hasVendorXqccmp()">,
+                      AssemblerPredicate<(all_of FeatureVendorXqccmp),
+                        "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+
 // Rivos Extension(s)
 
 def FeatureVendorXRivosVisni

@@ -220,7 +220,7 @@ private:
     CHECK_RANKS_FOR(ReduceAny);
     CHECK_RANKS_FOR(ReduceMax);
     CHECK_RANKS_FOR(ReduceMin);
-    CHECK_RANKS_FOR(ReduceProd);
+    CHECK_RANKS_FOR(ReduceProduct);
     CHECK_RANKS_FOR(ReduceSum);
     // all data layout operators:
     CHECK_RANKS_FOR(Concat);

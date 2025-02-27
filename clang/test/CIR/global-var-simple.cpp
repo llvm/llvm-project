@@ -92,10 +92,10 @@ char **cpp;
 // CHECK: cir.global @cpp : !cir.ptr<!cir.ptr<!cir.int<s, 8>>>
 
 void (*fp)();
-// CHECK: cir.global @fp : !cir.ptr<!cir.func<!cir.void ()>>
+// CHECK: cir.global @fp : !cir.ptr<!cir.func<()>>
 
 int (*fpii)(int) = 0;
-// CHECK: cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<!cir.int<s, 32> (!cir.int<s, 32>)>>
+// CHECK: cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!cir.int<s, 32>) -> !cir.int<s, 32>>>
 
 void (*fpvar)(int, ...);
-// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<!cir.void (!cir.int<s, 32>, ...)>>
+// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<(!cir.int<s, 32>, ...)>>

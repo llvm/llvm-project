@@ -134,16 +134,25 @@ public:
     Value weightPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), weightPadding);
 
-    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
-    if (failed(failureOrMaybeZps))
-      return failure();
+    // Get and verify zero points.
+    int64_t inputZpVal;
+    int64_t weightZpVal;
 
-    auto maybeZps = failureOrMaybeZps.value();
-    if (maybeZps) {
+    if (op.getInputZeroPoint(inputZpVal).failed() ||
+        op.getWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "bail out if zero points cannot statically be determined");
+
+    if (op.verifyInputZeroPoint(inputZpVal).failed() ||
+        op.verifyWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "zero point must be zero for non-int8 integer types");
+
+    if (weightZpVal != 0) {
       weight = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-          weightPaddingVal, nullptr,
-          rewriter.getI32IntegerAttr(maybeZps->weightZp));
+          weightPaddingVal, nullptr, rewriter.getI32IntegerAttr(weightZpVal));
+
     } else {
       weight = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
@@ -197,11 +206,10 @@ public:
     Value inputPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), inputPadding);
 
-    if (maybeZps) {
+    if (inputZpVal != 0) {
       input = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
-          inputPaddingVal, nullptr,
-          rewriter.getI32IntegerAttr(maybeZps->inputZp));
+          inputPaddingVal, nullptr, rewriter.getI32IntegerAttr(inputZpVal));
     } else {
       input = CreateOpAndInferShape<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
@@ -218,28 +226,20 @@ public:
                                   biasETy),
             rewriter.getZeroAttr(biasETy)));
 
-    Value inputZp, weightZp;
-    if (maybeZps) {
-      auto maybeInputZp = createZeroPointTensor(
-          rewriter, loc, getElementTypeOrSelf(input.getType()),
-          maybeZps->inputZp);
-      auto maybeWeightZp = createZeroPointTensor(
-          rewriter, loc, getElementTypeOrSelf(weight.getType()),
-          maybeZps->weightZp);
+    auto inputZp =
+        createZeroPointTensor(rewriter, loc, input.getType(), inputZpVal);
+    auto weightZp =
+        createZeroPointTensor(rewriter, loc, weight.getType(), weightZpVal);
 
-      if (!maybeInputZp.has_value() || !maybeWeightZp.has_value()) {
-        return rewriter.notifyMatchFailure(
-            op, "fail to create a const zero point tensor");
-      }
-
-      inputZp = *maybeInputZp;
-      weightZp = *maybeWeightZp;
+    if (!inputZp.has_value() || !weightZp.has_value()) {
+      return rewriter.notifyMatchFailure(
+          op, "fail to create a const zero point tensor");
     }
 
     // Perform the convolution using the zero bias.
     Value conv2d = CreateOpAndInferShape<tosa::Conv2DOp>(
                        rewriter, loc, UnrankedTensorType::get(resultETy), input,
-                       weight, zeroBias, inputZp, weightZp,
+                       weight, zeroBias, inputZp.value(), weightZp.value(),
                        /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
                        /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
                        /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),

@@ -6196,7 +6196,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Line.IsMultiVariableDeclStmt ||
            (getTokenPointerOrReferenceAlignment(Right) ==
                 FormatStyle::PAS_Right &&
-            (!Right.Next || Right.Next->isNot(TT_FunctionDeclarationName)));
+            !(Right.Next &&
+              Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
                     TT_ClassHeadName, tok::kw_operator)) {
