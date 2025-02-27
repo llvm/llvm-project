@@ -789,6 +789,17 @@ def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
 
 def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
+//Applypriority intrinsics
+class APPLYPRIORITY_L2_INTRS<string addr> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$size),
+          StrJoin<".", ["applypriority", addr , "L2::evict_normal"]>.ret # " [$addr], $size;",
+          [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_applypriority", addr , "L2_evict_normal"]>.ret)
+          i64:$addr, i64:$size)]>,
+          Requires<[hasPTX<74>, hasSM<80>]>;
+
+def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"">;
+def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"global">;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
