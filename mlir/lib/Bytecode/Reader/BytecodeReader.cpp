@@ -1106,13 +1106,18 @@ public:
               dialectReader.withEncodingReader(reader).readBlob(rawProperties)))
         return failure();
     }
+
+    // If the op is a "fallback" op, give it a handle to the raw properties
+    // buffer.
+    if (auto *iface = opName->getInterface<FallbackBytecodeOpInterface>())
+      return iface->readPropertiesBlob(rawProperties, opState);
+
     // Setup a new reader to read from the `rawProperties` sub-buffer.
     EncodingReader reader(
         StringRef(rawProperties.begin(), rawProperties.size()), fileLoc);
     DialectReader propReader = dialectReader.withEncodingReader(reader);
 
-    auto *iface = opName->getInterface<BytecodeOpInterface>();
-    if (iface)
+    if (auto *iface = opName->getInterface<BytecodeOpInterface>())
       return iface->readProperties(propReader, opState);
     if (opName->isRegistered())
       return propReader.emitError(
@@ -1506,7 +1511,7 @@ private:
     UseListOrderStorage(bool isIndexPairEncoding,
                         SmallVector<unsigned, 4> &&indices)
         : indices(std::move(indices)),
-          isIndexPairEncoding(isIndexPairEncoding){};
+          isIndexPairEncoding(isIndexPairEncoding) {};
     /// The vector containing the information required to reorder the
     /// use-list of a value.
     SmallVector<unsigned, 4> indices;
@@ -1863,10 +1868,18 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
       // Load the dialect and its version.
       DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
                                   dialectsMap, reader, version);
-      if (failed(opName->dialect->load(dialectReader, getContext())))
+      if (succeeded(opName->dialect->load(dialectReader, getContext()))) {
+        opName->opName.emplace(
+            (opName->dialect->name + "." + opName->name).str(), getContext());
+      } else if (auto fallbackOp =
+                     opName->dialect->interface->getFallbackOperationName();
+                 succeeded(fallbackOp)) {
+        // If the dialect's bytecode interface specifies a fallback op, we want
+        // to use that instead of an unregistered op.
+        opName->opName.emplace(*fallbackOp);
+      } else {
         return failure();
-      opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
-                             getContext());
+      }
     }
   }
   return *opName->opName;

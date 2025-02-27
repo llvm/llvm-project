@@ -518,6 +518,13 @@ public:
       return emit(scratch);
     }
 
+    if (auto iface = dyn_cast<FallbackBytecodeOpInterface>(op)) {
+      // Fallback ops should write the properties payload to the bytecode buffer
+      // directly.
+      ArrayRef<char> encodedProperties = iface.getPropertiesBlob();
+      return emit(encodedProperties);
+    }
+
     EncodingEmitter emitter;
     DialectWriter propertiesWriter(config.bytecodeVersion, emitter,
                                    numberingState, stringSection,

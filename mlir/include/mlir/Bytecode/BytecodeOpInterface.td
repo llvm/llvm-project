@@ -40,4 +40,28 @@ def BytecodeOpInterface : OpInterface<"BytecodeOpInterface"> {
   ];
 }
 
+// `FallbackBytecodeOpInterface`
+def FallbackBytecodeOpInterface : OpInterface<"FallbackBytecodeOpInterface"> {
+  let description = [{
+    This interface allows fallback operations direct access to the bytecode
+    property streams.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    StaticInterfaceMethod<[{
+      Read the properties blob for this operation from the bytecode and populate the state.
+      }],
+      "LogicalResult", "readPropertiesBlob", (ins
+          "ArrayRef<char>":$blob,
+          "::mlir::OperationState &":$state)
+    >,
+    InterfaceMethod<[{
+      Get the properties blob for this operation to be emitted into the bytecode.
+      }],
+      "ArrayRef<char>", "getPropertiesBlob", (ins)
+    >,
+  ];
+}
+
 #endif // MLIR_BYTECODE_BYTECODEOPINTERFACES
