@@ -70,6 +70,7 @@ struct Config {
   bool pie;
   bool printGcSections;
   bool relocatable;
+  llvm::SmallVector<llvm::StringRef, 0> rpath;
   bool saveTemps;
   bool shared;
   bool shlibSigCheck;

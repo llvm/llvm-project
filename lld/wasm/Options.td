@@ -132,6 +132,8 @@ def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
 defm reproduce: EEq<"reproduce", "Dump linker invocation and input files for debugging">;
 
+defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
+
 defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
   MetaVarName<"[posix,windows]">;
 
@@ -289,6 +291,7 @@ def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
+def: JoinedOrSeparate<["-"], "R">, Alias<rpath>, HelpText<"Alias for --rpath">;
 
 // LTO-related options.
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
