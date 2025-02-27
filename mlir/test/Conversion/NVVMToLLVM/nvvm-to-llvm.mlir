@@ -4,6 +4,23 @@
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck %s
 
+// CHECK: @global_timer_wait
+// CHECK: llvm.inline_asm
+// CHECK-SAME: .reg .pred continueloop;
+// CHECK-SAME: .reg .u64 rd<3>;
+// CHECK-SAME: mov.u64 rd0, %globaltimer;
+// CHECK-SAME: add.s64 rd1, rd0, $0;
+// CHECK-SAME: L_busy:
+// CHECK-SAME: mov.u64 rd2, %globaltimer;
+// CHECK-SAME: setp.lt.s64 continueloop, rd2, rd1;
+// CHECK-SAME: @continueloop bra L_busy;
+llvm.func @global_timer_wait(%time: i64) {
+  nvvm.globaltimer_wait %time
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @init_mbarrier
 llvm.func @init_mbarrier(%barrier_gen : !llvm.ptr, %barrier : !llvm.ptr<3>, %count : i32, %pred : i1) {
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.shared.b64 [$0], $1;", "r,r,b" 
