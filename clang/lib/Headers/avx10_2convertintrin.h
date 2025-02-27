@@ -798,8 +798,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_bf8(
 
 /// Convert 256-bit vector \a __B containing packed FP16 floating-point elements
 ///    to FP8 E5M2 numbers, using conversion biases stored in lower 8 bits of each
-///    16-bit integer stored in \a __B. Results are saturated. Merging mask \a __U
-///    is used to determine if given element should be taken from \a __W instead.
+///    16-bit integer stored in \a __B. Results are saturated. Zeroing mask \a __U
+///    is used to determine if given element should be zeroed instead.
 ///
 /// \code{.operation}
 /// FOR i := 0 to 15
@@ -1014,8 +1014,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiasph_hf8(
 
 /// Convert 256-bit vector \a __B containing packed FP16 floating-point elements
 ///    to FP8 E4M3 numbers, using conversion biases stored in lower 8 bits of each
-///    16-bit integer stored in \a __B. Merging mask \a __U is used to determine if
-///    given element should be taken from \a __W instead.
+///    16-bit integer stored in \a __B. Zeroing mask \a __U is used to determine if
+///    given element should be taken zeroed instead.
 ///
 /// \code{.operation}
 /// FOR i := 0 to 15
@@ -1230,8 +1230,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_hf8(
 
 /// Convert 256-bit vector \a __B containing packed FP16 floating-point elements
 ///    to FP8 E4M3 numbers, using conversion biases stored in lower 8 bits of each
-///    16-bit integer stored in \a __B. Results are saturated. Merging mask \a __U
-///    is used to determine if given element should be taken from \a __W instead.
+///    16-bit integer stored in \a __B. Results are saturated. Zeroing mask \a __U
+///    is used to determine if given element should be zeroed instead.
 ///
 /// \code{.operation}
 /// FOR i := 0 to 15
@@ -1465,7 +1465,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_bf8(
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed FP16
 ///    floating-point elements to a 256-bit vector containing E5M2 FP8 elements.
-///    Merging mask \a __U is used to determine if given element should be zeroed
+///    Zeroing mask \a __U is used to determine if given element should be zeroed
 ///    instead.
 ///
 /// \code{.operation}
@@ -1707,7 +1707,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_bf8(
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed FP16
 ///    floating-point elements to a 256-bit vector containing E5M2 FP8 elements.
-///    Merging mask \a __U is used to determine if given element should be zeroed
+///    Zeroing mask \a __U is used to determine if given element should be zeroed
 ///    instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
@@ -1947,7 +1947,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_hf8(
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed FP16
 ///    floating-point elements to a 256-bit vector containing E4M3 FP8 elements.
-///    Merging mask \a __U is used to determine if given element should be zeroed
+///    Zeroing mask \a __U is used to determine if given element should be zeroed
 ///    instead.
 ///
 /// \code{.operation}
@@ -2189,7 +2189,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_hf8(
 
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed FP16
 ///    floating-point elements to a 256-bit vector containing E4M3 FP8 elements.
-///    Merging mask \a __U is used to determine if given element should be zeroed
+///    Zeroing mask \a __U is used to determine if given element should be zeroed
 ///    instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
@@ -2411,7 +2411,7 @@ _mm256_mask_cvthf8_ph(__m256h __W, __mmask16 __U, __m128i __A) {
 /// This intrinsic corresponds to the \c VCVTHF82PH instruction.
 ///
 /// \param __U
-///    A 16-bit merging mask.
+///    A 16-bit zeroing mask.
 /// \param __A
 ///    A 256-bit vector of [32 x hf8].
 /// \returns
@@ -2509,7 +2509,7 @@ _mm_mask_cvtph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8 instruction.
 ///
 /// \param __U
-///    A 8-bit merging mask.
+///    A 8-bit zeroing mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
@@ -2605,7 +2605,7 @@ _mm256_mask_cvtph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8 instruction.
 ///
 /// \param __U
-///    A 16-bit merging mask.
+///    A 16-bit zeroing mask.
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
@@ -2703,7 +2703,7 @@ _mm_mask_cvtsph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8S instruction.
 ///
 /// \param __U
-///    A 8-bit merging mask.
+///    A 8-bit zeroing mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
@@ -2801,7 +2801,7 @@ _mm256_mask_cvtsph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8S instruction.
 ///
 /// \param __U
-///    A 16-bit merging mask.
+///    A 16-bit zeroing mask.
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
@@ -2899,7 +2899,7 @@ _mm_mask_cvtph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8 instruction.
 ///
 /// \param __U
-///    A 8-bit merging mask.
+///    A 8-bit zeroing mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
@@ -2995,7 +2995,7 @@ _mm256_mask_cvtph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8 instruction.
 ///
 /// \param __U
-///    A 16-bit merging mask.
+///    A 16-bit zeroing mask.
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
@@ -3093,7 +3093,7 @@ _mm_mask_cvtsph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8S instruction.
 ///
 /// \param __U
-///    A 8-bit merging mask.
+///    A 8-bit zeroing mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
@@ -3191,7 +3191,7 @@ _mm256_mask_cvtsph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8S instruction.
 ///
 /// \param __U
-///    A 16-bit merging mask.
+///    A 16-bit zeroing mask.
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
@@ -3370,7 +3370,7 @@ _mm256_mask_cvtbf8_ph(__m256h __W, __mmask16 __U, __m128i __A) {
 /// This intrinsic does not correspond to a single instruction.
 ///
 /// \param __U
-///    A 16-bit merging mask.
+///    A 16-bit zeroing mask.
 /// \param __A
 ///    A 256-bit vector of [32 x bf8].
 /// \returns
