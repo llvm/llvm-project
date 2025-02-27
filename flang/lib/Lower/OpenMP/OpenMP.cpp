@@ -1691,7 +1691,7 @@ static void genTargetClauses(
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Defaultmap, clause::Firstprivate,
+  cp.processTODO<clause::Allocate, clause::Defaultmap, // clause::Firstprivate,
                  clause::InReduction, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
 

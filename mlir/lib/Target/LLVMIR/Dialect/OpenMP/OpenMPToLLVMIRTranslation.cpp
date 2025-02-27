@@ -211,16 +211,16 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       // Privatization clauses are supported, except on some situations, so we
       // need to check here whether any of these unsupported cases are being
       // translated.
-      if (std::optional<ArrayAttr> privateSyms = op.getPrivateSyms()) {
-        for (Attribute privatizerNameAttr : *privateSyms) {
-          omp::PrivateClauseOp privatizer = findPrivatizer(
-              op.getOperation(), cast<SymbolRefAttr>(privatizerNameAttr));
+      // if (std::optional<ArrayAttr> privateSyms = op.getPrivateSyms()) {
+      //   for (Attribute privatizerNameAttr : *privateSyms) {
+      //     omp::PrivateClauseOp privatizer = findPrivatizer(
+      //         op.getOperation(), cast<SymbolRefAttr>(privatizerNameAttr));
 
-          if (privatizer.getDataSharingType() ==
-              omp::DataSharingClauseType::FirstPrivate)
-            result = todo("firstprivate");
-        }
-      }
+      //     if (privatizer.getDataSharingType() ==
+      //         omp::DataSharingClauseType::FirstPrivate)
+      //       result = todo("firstprivate");
+      //   }
+      // }
     } else {
       if (!op.getPrivateVars().empty() || op.getPrivateSyms())
         result = todo("privatization");
