@@ -8,10 +8,6 @@
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Telemetry.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/Version/Version.h"
@@ -19,7 +15,6 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Telemetry/Telemetry.h"
 #include <chrono>
