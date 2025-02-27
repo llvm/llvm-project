@@ -84,23 +84,6 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return llvm::Error::success();
 }
 
-void TelemetryManager::AtDebuggerStartup(DebuggerInfo *entry) {
-  if (llvm::Error er = dispatch(entry)) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                   "Failed to dispatch entry at debugger startup: {0}");
-  }
-}
-
-void TelemetryManager::AtDebuggerExit(DebuggerInfo *entry) {
-  // There must be a reference to the debugger at this point.
-  assert(entry->debugger != nullptr);
-
-  if (llvm::Error er = dispatch(entry)) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                   "Failed to dispatch entry at debugger exit: {0}");
-  }
-}
-
 const Config *TelemetryManager::GetConfig() { return m_config.get(); }
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;

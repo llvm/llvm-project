@@ -90,9 +90,6 @@ class TelemetryManager : public llvm::telemetry::Manager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
-  virtual void AtDebuggerStartup(DebuggerInfo *entry);
-  virtual void AtDebuggerExit(DebuggerInfo *entry);
-
   const llvm::telemetry::Config *GetConfig();
 
   virtual llvm::StringRef GetInstanceName() const = 0;
