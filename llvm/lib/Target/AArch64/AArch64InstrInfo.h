@@ -251,6 +251,12 @@ public:
   /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
+  /// Returns whether the physical register is FP or NEON.
+  static bool isFpOrNEON(Register Reg);
+
+  /// Returns the shift amount operator of a load/store.
+  static const MachineOperand &getLdStAmountOp(const MachineInstr &MI);
+
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 
@@ -314,7 +320,10 @@ public:
   /// Returns true if opcode \p Opc is a memory operation. If it is, set
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
-  /// For unscaled instructions, \p Scale is set to 1.
+  /// For unscaled instructions, \p Scale is set to 1. All values are in bytes.
+  /// MinOffset/MaxOffset are the un-scaled limits of the immediate in the
+  /// instruction, the actual offset limit is [MinOffset*Scale,
+  /// MaxOffset*Scale].
   static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, TypeSize &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 
@@ -330,25 +339,25 @@ public:
                         MCRegister SrcReg, bool KillSrc, unsigned Opcode,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                       DebugLoc DL, unsigned DestReg, unsigned SrcReg,
+                       const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                        bool KillSrc, unsigned Opcode, unsigned ZeroReg,
                        llvm::ArrayRef<unsigned> Indices) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // This tells target independent code that it is okay to pass instructions
   // with subreg operands to foldMemoryOperandImpl.
@@ -462,12 +471,16 @@ public:
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
-  outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
   SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;
@@ -572,6 +585,13 @@ private:
   bool optimizePTestInstr(MachineInstr *PTest, unsigned MaskReg,
                           unsigned PredReg,
                           const MachineRegisterInfo *MRI) const;
+  std::optional<unsigned>
+  canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
+                      MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
+
+  /// verifyInstruction - Perform target specific instruction verification.
+  bool verifyInstruction(const MachineInstr &MI,
+                         StringRef &ErrInfo) const override;
 };
 
 struct UsedNZCV {
@@ -672,6 +692,10 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBZX:
   case AArch64::TBNZW:
   case AArch64::TBNZX:
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
     return true;
   default:
     return false;
@@ -725,6 +749,7 @@ static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
   case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 /// Return PAC opcode to be used for a ptrauth sign using the given key, or its
@@ -737,6 +762,7 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
   case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 // struct TSFlags {

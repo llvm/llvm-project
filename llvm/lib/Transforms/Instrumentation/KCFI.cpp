@@ -17,7 +17,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -71,8 +70,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
                            "compatible with -fsanitize=kcfi on this target"));
 
   IntegerType *Int32Ty = Type::getInt32Ty(Ctx);
-  MDNode *VeryUnlikelyWeights =
-      MDBuilder(Ctx).createBranchWeights(1, (1U << 20) - 1);
+  MDNode *VeryUnlikelyWeights = MDBuilder(Ctx).createUnlikelyBranchWeights();
   Triple T(M.getTargetTriple());
 
   for (CallInst *CI : KCFICalls) {
@@ -111,7 +109,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Test, Call, false, VeryUnlikelyWeights);
     Builder.SetInsertPoint(ThenTerm);
-    Builder.CreateCall(Intrinsic::getDeclaration(&M, Intrinsic::debugtrap));
+    Builder.CreateIntrinsic(Intrinsic::debugtrap, {}, {});
     ++NumKCFIChecks;
   }
 

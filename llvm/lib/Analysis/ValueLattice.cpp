@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 Constant *
@@ -50,6 +51,62 @@ ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
     return ConstantInt::getFalse(Ty);
 
   return nullptr;
+}
+
+static bool hasSingleValue(const ValueLatticeElement &Val) {
+  if (Val.isConstantRange() && Val.getConstantRange().isSingleElement())
+    // Integer constants are single element ranges
+    return true;
+  return Val.isConstant();
+}
+
+/// Combine two sets of facts about the same value into a single set of
+/// facts.  Note that this method is not suitable for merging facts along
+/// different paths in a CFG; that's what the mergeIn function is for.  This
+/// is for merging facts gathered about the same value at the same location
+/// through two independent means.
+/// Notes:
+/// * This method does not promise to return the most precise possible lattice
+///   value implied by A and B.  It is allowed to return any lattice element
+///   which is at least as strong as *either* A or B (unless our facts
+///   conflict, see below).
+/// * Due to unreachable code, the intersection of two lattice values could be
+///   contradictory.  If this happens, we return some valid lattice value so as
+///   not confuse the rest of LVI.  Ideally, we'd always return Undefined, but
+///   we do not make this guarantee.  TODO: This would be a useful enhancement.
+ValueLatticeElement
+ValueLatticeElement::intersect(const ValueLatticeElement &Other) const {
+  if (isUnknown())
+    return *this;
+  if (Other.isUnknown())
+    return Other;
+
+  // If we gave up for one, but got a useable fact from the other, use it.
+  if (isOverdefined())
+    return Other;
+  if (Other.isOverdefined())
+    return *this;
+
+  // Can't get any more precise than constants.
+  if (hasSingleValue(*this))
+    return *this;
+  if (hasSingleValue(Other))
+    return Other;
+
+  // Could be either constant range or not constant here.
+  if (!isConstantRange() || !Other.isConstantRange()) {
+    // TODO: Arbitrary choice, could be improved
+    return *this;
+  }
+
+  // Intersect two constant ranges
+  ConstantRange Range =
+      getConstantRange().intersectWith(Other.getConstantRange());
+  // Note: An empty range is implicitly converted to unknown or undef depending
+  // on MayIncludeUndef internally.
+  return ValueLatticeElement::getRange(
+      std::move(Range), /*MayIncludeUndef=*/isConstantRangeIncludingUndef() ||
+                            Other.isConstantRangeIncludingUndef());
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {

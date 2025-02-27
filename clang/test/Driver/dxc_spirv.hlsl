@@ -6,8 +6,8 @@
 // CHECK: "-triple" "spirv-unknown-vulkan-compute"
 // CHECK-SAME: "-x" "hlsl"
 
-// CHECK-VULKAN12: "-triple" "spirv-unknown-vulkan1.2-compute"
+// CHECK-VULKAN12: "-triple" "spirv1.5-unknown-vulkan1.2-compute"
 
-// CHECK-VULKAN13: "-triple" "spirv-unknown-vulkan1.3-compute"
+// CHECK-VULKAN13: "-triple" "spirv1.6-unknown-vulkan1.3-compute"
 
 // CHECK-ERROR: error: invalid value 'vulkan1.0' in '-fspv-target-env=vulkan1.0'

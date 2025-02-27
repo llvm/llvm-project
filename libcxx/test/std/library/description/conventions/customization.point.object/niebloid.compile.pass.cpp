@@ -14,12 +14,14 @@
 
 #include <algorithm>
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <random>
 #include <ranges>
 #include <type_traits>
 #include <utility>
+
 #include "test_macros.h"
 
 // Niebloids, unlike CPOs, are *not* required to be semiregular or even to have
@@ -88,6 +90,9 @@ static_assert(test(std::ranges::find_first_of, a, a));
 static_assert(test(std::ranges::find_if, a, odd));
 static_assert(test(std::ranges::find_if_not, a, odd));
 #if TEST_STD_VER >= 23
+static_assert(test(std::ranges::find_last, a, 42));
+static_assert(test(std::ranges::find_last_if, a, odd));
+static_assert(test(std::ranges::find_last_if_not, a, odd));
 static_assert(test(std::ranges::fold_left, a, 0, std::plus()));
 static_assert(test(std::ranges::fold_left_with_iter, a, 0, std::plus()));
 #endif

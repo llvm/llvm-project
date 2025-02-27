@@ -12,6 +12,7 @@
 # ELF64: .relr.default RELR 0000000000000000 000040 000000 08
 # ELF64: .rela.custom  RELA 0000000000000000 000040 000000 ff
 # ELF64: .rel.custom   REL  0000000000000000 000040 000000 ff
+# ELF64: .crel.custom  CREL 0000000000000000 000040 000000 ff
 # ELF64: .relr.custom  RELR 0000000000000000 000040 000000 ff
 
 # ELF32: Name          Type  Address  Off    Size   ES
@@ -20,6 +21,7 @@
 # ELF32: .relr.default RELR  00000000 000034 000000 04
 # ELF32: .rela.custom  RELA  00000000 000034 000000 ff
 # ELF32: .rel.custom   REL   00000000 000034 000000 ff
+# ELF32: .crel.custom  CREL  00000000 000034 000000 ff
 # ELF32: .relr.custom  RELR  00000000 000034 000000 ff
 
 --- !ELF
@@ -41,6 +43,9 @@ Sections:
     EntSize: 0xFF
   - Name:    .rel.custom
     Type:    SHT_REL
+    EntSize: 0xFF
+  - Name:    .crel.custom
+    Type:    SHT_CREL
     EntSize: 0xFF
   - Name:    .relr.custom
     Type:    SHT_RELR

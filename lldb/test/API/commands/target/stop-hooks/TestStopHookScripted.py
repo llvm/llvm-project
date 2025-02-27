@@ -32,7 +32,7 @@ class TestStopHooks(TestBase):
         self.interp.HandleCommand(command, result)
         self.assertFalse(result.Succeeded(), "Set the target stop hook")
         self.assertIn(
-            "Wrong number of args",
+            "has unexpected argument count",
             result.GetError(),
             "Got the wrong number of args error",
         )
@@ -43,7 +43,7 @@ class TestStopHooks(TestBase):
         self.interp.HandleCommand(command, result)
         self.assertFalse(result.Succeeded(), "Set the target stop hook")
         self.assertIn(
-            'Class "stop_hook.no_handle_stop" is missing the required handle_stop callback',
+            "Abstract method no_handle_stop.handle_stop not implemented",
             result.GetError(),
             "Got the right error",
         )

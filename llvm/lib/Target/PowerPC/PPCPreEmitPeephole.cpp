@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -158,7 +157,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
              ++AfterBBI) {
           // Track the operand that kill Reg. We would unset the kill flag of
           // the operand if there is a following redundant load immediate.
-          int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, true, TRI);
+          int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, TRI, true);
 
           // We can't just clear implicit kills, so if we encounter one, stop
           // looking further.
@@ -204,7 +203,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
               DeadOrKillToUnset->setIsKill(false);
           }
           DeadOrKillToUnset =
-              AfterBBI->findRegisterDefOperand(Reg, true, true, TRI);
+              AfterBBI->findRegisterDefOperand(Reg, TRI, true, true);
           if (DeadOrKillToUnset)
             LLVM_DEBUG(dbgs()
                        << " Dead flag of " << *DeadOrKillToUnset << " from "
@@ -415,7 +414,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     bool runOnMachineFunction(MachineFunction &MF) override {
       // If the user wants to set the DSCR using command-line options,
       // load in the specified value at the start of main.
-      if (DSCRValue.getNumOccurrences() > 0 && MF.getName().equals("main") &&
+      if (DSCRValue.getNumOccurrences() > 0 && MF.getName() == "main" &&
           MF.getFunction().hasExternalLinkage()) {
         DSCRValue = (uint32_t)(DSCRValue & 0x01FFFFFF); // 25-bit DSCR mask
         RegScavenger RS;

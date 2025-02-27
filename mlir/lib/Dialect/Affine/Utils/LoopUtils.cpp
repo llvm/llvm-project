@@ -12,10 +12,8 @@
 
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -23,7 +21,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -37,16 +34,6 @@ using namespace mlir;
 using namespace affine;
 using namespace presburger;
 using llvm::SmallMapVector;
-
-namespace {
-// This structure is to pass and return sets of loop parameters without
-// confusing the order.
-struct LoopParams {
-  Value lowerBound;
-  Value upperBound;
-  Value step;
-};
-} // namespace
 
 /// Computes the cleanup loop lower bound of the loop being unrolled with
 /// the specified unroll factor; this bound will also be upper bound of the main
@@ -142,8 +129,13 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   auto *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
-      auto constOp = topBuilder.create<arith::ConstantIndexOp>(
+      auto func = forOp->getParentOfType<FunctionOpInterface>();
+      OpBuilder builder(forOp->getContext());
+      if (func)
+        builder.setInsertionPointToStart(&func.getFunctionBody().front());
+      else
+        builder.setInsertionPoint(forOp);
+      auto constOp = builder.create<arith::ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
     } else {
@@ -326,8 +318,8 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
         GreedyRewriteConfig config;
         config.strictMode = GreedyRewriteStrictness::ExistingOps;
         bool erased;
-        (void)applyOpPatternsAndFold(res.getOperation(), std::move(patterns),
-                                     config, /*changed=*/nullptr, &erased);
+        (void)applyOpPatternsGreedily(res.getOperation(), std::move(patterns),
+                                      config, /*changed=*/nullptr, &erased);
         if (!erased && !prologue)
           prologue = res;
         if (!erased)
@@ -927,8 +919,9 @@ static void generateUnrolledLoop(
   // 'forOp'.
   auto builder = OpBuilder::atBlockTerminator(loopBodyBlock);
 
+  constexpr auto defaultAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
   if (!annotateFn)
-    annotateFn = [](unsigned, Operation *, OpBuilder) {};
+    annotateFn = defaultAnnotateFn;
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
@@ -1102,34 +1095,6 @@ static bool areInnerBoundsInvariant(AffineForOp forOp) {
   return !walkResult.wasInterrupted();
 }
 
-// Gathers all maximal sub-blocks of operations that do not themselves
-// include a for op (a operation could have a descendant for op though
-// in its tree).  Ignore the block terminators.
-struct JamBlockGatherer {
-  // Store iterators to the first and last op of each sub-block found.
-  std::vector<std::pair<Block::iterator, Block::iterator>> subBlocks;
-
-  // This is a linear time walk.
-  void walk(Operation *op) {
-    for (auto &region : op->getRegions())
-      for (auto &block : region)
-        walk(block);
-  }
-
-  void walk(Block &block) {
-    for (auto it = block.begin(), e = std::prev(block.end()); it != e;) {
-      auto subBlockStart = it;
-      while (it != e && !isa<AffineForOp>(&*it))
-        ++it;
-      if (it != subBlockStart)
-        subBlocks.emplace_back(subBlockStart, std::prev(it));
-      // Process all for ops that appear next.
-      while (it != e && isa<AffineForOp>(&*it))
-        walk(&*it++);
-    }
-  }
-};
-
 /// Unrolls and jams this loop by the specified factor.
 LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
                                                   uint64_t unrollJamFactor) {
@@ -1159,7 +1124,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
     return failure();
 
   // Gather all sub-blocks to jam upon the loop being unrolled.
-  JamBlockGatherer jbg;
+  JamBlockGatherer<AffineForOp> jbg;
   jbg.walk(forOp);
   auto &subBlocks = jbg.subBlocks;
 
@@ -1386,10 +1351,12 @@ static bool checkLoopInterchangeDependences(
 /// nested sequence of loops in 'loops' would violate dependences.
 bool mlir::affine::isValidLoopInterchangePermutation(
     ArrayRef<AffineForOp> loops, ArrayRef<unsigned> loopPermMap) {
+  assert(loopPermMap.size() == loops.size() && "invalid loop perm map");
+  unsigned maxLoopDepth = loops.size();
+  if (maxLoopDepth == 1)
+    return true;
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
-  assert(loopPermMap.size() == loops.size());
-  unsigned maxLoopDepth = loops.size();
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
   getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
@@ -1420,12 +1387,12 @@ mlir::affine::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
 
 // input[i] should move from position i -> permMap[i]. Returns the position in
 // `input` that becomes the new outermost loop.
-unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
+unsigned mlir::affine::permuteLoops(ArrayRef<AffineForOp> input,
                                     ArrayRef<unsigned> permMap) {
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
   // just sort and check if it's iota.
-  SmallVector<unsigned, 4> checkPermMap(permMap.begin(), permMap.end());
+  SmallVector<unsigned, 4> checkPermMap(permMap);
   llvm::sort(checkPermMap);
   if (llvm::any_of(llvm::enumerate(checkPermMap),
                    [](const auto &en) { return en.value() != en.index(); }))
@@ -1447,8 +1414,8 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
   // Move the innermost loop body to the loop that would be the innermost in the
   // permuted nest (only if the innermost loop is going to change).
   if (permMap.back() != input.size() - 1) {
-    auto *destBody = input[invPermMap.back().second].getBody();
-    auto *srcBody = input.back().getBody();
+    Block *destBody = ((AffineForOp)input[invPermMap.back().second]).getBody();
+    Block *srcBody = ((AffineForOp)input.back()).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      srcBody->getOperations(), srcBody->begin(),
                                      std::prev(srcBody->end()));
@@ -1478,7 +1445,7 @@ unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
       continue;
 
     // Move input[i] to its surrounding loop in the transformed nest.
-    auto *destBody = input[parentPosInInput].getBody();
+    auto *destBody = ((AffineForOp)input[parentPosInInput]).getBody();
     destBody->getOperations().splice(destBody->begin(),
                                      input[i]->getBlock()->getOperations(),
                                      Block::iterator(input[i]));
@@ -1624,7 +1591,7 @@ SmallVector<SmallVector<AffineForOp, 8>, 8>
 mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
                    ArrayRef<AffineForOp> targets) {
   SmallVector<SmallVector<AffineForOp, 8>, 8> res;
-  SmallVector<AffineForOp, 8> currentTargets(targets.begin(), targets.end());
+  SmallVector<AffineForOp, 8> currentTargets(targets);
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);
@@ -1977,8 +1944,8 @@ static LogicalResult generateCopy(
   *nBegin = begin;
   *nEnd = end;
 
-  func::FuncOp f = begin->getParentOfType<func::FuncOp>();
-  OpBuilder topBuilder(f.getBody());
+  auto f = begin->getParentOfType<FunctionOpInterface>();
+  OpBuilder topBuilder(f.getFunctionBody());
   Value zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 
   *sizeInBytes = 0;
@@ -1997,8 +1964,9 @@ static LogicalResult generateCopy(
   OpBuilder &b = region.isWrite() ? epilogue : prologue;
 
   // Builder to create constants at the top level.
-  auto func = copyPlacementBlock->getParent()->getParentOfType<func::FuncOp>();
-  OpBuilder top(func.getBody());
+  auto func =
+      copyPlacementBlock->getParent()->getParentOfType<FunctionOpInterface>();
+  OpBuilder top(func.getFunctionBody());
 
   auto loc = region.loc;
   auto memref = region.memref;
@@ -2035,8 +2003,15 @@ static LogicalResult generateCopy(
   }
 
   SmallVector<AffineMap, 4> lbMaps(rank), ubMaps(rank);
-  for (unsigned i = 0; i < rank; ++i)
+  for (unsigned i = 0; i < rank; ++i) {
     region.getLowerAndUpperBound(i, lbMaps[i], ubMaps[i]);
+    if (lbMaps[i].getNumResults() == 0 || ubMaps[i].getNumResults() == 0) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Missing lower or upper bound for region along dimension: "
+                 << i << '\n');
+      return failure();
+    }
+  }
 
   const FlatAffineValueConstraints *cst = region.getConstraints();
   // 'regionSymbols' hold values that this memory region is symbolic/parametric
@@ -2108,7 +2083,7 @@ static LogicalResult generateCopy(
     // fastMemRefType is a constant shaped memref.
     auto maySizeInBytes = getIntOrFloatMemRefSizeInBytes(fastMemRefType);
     // We don't account for things of unknown size.
-    *sizeInBytes = maySizeInBytes ? *maySizeInBytes : 0;
+    *sizeInBytes = maySizeInBytes.value_or(0);
 
     LLVM_DEBUG(emitRemarkForBlock(*block)
                << "Creating fast buffer of type " << fastMemRefType
@@ -2121,8 +2096,8 @@ static LogicalResult generateCopy(
 
   auto numElementsSSA = top.create<arith::ConstantIndexOp>(loc, *numElements);
 
-  Value dmaStride = nullptr;
-  Value numEltPerDmaStride = nullptr;
+  Value dmaStride;
+  Value numEltPerDmaStride;
   if (copyOptions.generateDma) {
     SmallVector<StrideInfo, 4> dmaStrideInfos;
     getMultiLevelStrides(region, fastBufferShape, &dmaStrideInfos);
@@ -2339,21 +2314,26 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
 
   // Walk this range of operations  to gather all memory regions.
   block->walk(begin, end, [&](Operation *opInst) {
+    Value memref;
+    MemRefType memrefType;
     // Gather regions to allocate to buffers in faster memory space.
     if (auto loadOp = dyn_cast<AffineLoadOp>(opInst)) {
-      if ((filterMemRef.has_value() && filterMemRef != loadOp.getMemRef()) ||
-          (loadOp.getMemRefType().getMemorySpaceAsInt() !=
-           copyOptions.slowMemorySpace))
-        return;
+      memref = loadOp.getMemRef();
+      memrefType = loadOp.getMemRefType();
     } else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst)) {
-      if ((filterMemRef.has_value() && filterMemRef != storeOp.getMemRef()) ||
-          storeOp.getMemRefType().getMemorySpaceAsInt() !=
-              copyOptions.slowMemorySpace)
-        return;
-    } else {
-      // Neither load nor a store op.
-      return;
+      memref = storeOp.getMemRef();
+      memrefType = storeOp.getMemRefType();
     }
+    // Neither load nor a store op.
+    if (!memref)
+      return;
+
+    auto memorySpaceAttr =
+        dyn_cast_or_null<IntegerAttr>(memrefType.getMemorySpace());
+    if ((filterMemRef.has_value() && filterMemRef != memref) ||
+        (memorySpaceAttr &&
+         memrefType.getMemorySpaceAsInt() != copyOptions.slowMemorySpace))
+      return;
 
     // Compute the MemRefRegion accessed.
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());
@@ -2812,4 +2792,16 @@ LogicalResult affine::coalescePerfectlyNestedAffineLoops(AffineForOp op) {
       end = start + 1;
   }
   return result;
+}
+
+int64_t mlir::affine::numEnclosingInvariantLoops(OpOperand &operand) {
+  int64_t count = 0;
+  Operation *currentOp = operand.getOwner();
+  while (auto loopOp = currentOp->getParentOfType<LoopLikeOpInterface>()) {
+    if (!loopOp.isDefinedOutsideOfLoop(operand.get()))
+      break;
+    currentOp = loopOp;
+    count++;
+  }
+  return count;
 }

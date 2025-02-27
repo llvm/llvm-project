@@ -15,13 +15,18 @@
 
 // basic_ios& copyfmt(const basic_ios& rhs);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <ios>
+#include <memory>
 #include <streambuf>
+#include <sstream>
 #include <cassert>
 
 #include "platform_support.h" // locale name macros
 
 #include "test_macros.h"
+#include "operator_hijacker.h"
 
 struct testbuf
     : public std::streambuf
@@ -190,6 +195,12 @@ int main(int, char**)
     assert(ios1.tie() == (std::ostream*)2);
     assert(ios1.fill() == '2');
 #endif
+
+    {
+      std::basic_stringbuf<char, operator_hijacker_char_traits<char> > sb;
+      std::basic_ios<char, operator_hijacker_char_traits<char> > ios(std::addressof(sb));
+      ios.copyfmt(ios);
+    }
 
   return 0;
 }

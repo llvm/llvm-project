@@ -18,7 +18,6 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <memory>
 #include <string>
 
 using namespace llvm;

@@ -29,6 +29,27 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
+DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
+    const object::DirectX::RootSignature &Data)
+    : Version(Data.getVersion()), NumParameters(Data.getNumParameters()),
+      RootParametersOffset(Data.getRootParametersOffset()),
+      NumStaticSamplers(Data.getNumStaticSamplers()),
+      StaticSamplersOffset(Data.getStaticSamplersOffset()) {
+  uint32_t Flags = Data.getFlags();
+#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
+  Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
+  uint64_t Flag = 0;
+#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
+  if (Val)                                                                     \
+    Flag |= (uint32_t)dxbc::RootElementFlag::Val;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flag;
+}
+
 uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
   uint64_t Flag = 0;
 #define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
@@ -188,6 +209,17 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
+void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
+    IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
+  IO.mapRequired("Version", S.Version);
+  IO.mapRequired("NumParameters", S.NumParameters);
+  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
+  IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
+  IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
+#define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -197,6 +229,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Hash", P.Hash);
   IO.mapOptional("PSVInfo", P.Info);
   IO.mapOptional("Signature", P.Signature);
+  IO.mapOptional("RootSignature", P.RootSignature);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -204,6 +237,12 @@ void MappingTraits<DXContainerYAML::Object>::mapping(
   IO.mapTag("!dxcontainer", true);
   IO.mapRequired("Header", Obj.Header);
   IO.mapRequired("Parts", Obj.Parts);
+}
+
+void MappingTraits<DXContainerYAML::ResourceFlags>::mapping(
+    IO &IO, DXContainerYAML::ResourceFlags &Flags) {
+#define RESOURCE_FLAG(FlagIndex, Enum) IO.mapRequired(#Enum, Flags.Bits.Enum);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 void MappingTraits<DXContainerYAML::ResourceBindInfo>::mapping(
@@ -251,6 +290,18 @@ void ScalarEnumerationTraits<dxbc::PSV::ComponentType>::enumeration(
 void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
     IO &IO, dxbc::PSV::InterpolationMode &Value) {
   for (const auto &E : dxbc::PSV::getInterpolationModes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::ResourceType>::enumeration(
+    IO &IO, dxbc::PSV::ResourceType &Value) {
+  for (const auto &E : dxbc::PSV::getResourceTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
+    IO &IO, dxbc::PSV::ResourceKind &Value) {
+  for (const auto &E : dxbc::PSV::getResourceKinds())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 

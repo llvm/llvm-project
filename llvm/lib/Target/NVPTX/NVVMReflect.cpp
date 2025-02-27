@@ -21,6 +21,7 @@
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -34,14 +35,11 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
-#include <sstream>
-#include <string>
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
 #define NVVM_REFLECT_OCL_FUNCTION "__nvvm_reflect_ocl"
 
@@ -49,7 +47,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-reflect"
 
-namespace llvm { void initializeNVVMReflectPass(PassRegistry &); }
+namespace llvm {
+void initializeNVVMReflectPass(PassRegistry &);
+}
 
 namespace {
 class NVVMReflect : public FunctionPass {
@@ -63,15 +63,15 @@ public:
 
   bool runOnFunction(Function &) override;
 };
-}
+} // namespace
 
 FunctionPass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
   return new NVVMReflect(SmVersion);
 }
 
 static cl::opt<bool>
-NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
-                   cl::desc("NVVM reflection, enabled by default"));
+    NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
+                       cl::desc("NVVM reflection, enabled by default"));
 
 char NVVMReflect::ID = 0;
 INITIALIZE_PASS(NVVMReflect, "nvvm-reflect",
@@ -191,8 +191,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   // until we find a terminator that we can then remove.
   while (!ToSimplify.empty()) {
     Instruction *I = ToSimplify.pop_back_val();
-    if (Constant *C =
-            ConstantFoldInstruction(I, F.getParent()->getDataLayout())) {
+    if (Constant *C = ConstantFoldInstruction(I, F.getDataLayout())) {
       for (User *U : I->users())
         if (Instruction *I = dyn_cast<Instruction>(U))
           ToSimplify.push_back(I);
@@ -209,7 +208,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   // Removing via isInstructionTriviallyDead may add duplicates to the ToRemove
   // array. Filter out the duplicates before starting to erase from parent.
   std::sort(ToRemove.begin(), ToRemove.end());
-  auto NewLastIter = std::unique(ToRemove.begin(), ToRemove.end());
+  auto NewLastIter = llvm::unique(ToRemove);
   ToRemove.erase(NewLastIter, ToRemove.end());
 
   for (Instruction *I : ToRemove)

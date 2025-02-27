@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -77,9 +78,11 @@ static CXTypeKind GetBuiltinTypeKind(const BuiltinType *BT) {
     BTCASE(OCLEvent);
     BTCASE(OCLQueue);
     BTCASE(OCLReserveID);
-  default:
-    return CXType_Unexposed;
-  }
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) BTCASE(Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
+    default:
+      return CXType_Unexposed;
+    }
 #undef BTCASE
 }
 
@@ -311,6 +314,20 @@ CXString clang_getTypeSpelling(CXType CT) {
   return cxstring::createDup(OS.str());
 }
 
+CXString clang_getTypePrettyPrinted(CXType CT, CXPrintingPolicy cxPolicy) {
+  QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+
+  SmallString<64> Str;
+  llvm::raw_svector_ostream OS(Str);
+  PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+
+  T.print(OS, *UserPolicy);
+
+  return cxstring::createDup(OS.str());
+}
+
 CXType clang_getTypedefDeclUnderlyingType(CXCursor C) {
   using namespace cxcursor;
   CXTranslationUnit TU = cxcursor::getCursorTU(C);
@@ -379,7 +396,7 @@ int clang_getFieldDeclBitWidth(CXCursor C) {
 
     if (const FieldDecl *FD = dyn_cast_or_null<FieldDecl>(D)) {
       if (FD->isBitField() && !FD->getBitWidth()->isValueDependent())
-        return FD->getBitWidthValue(getCursorContext(C));
+        return FD->getBitWidthValue();
     }
   }
 
@@ -618,6 +635,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Pipe);
     TKIND(Attributed);
     TKIND(BTFTagAttributed);
+    TKIND(HLSLAttributedResource);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -628,6 +646,8 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(OCLEvent);
     TKIND(OCLQueue);
     TKIND(OCLReserveID);
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) TKIND(Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
     TKIND(Atomic);
   }
 #undef TKIND
@@ -1087,6 +1107,39 @@ long long clang_Cursor_getOffsetOfField(CXCursor C) {
       return Ctx.getFieldOffset(IFD);
   }
   return -1;
+}
+
+long long clang_getOffsetOfBase(CXCursor Parent, CXCursor Base) {
+  if (Base.kind != CXCursor_CXXBaseSpecifier)
+    return -1;
+
+  if (!clang_isDeclaration(Parent.kind))
+    return -1;
+
+  // we need to validate the parent type
+  CXType PT = clang_getCursorType(Parent);
+  long long Error = validateFieldParentType(Parent, PT);
+  if (Error < 0)
+    return Error;
+
+  const CXXRecordDecl *ParentRD =
+      dyn_cast<CXXRecordDecl>(cxcursor::getCursorDecl(Parent));
+  if (!ParentRD)
+    return -1;
+
+  ASTContext &Ctx = cxcursor::getCursorContext(Base);
+  const CXXBaseSpecifier *B = cxcursor::getCursorCXXBaseSpecifier(Base);
+  if (ParentRD->bases_begin() > B || ParentRD->bases_end() <= B)
+    return -1;
+
+  const CXXRecordDecl *BaseRD = B->getType()->getAsCXXRecordDecl();
+  if (!BaseRD)
+    return -1;
+
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(ParentRD);
+  if (B->isVirtual())
+    return Ctx.toBits(Layout.getVBaseClassOffset(BaseRD));
+  return Ctx.toBits(Layout.getBaseClassOffset(BaseRD));
 }
 
 enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T) {

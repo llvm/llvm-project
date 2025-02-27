@@ -36,6 +36,9 @@ namespace polly {
 class Scop;
 class ScopStmt;
 
+/// Same as llvm/Analysis/ScalarEvolutionExpressions.h
+using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, const llvm::SCEV *>;
+
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {
   ALIASING,
@@ -80,7 +83,7 @@ using RecordedAssumptionsTy = llvm::SmallVector<Assumption, 8>;
 ///
 /// This function will add the assumption to the RecordedAssumptions. This
 /// collection will be added (@see addAssumption) to the assumed context once
-/// all paramaters are known and the context is fully built.
+/// all parameters are known and the context is fully built.
 ///
 /// @param RecordedAssumption container which keeps all recorded assumptions.
 /// @param Kind The assumption kind describing the underlying cause.
@@ -129,7 +132,7 @@ using BoxedLoopsSetTy = llvm::SetVector<const llvm::Loop *>;
 /// isNull(), isInstruction(), isLoad(), isStore(), ..., isMemTransferInst(),
 /// operator bool(), operator!()
 ///
-/// The functions isa, cast, cast_or_null, dyn_cast are modeled te resemble
+/// The functions isa, cast, cast_or_null, dyn_cast are modeled to resemble
 /// those from llvm/Support/Casting.h. Partial template function specialization
 /// is currently not supported in C++ such that those cannot be used directly.
 /// (llvm::isa could, but then llvm:cast etc. would not have the expected
@@ -383,20 +386,24 @@ void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock,
 /// as the call to SCEVExpander::expandCodeFor:
 ///
 /// @param S     The current Scop.
-/// @param SE    The Scalar Evolution pass.
+/// @param SE    The Scalar Evolution pass used by @p S.
+/// @param GenFn The function to generate code in. Can be the same as @p SE.
+/// @param GenSE The Scalar Evolution pass for @p GenFn.
 /// @param DL    The module data layout.
 /// @param Name  The suffix added to the new instruction names.
 /// @param E     The expression for which code is actually generated.
 /// @param Ty    The type of the resulting code.
 /// @param IP    The insertion point for the new code.
 /// @param VMap  A remapping of values used in @p E.
+/// @param LoopMap A remapping of loops used in @p E.
 /// @param RTCBB The last block of the RTC. Used to insert loop-invariant
 ///              instructions in rare cases.
 llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
+                           llvm::Function *GenFn, llvm::ScalarEvolution &GenSE,
                            const llvm::DataLayout &DL, const char *Name,
                            const llvm::SCEV *E, llvm::Type *Ty,
                            llvm::Instruction *IP, ValueMapT *VMap,
-                           llvm::BasicBlock *RTCBB);
+                           LoopToScevMapT *LoopMap, llvm::BasicBlock *RTCBB);
 
 /// Return the condition for the terminator @p TI.
 ///

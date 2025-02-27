@@ -197,7 +197,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
 BasicBlock *
 OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
                                            BasicBlock *BB) {
-  Instruction *FirstNonPHI = BB->getFirstNonPHIOrDbg();
+  Instruction *FirstNonPHI = &*BB->getFirstNonPHIOrDbg();
   assert(FirstNonPHI && "block is empty?");
   Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
   if (!CorrespondingVal)
@@ -678,11 +678,9 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), MangledNameStream.str(),
-        Unit /* File */,
+        Unit /* Context */, F->getName(), Dummy, Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
-        DB.createSubroutineType(
-            DB.getOrCreateTypeArray(std::nullopt)), /* void type */
+        DB.createSubroutineType(DB.getOrCreateTypeArray({})), /* void type */
         0, /* Line 0 is reserved for compiler-generated code. */
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
         /* Outlined code is optimized code by definition. */
@@ -789,10 +787,8 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = *C.getGVN(V);
       if (isa<Constant>(V))
-        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
+        if (NotSame.contains(GVN) && Seen.insert(GVN).second)
           Inputs.push_back(GVN);
-          Seen.insert(GVN);
-        }
     }
   }
 }
@@ -816,8 +812,9 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
   // replacement.
   for (Value *Input : CurrentInputs) {
     assert(Input && "Have a nullptr as an input");
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     assert(C.getGVN(Input) && "Could not find a numbering for the given input");
     EndInputNumbers.push_back(*C.getGVN(Input));
   }
@@ -838,8 +835,9 @@ remapExtractedInputs(const ArrayRef<Value *> ArgInputs,
   // Get the global value number for each input that will be extracted as an
   // argument by the code extractor, remapping if needed for reloaded values.
   for (Value *Input : ArgInputs) {
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     RemappedArgInputs.insert(Input);
   }
 }
@@ -1186,21 +1184,21 @@ static std::optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
   for (unsigned Idx = 0, EIdx = PN->getNumIncomingValues(); Idx < EIdx; Idx++) {
     Incoming = PN->getIncomingValue(Idx);
     IncomingBlock = PN->getIncomingBlock(Idx);
+    // If the incoming block isn't in the region, we don't have to worry about
+    // this incoming value.
+    if (!Blocks.contains(IncomingBlock))
+      continue;
+
     // If we cannot find a GVN, and the incoming block is included in the region
     // this means that the input to the PHINode is not included in the region we
     // are trying to analyze, meaning, that if it was outlined, we would be
     // adding an extra input.  We ignore this case for now, and so ignore the
     // region.
     std::optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN && Blocks.contains(IncomingBlock)) {
+    if (!OGVN) {
       Region.IgnoreRegion = true;
       return std::nullopt;
     }
-
-    // If the incoming block isn't in the region, we don't have to worry about
-    // this incoming value.
-    if (!Blocks.contains(IncomingBlock))
-      continue;
 
     // Collect the canonical numbers of the values in the PHINode.
     unsigned GVN = *OGVN;
@@ -1333,11 +1331,10 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
       if (!isa<PointerType>(Group.ArgumentTypes[Jdx]))
         continue;
 
-      if (AggArgsUsed.contains(Jdx))
+      if (!AggArgsUsed.insert(Jdx).second)
         continue;
 
       TypeFound = true;
-      AggArgsUsed.insert(Jdx);
       Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, Jdx));
       Region.AggArgToExtracted.insert(std::make_pair(Jdx, OriginalIndex));
       AggArgIdx = Jdx;
@@ -1516,7 +1513,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // Transfer any debug information.
   Call->setDebugLoc(Region.Call->getDebugLoc());
   // Since our output may determine which branch we go to, we make sure to
-  // propogate this new call value through the module.
+  // propagate this new call value through the module.
   OldCall->replaceAllUsesWith(Call);
 
   // Remove the old instruction.
@@ -1757,7 +1754,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
   // If we've made it here, it means we weren't able to replace the PHINode, so
   // we must insert it ourselves.
   PHINode *NewPN = cast<PHINode>(PN.clone());
-  NewPN->insertBefore(&*OverallPhiBlock->begin());
+  NewPN->insertBefore(OverallPhiBlock->begin());
   for (unsigned Idx = 0, Edx = NewPN->getNumIncomingValues(); Idx < Edx;
        Idx++) {
     Value *IncomingVal = NewPN->getIncomingValue(Idx);

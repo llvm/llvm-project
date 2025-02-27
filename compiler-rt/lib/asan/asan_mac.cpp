@@ -51,7 +51,8 @@ bool IsSystemHeapAddress (uptr addr) { return false; }
 
 uptr FindDynamicShadowStart() {
   return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 // No-op. Mac does not support static linkage anyway.

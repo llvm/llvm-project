@@ -38,6 +38,7 @@
   ; CHECK-NEXT:    lw a7, 2036(sp) # 4-byte Folded Reload
   ; CHECK-NEXT:    addi sp, sp, 2032
   ; CHECK-NEXT:    addi sp, sp, 32
+  ; CHECK-NEXT:    .cfi_def_cfa_offset 0
   ; CHECK-NEXT:    ret
     ret void
   }

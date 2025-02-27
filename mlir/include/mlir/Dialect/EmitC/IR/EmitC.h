@@ -27,9 +27,14 @@
 #include "mlir/Dialect/EmitC/IR/EmitCDialect.h.inc"
 #include "mlir/Dialect/EmitC/IR/EmitCEnums.h.inc"
 
+#include <variant>
+
 namespace mlir {
 namespace emitc {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
+
+/// Determines whether \p type is valid in EmitC.
+bool isSupportedEmitCType(mlir::Type type);
 
 /// Determines whether \p type is a valid integer type in EmitC.
 bool isSupportedIntegerType(mlir::Type type);
@@ -40,6 +45,14 @@ bool isIntegerIndexOrOpaqueType(Type type);
 
 /// Determines whether \p type is a valid floating-point type in EmitC.
 bool isSupportedFloatType(mlir::Type type);
+
+/// Determines whether \p type is a emitc.size_t/ssize_t type.
+bool isPointerWideType(mlir::Type type);
+
+// Either a literal string, or an placeholder for the fmtArgs.
+struct Placeholder {};
+using ReplacementItem = std::variant<StringRef, Placeholder>;
+
 } // namespace emitc
 } // namespace mlir
 

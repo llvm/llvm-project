@@ -18,12 +18,13 @@ func.func @elementwise_static_1d_mesh_static_1d_tensor(
   %dps_out: tensor<2xi8>
 // CHECK-SAME: -> tensor<1xi8> {
 ) -> tensor<2xi8> {
-  %in1_shared1 = mesh.shard %in1 to <@mesh_1d, [[0]]> : tensor<2xi8>
-  %in1_shared2 = mesh.shard %in1_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
-  %in2_shared1 = mesh.shard %in2 to <@mesh_1d, [[0]]> : tensor<2xi8>
-  %in2_shared2 = mesh.shard %in2_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
-  %dps_out_shared1 = mesh.shard %dps_out to <@mesh_1d, [[0]]> : tensor<2xi8>
-  %dps_out_shared2 = mesh.shard %dps_out_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
+  %sharding = mesh.sharding @mesh_1d split_axes = [[0]]  : !mesh.sharding
+  %in1_sharded1 = mesh.shard %in1 to %sharding  : tensor<2xi8>
+  %in1_sharded2 = mesh.shard %in1_sharded1 to %sharding annotate_for_users : tensor<2xi8>
+  %in2_sharded1 = mesh.shard %in2 to %sharding : tensor<2xi8>
+  %in2_sharded2 = mesh.shard %in2_sharded1 to %sharding annotate_for_users : tensor<2xi8>
+  %dps_out_sharded1 = mesh.shard %dps_out to %sharding : tensor<2xi8>
+  %dps_out_shared2 = mesh.shard %dps_out_sharded1 to %sharding annotate_for_users : tensor<2xi8>
   // CHECK: %[[RES:.*]] = linalg.generic {
   // CHECK-SAME: indexing_maps = [#[[$MAP_IDENTITY_1D]], #[[$MAP_IDENTITY_1D]], #[[$MAP_IDENTITY_1D]]],
   // CHECK-SAME: iterator_types = ["parallel"]}
@@ -32,14 +33,14 @@ func.func @elementwise_static_1d_mesh_static_1d_tensor(
   %res = linalg.generic {
       indexing_maps = [#map_identity_1d, #map_identity_1d, #map_identity_1d],
       iterator_types = ["parallel"]
-    } ins(%in1_shared2, %in2_shared2 : tensor<2xi8>, tensor<2xi8>)
+    } ins(%in1_sharded2, %in2_sharded2 : tensor<2xi8>, tensor<2xi8>)
       outs(%dps_out_shared2 : tensor<2xi8>) {
     ^bb0(%in1_scalar: i8, %in2_scalar: i8, %out: i8):
       %res_scalar = arith.muli %in1_scalar, %in2_scalar : i8
       linalg.yield %res_scalar : i8
     } -> tensor<2xi8>
-  %res_shared1 = mesh.shard %res to <@mesh_1d, [[0]]> : tensor<2xi8>
-  %res_shared2 = mesh.shard %res_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
+  %res_sharded1 = mesh.shard %res to %sharding : tensor<2xi8>
+  %res_shared2 = mesh.shard %res_sharded1 to %sharding annotate_for_users : tensor<2xi8>
   // CHECK: return %[[RES]] : tensor<1xi8>
   return %res_shared2 : tensor<2xi8>
 }
@@ -58,20 +59,22 @@ func.func @matmul_1d_mesh_static_tensors_parallel_iterator_sharding(
   %dps_out: tensor<4x8xi8>
 // CHECK-SAME: -> tensor<1x8xi8> {
 ) -> tensor<4x8xi8> {
-  %in1_shared1 = mesh.shard %in1 to <@mesh_1d, [[0]]> : tensor<4x3xi8>
-  %in1_shared2 = mesh.shard %in1_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<4x3xi8>
-  %in2_shared1 = mesh.shard %in2 to <@mesh_1d, [[]]> : tensor<3x8xi8>
-  %in2_shared2 = mesh.shard %in2_shared1 to <@mesh_1d, [[]]> annotate_for_users: tensor<3x8xi8>
-  %dps_out_shared1 = mesh.shard %dps_out to <@mesh_1d, [[0]]> : tensor<4x8xi8>
-  %dps_out_shared2 = mesh.shard %dps_out_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<4x8xi8>
+  %sharding = mesh.sharding @mesh_1d split_axes = [[0]] : !mesh.sharding
+  %in1_shared1 = mesh.shard %in1 to %sharding : tensor<4x3xi8>
+  %in1_shared2 = mesh.shard %in1_shared1 to %sharding annotate_for_users : tensor<4x3xi8>
+  %sharding2 = mesh.sharding @mesh_1d split_axes = [[]] : !mesh.sharding
+  %in2_shared1 = mesh.shard %in2 to %sharding2 : tensor<3x8xi8>
+  %in2_shared2 = mesh.shard %in2_shared1 to %sharding2 annotate_for_users : tensor<3x8xi8>
+  %dps_out_shared1 = mesh.shard %dps_out to %sharding : tensor<4x8xi8>
+  %dps_out_shared2 = mesh.shard %dps_out_shared1 to %sharding annotate_for_users : tensor<4x8xi8>
   // CHECK: %[[RES:.*]] = linalg.matmul
   // CHECK-SAME: ins(%[[IN1]], %[[IN2]] : tensor<1x3xi8>, tensor<3x8xi8>)
   // CHECK-SAME: outs(%[[DPS_OUT]] : tensor<1x8xi8>)
   // CHECK-SAME: -> tensor<1x8xi8>
   %res = linalg.matmul ins(%in1_shared2, %in2_shared2 : tensor<4x3xi8>, tensor<3x8xi8>)
       outs(%dps_out_shared2 : tensor<4x8xi8>) -> tensor<4x8xi8>
-  %res_shared1 = mesh.shard %res to <@mesh_1d, [[0]]> : tensor<4x8xi8>
-  %res_shared2 = mesh.shard %res_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<4x8xi8>
+  %res_shared1 = mesh.shard %res to %sharding : tensor<4x8xi8>
+  %res_shared2 = mesh.shard %res_shared1 to %sharding annotate_for_users : tensor<4x8xi8>
   // CHECK: return %[[RES]] : tensor<1x8xi8>
   return %res_shared2 : tensor<4x8xi8>
 }
@@ -90,12 +93,15 @@ func.func @matmul_1d_mesh_static_tensors_reduction_iterator_sharding(
   %dps_out: tensor<4x8xi8>
 // CHECK-SAME: -> tensor<4x8xi8> {
 ) -> tensor<4x8xi8> {
-  %in1_shared1 = mesh.shard %in1 to <@mesh_1d, [[], [0]]> : tensor<4x6xi8>
-  %in1_shared2 = mesh.shard %in1_shared1 to <@mesh_1d, [[], [0]]> annotate_for_users: tensor<4x6xi8>
-  %in2_shared1 = mesh.shard %in2 to <@mesh_1d, [[0]]> : tensor<6x8xi8>
-  %in2_shared2 = mesh.shard %in2_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<6x8xi8>
-  %dps_out_shared1 = mesh.shard %dps_out to <@mesh_1d, [[]]> : tensor<4x8xi8>
-  %dps_out_shared2 = mesh.shard %dps_out_shared1 to <@mesh_1d, [[]]> annotate_for_users: tensor<4x8xi8>
+  %sharding = mesh.sharding @mesh_1d split_axes = [[], [0]] : !mesh.sharding
+  %in1_shared1 = mesh.shard %in1 to %sharding : tensor<4x6xi8>
+  %in1_shared2 = mesh.shard %in1_shared1 to %sharding annotate_for_users : tensor<4x6xi8>
+  %sharding2 = mesh.sharding @mesh_1d split_axes = [[0]] : !mesh.sharding
+  %in2_shared1 = mesh.shard %in2 to %sharding2 : tensor<6x8xi8>
+  %in2_shared2 = mesh.shard %in2_shared1 to %sharding2 annotate_for_users : tensor<6x8xi8>
+  %sharding3 = mesh.sharding @mesh_1d split_axes = [[]] : !mesh.sharding
+  %dps_out_shared1 = mesh.shard %dps_out to %sharding3 : tensor<4x8xi8>
+  %dps_out_shared2 = mesh.shard %dps_out_shared1 to %sharding3 annotate_for_users : tensor<4x8xi8>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:  %[[C0_I8:.*]] = arith.constant 0 : i8
   // CHECK-DAG:  %[[PROCESS_IDX:.*]] = mesh.process_multi_index on @mesh_1d axes = [0] : index
@@ -114,8 +120,8 @@ func.func @matmul_1d_mesh_static_tensors_reduction_iterator_sharding(
   // CHECK:      %[[ALL_REDUCED:.*]] = mesh.all_reduce %[[SHARDED_MATMUL]] on @mesh_1d mesh_axes = [0] : tensor<4x8xi8> -> tensor<4x8xi8>
   %res = linalg.matmul ins(%in1_shared2, %in2_shared2 : tensor<4x6xi8>, tensor<6x8xi8>)
       outs(%dps_out_shared2 : tensor<4x8xi8>) -> tensor<4x8xi8>
-  %res_shared1 = mesh.shard %res to <@mesh_1d, [[]]> : tensor<4x8xi8>
-  %res_shared2 = mesh.shard %res_shared1 to <@mesh_1d, [[]]> annotate_for_users: tensor<4x8xi8>
+  %res_shared1 = mesh.shard %res to %sharding3 : tensor<4x8xi8>
+  %res_shared2 = mesh.shard %res_shared1 to %sharding3 annotate_for_users : tensor<4x8xi8>
   // CHECK:      return %[[ALL_REDUCED]] : tensor<4x8xi8>
   return %res_shared2 : tensor<4x8xi8>
 }
@@ -134,12 +140,16 @@ func.func @matmul_1d_mesh_static_tensors_reduction_iterator_sharding_with_partia
   %dps_out: tensor<4x8xi8>
 // CHECK-SAME: -> tensor<4x8xi8> {
 ) -> tensor<4x8xi8> {
-  %in1_shared1 = mesh.shard %in1 to <@mesh_1d, [[], [0]]> : tensor<4x6xi8>
-  %in1_shared2 = mesh.shard %in1_shared1 to <@mesh_1d, [[], [0]]> annotate_for_users: tensor<4x6xi8>
-  %in2_shared1 = mesh.shard %in2 to <@mesh_1d, [[0]]> : tensor<6x8xi8>
-  %in2_shared2 = mesh.shard %in2_shared1 to <@mesh_1d, [[0]]> annotate_for_users: tensor<6x8xi8>
-  %dps_out_shared1 = mesh.shard %dps_out to <@mesh_1d, [[]]> : tensor<4x8xi8>
-  %dps_out_shared2 = mesh.shard %dps_out_shared1 to <@mesh_1d, [[]]> annotate_for_users: tensor<4x8xi8>
+  %sharding = mesh.sharding @mesh_1d split_axes = [[], [0]] : !mesh.sharding
+  %in1_shared1 = mesh.shard %in1 to %sharding : tensor<4x6xi8>
+  %in1_shared2 = mesh.shard %in1_shared1 to %sharding annotate_for_users : tensor<4x6xi8>
+  %sharding2 = mesh.sharding @mesh_1d split_axes = [[0]] : !mesh.sharding
+  %in2_shared1 = mesh.shard %in2 to %sharding2 : tensor<6x8xi8>
+  %in2_shared2 = mesh.shard %in2_shared1 to %sharding2 annotate_for_users : tensor<6x8xi8>
+  %sharding3 = mesh.sharding @mesh_1d split_axes = [[]] : !mesh.sharding
+  %dps_out_shared1 = mesh.shard %dps_out to %sharding3 : tensor<4x8xi8>
+  %sdps_out_shared2 = mesh.sharding @mesh_1d split_axes = [[]] : !mesh.sharding
+  %dps_out_shared2 = mesh.shard %dps_out_shared1 to %sharding3 annotate_for_users : tensor<4x8xi8>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:  %[[C0_I8:.*]] = arith.constant 0 : i8
   // CHECK-DAG:  %[[PROCESS_IDX:.*]] = mesh.process_multi_index on @mesh_1d axes = [0] : index
@@ -157,8 +167,46 @@ func.func @matmul_1d_mesh_static_tensors_reduction_iterator_sharding_with_partia
   // CHECK-SAME:     outs(%[[DPS_INIT_OPERAND]] : tensor<4x8xi8>) -> tensor<4x8xi8>
   %res = linalg.matmul ins(%in1_shared2, %in2_shared2 : tensor<4x6xi8>, tensor<6x8xi8>)
       outs(%dps_out_shared2 : tensor<4x8xi8>) -> tensor<4x8xi8>
-  %res_shared1 = mesh.shard %res to <@mesh_1d, [[]], partial = sum[0]> : tensor<4x8xi8>
-  %res_shared2 = mesh.shard %res_shared1 to <@mesh_1d, [[]], partial = sum[0]> annotate_for_users: tensor<4x8xi8>
+  %sharding4 = mesh.sharding @mesh_1d split_axes = [[]] partial = sum[0] : !mesh.sharding
+  %res_shared1 = mesh.shard %res to %sharding4 : tensor<4x8xi8>
+  %res_shared2 = mesh.shard %res_shared1 to %sharding4 annotate_for_users : tensor<4x8xi8>
   // CHECK:      return %[[SHARDED_MATMUL]] : tensor<4x8xi8>
   return %res_shared2 : tensor<4x8xi8>
+}
+
+// -----
+
+mesh.mesh @mesh_1d(shape = 4)
+
+// CHECK-LABEL: func @matmul_1d_mesh_static_tensors_parallel_iterator_unsplit_last_axis
+func.func @matmul_1d_mesh_static_tensors_parallel_iterator_unsplit_last_axis(
+  // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<4x6xi8>,
+  %in1: tensor<4x6xi8>,
+  // CHECK-SAME: %[[IN2:[A-Za-z0-9_]+]]: tensor<6x8xi8>,
+  %in2: tensor<6x8xi8>,
+  // CHECK-SAME: %[[DPS_OUT:[A-Za-z0-9_]+]]: tensor<4x8xi8>
+  %dps_out: tensor<4x8xi8>
+  // CHECK-SAME: -> tensor<4x8xi8> {
+) -> tensor<4x8xi8> {
+  %sharding1 = mesh.sharding @mesh_1d split_axes = [[], []] : !mesh.sharding
+  %in1_replicated1 = mesh.shard %in1 to %sharding1 : tensor<4x6xi8>
+  %in1_replicated2 = mesh.shard %in1_replicated1 to %sharding1 annotate_for_users : tensor<4x6xi8>
+  // CHECK: %[[ALL_SLICE1:.*]] = mesh.all_slice %[[IN2]] on @mesh_1d mesh_axes = [0] slice_axis = 1
+  %in2_replicated = mesh.shard %in2 to %sharding1 : tensor<6x8xi8>
+  %sharding2 = mesh.sharding @mesh_1d split_axes = [[], [0]] : !mesh.sharding
+  %in2_sharded = mesh.shard %in2_replicated to %sharding2 annotate_for_users : tensor<6x8xi8>
+  // CHECK: %[[ALL_SLICE2:.*]] = mesh.all_slice %[[DPS_OUT]] on @mesh_1d mesh_axes = [0] slice_axis = 1
+  %dps_out_replicated = mesh.shard %dps_out to %sharding1 : tensor<4x8xi8>
+  %dps_out_sharded = mesh.shard %dps_out_replicated to %sharding2 annotate_for_users : tensor<4x8xi8>
+  // CHECK: %[[MATMUL_RES:.*]] = linalg.matmul
+  // CHECK-SAME: ins(%[[IN1]], %[[ALL_SLICE1]] : tensor<4x6xi8>, tensor<6x2xi8>)
+  // CHECK-SAME: outs(%[[ALL_SLICE2]] : tensor<4x2xi8>)
+  // CHECK-SAME: -> tensor<4x2xi8>
+  %res = linalg.matmul ins(%in1_replicated2, %in2_sharded : tensor<4x6xi8>, tensor<6x8xi8>)
+      outs(%dps_out_sharded : tensor<4x8xi8>) -> tensor<4x8xi8>
+  // CHECK: %[[ALL_GATHER:.*]] = mesh.all_gather %[[MATMUL_RES]] on @mesh_1d mesh_axes = [0] gather_axis = 1 : tensor<4x2xi8> -> tensor<4x8xi8>
+  %res_sharded = mesh.shard %res to %sharding2 : tensor<4x8xi8>
+  %res_replicated = mesh.shard %res_sharded to %sharding1 annotate_for_users : tensor<4x8xi8>
+  // CHECK: return %[[ALL_GATHER]] : tensor<4x8xi8>
+  return %res_replicated : tensor<4x8xi8>
 }

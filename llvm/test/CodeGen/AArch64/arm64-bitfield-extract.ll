@@ -810,7 +810,7 @@ define i32 @fct19(i64 %arg1) nounwind readonly ssp  {
 ; LLC-NEXT:    add w0, w8, #16
 ; LLC-NEXT:    ret
 ; LLC-NEXT:  .LBB26_4: // %if.end13
-; LLC-NEXT:    ubfx x8, x0, #16, #16
+; LLC-NEXT:    lsr w8, w0, #16
 ; LLC-NEXT:    cbz w8, .LBB26_6
 ; LLC-NEXT:  // %bb.5: // %if.then17
 ; LLC-NEXT:    adrp x9, first_ones
@@ -1032,7 +1032,7 @@ define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[SHR47:%.*]] = lshr i64 [[SRC:%.*]], 47
 ; OPT-NEXT:    [[SRC2_TRUNC:%.*]] = trunc i64 [[SRC2:%.*]] to i32
-; OPT-NEXT:    br i1 undef, label [[END:%.*]], label [[IF_ELSE:%.*]]
+; OPT-NEXT:    br i1 poison, label [[END:%.*]], label [[IF_ELSE:%.*]]
 ; OPT:       if.else:
 ; OPT-NEXT:    [[AND3:%.*]] = and i32 [[SRC2_TRUNC]], 3
 ; OPT-NEXT:    [[SHL2:%.*]] = shl nuw nsw i64 [[SHR47]], 2
@@ -1050,7 +1050,7 @@ define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 entry:
   %shr47 = lshr i64 %src, 47
   %src2.trunc = trunc i64 %src2 to i32
-  br i1 undef, label %end, label %if.else
+  br i1 poison, label %end, label %if.else
 
 if.else:
   %and3 = and i32 %src2.trunc, 3

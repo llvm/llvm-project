@@ -1,8 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
 
 #include "Inputs/system-header-simulator.h"
@@ -263,4 +263,13 @@ void error_fseek_read_eof(void) {
   }
   fgetc(F); // no warning
   fclose(F);
+}
+
+void check_note_at_use_after_close(void) {
+  FILE *F = tmpfile();
+  if (!F) // expected-note {{'F' is non-null}} expected-note {{Taking false branch}}
+    return;
+  fclose(F); // expected-note {{Stream is closed here}}
+  rewind(F); // expected-warning {{Use of a stream that might be already closed}}
+  // expected-note@-1 {{Use of a stream that might be already closed}}
 }

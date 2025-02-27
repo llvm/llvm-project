@@ -14,11 +14,13 @@
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 #if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
@@ -230,7 +232,7 @@ rotl(T value, int rotate) {
     return value;
   if (rotate < 0)
     return cpp::rotr<T>(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
+  return static_cast<T>((value << rotate) | (value >> (N - rotate)));
 }
 
 template <typename T>
@@ -242,7 +244,7 @@ rotr(T value, int rotate) {
     return value;
   if (rotate < 0)
     return cpp::rotl<T>(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
+  return static_cast<T>((value >> rotate) | (value << (N - rotate)));
 }
 
 // TODO: Do we need this function at all? How is it different from
@@ -271,9 +273,10 @@ template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 popcount(T value) {
   int count = 0;
-  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    if ((value >> i) & 0x1)
-      ++count;
+  while (value) {
+    value &= value - 1;
+    ++count;
+  }
   return count;
 }
 #define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
@@ -289,6 +292,7 @@ ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
 #endif // __builtin_popcountg
 #undef ADD_SPECIALIZATION
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

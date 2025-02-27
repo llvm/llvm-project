@@ -64,9 +64,6 @@ func.func @remap_call_1_to_1(%arg0: i64) {
 // Contents of the old block are moved to the new block.
 // CHECK-NEXT: notifyOperationInserted: test.return, was linked, exact position unknown
 
-// The new block arguments are used in "test.return".
-// CHECK-NEXT: notifyOperationModified: test.return
-
 // The old block is erased.
 // CHECK-NEXT: notifyBlockErased
 
@@ -124,10 +121,10 @@ func.func @no_remap_nested() {
   // CHECK-NEXT: "foo.region"
   // expected-remark@+1 {{op 'foo.region' is not legalizable}}
   "foo.region"() ({
-    // CHECK-NEXT: ^bb0(%{{.*}}: i64, %{{.*}}: i16, %{{.*}}: i64):
-    ^bb0(%i0: i64, %unused: i16, %i1: i64):
-      // CHECK-NEXT: "test.valid"{{.*}} : (i64, i64)
-      "test.invalid"(%i0, %i1) : (i64, i64) -> ()
+    // CHECK-NEXT: ^bb0(%{{.*}}: f64, %{{.*}}: i16, %{{.*}}: f64):
+    ^bb0(%i0: f64, %unused: i16, %i1: f64):
+      // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64)
+      "test.invalid"(%i0, %i1) : (f64, f64) -> ()
   }) : () -> ()
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
@@ -379,15 +376,24 @@ builtin.module {
 
 // -----
 
-// expected-remark @below {{applyPartialConversion failed}}
 module {
-  func.func private @callee(%0 : f32) -> f32
+// CHECK-LABEL: func.func private @callee() -> (f16, f16)
+func.func private @callee() -> (f32, i24)
 
-  func.func @caller( %arg: f32) {
-    // expected-error @below {{failed to legalize}}
-    %1 = func.call @callee(%arg) : (f32) -> f32
-    return
-  }
+// CHECK: func.func @caller()
+func.func @caller() {
+  // f32 is converted to (f16, f16).
+  // i24 is converted to ().
+  // CHECK: %[[call:.*]]:2 = call @callee() : () -> (f16, f16)
+  %0:2 = func.call @callee() : () -> (f32, i24)
+
+  // CHECK-DAG: %[[cast1:.*]] = "test.cast"() : () -> i24
+  // CHECK-DAG: %[[cast0:.*]] = "test.cast"(%[[call]]#0, %[[call]]#1) : (f16, f16) -> f32
+  // CHECK: "test.some_user"(%[[cast0]], %[[cast1]]) : (f32, i24) -> ()
+  // expected-remark @below{{'test.some_user' is not legalizable}}
+  "test.some_user"(%0#0, %0#1) : (f32, i24) -> ()
+  "test.return"() : () -> ()
+}
 }
 
 // -----
@@ -408,10 +414,10 @@ func.func @test_move_op_before_rollback() {
 
 // CHECK-LABEL: func @test_properties_rollback()
 func.func @test_properties_rollback() {
-  // CHECK: test.with_properties <{a = 32 : i64,
+  // CHECK: test.with_properties a = 32,
   // expected-remark @below{{op 'test.with_properties' is not legalizable}}
   test.with_properties
-      <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, b = "foo"}>
+      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]
       {modify_inplace}
   "test.return"() : () -> ()
 }
@@ -426,4 +432,68 @@ func.func @use_of_replaced_bbarg(%arg0: i64) {
     "foo.op_with_region_terminator"() : () -> ()
   }) : (i64) -> (i64)
   "test.invalid"(%0) : (i64) -> ()
+}
+
+// -----
+
+// CHECK-LABEL: @fold_legalization
+func.func @fold_legalization() -> i32 {
+  // CHECK: op_in_place_self_fold
+  // CHECK-SAME: folded
+  %1 = "test.op_in_place_self_fold"() : () -> (i32)
+  "test.return"(%1) : (i32) -> ()
+}
+
+// -----
+
+// CHECK-LABEL: func @convert_detached_signature()
+//       CHECK:   "test.legal_op"() ({
+//       CHECK:   ^bb0(%arg0: f64):
+//       CHECK:     "test.return"() : () -> ()
+//       CHECK:   }) : () -> ()
+func.func @convert_detached_signature() {
+  "test.detached_signature_conversion"() ({
+  ^bb0(%arg0: i64):
+    "test.return"() : () -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: func @circular_mapping()
+//  CHECK-NEXT:   "test.valid"() : () -> ()
+func.func @circular_mapping() {
+  // Regression test that used to crash due to circular
+  // unrealized_conversion_cast ops.
+  %0 = "test.erase_op"() : () -> (i64)
+  "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
+}
+
+// -----
+
+func.func @test_1_to_n_block_signature_conversion() {
+  "test.duplicate_block_args"() ({
+  ^bb0(%arg0: i64):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
+  }) {} : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK: notifyOperationInserted: test.step_1
+// CHECK: notifyOperationReplaced: test.multiple_1_to_n_replacement
+// CHECK: notifyOperationErased: test.multiple_1_to_n_replacement
+// CHECK: notifyOperationInserted: test.legal_op
+// CHECK: notifyOperationReplaced: test.step_1
+// CHECK: notifyOperationErased: test.step_1
+
+// CHECK-LABEL: func @test_multiple_1_to_n_replacement()
+//       CHECK:   %[[legal_op:.*]]:4 = "test.legal_op"() : () -> (f16, f16, f16, f16)
+//       CHECK:   %[[cast:.*]] = "test.cast"(%[[legal_op]]#0, %[[legal_op]]#1, %[[legal_op]]#2, %[[legal_op]]#3) : (f16, f16, f16, f16) -> f16
+//       CHECK:   "test.valid"(%[[cast]]) : (f16) -> ()
+func.func @test_multiple_1_to_n_replacement() {
+  %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
+  "test.invalid"(%0) : (f16) -> ()
 }

@@ -124,6 +124,12 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
   return g_program_filespec;
 }
 
+/// Resolve the given candidate support dir and return true if it's valid.
+static bool ResolveAndVerifyCandidateSupportDir(FileSpec &path) {
+  FileSystem::Instance().Resolve(path);
+  return FileSystem::Instance().IsDirectory(path);
+}
+
 bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec = GetShlibDir();
   if (!lldb_file_spec)
@@ -144,16 +150,24 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
 #endif
   } else {
     // Find the bin path relative to the lib path where the cmake-based
-    // OS X .dylib lives.  This is not going to work if the bin and lib
-    // dir are not both in the same dir.
+    // OS X .dylib lives. We try looking first at a possible sibling `bin`
+    // directory, and then at the `lib` directory itself. This last case is
+    // useful for supporting build systems like Bazel which in many cases prefer
+    // to place support binaries right next to dylibs.
     //
-    // It is not going to work to do it by the executable path either,
+    // It is not going to work to do it by the executable path,
     // as in the case of a python script, the executable is python, not
     // the lldb driver.
-    raw_path.append("/../bin");
-    FileSpec support_dir_spec(raw_path);
-    FileSystem::Instance().Resolve(support_dir_spec);
-    if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
+    FileSpec support_dir_spec_lib(raw_path);
+    FileSpec support_dir_spec_bin =
+        support_dir_spec_lib.CopyByAppendingPathComponent("/../bin");
+    FileSpec support_dir_spec;
+
+    if (ResolveAndVerifyCandidateSupportDir(support_dir_spec_bin)) {
+      support_dir_spec = support_dir_spec_bin;
+    } else if (ResolveAndVerifyCandidateSupportDir(support_dir_spec_lib)) {
+      support_dir_spec = support_dir_spec_lib;
+    } else {
       Log *log = GetLog(LLDBLog::Host);
       LLDB_LOG(log, "failed to find support directory");
       return false;
@@ -636,12 +650,15 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
   if (!dyld_process)
     return false;
 
+  auto cleanup_process_on_exit =
+      llvm::make_scope_exit([&]() { dyld_process_dispose(dyld_process); });
+
   dyld_process_snapshot_t snapshot =
       dyld_process_snapshot_create_for_process(dyld_process, nullptr);
   if (!snapshot)
     return false;
 
-  auto on_exit =
+  auto cleanup_snapshot_on_exit =
       llvm::make_scope_exit([&]() { dyld_process_snapshot_dispose(snapshot); });
 
   dyld_shared_cache_t shared_cache =

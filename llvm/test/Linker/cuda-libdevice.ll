@@ -4,8 +4,8 @@
 ; RUN: llvm-as %p/Inputs/libdevice-cuda-9.ll -o %t/libdevice.compute_35.10.bc
 ; RUN: llvm-as %p/Inputs/libdevice-cuda-10.ll -o %t/libdevice.10.bc
 ; RUN: llvm-as %p/Inputs/libdevice-cuda-11.ll -o %t/libdevice.11.10.bc
-; RUN: llvm-as %p/Inputs/libdevice-cuda-9.ll -o %t/correct-libdevice-wrong-filename.bc
 ; RUN: llvm-as %p/Inputs/not-a-libdevice.ll -o %t/libdevice-with-wrong-info.bc
+; RUN: llvm-as %p/Inputs/libdevice-with-wrong-dl.ll -o %t/libdevice-with-wrong-dl.bc
 
 ; No warnings expected when we link with libdevice variants
 ; RUN: llvm-link %t/main.bc %t/libdevice.compute_35.10.bc -S 2>&1 \
@@ -15,12 +15,12 @@
 ; RUN: llvm-link %t/main.bc %t/libdevice.11.10.bc -S 2>&1 \
 ; RUN:  | FileCheck --check-prefixes COMMON,NOWARN %s
 
-; But make sure we still issue warnings if we see unexpected filename, or
-; unexpected triple or datalayout within a libdevice filename.
-; RUN: llvm-link %t/main.bc %t/correct-libdevice-wrong-filename.bc -S 2>&1 \
-; RUN:  | FileCheck --check-prefixes COMMON,WARN-TRIPLE %s
+; But make sure we still issue warnings if we see unexpected triple or
+; datalayout within a libdevice module.
 ; RUN: llvm-link %t/main.bc %t/libdevice-with-wrong-info.bc -S 2>&1 \
 ; RUN:  | FileCheck --check-prefixes COMMON,WARN-TRIPLE,WARN-DL %s
+; RUN: llvm-link %t/main.bc %t/libdevice-with-wrong-dl.bc -S 2>&1 \
+; RUN:  | FileCheck --check-prefixes COMMON,NOWARN,WARN-DL %s
 
 
 target triple = "nvptx64-nvidia-cuda"

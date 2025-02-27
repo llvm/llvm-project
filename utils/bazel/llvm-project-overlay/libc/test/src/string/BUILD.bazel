@@ -23,7 +23,7 @@ libc_test(
     name = "strcpy_test",
     srcs = ["strcpy_test.cpp"],
     libc_function_deps = [
-        "//libc:strcpy_sanitized",
+        "//libc:strcpy",
     ],
 )
 
@@ -121,8 +121,18 @@ libc_support_library(
     deps = [
         "//libc:__support_cpp_span",
         "//libc:__support_libc_assert",
+        "//libc:__support_macros_config",
         "//libc:__support_macros_sanitizer",
         "//libc:string_memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "protected_pages",
+    hdrs = ["memory_utils/protected_pages.h"],
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_macros_properties_os",
     ],
 )
 
@@ -132,7 +142,11 @@ libc_test(
     libc_function_deps = [
         "//libc:memcpy",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        ":protected_pages",
+        "//libc:__support_macros_properties_os",
+    ],
 )
 
 libc_test(
@@ -149,7 +163,11 @@ libc_test(
     libc_function_deps = [
         "//libc:memset",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        ":protected_pages",
+        "//libc:__support_macros_properties_os",
+    ],
 )
 
 libc_test(
@@ -158,19 +176,6 @@ libc_test(
     libc_function_deps = [
         "//libc:memcmp",
         "//libc:memmove",
-    ],
-    deps = [
-        ":memory_check_utils",
-        "//libc:__support_cpp_span",
-        "//libc/test/UnitTest:memory_matcher",
-    ],
-)
-
-libc_test(
-    name = "bcopy_test",
-    srcs = ["bcopy_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcopy",
     ],
     deps = [
         ":memory_check_utils",
@@ -189,25 +194,4 @@ libc_test(
         ":memory_check_utils",
         "//libc/test/UnitTest:test_logger",
     ],
-)
-
-libc_test(
-    name = "bcmp_test",
-    srcs = ["bcmp_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcmp",
-    ],
-    deps = [
-        ":memory_check_utils",
-        "//libc/test/UnitTest:test_logger",
-    ],
-)
-
-libc_test(
-    name = "bzero_test",
-    srcs = ["bzero_test.cpp"],
-    libc_function_deps = [
-        "//libc:bzero",
-    ],
-    deps = [":memory_check_utils"],
 )

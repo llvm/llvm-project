@@ -25,11 +25,12 @@ add_flang_library(FortranParser
   user-state.cpp
 
   LINK_LIBS
-  FortranCommon
+  FortranSupport
 
   LINK_COMPONENTS
   Support
   FrontendOpenACC
+  FrontendOpenMP
 
   DEPENDS
   omp_gen

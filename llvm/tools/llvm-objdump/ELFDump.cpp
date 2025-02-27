@@ -17,7 +17,6 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -79,8 +78,8 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
     return SectionsOrError.takeError();
 
   for (const typename ELFT::Shdr &Sec : *SectionsOrError) {
-    if (Sec.sh_type == ELF::SHT_DYNSYM)
-      return Elf.getStringTableForSymtab(Sec);
+    if (Sec.sh_type == ELF::SHT_DYNAMIC)
+      return Elf.getLinkAsStrtab(Sec);
   }
 
   return createError("dynamic string table not found");
@@ -104,7 +103,11 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   // In SHT_REL case we would need to read the addend from section data.
   // GNU objdump does not do that and we just follow for simplicity atm.
   bool Undef = false;
-  if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
+  if ((*SecOrErr)->sh_type == ELF::SHT_CREL) {
+    auto ERela = Obj->getCrel(Rel);
+    Addend = ERela.r_addend;
+    Undef = ERela.getSymbol(false) == 0;
+  } else if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
     const typename ELFT::Rela *ERela = Obj->getRela(Rel);
     Addend = ERela->r_addend;
     Undef = ERela->getSymbol(false) == 0;
@@ -266,7 +269,7 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
       outs() << "   RELRO ";
       break;
     case ELF::PT_GNU_PROPERTY:
-      outs() << "   PROPERTY ";
+      outs() << "PROPERTY ";
       break;
     case ELF::PT_GNU_STACK:
       outs() << "   STACK ";

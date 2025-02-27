@@ -1,0 +1,24 @@
+; REQUIRES: x86_64-linux
+
+; RUN: not llvm-ctxprof-util nofile.yaml 2>&1 | FileCheck %s --check-prefix=NO_CMD
+; RUN: not llvm-ctxprof-util invalidCmd --input nofile.yaml 2>&1 | FileCheck %s --check-prefix=INVALID_CMD
+; RUN: not llvm-ctxprof-util fromYAML nofile.yaml 2>&1 | FileCheck %s --check-prefix=NO_FLAG
+; RUN: not llvm-ctxprof-util fromYAML --input nofile.yaml 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NO_FILE
+; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/bad.yaml 2>&1 | FileCheck %s --check-prefix=BAD_FORMAT
+; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-no-vector.yaml 2>&1 | FileCheck %s --check-prefix=NO_VECTOR
+; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-no-ctx.yaml 2>&1 | FileCheck %s --check-prefix=NO_CTX
+; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-no-counters.yaml 2>&1 | FileCheck %s --check-prefix=NO_COUNTERS
+; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/invalid-bad-subctx.yaml 2>&1 | FileCheck %s --check-prefix=BAD_SUBCTX
+; RUN: rm -rf %t
+; RUN: not llvm-ctxprof-util fromYAML --input %S/Inputs/valid.yaml --output %t/output.bitstream 2>&1 | FileCheck %s --check-prefix=NO_DIR
+
+; NO_CMD: Unknown subcommand 'nofile.yaml'
+; INVALID_CMD: Unknown subcommand 'invalidCmd'
+; NO_FLAG: Unknown command line argument 'nofile.yaml'. 
+; NO_FILE: 'nofile.yaml': [[MSG]]
+; BAD_FORMAT: YAML:1:3: error: not a mapping
+; NO_VECTOR: YAML:1:1: error: not a sequence
+; NO_CTX: YAML:1:2: error: not a mapping
+; NO_COUNTERS: YAML:1:3: error: missing required key 'Counters'
+; BAD_SUBCTX: YAML:3:16: error: not a sequence
+; NO_DIR: failed to open output

@@ -14,93 +14,90 @@
 #include "Basic/SequenceToOffsetTable.h"
 #include "Common/CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/VersionTuple.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+
 #include <string>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
 
-struct DXILShaderModel {
-  int Major = 0;
-  int Minor = 0;
+struct DXILIntrinsicSelect {
+  StringRef Intrinsic;
+  SmallVector<const Record *> ArgSelectRecords;
 };
+
+static StringRef StripIntrinArgSelectTypePrefix(StringRef Type) {
+  StringRef Prefix = "IntrinArgSelect_";
+  if (!Type.starts_with(Prefix)) {
+    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
+                    "'IntrinArgSelect_'");
+  }
+  return Type.substr(Prefix.size());
+}
 
 struct DXILOperationDesc {
   std::string OpName; // name of DXIL operation
   int OpCode;         // ID of DXIL operation
   StringRef OpClass;  // name of the opcode class
   StringRef Doc;      // the documentation description of this instruction
-  SmallVector<Record *> OpTypes; // Vector of operand type records -
-                                 // return type is at index 0
-  SmallVector<std::string>
-      OpAttributes;     // operation attribute represented as strings
-  StringRef Intrinsic;  // The llvm intrinsic map to OpName. Default is "" which
-                        // means no map exists
-  bool IsDeriv = false; // whether this is some kind of derivative
-  bool IsGradient = false; // whether this requires a gradient calculation
-  bool IsFeedback = false; // whether this is a sampler feedback op
-  bool IsWave =
-      false; // whether this requires in-wave, cross-lane functionality
-  bool RequiresUniformInputs = false; // whether this operation requires that
-                                      // all of its inputs are uniform across
-                                      // the wave
+  // Vector of operand type records - return type is at index 0
+  SmallVector<const Record *> OpTypes;
+  SmallVector<const Record *> OverloadRecs;
+  SmallVector<const Record *> StageRecs;
+  SmallVector<const Record *> AttrRecs;
+  SmallVector<const Record *> PropRecs;
+  SmallVector<DXILIntrinsicSelect> IntrinsicSelects;
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
-  DXILShaderModel ShaderModel;           // minimum shader model required
-  DXILShaderModel ShaderModelTranslated; // minimum shader model required with
-                                         // translation by linker
   int OverloadParamIndex;             // Index of parameter with overload type.
                                       //   -1 : no overload types
-  SmallVector<StringRef, 4> counters; // counters for this inst.
+  SmallVector<StringRef, 4> Counters; // counters for this inst.
   DXILOperationDesc(const Record *);
 };
 } // end anonymous namespace
 
-/// Return dxil::ParameterKind corresponding to input LLVMType record
-///
-/// \param R TableGen def record of class LLVMType
-/// \return ParameterKind As defined in llvm/Support/DXILABI.h
+/// In-place sort TableGen records of class with a field
+///    Version dxil_version
+/// in the ascending version order.
+static void ascendingSortByVersion(std::vector<const Record *> &Recs) {
+  sort(Recs, [](const Record *RecA, const Record *RecB) {
+    unsigned RecAMaj =
+        RecA->getValueAsDef("dxil_version")->getValueAsInt("Major");
+    unsigned RecAMin =
+        RecA->getValueAsDef("dxil_version")->getValueAsInt("Minor");
+    unsigned RecBMaj =
+        RecB->getValueAsDef("dxil_version")->getValueAsInt("Major");
+    unsigned RecBMin =
+        RecB->getValueAsDef("dxil_version")->getValueAsInt("Minor");
 
-static ParameterKind getParameterKind(const Record *R) {
-  auto VTRec = R->getValueAsDef("VT");
-  switch (getValueType(VTRec)) {
-  case MVT::isVoid:
-    return ParameterKind::Void;
-  case MVT::f16:
-    return ParameterKind::Half;
-  case MVT::f32:
-    return ParameterKind::Float;
-  case MVT::f64:
-    return ParameterKind::Double;
-  case MVT::i1:
-    return ParameterKind::I1;
-  case MVT::i8:
-    return ParameterKind::I8;
-  case MVT::i16:
-    return ParameterKind::I16;
-  case MVT::i32:
-    return ParameterKind::I32;
-  case MVT::fAny:
-  case MVT::iAny:
-    return ParameterKind::Overload;
-  case MVT::Other:
-    // Handle DXIL-specific overload types
-    if (R->getValueAsInt("isHalfOrFloat") || R->getValueAsInt("isI16OrI32")) {
-      return ParameterKind::Overload;
+    return (VersionTuple(RecAMaj, RecAMin) < VersionTuple(RecBMaj, RecBMin));
+  });
+}
+
+/// Take a `int_{intrinsic_name}` and return just the intrinsic_name part if
+/// available. Otherwise return the empty string.
+static StringRef GetIntrinsicName(const RecordVal *RV) {
+  if (RV && RV->getValue()) {
+    if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+      auto *IntrinsicDef = DI->getDef();
+      auto DefName = IntrinsicDef->getName();
+      assert(DefName.starts_with("int_") && "invalid intrinsic name");
+      // Remove the int_ from intrinsic name.
+      return DefName.substr(4);
     }
-    LLVM_FALLTHROUGH;
-  default:
-    llvm_unreachable("Support for specified DXIL Type not yet implemented");
   }
+  return "";
 }
 
 /// Construct an object using the DXIL Operation records specified
@@ -113,9 +110,14 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   OpCode = R->getValueAsInt("OpCode");
 
   Doc = R->getValueAsString("Doc");
+  SmallVector<const Record *> ParamTypeRecs;
 
-  auto TypeRecs = R->getValueAsListOfDefs("OpTypes");
-  unsigned TypeRecsSize = TypeRecs.size();
+  ParamTypeRecs.push_back(R->getValueAsDef("result"));
+
+  for (const Record *ArgTy : R->getValueAsListOfDefs("arguments")) {
+    ParamTypeRecs.push_back(ArgTy);
+  }
+  size_t ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
 
   // Parameter indices of overloaded parameters.
@@ -123,114 +125,85 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // resolve an LLVMMatchType in accordance with  convention outlined in
   // the comment before the definition of class LLVMMatchType in
   // llvm/IR/Intrinsics.td
-  SmallVector<int> OverloadParamIndices;
-  for (unsigned i = 0; i < TypeRecsSize; i++) {
-    auto TR = TypeRecs[i];
+  OverloadParamIndex = -1; // A sigil meaning none.
+  for (unsigned I = 0; I < ParamTypeRecsSize; I++) {
+    const Record *TR = ParamTypeRecs[I];
     // Track operation parameter indices of any overload types
-    auto isAny = TR->getValueAsInt("isAny");
-    if (isAny == 1) {
-      // TODO: At present it is expected that all overload types in a DXIL Op
-      // are of the same type. Hence, OverloadParamIndices will have only one
-      // element. This implies we do not need a vector. However, until more
-      // (all?) DXIL Ops are added in DXIL.td, a vector is being used to flag
-      // cases this assumption would not hold.
-      if (!OverloadParamIndices.empty()) {
-        bool knownType = true;
-        // Ensure that the same overload type registered earlier is being used
-        for (auto Idx : OverloadParamIndices) {
-          if (TR != TypeRecs[Idx]) {
-            knownType = false;
-            break;
-          }
-        }
-        if (!knownType) {
-          report_fatal_error("Specification of multiple differing overload "
-                             "parameter types not yet supported",
-                             false);
-        }
-      } else {
-        OverloadParamIndices.push_back(i);
+    if (TR->getValueAsInt("isOverload")) {
+      if (OverloadParamIndex != -1) {
+        assert(TR == ParamTypeRecs[OverloadParamIndex] &&
+               "Specification of multiple differing overload parameter types "
+               "is not supported");
       }
+      // Keep the earliest parameter index we see, but if it was the return type
+      // overwrite it with the first overloaded argument.
+      if (OverloadParamIndex <= 0)
+        OverloadParamIndex = I;
     }
-    // Populate OpTypes array according to the type specification
-    if (TR->isAnonymous()) {
-      // Check prior overload types exist
-      assert(!OverloadParamIndices.empty() &&
-             "No prior overloaded parameter found to match.");
-      // Get the parameter index of anonymous type, TR, references
-      auto OLParamIndex = TR->getValueAsInt("Number");
-      // Resolve and insert the type to that at OLParamIndex
-      OpTypes.emplace_back(TypeRecs[OLParamIndex]);
-    } else {
-      // A non-anonymous type. Just record it in OpTypes
-      OpTypes.emplace_back(TR);
-    }
+    OpTypes.emplace_back(TR);
   }
 
-  // Set the index of the overload parameter, if any.
-  OverloadParamIndex = -1; // default; indicating none
-  if (!OverloadParamIndices.empty()) {
-    if (OverloadParamIndices.size() > 1)
-      report_fatal_error("Multiple overload type specification not supported",
-                         false);
-    OverloadParamIndex = OverloadParamIndices[0];
+  // Get overload records
+  std::vector<const Record *> Recs = R->getValueAsListOfDefs("overloads");
+
+  // Sort records in ascending order of DXIL version
+  ascendingSortByVersion(Recs);
+
+  for (const Record *CR : Recs) {
+    OverloadRecs.push_back(CR);
   }
+
+  // Get stage records
+  Recs = R->getValueAsListOfDefs("stages");
+
+  if (Recs.empty()) {
+    PrintFatalError(R, Twine("Atleast one specification of valid stage for ") +
+                           OpName + " is required");
+  }
+
+  // Sort records in ascending order of DXIL version
+  ascendingSortByVersion(Recs);
+
+  for (const Record *CR : Recs) {
+    StageRecs.push_back(CR);
+  }
+
+  // Get attribute records
+  Recs = R->getValueAsListOfDefs("attributes");
+
+  // Sort records in ascending order of DXIL version
+  ascendingSortByVersion(Recs);
+
+  for (const Record *CR : Recs) {
+    AttrRecs.push_back(CR);
+  }
+
+  Recs = R->getValueAsListOfDefs("properties");
+
+  // Get property records
+  for (const Record *CR : Recs)
+    PropRecs.push_back(CR);
+
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
 
-  if (R->getValue("LLVMIntrinsic")) {
-    auto *IntrinsicDef = R->getValueAsDef("LLVMIntrinsic");
-    auto DefName = IntrinsicDef->getName();
-    assert(DefName.starts_with("int_") && "invalid intrinsic name");
-    // Remove the int_ from intrinsic name.
-    Intrinsic = DefName.substr(4);
-    // TODO: For now, assume that attributes of DXIL Operation are the same as
-    // that of the intrinsic. Deviations are expected to be encoded in TableGen
-    // record specification and handled accordingly here. Support to be added
-    // as needed.
-    auto IntrPropList = IntrinsicDef->getValueAsListInit("IntrProperties");
-    auto IntrPropListSize = IntrPropList->size();
-    for (unsigned i = 0; i < IntrPropListSize; i++) {
-      OpAttributes.emplace_back(IntrPropList->getElement(i)->getAsString());
+  if (!OpClass.str().compare("UnknownOpClass")) {
+    PrintFatalError(R, Twine("Unspecified DXIL OpClass for DXIL operation - ") +
+                           OpName);
+  }
+
+  auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
+  if (IntrinsicSelectRecords.size()) {
+    for (const Record *R : IntrinsicSelectRecords) {
+      DXILIntrinsicSelect IntrSelect;
+      IntrSelect.Intrinsic = GetIntrinsicName(R->getValue("intrinsic"));
+      auto Args = R->getValueAsListOfDefs("arg_selects");
+      for (const Record *ArgSelect : Args) {
+        IntrSelect.ArgSelectRecords.emplace_back(ArgSelect);
+      }
+      IntrinsicSelects.emplace_back(std::move(IntrSelect));
     }
   }
-}
-
-/// Return a string representation of ParameterKind enum
-/// \param Kind Parameter Kind enum value
-/// \return std::string string representation of input Kind
-static std::string getParameterKindStr(ParameterKind Kind) {
-  switch (Kind) {
-  case ParameterKind::Invalid:
-    return "Invalid";
-  case ParameterKind::Void:
-    return "Void";
-  case ParameterKind::Half:
-    return "Half";
-  case ParameterKind::Float:
-    return "Float";
-  case ParameterKind::Double:
-    return "Double";
-  case ParameterKind::I1:
-    return "I1";
-  case ParameterKind::I8:
-    return "I8";
-  case ParameterKind::I16:
-    return "I16";
-  case ParameterKind::I32:
-    return "I32";
-  case ParameterKind::I64:
-    return "I64";
-  case ParameterKind::Overload:
-    return "Overload";
-  case ParameterKind::CBufferRet:
-    return "CBufferRet";
-  case ParameterKind::ResourceRet:
-    return "ResourceRet";
-  case ParameterKind::DXILHandle:
-    return "DXILHandle";
-  }
-  llvm_unreachable("Unknown llvm::dxil::ParameterKind enum");
 }
 
 /// Return a string representation of OverloadKind enum that maps to
@@ -238,183 +211,329 @@ static std::string getParameterKindStr(ParameterKind Kind) {
 /// \param R TableGen def record of class LLVMType
 /// \return std::string string representation of OverloadKind
 
-static std::string getOverloadKindStr(const Record *R) {
-  auto VTRec = R->getValueAsDef("VT");
-  switch (getValueType(VTRec)) {
-  case MVT::isVoid:
-    return "OverloadKind::VOID";
-  case MVT::f16:
-    return "OverloadKind::HALF";
-  case MVT::f32:
-    return "OverloadKind::FLOAT";
-  case MVT::f64:
-    return "OverloadKind::DOUBLE";
-  case MVT::i1:
-    return "OverloadKind::I1";
-  case MVT::i8:
-    return "OverloadKind::I8";
-  case MVT::i16:
-    return "OverloadKind::I16";
-  case MVT::i32:
-    return "OverloadKind::I32";
-  case MVT::i64:
-    return "OverloadKind::I64";
-  case MVT::iAny:
-    return "OverloadKind::I16 | OverloadKind::I32 | OverloadKind::I64";
-  case MVT::fAny:
-    return "OverloadKind::HALF | OverloadKind::FLOAT | OverloadKind::DOUBLE";
-  case MVT::Other:
-    // Handle DXIL-specific overload types
-    {
-      if (R->getValueAsInt("isHalfOrFloat")) {
-        return "OverloadKind::HALF | OverloadKind::FLOAT";
-      } else if (R->getValueAsInt("isI16OrI32")) {
-        return "OverloadKind::I16 | OverloadKind::I32";
-      }
-    }
-    LLVM_FALLTHROUGH;
-  default:
-    llvm_unreachable(
-        "Support for specified parameter OverloadKind not yet implemented");
-  }
+static StringRef getOverloadKindStr(const Record *R) {
+  // TODO: This is a hack. We need to rework how we're handling the set of
+  // overloads to avoid this business with the separate OverloadKind enum.
+  return StringSwitch<StringRef>(R->getName())
+      .Case("HalfTy", "OverloadKind::HALF")
+      .Case("FloatTy", "OverloadKind::FLOAT")
+      .Case("DoubleTy", "OverloadKind::DOUBLE")
+      .Case("Int1Ty", "OverloadKind::I1")
+      .Case("Int8Ty", "OverloadKind::I8")
+      .Case("Int16Ty", "OverloadKind::I16")
+      .Case("Int32Ty", "OverloadKind::I32")
+      .Case("Int64Ty", "OverloadKind::I64")
+      .Case("ResRetHalfTy", "OverloadKind::HALF")
+      .Case("ResRetFloatTy", "OverloadKind::FLOAT")
+      .Case("ResRetDoubleTy", "OverloadKind::DOUBLE")
+      .Case("ResRetInt16Ty", "OverloadKind::I16")
+      .Case("ResRetInt32Ty", "OverloadKind::I32")
+      .Case("ResRetInt64Ty", "OverloadKind::I64")
+      .Case("CBufRetHalfTy", "OverloadKind::HALF")
+      .Case("CBufRetFloatTy", "OverloadKind::FLOAT")
+      .Case("CBufRetDoubleTy", "OverloadKind::DOUBLE")
+      .Case("CBufRetInt16Ty", "OverloadKind::I16")
+      .Case("CBufRetInt32Ty", "OverloadKind::I32")
+      .Case("CBufRetInt64Ty", "OverloadKind::I64");
 }
 
-/// Emit Enums of DXIL Ops
-/// \param A vector of DXIL Ops
-/// \param Output stream
-static void emitDXILEnums(std::vector<DXILOperationDesc> &Ops,
-                          raw_ostream &OS) {
-  // Sort by OpCode
-  llvm::sort(Ops, [](DXILOperationDesc &A, DXILOperationDesc &B) {
-    return A.OpCode < B.OpCode;
-  });
+/// Return a string representation of valid overload information denoted
+// by input records
+//
+/// \param Recs A vector of records of TableGen Overload records
+/// \return std::string string representation of overload mask string
+///         predicated by DXIL Version. E.g.,
+//          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
+static std::string getOverloadMaskString(ArrayRef<const Record *> Recs) {
+  std::string MaskString = "";
+  std::string Prefix = "";
+  MaskString.append("{");
+  // If no overload information records were specified, assume the operation
+  // a) to be supported in DXIL Version 1.0 and later
+  // b) has no overload types
+  if (Recs.empty()) {
+    MaskString.append("{{1, 0}, OverloadKind::UNDEFINED}}");
+  } else {
+    for (const auto *Rec : Recs) {
+      unsigned Major =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
+      unsigned Minor =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
+      MaskString.append(Prefix)
+          .append("{{")
+          .append(std::to_string(Major))
+          .append(", ")
+          .append(std::to_string(Minor).append("}, "));
 
-  OS << "// Enumeration for operations specified by DXIL\n";
-  OS << "enum class OpCode : unsigned {\n";
+      std::string PipePrefix = "";
+      auto Tys = Rec->getValueAsListOfDefs("overload_types");
+      if (Tys.empty()) {
+        MaskString.append("OverloadKind::UNDEFINED");
+      }
+      for (const auto *Ty : Tys) {
+        MaskString.append(PipePrefix).append(getOverloadKindStr(Ty));
+        PipePrefix = " | ";
+      }
 
-  for (auto &Op : Ops) {
-    // Name = ID, // Doc
-    OS << Op.OpName << " = " << Op.OpCode << ", // " << Op.Doc << "\n";
+      MaskString.append("}");
+      Prefix = ", ";
+    }
+    MaskString.append("}");
+  }
+  return MaskString;
+}
+
+/// Return a string representation of valid shader stag information denoted
+// by input records
+//
+/// \param Recs A vector of records of TableGen Stages records
+/// \return std::string string representation of stages mask string
+///         predicated by DXIL Version. E.g.,
+//          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
+static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
+  std::string MaskString = "";
+  std::string Prefix = "";
+  MaskString.append("{");
+  // Atleast one stage information record is expected to be specified.
+  if (Recs.empty()) {
+    PrintFatalError("Atleast one specification of valid stages for "
+                    "operation must be specified");
   }
 
-  OS << "\n};\n\n";
+  for (const auto *Rec : Recs) {
+    unsigned Major = Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
+    unsigned Minor = Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
+    MaskString.append(Prefix)
+        .append("{{")
+        .append(std::to_string(Major))
+        .append(", ")
+        .append(std::to_string(Minor).append("}, "));
 
-  OS << "// Groups for DXIL operations with equivalent function templates\n";
-  OS << "enum class OpCodeClass : unsigned {\n";
-  // Build an OpClass set to print
-  SmallSet<StringRef, 2> OpClassSet;
-  for (auto &Op : Ops) {
-    OpClassSet.insert(Op.OpClass);
+    std::string PipePrefix = "";
+    auto Stages = Rec->getValueAsListOfDefs("shader_stages");
+    if (Stages.empty()) {
+      PrintFatalError("No valid stages for operation specified");
+    }
+    for (const auto *S : Stages) {
+      MaskString.append(PipePrefix).append("ShaderKind::").append(S->getName());
+      PipePrefix = " | ";
+    }
+
+    MaskString.append("}");
+    Prefix = ", ";
   }
-  for (auto &C : OpClassSet) {
-    OS << C << ",\n";
+  MaskString.append("}");
+  return MaskString;
+}
+
+/// Emit a list valid DXIL Version records
+static void emitDXILVersions(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_VERSION\n";
+  for (const Record *Version : Records.getAllDerivedDefinitions("Version")) {
+    unsigned Major = Version->getValueAsInt("Major");
+    unsigned Minor = Version->getValueAsInt("Minor");
+    OS << "DXIL_VERSION(";
+    OS << std::to_string(Major) << ", " << std::to_string(Minor);
+    OS << ")\n";
   }
-  OS << "\n};\n\n";
+  OS << "#undef DXIL_VERSION\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a mapping of DXIL opcode to opname
+static void emitDXILOpCodes(ArrayRef<DXILOperationDesc> Ops, raw_ostream &OS) {
+  OS << "#ifdef DXIL_OPCODE\n";
+  for (const DXILOperationDesc &Op : Ops)
+    OS << "DXIL_OPCODE(" << Op.OpCode << ", " << Op.OpName << ")\n";
+  OS << "#undef DXIL_OPCODE\n";
+  OS << "\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op classes
+static void emitDXILOpClasses(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_OPCLASS\n";
+  for (const Record *OpClass : Records.getAllDerivedDefinitions("DXILOpClass"))
+    OS << "DXIL_OPCLASS(" << OpClass->getName() << ")\n";
+  OS << "#undef DXIL_OPCLASS\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op parameter types
+static void emitDXILOpParamTypes(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_OP_PARAM_TYPE\n";
+  for (const Record *OpParamType :
+       Records.getAllDerivedDefinitions("DXILOpParamType"))
+    OS << "DXIL_OP_PARAM_TYPE(" << OpParamType->getName() << ")\n";
+  OS << "#undef DXIL_OP_PARAM_TYPE\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op function attributes
+static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_ATTRIBUTE\n";
+  for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute"))
+    OS << "DXIL_ATTRIBUTE(" << Attr->getName() << ")\n";
+  OS << "#undef DXIL_ATTRIBUTE\n";
+  OS << "#endif\n\n";
+}
+
+// Helper function to determine if the given Attr is defined in the vector
+// Attrs, by comparing the names
+static bool attrIsDefined(std::vector<const Record *> Attrs,
+                          const Record *Attr) {
+  for (auto CurAttr : Attrs)
+    if (CurAttr->getName() == Attr->getName())
+      return true;
+  return false;
+}
+
+/// Emit a table of bools denoting a DXIL op's function attributes
+static void emitDXILOpAttributes(const RecordKeeper &Records,
+                                 ArrayRef<DXILOperationDesc> Ops,
+                                 raw_ostream &OS) {
+  // A DXIL op can have multiple function attributes that are specific to a
+  // specific DXIL version and higher. AttrRecs models this by grouping the
+  // attributes by the versions. So we will output a macro for each version
+  // number with a table of bools in the following format:
+  //
+  //     OpName, VersionMajor, VersionMinor, FnAttr1, FnAttr2, ...
+  // Eg)    Abs,            1,            0,    true,   false, ...
+  OS << "#ifdef DXIL_OP_ATTRIBUTES\n";
+  for (const auto &Op : Ops) {
+    for (const auto *Rec : Op.AttrRecs) {
+      unsigned Major =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
+      unsigned Minor =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
+      OS << "DXIL_OP_ATTRIBUTES(dxil::OpCode::" << Op.OpName << ", ";
+      OS << std::to_string(Major) << ", " << std::to_string(Minor);
+      // These Attrs are the ones set for above DXIL version
+      auto Attrs = Rec->getValueAsListOfDefs("fn_attrs");
+      // We will then iteratre through all possible attributes and mark the
+      // present ones as 'true' and all the others as 'false' to create the
+      // boolean table, eg) true, false, false, false
+      for (const Record *Attr :
+           Records.getAllDerivedDefinitions("DXILAttribute")) {
+        std::string HasAttr = ", false";
+        if (attrIsDefined(Attrs, Attr))
+          HasAttr = ", true";
+        OS << HasAttr;
+      }
+      OS << ")\n";
+    }
+  }
+  OS << "#undef DXIL_OP_ATTRIBUTES\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op properties
+static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_PROPERTY\n";
+  for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty"))
+    OS << "DXIL_PROPERTY(" << Prop->getName() << ")\n";
+  OS << "#undef DXIL_PROPERTY\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op function types
+static void emitDXILOpFunctionTypes(ArrayRef<DXILOperationDesc> Ops,
+                                    raw_ostream &OS) {
+  OS << "#ifndef DXIL_OP_FUNCTION_TYPE\n";
+  OS << "#define DXIL_OP_FUNCTION_TYPE(OpCode, RetType, ...)\n";
+  OS << "#endif\n";
+  for (const DXILOperationDesc &Op : Ops) {
+    OS << "DXIL_OP_FUNCTION_TYPE(dxil::OpCode::" << Op.OpName;
+    for (const Record *Rec : Op.OpTypes)
+      OS << ", dxil::OpParamType::" << Rec->getName();
+    // If there are no arguments, we need an empty comma for the varargs
+    if (Op.OpTypes.size() == 1)
+      OS << ", ";
+    OS << ")\n";
+  }
+  OS << "#undef DXIL_OP_FUNCTION_TYPE\n";
 }
 
 /// Emit map of DXIL operation to LLVM or DirectX intrinsic
 /// \param A vector of DXIL Ops
 /// \param Output stream
-static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
+static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
                                  raw_ostream &OS) {
+
+  OS << "#ifdef DXIL_OP_INTRINSIC\n";
   OS << "\n";
-  // FIXME: use array instead of SmallDenseMap.
-  OS << "static const SmallDenseMap<Intrinsic::ID, dxil::OpCode> LowerMap = "
-        "{\n";
-  for (auto &Op : Ops) {
-    if (Op.Intrinsic.empty())
+  for (const auto &Op : Ops) {
+    if (Op.IntrinsicSelects.empty()) {
       continue;
-    // {Intrinsic::sin, dxil::OpCode::Sin},
-    OS << "  { Intrinsic::" << Op.Intrinsic << ", dxil::OpCode::" << Op.OpName
-       << "},\n";
-  }
-  OS << "};\n";
-  OS << "\n";
-}
-
-/// Convert operation attribute string to Attribute enum
-///
-/// \param Attr string reference
-/// \return std::string Attribute enum string
-
-static std::string emitDXILOperationAttr(SmallVector<std::string> Attrs) {
-  for (auto Attr : Attrs) {
-    // TODO: For now just recognize IntrNoMem and IntrReadMem as valid and
-    //  ignore others.
-    if (Attr == "IntrNoMem") {
-      return "Attribute::ReadNone";
-    } else if (Attr == "IntrReadMem") {
-      return "Attribute::ReadOnly";
+    }
+    for (const DXILIntrinsicSelect &MappedIntr : Op.IntrinsicSelects) {
+      OS << "DXIL_OP_INTRINSIC(dxil::OpCode::" << Op.OpName
+         << ", Intrinsic::" << MappedIntr.Intrinsic << ", ";
+      for (const Record *ArgSelect : MappedIntr.ArgSelectRecords) {
+        std::string Type =
+            ArgSelect->getValueAsDef("type")->getNameInitAsString();
+        int Value = ArgSelect->getValueAsInt("value");
+        OS << "(IntrinArgSelect{"
+           << "IntrinArgSelect::Type::" << StripIntrinArgSelectTypePrefix(Type)
+           << "," << Value << "}), ";
+      }
+      OS << ")\n";
     }
   }
-  return "Attribute::None";
+  OS << "\n";
+  OS << "#undef DXIL_OP_INTRINSIC\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit the IntrinArgSelect type for DirectX intrinsic to DXIL Op lowering
+static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
+                                            raw_ostream &OS) {
+  OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
+  for (const Record *Records :
+       Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
+    StringRef StrippedName = StripIntrinArgSelectTypePrefix(Records->getName());
+    OS << "DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(" << StrippedName << ")\n";
+  }
+  OS << "#undef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
+  OS << "#endif\n\n";
 }
 
 /// Emit DXIL operation table
 /// \param A vector of DXIL Ops
 /// \param Output stream
-static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
+static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
                                    raw_ostream &OS) {
-  // Sort by OpCode.
-  llvm::sort(Ops, [](DXILOperationDesc &A, DXILOperationDesc &B) {
-    return A.OpCode < B.OpCode;
-  });
-
   // Collect Names.
   SequenceToOffsetTable<std::string> OpClassStrings;
   SequenceToOffsetTable<std::string> OpStrings;
-  SequenceToOffsetTable<SmallVector<ParameterKind>> Parameters;
 
-  StringMap<SmallVector<ParameterKind>> ParameterMap;
   StringSet<> ClassSet;
-  for (auto &Op : Ops) {
+  for (const auto &Op : Ops) {
     OpStrings.add(Op.OpName);
 
-    if (ClassSet.contains(Op.OpClass))
-      continue;
-    ClassSet.insert(Op.OpClass);
-    OpClassStrings.add(Op.OpClass.data());
-    SmallVector<ParameterKind> ParamKindVec;
-    // ParamKindVec is a vector of parameters. Skip return type at index 0
-    for (unsigned i = 1; i < Op.OpTypes.size(); i++) {
-      ParamKindVec.emplace_back(getParameterKind(Op.OpTypes[i]));
-    }
-    ParameterMap[Op.OpClass] = ParamKindVec;
-    Parameters.add(ParamKindVec);
+    if (ClassSet.insert(Op.OpClass).second)
+      OpClassStrings.add(Op.OpClass.data());
   }
 
   // Layout names.
   OpStrings.layout();
   OpClassStrings.layout();
-  Parameters.layout();
 
-  // Emit the DXIL operation table.
-  //{dxil::OpCode::Sin, OpCodeNameIndex, OpCodeClass::unary,
-  // OpCodeClassNameIndex,
-  // OverloadKind::FLOAT | OverloadKind::HALF, Attribute::AttrKind::ReadNone, 0,
-  // 3, ParameterTableOffset},
+  // Emit access function getOpcodeProperty() that embeds DXIL Operation table
+  // with entries of type struct OpcodeProperty.
   OS << "static const OpCodeProperty *getOpCodeProperty(dxil::OpCode Op) "
         "{\n";
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
-  for (auto &Op : Ops) {
-    // Consider Op.OverloadParamIndex as the overload parameter index, by
-    // default
-    auto OLParamIdx = Op.OverloadParamIndex;
-    // If no overload parameter index is set, treat first parameter type as
-    // overload type - unless the Op has no parameters, in which case treat the
-    // return type - as overload parameter to emit the appropriate overload kind
-    // enum.
-    if (OLParamIdx < 0) {
-      OLParamIdx = (Op.OpTypes.size() > 1) ? 1 : 0;
-    }
-    OS << "  { dxil::OpCode::" << Op.OpName << ", " << OpStrings.get(Op.OpName)
-       << ", OpCodeClass::" << Op.OpClass << ", "
+  std::string Prefix = "";
+  for (const auto &Op : Ops) {
+    OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", "
+       << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
-       << getOverloadKindStr(Op.OpTypes[OLParamIdx]) << ", "
-       << emitDXILOperationAttr(Op.OpAttributes) << ", "
-       << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
-       << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
+       << getOverloadMaskString(Op.OverloadRecs) << ", "
+       << getStageMaskString(Op.StageRecs) << ", " << Op.OverloadParamIndex
+       << " }";
+    Prefix = ",\n";
   }
   OS << "  };\n";
 
@@ -451,47 +570,85 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
 
   OS << "  unsigned Index = Prop.OpCodeClassNameOffset;\n";
   OS << "  return DXILOpCodeClassNameTable + Index;\n";
-  OS << "}\n ";
+  OS << "}\n\n";
+}
 
-  OS << "static const ParameterKind *getOpCodeParameterKind(const "
-        "OpCodeProperty &Prop) "
-        "{\n\n";
-  OS << "  static const ParameterKind DXILOpParameterKindTable[] = {\n";
-  Parameters.emit(
-      OS,
-      [](raw_ostream &ParamOS, ParameterKind Kind) {
-        ParamOS << "ParameterKind::" << getParameterKindStr(Kind);
-      },
-      "ParameterKind::Invalid");
-  OS << "  };\n\n";
-  OS << "  unsigned Index = Prop.ParameterTableOffset;\n";
-  OS << "  return DXILOpParameterKindTable + Index;\n";
-  OS << "}\n ";
+static void emitDXILOperationTableDataStructs(const RecordKeeper &Records,
+                                              raw_ostream &OS) {
+  // Get Shader stage records
+  std::vector<const Record *> ShaderKindRecs =
+      Records.getAllDerivedDefinitions("DXILShaderStage");
+  // Sort records by name
+  llvm::sort(ShaderKindRecs, [](const Record *A, const Record *B) {
+    return A->getName() < B->getName();
+  });
+
+  OS << "// Valid shader kinds\n\n";
+  // Choose the type of enum ShaderKind based on the number of stages declared.
+  // This gives the flexibility to just add add new stage records in DXIL.td, if
+  // needed, with no need to change this backend code.
+  size_t ShaderKindCount = ShaderKindRecs.size();
+  uint64_t ShaderKindTySz = PowerOf2Ceil(ShaderKindRecs.size() + 1);
+  OS << "enum ShaderKind : uint" << ShaderKindTySz << "_t {\n";
+  const std::string AllStages("all_stages");
+  const std::string Removed("removed");
+  int ShiftVal = 1;
+  for (const auto *R : ShaderKindRecs) {
+    auto Name = R->getName();
+    if (Name.compare(Removed) == 0) {
+      OS << "  " << Name
+         << " =  0,  // Pseudo-stage indicating op not supported in any "
+            "stage\n";
+    } else if (Name.compare(AllStages) == 0) {
+      OS << "  " << Name << " =  0x"
+         << utohexstr(((1 << ShaderKindCount) - 1), false, 0)
+         << ", // Pseudo-stage indicating op is supported in all stages\n";
+    } else if (Name.compare(AllStages)) {
+      OS << "  " << Name << " = 1 << " << std::to_string(ShiftVal++) << ",\n";
+    }
+  }
+  OS << "}; // enum ShaderKind\n\n";
 }
 
 /// Entry function call that invokes the functionality of this TableGen backend
 /// \param Records TableGen records of DXIL Operations defined in DXIL.td
 /// \param OS output stream
-static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
+static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
-  // Get all DXIL Ops to intrinsic mapping records
-  std::vector<Record *> OpIntrMaps =
-      Records.getAllDerivedDefinitions("DXILOpMapping");
+  // Get all DXIL Ops property records
   std::vector<DXILOperationDesc> DXILOps;
-  for (auto *Record : OpIntrMaps) {
-    DXILOps.emplace_back(DXILOperationDesc(Record));
+  for (const Record *R : Records.getAllDerivedDefinitions("DXILOp")) {
+    DXILOps.emplace_back(DXILOperationDesc(R));
   }
-  OS << "#ifdef DXIL_OP_ENUM\n";
-  emitDXILEnums(DXILOps, OS);
-  OS << "#endif\n\n";
-  OS << "#ifdef DXIL_OP_INTRINSIC_MAP\n";
+  // Sort by opcode.
+  llvm::sort(DXILOps,
+             [](const DXILOperationDesc &A, const DXILOperationDesc &B) {
+               return A.OpCode < B.OpCode;
+             });
+  int PrevOp = -1;
+  for (const DXILOperationDesc &Desc : DXILOps) {
+    if (Desc.OpCode == PrevOp)
+      PrintFatalError(Twine("Duplicate opcode: ") + Twine(Desc.OpCode));
+    PrevOp = Desc.OpCode;
+  }
+
+  emitDXILVersions(Records, OS);
+  emitDXILOpCodes(DXILOps, OS);
+  emitDXILOpClasses(Records, OS);
+  emitDXILOpParamTypes(Records, OS);
+  emitDXILAttributes(Records, OS);
+  emitDXILOpAttributes(Records, DXILOps, OS);
+  emitDXILProperties(Records, OS);
+  emitDXILOpFunctionTypes(DXILOps, OS);
+  emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
-  OS << "#endif\n\n";
-  OS << "#ifdef DXIL_OP_OPERATION_TABLE\n";
+  OS << "#ifdef DXIL_OP_OPERATION_TABLE\n\n";
+  emitDXILOperationTableDataStructs(Records, OS);
   emitDXILOperationTable(DXILOps, OS);
+  OS << "#undef DXIL_OP_OPERATION_TABLE\n";
   OS << "#endif\n\n";
 }
 
-static TableGen::Emitter::Opt X("gen-dxil-operation", EmitDXILOperation,
+static TableGen::Emitter::Opt X("gen-dxil-operation", emitDxilOperation,
                                 "Generate DXIL operation information");

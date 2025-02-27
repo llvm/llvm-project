@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/ModuleImport.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
@@ -54,7 +55,7 @@ static std::string diag(const llvm::Value &value) {
   std::string str;
   llvm::raw_string_ostream os(str);
   os << value;
-  return os.str();
+  return str;
 }
 
 // Utility to print an LLVM metadata node as a string for passing
@@ -65,12 +66,17 @@ static std::string diagMD(const llvm::Metadata *node,
   std::string str;
   llvm::raw_string_ostream os(str);
   node->print(os, module, /*IsForDebug=*/true);
-  return os.str();
+  return str;
 }
 
 /// Returns the name of the global_ctors global variables.
 static constexpr StringRef getGlobalCtorsVarName() {
   return "llvm.global_ctors";
+}
+
+/// Prefix used for symbols of nameless llvm globals.
+static constexpr StringRef getNamelessGlobalPrefix() {
+  return "mlir.llvm.nameless_global";
 }
 
 /// Returns the name of the global_dtors global variables.
@@ -133,8 +139,8 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   if (iface.isConvertibleInstruction(inst->getOpcode()))
     return iface.convertInstruction(odsBuilder, inst, llvmOperands,
                                     moduleImport);
-    // TODO: Implement the `convertInstruction` hooks in the
-    // `LLVMDialectLLVMIRImportInterface` and move the following include there.
+  // TODO: Implement the `convertInstruction` hooks in the
+  // `LLVMDialectLLVMIRImportInterface` and move the following include there.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   return failure();
 }
@@ -155,12 +161,14 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
 
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
-                           bool emitExpensiveWarnings)
+                           bool emitExpensiveWarnings,
+                           bool importEmptyDICompositeTypes)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule)),
+      debugImporter(std::make_unique<DebugImporter>(
+          mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
           std::make_unique<LoopAnnotationImporter>(*this, builder)),
       emitExpensiveWarnings(emitExpensiveWarnings) {
@@ -419,19 +427,33 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     return node->getNumOperands() != 0 &&
            node == dyn_cast<llvm::MDNode>(node->getOperand(0));
   };
+  auto verifySelfRefOrString = [](const llvm::MDNode *node) {
+    return node->getNumOperands() != 0 &&
+           (node == dyn_cast<llvm::MDNode>(node->getOperand(0)) ||
+            isa<llvm::MDString>(node->getOperand(0)));
+  };
   // Helper that verifies the given operand is a string or does not exist.
   auto verifyDescription = [](const llvm::MDNode *node, unsigned idx) {
     return idx >= node->getNumOperands() ||
            isa<llvm::MDString>(node->getOperand(idx));
   };
+
+  auto getIdAttr = [&](const llvm::MDNode *node) -> Attribute {
+    if (verifySelfRef(node))
+      return DistinctAttr::create(builder.getUnitAttr());
+
+    auto name = cast<llvm::MDString>(node->getOperand(0));
+    return builder.getStringAttr(name->getString());
+  };
+
   // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
     if (aliasDomain->getNumOperands() >= 2)
       if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
         description = builder.getStringAttr(operand->getString());
-    return builder.getAttr<AliasScopeDomainAttr>(
-        DistinctAttr::create(builder.getUnitAttr()), description);
+    Attribute idAttr = getIdAttr(aliasDomain);
+    return builder.getAttr<AliasScopeDomainAttr>(idAttr, description);
   };
 
   // Collect the alias scopes and domains to translate them.
@@ -444,10 +466,11 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
       // verifying its domain. Perform the verification before looking it up in
       // the alias scope mapping since it could have been inserted as a domain
       // node before.
-      if (!verifySelfRef(scope) || !domain || !verifyDescription(scope, 2))
+      if (!verifySelfRefOrString(scope) || !domain ||
+          !verifyDescription(scope, 2))
         return emitError(loc) << "unsupported alias scope node: "
                               << diagMD(scope, llvmModule.get());
-      if (!verifySelfRef(domain) || !verifyDescription(domain, 1))
+      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 1))
         return emitError(loc) << "unsupported alias domain node: "
                               << diagMD(domain, llvmModule.get());
 
@@ -465,9 +488,10 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
       StringAttr description = nullptr;
       if (!aliasScope.getName().empty())
         description = builder.getStringAttr(aliasScope.getName());
+      Attribute idAttr = getIdAttr(scope);
       auto aliasScopeOp = builder.getAttr<AliasScopeAttr>(
-          DistinctAttr::create(builder.getUnitAttr()),
-          cast<AliasScopeDomainAttr>(it->second), description);
+          idAttr, cast<AliasScopeDomainAttr>(it->second), description);
+
       aliasScopeMapping.try_emplace(aliasScope.getNode(), aliasScopeOp);
     }
   }
@@ -498,14 +522,48 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
     if (named.getName() != "llvm.linker.options")
       continue;
     // llvm.linker.options operands are lists of strings.
-    for (const llvm::MDNode *md : named.operands()) {
+    for (const llvm::MDNode *node : named.operands()) {
       SmallVector<StringRef> options;
-      options.reserve(md->getNumOperands());
-      for (const llvm::MDOperand &option : md->operands())
+      options.reserve(node->getNumOperands());
+      for (const llvm::MDOperand &option : node->operands())
         options.push_back(cast<llvm::MDString>(option)->getString());
       builder.create<LLVM::LinkerOptionsOp>(mlirModule.getLoc(),
                                             builder.getStrArrayAttr(options));
     }
+  }
+  return success();
+}
+
+LogicalResult ModuleImport::convertIdentMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    // llvm.ident should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (named.getName() != LLVMDialect::getIdentAttrName())
+      continue;
+
+    if (named.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
+        if (md->getNumOperands() == 1)
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr(LLVMDialect::getIdentAttrName(),
+                                builder.getStringAttr(mdStr->getString()));
+  }
+  return success();
+}
+
+LogicalResult ModuleImport::convertCommandlineMetadata() {
+  for (const llvm::NamedMDNode &nmd : llvmModule->named_metadata()) {
+    // llvm.commandline should have a single operand. That operand is itself an
+    // MDNode with a single string operand.
+    if (nmd.getName() != LLVMDialect::getCommandlineAttrName())
+      continue;
+
+    if (nmd.getNumOperands() == 1)
+      if (auto *md = dyn_cast<llvm::MDNode>(nmd.getOperand(0)))
+        if (md->getNumOperands() == 1)
+          if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
+            mlirModule->setAttr(LLVMDialect::getCommandlineAttrName(),
+                                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -537,6 +595,10 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertIdentMetadata()))
+    return failure();
+  if (failed(convertCommandlineMetadata()))
     return failure();
   return success();
 }
@@ -585,6 +647,16 @@ LogicalResult ModuleImport::convertGlobals() {
   return success();
 }
 
+LogicalResult ModuleImport::convertAliases() {
+  for (llvm::GlobalAlias &alias : llvmModule->aliases()) {
+    if (failed(convertAlias(&alias))) {
+      return emitError(UnknownLoc::get(context))
+             << "unhandled global alias: " << diag(alias);
+    }
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
   DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
@@ -598,6 +670,11 @@ LogicalResult ModuleImport::convertDataLayout() {
   mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
                       dataLayoutImporter.getDataLayout());
   return success();
+}
+
+void ModuleImport::convertTargetTriple() {
+  mlirModule->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
+                      builder.getStringAttr(llvmModule->getTargetTriple()));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -625,8 +702,8 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
-void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
-                                               Operation *op) const {
+void ModuleImport::setIntegerOverflowFlags(llvm::Instruction *inst,
+                                           Operation *op) const {
   auto iface = cast<IntegerOverflowFlagsInterface>(op);
 
   IntegerOverflowFlags value = {};
@@ -634,8 +711,27 @@ void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
   value =
       bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
 
-  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
-  iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
+  iface.setOverflowFlags(value);
+}
+
+void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
+  auto iface = cast<ExactFlagInterface>(op);
+
+  iface.setIsExact(inst->isExact());
+}
+
+void ModuleImport::setDisjointFlag(llvm::Instruction *inst,
+                                   Operation *op) const {
+  auto iface = cast<DisjointFlagInterface>(op);
+  auto instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
+
+  iface.setIsDisjoint(instDisjoint->isDisjoint());
+}
+
+void ModuleImport::setNonNegFlag(llvm::Instruction *inst, Operation *op) const {
+  auto iface = cast<NonNegFlagInterface>(op);
+
+  iface.setNonNeg(inst->hasNonNeg());
 }
 
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
@@ -688,7 +784,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
   if (!isScalarType(elementType))
     return {};
 
-  SmallVector<int64_t> shape(arrayShape.begin(), arrayShape.end());
+  SmallVector<int64_t> shape(arrayShape);
   shape.push_back(numElements.getKnownMinValue());
   return VectorType::get(shape, elementType);
 }
@@ -735,7 +831,7 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
     llvm::Type *type = constFloat->getType();
     FloatType floatType =
         type->isBFloatTy()
-            ? FloatType::getBF16(context)
+            ? BFloat16Type::get(context)
             : LLVM::detail::getFloatType(context, type->getScalarSizeInBits());
     if (!floatType) {
       emitError(UnknownLoc::get(builder.getContext()))
@@ -765,10 +861,6 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
   // Convert scalar constants.
   if (Attribute scalarAttr = getScalarConstantAsAttr(builder, constant))
     return scalarAttr;
-
-  // Convert function references.
-  if (auto *func = dyn_cast<llvm::Function>(constant))
-    return SymbolRefAttr::get(builder.getContext(), func->getName());
 
   // Returns the static shape of the provided type if possible.
   auto getConstantShape = [&](llvm::Type *type) {
@@ -852,13 +944,64 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
   return {};
 }
 
+FlatSymbolRefAttr
+ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
+  assert(globalVar->getName().empty() &&
+         "expected to work with a nameless global");
+  auto [it, success] = namelessGlobals.try_emplace(globalVar);
+  if (!success)
+    return it->second;
+
+  // Make sure the symbol name does not clash with an existing symbol.
+  SmallString<128> globalName = SymbolTable::generateSymbolName<128>(
+      getNamelessGlobalPrefix(),
+      [this](StringRef newName) { return llvmModule->getNamedValue(newName); },
+      namelessGlobalId);
+  auto symbolRef = FlatSymbolRefAttr::get(context, globalName);
+  it->getSecond() = symbolRef;
+  return symbolRef;
+}
+
+OpBuilder::InsertionGuard ModuleImport::setGlobalInsertionPoint() {
+  OpBuilder::InsertionGuard guard(builder);
+  if (globalInsertionOp)
+    builder.setInsertionPointAfter(globalInsertionOp);
+  else
+    builder.setInsertionPointToStart(mlirModule.getBody());
+  return guard;
+}
+
+LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
+  // Insert the alias after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
+
+  Type type = convertType(alias->getValueType());
+  AliasOp aliasOp = builder.create<AliasOp>(
+      mlirModule.getLoc(), type, convertLinkageFromLLVM(alias->getLinkage()),
+      alias->getName(),
+      /*dso_local=*/alias->isDSOLocal(),
+      /*thread_local=*/alias->isThreadLocal(),
+      /*attrs=*/ArrayRef<NamedAttribute>());
+  globalInsertionOp = aliasOp;
+
+  clearRegionState();
+  Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
+  setConstantInsertionPointToStart(block);
+  FailureOr<Value> initializer = convertConstantExpr(alias->getAliasee());
+  if (failed(initializer))
+    return failure();
+  builder.create<ReturnOp>(aliasOp.getLoc(), *initializer);
+
+  if (alias->hasAtLeastLocalUnnamedAddr())
+    aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
+  aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Attribute valueAttr;
   if (globalVar->hasInitializer())
@@ -874,22 +1017,29 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   // Get the global expression associated with this global variable and convert
   // it.
-  DIGlobalVariableExpressionAttr globalExpressionAttr;
+  SmallVector<Attribute> globalExpressionAttrs;
   SmallVector<llvm::DIGlobalVariableExpression *> globalExpressions;
   globalVar->getDebugInfo(globalExpressions);
 
-  // There should only be a single global expression.
-  if (!globalExpressions.empty())
-    globalExpressionAttr =
-        debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
+  for (llvm::DIGlobalVariableExpression *expr : globalExpressions) {
+    DIGlobalVariableExpressionAttr globalExpressionAttr =
+        debugImporter->translateGlobalVariableExpression(expr);
+    globalExpressionAttrs.push_back(globalExpressionAttr);
+  }
+
+  // Workaround to support LLVM's nameless globals. MLIR, in contrast to LLVM,
+  // always requires a symbol name.
+  StringRef globalName = globalVar->getName();
+  if (globalName.empty())
+    globalName = getOrCreateNamelessSymbolName(globalVar).getValue();
 
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
-      convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
+      convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
-      /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExpr=*/globalExpressionAttr);
+      /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
 
   if (globalVar->hasInitializer() && !valueAttr) {
@@ -947,11 +1097,8 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
     priorities.push_back(priority->getValue().getZExtValue());
   }
 
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  // Insert the global after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   if (globalVar->getName() == getGlobalCtorsVarName()) {
     globalInsertionOp = builder.create<LLVM::GlobalCtorsOp>(
@@ -980,11 +1127,18 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
   workList.insert(constant);
   while (!workList.empty()) {
     llvm::Constant *current = workList.back();
+    // References of global objects are just pointers to the object. Avoid
+    // walking the elements of these here.
+    if (isa<llvm::GlobalObject>(current) || isa<llvm::GlobalAlias>(current)) {
+      orderedSet.insert(current);
+      workList.pop_back();
+      continue;
+    }
+
     // Collect all dependencies of the current constant and add them to the
     // adjacency list if none has been computed before.
-    auto adjacencyIt = adjacencyLists.find(current);
-    if (adjacencyIt == adjacencyLists.end()) {
-      adjacencyIt = adjacencyLists.try_emplace(current).first;
+    auto [adjacencyIt, inserted] = adjacencyLists.try_emplace(current);
+    if (inserted) {
       // Add all constant operands to the adjacency list and skip any other
       // values such as basic block addresses.
       for (llvm::Value *operand : current->operands())
@@ -1058,9 +1212,24 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   }
 
   // Convert global variable accesses.
-  if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
-    Type type = convertType(globalVar->getType());
-    auto symbolRef = FlatSymbolRefAttr::get(context, globalVar->getName());
+  if (auto *globalObj = dyn_cast<llvm::GlobalObject>(constant)) {
+    Type type = convertType(globalObj->getType());
+    StringRef globalName = globalObj->getName();
+    FlatSymbolRefAttr symbolRef;
+    // Empty names are only allowed for global variables.
+    if (globalName.empty())
+      symbolRef =
+          getOrCreateNamelessSymbolName(cast<llvm::GlobalVariable>(globalObj));
+    else
+      symbolRef = FlatSymbolRefAttr::get(context, globalName);
+    return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
+  }
+
+  // Convert global alias accesses.
+  if (auto *globalAliasObj = dyn_cast<llvm::GlobalAlias>(constant)) {
+    Type type = convertType(globalAliasObj->getType());
+    StringRef aliaseeName = globalAliasObj->getName();
+    FlatSymbolRefAttr symbolRef = FlatSymbolRefAttr::get(context, aliaseeName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
@@ -1231,7 +1400,8 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
 }
 
 LogicalResult ModuleImport::convertIntrinsicArguments(
-    ArrayRef<llvm::Value *> values, ArrayRef<unsigned> immArgPositions,
+    ArrayRef<llvm::Value *> values, ArrayRef<llvm::OperandBundleUse> opBundles,
+    bool requiresOpBundles, ArrayRef<unsigned> immArgPositions,
     ArrayRef<StringLiteral> immArgAttrNames, SmallVectorImpl<Value> &valuesOut,
     SmallVectorImpl<NamedAttribute> &attrsOut) {
   assert(immArgPositions.size() == immArgAttrNames.size() &&
@@ -1259,6 +1429,35 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     if (failed(mlirValue))
       return failure();
     valuesOut.push_back(*mlirValue);
+  }
+
+  SmallVector<int> opBundleSizes;
+  SmallVector<Attribute> opBundleTagAttrs;
+  if (requiresOpBundles) {
+    opBundleSizes.reserve(opBundles.size());
+    opBundleTagAttrs.reserve(opBundles.size());
+
+    for (const llvm::OperandBundleUse &bundle : opBundles) {
+      opBundleSizes.push_back(bundle.Inputs.size());
+      opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
+
+      for (const llvm::Use &opBundleOperand : bundle.Inputs) {
+        auto operandMlirValue = convertValue(opBundleOperand.get());
+        if (failed(operandMlirValue))
+          return failure();
+        valuesOut.push_back(*operandMlirValue);
+      }
+    }
+
+    auto opBundleSizesAttr = DenseI32ArrayAttr::get(context, opBundleSizes);
+    auto opBundleSizesAttrNameAttr =
+        StringAttr::get(context, LLVMDialect::getOpBundleSizesAttrName());
+    attrsOut.push_back({opBundleSizesAttrNameAttr, opBundleSizesAttr});
+
+    auto opBundleTagsAttr = ArrayAttr::get(context, opBundleTagAttrs);
+    auto opBundleTagsAttrNameAttr =
+        StringAttr::get(context, LLVMDialect::getOpBundleTagsAttrName());
+    attrsOut.push_back({opBundleTagsAttrNameAttr, opBundleTagsAttr});
   }
 
   return success();
@@ -1343,25 +1542,104 @@ ModuleImport::convertBranchArgs(llvm::Instruction *branch,
   return success();
 }
 
-LogicalResult
-ModuleImport::convertCallTypeAndOperands(llvm::CallBase *callInst,
-                                         SmallVectorImpl<Type> &types,
-                                         SmallVectorImpl<Value> &operands) {
-  if (!callInst->getType()->isVoidTy())
-    types.push_back(convertType(callInst->getType()));
+FailureOr<SmallVector<Value>>
+ModuleImport::convertCallOperands(llvm::CallBase *callInst,
+                                  bool allowInlineAsm) {
+  bool isInlineAsm = callInst->isInlineAsm();
+  if (isInlineAsm && !allowInlineAsm)
+    return failure();
 
-  if (!callInst->getCalledFunction()) {
+  SmallVector<Value> operands;
+
+  // Cannot use isIndirectCall() here because we need to handle Constant callees
+  // that are not considered indirect calls by LLVM. However, in MLIR, they are
+  // treated as indirect calls to constant operands that need to be converted.
+  // Skip the callee operand if it's inline assembly, as it's handled separately
+  // in InlineAsmOp.
+  if (!isa<llvm::Function>(callInst->getCalledOperand()) && !isInlineAsm) {
     FailureOr<Value> called = convertValue(callInst->getCalledOperand());
     if (failed(called))
       return failure();
     operands.push_back(*called);
   }
+
   SmallVector<llvm::Value *> args(callInst->args());
   FailureOr<SmallVector<Value>> arguments = convertValues(args);
   if (failed(arguments))
     return failure();
+
   llvm::append_range(operands, *arguments);
+  return operands;
+}
+
+/// Checks if `callType` and `calleeType` are compatible and can be represented
+/// in MLIR.
+static LogicalResult
+verifyFunctionTypeCompatibility(LLVMFunctionType callType,
+                                LLVMFunctionType calleeType) {
+  if (callType.getReturnType() != calleeType.getReturnType())
+    return failure();
+
+  if (calleeType.isVarArg()) {
+    // For variadic functions, the call can have more types than the callee
+    // specifies.
+    if (callType.getNumParams() < calleeType.getNumParams())
+      return failure();
+  } else {
+    // For non-variadic functions, the number of parameters needs to be the
+    // same.
+    if (callType.getNumParams() != calleeType.getNumParams())
+      return failure();
+  }
+
+  // Check that all operands match.
+  for (auto [operandType, argumentType] :
+       llvm::zip(callType.getParams(), calleeType.getParams()))
+    if (operandType != argumentType)
+      return failure();
+
   return success();
+}
+
+FailureOr<LLVMFunctionType>
+ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
+  auto castOrFailure = [](Type convertedType) -> FailureOr<LLVMFunctionType> {
+    auto funcTy = dyn_cast_or_null<LLVMFunctionType>(convertedType);
+    if (!funcTy)
+      return failure();
+    return funcTy;
+  };
+
+  llvm::Value *calledOperand = callInst->getCalledOperand();
+  FailureOr<LLVMFunctionType> callType =
+      castOrFailure(convertType(callInst->getFunctionType()));
+  if (failed(callType))
+    return failure();
+  auto *callee = dyn_cast<llvm::Function>(calledOperand);
+  // For indirect calls, return the type of the call itself.
+  if (!callee)
+    return callType;
+
+  FailureOr<LLVMFunctionType> calleeType =
+      castOrFailure(convertType(callee->getFunctionType()));
+  if (failed(calleeType))
+    return failure();
+
+  // Compare the types to avoid constructing illegal call/invoke operations.
+  if (failed(verifyFunctionTypeCompatibility(*callType, *calleeType))) {
+    Location loc = translateLoc(callInst->getDebugLoc());
+    return emitError(loc) << "incompatible call and callee types: " << *callType
+                          << " and " << *calleeType;
+  }
+
+  return calleeType;
+}
+
+FlatSymbolRefAttr ModuleImport::convertCalleeName(llvm::CallBase *callInst) {
+  llvm::Value *calledOperand = callInst->getCalledOperand();
+  if (auto *callee = dyn_cast<llvm::Function>(calledOperand))
+    return SymbolRefAttr::get(context, callee->getName());
+  return {};
 }
 
 LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
@@ -1446,32 +1724,48 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   }
   if (inst->getOpcode() == llvm::Instruction::Call) {
     auto *callInst = cast<llvm::CallInst>(inst);
+    llvm::Value *calledOperand = callInst->getCalledOperand();
 
-    SmallVector<Type> types;
-    SmallVector<Value> operands;
-    if (failed(convertCallTypeAndOperands(callInst, types, operands)))
+    FailureOr<SmallVector<Value>> operands =
+        convertCallOperands(callInst, /*allowInlineAsm=*/true);
+    if (failed(operands))
       return failure();
 
-    auto funcTy =
-        dyn_cast<LLVMFunctionType>(convertType(callInst->getFunctionType()));
-    if (!funcTy)
+    auto callOp = [&]() -> FailureOr<Operation *> {
+      if (auto *asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+        Type resultTy = convertType(callInst->getType());
+        if (!resultTy)
+          return failure();
+        return builder
+            .create<InlineAsmOp>(
+                loc, resultTy, *operands,
+                builder.getStringAttr(asmI->getAsmString()),
+                builder.getStringAttr(asmI->getConstraintString()),
+                /*has_side_effects=*/true,
+                /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
+                /*operand_attrs=*/nullptr)
+            .getOperation();
+      }
+      FailureOr<LLVMFunctionType> funcTy = convertFunctionType(callInst);
+      if (failed(funcTy))
+        return failure();
+
+      FlatSymbolRefAttr callee = convertCalleeName(callInst);
+      auto callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
+      if (failed(convertCallAttributes(callInst, callOp)))
+        return failure();
+      // Handle parameter and result attributes.
+      convertParameterAttributes(callInst, callOp, builder);
+      return callOp.getOperation();
+    }();
+
+    if (failed(callOp))
       return failure();
 
-    CallOp callOp;
-
-    if (llvm::Function *callee = callInst->getCalledFunction()) {
-      callOp = builder.create<CallOp>(
-          loc, funcTy, SymbolRefAttr::get(context, callee->getName()),
-          operands);
-    } else {
-      callOp = builder.create<CallOp>(loc, funcTy, operands);
-    }
-    callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
-    setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
-      mapValue(inst, callOp.getResult());
+      mapValue(inst, (*callOp)->getResult(0));
     else
-      mapNoResultOp(inst, callOp);
+      mapNoResultOp(inst, *callOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::LandingPad) {
@@ -1495,9 +1789,11 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   if (inst->getOpcode() == llvm::Instruction::Invoke) {
     auto *invokeInst = cast<llvm::InvokeInst>(inst);
 
-    SmallVector<Type> types;
-    SmallVector<Value> operands;
-    if (failed(convertCallTypeAndOperands(invokeInst, types, operands)))
+    if (invokeInst->isInlineAsm())
+      return emitError(loc) << "invoke of inline assembly is not supported";
+
+    FailureOr<SmallVector<Value>> operands = convertCallOperands(invokeInst);
+    if (failed(operands))
       return failure();
 
     // Check whether the invoke result is an argument to the normal destination
@@ -1524,27 +1820,25 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
-    auto funcTy =
-        dyn_cast<LLVMFunctionType>(convertType(invokeInst->getFunctionType()));
-    if (!funcTy)
+    FailureOr<LLVMFunctionType> funcTy = convertFunctionType(invokeInst);
+    if (failed(funcTy))
       return failure();
+
+    FlatSymbolRefAttr calleeName = convertCalleeName(invokeInst);
 
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
-    InvokeOp invokeOp;
-    if (llvm::Function *callee = invokeInst->getCalledFunction()) {
-      invokeOp = builder.create<InvokeOp>(
-          loc, funcTy,
-          SymbolRefAttr::get(builder.getContext(), callee->getName()), operands,
-          directNormalDest, ValueRange(),
-          lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
-    } else {
-      invokeOp = builder.create<InvokeOp>(
-          loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
-          ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
-    }
-    invokeOp.setCConv(convertCConvFromLLVM(invokeInst->getCallingConv()));
+    auto invokeOp = builder.create<InvokeOp>(
+        loc, *funcTy, calleeName, *operands, directNormalDest, ValueRange(),
+        lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+
+    if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
+      return failure();
+
+    // Handle parameter and result attributes.
+    convertParameterAttributes(invokeInst, invokeOp, builder);
+
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
     else
@@ -1658,28 +1952,38 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   // Only set the attr when it does not match the default value.
   if (memAttr.isReadWrite())
     return;
-  funcOp.setMemoryAttr(memAttr);
+  funcOp.setMemoryEffectsAttr(memAttr);
 }
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
-static constexpr std::array ExplicitAttributes{
-    StringLiteral("aarch64_pstate_sm_enabled"),
+static constexpr std::array kExplicitAttributes{
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_inout_za"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_preserves_za"),
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
-    StringLiteral("aarch64_new_za"),
-    StringLiteral("aarch64_preserves_za"),
-    StringLiteral("aarch64_in_za"),
-    StringLiteral("aarch64_out_za"),
-    StringLiteral("aarch64_inout_za"),
-    StringLiteral("vscale_range"),
+    StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("alwaysinline"),
+    StringLiteral("approx-func-fp-math"),
+    StringLiteral("convergent"),
+    StringLiteral("denormal-fp-math"),
+    StringLiteral("denormal-fp-math-f32"),
+    StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
-    StringLiteral("target-features"),
-    StringLiteral("unsafe-fp-math"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
-    StringLiteral("approx-func-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("noinline"),
+    StringLiteral("nounwind"),
+    StringLiteral("optnone"),
+    StringLiteral("target-features"),
+    StringLiteral("tune-cpu"),
+    StringLiteral("unsafe-fp-math"),
+    StringLiteral("vscale_range"),
+    StringLiteral("willreturn"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1708,7 +2012,7 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
     auto keyAttr = StringAttr::get(context, attrName);
 
     // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
-    if (llvm::is_contained(ExplicitAttributes, attrName))
+    if (llvm::is_contained(kExplicitAttributes, attrName))
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1743,6 +2047,19 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
   processPassthroughAttrs(func, funcOp);
+
+  if (func->hasFnAttribute(llvm::Attribute::NoInline))
+    funcOp.setNoInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::AlwaysInline))
+    funcOp.setAlwaysInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
+    funcOp.setOptimizeNone(true);
+  if (func->hasFnAttribute(llvm::Attribute::Convergent))
+    funcOp.setConvergent(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoUnwind))
+    funcOp.setNoUnwind(true);
+  if (func->hasFnAttribute(llvm::Attribute::WillReturn))
+    funcOp.setWillReturn(true);
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -1785,6 +2102,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
 
+  if (llvm::Attribute attr = func->getFnAttribute("tune-cpu");
+      attr.isStringAttribute())
+    funcOp.setTuneCpuAttr(StringAttr::get(context, attr.getValueAsString()));
+
   if (llvm::Attribute attr = func->getFnAttribute("target-features");
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
@@ -1809,6 +2130,20 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())
     funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math");
+      attr.isStringAttribute())
+    funcOp.setDenormalFpMathAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math-f32");
+      attr.isStringAttribute())
+    funcOp.setDenormalFpMathF32Attr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("fp-contract");
+      attr.isStringAttribute())
+    funcOp.setFpContractAttr(StringAttr::get(context, attr.getValueAsString()));
 }
 
 DictionaryAttr
@@ -1820,6 +2155,17 @@ ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
     // Skip attributes that are not attached.
     if (!llvmAttr.isValid())
       continue;
+
+    // TODO: Import captures(none) as a nocapture unit attribute until the
+    // LLVM dialect switches to the captures representation.
+    if (llvmAttr.hasKindAsEnum() &&
+        llvmAttr.getKindAsEnum() == llvm::Attribute::Captures) {
+      if (llvm::capturesNothing(llvmAttr.getCaptureInfo()))
+        paramAttrs.push_back(
+            builder.getNamedAttr(mlirName, builder.getUnitAttr()));
+      continue;
+    }
+
     Attribute mlirAttr;
     if (llvmAttr.isTypeAttribute())
       mlirAttr = TypeAttr::get(convertType(llvmAttr.getValueAsType()));
@@ -1827,7 +2173,11 @@ ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
       mlirAttr = builder.getI64IntegerAttr(llvmAttr.getValueAsInt());
     else if (llvmAttr.isEnumAttribute())
       mlirAttr = builder.getUnitAttr();
-    else
+    else if (llvmAttr.isConstantRangeAttribute()) {
+      const llvm::ConstantRange &value = llvmAttr.getValueAsConstantRange();
+      mlirAttr = builder.getAttr<LLVM::ConstantRangeAttr>(value.getLower(),
+                                                          value.getUpper());
+    } else
       llvm_unreachable("unexpected parameter attribute kind");
     paramAttrs.push_back(builder.getNamedAttr(mlirName, mlirAttr));
   }
@@ -1852,6 +2202,72 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
       builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
 }
 
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              CallOpInterface callOp,
+                                              OpBuilder &builder) {
+  llvm::AttributeList llvmAttrs = call->getAttributes();
+  SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
+  bool anyArgAttrs = false;
+  for (size_t i = 0, e = call->arg_size(); i < e; ++i) {
+    llvmArgAttrsSet.emplace_back(llvmAttrs.getParamAttrs(i));
+    if (llvmArgAttrsSet.back().hasAttributes())
+      anyArgAttrs = true;
+  }
+  auto getArrayAttr = [&](ArrayRef<DictionaryAttr> dictAttrs) {
+    SmallVector<Attribute> attrs;
+    for (auto &dict : dictAttrs)
+      attrs.push_back(dict ? dict : builder.getDictionaryAttr({}));
+    return builder.getArrayAttr(attrs);
+  };
+  if (anyArgAttrs) {
+    SmallVector<DictionaryAttr> argAttrs;
+    for (auto &llvmArgAttrs : llvmArgAttrsSet)
+      argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
+    callOp.setArgAttrsAttr(getArrayAttr(argAttrs));
+  }
+
+  llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
+  if (!llvmResAttr.hasAttributes())
+    return;
+  DictionaryAttr resAttrs = convertParameterAttribute(llvmResAttr, builder);
+  callOp.setResAttrsAttr(getArrayAttr({resAttrs}));
+}
+
+template <typename Op>
+static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
+  op.setCConv(convertCConvFromLLVM(inst->getCallingConv()));
+  return success();
+}
+
+LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
+                                                    InvokeOp op) {
+  return convertCallBaseAttributes(inst, op);
+}
+
+LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
+                                                  CallOp op) {
+  setFastmathFlagsAttr(inst, op.getOperation());
+  op.setTailCallKind(convertTailCallKindFromLLVM(inst->getTailCallKind()));
+  op.setConvergent(inst->isConvergent());
+  op.setNoUnwind(inst->doesNotThrow());
+  op.setWillReturn(inst->hasFnAttr(llvm::Attribute::WillReturn));
+
+  llvm::MemoryEffects memEffects = inst->getMemoryEffects();
+  ModRefInfo othermem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+  ModRefInfo argMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+  ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+  auto memAttr = MemoryEffectsAttr::get(op.getContext(), othermem, argMem,
+                                        inaccessibleMem);
+  // Only set the attribute when it does not match the default value.
+  if (!memAttr.isReadWrite())
+    op.setMemoryEffectsAttr(memAttr);
+
+  return convertCallBaseAttributes(inst, op);
+}
+
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   clearRegionState();
 
@@ -1861,12 +2277,12 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
       iface.isConvertibleIntrinsic(func->getIntrinsicID()))
     return success();
 
-  bool dsoLocal = func->hasLocalLinkage();
+  bool dsoLocal = func->isDSOLocal();
   CConv cconv = convertCConvFromLLVM(func->getCallingConv());
 
   // Insert the function at the end of the module.
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+  builder.setInsertionPointToEnd(mlirModule.getBody());
 
   Location loc = debugImporter->translateFuncLocation(func);
   LLVMFuncOp funcOp = builder.create<LLVMFuncOp>(
@@ -2005,7 +2421,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
                           << diag(*dbgIntr);
 
-  // Ensure that the debug instrinsic is inserted right after its operand is
+  // Ensure that the debug intrinsic is inserted right after its operand is
   // defined. Otherwise, the operand might not necessarily dominate the
   // intrinsic. If the defining operation is a terminator, insert the intrinsic
   // into a dominated block.
@@ -2092,8 +2508,9 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
 
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context,
-                              bool emitExpensiveWarnings) {
+                              MLIRContext *context, bool emitExpensiveWarnings,
+                              bool dropDICompositeTypeElements,
+                              bool loadAllDialects) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2103,13 +2520,14 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                             LLVMDialect::getDialectNamespace()));
   assert(llvm::is_contained(context->getAvailableDialects(),
                             DLTIDialect::getDialectNamespace()));
-  context->loadAllAvailableDialects();
+  if (loadAllDialects)
+    context->loadAllAvailableDialects();
   OwningOpRef<ModuleOp> module(ModuleOp::create(FileLineColLoc::get(
       StringAttr::get(context, llvmModule->getSourceFileName()), /*line=*/0,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings);
+                            emitExpensiveWarnings, dropDICompositeTypeElements);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))
@@ -2122,6 +2540,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
     return {};
   if (failed(moduleImport.convertFunctions()))
     return {};
-
+  if (failed(moduleImport.convertAliases()))
+    return {};
+  moduleImport.convertTargetTriple();
   return module;
 }

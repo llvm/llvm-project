@@ -5,15 +5,11 @@ import json, struct, signal
 
 
 class ScriptedProcess(metaclass=ABCMeta):
-
     """
     The base class for a scripted process.
 
     Most of the base class methods are `@abstractmethod` that need to be
     overwritten by the inheriting class.
-
-    DISCLAIMER: THIS INTERFACE IS STILL UNDER DEVELOPMENT AND NOT STABLE.
-                THE METHODS EXPOSED MIGHT CHANGE IN THE FUTURE.
     """
 
     capabilities = None
@@ -106,8 +102,8 @@ class ScriptedProcess(metaclass=ABCMeta):
 
         Args:
             addr (int): Address from which we should start reading.
-            data (lldb.SBData): An `lldb.SBData` buffer to write to the
-                process memory.
+            data (lldb.SBData): An `lldb.SBData` buffer to write to the process
+            memory.
             error (lldb.SBError): Error object.
 
         Returns:
@@ -121,13 +117,13 @@ class ScriptedProcess(metaclass=ABCMeta):
     def get_loaded_images(self):
         """Get the list of loaded images for the scripted process.
 
-        ```
-        scripted_image = {
-            uuid = "c6ea2b64-f77c-3d27-9528-74f507b9078b",
-            path = "/usr/lib/dyld"
-            load_addr = 0xbadc0ffee
-        }
-        ```
+        .. code-block:: python
+
+            scripted_image = {
+                uuid = "c6ea2b64-f77c-3d27-9528-74f507b9078b",
+                path = "/usr/lib/dyld"
+                load_addr = 0xbadc0ffee
+            }
 
         Returns:
             List[scripted_image]: A list of `scripted_image` dictionaries
@@ -232,15 +228,11 @@ class ScriptedProcess(metaclass=ABCMeta):
 
 
 class ScriptedThread(metaclass=ABCMeta):
-
     """
     The base class for a scripted thread.
 
     Most of the base class methods are `@abstractmethod` that need to be
     overwritten by the inheriting class.
-
-    DISCLAIMER: THIS INTERFACE IS STILL UNDER DEVELOPMENT AND NOT STABLE.
-                THE METHODS EXPOSED MIGHT CHANGE IN THE FUTURE.
     """
 
     @abstractmethod
@@ -305,10 +297,12 @@ class ScriptedThread(metaclass=ABCMeta):
     def get_state(self):
         """Get the scripted thread state type.
 
+        .. code-block:: python
+
             eStateStopped,   ///< Process or thread is stopped and can be examined.
             eStateRunning,   ///< Process or thread is running and can't be examined.
-            eStateStepping,  ///< Process or thread is in the process of stepping and can
-                             /// not be examined.
+            eStateStepping,  ///< Process or thread is in the process of stepping and
+                             /// can not be examined.
             eStateCrashed,   ///< Process or thread has crashed and can be examined.
 
         Returns:
@@ -340,12 +334,12 @@ class ScriptedThread(metaclass=ABCMeta):
     def get_stackframes(self):
         """Get the list of stack frames for the scripted thread.
 
-        ```
-        scripted_frame = {
-            idx = 0,
-            pc = 0xbadc0ffee
-        }
-        ```
+        .. code-block:: python
+
+            scripted_frame = {
+                idx = 0,
+                pc = 0xbadc0ffee
+            }
 
         Returns:
             List[scripted_frame]: A list of `scripted_frame` dictionaries
@@ -361,7 +355,10 @@ class ScriptedThread(metaclass=ABCMeta):
             if self.originating_process.arch == "x86_64":
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = INTEL64_GPR
-            elif "arm64" in self.originating_process.arch:
+            elif (
+                "arm64" in self.originating_process.arch
+                or self.originating_process.arch == "aarch64"
+            ):
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = ARM64_GPR
             else:
@@ -415,9 +412,9 @@ class PassthroughScriptedProcess(ScriptedProcess):
                         )
                     )
 
-                    self.threads[
-                        driving_thread.GetThreadID()
-                    ] = PassthroughScriptedThread(self, structured_data)
+                    self.threads[driving_thread.GetThreadID()] = (
+                        PassthroughScriptedThread(self, structured_data)
+                    )
 
                 for module in self.driving_target.modules:
                     path = module.file.fullpath
@@ -511,9 +508,9 @@ class PassthroughScriptedThread(ScriptedThread):
             if self.driving_thread.GetStopReason() != lldb.eStopReasonNone:
                 if "arm64" in self.originating_process.arch:
                     stop_reason["type"] = lldb.eStopReasonException
-                    stop_reason["data"][
-                        "desc"
-                    ] = self.driving_thread.GetStopDescription(100)
+                    stop_reason["data"]["desc"] = (
+                        self.driving_thread.GetStopDescription(100)
+                    )
                 elif self.originating_process.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP

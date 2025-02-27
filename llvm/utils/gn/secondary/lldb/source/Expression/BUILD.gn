@@ -9,6 +9,7 @@ static_library("Expression") {
     #"//lldb/source/Symbol", # FIXME: Dependency cycle.
     #"//lldb/source/Target", # FIXME: Dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
@@ -25,6 +26,7 @@ static_library("Expression") {
     "DWARFExpressionList.cpp",
     "DiagnosticManager.cpp",
     "Expression.cpp",
+    "ExpressionParser.cpp",
     "ExpressionTypeSystemHelper.cpp",
     "ExpressionVariable.cpp",
     "FunctionCaller.cpp",

@@ -9,8 +9,14 @@ Introduction
 ============
 
 This tutorial will guide you through the process of making a change to
-LLVM, and contributing it back to the LLVM project. We'll be making a
-change to Clang, but the steps for other parts of LLVM are the same.
+LLVM, and contributing it back to the LLVM project.
+
+.. note::
+   The code changes presented here are only an example and not something you
+   should actually submit to the LLVM project. For your first real change to LLVM,
+   the code will be different but the rest of the guide will still apply.
+
+We'll be making a change to Clang, but the steps for other parts of LLVM are the same.
 Even though the change we'll be making is simple, we're going to cover
 steps like building LLVM, running the tests, and code review. This is
 good practice, and you'll be prepared for making larger changes.
@@ -372,7 +378,7 @@ your branch with more commits and push to your GitHub fork of ``llvm-project``.
 It is best if you answer comments from the reviewer directly instead of expecting
 them to read through all the changes again.
 
-For example you might comment "I have done this." or "I was able to this part
+For example you might comment "I have done this." or "I was able to do this part
 but have a question about...".
 
 Review expectations

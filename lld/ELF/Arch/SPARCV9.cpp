@@ -21,7 +21,7 @@ using namespace lld::elf;
 namespace {
 class SPARCV9 final : public TargetInfo {
 public:
-  SPARCV9();
+  SPARCV9(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -31,7 +31,7 @@ public:
 };
 } // namespace
 
-SPARCV9::SPARCV9() {
+SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_SPARC_COPY;
   gotRel = R_SPARC_GLOB_DAT;
   pltRel = R_SPARC_JMP_SLOT;
@@ -78,8 +78,8 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
   case R_SPARC_TLS_LE_LOX10:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -90,23 +90,23 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
   case R_SPARC_32:
   case R_SPARC_UA32:
     // V-word32
-    checkUInt(loc, val, 32, rel);
+    checkUInt(ctx, loc, val, 32, rel);
     write32be(loc, val);
     break;
   case R_SPARC_DISP32:
     // V-disp32
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32be(loc, val);
     break;
   case R_SPARC_WDISP30:
   case R_SPARC_WPLT30:
     // V-disp30
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32be(loc, (read32be(loc) & ~0x3fffffff) | ((val >> 2) & 0x3fffffff));
     break;
   case R_SPARC_22:
     // V-imm22
-    checkUInt(loc, val, 22, rel);
+    checkUInt(ctx, loc, val, 22, rel);
     write32be(loc, (read32be(loc) & ~0x003fffff) | (val & 0x003fffff));
     break;
   case R_SPARC_GOT22:
@@ -117,12 +117,12 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_SPARC_HI22:
     // V-imm22
-    checkUInt(loc, val >> 10, 22, rel);
+    checkUInt(ctx, loc, val >> 10, 22, rel);
     write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 10) & 0x003fffff));
     break;
   case R_SPARC_WDISP19:
     // V-disp19
-    checkInt(loc, val, 21, rel);
+    checkInt(ctx, loc, val, 21, rel);
     write32be(loc, (read32be(loc) & ~0x0007ffff) | ((val >> 2) & 0x0007ffff));
     break;
   case R_SPARC_GOT10:
@@ -141,7 +141,7 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_SPARC_HH22:
     // V-imm22
-    checkUInt(loc, val >> 42, 22, rel);
+    checkUInt(ctx, loc, val >> 42, 22, rel);
     write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 42) & 0x003fffff));
     break;
   case R_SPARC_HM10:
@@ -150,7 +150,7 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_SPARC_H44:
     // V-imm22
-    checkUInt(loc, val >> 22, 22, rel);
+    checkUInt(ctx, loc, val >> 22, 22, rel);
     write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 22) & 0x003fffff));
     break;
   case R_SPARC_M44:
@@ -188,12 +188,9 @@ void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
   };
   memcpy(buf, pltData, sizeof(pltData));
 
-  uint64_t off = pltEntryAddr - in.plt->getVA();
+  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
   relocateNoSym(buf, R_SPARC_22, off);
   relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }
 
-TargetInfo *elf::getSPARCV9TargetInfo() {
-  static SPARCV9 target;
-  return &target;
-}
+void elf::setSPARCV9TargetInfo(Ctx &ctx) { ctx.target.reset(new SPARCV9(ctx)); }

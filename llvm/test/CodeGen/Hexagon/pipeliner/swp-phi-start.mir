@@ -1,4 +1,4 @@
-# RUN: llc < %s -x mir -march=hexagon -run-pass=modulo-schedule-test -pipeliner-experimental-cg=true | FileCheck %s
+# RUN: llc < %s -x mir -mtriple=hexagon -run-pass=modulo-schedule-test -pipeliner-experimental-cg=true | FileCheck %s
 
 # Simple check for this basic correctness test; ensure all instructions are in stage 0 in
 # the prolog and stage 3 in the epilog.

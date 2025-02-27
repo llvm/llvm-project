@@ -2,13 +2,13 @@
 ; REQUIRES: asserts
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK-LABEL: @func()
-define void @func() {
-  br i1 undef, label %bb5, label %bb3
+; CHECK-LABEL: @func(i1 %arg)
+define void @func(i1 %arg) {
+  br i1 %arg, label %bb5, label %bb3
 
 bb5:                                              ; preds = %bb5, %0
   store i16 undef, ptr undef
-  br i1 undef, label %bb5, label %bb3
+  br i1 %arg, label %bb5, label %bb3
 
 bb3:                                              ; preds = %bb5, %0
   ret void

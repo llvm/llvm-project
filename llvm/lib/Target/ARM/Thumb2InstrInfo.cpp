@@ -24,12 +24,12 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 
@@ -149,8 +149,9 @@ Thumb2InstrInfo::optimizeSelect(MachineInstr &MI,
 
 void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   // Handle SPR, DPR, and QPR copies.
   if (!ARM::GPRRegClass.contains(DestReg, SrcReg))
     return ARMBaseInstrInfo::copyPhysReg(MBB, I, DL, DestReg, SrcReg, KillSrc);
@@ -165,7 +166,8 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                           Register SrcReg, bool isKill, int FI,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI,
-                                          Register VReg) const {
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -205,12 +207,10 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         Register());
 }
 
-void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator I,
-                                           Register DestReg, int FI,
-                                           const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+void Thumb2InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -262,8 +262,11 @@ void Thumb2InstrInfo::expandLoadStackGuard(
   }
 
   const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
-  if (MF.getSubtarget<ARMSubtarget>().isTargetELF() && !GV->isDSOLocal())
+  const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  if (Subtarget.isTargetELF() && !GV->isDSOLocal())
     expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
+  else if (!Subtarget.useMovt())
+    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::t2LDRi12);
   else if (MF.getTarget().isPositionIndependent())
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else
@@ -571,7 +574,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     Register PredReg;
     if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL &&
-        !MI.definesRegister(ARM::CPSR)) {
+        !MI.definesRegister(ARM::CPSR, /*TRI=*/nullptr)) {
       // Turn it into a move.
       MI.setDesc(TII.get(ARM::tMOVr));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);

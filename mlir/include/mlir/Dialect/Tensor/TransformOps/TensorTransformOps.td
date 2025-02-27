@@ -53,16 +53,6 @@ def ApplyFoldTensorEmptyPatternsOp : Op<Transform_Dialect,
   let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
   let assemblyFormat = "attr-dict";
 }
-def ApplyFoldIntoPackAndUnpackPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.tensor.fold_into_pack_and_unpack",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Indicates that operations like tensor.pad and tensor.extract_slice should
-    be folded into tensor.pack and tensor.unpack operations, respectively.
-  }];
-
-  let assemblyFormat = "attr-dict";
-}
 
 def ApplyFoldTensorSubsetOpsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.fold_tensor_subset_ops",
@@ -114,12 +104,14 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
 def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.rewrite_as_constant",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let arguments = (ins UnitAttr:$aggressive);
   let description = [{
     Indicates that tensor ops (such as tensor.generate) should be replaced with
     constants (arith.constant) when possible.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat =
+      "(`aggressive` $aggressive^)? attr-dict";
 }
 
 def Transform_TensorPadOp : Transform_ConcreteOpType<"tensor.pad">;

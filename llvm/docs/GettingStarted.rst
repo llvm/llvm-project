@@ -233,12 +233,13 @@ Hardware
 
 LLVM is known to work on the following host platforms:
 
-================== ===================== =============
+================== ===================== ==============================
 OS                 Arch                  Compilers
-================== ===================== =============
+================== ===================== ==============================
 Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
+Linux              AArch64               GCC, Clang
 Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
 Linux              SystemZ               GCC, Clang
@@ -246,16 +247,19 @@ Solaris            V9 (Ultrasparc)       GCC
 DragonFlyBSD       amd64                 GCC, Clang
 FreeBSD            x86\ :sup:`1`         GCC, Clang
 FreeBSD            amd64                 GCC, Clang
+FreeBSD            AArch64               GCC, Clang
 NetBSD             x86\ :sup:`1`         GCC, Clang
 NetBSD             amd64                 GCC, Clang
 OpenBSD            x86\ :sup:`1`         GCC, Clang
 OpenBSD            amd64                 GCC, Clang
 macOS\ :sup:`2`    PowerPC               GCC
 macOS              x86                   GCC, Clang
+macOS              arm64                 Clang
 Cygwin/Win32       x86\ :sup:`1, 3`      GCC
 Windows            x86\ :sup:`1`         Visual Studio
-Windows x64        x86-64                Visual Studio
-================== ===================== =============
+Windows x64        x86-64                Visual Studio, Clang\ :sup:`4`
+Windows on Arm     ARM64                 Visual Studio, Clang\ :sup:`4`
+================== ===================== ==============================
 
 .. note::
 
@@ -263,6 +267,8 @@ Windows x64        x86-64                Visual Studio
   #. Code generation supported for 32-bit ABI only
   #. To use LLVM modules on Win32-based system, you may configure LLVM
      with ``-DBUILD_SHARED_LIBS=On``.
+  #. Visual Studio alone can compile LLVM. When using Clang, you
+     must also have Visual Studio installed.
 
 Note that Debug builds require a lot of time and disk space.  An LLVM-only build
 will need about 1-3 GB of space.  A full build of LLVM and Clang will need around
@@ -291,20 +297,22 @@ uses the package and provides other details.
 =========================================================== ============ ==========================================
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
-`CMake <http://cmake.org/>`__                               >=3.20.0     Makefile/workspace generator
-`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`1`
+`CMake <http://cmake.org/>`_                                >=3.20.0     Makefile/workspace generator
+`python <http://www.python.org/>`_                          >=3.8        Automated test suite\ :sup:`1`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`2`
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`3`
+`PyYAML <https://pypi.org/project/PyYAML/>`_                >=5.1        Header generator\ :sup:`4`
 =========================================================== ============ ==========================================
 
 .. note::
 
-   #. Only needed if you want to run the automated test suite. Python 3.8.0
-      or later is needed on Windows if a substitute (virtual) drive is used
-      to access LLVM source code due to ``MAX_PATH`` limitations.
+   #. Only needed if you want to run the automated test suite in the
+      ``llvm/test`` directory, or if you plan to utilize any Python libraries,
+      utilities, or bindings.
    #. Optional, adds compression / uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.
+   #. Only needed when building libc with New Headergen. Mainly used by libc.
 
 Additionally, your compilation host is expected to have the usual plethora of
 Unix utilities. Specifically:
@@ -354,7 +362,7 @@ popular host toolchains for specific minimum versions in our build systems:
 * Clang 5.0
 * Apple Clang 10.0
 * GCC 7.4
-* Visual Studio 2019 16.7
+* Visual Studio 2019 16.8
 
 Anything older than these toolchains *may* work, but will require forcing the
 build system with a special option and is not really a supported host platform.
@@ -1083,67 +1091,89 @@ general questions about LLVM, please consult the `Frequently Asked
 Questions <FAQ.html>`_ page.
 
 If you are having problems with limited memory and build time, please try
-building with ninja instead of make. Please consider configuring the
+building with ``ninja`` instead of ``make``. Please consider configuring the
 following options with cmake:
 
- * -G Ninja
+ * ``-G Ninja``
+
    Setting this option will allow you to build with ninja instead of make.
    Building with ninja significantly improves your build time, especially with
    incremental builds, and improves your memory usage.
 
- * -DLLVM_USE_LINKER
-   Setting this option to lld will significantly reduce linking time for LLVM
-   executables on ELF-based platforms, such as Linux. If you are building LLVM
+ * ``-DLLVM_USE_LINKER``
+
+   Setting this option to ``lld`` will significantly reduce linking time for LLVM
+   executables, particularly on Linux and Windows. If you are building LLVM
    for the first time and lld is not available to you as a binary package, then
    you may want to use the gold linker as a faster alternative to GNU ld.
 
- * -DCMAKE_BUILD_TYPE
+ * ``-DCMAKE_BUILD_TYPE``
+
    Controls optimization level and debug information of the build.  This setting
    can affect RAM and disk usage, see :ref:`CMAKE_BUILD_TYPE <cmake_build_type>`
    for more information.
 
- * -DLLVM_ENABLE_ASSERTIONS
-   This option defaults to ON for Debug builds and defaults to OFF for Release
+ * ``-DLLVM_ENABLE_ASSERTIONS``
+
+   This option defaults to ``ON`` for Debug builds and defaults to ``OFF`` for Release
    builds. As mentioned in the previous option, using the Release build type and
    enabling assertions may be a good alternative to using the Debug build type.
 
- * -DLLVM_PARALLEL_LINK_JOBS
+ * ``-DLLVM_PARALLEL_LINK_JOBS``
+
    Set this equal to number of jobs you wish to run simultaneously. This is
-   similar to the -j option used with make, but only for link jobs. This option
+   similar to the ``-j`` option used with ``make``, but only for link jobs. This option
    can only be used with ninja. You may wish to use a very low number of jobs,
    as this will greatly reduce the amount of memory used during the build
-   process. If you have limited memory, you may wish to set this to 1.
+   process. If you have limited memory, you may wish to set this to ``1``.
 
- * -DLLVM_TARGETS_TO_BUILD
+ * ``-DLLVM_TARGETS_TO_BUILD``
+
    Set this equal to the target you wish to build. You may wish to set this to
-   X86; however, you will find a full list of targets within the
-   llvm-project/llvm/lib/Target directory.
+   only your host architecture. For example ``X86`` if you are using an Intel or
+   AMD machine. You will find a full list of targets within the
+   `llvm-project/llvm/lib/Target <https://github.com/llvm/llvm-project/tree/main/llvm/lib/Target>`_
+   directory.
 
- * -DLLVM_OPTIMIZED_TABLEGEN
-   Set this to ON to generate a fully optimized tablegen during your build. This
-   will significantly improve your build time. This is only useful if you are
-   using the Debug build type.
+ * ``-DLLVM_OPTIMIZED_TABLEGEN``
 
- * -DLLVM_ENABLE_PROJECTS
-   Set this equal to the projects you wish to compile (e.g. clang, lld, etc.) If
+   Set this to ``ON`` to generate a fully optimized TableGen compiler during your
+   build, even if that build is a ``Debug`` build. This will significantly improve
+   your build time. You should not enable this if your intention is to debug the
+   TableGen compiler.
+
+ * ``-DLLVM_ENABLE_PROJECTS``
+
+   Set this equal to the projects you wish to compile (e.g. ``clang``, ``lld``, etc.) If
    compiling more than one project, separate the items with a semicolon. Should
    you run into issues with the semicolon, try surrounding it with single quotes.
 
- * -DLLVM_ENABLE_RUNTIMES
-   Set this equal to the runtimes you wish to compile (e.g. libcxx, libcxxabi, etc.)
+ * ``-DLLVM_ENABLE_RUNTIMES``
+
+   Set this equal to the runtimes you wish to compile (e.g. ``libcxx``, ``libcxxabi``, etc.)
    If compiling more than one runtime, separate the items with a semicolon. Should
    you run into issues with the semicolon, try surrounding it with single quotes.
 
- * -DCLANG_ENABLE_STATIC_ANALYZER
-   Set this option to OFF if you do not require the clang static analyzer. This
+ * ``-DCLANG_ENABLE_STATIC_ANALYZER``
+
+   Set this option to ``OFF`` if you do not require the clang static analyzer. This
    should improve your build time slightly.
 
- * -DLLVM_USE_SPLIT_DWARF
-   Consider setting this to ON if you require a debug build, as this will ease
+ * ``-DLLVM_USE_SPLIT_DWARF``
+
+   Consider setting this to ``ON`` if you require a debug build, as this will ease
    memory pressure on the linker. This will make linking much faster, as the
-   binaries will not contain any of the debug information; however, this will
-   generate the debug information in the form of a DWARF object file (with the
-   extension .dwo). This only applies to host platforms using ELF, such as Linux.
+   binaries will not contain any of the debug information. Instead the debug
+   information is in a separate DWARF object file (with the extension ``.dwo``).
+   This only applies to host platforms using ELF, such as Linux.
+
+ * ``-DBUILD_SHARED_LIBS``
+
+   Setting this to ``ON`` will build shared libraries instead of static
+   libraries. This will ease memory pressure on the linker. However, this should
+   only be used when developing llvm. See
+   :ref:`BUILD_SHARED_LIBS <LLVM-related variables BUILD_SHARED_LIBS>`
+   for more information.
 
 .. _links:
 

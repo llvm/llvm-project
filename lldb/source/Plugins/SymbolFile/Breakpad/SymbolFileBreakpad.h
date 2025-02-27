@@ -120,9 +120,8 @@ public:
 
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override {
-    return llvm::make_error<llvm::StringError>(
-        "SymbolFileBreakpad does not support GetTypeSystemForLanguage",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "SymbolFileBreakpad does not support GetTypeSystemForLanguage");
   }
 
   CompilerDeclContext FindNamespace(ConstString name,

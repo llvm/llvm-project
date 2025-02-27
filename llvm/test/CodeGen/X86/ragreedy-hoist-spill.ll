@@ -84,7 +84,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    movq _syCTRO@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $1, %r13d
 ; CHECK-NEXT:    movb $1, %cl
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_9: ## %do.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $0, (%rax)
@@ -108,7 +108,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    testb %r12b, %r12b
 ; CHECK-NEXT:    je LBB0_54
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_20: ## %while.cond197.backedge
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    decl %r13d
@@ -141,7 +141,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    ## implicit-def: $rax
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_31: ## %do.body479.backedge
 ; CHECK-NEXT:    ## in Loop: Header=BB0_28 Depth=2
 ; CHECK-NEXT:    leaq 1(%rbx), %rax
@@ -165,7 +165,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    testb %r12b, %r12b
 ; CHECK-NEXT:    jne LBB0_31
 ; CHECK-NEXT:    jmp LBB0_33
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_14: ## %while.body200
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    leal 1(%rbp), %eax
@@ -223,7 +223,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    movq _SyFgets.yank@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movb $0, (%rax)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_37: ## %for.cond534
 ; CHECK-NEXT:    ## Parent Loop BB0_13 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
@@ -235,15 +235,15 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    movb $0, (%rbx)
 ; CHECK-NEXT:    leaq LJTI0_0(%rip), %rdx
 ; CHECK-NEXT:    jmp LBB0_20
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_41: ## %while.cond864
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp LBB0_41
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_42: ## %while.cond962
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp LBB0_42
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_24: ## %for.cond357
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp LBB0_24
@@ -266,7 +266,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    subq %rbx, %r14
 ; CHECK-NEXT:    movq _syHistory@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    leaq 8189(%r14,%rax), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_48: ## %for.body1723
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    decq %rax
@@ -279,11 +279,11 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_40
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_17: ## %for.body643.us
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp LBB0_17
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_40: ## %while.cond661
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp LBB0_40
@@ -300,7 +300,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:  ## %bb.51: ## %while.body1679.preheader
 ; CHECK-NEXT:    incl %ebp
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_52: ## %while.body1679
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq (%r14), %rdi
@@ -331,13 +331,13 @@ if.end:
   ]
 
 if.then4:
-  br i1 undef, label %SyTime.exit, label %if.then.i
+  br i1 poison, label %SyTime.exit, label %if.then.i
 
 if.then.i:
   unreachable
 
 SyTime.exit:
-  br i1 undef, label %SyTime.exit2681, label %if.then.i2673
+  br i1 poison, label %SyTime.exit2681, label %if.then.i2673
 
 if.then.i2673:
   unreachable
@@ -349,7 +349,7 @@ land.lhs.true14:
   unreachable
 
 if.end25:
-  br i1 undef, label %SyTime.exit2720, label %if.then.i2712
+  br i1 poison, label %SyTime.exit2720, label %if.then.i2712
 
 if.then.i2712:
   unreachable
@@ -406,7 +406,7 @@ do.end:
   %mul167 = shl i32 %rep.6, 2
   %rep.8 = select i1 %cmp164, i32 %mul167, i32 %rep.6
   %..ch.19 = select i1 false, i32 2, i32 0
-  br i1 undef, label %while.body200, label %while.end1465
+  br i1 poison, label %while.body200, label %while.end1465
 
 while.body200:
   %dec3386.in = phi i32 [ %dec3386, %while.cond197.backedge ], [ %rep.8, %do.end ]
@@ -444,7 +444,7 @@ while.cond1037.preheader:
   br i1 %cmp10393273, label %if.end1070, label %land.rhs1041
 
 while.cond635.preheader:
-  br i1 undef, label %for.body643.us, label %while.cond661
+  br i1 poison, label %for.body643.us, label %while.cond661
 
 for.body643.us:
   br label %for.body643.us
@@ -488,7 +488,7 @@ land.rhs485:
   br i1 %isascii.i.i27763151, label %cond.true.i.i2780, label %cond.false.i.i2782
 
 cond.true.i.i2780:
-  br i1 undef, label %land.lhs.true490, label %lor.rhs500
+  br i1 poison, label %land.lhs.true490, label %lor.rhs500
 
 cond.false.i.i2782:
   unreachable
@@ -499,10 +499,10 @@ land.lhs.true490:
 lor.rhs500:
   ; Make sure spill is hoisted to a cold preheader in outside loop.
   %call3.i.i2792 = call i32 @__maskrune(i32 undef, i64 256)
-  br i1 undef, label %land.lhs.true504, label %do.body479.backedge
+  br i1 poison, label %land.lhs.true504, label %do.body479.backedge
 
 land.lhs.true504:
-  br i1 undef, label %do.body479.backedge, label %if.end517
+  br i1 poison, label %do.body479.backedge, label %if.end517
 
 do.body479.backedge:
   %incdec.ptr480 = getelementptr i8, ptr %incdec.ptr4803316, i64 1
@@ -531,10 +531,10 @@ for.cond534:
   br i1 %cmp536, label %for.cond542.preheader, label %for.cond534
 
 for.cond542.preheader:
-  br i1 undef, label %for.body545, label %for.end552
+  br i1 poison, label %for.body545, label %for.end552
 
 for.body545:
-  br i1 undef, label %for.end552, label %for.body545
+  br i1 poison, label %for.end552, label %for.body545
 
 for.end552:
   %s.2.lcssa = phi ptr [ undef, %for.cond542.preheader ], [ %q.4, %for.body545 ]
@@ -554,7 +554,7 @@ while.cond864:
   br label %while.cond864
 
 sw.bb956:
-  br i1 undef, label %if.then959, label %while.cond197.backedge
+  br i1 poison, label %if.then959, label %while.cond197.backedge
 
 if.then959:
   br label %while.cond962
@@ -600,7 +600,7 @@ while.end1465:
   ]
 
 for.cond1480.preheader:
-  br i1 undef, label %for.body1606.lr.ph, label %for.end1609
+  br i1 poison, label %for.body1606.lr.ph, label %for.end1609
 
 if.then1477:
   %p.1.lcssa3539 = phi ptr [ null, %while.end1465 ], [ null, %while.end1465 ], [ null, %while.end1465 ], [ null, %while.end1465 ], [ %line, %while.body200 ]
@@ -614,7 +614,7 @@ for.body1606.lr.ph:
   br label %for.end1609
 
 for.end1609:
-  br i1 undef, label %for.cond1659.preheader, label %land.lhs.true1614
+  br i1 poison, label %for.cond1659.preheader, label %land.lhs.true1614
 
 land.lhs.true1614:
   br label %for.cond1659.preheader
@@ -631,13 +631,13 @@ while.body1703.lr.ph:
   unreachable
 
 while.cond1683.preheader:
-  br i1 undef, label %while.body1691, label %while.end1693
+  br i1 poison, label %while.body1691, label %while.end1693
 
 while.body1679:
   %oldc.43406 = phi i32 [ %inc, %syEchoch.exit3070 ], [ %oldc.1.lcssa, %for.body1664.lr.ph ]
   %3 = load ptr, ptr %echo.i3101, align 8, !tbaa !6
   %call.i3062 = call i32 @fileno(ptr %3)
-  br i1 undef, label %if.then.i3069, label %syEchoch.exit3070
+  br i1 poison, label %if.then.i3069, label %syEchoch.exit3070
 
 if.then.i3069:
   br label %syEchoch.exit3070

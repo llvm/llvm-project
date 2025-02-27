@@ -8,12 +8,14 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 using UnsignedTypes = testing::TypeList<
 #if defined(LIBC_TYPES_HAS_INT128)
@@ -39,7 +41,8 @@ TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   constexpr auto LSB = T(1);
   constexpr auto MSB = T(~(ALL_ONES >> 1));
   for (T value = 1; value; value <<= 1) {
-    auto two_bits_value = value | ((value <= MIDPOINT) ? MSB : LSB);
+    T two_bits_value =
+        static_cast<T>(value | ((value <= MIDPOINT) ? MSB : LSB));
     EXPECT_FALSE(has_single_bit<T>(two_bits_value));
   }
 }
@@ -228,4 +231,5 @@ TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
               cpp::numeric_limits<T>::digits - i);
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL

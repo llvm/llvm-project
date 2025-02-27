@@ -103,7 +103,8 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
+  void spillFPBP(MachineFunction &MF) const override;
+
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   bool needsFrameIndexResolution(const MachineFunction &MF) const override;
@@ -133,12 +134,50 @@ public:
   processFunctionBeforeFrameIndicesReplaced(MachineFunction &MF,
                                             RegScavenger *RS) const override;
 
-  /// Check the instruction before/after the passed instruction. If
-  /// it is an ADD/SUB/LEA instruction it is deleted argument and the
-  /// stack adjustment is returned as a positive value for ADD/LEA and
-  /// a negative for SUB.
-  int mergeSPUpdates(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
-                     bool doMergeWithPrevious) const;
+private:
+  /// Basic Pseudocode:
+  /// if (instruction before/after the passed instruction is ADD/SUB/LEA)
+  ///   Offset = instruction stack adjustment
+  ///            ... positive value for ADD/LEA and negative for SUB
+  ///   FoundStackAdjust(instruction, Offset)
+  ///   erase(instruction)
+  ///   return CalcNewOffset(Offset)
+  /// else
+  ///   return CalcNewOffset(0)
+  ///
+  /// It's possible that the selected instruction is not immediately
+  /// before/after MBBI for large adjustments that have been split into multiple
+  /// instructions.
+  ///
+  /// FoundStackAdjust should have the signature:
+  ///    void FoundStackAdjust(MachineBasicBlock::iterator PI, int64_t Offset)
+  /// CalcNewOffset should have the signature:
+  ///   int64_t CalcNewOffset(int64_t Offset)
+  template <typename FoundT, typename CalcT>
+  int64_t mergeSPUpdates(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator &MBBI,
+                         FoundT FoundStackAdjust, CalcT CalcNewOffset,
+                         bool doMergeWithPrevious) const;
+
+  template <typename CalcT>
+  int64_t mergeSPUpdates(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator &MBBI, CalcT CalcNewOffset,
+                         bool doMergeWithPrevious) const {
+    auto FoundStackAdjust = [](MachineBasicBlock::iterator MBBI,
+                               int64_t Offset) {};
+    return mergeSPUpdates(MBB, MBBI, FoundStackAdjust, CalcNewOffset,
+                          doMergeWithPrevious);
+  }
+
+public:
+  /// Equivalent to:
+  ///   mergeSPUpdates(MBB, MBBI,
+  ///                  [AddOffset](int64_t Offset) {
+  ///                    return AddOffset + Offset;
+  ///                  },
+  ///                  doMergeWithPrevious);
+  int64_t mergeSPAdd(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+                     int64_t AddOffset, bool doMergeWithPrevious) const;
 
   /// Emit a series of instructions to increment / decrement the stack
   /// pointer by a constant value.
@@ -198,6 +237,9 @@ public:
   /// Return true if the function has a redzone (accessible bytes past the
   /// frame of the top of stack function) as part of it's ABI.
   bool has128ByteRedZone(const MachineFunction& MF) const;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   bool isWin64Prologue(const MachineFunction &MF) const;
@@ -267,6 +309,34 @@ private:
   void emitCatchRetReturnValue(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI,
                                MachineInstr *CatchRet) const;
+
+  /// Issue instructions to allocate stack space and spill frame pointer and/or
+  /// base pointer to stack using stack pointer register.
+  void spillFPBPUsingSP(MachineFunction &MF,
+                        const MachineBasicBlock::iterator BeforeMI, Register FP,
+                        Register BP, int SPAdjust) const;
+
+  /// Issue instructions to restore frame pointer and/or base pointer from stack
+  /// using stack pointer register, and free stack space.
+  void restoreFPBPUsingSP(MachineFunction &MF,
+                          const MachineBasicBlock::iterator AfterMI,
+                          Register FP, Register BP, int SPAdjust) const;
+
+  void saveAndRestoreFPBPUsingSP(MachineFunction &MF,
+                                 MachineBasicBlock::iterator BeforeMI,
+                                 MachineBasicBlock::iterator AfterMI,
+                                 bool SpillFP, bool SpillBP) const;
+
+  void checkInterferedAccess(MachineFunction &MF,
+                             MachineBasicBlock::reverse_iterator DefMI,
+                             MachineBasicBlock::reverse_iterator KillMI,
+                             bool SpillFP, bool SpillBP) const;
+
+  // If MI uses fp/bp, but target can handle it, and doesn't want to be spilled
+  // again, this function should return true, and update MI so we will not check
+  // any instructions from related sequence.
+  bool skipSpillFPBP(MachineFunction &MF,
+                     MachineBasicBlock::reverse_iterator &MI) const;
 };
 
 } // End llvm namespace

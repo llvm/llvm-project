@@ -58,6 +58,9 @@ define void @atomic_rmw_ops(ptr %p, i32 %i, float %f) {
   %a.uinc_wrap = atomicrmw uinc_wrap ptr %p, i32 %i acq_rel, align 8
   %a.udec_wrap = atomicrmw udec_wrap ptr %p, i32 %i acq_rel, align 8
 
+  %a.usub_sat  = atomicrmw usub_sat  ptr %p, i32 %i acq_rel, align 8
+  %a.usub_cond = atomicrmw usub_cond ptr %p, i32 %i acq_rel, align 8
+
   ret void
 }
 

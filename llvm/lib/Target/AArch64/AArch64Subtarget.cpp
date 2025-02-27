@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
@@ -64,12 +65,6 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool> ForceStreamingCompatibleSVE(
-    "force-streaming-compatible-sve",
-    cl::desc(
-        "Force the use of streaming-compatible SVE code for all functions"),
-    cl::Hidden);
-
 static cl::opt<AArch64PAuth::AuthCheckMethod>
     AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
                                cl::Hidden,
@@ -80,6 +75,32 @@ static cl::opt<AArch64PAuth::AuthCheckMethod>
 static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
     "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
+
+static cl::opt<unsigned> AArch64StreamingHazardSize(
+    "aarch64-streaming-hazard-size",
+    cl::desc("Hazard size for streaming mode memory accesses. 0 = disabled."),
+    cl::init(0), cl::Hidden);
+
+static cl::alias AArch64StreamingStackHazardSize(
+    "aarch64-stack-hazard-size",
+    cl::desc("alias for -aarch64-streaming-hazard-size"),
+    cl::aliasopt(AArch64StreamingHazardSize));
+
+static cl::opt<bool> EnableZPRPredicateSpills(
+    "aarch64-enable-zpr-predicate-spills", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
+
+// Subreg liveness tracking is disabled by default for now until all issues
+// are ironed out. This option allows the feature to be used in tests.
+static cl::opt<bool>
+    EnableSubregLivenessTracking("aarch64-enable-subreg-liveness-tracking",
+                                 cl::init(false), cl::Hidden,
+                                 cl::desc("Enable subreg liveness tracking"));
+
+static cl::opt<bool>
+    UseScalarIncVL("sve-use-scalar-inc-vl", cl::init(false), cl::Hidden,
+                   cl::desc("Prefer add+cnt over addvl/inc/dec"));
 
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
@@ -109,7 +130,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   // this in the future so we can specify it together with the subtarget
   // features.
   switch (ARMProcFamily) {
-  case Others:
+  case Generic:
+    // Using TuneCPU=generic we avoid ldapur instructions to line up with the
+    // cpus that use the AvoidLDAPUR feature. We don't want this to be on
+    // forever, so it is enabled between armv8.4 and armv8.7/armv9.2.
+    if (hasV8_4aOps() && !hasV8_8aOps())
+      AvoidLDAPUR = true;
     break;
   case Carmel:
     CacheLineSize = 64;
@@ -117,6 +143,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA35:
   case CortexA53:
   case CortexA55:
+  case CortexR82:
+  case CortexR82AE:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
@@ -142,9 +170,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA78:
   case CortexA78AE:
   case CortexA78C:
-  case CortexR82:
   case CortexX1:
-  case CortexX1C:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -159,9 +185,11 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA710:
   case CortexA715:
   case CortexA720:
+  case CortexA725:
   case CortexX2:
   case CortexX3:
   case CortexX4:
+  case CortexX925:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -177,6 +205,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 4;
     VScaleForTuning = 4;
     break;
+  case MONAKA:
+    VScaleForTuning = 2;
+    break;
   case AppleA7:
   case AppleA10:
   case AppleA11:
@@ -186,6 +217,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA15:
   case AppleA16:
   case AppleA17:
+  case AppleM4:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -195,6 +227,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     case AppleA15:
     case AppleA16:
     case AppleA17:
+    case AppleM4:
       MaxInterleaveFactor = 4;
       break;
     default:
@@ -234,8 +267,14 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
-  case NeoverseN2:
   case NeoverseV2:
+  case NeoverseV3:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
+    ScatterOverhead = 13;
+    LLVM_FALLTHROUGH;
+  case NeoverseN2:
+  case NeoverseN3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -303,6 +342,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
     break;
+  case Oryon:
+    CacheLineSize = 64;
+    PrefFunctionAlignment = Align(16);
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
+    break;
   }
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
@@ -314,15 +360,18 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEMode,
-                                   bool StreamingCompatibleSVEMode,
+                                   bool IsStreaming, bool IsStreamingCompatible,
                                    bool HasMinSize)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
-      IsLittle(LittleEndian), StreamingSVEMode(StreamingSVEMode),
-      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
+      IsLittle(LittleEndian), IsStreaming(IsStreaming),
+      IsStreamingCompatible(IsStreamingCompatible),
+      StreamingHazardSize(
+          AArch64StreamingHazardSize.getNumOccurrences() > 0
+              ? std::optional<unsigned>(AArch64StreamingHazardSize)
+              : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
@@ -358,7 +407,21 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
 
-  AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
+  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
+}
+
+unsigned AArch64Subtarget::getHwModeSet() const {
+  AArch64HwModeBits Modes = AArch64HwModeBits::DefaultMode;
+
+  // Use a special hardware mode in streaming[-compatible] functions with
+  // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
+  // alignment) for the predicate register class.
+  if (EnableZPRPredicateSpills.getValue() &&
+      (isStreaming() || isStreamingCompatible())) {
+    Modes |= AArch64HwModeBits::SMEWithZPRPredicateSpills;
+  }
+
+  return to_underlying(Modes);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
@@ -545,18 +608,12 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
-bool AArch64Subtarget::isStreamingCompatible() const {
-  return StreamingCompatibleSVEMode || ForceStreamingCompatibleSVE;
-}
-
-bool AArch64Subtarget::isNeonAvailable() const {
-  return hasNEON() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
-}
-
-bool AArch64Subtarget::isSVEAvailable() const {
-  return hasSVE() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
+bool AArch64Subtarget::useScalarIncVL() const {
+  // If SVE2 or SME is present (we are not SVE-1 only) and UseScalarIncVL
+  // is not otherwise set, enable it by default.
+  if (UseScalarIncVL.getNumOccurrences())
+    return UseScalarIncVL;
+  return hasSVE2() || hasSME();
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:
@@ -572,14 +629,30 @@ bool AArch64Subtarget::isSVEAvailable() const {
 // exception on its own. Later, if the callee spills the signed LR value and
 // neither FEAT_PAuth2 nor FEAT_EPAC are implemented, the valid PAC replaces
 // the higher bits of LR thus hiding the authentication failure.
-AArch64PAuth::AuthCheckMethod
-AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
+AArch64PAuth::AuthCheckMethod AArch64Subtarget::getAuthenticatedLRCheckMethod(
+    const MachineFunction &MF) const {
+  // TODO: Check subtarget for the scheme. Present variant is a default for
+  // pauthtest ABI.
+  if (MF.getFunction().hasFnAttribute("ptrauth-returns") &&
+      MF.getFunction().hasFnAttribute("ptrauth-auth-traps"))
+    return AArch64PAuth::AuthCheckMethod::HighBitsNoTBI;
   if (AuthenticatedLRCheckMethod.getNumOccurrences())
     return AuthenticatedLRCheckMethod;
 
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
   return AArch64PAuth::AuthCheckMethod::None;
+}
+
+std::optional<uint16_t>
+AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
+    const Function &ParentFn) const {
+  if (!ParentFn.hasFnAttribute("ptrauth-indirect-gotos"))
+    return std::nullopt;
+  // We currently have one simple mechanism for all targets.
+  // This isn't ABI, so we can always do better in the future.
+  return getPointerAuthStableSipHash(
+      (Twine(ParentFn.getName()) + " blockaddress").str());
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

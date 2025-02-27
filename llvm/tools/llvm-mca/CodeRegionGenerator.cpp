@@ -29,7 +29,7 @@ namespace mca {
 CodeRegionGenerator::~CodeRegionGenerator() {}
 
 Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
-    const std::unique_ptr<MCInstPrinter> &IP) {
+    const std::unique_ptr<MCInstPrinter> &IP, bool SkipFailures) {
   MCTargetOptions Opts;
   Opts.PreserveAsmComments = false;
   CodeRegions &Regions = getRegions();
@@ -41,8 +41,7 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   // doesn't show up in the llvm-mca output.
   raw_ostream &OSRef = nulls();
   formatted_raw_ostream FOSRef(OSRef);
-  TheTarget.createAsmTargetStreamer(*Str, FOSRef, IP.get(),
-                                    /*IsVerboseAsm=*/true);
+  TheTarget.createAsmTargetStreamer(*Str, FOSRef, IP.get());
 
   // Create a MCAsmParser and setup the lexer to recognize llvm-mca ASM
   // comments.
@@ -61,7 +60,16 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
         "This target does not support assembly parsing.",
         inconvertibleErrorCode());
   Parser->setTargetParser(*TAP);
-  Parser->Run(false);
+  // Parser->Run() confusingly returns true on errors, in which case the errors
+  // were already shown to the user. SkipFailures implies continuing in the
+  // presence of any kind of failure within the parser, in which case failing
+  // input lines are not represented, but the rest of the input remains.
+  if (Parser->Run(false) && !SkipFailures) {
+    const char *Message = "Assembly input parsing had errors, use "
+                          "-skip-unsupported-instructions=parse-failure "
+                          "to drop failing lines from the input.";
+    return make_error<StringError>(Message, inconvertibleErrorCode());
+  }
 
   if (CCP->hadErr())
     return make_error<StringError>("There was an error parsing comments.",

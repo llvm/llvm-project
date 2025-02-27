@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=bpfel -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfel -mcpu=v1 -mattr=+alu32 < %s | FileCheck %s
 ;
 ; unsigned int select_cc_32 (unsigned a, unsigned b, int c, int d)
 ; {

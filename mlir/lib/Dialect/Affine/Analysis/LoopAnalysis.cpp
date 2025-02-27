@@ -16,19 +16,150 @@
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Debug.h"
 #include <numeric>
 #include <optional>
 #include <type_traits>
 
+#define DEBUG_TYPE "affine-loop-analysis"
+
 using namespace mlir;
 using namespace mlir::affine;
+
+namespace {
+
+/// A directed graph to model relationships between MLIR Operations.
+class DirectedOpGraph {
+public:
+  /// Add a node to the graph.
+  void addNode(Operation *op) {
+    assert(!hasNode(op) && "node already added");
+    nodes.emplace_back(op);
+    edges[op] = {};
+  }
+
+  /// Add an edge from `src` to `dest`.
+  void addEdge(Operation *src, Operation *dest) {
+    // This is a multi-graph.
+    assert(hasNode(src) && "src node does not exist in graph");
+    assert(hasNode(dest) && "dest node does not exist in graph");
+    edges[src].push_back(getNode(dest));
+  }
+
+  /// Returns true if there is a (directed) cycle in the graph.
+  bool hasCycle() { return dfs(/*cycleCheck=*/true); }
+
+  void printEdges() {
+    for (auto &en : edges) {
+      llvm::dbgs() << *en.first << " (" << en.first << ")"
+                   << " has " << en.second.size() << " edges:\n";
+      for (auto *node : en.second) {
+        llvm::dbgs() << '\t' << *node->op << '\n';
+      }
+    }
+  }
+
+private:
+  /// A node of a directed graph between MLIR Operations to model various
+  /// relationships. This is meant to be used internally.
+  struct DGNode {
+    DGNode(Operation *op) : op(op) {};
+    Operation *op;
+
+    // Start and finish visit numbers are standard in DFS to implement things
+    // like finding strongly connected components. These numbers are modified
+    // during analyses on the graph and so seemingly const API methods will be
+    // non-const.
+
+    /// Start visit number.
+    int vn = -1;
+
+    /// Finish visit number.
+    int fn = -1;
+  };
+
+  /// Get internal node corresponding to `op`.
+  DGNode *getNode(Operation *op) {
+    auto *value =
+        llvm::find_if(nodes, [&](const DGNode &node) { return node.op == op; });
+    assert(value != nodes.end() && "node doesn't exist in graph");
+    return &*value;
+  }
+
+  /// Returns true if `key` is in the graph.
+  bool hasNode(Operation *key) const {
+    return llvm::find_if(nodes, [&](const DGNode &node) {
+             return node.op == key;
+           }) != nodes.end();
+  }
+
+  /// Perform a depth-first traversal of the graph setting visited and finished
+  /// numbers. If `cycleCheck` is set, detects cycles and returns true as soon
+  /// as the first cycle is detected, and false if there are no cycles. If
+  /// `cycleCheck` is not set, completes the DFS and the `return` value doesn't
+  /// have a meaning.
+  bool dfs(bool cycleCheck = false) {
+    for (DGNode &node : nodes) {
+      node.vn = 0;
+      node.fn = -1;
+    }
+
+    unsigned time = 0;
+    for (DGNode &node : nodes) {
+      if (node.vn == 0) {
+        bool ret = dfsNode(node, cycleCheck, time);
+        // Check if a cycle was already found.
+        if (cycleCheck && ret)
+          return true;
+      } else if (cycleCheck && node.fn == -1) {
+        // We have encountered a node whose visit has started but it's not
+        // finished. So we have a cycle.
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Perform depth-first traversal starting at `node`. Return true
+  /// as soon as a cycle is found if `cycleCheck` was set. Update `time`.
+  bool dfsNode(DGNode &node, bool cycleCheck, unsigned &time) const {
+    auto nodeEdges = edges.find(node.op);
+    assert(nodeEdges != edges.end() && "missing node in graph");
+    node.vn = ++time;
+
+    for (auto &neighbour : nodeEdges->second) {
+      if (neighbour->vn == 0) {
+        bool ret = dfsNode(*neighbour, cycleCheck, time);
+        if (cycleCheck && ret)
+          return true;
+      } else if (cycleCheck && neighbour->fn == -1) {
+        // We have encountered a node whose visit has started but it's not
+        // finished. So we have a cycle.
+        return true;
+      }
+    }
+
+    // Update finish time.
+    node.fn = ++time;
+
+    return false;
+  }
+
+  // The list of nodes. The storage is owned by this class.
+  SmallVector<DGNode> nodes;
+
+  // Edges as an adjacency list.
+  DenseMap<Operation *, SmallVector<DGNode *>> edges;
+};
+
+} // namespace
 
 /// Returns the trip count of the loop as an affine expression if the latter is
 /// expressible as an affine expression, and nullptr otherwise. The trip count
@@ -47,7 +178,8 @@ void mlir::affine::getTripCountMapAndOperands(
     loopSpan = ub - lb;
     if (loopSpan < 0)
       loopSpan = 0;
-    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
+    *tripCountMap = AffineMap::getConstantMap(
+        llvm::divideCeilSigned(loopSpan, step), context);
     tripCountOperands->clear();
     return;
   }
@@ -178,10 +310,9 @@ template bool mlir::affine::isInvariantAccess(AffineStoreOp, AffineForOp);
 DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
                                                    ArrayRef<Value> indices) {
   DenseSet<Value> res;
-  for (auto val : indices) {
-    if (isAccessIndexInvariant(iv, val)) {
-      res.insert(val);
-    }
+  for (Value index : indices) {
+    if (isAccessIndexInvariant(iv, index))
+      res.insert(index);
   }
   return res;
 }
@@ -388,4 +519,89 @@ bool mlir::affine::isOpwiseShiftValid(AffineForOp forOp,
     }
   }
   return true;
+}
+
+bool mlir::affine::isTilingValid(ArrayRef<AffineForOp> loops) {
+  assert(!loops.empty() && "no original loops provided");
+
+  // We first find out all dependences we intend to check.
+  SmallVector<Operation *, 8> loadAndStoreOps;
+  loops[0]->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      loadAndStoreOps.push_back(op);
+  });
+
+  unsigned numOps = loadAndStoreOps.size();
+  unsigned numLoops = loops.size();
+  for (unsigned d = 1; d <= numLoops + 1; ++d) {
+    for (unsigned i = 0; i < numOps; ++i) {
+      Operation *srcOp = loadAndStoreOps[i];
+      MemRefAccess srcAccess(srcOp);
+      for (unsigned j = 0; j < numOps; ++j) {
+        Operation *dstOp = loadAndStoreOps[j];
+        MemRefAccess dstAccess(dstOp);
+
+        SmallVector<DependenceComponent, 2> depComps;
+        DependenceResult result = checkMemrefAccessDependence(
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
+            &depComps);
+
+        // Skip if there is no dependence in this case.
+        if (!hasDependence(result))
+          continue;
+
+        // Check whether there is any negative direction vector in the
+        // dependence components found above, which means that dependence is
+        // violated by the default hyper-rect tiling method.
+        LLVM_DEBUG(llvm::dbgs() << "Checking whether tiling legality violated "
+                                   "for dependence at depth: "
+                                << Twine(d) << " between:\n";);
+        LLVM_DEBUG(srcAccess.opInst->dump());
+        LLVM_DEBUG(dstAccess.opInst->dump());
+        for (const DependenceComponent &depComp : depComps) {
+          if (depComp.lb.has_value() && depComp.ub.has_value() &&
+              *depComp.lb < *depComp.ub && *depComp.ub < 0) {
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Dependence component lb = " << Twine(*depComp.lb)
+                       << " ub = " << Twine(*depComp.ub)
+                       << " is negative  at depth: " << Twine(d)
+                       << " and thus violates the legality rule.\n");
+            return false;
+          }
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+bool mlir::affine::hasCyclicDependence(AffineForOp root) {
+  // Collect all the memory accesses in the source nest grouped by their
+  // immediate parent block.
+  DirectedOpGraph graph;
+  SmallVector<MemRefAccess> accesses;
+  root->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) {
+      accesses.emplace_back(op);
+      graph.addNode(op);
+    }
+  });
+
+  // Construct the dependence graph for all the collected acccesses.
+  unsigned rootDepth = getNestingDepth(root);
+  for (const auto &accA : accesses) {
+    for (const auto &accB : accesses) {
+      if (accA.memref != accB.memref)
+        continue;
+      // Perform the dependence on all surrounding loops + the body.
+      unsigned numCommonLoops =
+          getNumCommonSurroundingLoops(*accA.opInst, *accB.opInst);
+      for (unsigned d = rootDepth + 1; d <= numCommonLoops + 1; ++d) {
+        if (!noDependence(checkMemrefAccessDependence(accA, accB, d)))
+          graph.addEdge(accA.opInst, accB.opInst);
+      }
+    }
+  }
+  return graph.hasCycle();
 }

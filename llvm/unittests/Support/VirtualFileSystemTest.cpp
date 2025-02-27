@@ -101,7 +101,7 @@ public:
     std::map<std::string, vfs::Status>::iterator I;
     std::string Path;
     bool isInPath(StringRef S) {
-      if (Path.size() < S.size() && S.find(Path) == 0) {
+      if (Path.size() < S.size() && S.starts_with(Path)) {
         auto LastSep = S.find_last_of('/');
         if (LastSep == Path.size() || LastSep == Path.size() - 1)
           return true;
@@ -766,7 +766,7 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
 template <typename DirIter>
 static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
   std::error_code EC;
-  SmallVector<StringRef, 4> Expected(ExpectedOut.begin(), ExpectedOut.end());
+  SmallVector<StringRef, 4> Expected(ExpectedOut);
   SmallVector<std::string, 4> InputToCheck;
 
   // Do not rely on iteration order to check for contents, sort both
@@ -1138,6 +1138,11 @@ TEST_F(InMemoryFileSystemTest, DuplicatedFile) {
   ASSERT_FALSE(FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("a")));
   ASSERT_TRUE(FS.addFile("/a", 0, MemoryBuffer::getMemBuffer("a")));
   ASSERT_FALSE(FS.addFile("/a", 0, MemoryBuffer::getMemBuffer("b")));
+  ASSERT_TRUE(FS.addFile("/b/c/d", 0, MemoryBuffer::getMemBuffer("a")));
+  ASSERT_FALSE(FS.addFile("/b/c", 0, MemoryBuffer::getMemBuffer("a")));
+  ASSERT_TRUE(FS.addFile(
+      "/b/c", 0, MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
+      /*Group=*/std::nullopt, sys::fs::file_type::directory_file));
 }
 
 TEST_F(InMemoryFileSystemTest, DirectoryIteration) {
@@ -1578,7 +1583,7 @@ public:
       IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS = new DummyFileSystem(),
       StringRef YAMLFilePath = "") {
     std::string VersionPlusContent("{\n  'version':0,\n");
-    VersionPlusContent += Content.slice(Content.find('{') + 1, StringRef::npos);
+    VersionPlusContent += Content.substr(Content.find('{') + 1);
     return getFromYAMLRawString(VersionPlusContent, ExternalFS, YAMLFilePath);
   }
 
@@ -2922,7 +2927,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   Lower->addDirectory("//root/");
@@ -2973,7 +2977,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest2) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
@@ -3006,7 +3009,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
@@ -3027,7 +3029,6 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
   VFSWriter.write(OS);
-  OS.flush();
 
   // We didn't add a single file - only directories.
   EXPECT_EQ(Buffer.find("'type': 'file'"), std::string::npos);
@@ -3559,4 +3560,118 @@ TEST(RedirectingFileSystemTest, ExistsRedirectOnly) {
   EXPECT_FALSE(Redirecting->exists("/a"));
   EXPECT_FALSE(Redirecting->exists("/b"));
   EXPECT_TRUE(Redirecting->exists("/vfile"));
+}
+
+TEST(TracingFileSystemTest, TracingWorks) {
+  auto InMemoryFS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  auto TracingFS =
+      makeIntrusiveRefCnt<vfs::TracingFileSystem>(std::move(InMemoryFS));
+
+  EXPECT_EQ(TracingFS->NumStatusCalls, 0u);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls, 0u);
+  EXPECT_EQ(TracingFS->NumDirBeginCalls, 0u);
+  EXPECT_EQ(TracingFS->NumGetRealPathCalls, 0u);
+  EXPECT_EQ(TracingFS->NumExistsCalls, 0u);
+  EXPECT_EQ(TracingFS->NumIsLocalCalls, 0u);
+
+  (void)TracingFS->status("/foo");
+  EXPECT_EQ(TracingFS->NumStatusCalls, 1u);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls, 0u);
+  EXPECT_EQ(TracingFS->NumDirBeginCalls, 0u);
+  EXPECT_EQ(TracingFS->NumGetRealPathCalls, 0u);
+  EXPECT_EQ(TracingFS->NumExistsCalls, 0u);
+  EXPECT_EQ(TracingFS->NumIsLocalCalls, 0u);
+
+  (void)TracingFS->openFileForRead("/foo");
+  EXPECT_EQ(TracingFS->NumStatusCalls, 1u);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls, 1u);
+  EXPECT_EQ(TracingFS->NumDirBeginCalls, 0u);
+  EXPECT_EQ(TracingFS->NumGetRealPathCalls, 0u);
+  EXPECT_EQ(TracingFS->NumExistsCalls, 0u);
+  EXPECT_EQ(TracingFS->NumIsLocalCalls, 0u);
+
+  std::error_code EC;
+  (void)TracingFS->dir_begin("/foo", EC);
+  EXPECT_EQ(TracingFS->NumStatusCalls, 1u);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls, 1u);
+  EXPECT_EQ(TracingFS->NumDirBeginCalls, 1u);
+  EXPECT_EQ(TracingFS->NumGetRealPathCalls, 0u);
+  EXPECT_EQ(TracingFS->NumExistsCalls, 0u);
+  EXPECT_EQ(TracingFS->NumIsLocalCalls, 0u);
+
+  SmallString<128> RealPath;
+  (void)TracingFS->getRealPath("/foo", RealPath);
+  EXPECT_EQ(TracingFS->NumStatusCalls, 1u);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls, 1u);
+  EXPECT_EQ(TracingFS->NumDirBeginCalls, 1u);
+  EXPECT_EQ(TracingFS->NumGetRealPathCalls, 1u);
+  EXPECT_EQ(TracingFS->NumExistsCalls, 0u);
+  EXPECT_EQ(TracingFS->NumIsLocalCalls, 0u);
+
+  (void)TracingFS->exists("/foo");
+  EXPECT_EQ(TracingFS->NumStatusCalls, 1u);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls, 1u);
+  EXPECT_EQ(TracingFS->NumDirBeginCalls, 1u);
+  EXPECT_EQ(TracingFS->NumGetRealPathCalls, 1u);
+  EXPECT_EQ(TracingFS->NumExistsCalls, 1u);
+  EXPECT_EQ(TracingFS->NumIsLocalCalls, 0u);
+
+  bool IsLocal;
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  EXPECT_EQ(TracingFS->NumStatusCalls, 1u);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls, 1u);
+  EXPECT_EQ(TracingFS->NumDirBeginCalls, 1u);
+  EXPECT_EQ(TracingFS->NumGetRealPathCalls, 1u);
+  EXPECT_EQ(TracingFS->NumExistsCalls, 1u);
+  EXPECT_EQ(TracingFS->NumIsLocalCalls, 1u);
+}
+
+TEST(TracingFileSystemTest, PrintOutput) {
+  auto InMemoryFS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  auto TracingFS =
+      makeIntrusiveRefCnt<vfs::TracingFileSystem>(std::move(InMemoryFS));
+
+  (void)TracingFS->status("/foo");
+
+  (void)TracingFS->openFileForRead("/foo");
+  (void)TracingFS->openFileForRead("/foo");
+
+  std::error_code EC;
+  (void)TracingFS->dir_begin("/foo", EC);
+  (void)TracingFS->dir_begin("/foo", EC);
+  (void)TracingFS->dir_begin("/foo", EC);
+
+  llvm::SmallString<128> RealPath;
+  (void)TracingFS->getRealPath("/foo", RealPath);
+  (void)TracingFS->getRealPath("/foo", RealPath);
+  (void)TracingFS->getRealPath("/foo", RealPath);
+  (void)TracingFS->getRealPath("/foo", RealPath);
+
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+  (void)TracingFS->exists("/foo");
+
+  bool IsLocal;
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+  (void)TracingFS->isLocal("/foo", IsLocal);
+
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  TracingFS->print(OS);
+
+  ASSERT_EQ("TracingFileSystem\n"
+            "NumStatusCalls=1\n"
+            "NumOpenFileForReadCalls=2\n"
+            "NumDirBeginCalls=3\n"
+            "NumGetRealPathCalls=4\n"
+            "NumExistsCalls=5\n"
+            "NumIsLocalCalls=6\n"
+            "  InMemoryFileSystem\n",
+            Output);
 }

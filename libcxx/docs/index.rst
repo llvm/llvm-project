@@ -35,15 +35,15 @@ Getting Started with libc++
    :maxdepth: 1
 
    ReleaseNotes
-   UsingLibcxx
-   BuildingLibcxx
-   TestingLibcxx
+   UserDocumentation
+   VendorDocumentation
    Contributing
+   CodingGuidelines
+   TestingLibcxx
    ImplementationDefinedBehavior
    Modules
    Hardening
    ReleaseProcedure
-   Status/Cxx14
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
@@ -51,9 +51,6 @@ Getting Started with libc++
    Status/Format
    Status/Parallelism
    Status/PSTL
-   Status/Ranges
-   Status/Spaceship
-   Status/Zip
 
 
 .. toctree::
@@ -71,7 +68,7 @@ iOS, watchOS, and tvOS, Google Search, the Android operating system, and FreeBSD
 user base of over 1 billion daily active users.
 
 Since its inception, libc++ has focused on delivering high performance, standards-conformance, and portability. It has
-been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14, 
+been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14,
 with C++17, C++20, C++23, and C++26 features being actively developed and making steady progress.
 
 libc++ is continuously integrated and tested on a wide range of platforms and configurations, ensuring its reliability
@@ -131,14 +128,14 @@ Libc++ aims to support common compilers that implement the C++11 Standard. In or
 good balance between stability for users and maintenance cost, testing coverage and development
 velocity, libc++ drops support for older compilers as newer ones are released.
 
-============ =============== ========================== =====================
-Compiler     Versions        Restrictions               Support policy
-============ =============== ========================== =====================
-Clang        17, 18, 19-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
-AppleClang   15                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
-Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
-GCC          13              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
-============ =============== ========================== =====================
+============ =================== ========================== =====================
+Compiler     Versions            Restrictions               Support policy
+============ =================== ========================== =====================
+Clang        18, 19, 20, 21-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
+AppleClang   15                                             latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
+Open XL      17.1.3 (AIX)                                   latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
+GCC          14                  In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
+============ =================== ========================== =====================
 
 Libc++ also supports common platforms and architectures:
 
@@ -168,11 +165,16 @@ to be formally supported and listed here, please work with the libc++ team to se
 up testing for your configuration.
 
 
-C++ Dialect Support
-===================
+C++ Standards Conformance
+=========================
+
+Libc++ provides full support for C++11 and C++14, and provides most of newer standards
+with a few omissions. The conformance status of the library's tip is tracked in real-time
+using `this page <https://github.com/orgs/llvm/projects/31>`_. The conformance status of
+this release is described in the pages below:
 
 * C++11 - Complete
-* :ref:`C++14 - Complete <cxx14-status>`
+* C++14 - Complete
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++23 - In Progress <cxx23-status>`
@@ -180,18 +182,25 @@ C++ Dialect Support
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 
-Notes and Known Issues
-======================
+Getting Involved
+================
 
-This list contains known issues with libc++
+First please review our `Developer's Policy <https://llvm.org/docs/DeveloperPolicy.html>`__
+and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
-* Building libc++ with ``-fno-rtti`` is not supported. However
-  linking against it with ``-fno-rtti`` is supported.
+**Bug Reports**
 
+If you think you've found a bug in libc++, please report it using the `LLVM bug tracker`_.
+If you're not sure, you can ask for support on the `libc++ forum`_ or in the `libc++ chat`_.
 
-A full list of currently open libc++ bugs can be `found here`__.
+**Patches**
 
-.. __:  https://github.com/llvm/llvm-project/labels/libc%2B%2B
+If you want to contribute a patch to libc++, please start by reviewing our
+:ref:`documentation about contributing <ContributingToLibcxx>`.
+
+**Discussion and Questions**
+
+Send discussions and questions to the `libc++ forum`_.
 
 
 Design Documents
@@ -208,7 +217,6 @@ Design Documents
    DesignDocs/FeatureTestMacros
    DesignDocs/FileTimeType
    DesignDocs/HeaderRemovalPolicy
-   DesignDocs/NodiscardPolicy
    DesignDocs/NoexceptPolicy
    DesignDocs/PSTLIntegration
    DesignDocs/ThreadingSupportAPI
@@ -227,33 +235,12 @@ Build Bots and Test Coverage
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`
 
 
-Getting Involved
-================
-
-First please review our `Developer's Policy <https://llvm.org/docs/DeveloperPolicy.html>`__
-and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
-
-**Bug Reports**
-
-If you think you've found a bug in libc++, please report it using
-the `LLVM bug tracker`_. If you're not sure, you
-can ask for support on the `libcxx forum`_ or on IRC.
-
-**Patches**
-
-If you want to contribute a patch to libc++, please start by reviewing our
-:ref:`documentation about contributing <ContributingToLibcxx>`.
-
-**Discussion and Questions**
-
-Send discussions and questions to the `libcxx forum`_.
-
-
 Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
 * `libc++abi Homepage <http://libcxxabi.llvm.org/>`_
 * `LLVM Bug Tracker <https://github.com/llvm/llvm-project/labels/libc++/>`_
 * `libcxx-commits Mailing List <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_
-* `libcxx Forum <https://discourse.llvm.org/c/runtimes/libcxx/>`_
+* `libc++ forum <https://discourse.llvm.org/c/runtimes/libcxx/>`_
+* `libc++ chat <https://discord.com/channels/636084430946959380/636732894974312448>`_ (`invite link <https://discord.gg/xS7Z362>`_)
 * `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_

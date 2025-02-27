@@ -24,16 +24,11 @@ using namespace lldb_private::plugin::dwarf;
 DWARFIndex::~DWARFIndex() = default;
 
 bool DWARFIndex::ProcessFunctionDIE(
-    const Module::LookupInfo &lookup_info, DIERef ref, SymbolFileDWARF &dwarf,
+    const Module::LookupInfo &lookup_info, DWARFDIE die,
     const CompilerDeclContext &parent_decl_ctx,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
   llvm::StringRef name = lookup_info.GetLookupName().GetStringRef();
   FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
-  DWARFDIE die = dwarf.GetDIE(ref);
-  if (!die) {
-    ReportInvalidDIERef(ref, name);
-    return true;
-  }
 
   if (!(name_type_mask & eFunctionNameTypeFull)) {
     ConstString name_to_match_against;
@@ -126,9 +121,59 @@ void DWARFIndex::GetFullyQualifiedType(
 bool DWARFIndex::GetFullyQualifiedTypeImpl(
     const DWARFDeclContext &context, DWARFDIE die,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
-  DWARFDeclContext dwarf_decl_ctx =
-      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
+  DWARFDeclContext dwarf_decl_ctx = die.GetDWARFDeclContext();
   if (dwarf_decl_ctx == context)
     return callback(die);
   return true;
+}
+
+void DWARFIndex::GetTypesWithQuery(
+    TypeQuery &query, llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetTypes(query.GetTypeBasename(), [&](DWARFDIE die) {
+    return ProcessTypeDIEMatchQuery(query, die, callback);
+  });
+}
+
+bool DWARFIndex::ProcessTypeDIEMatchQuery(
+    TypeQuery &query, DWARFDIE die,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  // Check the language, but only if we have a language filter.
+  if (query.HasLanguage() &&
+      !query.LanguageMatches(SymbolFileDWARF::GetLanguageFamily(*die.GetCU())))
+    return true; // Keep iterating over index types, language mismatch.
+
+  // Since mangled names are unique, we only need to check if the names are
+  // the same.
+  if (query.GetSearchByMangledName()) {
+    if (die.GetMangledName(/*substitute_name_allowed=*/false) !=
+        query.GetTypeBasename().GetStringRef())
+      return true; // Keep iterating over index types, mangled name mismatch.
+    return callback(die);
+  }
+
+  std::vector<lldb_private::CompilerContext> die_context;
+  if (query.GetModuleSearch())
+    die_context = die.GetDeclContext();
+  else
+    die_context = die.GetTypeLookupContext();
+
+  if (!query.ContextMatches(die_context))
+    return true;
+  return callback(die);
+}
+
+void DWARFIndex::GetNamespacesWithParents(
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetNamespaces(name, [&](DWARFDIE die) {
+    return ProcessNamespaceDieMatchParents(parent_decl_ctx, die, callback);
+  });
+}
+
+bool DWARFIndex::ProcessNamespaceDieMatchParents(
+    const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
+    return true;
+  return callback(die);
 }

@@ -56,12 +56,9 @@ public:
   typedef TransferBatch<ThisT> TransferBatchT;
   typedef BatchGroup<ThisT> BatchGroupT;
 
-  static_assert(sizeof(BatchGroupT) <= sizeof(TransferBatchT),
-                "BatchGroupT uses the same class size as TransferBatchT");
-
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
-               ? sizeof(TransferBatchT)
+               ? Max(sizeof(BatchGroupT), sizeof(TransferBatchT))
                : SizeClassMap::getSizeByClassId(ClassId);
   }
 
@@ -88,6 +85,10 @@ public:
       Sci->MinRegionIndex = NumRegions;
       Sci->ReleaseInfo.LastReleaseAtNs = Time;
     }
+
+    // The default value in the primary config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -328,6 +329,12 @@ public:
     }
   }
 
+  void getMemoryGroupFragmentationInfo(ScopedString *Str) {
+    // Each region is also a memory group because region size is the same as
+    // group size.
+    getFragmentationInfo(Str);
+  }
+
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
       const s32 Interval = Max(
@@ -380,7 +387,7 @@ private:
 
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
-    uptr RangesReleased;
+    uptr NumReleasesAttempted;
     uptr LastReleasedBytes;
     u64 LastReleaseAtNs;
   };
@@ -521,9 +528,6 @@ private:
       // BatchClass hasn't enabled memory group. Use `0` to indicate there's no
       // memory group here.
       BG->CompactPtrGroupBase = 0;
-      // `BG` is also the block of BatchClassId. Note that this is different
-      // from `CreateGroup` in `pushBlocksImpl`
-      BG->PushedBlocks = 1;
       BG->BytesInBGAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch =
           CacheT::getMaxCached(getSizeByClassId(SizeClassMap::BatchClassId));
@@ -548,9 +552,6 @@ private:
       TB->add(
           compactPtr(SizeClassMap::BatchClassId, reinterpret_cast<uptr>(BG)));
       --Size;
-      DCHECK_EQ(BG->PushedBlocks, 1U);
-      // `TB` is also the block of BatchClassId.
-      BG->PushedBlocks += 1;
       BG->Batches.push_front(TB);
     }
 
@@ -577,8 +578,6 @@ private:
       CurBatch->appendFromArray(&Array[I], AppendSize);
       I += AppendSize;
     }
-
-    BG->PushedBlocks += Size;
   }
   // Push the blocks to their batch group. The layout will be like,
   //
@@ -614,7 +613,6 @@ private:
 
       BG->CompactPtrGroupBase = CompactPtrGroupBase;
       BG->Batches.push_front(TB);
-      BG->PushedBlocks = 0;
       BG->BytesInBGAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch = TransferBatchT::MaxNumCached;
 
@@ -642,8 +640,6 @@ private:
         CurBatch->appendFromArray(&Array[I], AppendSize);
         I += AppendSize;
       }
-
-      BG->PushedBlocks += Size;
     };
 
     Sci->FreeListInfo.PushedBlocks += Size;
@@ -884,14 +880,14 @@ private:
           BytesInFreeList - Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
     }
     const uptr AvailableChunks = Sci->AllocatedUser / BlockSize;
-    Str->append("  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-                "inuse: %6zu avail: %6zu releases: %6zu last released: %6zuK "
-                "latest pushed bytes: %6zuK\n",
-                ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
-                Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks,
-                InUse, AvailableChunks, Sci->ReleaseInfo.RangesReleased,
-                Sci->ReleaseInfo.LastReleasedBytes >> 10,
-                PushedBytesDelta >> 10);
+    Str->append(
+        "  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
+        "inuse: %6zu avail: %6zu releases attempted: %6zu last released: %6zuK "
+        "latest pushed bytes: %6zuK\n",
+        ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
+        Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks, InUse,
+        AvailableChunks, Sci->ReleaseInfo.NumReleasesAttempted,
+        Sci->ReleaseInfo.LastReleasedBytes >> 10, PushedBytesDelta >> 10);
   }
 
   void getSizeClassFragmentationInfo(SizeClassInfo *Sci, uptr ClassId,
@@ -936,7 +932,7 @@ private:
 
     uptr Integral;
     uptr Fractional;
-    computePercentage(BlockSize * InUseBlocks, InUsePages * PageSize, &Integral,
+    computePercentage(BlockSize * InUseBlocks, InUseBytes, &Integral,
                       &Fractional);
     Str->append("  %02zu (%6zu): inuse/total blocks: %6zu/%6zu inuse/total "
                 "pages: %6zu/%6zu inuse bytes: %6zuK util: %3zu.%02zu%%\n",
@@ -976,6 +972,10 @@ private:
     const uptr Base = First * RegionSize;
     const uptr NumberOfRegions = Last - First + 1U;
 
+    // The following steps contribute to the majority time spent in page
+    // releasing thus we increment the counter here.
+    ++Sci->ReleaseInfo.NumReleasesAttempted;
+
     // ==================================================================== //
     // 2. Mark the free blocks and we can tell which pages are in-use by
     //    querying `PageReleaseContext`.
@@ -995,9 +995,8 @@ private:
     };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 
-    if (Recorder.getReleasedRangesCount() > 0) {
+    if (Recorder.getReleasedBytes() > 0) {
       Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
       Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
       TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
     }

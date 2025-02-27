@@ -19,6 +19,7 @@
 
 #include "../../test/lib/Dialect/Test/TestAttributes.h"
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
 #include "mlir/IR/OwningOpRef.h"
 
@@ -42,7 +43,7 @@ struct Model
 /// overrides default methods.
 struct OverridingModel
     : public TestExternalTypeInterface::ExternalModel<OverridingModel,
-                                                      FloatType> {
+                                                      Float32Type> {
   unsigned getBitwidthPlusArg(Type type, unsigned arg) const {
     return type.getIntOrFloatBitWidth() + arg;
   }

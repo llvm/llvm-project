@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++98 -triple x86_64-pc-linux-gnu
 // RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++2a -triple x86_64-pc-linux-gnu
 
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++98 -triple x86_64-pc-linux-gnu -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=gnu++2a -triple x86_64-pc-linux-gnu -fexperimental-new-constant-interpreter
+
+
 typedef unsigned long long uint64_t;
 typedef unsigned int uint32_t;
 
@@ -240,6 +244,12 @@ int m() {
     int64_t x = Pass(30 * 24 * 60 * 59 * 1000);  // expected-warning {{overflow in expression; result is -1'746'167'296 with type 'int'}}
     auto r = Wrap(Pass(30 * 24 * 60 * 59 * 1000));  // expected-warning {{overflow in expression; result is -1'746'167'296 with type 'int'}}
     return 0;
+}
+}
+
+namespace GH46755 {
+void f() {
+    struct { int v; } &&r = {512 * 1024 * 1024 * 1024}; // expected-warning {{overflow in expression; result is 0 with type 'int'}}
 }
 }
 #endif

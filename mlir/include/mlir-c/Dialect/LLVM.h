@@ -23,6 +23,13 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(LLVM, llvm);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMPointerTypeGet(MlirContext ctx,
                                                    unsigned addressSpace);
 
+/// Returns `true` if the type is an LLVM dialect pointer type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMPointerType(MlirType type);
+
+/// Returns address space of llvm.ptr
+MLIR_CAPI_EXPORTED unsigned
+mlirLLVMPointerTypeGetAddressSpace(MlirType pointerType);
+
 /// Creates an llmv.void type.
 MLIR_CAPI_EXPORTED MlirType mlirLLVMVoidTypeGet(MlirContext ctx);
 
@@ -30,10 +37,23 @@ MLIR_CAPI_EXPORTED MlirType mlirLLVMVoidTypeGet(MlirContext ctx);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMArrayTypeGet(MlirType elementType,
                                                  unsigned numElements);
 
+/// Returns the element type of the llvm.array type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMArrayTypeGetElementType(MlirType type);
+
 /// Creates an llvm.func type.
 MLIR_CAPI_EXPORTED MlirType
 mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
                         MlirType const *argumentTypes, bool isVarArg);
+
+/// Returns the number of input types.
+MLIR_CAPI_EXPORTED intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type);
+
+/// Returns the pos-th input type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetInput(MlirType type,
+                                                         intptr_t pos);
+
+/// Returns the return type of the function type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type);
 
 /// Returns `true` if the type is an LLVM dialect struct type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMStructType(MlirType type);
@@ -168,17 +188,17 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMComdatAttrGet(MlirContext ctx,
                                                        MlirLLVMComdat comdat);
 
 enum MlirLLVMLinkage {
-  MlirLLVMLinkagePrivate = 0,
-  MlirLLVMLinkageInternal = 1,
-  MlirLLVMLinkageAvailableExternally = 2,
-  MlirLLVMLinkageLinkonce = 3,
+  MlirLLVMLinkageExternal = 0,
+  MlirLLVMLinkageAvailableExternally = 1,
+  MlirLLVMLinkageLinkonce = 2,
+  MlirLLVMLinkageLinkonceODR = 3,
   MlirLLVMLinkageWeak = 4,
-  MlirLLVMLinkageCommon = 5,
+  MlirLLVMLinkageWeakODR = 5,
   MlirLLVMLinkageAppending = 6,
-  MlirLLVMLinkageExternWeak = 7,
-  MlirLLVMLinkageLinkonceODR = 8,
-  MlirLLVMLinkageWeakODR = 9,
-  MlirLLVMLinkageExternal = 10,
+  MlirLLVMLinkageInternal = 7,
+  MlirLLVMLinkagePrivate = 8,
+  MlirLLVMLinkageExternWeak = 9,
+  MlirLLVMLinkageCommon = 10,
 };
 typedef enum MlirLLVMLinkage MlirLLVMLinkage;
 
@@ -227,18 +247,35 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIBasicTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
     MlirLLVMTypeEncoding encoding);
 
+/// Creates a self-referencing LLVM DICompositeType attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDICompositeTypeAttrGetRecSelf(MlirAttribute recId);
+
 /// Creates a LLVM DICompositeType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute recId, MlirAttribute name,
-    MlirAttribute file, uint32_t line, MlirAttribute scope,
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, unsigned int tag,
+    MlirAttribute name, MlirAttribute file, uint32_t line, MlirAttribute scope,
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
-    uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements);
+    uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
+    MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
+    MlirAttribute associated);
 
-/// Creates a LLVM DIDerivedType attribute.
+/// Creates a LLVM DIDerivedType attribute.  Note that `dwarfAddressSpace` is an
+/// optional field, where `MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL` indicates null
+/// and non-negative values indicate a value present.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name,
     MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
-    uint64_t offsetInBits, MlirAttribute extraData);
+    uint64_t offsetInBits, int64_t dwarfAddressSpace, MlirAttribute extraData);
+
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIStringTypeAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
+    uint32_t alignInBits, MlirAttribute stringLength,
+    MlirAttribute stringLengthExp, MlirAttribute stringLocationExp,
+    MlirLLVMTypeEncoding encoding);
+
+/// Constant to represent std::nullopt for dwarfAddressSpace to omit the field.
+#define MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL -1
 
 /// Gets the base type from a LLVM DIDerivedType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -289,14 +326,24 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILexicalBlockFileAttrGet(
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILocalVariableAttrGet(
     MlirContext ctx, MlirAttribute scope, MlirAttribute name,
     MlirAttribute diFile, unsigned int line, unsigned int arg,
-    unsigned int alignInBits, MlirAttribute diType);
+    unsigned int alignInBits, MlirAttribute diType, int64_t flags);
+
+/// Creates a self-referencing LLVM DISubprogramAttr attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDISubprogramAttrGetRecSelf(MlirAttribute recId);
 
 /// Creates a LLVM DISubprogramAttr attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubprogramAttrGet(
-    MlirContext ctx, MlirAttribute id, MlirAttribute compileUnit,
-    MlirAttribute scope, MlirAttribute name, MlirAttribute linkageName,
-    MlirAttribute file, unsigned int line, unsigned int scopeLine,
-    uint64_t subprogramFlags, MlirAttribute type);
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    MlirAttribute compileUnit, MlirAttribute scope, MlirAttribute name,
+    MlirAttribute linkageName, MlirAttribute file, unsigned int line,
+    unsigned int scopeLine, uint64_t subprogramFlags, MlirAttribute type,
+    intptr_t nRetainedNodes, MlirAttribute const *retainedNodes,
+    intptr_t nAnnotations, MlirAttribute const *annotations);
+
+/// Creates a LLVM DIAnnotation attribute.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIAnnotationAttrGet(
+    MlirContext ctx, MlirAttribute name, MlirAttribute value);
 
 /// Gets the scope from this DISubprogramAttr.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -332,6 +379,12 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIModuleAttrGet(
     MlirContext ctx, MlirAttribute file, MlirAttribute scope,
     MlirAttribute name, MlirAttribute configMacros, MlirAttribute includePath,
     MlirAttribute apinotes, unsigned int line, bool isDecl);
+
+/// Creates a LLVM DIImportedEntityAttr attribute.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIImportedEntityAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute scope,
+    MlirAttribute entity, MlirAttribute file, unsigned int line,
+    MlirAttribute name, intptr_t nElements, MlirAttribute const *elements);
 
 /// Gets the scope of this DIModuleAttr.
 MLIR_CAPI_EXPORTED MlirAttribute

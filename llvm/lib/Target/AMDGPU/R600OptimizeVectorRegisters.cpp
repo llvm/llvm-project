@@ -58,7 +58,7 @@ public:
       MachineOperand &MO = Instr->getOperand(i);
       unsigned Chan = Instr->getOperand(i + 1).getImm();
       if (isImplicitlyDef(MRI, MO.getReg()))
-        UndefReg.push_back(Chan);
+        UndefReg.emplace_back(Chan);
       else
         RegToChan[MO.getReg()] = Chan;
     }
@@ -103,10 +103,10 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -154,14 +154,12 @@ bool R600VectorRegMerger::tryMergeVector(const RegSeqInfo *Untouched,
     DenseMap<Register, unsigned>::const_iterator PosInUntouched =
         Untouched->RegToChan.find(It.first);
     if (PosInUntouched != Untouched->RegToChan.end()) {
-      Remap.push_back(
-          std::pair<unsigned, unsigned>(It.second, (*PosInUntouched).second));
+      Remap.emplace_back(It.second, (*PosInUntouched).second);
       continue;
     }
     if (CurrentUndexIdx >= Untouched->UndefReg.size())
       return false;
-    Remap.push_back(std::pair<unsigned, unsigned>(
-        It.second, Untouched->UndefReg[CurrentUndexIdx++]));
+    Remap.emplace_back(It.second, Untouched->UndefReg[CurrentUndexIdx++]);
   }
 
   return true;
@@ -272,9 +270,10 @@ bool R600VectorRegMerger::tryMergeUsingCommonSlot(RegSeqInfo &RSI,
       MOE = RSI.Instr->operands_end(); MOp != MOE; ++MOp) {
     if (!MOp->isReg())
       continue;
-    if (PreviousRegSeqByReg[MOp->getReg()].empty())
+    auto &Insts = PreviousRegSeqByReg[MOp->getReg()];
+    if (Insts.empty())
       continue;
-    for (MachineInstr *MI : PreviousRegSeqByReg[MOp->getReg()]) {
+    for (MachineInstr *MI : Insts) {
       CompatibleRSI = PreviousRegSeq[MI];
       if (RSI == CompatibleRSI)
         continue;
@@ -289,10 +288,10 @@ bool R600VectorRegMerger::tryMergeUsingFreeSlot(RegSeqInfo &RSI,
     RegSeqInfo &CompatibleRSI,
     std::vector<std::pair<unsigned, unsigned>> &RemapChan) {
   unsigned NeededUndefs = 4 - RSI.UndefReg.size();
-  if (PreviousRegSeqByUndefCount[NeededUndefs].empty())
-    return false;
   std::vector<MachineInstr *> &MIs =
       PreviousRegSeqByUndefCount[NeededUndefs];
+  if (MIs.empty())
+    return false;
   CompatibleRSI = PreviousRegSeq[MIs.back()];
   tryMergeVector(&CompatibleRSI, &RSI, RemapChan);
   return true;

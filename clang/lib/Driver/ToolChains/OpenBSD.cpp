@@ -239,7 +239,8 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       if (Profiling)
@@ -375,7 +376,8 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
   if (Component == "builtins") {
     SmallString<128> Path(getDriver().SysRoot);
     llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
-    return std::string(Path);
+    if (getVFS().exists(Path))
+      return std::string(Path);
   }
   SmallString<128> P(getDriver().ResourceDir);
   std::string CRTBasename =

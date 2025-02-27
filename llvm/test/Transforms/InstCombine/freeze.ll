@@ -1069,7 +1069,7 @@ define ptr @freeze_load_dereferenceable(ptr %ptr) {
 
 define ptr @freeze_load_dereferenceable_or_null(ptr %ptr) {
 ; CHECK-LABEL: @freeze_load_dereferenceable_or_null(
-; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable_or_null !1
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable_or_null [[META1]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %p = load ptr, ptr %ptr, !dereferenceable_or_null !1
@@ -1107,7 +1107,7 @@ define i32 @freeze_ctpop(i32 %x) {
 ; CHECK-LABEL: @freeze_ctpop(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 2047, [[X:%.*]]
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    [[CTPOP:%.*]] = call i32 @llvm.ctpop.i32(i32 [[Y_FR]]), !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y_FR]])
 ; CHECK-NEXT:    ret i32 [[CTPOP]]
 ;
   %y = lshr i32 2047, %x
@@ -1160,6 +1160,78 @@ define i32 @propagate_drop_flags_trunc(i64 %arg) {
   ret i32 %v1.fr
 }
 
+define ptr @propagate_drop_flags_gep_nusw(ptr %p) {
+; CHECK-LABEL: @propagate_drop_flags_gep_nusw(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P_FR]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw i8, ptr %p, i64 1
+  %gep.fr = freeze ptr %gep
+  ret ptr %gep.fr
+}
+
+define ptr @propagate_drop_flags_gep_nuw(ptr %p) {
+; CHECK-LABEL: @propagate_drop_flags_gep_nuw(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P_FR]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nuw i8, ptr %p, i64 1
+  %gep.fr = freeze ptr %gep
+  ret ptr %gep.fr
+}
+
+define i1 @propagate_drop_flags_icmp(i32 %a, i32 %b) {
+; CHECK-LABEL: @propagate_drop_flags_icmp(
+; CHECK-NEXT:    [[A_FR:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[A_FR]], 3
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ret = icmp samesign ult i32 %a, 3
+  %ret.fr = freeze i1 %ret
+  ret i1 %ret.fr
+}
+
+declare i32 @llvm.umax.i32(i32 %a, i32 %b)
+
+define i32 @freeze_call_with_range_attr(i32 %a) {
+; CHECK-LABEL: @freeze_call_with_range_attr(
+; CHECK-NEXT:    [[Y:%.*]] = lshr i32 2047, [[A:%.*]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.umax.i32(i32 [[Y_FR]], i32 50)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %y = lshr i32 2047, %a
+  %x = call range(i32 0, 2048) i32 @llvm.umax.i32(i32 %y, i32 50)
+  %x.fr = freeze i32 %x
+  ret i32 %x.fr
+}
+
+declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
+
+define ptr @freeze_ptrmask_align(ptr %p, i64 noundef %m) {
+; CHECK-LABEL: @freeze_ptrmask_align(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P_FR]], i64 [[M:%.*]])
+; CHECK-NEXT:    ret ptr [[MASK]]
+;
+  %mask = call align(4) ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m)
+  %fr =  freeze ptr %mask
+  ret ptr %fr
+}
+
+define ptr @freeze_ptrmask_nonnull(ptr %p, i64 noundef %m) {
+; CHECK-LABEL: @freeze_ptrmask_nonnull(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P_FR]], i64 [[M:%.*]])
+; CHECK-NEXT:    ret ptr [[MASK]]
+;
+  %mask = call nonnull ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m)
+  %fr =  freeze ptr %mask
+  ret ptr %fr
+}
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}
@@ -1170,5 +1242,4 @@ define i32 @propagate_drop_flags_trunc(i64 %arg) {
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[META1]] = !{i64 4}
 ; CHECK: [[RNG2]] = !{i32 0, i32 100}
-; CHECK: [[RNG3]] = !{i32 0, i32 33}
 ;.

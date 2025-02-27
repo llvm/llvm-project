@@ -199,6 +199,10 @@ s_sendmsg sendmsg(MSG_SYSMSG, 0)
 s_sendmsg sendmsg(MSG_SYSMSG, 5)
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operation id
 
+s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_HOST_TRAP_ACK)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: specified operation id is not supported on this GPU
+// GFX11PLUS: :[[@LINE-2]]:{{[0-9]+}}: error: specified operation id is not supported on this GPU
+
 //===----------------------------------------------------------------------===//
 // waitcnt
 //===----------------------------------------------------------------------===//

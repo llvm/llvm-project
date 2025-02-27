@@ -59,7 +59,7 @@ class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS chunk_by_view : public view_interface
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
   // We cache the result of begin() to allow providing an amortized O(1).
-  using _Cache = __non_propagating_cache<iterator_t<_View>>;
+  using _Cache _LIBCPP_NODEBUG = __non_propagating_cache<iterator_t<_View>>;
   _Cache __cached_begin_;
 
   class __iterator;
@@ -205,7 +205,7 @@ namespace views {
 namespace __chunk_by {
 struct __fn {
   template <class _Range, class _Pred>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Pred&& __pred) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Pred&& __pred) const
       noexcept(noexcept(/**/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))))
           -> decltype(/*--*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred))) {
     return /*-------------*/ chunk_by_view(std::forward<_Range>(__range), std::forward<_Pred>(__pred));
@@ -213,9 +213,9 @@ struct __fn {
 
   template <class _Pred>
     requires constructible_from<decay_t<_Pred>, _Pred>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pred>(__pred)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pred>(__pred)));
   }
 };
 } // namespace __chunk_by

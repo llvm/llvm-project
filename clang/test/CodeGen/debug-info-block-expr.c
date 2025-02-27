@@ -10,7 +10,7 @@ void noEscapeFunc(__attribute__((noescape)) BlockTy);
 // 'noescape') blocks.
 void test_escape_func(void) {
 // CHECK-LABEL: void @test_escape_func
-// CHECK: call void @llvm.dbg.declare({{.*}}metadata ![[ESCAPE_VAR:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}){{.*}})
+// CHECK: #dbg_declare({{.*}}![[ESCAPE_VAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}){{.*}})
   __block int escape_var;
 // Blocks in dead code branches still capture __block variables.
 #ifdef DEAD_CODE
@@ -22,7 +22,7 @@ void test_escape_func(void) {
 // Verify that the desired DIExpression are generated for noescape blocks.
 void test_noescape_func(void) {
 // CHECK-LABEL: void @test_noescape_func
-// CHECK: call void @llvm.dbg.declare({{.*}}metadata ![[NOESCAPE_VAR:[0-9]+]], metadata !DIExpression())
+// CHECK: #dbg_declare({{.*}}![[NOESCAPE_VAR:[0-9]+]], !DIExpression(),
   __block int noescape_var;
   noEscapeFunc(^{ (void)noescape_var; });
 }
@@ -30,11 +30,11 @@ void test_noescape_func(void) {
 // Verify that the desired DIExpression are generated for blocks.
 void test_local_block(void) {
 // CHECK-LABEL: void @test_local_block
-// CHECK: call void @llvm.dbg.declare({{.*}}metadata ![[BLOCK_VAR:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}){{.*}})
+// CHECK: #dbg_declare({{.*}}![[BLOCK_VAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}){{.*}})
   __block int block_var;
 
 // CHECK-LABEL: @__test_local_block_block_invoke
-// CHECK: call void @llvm.dbg.declare({{.*}}!DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}){{.*}})
+// CHECK: #dbg_declare({{.*}}!DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}){{.*}})
   ^ { block_var = 1; }();
 }
 
@@ -42,7 +42,7 @@ void test_local_block(void) {
 // in any block.
 void test_unused(void) {
 // CHECK-LABEL: void @test_unused
-// CHECK: call void @llvm.dbg.declare({{.*}}metadata ![[UNUSED_VAR:[0-9]+]], metadata !DIExpression())
+// CHECK: #dbg_declare({{.*}}![[UNUSED_VAR:[0-9]+]], !DIExpression(),
   __block int unused_var;
 // Use i (not inside a block).
   ++unused_var;

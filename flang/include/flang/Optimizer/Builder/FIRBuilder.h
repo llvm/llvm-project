@@ -16,12 +16,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/MathOptionsBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -29,6 +29,7 @@
 #include <utility>
 
 namespace mlir {
+class DataLayout;
 class SymbolTable;
 }
 
@@ -37,6 +38,13 @@ class AbstractArrayBox;
 class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
+
+/// Get the integer type with a pointer size.
+inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
+  // TODO: Delay the need of such type until codegen or find a way to use
+  // llvm::DataLayout::getPointerSizeInBits here.
+  return builder.getI64Type();
+}
 
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
@@ -49,9 +57,17 @@ public:
   explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
-        symbolTable{symbolTable} {}
-  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap)
-      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)} {
+        symbolTable{symbolTable} {
+    auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+    if (fmi) {
+      // Set the builder with FastMathFlags attached to the operation.
+      setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+    }
+  }
+  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
+                        mlir::SymbolTable *symbolTable = nullptr)
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
+        symbolTable{symbolTable} {
     setListener(this);
   }
   explicit FirOpBuilder(mlir::OpBuilder &builder, mlir::ModuleOp mod)
@@ -75,13 +91,16 @@ public:
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)
       : OpBuilder(other), OpBuilder::Listener(), kindMap{other.kindMap},
-        fastMathFlags{other.fastMathFlags}, symbolTable{other.symbolTable} {
+        fastMathFlags{other.fastMathFlags},
+        integerOverflowFlags{other.integerOverflowFlags},
+        symbolTable{other.symbolTable} {
     setListener(this);
   }
 
   FirOpBuilder(FirOpBuilder &&other)
       : OpBuilder(other), OpBuilder::Listener(),
         kindMap{std::move(other.kindMap)}, fastMathFlags{other.fastMathFlags},
+        integerOverflowFlags{other.integerOverflowFlags},
         symbolTable{other.symbolTable} {
     setListener(this);
   }
@@ -141,11 +160,7 @@ public:
 
   /// Get the integer type whose bit width corresponds to the width of pointer
   /// types, or is bigger.
-  mlir::Type getIntPtrType() {
-    // TODO: Delay the need of such type until codegen or find a way to use
-    // llvm::DataLayout::getPointerSizeInBits here.
-    return getI64Type();
-  }
+  mlir::Type getIntPtrType() { return fir::getIntPtrType(*this); }
 
   /// Wrap `str` to a SymbolRefAttr.
   mlir::SymbolRefAttr getSymbolRefAttr(llvm::StringRef str) {
@@ -206,23 +221,28 @@ public:
                             llvm::ArrayRef<mlir::Value> lenParams,
                             bool asTarget = false);
 
+  /// Create a two dimensional ArrayAttr containing integer data as
+  /// IntegerAttrs, effectively: ArrayAttr<ArrayAttr<IntegerAttr>>>.
+  mlir::ArrayAttr create2DI64ArrayAttr(
+      llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &intData);
+
   /// Create a temporary using `fir.alloca`. This function does not hoist.
   /// It is the callers responsibility to set the insertion point if
   /// hoisting is required.
-  mlir::Value
-  createTemporaryAlloc(mlir::Location loc, mlir::Type type,
-                       llvm::StringRef name, mlir::ValueRange lenParams = {},
-                       mlir::ValueRange shape = {},
-                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+  mlir::Value createTemporaryAlloc(
+      mlir::Location loc, mlir::Type type, llvm::StringRef name,
+      mlir::ValueRange lenParams = {}, mlir::ValueRange shape = {},
+      llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt);
 
   /// Create a temporary. A temp is allocated using `fir.alloca` and can be read
   /// and written using `fir.load` and `fir.store`, resp.  The temporary can be
   /// given a name via a front-end `Symbol` or a `StringRef`.
-  mlir::Value createTemporary(mlir::Location loc, mlir::Type type,
-                              llvm::StringRef name = {},
-                              mlir::ValueRange shape = {},
-                              mlir::ValueRange lenParams = {},
-                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+  mlir::Value createTemporary(
+      mlir::Location loc, mlir::Type type, llvm::StringRef name = {},
+      mlir::ValueRange shape = {}, mlir::ValueRange lenParams = {},
+      llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt);
 
   /// Create an unnamed and untracked temporary on the stack.
   mlir::Value createTemporary(mlir::Location loc, mlir::Type type,
@@ -248,19 +268,28 @@ public:
                       mlir::ValueRange lenParams = {},
                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
+  /// Create an LLVM stack save intrinsic op. Returns the saved stack pointer.
+  /// The stack address space is fetched from the data layout of the current
+  /// module.
+  mlir::Value genStackSave(mlir::Location loc);
+
+  /// Create an LLVM stack restore intrinsic op. stackPointer should be a value
+  /// previously returned from genStackSave.
+  void genStackRestore(mlir::Location loc, mlir::Value stackPointer);
+
   /// Create a global value.
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name,
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -283,6 +312,10 @@ public:
   /// Convert a StringRef string into a fir::StringLitOp.
   fir::StringLitOp createStringLitOp(mlir::Location loc,
                                      llvm::StringRef string);
+
+  std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+  createTypeInfoOp(mlir::Location loc, fir::RecordType recordType,
+                   fir::RecordType parentType);
 
   //===--------------------------------------------------------------------===//
   // Linkage helpers (inline). The default linkage is external.
@@ -351,6 +384,15 @@ public:
                                            llvm::StringRef name,
                                            mlir::FunctionType ty,
                                            mlir::SymbolTable *);
+
+  /// Returns a named function for a Fortran runtime API, creating
+  /// it, if it does not exist in the module yet.
+  /// If \p isIO is set to true, then the function corresponds
+  /// to one of Fortran runtime IO APIs.
+  mlir::func::FuncOp createRuntimeFunction(mlir::Location loc,
+                                           llvm::StringRef name,
+                                           mlir::FunctionType ty,
+                                           bool isIO = false);
 
   /// Cast the input value to IndexType.
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
@@ -502,6 +544,18 @@ public:
     return fmfString;
   }
 
+  /// Set default IntegerOverflowFlags value for all operations
+  /// supporting mlir::arith::IntegerOverflowFlagsAttr that will be created
+  /// by this builder.
+  void setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags flags) {
+    integerOverflowFlags = flags;
+  }
+
+  /// Get current IntegerOverflowFlags value.
+  mlir::arith::IntegerOverflowFlags getIntegerOverflowFlags() const {
+    return integerOverflowFlags;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -512,6 +566,34 @@ public:
     if (previous.isSet())
       return;
     setCommonAttributes(op);
+  }
+
+  /// Construct a data layout on demand and return it
+  mlir::DataLayout &getDataLayout();
+
+  /// Convert operands &/or result from/to unsigned so that the operation
+  /// only receives/produces signless operands.
+  template <typename OpTy>
+  mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
+                             mlir::Value left, mlir::Value right) {
+    if (!resultType.isIntOrFloat())
+      return create<OpTy>(loc, resultType, left, right);
+    mlir::Type signlessType = mlir::IntegerType::get(
+        getContext(), resultType.getIntOrFloatBitWidth(),
+        mlir::IntegerType::SignednessSemantics::Signless);
+    mlir::Type opResType = resultType;
+    if (left.getType().isUnsignedInteger()) {
+      left = createConvert(loc, signlessType, left);
+      opResType = signlessType;
+    }
+    if (right.getType().isUnsignedInteger()) {
+      right = createConvert(loc, signlessType, right);
+      opResType = signlessType;
+    }
+    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    if (resultType.isUnsignedInteger())
+      result = createConvert(loc, resultType, result);
+    return result;
   }
 
 private:
@@ -525,9 +607,18 @@ private:
   /// mlir::arith::FastMathAttr.
   mlir::arith::FastMathFlags fastMathFlags{};
 
+  /// IntegerOverflowFlags that need to be set for operations that support
+  /// mlir::arith::IntegerOverflowFlagsAttr.
+  mlir::arith::IntegerOverflowFlags integerOverflowFlags{};
+
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.
   mlir::SymbolTable *symbolTable = nullptr;
+
+  /// DataLayout constructed on demand. Access via getDataLayout().
+  /// Stored via a unique_ptr rather than an optional so as not to bloat this
+  /// class when most instances won't ever need a data layout.
+  std::unique_ptr<mlir::DataLayout> dataLayout = nullptr;
 };
 
 } // namespace fir
@@ -693,6 +784,11 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
 
+/// The type(C_DEVPTR) is defined as the derived type with only one
+/// component of C_PTR type. Get the C address from the C_PTR component.
+mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value cDevPtr, mlir::Type ty);
+
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Value cPtr);
@@ -706,8 +802,44 @@ fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxType);
 
+/// Convert a value to a new type. Return the value directly if it has the right
+/// type.
+mlir::Value createConvert(mlir::OpBuilder &, mlir::Location, mlir::Type,
+                          mlir::Value);
+
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
+
+llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
+/// Get the address space which should be used for allocas
+uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
+
+/// The two vectors of MLIR values have the following property:
+///   \p extents1[i] must have the same value as \p extents2[i]
+/// The function returns a new vector of MLIR values that preserves
+/// the same property vs \p extents1 and \p extents2, but allows
+/// more optimizations. For example, if extents1[j] is a known constant,
+/// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
+llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
+                                                    mlir::ValueRange extents2);
+
+/// Given array extents generate code that sets them all to zeroes,
+/// if the array is empty, e.g.:
+///   %false = arith.constant false
+///   %c0 = arith.constant 0 : index
+///   %p1 = arith.cmpi eq, %e0, %c0 : index
+///   %p2 = arith.ori %false, %p1 : i1
+///   %p3 = arith.cmpi eq, %e1, %c0 : index
+///   %p4 = arith.ori %p1, %p2 : i1
+///   %result0 = arith.select %p4, %c0, %e0 : index
+///   %result1 = arith.select %p4, %c0, %e1 : index
+llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

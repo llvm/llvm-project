@@ -1,4 +1,3 @@
-
 # The find_package changes these variables. This leaves the build in an odd
 # state. Calling cmake a second time tries to write site config information in
 # the system's libc++. Restoring these setting after testing fixes this issue.
@@ -64,14 +63,37 @@ if(NOT HAS_CLANG_TIDY_HEADERS)
                  "clang-tidy headers are not present.")
   return()
 endif()
+
+# The clangTidy plugin uses C++20, so ensure that we support C++20 when using libstdc++.
+# This is required because some versions of libstdc++ used as a system library on build platforms
+# we support do not support C++20 yet.
+# Note it has not been tested whether version 11 works.
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/test.cpp" "
+#include <version>
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 11
+  # error The libstdc++ version is too old.
+#endif
+int main(){}
+")
+try_compile(HAS_NEWER_STANDARD_LIBRARY
+  "${CMAKE_CURRENT_BINARY_DIR}"
+  "${CMAKE_CURRENT_BINARY_DIR}/test.cpp"
+   LINK_LIBRARIES clangTidy)
+
+if(NOT HAS_NEWER_STANDARD_LIBRARY)
+  message(STATUS "Clang-tidy tests are disabled due to using "
+                 "stdlibc++ older than version 11")
+  return()
+endif()
 message(STATUS "Clang-tidy tests are enabled.")
 
 set(SOURCES
     abi_tag_on_virtual.cpp
     header_exportable_declarations.cpp
     hide_from_abi.cpp
+    internal_ftm_use.cpp
+    nodebug_on_aliases.cpp
     proper_version_checks.cpp
-    qualify_declval.cpp
     robust_against_adl.cpp
     uglify_attributes.cpp
 
@@ -89,4 +111,4 @@ set_target_properties(cxx-tidy PROPERTIES
 set_target_properties(cxx-tidy PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SHARED_MODULE_SUFFIX_CXX .plugin) # Use a portable suffix to simplify how we can find it from Lit
 
-list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
+add_dependencies(cxx-test-depends cxx-tidy)

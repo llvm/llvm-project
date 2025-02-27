@@ -87,6 +87,7 @@ class BinarySection {
                                    // been renamed)
   uint64_t OutputAddress{0};       // Section address for the rewritten binary.
   uint64_t OutputSize{0};          // Section size in the rewritten binary.
+                                   // Can exceed OutputContents with padding.
   uint64_t OutputFileOffset{0};    // File offset in the rewritten binary file.
   StringRef OutputContents;        // Rewritten section contents.
   const uint64_t SectionNumber;    // Order in which the section was created.
@@ -284,6 +285,7 @@ public:
       return true;
     }
   }
+  bool isNote() const { return isELF() && ELFType == ELF::SHT_NOTE; }
   bool isReordered() const { return IsReordered; }
   bool isAnonymous() const { return IsAnonymous; }
   bool isRelro() const { return IsRelro; }
@@ -357,15 +359,9 @@ public:
 
   /// Add a new relocation at the given /p Offset.
   void addRelocation(uint64_t Offset, MCSymbol *Symbol, uint64_t Type,
-                     uint64_t Addend, uint64_t Value = 0,
-                     bool Pending = false) {
+                     uint64_t Addend, uint64_t Value = 0) {
     assert(Offset < getSize() && "offset not within section bounds");
-    if (!Pending) {
-      Relocations.emplace(Relocation{Offset, Symbol, Type, Addend, Value});
-    } else {
-      PendingRelocations.emplace_back(
-          Relocation{Offset, Symbol, Type, Addend, Value});
-    }
+    Relocations.emplace(Relocation{Offset, Symbol, Type, Addend, Value});
   }
 
   /// Add a dynamic relocation at the given /p Offset.
@@ -473,6 +469,11 @@ public:
   /// Use name \p SectionName for the section during the emission.
   void emitAsData(MCStreamer &Streamer, const Twine &SectionName) const;
 
+  /// Write finalized contents of the section. If OutputSize exceeds the size of
+  /// the OutputContents, append zero padding to the stream and return the
+  /// number of byte written which should match the OutputSize.
+  uint64_t write(raw_ostream &OS) const;
+
   using SymbolResolverFuncTy = llvm::function_ref<uint64_t(const MCSymbol *)>;
 
   /// Flush all pending relocations to patch original contents of sections
@@ -495,6 +496,9 @@ public:
     OutputSize = NewSize;
     IsFinalized = true;
   }
+
+  /// When writing section contents, add \p PaddingSize zero bytes at the end.
+  void addPadding(uint64_t PaddingSize) { OutputSize += PaddingSize; }
 
   /// Reorder the contents of this section according to /p Order.  If
   /// /p Inplace is true, the entire contents of the section is reordered,

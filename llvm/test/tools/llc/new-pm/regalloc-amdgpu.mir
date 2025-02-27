@@ -1,0 +1,12 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llc -mtriple=amdgcn --passes='regallocfast<filter=sgpr>,regallocfast<filter=wwm>,regallocfast<filter=vgpr>' --print-pipeline-passes --filetype=null %s | FileCheck %s --check-prefix=PASS
+# RUN: not llc -mtriple=amdgcn --passes='regallocfast<filter=bad-filter>' --print-pipeline-passes --filetype=null %s 2>&1 | FileCheck %s --check-prefix=BAD-FILTER
+
+# PASS: regallocfast<filter=sgpr>
+# PASS: regallocfast<filter=wwm>
+# PASS: regallocfast<filter=vgpr>
+# BAD-FILTER: invalid regallocfast register filter 'bad-filter'
+
+---
+name: f
+...

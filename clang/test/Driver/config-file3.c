@@ -226,3 +226,26 @@
 //
 // RUN: HOME=%S/Inputs/config %clang -### --config-user-dir=~ -v 2>&1 | FileCheck %s --check-prefix=CHECK-TILDE
 // CHECK-TILDE: User configuration file directory: {{.*}}/Inputs/config
+
+//--- Fallback to stripping OS versions
+//
+// RUN: touch %t/testdmode/x86_64-apple-darwin23.6.0-clang.cfg
+// RUN: touch %t/testdmode/x86_64-apple-darwin23-clang.cfg
+// RUN: touch %t/testdmode/x86_64-apple-darwin-clang.cfg
+// RUN: %clang -target x86_64-apple-darwin23.6.0 --config-system-dir=%t/testdmode --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix DARWIN --implicit-check-not 'Configuration file:'
+//
+// DARWIN: Configuration file: {{.*}}/testdmode/x86_64-apple-darwin23.6.0-clang.cfg
+
+//--- DARWIN + no full version
+//
+// RUN: rm %t/testdmode/x86_64-apple-darwin23.6.0-clang.cfg
+// RUN: %clang -target x86_64-apple-darwin23.6.0 --config-system-dir=%t/testdmode --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix DARWIN-MAJOR --implicit-check-not 'Configuration file:'
+//
+// DARWIN-MAJOR: Configuration file: {{.*}}/testdmode/x86_64-apple-darwin23-clang.cfg
+
+//--- DARWIN + no version
+//
+// RUN: rm %t/testdmode/x86_64-apple-darwin23-clang.cfg
+// RUN: %clang -target x86_64-apple-darwin23.6.0 --config-system-dir=%t/testdmode --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix DARWIN-VERSIONLESS --implicit-check-not 'Configuration file:'
+//
+// DARWIN-VERSIONLESS: Configuration file: {{.*}}/testdmode/x86_64-apple-darwin-clang.cfg

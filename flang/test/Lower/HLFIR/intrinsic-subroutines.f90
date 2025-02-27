@@ -81,7 +81,7 @@ end program
 ! CHECK:           %[[VAL_45:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_46:.*]] = arith.constant false
 ! CHECK:           %[[VAL_47:.*]] = arith.constant false
-! CHECK:           %[[VAL_48:.*]] = fir.call @_FortranAStopStatement(%[[VAL_45]], %[[VAL_46]], %[[VAL_47]]) fastmath<contract> : (i32, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_45]], %[[VAL_46]], %[[VAL_47]]) fastmath<contract> : (i32, i1, i1) -> ()
 ! CHECK:           fir.unreachable
 ! CHECK:         ^bb2:
 ! CHECK:           return

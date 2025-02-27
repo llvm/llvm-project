@@ -10,7 +10,6 @@
 #include "FindSymbols.h"
 #include "FindTarget.h"
 #include "Headers.h"
-#include "HeuristicResolver.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
@@ -53,6 +52,7 @@
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -63,6 +63,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -120,31 +121,17 @@ void logIfOverflow(const SymbolLocation &Loc) {
 
 // Convert a SymbolLocation to LSP's Location.
 // TUPath is used to resolve the path of URI.
-// FIXME: figure out a good home for it, and share the implementation with
-// FindSymbols.
 std::optional<Location> toLSPLocation(const SymbolLocation &Loc,
                                       llvm::StringRef TUPath) {
   if (!Loc)
     return std::nullopt;
-  auto Uri = URI::parse(Loc.FileURI);
-  if (!Uri) {
-    elog("Could not parse URI {0}: {1}", Loc.FileURI, Uri.takeError());
+  auto LSPLoc = indexToLSPLocation(Loc, TUPath);
+  if (!LSPLoc) {
+    elog("{0}", LSPLoc.takeError());
     return std::nullopt;
   }
-  auto U = URIForFile::fromURI(*Uri, TUPath);
-  if (!U) {
-    elog("Could not resolve URI {0}: {1}", Loc.FileURI, U.takeError());
-    return std::nullopt;
-  }
-
-  Location LSPLoc;
-  LSPLoc.uri = std::move(*U);
-  LSPLoc.range.start.line = Loc.Start.line();
-  LSPLoc.range.start.character = Loc.Start.column();
-  LSPLoc.range.end.line = Loc.End.line();
-  LSPLoc.range.end.character = Loc.End.column();
   logIfOverflow(Loc);
-  return LSPLoc;
+  return *LSPLoc;
 }
 
 SymbolLocation toIndexLocation(const Location &Loc, std::string &URIStorage) {
@@ -385,6 +372,15 @@ void enhanceLocatedSymbolsFromIndex(llvm::MutableArrayRef<LocatedSymbol> Result,
   });
 }
 
+bool objcMethodIsTouched(const SourceManager &SM, const ObjCMethodDecl *OMD,
+                         SourceLocation Loc) {
+  unsigned NumSels = OMD->getNumSelectorLocs();
+  for (unsigned I = 0; I < NumSels; ++I)
+    if (SM.getSpellingLoc(OMD->getSelectorLoc(I)) == Loc)
+      return true;
+  return false;
+}
+
 // Decls are more complicated.
 // The AST contains at least a declaration, maybe a definition.
 // These are up-to-date, and so generally preferred over index results.
@@ -440,6 +436,26 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         // We may be overridding multiple methods - offer them all.
         for (const NamedDecl *ND : CMD->overridden_methods())
           AddResultDecl(ND);
+        continue;
+      }
+    }
+    // Special case: - (void)^method {} should jump to overrides, but the decl
+    // shouldn't, only the definition. Note that an Objective-C method can
+    // override a parent class or protocol.
+    //
+    // FIXME: Support jumping from a protocol decl to overrides on go-to
+    // definition.
+    if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D)) {
+      if (OMD->isThisDeclarationADefinition() && TouchedIdentifier &&
+          objcMethodIsTouched(SM, OMD, TouchedIdentifier->location())) {
+        llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+        OMD->getOverriddenMethods(Overrides);
+        if (!Overrides.empty()) {
+          for (const auto *Override : Overrides)
+            AddResultDecl(Override);
+          LocateASTReferentMetric.record(1, "objc-overriden-method");
+        }
+        AddResultDecl(OMD);
         continue;
       }
     }
@@ -844,7 +860,7 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
     if (Inc.Resolved.empty())
       continue;
     auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
-    const auto *HashTok = AST.getTokens().spelledTokenAt(HashLoc);
+    const auto *HashTok = AST.getTokens().spelledTokenContaining(HashLoc);
     assert(HashTok && "got inclusion at wrong offset");
     const auto *IncludeTok = std::next(HashTok);
     const auto *FileTok = std::next(IncludeTok);
@@ -938,7 +954,7 @@ public:
     CollectorOpts.CollectMainFileSymbols = true;
     for (SourceLocation L : Locs) {
       L = SM.getFileLoc(L);
-      if (const auto *Tok = TB.spelledTokenAt(L))
+      if (const auto *Tok = TB.spelledTokenContaining(L))
         References.push_back(
             {*Tok, Roles,
              SymbolCollector::getRefContainer(ASTNode.Parent, CollectorOpts)});
@@ -1216,7 +1232,7 @@ DocumentHighlight toHighlight(const ReferenceFinder::Reference &Ref,
 std::optional<DocumentHighlight> toHighlight(SourceLocation Loc,
                                              const syntax::TokenBuffer &TB) {
   Loc = TB.sourceManager().getFileLoc(Loc);
-  if (const auto *Tok = TB.spelledTokenAt(Loc)) {
+  if (const auto *Tok = TB.spelledTokenContaining(Loc)) {
     DocumentHighlight Result;
     Result.range = halfOpenToRange(
         TB.sourceManager(),
@@ -1296,6 +1312,12 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
     } else if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
       IDs.insert(getSymbolID(RD));
       QueryKind = RelationKind::BaseOf;
+    } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(ND)) {
+      IDs.insert(getSymbolID(OMD));
+      QueryKind = RelationKind::OverriddenBy;
+    } else if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(ND)) {
+      IDs.insert(getSymbolID(ID));
+      QueryKind = RelationKind::BaseOf;
     }
   }
   return findImplementors(std::move(IDs), QueryKind, Index, AST.tuPath());
@@ -1309,6 +1331,21 @@ void getOverriddenMethods(const CXXMethodDecl *CMD,
   if (!CMD)
     return;
   for (const CXXMethodDecl *Base : CMD->overridden_methods()) {
+    if (auto ID = getSymbolID(Base))
+      OverriddenMethods.insert(ID);
+    getOverriddenMethods(Base, OverriddenMethods);
+  }
+}
+
+// Recursively finds all the overridden methods of `OMD` in complete type
+// hierarchy.
+void getOverriddenMethods(const ObjCMethodDecl *OMD,
+                          llvm::DenseSet<SymbolID> &OverriddenMethods) {
+  if (!OMD)
+    return;
+  llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+  OMD->getOverriddenMethods(Overrides);
+  for (const ObjCMethodDecl *Base : Overrides) {
     if (auto ID = getSymbolID(Base))
       OverriddenMethods.insert(ID);
     getOverriddenMethods(Base, OverriddenMethods);
@@ -1353,7 +1390,8 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
           Loc = SM.getIncludeLoc(SM.getFileID(Loc));
 
         ReferencesResult::Reference Result;
-        const auto *Token = AST.getTokens().spelledTokenAt(Loc);
+        const auto *Token = AST.getTokens().spelledTokenContaining(Loc);
+        assert(Token && "references expected token here");
         Result.Loc.range = Range{sourceLocToPosition(SM, Token->location()),
                                  sourceLocToPosition(SM, Token->endLocation())};
         Result.Loc.uri = URIMainFile;
@@ -1449,6 +1487,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
               OverriddenBy.Subjects.insert(ID);
             getOverriddenMethods(CMD, OverriddenMethods);
           }
+        }
+        // Special case: Objective-C methods can override a parent class or
+        // protocol, we should be sure to report references to those.
+        if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(ND)) {
+          OverriddenBy.Subjects.insert(getSymbolID(OMD));
+          getOverriddenMethods(OMD, OverriddenMethods);
         }
       }
     }
@@ -1700,6 +1744,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
+  // FIXME: Populate HI.detail the way we do in symbolToHierarchyItem?
   HI.kind = SK;
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
@@ -1751,6 +1796,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   }
   HierarchyItem HI;
   HI.name = std::string(S.Name);
+  HI.detail = (S.Scope + S.Name).str();
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
@@ -2044,9 +2090,10 @@ static void unwrapFindType(
 
   // For smart pointer types, add the underlying type
   if (H)
-    if (const auto* PointeeType = H->getPointeeType(T.getNonReferenceType().getTypePtr())) {
-        unwrapFindType(QualType(PointeeType, 0), H, Out);
-        return Out.push_back(T);
+    if (auto PointeeType = H->getPointeeType(T.getNonReferenceType());
+        !PointeeType.isNull()) {
+      unwrapFindType(PointeeType, H, Out);
+      return Out.push_back(T);
     }
 
   return Out.push_back(T);
@@ -2237,7 +2284,10 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
     if (!(isa<DeclContext>(Decl) &&
           cast<DeclContext>(Decl)->isFunctionOrMethod()) &&
-        Decl->getKind() != Decl::Kind::FunctionTemplate)
+        Decl->getKind() != Decl::Kind::FunctionTemplate &&
+        !(Decl->getKind() == Decl::Kind::Var &&
+          !cast<VarDecl>(Decl)->isLocalVarDecl()) &&
+        Decl->getKind() != Decl::Kind::Field)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
       Result.emplace_back(std::move(*CHI));
@@ -2271,7 +2321,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // Initially store the ranges in a map keyed by SymbolID of the caller.
   // This allows us to group different calls with the same caller
   // into the same CallHierarchyIncomingCall.
-  llvm::DenseMap<SymbolID, std::vector<Range>> CallsIn;
+  llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
   // We can populate the ranges based on a refs request only. As we do so, we
   // also accumulate the container IDs into a lookup request.
   LookupRequest ContainerLookup;
@@ -2281,8 +2331,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       elog("incomingCalls failed to convert location: {0}", Loc.takeError());
       return;
     }
-    auto It = CallsIn.try_emplace(R.Container, std::vector<Range>{}).first;
-    It->second.push_back(Loc->range);
+    CallsIn[R.Container].push_back(*Loc);
 
     ContainerLookup.IDs.insert(R.Container);
   });
@@ -2291,14 +2340,85 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
     auto It = CallsIn.find(Caller.ID);
     assert(It != CallsIn.end());
-    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file()))
+    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+      std::vector<Range> FromRanges;
+      for (const Location &L : It->second) {
+        if (L.uri != CHI->uri) {
+          // Call location not in same file as caller.
+          // This can happen in some edge cases. There's not much we can do,
+          // since the protocol only allows returning ranges interpreted as
+          // being in the caller's file.
+          continue;
+        }
+        FromRanges.push_back(L.range);
+      }
       Results.push_back(
-          CallHierarchyIncomingCall{std::move(*CHI), std::move(It->second)});
+          CallHierarchyIncomingCall{std::move(*CHI), std::move(FromRanges)});
+    }
   });
   // Sort results by name of container.
   llvm::sort(Results, [](const CallHierarchyIncomingCall &A,
                          const CallHierarchyIncomingCall &B) {
     return A.from.name < B.from.name;
+  });
+  return Results;
+}
+
+std::vector<CallHierarchyOutgoingCall>
+outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+  std::vector<CallHierarchyOutgoingCall> Results;
+  if (!Index || Item.data.empty())
+    return Results;
+  auto ID = SymbolID::fromStr(Item.data);
+  if (!ID) {
+    elog("outgoingCalls failed to find symbol: {0}", ID.takeError());
+    return Results;
+  }
+  // In this function, we find outgoing calls based on the index only.
+  ContainedRefsRequest Request;
+  Request.ID = *ID;
+  // Initially store the ranges in a map keyed by SymbolID of the callee.
+  // This allows us to group different calls to the same function
+  // into the same CallHierarchyOutgoingCall.
+  llvm::DenseMap<SymbolID, std::vector<Range>> CallsOut;
+  // We can populate the ranges based on a refs request only. As we do so, we
+  // also accumulate the callee IDs into a lookup request.
+  LookupRequest CallsOutLookup;
+  Index->containedRefs(Request, [&](const auto &R) {
+    auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
+    if (!Loc) {
+      elog("outgoingCalls failed to convert location: {0}", Loc.takeError());
+      return;
+    }
+    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Range>{}).first;
+    It->second.push_back(Loc->range);
+
+    CallsOutLookup.IDs.insert(R.Symbol);
+  });
+  // Perform the lookup request and combine its results with CallsOut to
+  // get complete CallHierarchyOutgoingCall objects.
+  Index->lookup(CallsOutLookup, [&](const Symbol &Callee) {
+    // The containedRefs request should only return symbols which are
+    // function-like, i.e. symbols for which references to them can be "calls".
+    using SK = index::SymbolKind;
+    auto Kind = Callee.SymInfo.Kind;
+    assert(Kind == SK::Function || Kind == SK::InstanceMethod ||
+           Kind == SK::ClassMethod || Kind == SK::StaticMethod ||
+           Kind == SK::Constructor || Kind == SK::Destructor ||
+           Kind == SK::ConversionFunction);
+    (void)Kind;
+    (void)SK::Function;
+
+    auto It = CallsOut.find(Callee.ID);
+    assert(It != CallsOut.end());
+    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file()))
+      Results.push_back(
+          CallHierarchyOutgoingCall{std::move(*CHI), std::move(It->second)});
+  });
+  // Sort results by name of the callee.
+  llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,
+                         const CallHierarchyOutgoingCall &B) {
+    return A.to.name < B.to.name;
   });
   return Results;
 }

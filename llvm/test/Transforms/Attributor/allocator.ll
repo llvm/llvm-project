@@ -7,7 +7,7 @@
 @.str = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
 
 ;.
-; CHECK: @[[_STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
+; CHECK: @.str = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
 ;.
 define dso_local void @positive_alloca_1(i32 noundef %val) #0 {
 ; CHECK-LABEL: define dso_local void @positive_alloca_1
@@ -47,7 +47,7 @@ entry:
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @positive_malloc_1(ptr noundef %val) #0 {
 ; CHECK-LABEL: define dso_local void @positive_malloc_1
-; CHECK-SAME: (ptr nocapture nofree noundef readonly [[VAL:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[F:%.*]] = alloca ptr, align 8
@@ -84,7 +84,7 @@ entry:
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @positive_malloc_2(ptr noundef %val) #0 {
 ; CHECK-LABEL: define dso_local void @positive_malloc_2
-; CHECK-SAME: (ptr nocapture nofree noundef readonly [[VAL:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[F:%.*]] = alloca ptr, align 8
@@ -229,7 +229,7 @@ entry:
 ; Should the optimization reduce the allocation size regardless? Based on AAPointerInfo.
 define dso_local void @baz(ptr noundef %val, i32 noundef %arrayLength) #0 {
 ; CHECK-LABEL: define dso_local void @baz
-; CHECK-SAME: (ptr nocapture nofree noundef readonly [[VAL:%.*]], i32 noundef [[ARRAYLENGTH:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[VAL:%.*]], i32 noundef [[ARRAYLENGTH:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[ARRAYLENGTH_ADDR:%.*]] = alloca i32, align 4
@@ -427,7 +427,7 @@ define dso_local void @pthread_test(){
 ; TUNIT-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
 ; TUNIT-NEXT:    [[F1:%.*]] = alloca i8, i32 4, align 4
-; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(12) undef)
+; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(12) undef)
 ; TUNIT-NEXT:    [[F2:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])
 ; TUNIT-NEXT:    ret void
@@ -437,7 +437,7 @@ define dso_local void @pthread_test(){
 ; CGSCC-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
 ; CGSCC-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(12) [[F]])
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[F]])
 ; CGSCC-NEXT:    [[F2:%.*]] = alloca [[STRUCT_FOO]], align 4
 ; CGSCC-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])
 ; CGSCC-NEXT:    ret void
@@ -467,13 +467,13 @@ entry:
 define internal void @pthread_allocation_should_be_reduced(ptr %arg) {
 ;
 ; TUNIT-LABEL: define internal void @pthread_allocation_should_be_reduced
-; TUNIT-SAME: (ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(12) [[ARG:%.*]]) {
+; TUNIT-SAME: (ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(12) [[ARG:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define internal void @pthread_allocation_should_be_reduced
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(12) [[ARG:%.*]]) {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[ARG:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG]], align 4
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
@@ -511,8 +511,13 @@ declare i32 @printf(ptr noundef, ...) #1
 ; Function Attrs: nounwind allocsize(0)
 declare noalias ptr @malloc(i64 noundef) #1
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1}
-; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 3, i1 false}
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+;.
+; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; TUNIT: [[META1]] = !{i64 2, i64 3, i1 false}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; CGSCC: [[META1]] = !{i64 2, i64 3, i1 false}
 ;.

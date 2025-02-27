@@ -32,6 +32,7 @@ namespace PR16225 {
     f<LocalStruct>();
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{template argument uses local type 'LocalStruct'}}
+    // expected-note@-3 {{while substituting explicitly-specified template arguments}}
 #endif
     struct LocalStruct2 : UnknownBase<C> { };  // expected-error {{no template named 'UnknownBase'}}
   }
@@ -47,7 +48,7 @@ namespace PR16225 {
 namespace test1 {
   template <typename> class ArraySlice {};
   class Foo;
-  class NonTemplateClass {
+  class NonTemplateClass { // #defined-here
     void MemberFunction(ArraySlice<Foo>, int);
     template <class T> void MemberFuncTemplate(ArraySlice<T>, int);
   };
@@ -61,7 +62,8 @@ namespace test1 {
     // expected-error@+1 {{member 'UndeclaredMethod' used before its declaration}}
     UndeclaredMethod(resource_data);
   }
-  // expected-error@+2 {{out-of-line definition of 'UndeclaredMethod' does not match any declaration}}
-  // expected-note@+1 {{member is declared here}}
+  // expected-error@+3 {{out-of-line definition of 'UndeclaredMethod' does not match any declaration}}
+  // expected-note@+2 {{member is declared here}}
+  // expected-note@#defined-here {{defined here}}
   void NonTemplateClass::UndeclaredMethod() {}
 }

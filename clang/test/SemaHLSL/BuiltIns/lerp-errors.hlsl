@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -verify -verify-ignore-unexpected
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected
 
 float2 test_no_second_arg(float2 p0) {
   return __builtin_hlsl_lerp(p0);
@@ -20,13 +20,35 @@ float2 test_lerp_no_second_arg(float2 p0) {
   // expected-error@-1 {{no matching function for call to 'lerp'}}
 }
 
-float2 test_lerp_vector_size_mismatch(float3 p0, float2 p1) {
-  return lerp(p0, p0, p1);
-  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'float __attribute__((ext_vector_type(2)))' (vector of 2 'float' values)}}
+float2 test_lerp_vector_trunc_warn1(float3 p0) {
+  return lerp(p0, p0, p0);
+  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
-float2 test_lerp_builtin_vector_size_mismatch(float3 p0, float2 p1) {
+float2 test_lerp_vector_trunc_warn2(float3 p0, float2 p1) {
+  return lerp(p0, p0, p1);
+  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-warning@-2 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+}
+
+float2 test_lerp_vector_trunc_warn3(float3 p0, float2 p1) {
+  return lerp(p0, p1, p0);
+  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-warning@-2 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+}
+
+float2 test_lerp_builtin_vector_size_mismatch_Arg1(float3 p0, float2 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
+}
+
+float2 test_lerp_builtin_vector_size_mismatch_Arg2(float3 p0, float2 p1) {
+  return __builtin_hlsl_lerp(p1, p0, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
+}
+
+float2 test_lerp_builtin_vector_size_mismatch_Arg3(float3 p0, float2 p1) {
+  return __builtin_hlsl_lerp(p1, p1, p0);
   // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
@@ -42,6 +64,16 @@ float2 test_lerp_element_type_mismatch(half2 p0, float2 p1) {
 
 float2 test_builtin_lerp_float2_splat(float p0, float2 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+}
+
+float2 test_builtin_lerp_float2_splat2(double p0, double2 p1) {
+  return __builtin_hlsl_lerp(p1, p0, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+}
+
+float2 test_builtin_lerp_float2_splat3(double p0, double2 p1) {
+  return __builtin_hlsl_lerp(p1, p1, p0);
   // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
 }
 

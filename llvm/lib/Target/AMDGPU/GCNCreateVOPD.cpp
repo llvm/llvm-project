@@ -20,7 +20,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "GCNVOPDUtils.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -28,9 +27,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include <utility>
 
 #define DEBUG_TYPE "gcn-create-vopd"
 STATISTIC(NumVOPDCreated, "Number of VOPD Insts Created.");
@@ -43,7 +40,7 @@ class GCNCreateVOPD : public MachineFunctionPass {
 private:
     class VOPDCombineInfo {
     public:
-      VOPDCombineInfo() {}
+      VOPDCombineInfo() = default;
       VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
           : FirstMI(First), SecondMI(Second) {}
 
@@ -101,6 +98,7 @@ public:
       }
     }
 
+    SII->fixImplicitOperands(*VOPDInst);
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
 

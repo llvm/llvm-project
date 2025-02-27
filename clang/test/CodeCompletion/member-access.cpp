@@ -367,4 +367,71 @@ class A {
 // CHECK-DEREF-THIS: [#void#]function()
   }
 };
+
+template <typename Element>
+struct RepeatedField {
+  void Add();
+};
+
+template <typename T>
+RepeatedField<T>* MutableRepeatedField() {}
+
+template <class T>
+void Foo() {
+  auto& C = *MutableRepeatedField<T>();
+  C.
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:382:5 %s -o - | FileCheck -check-prefix=CHECK-DEREF-DEPENDENT %s
+// CHECK-DEREF-DEPENDENT: [#void#]Add()
+}
+
+namespace dependent_smart_pointer {
+template <typename T>
+struct smart_pointer {
+  T* operator->();
+};
+
+template <typename T>
+struct node {
+  smart_pointer<node<T>> next;
+  void foo() {
+    next->next;
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:398:11 %s -o - | FileCheck -check-prefix=CHECK-DEPENDENT-SMARTPTR %s
+    // CHECK-DEPENDENT-SMARTPTR: [#smart_pointer<node<T>>#]next
+  }
+};
+}
+
+namespace dependent_nested_class {
+template <typename T>
+struct Foo {
+  struct Bar {
+    int field;
+  };
+};
+template <typename T>
+void f() {
+  typename Foo<T>::Bar bar;
+  bar.field;
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:415:7 %s -o - | FileCheck -check-prefix=CHECK-DEPENDENT-NESTEDCLASS %s
+  // CHECK-DEPENDENT-NESTEDCLASS: [#int#]field
+}
+}
+
+namespace template_alias {
+struct A {
+  int b;
+};
+template <typename T>
+struct S {
+  A a;
+};
+template <typename T>
+using Alias = S<T>;
+template <typename T>
+void f(Alias<T> s) {
+  s.a.b;
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:433:7 %s -o - | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS %s
+  // CHECK-TEMPLATE-ALIAS: [#int#]b
+}
 }

@@ -1,4 +1,4 @@
-// RUN: fir-opt --cfg-conversion-on-reduce-opt %s | FileCheck %s
+// RUN: fir-opt --cfg-conversion %s | FileCheck %s
 
 omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.array<3xi32>>> init {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.array<3xi32>>>):
@@ -18,7 +18,7 @@ omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.a
   %8 = fir.convert %0 : (!fir.ref<!fir.box<!fir.array<3xi32>>>) -> !fir.ref<!fir.box<none>>
   %9 = fir.convert %6 : (!fir.box<i32>) -> !fir.box<none>
   %10 = fir.convert %7 : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<i8>
-  %11 = fir.call @_FortranAAssign(%8, %9, %10, %c4_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAAssign(%8, %9, %10, %c4_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   %12 = fir.alloca !fir.box<!fir.array<3xi32>>
   fir.store %4 to %12 : !fir.ref<!fir.box<!fir.array<3xi32>>>
   omp.yield(%12 : !fir.ref<!fir.box<!fir.array<3xi32>>>)

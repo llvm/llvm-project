@@ -10,9 +10,9 @@ template<typename T> struct same_type<T, T> {};
 
 namespace std_example {
 
-long double operator "" _w(long double);
-std::string operator "" _w(const char16_t*, size_t);
-unsigned operator "" _w(const char*);
+long double operator ""_w(long double);
+std::string operator ""_w(const char16_t*, size_t);
+unsigned operator ""_w(const char*);
 int main() {
   auto v1 = 1.2_w;    // calls operator""_w(1.2L)
   auto v2 = u"one"_w; // calls operator""_w(u"one", 3)

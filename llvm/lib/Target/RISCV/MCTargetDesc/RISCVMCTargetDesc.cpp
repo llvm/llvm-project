@@ -11,14 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMCTargetDesc.h"
-#include "RISCVBaseInfo.h"
 #include "RISCVELFStreamer.h"
 #include "RISCVInstPrinter.h"
 #include "RISCVMCAsmInfo.h"
 #include "RISCVMCObjectFileInfo.h"
 #include "RISCVTargetStreamer.h"
 #include "TargetInfo/RISCVTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -43,6 +41,15 @@
 #define GET_SUBTARGETINFO_MC_DESC
 #include "RISCVGenSubtargetInfo.inc"
 
+namespace llvm::RISCVVInversePseudosTable {
+
+using namespace RISCV;
+
+#define GET_RISCVVInversePseudosTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace llvm::RISCVVInversePseudosTable
+
 using namespace llvm;
 
 static MCInstrInfo *createRISCVMCInstrInfo() {
@@ -62,7 +69,7 @@ static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new RISCVMCAsmInfo(TT);
 
-  MCRegister SP = MRI.getDwarfRegNum(RISCV::X2, true);
+  unsigned SP = MRI.getDwarfRegNum(RISCV::X2, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
   MAI->addInitialFrameState(Inst);
 
@@ -82,7 +89,22 @@ static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
   if (CPU.empty() || CPU == "generic")
     CPU = TT.isArch64Bit() ? "generic-rv64" : "generic-rv32";
 
-  return createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  MCSubtargetInfo *X =
+      createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  // If the CPU is "help" fill in 64 or 32 bit feature so we can pass
+  // RISCVFeatures::validate.
+  // FIXME: Why does llvm-mc still expect a source file with -mcpu=help?
+  if (CPU == "help") {
+    llvm::FeatureBitset Features = X->getFeatureBits();
+    if (TT.isArch64Bit())
+      Features.set(RISCV::Feature64Bit);
+    else
+      Features.set(RISCV::Feature32Bit);
+    X->setFeatureBits(Features);
+  }
+
+  return X;
 }
 
 static MCInstPrinter *createRISCVMCInstPrinter(const Triple &T,
@@ -101,10 +123,9 @@ createRISCVObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return nullptr;
 }
 
-static MCTargetStreamer *createRISCVAsmTargetStreamer(MCStreamer &S,
-                                                      formatted_raw_ostream &OS,
-                                                      MCInstPrinter *InstPrint,
-                                                      bool isVerboseAsm) {
+static MCTargetStreamer *
+createRISCVAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                             MCInstPrinter *InstPrint) {
   return new RISCVTargetAsmStreamer(S, OS);
 }
 
@@ -118,16 +139,16 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   int64_t GPRState[31] = {};
   std::bitset<31> GPRValidMask;
 
-  static bool isGPR(unsigned Reg) {
+  static bool isGPR(MCRegister Reg) {
     return Reg >= RISCV::X0 && Reg <= RISCV::X31;
   }
 
-  static unsigned getRegIndex(unsigned Reg) {
+  static unsigned getRegIndex(MCRegister Reg) {
     assert(isGPR(Reg) && Reg != RISCV::X0 && "Invalid GPR reg");
     return Reg - RISCV::X1;
   }
 
-  void setGPRState(unsigned Reg, std::optional<int64_t> Value) {
+  void setGPRState(MCRegister Reg, std::optional<int64_t> Value) {
     if (Reg == RISCV::X0)
       return;
 
@@ -141,7 +162,7 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
     }
   }
 
-  std::optional<int64_t> getGPRState(unsigned Reg) const {
+  std::optional<int64_t> getGPRState(MCRegister Reg) const {
     if (Reg == RISCV::X0)
       return 0;
 
@@ -293,7 +314,7 @@ public:
   }
 
 private:
-  static bool maybeReturnAddress(unsigned Reg) {
+  static bool maybeReturnAddress(MCRegister Reg) {
     // X1 is used for normal returns, X5 for returns from outlined functions.
     return Reg == RISCV::X1 || Reg == RISCV::X5;
   }
@@ -318,17 +339,6 @@ private:
 static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
   return new RISCVMCInstrAnalysis(Info);
 }
-
-namespace {
-MCStreamer *createRISCVELFStreamer(const Triple &T, MCContext &Context,
-                                   std::unique_ptr<MCAsmBackend> &&MAB,
-                                   std::unique_ptr<MCObjectWriter> &&MOW,
-                                   std::unique_ptr<MCCodeEmitter> &&MCE,
-                                   bool RelaxAll) {
-  return createRISCVELFStreamer(Context, std::move(MAB), std::move(MOW),
-                                std::move(MCE), RelaxAll);
-}
-} // end anonymous namespace
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
   for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {

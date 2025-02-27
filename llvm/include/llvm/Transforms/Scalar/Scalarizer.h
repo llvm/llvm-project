@@ -24,15 +24,28 @@
 namespace llvm {
 
 class Function;
+class FunctionPass;
 
 struct ScalarizerPassOptions {
-  // These options correspond 1:1 to cl::opt options defined in
-  // Scalarizer.cpp. When the cl::opt are specified, they take precedence.
-  // When the cl::opt are not specified, the present optional values allow to
-  // override the cl::opt's default values.
-  std::optional<bool> ScalarizeVariableInsertExtract;
-  std::optional<bool> ScalarizeLoadStore;
-  std::optional<unsigned> ScalarizeMinBits;
+  /// Instruct the scalarizer pass to attempt to keep values of a minimum number
+  /// of bits.
+
+  /// Split vectors larger than this size into fragments, where each fragment is
+  /// either a vector no larger than this size or a scalar.
+  ///
+  /// Instructions with operands or results of different sizes that would be
+  /// split into a different number of fragments are currently left as-is.
+  unsigned ScalarizeMinBits = 0;
+
+  /// Allow the scalarizer pass to scalarize insertelement/extractelement with
+  /// variable index.
+  bool ScalarizeVariableInsertExtract = true;
+
+  /// Allow the scalarizer pass to scalarize loads and store
+  ///
+  /// This is disabled by default because having separate loads and stores makes
+  /// it more likely that the -combiner-alias-analysis limits will be reached.
+  bool ScalarizeLoadStore = false;
 };
 
 class ScalarizerPass : public PassInfoMixin<ScalarizerPass> {
@@ -50,6 +63,10 @@ public:
   void setScalarizeLoadStore(bool Value) { Options.ScalarizeLoadStore = Value; }
   void setScalarizeMinBits(unsigned Value) { Options.ScalarizeMinBits = Value; }
 };
+
+/// Create a legacy pass manager instance of the Scalarizer pass
+FunctionPass *createScalarizerPass(
+    const ScalarizerPassOptions &Options = ScalarizerPassOptions());
 }
 
 #endif /* LLVM_TRANSFORMS_SCALAR_SCALARIZER_H */

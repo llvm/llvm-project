@@ -1,5 +1,4 @@
-; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck  \
-; RUN: %s
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 ; Test instrumentation of vector shift instructions.
@@ -7,7 +6,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare x86_mmx @llvm.x86.mmx.psll.d(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.psll.d(<1 x i64>, <1 x i64>)
 declare <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32>, <16 x i32>)
 declare <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32>, <8 x i32>)
 declare <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32>, <4 x i32>)
@@ -19,10 +18,10 @@ declare <32 x i16> @llvm.x86.avx512.pslli.w.512(<32 x i16>, i32)
 define i64 @test_mmx(i64 %x.coerce, i64 %y.coerce) sanitize_memory {
 entry:
   %0 = bitcast i64 %x.coerce to <2 x i32>
-  %1 = bitcast <2 x i32> %0 to x86_mmx
-  %2 = bitcast i64 %y.coerce to x86_mmx
-  %3 = tail call x86_mmx @llvm.x86.mmx.psll.d(x86_mmx %1, x86_mmx %2)
-  %4 = bitcast x86_mmx %3 to <2 x i32>
+  %1 = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = bitcast i64 %y.coerce to <1 x i64>
+  %3 = tail call <1 x i64> @llvm.x86.mmx.psll.d(<1 x i64> %1, <1 x i64> %2)
+  %4 = bitcast <1 x i64> %3 to <2 x i32>
   %5 = bitcast <2 x i32> %4 to <1 x i64>
   %6 = extractelement <1 x i64> %5, i32 0
   ret i64 %6
@@ -30,11 +29,11 @@ entry:
 
 ; CHECK-LABEL: @test_mmx
 ; CHECK: = icmp ne i64 {{.*}}, 0
-; CHECK: [[C:%.*]] = sext i1 {{.*}} to i64
-; CHECK: [[A:%.*]] = call x86_mmx @llvm.x86.mmx.psll.d(
-; CHECK: [[B:%.*]] = bitcast x86_mmx {{.*}}[[A]] to i64
-; CHECK: = or i64 {{.*}}[[B]], {{.*}}[[C]]
-; CHECK: call x86_mmx @llvm.x86.mmx.psll.d(
+; CHECK: [[B:%.*]] = sext i1 {{.*}} to i64
+; CHECK: [[C:%.*]] = bitcast i64 [[B]] to <1 x i64>
+; CHECK: [[A:%.*]] = call <1 x i64> @llvm.x86.mmx.psll.d(
+; CHECK: = or <1 x i64> {{.*}}[[A]], {{.*}}[[C]]
+; CHECK: call <1 x i64> @llvm.x86.mmx.psll.d(
 ; CHECK: ret i64
 
 

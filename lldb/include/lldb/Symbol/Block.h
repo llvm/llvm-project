@@ -40,14 +40,16 @@ namespace lldb_private {
 /// blocks.
 class Block : public UserID, public SymbolContextScope {
 public:
-  typedef RangeVector<uint32_t, uint32_t, 1> RangeList;
+  typedef RangeVector<int32_t, uint32_t, 1> RangeList;
   typedef RangeList::Entry Range;
 
-  /// Construct with a User ID \a uid, \a depth.
-  ///
-  /// Initialize this block with the specified UID \a uid. The \a depth in the
-  /// \a block_list is used to represent the parent, sibling, and child block
-  /// information and also allows for partial parsing at the block level.
+  // Creates a block representing the whole function. Only meant to be used from
+  // the Function class.
+  Block(Function &function, lldb::user_id_t function_uid);
+
+  ~Block() override;
+
+  /// Creates a block with the specified UID \a uid.
   ///
   /// \param[in] uid
   ///     The UID for a given block. This value is given by the
@@ -56,19 +58,7 @@ public:
   ///     information data that it parses for further or more in
   ///     depth parsing. Common values would be the index into a
   ///     table, or an offset into the debug information.
-  ///
-  /// \see BlockList
-  Block(lldb::user_id_t uid);
-
-  /// Destructor.
-  ~Block() override;
-
-  /// Add a child to this object.
-  ///
-  /// \param[in] child_block_sp
-  ///     A shared pointer to a child block that will get added to
-  ///     this block.
-  void AddChild(const lldb::BlockSP &child_block_sp);
+  lldb::BlockSP CreateChild(lldb::user_id_t uid);
 
   /// Add a new offset range to this block.
   void AddRange(const Range &range);
@@ -317,10 +307,6 @@ public:
                               const Declaration *decl_ptr,
                               const Declaration *call_decl_ptr);
 
-  void SetParentScope(SymbolContextScope *parent_scope) {
-    m_parent_scope = parent_scope;
-  }
-
   /// Set accessor for the variable list.
   ///
   /// Called by the SymbolFile plug-ins after they have parsed the variable
@@ -355,6 +341,8 @@ public:
   // be able to get at any of the address ranges in a block.
   bool GetRangeAtIndex(uint32_t range_idx, AddressRange &range);
 
+  AddressRanges GetRanges();
+
   bool GetStartAddress(Address &addr);
 
   void SetDidParseVariables(bool b, bool set_children);
@@ -362,7 +350,7 @@ public:
 protected:
   typedef std::vector<lldb::BlockSP> collection;
   // Member variables.
-  SymbolContextScope *m_parent_scope;
+  SymbolContextScope &m_parent_scope;
   collection m_children;
   RangeList m_ranges;
   lldb::InlineFunctionInfoSP m_inlineInfoSP; ///< Inlined function information.
@@ -380,6 +368,8 @@ protected:
 private:
   Block(const Block &) = delete;
   const Block &operator=(const Block &) = delete;
+
+  Block(lldb::user_id_t uid, SymbolContextScope &parent_scope);
 };
 
 } // namespace lldb_private

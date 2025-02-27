@@ -12,6 +12,7 @@
 
 #include "TestDenseDataFlowAnalysis.h"
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
@@ -54,8 +55,8 @@ public:
       : DenseBackwardDataFlowAnalysis(solver, symbolTable),
         assumeFuncReads(assumeFuncReads) {}
 
-  void visitOperation(Operation *op, const NextAccess &after,
-                      NextAccess *before) override;
+  LogicalResult visitOperation(Operation *op, const NextAccess &after,
+                               NextAccess *before) override;
 
   void visitCallControlFlowTransfer(CallOpInterface call,
                                     CallControlFlowAction action,
@@ -79,13 +80,16 @@ public:
 };
 } // namespace
 
-void NextAccessAnalysis::visitOperation(Operation *op, const NextAccess &after,
-                                        NextAccess *before) {
+LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
+                                                 const NextAccess &after,
+                                                 NextAccess *before) {
   auto memory = dyn_cast<MemoryEffectOpInterface>(op);
   // If we can't reason about the memory effects, conservatively assume we can't
   // say anything about the next access.
-  if (!memory)
-    return setToExitState(before);
+  if (!memory) {
+    setToExitState(before);
+    return success();
+  }
 
   SmallVector<MemoryEffects::EffectInstance> effects;
   memory.getEffects(effects);
@@ -101,20 +105,23 @@ void NextAccessAnalysis::visitOperation(Operation *op, const NextAccess &after,
 
     // Effects with unspecified value are treated conservatively and we cannot
     // assume anything about the next access.
-    if (!value)
-      return setToExitState(before);
+    if (!value) {
+      setToExitState(before);
+      return success();
+    }
 
     // If cannot find the most underlying value, we cannot assume anything about
     // the next accesses.
     std::optional<Value> underlyingValue =
         UnderlyingValueAnalysis::getMostUnderlyingValue(
             value, [&](Value value) {
-              return getOrCreateFor<UnderlyingValueLattice>(op, value);
+              return getOrCreateFor<UnderlyingValueLattice>(
+                  getProgramPointBefore(op), value);
             });
 
     // If the underlying value is not known yet, don't propagate.
     if (!underlyingValue)
-      return;
+      return success();
 
     underlyingValues.push_back(*underlyingValue);
   }
@@ -123,12 +130,15 @@ void NextAccessAnalysis::visitOperation(Operation *op, const NextAccess &after,
   ChangeResult result = before->meet(after);
   for (const auto &[effect, value] : llvm::zip(effects, underlyingValues)) {
     // If the underlying value is known to be unknown, set to fixpoint.
-    if (!value)
-      return setToExitState(before);
+    if (!value) {
+      setToExitState(before);
+      return success();
+    }
 
     result |= before->set(value, op);
   }
   propagateIfChanged(before, result);
+  return success();
 }
 
 void NextAccessAnalysis::visitCallControlFlowTransfer(
@@ -142,7 +152,7 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
           UnderlyingValueAnalysis::getMostUnderlyingValue(
               operand, [&](Value value) {
                 return getOrCreateFor<UnderlyingValueLattice>(
-                    call.getOperation(), value);
+                    getProgramPointBefore(call.getOperation()), value);
               });
       if (!underlyingValue)
         return;
@@ -161,7 +171,7 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
                             testCallAndStore.getStoreBeforeCall()) ||
                            (action == CallControlFlowAction::ExitCallee &&
                             !testCallAndStore.getStoreBeforeCall()))) {
-    visitOperation(call, after, before);
+    (void)visitOperation(call, after, before);
   } else {
     AbstractDenseBackwardDataFlowAnalysis::visitCallControlFlowTransfer(
         call, action, after, before);
@@ -178,8 +188,8 @@ void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
       ((regionTo.isParent() && !testStoreWithARegion.getStoreBeforeRegion()) ||
        (regionFrom.isParent() &&
         testStoreWithARegion.getStoreBeforeRegion()))) {
-    visitOperation(branch, static_cast<const NextAccess &>(after),
-                   static_cast<NextAccess *>(before));
+    (void)visitOperation(branch, static_cast<const NextAccess &>(after),
+                         static_cast<NextAccess *>(before));
   } else {
     propagateIfChanged(before, before->meet(after));
   }
@@ -274,9 +284,8 @@ struct TestNextAccessPass
       if (!tag)
         return;
 
-      const NextAccess *nextAccess = solver.lookupState<NextAccess>(
-          op->getNextNode() == nullptr ? ProgramPoint(op->getBlock())
-                                       : op->getNextNode());
+      const NextAccess *nextAccess =
+          solver.lookupState<NextAccess>(solver.getProgramPointAfter(op));
       op->setAttr(kNextAccessAttrName,
                   makeNextAccessAttribute(op, solver, nextAccess));
 
@@ -291,9 +300,8 @@ struct TestNextAccessPass
         if (!successor.getSuccessor() || successor.getSuccessor()->empty())
           continue;
         Block &successorBlock = successor.getSuccessor()->front();
-        ProgramPoint successorPoint = successorBlock.empty()
-                                          ? ProgramPoint(&successorBlock)
-                                          : &successorBlock.front();
+        ProgramPoint *successorPoint =
+            solver.getProgramPointBefore(&successorBlock);
         entryPointNextAccess.push_back(makeNextAccessAttribute(
             op, solver, solver.lookupState<NextAccess>(successorPoint)));
       }

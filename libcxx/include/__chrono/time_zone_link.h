@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__compare/strong_order.h>
 #  include <__config>
@@ -31,22 +31,21 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&   \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 namespace chrono {
 
 class time_zone_link {
 public:
-  _LIBCPP_NODISCARD_EXT
+  [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI explicit time_zone_link(__private_constructor_tag, string_view __name, string_view __target)
       : __name_{__name}, __target_{__target} {}
 
   _LIBCPP_HIDE_FROM_ABI time_zone_link(time_zone_link&&)            = default;
   _LIBCPP_HIDE_FROM_ABI time_zone_link& operator=(time_zone_link&&) = default;
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name_; }
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI string_view target() const noexcept { return __target_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view target() const noexcept { return __target_; }
 
 private:
   string __name_;
@@ -56,24 +55,25 @@ private:
   string __target_;
 };
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline bool
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline bool
 operator==(const time_zone_link& __x, const time_zone_link& __y) noexcept {
   return __x.name() == __y.name();
 }
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline strong_ordering
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline strong_ordering
 operator<=>(const time_zone_link& __x, const time_zone_link& __y) noexcept {
   return __x.name() <=> __y.name();
 }
 
 } // namespace chrono
 
-#  endif //_LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
+         // _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_TIME_ZONE_LINK_H

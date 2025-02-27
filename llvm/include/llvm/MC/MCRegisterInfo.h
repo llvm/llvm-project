@@ -71,7 +71,7 @@ public:
   /// contains - Return true if the specified register is included in this
   /// register class.  This does not include virtual registers.
   bool contains(MCRegister Reg) const {
-    unsigned RegNo = unsigned(Reg);
+    unsigned RegNo = Reg.id();
     unsigned InByte = RegNo % 8;
     unsigned Byte = RegNo / 8;
     if (Byte >= RegSetSize)
@@ -126,6 +126,12 @@ struct MCRegisterDesc {
   /// Index into list with lane mask sequences. The sequence contains a lanemask
   /// for every register unit.
   uint16_t RegUnitLaneMasks;
+
+  // Is true for constant registers.
+  bool IsConstant;
+
+  // Is true for artificial registers.
+  bool IsArtificial;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -183,6 +189,9 @@ private:
   const DwarfLLVMRegPair *EHDwarf2LRegs;      // Dwarf to LLVM regs mapping EH
   DenseMap<MCRegister, int> L2SEHRegs;        // LLVM to SEH regs mapping
   DenseMap<MCRegister, int> L2CVRegs;         // LLVM to CV regs mapping
+
+  mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
+  ArrayRef<MCPhysReg> getCachedAliasesOf(MCRegister R) const;
 
   /// Iterator class that can traverse the differentially encoded values in
   /// DiffLists. Don't use this class directly, use one of the adaptors below.
@@ -260,6 +269,9 @@ public:
   friend class MCRegUnitIterator;
   friend class MCRegUnitMaskIterator;
   friend class MCRegUnitRootIterator;
+  friend class MCRegAliasIterator;
+
+  virtual ~MCRegisterInfo() {}
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -295,6 +307,8 @@ public:
     EHDwarf2LRegsSize = 0;
     Dwarf2LRegs = nullptr;
     Dwarf2LRegsSize = 0;
+
+    RegAliasesCache.resize(NumRegs);
   }
 
   /// Used to initialize LLVM register to Dwarf
@@ -349,16 +363,16 @@ public:
     return PCReg;
   }
 
-  const MCRegisterDesc &operator[](MCRegister RegNo) const {
-    assert(RegNo < NumRegs &&
+  const MCRegisterDesc &operator[](MCRegister Reg) const {
+    assert(Reg.id() < NumRegs &&
            "Attempting to access record for invalid register number!");
-    return Desc[RegNo];
+    return Desc[Reg.id()];
   }
 
   /// Provide a get method, equivalent to [], but more useful with a
   /// pointer to this object.
-  const MCRegisterDesc &get(MCRegister RegNo) const {
-    return operator[](RegNo);
+  const MCRegisterDesc &get(MCRegister Reg) const {
+    return operator[](Reg);
   }
 
   /// Returns the physical register number of sub-register "Index"
@@ -381,6 +395,19 @@ public:
   const char *getName(MCRegister RegNo) const {
     return RegStrings + get(RegNo).Name;
   }
+
+  /// Returns true if the given register is constant.
+  bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
+
+  /// Returns true if the given register is artificial, which means it
+  /// represents a regunit that is not separately addressable but still needs to
+  /// be modelled, such as the top 16-bits of a 32-bit GPR.
+  bool isArtificial(MCRegister RegNo) const { return get(RegNo).IsArtificial; }
+
+  /// Returns true when the given register unit is considered artificial.
+  /// Register units are considered artificial when at least one of the
+  /// root registers is artificial.
+  bool isArtificialRegUnit(MCRegUnit Unit) const;
 
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
@@ -406,15 +433,15 @@ public:
   /// number.  Returns -1 if there is no equivalent value.  The second
   /// parameter allows targets to use different numberings for EH info and
   /// debugging info.
-  int getDwarfRegNum(MCRegister RegNum, bool isEH) const;
+  virtual int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const;
 
-  /// Map a dwarf register back to a target register. Returns std::nullopt is
+  /// Map a dwarf register back to a target register. Returns std::nullopt if
   /// there is no mapping.
-  std::optional<unsigned> getLLVMRegNum(unsigned RegNum, bool isEH) const;
+  std::optional<MCRegister> getLLVMRegNum(uint64_t RegNum, bool isEH) const;
 
   /// Map a target EH register number to an equivalent DWARF register
   /// number.
-  int getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const;
+  int64_t getDwarfRegNumFromDwarfEHRegNum(uint64_t RegNum) const;
 
   /// Map a target register to an equivalent SEH register
   /// number.  Returns LLVM register number if there is no equivalent value.
@@ -445,11 +472,11 @@ public:
     return RegClassStrings + Class->NameIdx;
   }
 
-   /// Returns the encoding for RegNo
-  uint16_t getEncodingValue(MCRegister RegNo) const {
-    assert(RegNo < NumRegs &&
+   /// Returns the encoding for Reg
+  uint16_t getEncodingValue(MCRegister Reg) const {
+    assert(Reg.id() < NumRegs &&
            "Attempting to get encoding for invalid register number!");
-    return RegEncodingTable[RegNo];
+    return RegEncodingTable[Reg.id()];
   }
 
   /// Returns true if RegB is a sub-register of RegA.
@@ -503,7 +530,7 @@ public:
 
   MCSubRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                    bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -573,7 +600,7 @@ public:
 
   MCSuperRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                      bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -619,8 +646,7 @@ public:
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-    assert(Reg && "Null register has no regunits");
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);
@@ -717,63 +743,30 @@ public:
   }
 };
 
-/// MCRegAliasIterator enumerates all registers aliasing Reg.  If IncludeSelf is
-/// set, Reg itself is included in the list.  This iterator does not guarantee
-/// any ordering or that entries are unique.
+/// MCRegAliasIterator enumerates all registers aliasing Reg.
 class MCRegAliasIterator {
 private:
-  MCRegister Reg;
-  const MCRegisterInfo *MCRI;
-  bool IncludeSelf;
-
-  MCRegUnitIterator RI;
-  MCRegUnitRootIterator RRI;
-  MCSuperRegIterator SI;
+  const MCPhysReg *It = nullptr;
+  const MCPhysReg *End = nullptr;
 
 public:
   MCRegAliasIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
-                     bool IncludeSelf)
-    : Reg(Reg), MCRI(MCRI), IncludeSelf(IncludeSelf) {
-    // Initialize the iterators.
-    for (RI = MCRegUnitIterator(Reg, MCRI); RI.isValid(); ++RI) {
-      for (RRI = MCRegUnitRootIterator(*RI, MCRI); RRI.isValid(); ++RRI) {
-        for (SI = MCSuperRegIterator(*RRI, MCRI, true); SI.isValid(); ++SI) {
-          if (!(!IncludeSelf && Reg == *SI))
-            return;
-        }
-      }
-    }
+                     bool IncludeSelf) {
+    ArrayRef<MCPhysReg> Cache = MCRI->getCachedAliasesOf(Reg);
+    assert(Cache.back() == Reg);
+    It = Cache.begin();
+    End = Cache.end();
+    if (!IncludeSelf)
+      --End;
   }
 
-  bool isValid() const { return RI.isValid(); }
+  bool isValid() const { return It != End; }
 
-  MCRegister operator*() const {
-    assert(SI.isValid() && "Cannot dereference an invalid iterator.");
-    return *SI;
-  }
-
-  void advance() {
-    // Assuming SI is valid.
-    ++SI;
-    if (SI.isValid()) return;
-
-    ++RRI;
-    if (RRI.isValid()) {
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-      return;
-    }
-
-    ++RI;
-    if (RI.isValid()) {
-      RRI = MCRegUnitRootIterator(*RI, MCRI);
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-    }
-  }
+  MCRegister operator*() const { return *It; }
 
   MCRegAliasIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
-    do advance();
-    while (!IncludeSelf && isValid() && *SI == Reg);
+    ++It;
     return *this;
   }
 };

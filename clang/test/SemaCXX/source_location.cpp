@@ -912,3 +912,121 @@ auto g() {
 }
 
 }
+
+namespace GH92680 {
+
+struct IntConstuctible {
+  IntConstuctible(std::source_location = std::source_location::current());
+};
+
+template <typename>
+auto construct_at(IntConstuctible) -> decltype(IntConstuctible()) {
+  return {};
+}
+
+void test() {
+  construct_at<IntConstuctible>({});
+}
+
+}
+
+namespace GH106428 {
+
+struct add_fn {
+    template <typename T>
+    constexpr auto operator()(T lhs, T rhs,
+                              const std::source_location loc = std::source_location::current())
+        const -> T
+    {
+        return lhs + rhs;
+    }
+};
+
+
+template <class _Fp, class... _Args>
+decltype(_Fp{}(0, 0))
+__invoke(_Fp&& __f);
+
+template<typename T>
+struct type_identity { using type = T; };
+
+template<class Fn>
+struct invoke_result : type_identity<decltype(__invoke(Fn{}))> {};
+
+using i = invoke_result<add_fn>::type;
+static_assert(__is_same(i, int));
+
+}
+
+#if __cplusplus >= 202002L
+
+namespace GH81155 {
+struct buff {
+  buff(buff &, const char * = __builtin_FUNCTION());
+};
+
+template <class Ty>
+Ty declval();
+
+template <class Fx>
+auto Call(buff arg) -> decltype(Fx{}(arg));
+
+template <typename>
+struct F {};
+
+template <class Fx>
+struct InvocableR : F<decltype(Call<Fx>(declval<buff>()))> {
+  static constexpr bool value = false;
+};
+
+template <class Fx, bool = InvocableR<Fx>::value>
+void Help(Fx) {}
+
+void Test() {
+  Help([](buff) {});
+}
+
+}
+
+#endif
+
+
+namespace GH67134 {
+template <int loc = std::source_location::current().line()>
+constexpr auto f(std::source_location loc2 = std::source_location::current()) { return loc; }
+
+int g = []() -> decltype(f()) { return 0; }();
+
+int call() {
+#if __cplusplus >= 202002L
+  return []<decltype(f()) = 0>() -> decltype(f()) { return  0; }();
+#endif
+  return []() -> decltype(f()) { return  0; }();
+}
+
+#if __cplusplus >= 202002L
+template<typename T>
+int Var = requires { []() -> decltype(f()){}; };
+int h = Var<int>;
+#endif
+
+
+}
+
+namespace GH119129 {
+struct X{
+  constexpr int foo(std::source_location loc = std::source_location::current()) {
+    return loc.line();
+  }
+};
+static_assert(X{}.foo() == __LINE__);
+static_assert(X{}.
+                foo() == __LINE__);
+static_assert(X{}.
+
+
+                foo() == __LINE__);
+#line 10000
+static_assert(X{}.
+                foo() == 10001);
+}

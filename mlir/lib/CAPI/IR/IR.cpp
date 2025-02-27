@@ -22,12 +22,14 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
@@ -202,6 +204,11 @@ void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
   unwrap(flags)->elideLargeElementsAttrs(largeElementLimit);
 }
 
+void mlirOpPrintingFlagsElideLargeResourceString(MlirOpPrintingFlags flags,
+                                                 intptr_t largeResourceLimit) {
+  unwrap(flags)->elideLargeResourceString(largeResourceLimit);
+}
+
 void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool enable,
                                         bool prettyForm) {
   unwrap(flags)->enableDebugInfo(enable, /*prettyForm=*/prettyForm);
@@ -219,6 +226,9 @@ void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
   unwrap(flags)->assumeVerified();
 }
 
+void mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags) {
+  unwrap(flags)->skipRegions();
+}
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
 //===----------------------------------------------------------------------===//
@@ -253,6 +263,15 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
                                         unsigned col) {
   return wrap(Location(
       FileLineColLoc::get(unwrap(context), unwrap(filename), line, col)));
+}
+
+MlirLocation
+mlirLocationFileLineColRangeGet(MlirContext context, MlirStringRef filename,
+                                unsigned startLine, unsigned startCol,
+                                unsigned endLine, unsigned endCol) {
+  return wrap(
+      Location(FileLineColRange::get(unwrap(context), unwrap(filename),
+                                     startLine, startCol, endLine, endCol)));
 }
 
 MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
@@ -305,6 +324,15 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
 MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
   OwningOpRef<ModuleOp> owning =
       parseSourceString<ModuleOp>(unwrap(module), unwrap(context));
+  if (!owning)
+    return MlirModule{nullptr};
+  return MlirModule{owning.release().getOperation()};
+}
+
+MlirModule mlirModuleCreateParseFromFile(MlirContext context,
+                                         MlirStringRef fileName) {
+  OwningOpRef<ModuleOp> owning =
+      parseSourceFile<ModuleOp>(unwrap(fileName), unwrap(context));
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
@@ -717,17 +745,35 @@ void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
   return unwrap(op)->moveBefore(unwrap(other));
 }
 
+static mlir::WalkResult unwrap(MlirWalkResult result) {
+  switch (result) {
+  case MlirWalkResultAdvance:
+    return mlir::WalkResult::advance();
+
+  case MlirWalkResultInterrupt:
+    return mlir::WalkResult::interrupt();
+
+  case MlirWalkResultSkip:
+    return mlir::WalkResult::skip();
+  }
+  llvm_unreachable("unknown result in WalkResult::unwrap");
+}
+
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder) {
   switch (walkOrder) {
 
   case MlirWalkPreOrder:
     unwrap(op)->walk<mlir::WalkOrder::PreOrder>(
-        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+        [callback, userData](Operation *op) {
+          return unwrap(callback(wrap(op), userData));
+        });
     break;
   case MlirWalkPostOrder:
     unwrap(op)->walk<mlir::WalkOrder::PostOrder>(
-        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+        [callback, userData](Operation *op) {
+          return unwrap(callback(wrap(op), userData));
+        });
   }
 }
 
@@ -889,6 +935,10 @@ MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type,
   return wrap(unwrap(block)->addArgument(unwrap(type), unwrap(loc)));
 }
 
+void mlirBlockEraseArgument(MlirBlock block, unsigned index) {
+  return unwrap(block)->eraseArgument(index);
+}
+
 MlirValue mlirBlockInsertArgument(MlirBlock block, intptr_t pos, MlirType type,
                                   MlirLocation loc) {
   return wrap(unwrap(block)->insertArgument(pos, unwrap(type), unwrap(loc)));
@@ -977,6 +1027,20 @@ MlirOpOperand mlirValueGetFirstUse(MlirValue value) {
 
 void mlirValueReplaceAllUsesOfWith(MlirValue oldValue, MlirValue newValue) {
   unwrap(oldValue).replaceAllUsesWith(unwrap(newValue));
+}
+
+void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
+                                   intptr_t numExceptions,
+                                   MlirOperation *exceptions) {
+  Value oldValueCpp = unwrap(oldValue);
+  Value newValueCpp = unwrap(newValue);
+
+  llvm::SmallPtrSet<mlir::Operation *, 4> exceptionSet;
+  for (intptr_t i = 0; i < numExceptions; ++i) {
+    exceptionSet.insert(unwrap(exceptions[i]));
+  }
+
+  oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
 }
 
 //===----------------------------------------------------------------------===//

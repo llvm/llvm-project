@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 | FileCheck %s
+; RUN: llc < %s -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 | FileCheck %s
 
 define i64 @dext(i64 %i) nounwind readnone {
 entry:

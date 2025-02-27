@@ -20,11 +20,16 @@
 namespace llvm {
 
 class Module;
+class Function;
 
 /// Merge identical functions.
 class MergeFunctionsPass : public PassInfoMixin<MergeFunctionsPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool runOnModule(Module &M);
+  static DenseMap<Function *, Function *>
+  runOnFunctions(ArrayRef<Function *> F);
 };
 
 } // end namespace llvm

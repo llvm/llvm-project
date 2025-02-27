@@ -49,7 +49,7 @@ public:
   ~ClangASTSource() override;
 
   /// Interface stubs.
-  clang::Decl *GetExternalDecl(uint32_t) override { return nullptr; }
+  clang::Decl *GetExternalDecl(clang::GlobalDeclID) override { return nullptr; }
   clang::Stmt *GetExternalDeclStmt(uint64_t) override { return nullptr; }
   clang::Selector GetExternalSelector(uint32_t) override {
     return clang::Selector();
@@ -83,8 +83,10 @@ public:
   ///
   /// \return
   ///     Whatever SetExternalVisibleDeclsForName returns.
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override;
+  bool
+  FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
+                                 clang::DeclarationName Name,
+                                 const clang::DeclContext *OriginalDC) override;
 
   /// Enumerate all Decls in a given lexical context.
   ///
@@ -211,9 +213,10 @@ public:
   public:
     ClangASTSourceProxy(ClangASTSource &original) : m_original(original) {}
 
-    bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                        clang::DeclarationName Name) override {
-      return m_original.FindExternalVisibleDeclsByName(DC, Name);
+    bool FindExternalVisibleDeclsByName(
+        const clang::DeclContext *DC, clang::DeclarationName Name,
+        const clang::DeclContext *OriginalDC) override {
+      return m_original.FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
     }
 
     void FindExternalLexicalDecls(

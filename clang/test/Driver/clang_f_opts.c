@@ -45,6 +45,13 @@
 // CHECK-UNROLL-LOOPS: "-funroll-loops"
 // CHECK-NO-UNROLL-LOOPS: "-fno-unroll-loops"
 
+// RUN: %clang -### -S -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -floop-interchange -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
+// CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
+
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
@@ -70,9 +77,6 @@
 // RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-profile-sample-use %s 2>&1 | FileCheck -check-prefix=CHECK-NO-AUTO-PROFILE %s
 // RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-auto-profile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-AUTO-PROFILE %s
 // CHECK-NO-AUTO-PROFILE-NOT: "-fprofile-sample-use={{.*}}/file.prof"
-
-// RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-profile-sample-use -fauto-profile %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
-// RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof -fno-auto-profile -fprofile-sample-use %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
 
 // RUN: %clang -### -S -fprofile-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-LLVM %s
 // RUN: %clang -### -S -fprofile-instr-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
@@ -367,6 +371,7 @@
 // RUN: -fno-devirtualize-speculatively                                       \
 // RUN: -fslp-vectorize-aggressive                                            \
 // RUN: -fno-slp-vectorize-aggressive                                         \
+// RUN: -forder-file-instrumentation                                          \
 // RUN: %s 2>&1 | FileCheck --check-prefix=CHECK-WARNING %s
 // CHECK-WARNING-DAG: optimization flag '-finline-limit=1000' is not supported
 // CHECK-WARNING-DAG: optimization flag '-finline-limit' is not supported
@@ -426,6 +431,7 @@
 // CHECK-WARNING-DAG: optimization flag '-fno-devirtualize-speculatively' is not supported
 // CHECK-WARNING-DAG: the flag '-fslp-vectorize-aggressive' has been deprecated and will be ignored
 // CHECK-WARNING-DAG: the flag '-fno-slp-vectorize-aggressive' has been deprecated and will be ignored
+// CHECK-WARNING-DAG: argument '-forder-file-instrumentation' is deprecated, use '-ftemporal-profile' instead
 
 // Test that we mute the warning on these
 // RUN: %clang -### -finline-limit=1000 -Wno-invalid-command-line-argument              \
@@ -463,8 +469,8 @@
 // RUN: %clang -### -S -fno-unsigned-char %s 2>&1 | FileCheck -check-prefix=CHAR-SIGN4 %s
 // CHAR-SIGN4-NOT: -fno-signed-char
 
-// RUN: %clang -target x86_64-unknown-none-none -### -fshort-wchar -fno-short-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR1 -check-prefix=DELIMITERS %s
-// RUN: %clang -target x86_64-unknown-none-none -### -fno-short-wchar -fshort-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR2 -check-prefix=DELIMITERS %s
+// RUN: %clang --target=x86_64-unknown-none-none -### -fshort-wchar -fno-short-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR1 -check-prefix=DELIMITERS %s
+// RUN: %clang --target=x86_64-unknown-none-none -### -fno-short-wchar -fshort-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR2 -check-prefix=DELIMITERS %s
 // Make sure we don't match the -NOT lines with the linker invocation.
 // Delimiters match the start of the cc1 and the start of the linker lines
 // DELIMITERS: {{^ (\(in-process\)|")}}
@@ -489,7 +495,7 @@
 // CHECK-ALLOW-PLACEHOLDERS: -fallow-editor-placeholders
 // CHECK-NO-ALLOW-PLACEHOLDERS-NOT: -fallow-editor-placeholders
 
-// RUN: %clang -### -target x86_64-unknown-windows-msvc -fno-short-wchar %s 2>&1 | FileCheck -check-prefix CHECK-WINDOWS-ISO10646 %s
+// RUN: %clang -### --target=x86_64-unknown-windows-msvc -fno-short-wchar %s 2>&1 | FileCheck -check-prefix CHECK-WINDOWS-ISO10646 %s
 // CHECK-WINDOWS-ISO10646: "-fwchar-type=int"
 // CHECK-WINDOWS-ISO10646: "-fsigned-wchar"
 
@@ -530,16 +536,16 @@
 // CHECK-NO-NULL-POINTER-CHECKS: "-fno-delete-null-pointer-checks"
 // CHECK-NULL-POINTER-CHECKS-NOT: "-fno-delete-null-pointer-checks"
 
-// RUN: %clang -### -S -target x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-linux -fno-record-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-linux -fno-record-gcc-switches -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-linux -frecord-gcc-switches -fno-record-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-linux -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-linux -fno-record-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-linux -fno-record-command-line -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-linux -frecord-command-line -fno-record-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fno-record-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fno-record-gcc-switches -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -frecord-gcc-switches -fno-record-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fno-record-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -fno-record-command-line -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-linux -frecord-command-line -fno-record-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
 // Test with a couple examples of non-ELF object file formats
-// RUN: %clang -### -S -target x86_64-unknown-macosx -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
+// RUN: %clang -### -S --target=x86_64-unknown-macosx -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
 // RUN: not %clang -### -S --target=x86_64-unknown-windows -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ERROR %s
 // CHECK-RECORD-GCC-SWITCHES: "-record-command-line"
 // CHECK-NO-RECORD-GCC-SWITCHES-NOT: "-record-command-line"
@@ -553,7 +559,7 @@
 // RUN: rm -rf "%t.r/with spaces"
 // RUN: mkdir -p "%t.r/with spaces"
 // RUN: cp %clang "%t.r/with spaces/clang"
-// RUN: "%t.r/with spaces/clang" -### -S -target x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ESCAPED %s
+// RUN: "%t.r/with spaces/clang" -### -S --target=x86_64-unknown-linux -frecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ESCAPED %s
 // CHECK-RECORD-GCC-SWITCHES-ESCAPED: "-record-command-line" "{{.+}}with\\ spaces{{.+}}"
 // Clean up copy of large binary copied into temp directory to avoid bloat.
 // RUN: rm -f "%t.r/with spaces/clang" || true
@@ -599,13 +605,16 @@
 // CHECK_DISABLE_DIRECT: -fobjc-disable-direct-methods-for-testing
 // CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing
 
-// RUN: %clang -### -S -fjmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
-// RUN: %clang -### -S -fjmc -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN_NOT_ELF,CHECK_NOJMC %s
-// RUN: %clang -### -S -fjmc -g -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
-// RUN: %clang -### -S -fjmc -g -fno-jmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
-// RUN: %clang -### -fjmc -g -flto -target x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN_NOT_ELF,CHECK_NOJMC_LTO %s
-// RUN: %clang -### -fjmc -g -flto -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC_LTO %s
-// RUN: %clang -### -fjmc -g -flto -fno-jmc -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
+// RUN: %clang -### -S -fjmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc -g --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
+// RUN: %clang -### -S -fjmc -g -fno-jmc --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
+// RUN: %clang -### -S -fjmc -g --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
+// RUN: %clang -### -S -fjmc -g -fno-jmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC %s
+// RUN: %clang -### -fjmc -g -flto -fuse-ld=lld --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
+// RUN: %clang -### -fjmc -g -flto -fuse-ld=lld-link --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
+// RUN: %clang -### -fjmc -g -flto --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_JMC_LTO %s
+// RUN: %clang -### -fjmc -g -flto -fno-jmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK_NOJMC_LTO %s
 // CHECK_JMC_WARN: -fjmc requires debug info. Use -g or debug options that enable debugger's stepping function; option ignored
 // CHECK_JMC_WARN_NOT_ELF: -fjmc works only for ELF; option ignored
 // CHECK_NOJMC-NOT: -fjmc
@@ -613,7 +622,7 @@
 // CHECK_NOJMC_LTO-NOT: -plugin-opt=-enable-jmc-instrument
 // CHECK_JMC_LTO: -plugin-opt=-enable-jmc-instrument
 
-// RUN: %clang -### -fintegrated-objemitter -target x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-INT-OBJEMITTER %s
+// RUN: %clang -### -fintegrated-objemitter --target=x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-INT-OBJEMITTER %s
 // CHECK-INT-OBJEMITTER-NOT: unsupported option '-fintegrated-objemitter' for target
 // RUN: not %clang -### -fno-integrated-objemitter --target=x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-NOINT-OBJEMITTER %s
 // CHECK-NOINT-OBJEMITTER: unsupported option '-fno-integrated-objemitter' for target
@@ -621,5 +630,15 @@
 // RUN: %clang -### --target=aarch64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // RUN: %clang -### --target=aarch64-windows-msvc -fms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
 // RUN: %clang -### --target=aarch64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=x86_64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=i686-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=i686-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // CHECK-MS-VOLATILE: -fms-volatile
 // CHECK-NO-MS-VOLATILE-NOT: -fms-volatile
+
+// RUN: %clang -### --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fstrict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
+// CHECK-NO-STRICT-ALIASING: -relaxed-aliasing

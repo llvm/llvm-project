@@ -12,11 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -40,7 +38,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
-  bool IsRVE = FeatureBits[RISCV::FeatureRVE];
+  bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()

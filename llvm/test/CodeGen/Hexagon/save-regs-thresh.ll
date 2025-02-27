@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O2 -spill-func-threshold=4 < %s | FileCheck %s --check-prefix=NOSAVE
-; RUN: llc -march=hexagon -O2 -spill-func-threshold=2 < %s | FileCheck %s --check-prefix=SAVE
+; RUN: llc -mtriple=hexagon -O2 -spill-func-threshold=4 < %s | FileCheck %s --check-prefix=NOSAVE
+; RUN: llc -mtriple=hexagon -O2 -spill-func-threshold=2 < %s | FileCheck %s --check-prefix=SAVE
 ; NOSAVE-NOT: call __save_r16_
 ; SAVE: call __save_r16_
 

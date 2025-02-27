@@ -26,8 +26,8 @@ namespace mesh {
 // on the provided shardings for the op's operands and results.
 // Assumes that the indexingMaps are projected permutations.
 ShardingArray getMeshAxisAssignmentForLoopIterators(
-    ArrayRef<MeshShardingAttr> operandShardings,
-    ArrayRef<MeshShardingAttr> resultShardings,
+    ArrayRef<MeshSharding> operandShardings,
+    ArrayRef<MeshSharding> resultShardings,
     ArrayRef<utils::IteratorType> loopIteratorTypes,
     ArrayRef<AffineMap> indexingMaps);
 
@@ -42,11 +42,13 @@ SmallVector<MeshAxis> getReductionMeshAxes(
 
 // Inserts a clone of the operation that has all ranked tensor
 // arguments/results sharded.
-void spmdizeTriviallyShardableOperation(
-    Operation &op, ArrayRef<Value> spmdizedOperands,
-    ArrayRef<MeshShardingAttr> operandShardings,
-    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
-    SymbolTableCollection &symbolTable, OpBuilder &builder);
+void spmdizeTriviallyShardableOperation(Operation &op,
+                                        ArrayRef<Value> spmdizedOperands,
+                                        ArrayRef<MeshSharding> operandShardings,
+                                        ArrayRef<MeshSharding> resultShardings,
+                                        IRMapping &spmdizationMap,
+                                        SymbolTableCollection &symbolTable,
+                                        OpBuilder &builder);
 
 // All ranked tensor argument and result dimensions have
 // independent parallel loop iterators.
@@ -72,8 +74,8 @@ struct IndependentParallelIteratorDomainShardingInterface
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshShardingAttr> operandShardings,
-                        ArrayRef<MeshShardingAttr> resultShardings,
+                        ArrayRef<MeshSharding> operandShardings,
+                        ArrayRef<MeshSharding> resultShardings,
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
@@ -87,7 +89,7 @@ private:
   void
   populateIteratorTypes(Type t,
                         SmallVector<utils::IteratorType> &iterTypes) const {
-    RankedTensorType rankedTensorType = t.dyn_cast<RankedTensorType>();
+    RankedTensorType rankedTensorType = dyn_cast<RankedTensorType>(t);
     if (!rankedTensorType) {
       return;
     }
@@ -106,7 +108,7 @@ struct ElementwiseShardingInterface
           ElementwiseShardingInterface<ElemwiseOp>, ElemwiseOp> {
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     Value val = op->getOperand(0);
-    auto type = val.getType().dyn_cast<RankedTensorType>();
+    auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
     SmallVector<utils::IteratorType> types(type.getRank(),
@@ -117,7 +119,7 @@ struct ElementwiseShardingInterface
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
     MLIRContext *ctx = op->getContext();
     Value val = op->getOperand(0);
-    auto type = val.getType().dyn_cast<RankedTensorType>();
+    auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
     int64_t rank = type.getRank();
@@ -128,8 +130,8 @@ struct ElementwiseShardingInterface
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshShardingAttr> operandShardings,
-                        ArrayRef<MeshShardingAttr> resultShardings,
+                        ArrayRef<MeshSharding> operandShardings,
+                        ArrayRef<MeshSharding> resultShardings,
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {

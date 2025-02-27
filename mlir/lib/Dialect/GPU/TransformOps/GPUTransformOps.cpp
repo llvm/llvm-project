@@ -86,7 +86,9 @@ void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
   // TODO: We should have a single to_nvvm_type_converter.
   llvmTypeConverter.addConversion(
       [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
-  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns);
+  // Set higher benefit, so patterns will run before generic LLVM lowering.
+  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns,
+                                      getBenefit());
 }
 
 LogicalResult
@@ -196,7 +198,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
       auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
       if (!extract)
         return std::nullopt;
-      auto vecType = extract.getResult().getType().cast<VectorType>();
+      auto vecType = cast<VectorType>(extract.getResult().getType());
       if (sliceType && sliceType != vecType)
         return std::nullopt;
       sliceType = vecType;
@@ -204,7 +206,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
     return llvm::to_vector(sliceType.getShape());
   }
   if ((OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)) {
-    if (auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>()) {
+    if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
       // TODO: The condition for unrolling elementwise should be restricted
       // only to operations that need unrolling (connected to the contract).
       if (vecType.getRank() < 2)
@@ -219,7 +221,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
         auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
         if (!extract)
           return std::nullopt;
-        auto vecType = extract.getResult().getType().cast<VectorType>();
+        auto vecType = cast<VectorType>(extract.getResult().getType());
         if (sliceType && sliceType != vecType)
           return std::nullopt;
         sliceType = vecType;
@@ -924,6 +926,8 @@ class GPUTransformDialectExtension
     : public transform::TransformDialectExtension<
           GPUTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GPUTransformDialectExtension)
+
   GPUTransformDialectExtension() {
     declareGeneratedDialect<scf::SCFDialect>();
     declareGeneratedDialect<arith::ArithDialect>();

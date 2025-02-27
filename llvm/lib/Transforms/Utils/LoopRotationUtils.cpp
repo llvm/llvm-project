@@ -171,14 +171,14 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
       // Users in the OrigPreHeader need to use the value to which the
       // original definitions are mapped and anything else can be handled by
       // the SSAUpdater. To avoid adding PHINodes, check if the value is
-      // available in UserBB, if not substitute undef.
+      // available in UserBB, if not substitute poison.
       Value *NewVal;
       if (UserBB == OrigPreheader)
         NewVal = OrigPreHeaderVal;
       else if (SSA.HasValueForBlock(UserBB))
         NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
       else
-        NewVal = UndefValue::get(OrigHeaderVal->getType());
+        NewVal = PoisonValue::get(OrigHeaderVal->getType());
       DbgValue->replaceVariableLocationOp(OrigHeaderVal, NewVal);
     }
 
@@ -194,14 +194,14 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
       // Users in the OrigPreHeader need to use the value to which the
       // original definitions are mapped and anything else can be handled by
       // the SSAUpdater. To avoid adding PHINodes, check if the value is
-      // available in UserBB, if not substitute undef.
+      // available in UserBB, if not substitute poison.
       Value *NewVal;
       if (UserBB == OrigPreheader)
         NewVal = OrigPreHeaderVal;
       else if (SSA.HasValueForBlock(UserBB))
         NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
       else
-        NewVal = UndefValue::get(OrigHeaderVal->getType());
+        NewVal = PoisonValue::get(OrigHeaderVal->getType());
       DVR->replaceVariableLocationOp(OrigHeaderVal, NewVal);
     }
   }
@@ -287,7 +287,7 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
     return;
 
   SmallVector<uint32_t, 2> Weights;
-  extractFromBranchWeightMD(WeightMD, Weights);
+  extractFromBranchWeightMD32(WeightMD, Weights);
   if (Weights.size() != 2)
     return;
   uint32_t OrigLoopExitWeight = Weights[0];
@@ -390,13 +390,13 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
       SuccsSwapped ? LoopBackWeight : ExitWeight1,
       SuccsSwapped ? ExitWeight1 : LoopBackWeight,
   };
-  setBranchWeights(LoopBI, LoopBIWeights);
+  setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
   if (HasConditionalPreHeader) {
     const uint32_t PreHeaderBIWeights[] = {
         SuccsSwapped ? EnterWeight : ExitWeight0,
         SuccsSwapped ? ExitWeight0 : EnterWeight,
     };
-    setBranchWeights(PreHeaderBI, PreHeaderBIWeights);
+    setBranchWeights(PreHeaderBI, PreHeaderBIWeights, /*IsExpected=*/false);
   }
 }
 
@@ -460,7 +460,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
                    L->dump());
         return Rotated;
       }
-      if (Metrics.convergent) {
+      if (Metrics.Convergence != ConvergenceKind::None) {
         LLVM_DEBUG(dbgs() << "LoopRotation: NOT rotating - contains convergent "
                    "instructions: ";
                    L->dump());
@@ -639,9 +639,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
             !NextDbgInsts.empty()) {
           auto DbgValueRange =
               LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-          RemapDbgVariableRecordRange(M, DbgValueRange, ValueMap,
-                                      RF_NoModuleLevelChanges |
-                                          RF_IgnoreMissingLocals);
+          RemapDbgRecordRange(M, DbgValueRange, ValueMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
           // Erase anything we've seen before.
           for (DbgVariableRecord &DVR :
                make_early_inc_range(filterDbgVars(DbgValueRange)))
@@ -651,7 +650,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
         NextDbgInsts = I->getDbgRecordRange();
 
-        Inst->moveBefore(LoopEntryBranch);
+        Inst->moveBefore(LoopEntryBranch->getIterator());
 
         ++NumInstrsHoisted;
         continue;
@@ -659,16 +658,15 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       // Otherwise, create a duplicate of the instruction.
       Instruction *C = Inst->clone();
-      C->insertBefore(LoopEntryBranch);
+      C->insertBefore(LoopEntryBranch->getIterator());
 
       ++NumInstrsDuplicated;
 
       if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
           !NextDbgInsts.empty()) {
         auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-        RemapDbgVariableRecordRange(M, Range, ValueMap,
-                                    RF_NoModuleLevelChanges |
-                                        RF_IgnoreMissingLocals);
+        RemapDbgRecordRange(M, Range, ValueMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         NextDbgInsts = DbgMarker::getEmptyDbgRecordRange();
         // Erase anything we've seen before.
         for (DbgVariableRecord &DVR :

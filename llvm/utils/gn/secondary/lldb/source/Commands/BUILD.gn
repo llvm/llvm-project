@@ -26,6 +26,7 @@ static_library("Commands") {
     #"//lldb/source/Symbol", # FIXME: many-hop dependency cycle.
     #"//lldb/source/Target", # FIXME: 2-hop dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//lldb/source/Version",
   ]
   sources = [
@@ -52,7 +53,7 @@ static_library("Commands") {
     "CommandObjectQuit.cpp",
     "CommandObjectRegexCommand.cpp",
     "CommandObjectRegister.cpp",
-    "CommandObjectScript.cpp",
+    "CommandObjectScripting.cpp",
     "CommandObjectSession.cpp",
     "CommandObjectSettings.cpp",
     "CommandObjectSource.cpp",

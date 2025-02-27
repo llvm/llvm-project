@@ -18,18 +18,23 @@ add_llvm_target(DirectXCodeGen
   DirectXRegisterInfo.cpp
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
+  DirectXTargetTransformInfo.cpp
   DXContainerGlobals.cpp
+  DXILDataScalarization.cpp
+  DXILFinalizeLinkage.cpp
+  DXILFlattenArrays.cpp
   DXILIntrinsicExpansion.cpp
-  DXILMetadata.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
   DXILResource.cpp
   DXILResourceAnalysis.cpp
+  DXILResourceAccess.cpp
   DXILShaderFlags.cpp
   DXILTranslateMetadata.cpp
-
+  DXILRootSignature.cpp
+  
   LINK_COMPONENTS
   Analysis
   AsmPrinter
@@ -42,6 +47,7 @@ add_llvm_target(DirectXCodeGen
   DirectXPointerTypeAnalysis
   FrontendHLSL
   MC
+  ScalarOpts
   SelectionDAG
   Support
   Target

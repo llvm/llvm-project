@@ -25,7 +25,7 @@ bb:
 define amdgpu_kernel void @test_sub_co_sdwa(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) #0 {
 ; GFX9-LABEL: test_sub_co_sdwa:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)

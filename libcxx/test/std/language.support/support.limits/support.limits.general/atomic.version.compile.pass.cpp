@@ -169,17 +169,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++20"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++20"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++20"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -200,17 +194,11 @@
 #   error "__cpp_lib_atomic_min_max should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should be defined in c++20"
-#   endif
-#   if __cpp_lib_atomic_ref != 201806L
-#     error "__cpp_lib_atomic_ref should have the value 201806L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_ref
+#   error "__cpp_lib_atomic_ref should be defined in c++20"
+# endif
+# if __cpp_lib_atomic_ref != 201806L
+#   error "__cpp_lib_atomic_ref should have the value 201806L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -268,17 +256,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++23"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++23"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++23"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -299,17 +281,11 @@
 #   error "__cpp_lib_atomic_min_max should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should be defined in c++23"
-#   endif
-#   if __cpp_lib_atomic_ref != 201806L
-#     error "__cpp_lib_atomic_ref should have the value 201806L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_ref
+#   error "__cpp_lib_atomic_ref should be defined in c++23"
+# endif
+# if __cpp_lib_atomic_ref != 201806L
+#   error "__cpp_lib_atomic_ref should have the value 201806L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -367,17 +343,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++26"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++26"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -407,17 +377,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should be defined in c++26"
-#   endif
-#   if __cpp_lib_atomic_ref != 201806L
-#     error "__cpp_lib_atomic_ref should have the value 201806L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_ref
+#   error "__cpp_lib_atomic_ref should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_ref != 201806L
+#   error "__cpp_lib_atomic_ref should have the value 201806L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

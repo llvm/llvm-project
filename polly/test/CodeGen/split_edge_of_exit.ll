@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -verify-region-info -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -verify-region-info -disable-output < %s
 ;
 ; This is a scop directly precedented by a region, i.e. the scop's entry is the
 ; region's exit block. This test is to ensure that the RegionInfo is correctly

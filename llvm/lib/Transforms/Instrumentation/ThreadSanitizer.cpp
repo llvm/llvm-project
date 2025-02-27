@@ -40,10 +40,9 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -191,6 +190,9 @@ PreservedAnalyses ThreadSanitizerPass::run(Function &F,
 
 PreservedAnalyses ModuleThreadSanitizerPass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
+  // Return early if nosanitize_thread module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_thread"))
+    return PreservedAnalyses::all();
   insertModuleCtor(M);
   return PreservedAnalyses::none();
 }
@@ -447,7 +449,7 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
     }
 
     if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-        !PointerMayBeCaptured(Addr, true, true)) {
+        !PointerMayBeCaptured(Addr, /*ReturnCaptures=*/true)) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race
       // (see llvm/Analysis/CaptureTracking.h for details).
@@ -477,7 +479,8 @@ static bool isTsanAtomic(const Instruction *I) {
 }
 
 void ThreadSanitizer::InsertRuntimeIgnores(Function &F) {
-  InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
+  InstrumentationIRBuilder IRB(&F.getEntryBlock(),
+                               F.getEntryBlock().getFirstNonPHIIt());
   IRB.CreateCall(TsanIgnoreBegin);
   EscapeEnumerator EE(F, "tsan_ignore_cleanup", ClHandleCxxExceptions);
   while (IRBuilder<> *AtExit = EE.Next()) {
@@ -511,7 +514,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   bool Res = false;
   bool HasCalls = false;
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.
   for (auto &BB : F) {
@@ -567,10 +570,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
 
   // Instrument function entry/exit points if there were instrumented accesses.
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
-    InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
-    Value *ReturnAddress = IRB.CreateCall(
-        Intrinsic::getDeclaration(F.getParent(), Intrinsic::returnaddress),
-        IRB.getInt32(0));
+    InstrumentationIRBuilder IRB(&F.getEntryBlock(),
+                                 F.getEntryBlock().getFirstNonPHIIt());
+    Value *ReturnAddress =
+        IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);
@@ -803,6 +806,10 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
 int ThreadSanitizer::getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr,
                                               const DataLayout &DL) {
   assert(OrigTy->isSized());
+  if (OrigTy->isScalableTy()) {
+    // FIXME: support vscale.
+    return -1;
+  }
   uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   if (TypeSize != 8  && TypeSize != 16 &&
       TypeSize != 32 && TypeSize != 64 && TypeSize != 128) {

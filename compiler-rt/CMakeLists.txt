@@ -4,12 +4,18 @@
 # based on the ability of the host toolchain to target various platforms.
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Compiler-RT")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
+
+# TODO(CMake 3.22): remove
+if(POLICY CMP0128)
+  cmake_policy(SET CMP0128 NEW)
+endif()
 
 # Check if compiler-rt is built as a standalone project.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE_BUILD)
@@ -38,6 +44,22 @@ include(CompilerRTUtils)
 include(CMakeDependentOption)
 include(GetDarwinLinkerVersion)
 
+include(CheckCXXCompilerFlag)
+
+# Check if we can compile with --no-default-config, or if that omits a config
+# file that is essential for the toolchain to work properly.
+#
+# Using CMAKE_REQUIRED_FLAGS to make sure the flag is used both for compilation
+# and for linking.
+#
+# Doing this test early on, to see if the flag works on the toolchain
+# out of the box. Later on, we end up adding -nostdlib and similar flags
+# to all test compiles, which easily can give false positives on this test.
+set(OLD_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --no-default-config")
+check_cxx_compiler_flag("" COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
+set(CMAKE_REQUIRED_FLAGS "${OLD_CMAKE_REQUIRED_FLAGS}")
+
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
 option(COMPILER_RT_DISABLE_AARCH64_FMV "Disable AArch64 Function Multi Versioning support" OFF)
@@ -50,6 +72,8 @@ option(COMPILER_RT_BUILD_LIBFUZZER "Build libFuzzer" ON)
 mark_as_advanced(COMPILER_RT_BUILD_LIBFUZZER)
 option(COMPILER_RT_BUILD_PROFILE "Build profile runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_PROFILE)
+option(COMPILER_RT_BUILD_CTX_PROFILE "Build ctx profile runtime" ON)
+mark_as_advanced(COMPILER_RT_BUILD_CTX_PROFILE)
 option(COMPILER_RT_BUILD_MEMPROF "Build memory profiling runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_MEMPROF)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
@@ -88,7 +112,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
   if (TARGET intrinsics_gen)
     # Loading the llvm config causes this target to be imported so place it
     # under the appropriate folder in an IDE.
-    set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
+    set_target_properties(intrinsics_gen PROPERTIES FOLDER "LLVM/Tablegenning")
   endif()
 
   find_package(Python3 COMPONENTS Interpreter)
@@ -197,7 +221,7 @@ macro(handle_default_cxx_lib var)
     set(${var}_LIBNAME "${CMAKE_MATCH_1}")
     set(${var}_SYSTEM 1)
   elseif (${var} STREQUAL "default")
-    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
       set(${var}_LIBNAME "libc++")
       set(${var}_SYSTEM 1)
     elseif (FUCHSIA)
@@ -280,6 +304,8 @@ endif()
 
 option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
+
+option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
 
 include(config-ix)
 
@@ -376,7 +402,7 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-  # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
+
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
   # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
@@ -601,10 +627,6 @@ if (COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
   if ("${COMPILER_RT_TEST_COMPILER_ID}" MATCHES "Clang")
     list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-resource-dir=${COMPILER_RT_OUTPUT_DIR}")
   endif()
-  get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} rtlib_dir)
-  if (NOT WIN32)
-    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-Wl,-rpath,${rtlib_dir}")
-  endif()
 endif()
 
 if(COMPILER_RT_USE_LLVM_UNWINDER)
@@ -615,7 +637,7 @@ if(COMPILER_RT_USE_LLVM_UNWINDER)
   if (COMPILER_RT_ENABLE_STATIC_UNWINDER)
     list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:unwind_static>")
   else()
-    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:unwind_shared>,unwind_shared,unwind_static>>")
+    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,unwind_shared,unwind_static>>")
   endif()
 endif()
 
@@ -628,7 +650,7 @@ if (COMPILER_RT_CXX_LIBRARY STREQUAL "libcxx")
   if (COMPILER_RT_STATIC_CXX_LIBRARY)
     set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:cxx_static>")
   else()
-    set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:cxx_shared>,cxx_shared,cxx_static>>")
+    set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<BOOL:${LIBCXX_ENABLE_SHARED}>,cxx_shared,cxx_static>>")
   endif()
 elseif (COMPILER_RT_CXX_LIBRARY STREQUAL "none")
   # We aren't using any C++ standard library so avoid including the default one.
@@ -670,7 +692,7 @@ if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
     if (SANITIZER_USE_STATIC_TEST_CXX)
       list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:cxx_static>")
     else()
-      list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:cxx_shared>,cxx_shared,cxx_static>>")
+      list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:$<IF:$<BOOL:${LIBCXX_ENABLE_SHARED}>,cxx_shared,cxx_static>>")
     endif()
     # We are using the in tree libc++ so avoid including the default one.
     append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ COMPILER_RT_UNITTEST_CFLAGS)
@@ -746,7 +768,7 @@ if (CMAKE_LINKER MATCHES "link.exe$")
   # it, but CMake doesn't seem to have a way to set linker flags for
   # individual static libraries, so we enable the suppression flag for
   # the whole compiler-rt project.
-  set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
+  set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/IGNORE:4221")
 endif()
 
 add_subdirectory(include)
@@ -797,6 +819,10 @@ if(ANDROID)
   set(COMPILER_RT_TEST_USE_LLD TRUE)
   append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
+endif()
+if(${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES sparc)
+  # lld has several bugs/limitations on SPARC, so disable (Issue #100320).
+  set(COMPILER_RT_HAS_LLD FALSE)
 endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)

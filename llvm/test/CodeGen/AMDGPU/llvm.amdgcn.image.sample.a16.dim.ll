@@ -107,9 +107,9 @@ define amdgpu_ps <4 x float> @sample_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
+; GFX10-NEXT:    image_sample v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -117,9 +117,9 @@ define amdgpu_ps <4 x float> @sample_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX11-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX11-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
+; GFX11-NEXT:    image_sample v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -153,9 +153,9 @@ define amdgpu_ps <4 x float> @sample_cube(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_CUBE a16
+; GFX10-NEXT:    image_sample v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_CUBE a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -163,9 +163,9 @@ define amdgpu_ps <4 x float> @sample_cube(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX11-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX11-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_CUBE a16
+; GFX11-NEXT:    image_sample v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_CUBE a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -245,9 +245,9 @@ define amdgpu_ps <4 x float> @sample_2darray(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY a16
+; GFX10-NEXT:    image_sample v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -255,9 +255,9 @@ define amdgpu_ps <4 x float> @sample_2darray(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX11-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX11-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY a16
+; GFX11-NEXT:    image_sample v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -424,9 +424,9 @@ define amdgpu_ps <4 x float> @sample_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10-NEXT:    image_sample_cl v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10-NEXT:    image_sample_cl v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -434,9 +434,9 @@ define amdgpu_ps <4 x float> @sample_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX11-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX11-NEXT:    image_sample_cl v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX11-NEXT:    image_sample_cl v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -1304,15 +1304,15 @@ define amdgpu_ps <4 x float> @sample_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ;
 ; GFX10-LABEL: sample_l_2d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
-; GFX10-NEXT:    image_sample_l v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX10-NEXT:    image_sample_l v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: sample_l_2d:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
-; GFX11-NEXT:    image_sample_l v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    image_sample_l v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;

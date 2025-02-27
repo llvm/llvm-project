@@ -228,7 +228,8 @@ public:
   ExternalSource(ASTContext &ChildASTCtxt, FileManager &ChildFM,
                  ASTContext &ParentASTCtxt, FileManager &ParentFM);
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
   void
   completeVisibleDeclsMap(const clang::DeclContext *childDeclContext) override;
 };
@@ -270,8 +271,9 @@ ExternalSource::ExternalSource(ASTContext &ChildASTCtxt, FileManager &ChildFM,
   Importer.reset(importer);
 }
 
-bool ExternalSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                    DeclarationName Name) {
+bool ExternalSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
 
   IdentifierTable &ParentIdTable = ParentASTCtxt.Idents;
 
@@ -368,8 +370,7 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
   llvm::SmallVector<const llvm::MemoryBuffer *, 1> tb = {};
   InterpCI->getFrontendOpts().Inputs[0] = FrontendInputFile(
       CodeCompletionFileName, Language::CXX, InputKind::Source);
-  auto Act = std::unique_ptr<IncrementalSyntaxOnlyAction>(
-      new IncrementalSyntaxOnlyAction(ParentCI));
+  auto Act = std::make_unique<IncrementalSyntaxOnlyAction>(ParentCI);
   std::unique_ptr<llvm::MemoryBuffer> MB =
       llvm::MemoryBuffer::getMemBufferCopy(Content, CodeCompletionFileName);
   llvm::SmallVector<ASTUnit::RemappedFile, 4> RemappedFiles;
@@ -381,8 +382,8 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
   AU->CodeComplete(CodeCompletionFileName, 1, Col, RemappedFiles, false, false,
                    false, consumer,
                    std::make_shared<clang::PCHContainerOperations>(), *diag,
-                   InterpCI->getLangOpts(), InterpCI->getSourceManager(),
-                   InterpCI->getFileManager(), sd, tb, std::move(Act));
+                   InterpCI->getLangOpts(), AU->getSourceManager(),
+                   AU->getFileManager(), sd, tb, std::move(Act));
 }
 
 } // namespace clang

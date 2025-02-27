@@ -408,6 +408,20 @@ func.func @for_yields_4() -> i32 {
 
 // -----
 
+// CHECK-LABEL: @constant_iter_arg
+func.func @constant_iter_arg(%arg0: index, %arg1: index, %arg2: index) {
+  %c0_i32 = arith.constant 0 : i32
+  // CHECK: scf.for %arg3 = %arg0 to %arg1 step %arg2 {
+  %0 = scf.for %i = %arg0 to %arg1 step %arg2 iter_args(%arg3 = %c0_i32) -> i32 {
+    // CHECK-NEXT: "test.use"(%c0_i32)
+    "test.use"(%arg3) : (i32) -> ()
+    scf.yield %c0_i32 : i32
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @replace_true_if
 func.func @replace_true_if() {
   %true = arith.constant true
@@ -803,6 +817,24 @@ func.func @fold_away_iter_and_result_with_no_use(%arg0 : i32,
 
   // CHECK: return %[[FOR_RES]] : i32
   return %0#0 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @replace_duplicate_iter_args
+// CHECK-SAME: [[LB:%arg[0-9]]]: index, [[UB:%arg[0-9]]]: index, [[STEP:%arg[0-9]]]: index, [[A:%arg[0-9]]]: index, [[B:%arg[0-9]]]: index
+func.func @replace_duplicate_iter_args(%lb: index, %ub: index, %step: index, %a: index, %b: index) -> (index, index, index, index) {
+  // CHECK-NEXT: [[RES:%.*]]:2 = scf.for {{.*}} iter_args([[K0:%.*]] = [[A]], [[K1:%.*]] = [[B]])
+  %0:4 = scf.for %i = %lb to %ub step %step iter_args(%k0 = %a, %k1 = %b, %k2 = %b, %k3 = %a) -> (index, index, index, index) {
+    // CHECK-NEXT: [[V0:%.*]] = arith.addi [[K0]], [[K1]]
+    %1 = arith.addi %k0, %k1 : index
+    // CHECK-NEXT: [[V1:%.*]] = arith.addi [[K1]], [[K0]]
+    %2 = arith.addi %k2, %k3 : index
+    // CHECK-NEXT: yield [[V0]], [[V1]]
+    scf.yield %1, %2, %2, %1 : index, index, index, index
+  }
+  // CHECK: return [[RES]]#0, [[RES]]#1, [[RES]]#1, [[RES]]#0
+  return %0#0, %0#1, %0#2, %0#3 : index, index, index, index
 }
 
 // -----
@@ -1617,7 +1649,7 @@ func.func @do_not_inline_distributed_forall_loop(
     %in: tensor<8x8xf32>) -> tensor<8x8xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.empty() : tensor<8x8xf32>
-  %1 = scf.forall (%i, %j) = (0, 0) to (1, 1) step (8, 8)
+  %1 = scf.forall (%i, %j) = (0, 4) to (1, 5) step (8, 8)
       shared_outs (%out_ = %0) -> (tensor<8x8xf32>) {
     %slice = tensor.extract_slice %out_[%i, %j] [2, 3] [1, 1]
       : tensor<8x8xf32> to tensor<2x3xf32>
@@ -1632,6 +1664,35 @@ func.func @do_not_inline_distributed_forall_loop(
 }
 // CHECK-LABEL: @do_not_inline_distributed_forall_loop
 // CHECK: scf.forall
+// CHECK:   tensor.extract_slice %{{.*}}[0, 4] [2, 3] [1, 1]
+// CHECK:   tensor.parallel_insert_slice %{{.*}}[0, 4] [2, 3] [1, 1]
+
+// -----
+
+func.func @inline_empty_loop_with_empty_mapping(
+    %in: tensor<16xf32>) -> tensor<16xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty() : tensor<16xf32>
+  %1 = scf.forall () in () shared_outs (%out_ = %0) -> (tensor<16xf32>) {
+    %slice = tensor.extract_slice %out_[0] [16] [1]
+      : tensor<16xf32> to tensor<16xf32>
+    %generic = linalg.generic {
+        indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+        iterator_types = ["parallel"]}
+        ins(%slice : tensor<16xf32>) outs(%0 : tensor<16xf32>) {
+      ^bb0(%b0 : f32, %b1 : f32):
+        %2 = arith.addf %b0, %b0 : f32
+        linalg.yield %2 : f32
+    } -> tensor<16xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %generic into %out_[0] [16] [1]
+        : tensor<16xf32> into tensor<16xf32>
+    }
+  }{ mapping = [] }
+  return %1 : tensor<16xf32>
+}
+// CHECK-LABEL: func @inline_empty_loop_with_empty_mapping
+//   CHECK-NOT:   scf.forall
 
 // -----
 
@@ -1735,6 +1796,87 @@ func.func @do_not_fold_tensor_cast_from_dynamic_to_static_type_into_forall(
 
 // -----
 
+#map = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
+#map1 = affine_map<(d0)[s0] -> (d0 * s0)>
+#map2 = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>
+module {
+  func.func @fold_iter_args_not_being_modified_within_scfforall(%arg0: index, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>) {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 4.200000e+01 : f32
+    %0 = linalg.fill ins(%cst : f32) outs(%arg1 : tensor<?xf32>) -> tensor<?xf32>
+    %dim = tensor.dim %arg1, %c0 : tensor<?xf32>
+    %1 = affine.apply #map()[%dim, %arg0]
+    %2:2 = scf.forall (%arg3) in (%1) shared_outs(%arg4 = %arg1, %arg5 = %arg2) -> (tensor<?xf32>, tensor<?xf32>) {
+      %3 = affine.apply #map1(%arg3)[%arg0]
+      %4 = affine.min #map2(%arg3)[%dim, %arg0]
+      %extracted_slice0 = tensor.extract_slice %arg4[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice1 = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %5 = linalg.elemwise_unary ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %5 into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+      }
+    }
+    return %2#0, %2#1 : tensor<?xf32>, tensor<?xf32>
+  }
+}
+// CHECK-LABEL: @fold_iter_args_not_being_modified_within_scfforall
+//  CHECK-SAME:   (%{{.*}}: index, %[[ARG1:.*]]: tensor<?xf32>, %[[ARG2:.*]]: tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>) {
+//       CHECK:    %[[RESULT:.*]] = scf.forall
+//  CHECK-SAME:                       shared_outs(%[[ITER_ARG_5:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
+//       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
+//       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ITER_ARG_5]]
+//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      scf.forall.in_parallel {
+//  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_5]]
+//  CHECK-NEXT:      }
+//  CHECK-NEXT:    }
+//  CHECK-NEXT:    return %[[ARG1]], %[[RESULT]]
+
+// -----
+
+#map = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
+#map1 = affine_map<(d0)[s0] -> (d0 * s0)>
+#map2 = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>
+module {
+  func.func @fold_iter_args_with_no_use_of_result_scfforall(%arg0: index, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: tensor<?xf32>) -> tensor<?xf32> {
+    %cst = arith.constant 4.200000e+01 : f32
+    %c0 = arith.constant 0 : index
+    %0 = linalg.fill ins(%cst : f32) outs(%arg1 : tensor<?xf32>) -> tensor<?xf32>
+    %dim = tensor.dim %arg1, %c0 : tensor<?xf32>
+    %1 = affine.apply #map()[%dim, %arg0]
+    %2:3 = scf.forall (%arg4) in (%1) shared_outs(%arg5 = %arg1, %arg6 = %arg2, %arg7 = %arg3) -> (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) {
+      %3 = affine.apply #map1(%arg4)[%arg0]
+      %4 = affine.min #map2(%arg4)[%dim, %arg0]
+      %extracted_slice = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice_0 = tensor.extract_slice %arg6[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice_1 = tensor.extract_slice %arg7[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice_2 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %5 = linalg.elemwise_unary ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %5 into %arg6[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+        tensor.parallel_insert_slice %extracted_slice into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+        tensor.parallel_insert_slice %extracted_slice_0 into %arg7[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+        tensor.parallel_insert_slice %5 into %arg7[%4] [%3] [1] : tensor<?xf32> into tensor<?xf32>
+      }
+    }
+    return %2#1 : tensor<?xf32>
+  }
+}
+// CHECK-LABEL: @fold_iter_args_with_no_use_of_result_scfforall
+//  CHECK-SAME:   (%{{.*}}: index, %[[ARG1:.*]]: tensor<?xf32>, %[[ARG2:.*]]: tensor<?xf32>, %[[ARG3:.*]]: tensor<?xf32>) -> tensor<?xf32> {
+//       CHECK:    %[[RESULT:.*]] = scf.forall
+//  CHECK-SAME:                       shared_outs(%[[ITER_ARG_6:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
+//       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
+//       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ARG3]]
+//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      scf.forall.in_parallel {
+//  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_6]]
+//  CHECK-NEXT:      }
+//  CHECK-NEXT:    }
+//  CHECK-NEXT:    return %[[RESULT]]
+
+// -----
+
 func.func @index_switch_fold() -> (f32, f32) {
   %switch_cst = arith.constant 1: index
   %0 = scf.index_switch %switch_cst -> f32
@@ -1746,7 +1888,7 @@ func.func @index_switch_fold() -> (f32, f32) {
     %y = arith.constant 42.0 : f32
     scf.yield %y : f32
   }
-  
+
   %switch_cst_2 = arith.constant 2: index
   %1 = scf.index_switch %switch_cst_2 -> f32
   case 0 {
@@ -1757,7 +1899,7 @@ func.func @index_switch_fold() -> (f32, f32) {
     %y = arith.constant 42.0 : f32
     scf.yield %y : f32
   }
-  
+
   return %0, %1 : f32, f32
 }
 
@@ -1765,3 +1907,21 @@ func.func @index_switch_fold() -> (f32, f32) {
 //  CHECK-NEXT:   %[[c1:.*]] = arith.constant 1.000000e+00 : f32
 //  CHECK-NEXT:   %[[c42:.*]] = arith.constant 4.200000e+01 : f32
 //  CHECK-NEXT:   return %[[c1]], %[[c42]] : f32, f32
+
+// -----
+
+func.func @index_switch_fold_no_res() {
+  %c1 = arith.constant 1 : index
+  scf.index_switch %c1
+  case 0 {
+    scf.yield
+  }
+  default {
+    "test.op"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @index_switch_fold_no_res()
+//  CHECK-NEXT: "test.op"() : () -> ()

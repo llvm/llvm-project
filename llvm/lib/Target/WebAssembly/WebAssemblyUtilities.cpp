@@ -13,9 +13,8 @@
 
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblySubtarget.h"
+#include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
 using namespace llvm;
@@ -43,6 +42,8 @@ bool WebAssembly::mayThrow(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::THROW:
   case WebAssembly::THROW_S:
+  case WebAssembly::THROW_REF:
+  case WebAssembly::THROW_REF_S:
   case WebAssembly::RETHROW:
   case WebAssembly::RETHROW_S:
     return true;
@@ -108,13 +109,14 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
+    bool is64 = Subtarget && Subtarget->getTargetTriple().isArch64Bit();
     Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
-    Sym->setFunctionTable();
+    Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
     Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasReferenceTypes()))
+  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }
@@ -139,7 +141,7 @@ MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     Sym->setTableType(TableType);
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasReferenceTypes()))
+  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }
@@ -175,7 +177,21 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
     return WebAssembly::COPY_FUNCREF;
   case WebAssembly::EXTERNREFRegClassID:
     return WebAssembly::COPY_EXTERNREF;
+  case WebAssembly::EXNREFRegClassID:
+    return WebAssembly::COPY_EXNREF;
   default:
     llvm_unreachable("Unexpected register class");
   }
+}
+
+bool WebAssembly::canLowerMultivalueReturn(
+    const WebAssemblySubtarget *Subtarget) {
+  const auto &TM = static_cast<const WebAssemblyTargetMachine &>(
+      Subtarget->getTargetLowering()->getTargetMachine());
+  return Subtarget->hasMultivalue() && TM.usesMultivalueABI();
+}
+
+bool WebAssembly::canLowerReturn(size_t ResultSize,
+                                 const WebAssemblySubtarget *Subtarget) {
+  return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
 }

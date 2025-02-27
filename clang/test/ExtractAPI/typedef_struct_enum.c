@@ -72,7 +72,7 @@ typedef enum Test2 {
 // TEST2-NEXT:   },
 // TEST2-NEXT:   {
 // TEST2-NEXT:     "kind": "text",
-// TEST2-NEXT:     "spelling": ": "
+// TEST2-NEXT:     "spelling": " : "
 // TEST2-NEXT:   },
 // TEST2-NEXT:   {
 // TEST2-NEXT:     "kind": "typeIdentifier",

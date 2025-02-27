@@ -83,6 +83,296 @@ define i64 @caller_i128_in_regs() nounwind {
   ret i64 %1
 }
 
+define i64 @callee_i128_fp128_in_regs(i128 %a, fp128 %b) nounwind {
+  ; RV64I-LABEL: name: callee_i128_fp128_in_regs
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
+  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
+  ; RV64I-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
+  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[MV]](s128), [[MV1]]
+  ; RV64I-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
+  ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10
+  %b_bitcast = bitcast fp128 %b to i128
+  %1 = icmp eq i128 %a, %b_bitcast
+  %2 = zext i1 %1 to i64
+  ret i64 %2
+}
+
+define i64 @caller_i128_fp128_in_regs() nounwind {
+  ; LP64-LABEL: name: caller_i128_fp128_in_regs
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 1
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C]](s128)
+  ; LP64-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C1]](s128)
+  ; LP64-NEXT:   $x10 = COPY [[UV]](s64)
+  ; LP64-NEXT:   $x11 = COPY [[UV1]](s64)
+  ; LP64-NEXT:   $x12 = COPY [[UV2]](s64)
+  ; LP64-NEXT:   $x13 = COPY [[UV3]](s64)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i128_fp128_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_i128_fp128_in_regs
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 1
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C]](s128)
+  ; LP64F-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C1]](s128)
+  ; LP64F-NEXT:   $x10 = COPY [[UV]](s64)
+  ; LP64F-NEXT:   $x11 = COPY [[UV1]](s64)
+  ; LP64F-NEXT:   $x12 = COPY [[UV2]](s64)
+  ; LP64F-NEXT:   $x13 = COPY [[UV3]](s64)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i128_fp128_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_i128_fp128_in_regs
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 1
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C]](s128)
+  ; LP64D-NEXT:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C1]](s128)
+  ; LP64D-NEXT:   $x10 = COPY [[UV]](s64)
+  ; LP64D-NEXT:   $x11 = COPY [[UV1]](s64)
+  ; LP64D-NEXT:   $x12 = COPY [[UV2]](s64)
+  ; LP64D-NEXT:   $x13 = COPY [[UV3]](s64)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i128_fp128_in_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call i64 @callee_i128_fp128_in_regs(i128 1, fp128 0xL00000000000000007FFF000000000000)
+  ret i64 %1
+}
+
+; Check the correct handling of passing of values that are larger that 2*XLen.
+
+define i32 @caller_i256_indirect_reference_in_stack() {
+  ; LP64-LABEL: name: caller_i256_indirect_reference_in_stack
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+  ; LP64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; LP64-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+  ; LP64-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+  ; LP64-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; LP64-NEXT:   [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64-NEXT:   [[C8:%[0-9]+]]:_(s256) = G_CONSTANT i256 42
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64-NEXT:   G_STORE [[C8]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+  ; LP64-NEXT:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
+  ; LP64-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
+  ; LP64-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64-NEXT:   $x12 = COPY [[C2]](s64)
+  ; LP64-NEXT:   $x13 = COPY [[C3]](s64)
+  ; LP64-NEXT:   $x14 = COPY [[C4]](s64)
+  ; LP64-NEXT:   $x15 = COPY [[C5]](s64)
+  ; LP64-NEXT:   $x16 = COPY [[C6]](s64)
+  ; LP64-NEXT:   $x17 = COPY [[C7]](s64)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_stack, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+  ; LP64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
+  ; LP64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_i256_indirect_reference_in_stack
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+  ; LP64F-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; LP64F-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+  ; LP64F-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+  ; LP64F-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; LP64F-NEXT:   [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64F-NEXT:   [[C8:%[0-9]+]]:_(s256) = G_CONSTANT i256 42
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64F-NEXT:   G_STORE [[C8]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+  ; LP64F-NEXT:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
+  ; LP64F-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
+  ; LP64F-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64F-NEXT:   $x12 = COPY [[C2]](s64)
+  ; LP64F-NEXT:   $x13 = COPY [[C3]](s64)
+  ; LP64F-NEXT:   $x14 = COPY [[C4]](s64)
+  ; LP64F-NEXT:   $x15 = COPY [[C5]](s64)
+  ; LP64F-NEXT:   $x16 = COPY [[C6]](s64)
+  ; LP64F-NEXT:   $x17 = COPY [[C7]](s64)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_stack, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+  ; LP64F-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
+  ; LP64F-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_i256_indirect_reference_in_stack
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+  ; LP64D-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; LP64D-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+  ; LP64D-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+  ; LP64D-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; LP64D-NEXT:   [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64D-NEXT:   [[C8:%[0-9]+]]:_(s256) = G_CONSTANT i256 42
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64D-NEXT:   G_STORE [[C8]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+  ; LP64D-NEXT:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
+  ; LP64D-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
+  ; LP64D-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64D-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64D-NEXT:   $x12 = COPY [[C2]](s64)
+  ; LP64D-NEXT:   $x13 = COPY [[C3]](s64)
+  ; LP64D-NEXT:   $x14 = COPY [[C4]](s64)
+  ; LP64D-NEXT:   $x15 = COPY [[C5]](s64)
+  ; LP64D-NEXT:   $x16 = COPY [[C6]](s64)
+  ; LP64D-NEXT:   $x17 = COPY [[C7]](s64)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_stack, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+  ; LP64D-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
+  ; LP64D-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call i64 @callee_i256_indirect_reference_in_stack(i64 1, i64 2, i64 3, i64 4,i64 5,i64 6,i64 7,i64 8, i256 42)
+  %2 = trunc i64 %1 to i32
+  ret i32 %2
+}
+
+
+define i64 @callee_i256_indirect_reference_in_stack(i64 %x1, i64 %x2, i64 %x3, i64 %x4, i64 %x5, i64 %x6, i64 %x7, i64 %x8, i256 %y) {
+  ; RV64I-LABEL: name: callee_i256_indirect_reference_in_stack
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
+  ; RV64I-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
+  ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
+  ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
+  ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
+  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 16)
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[LOAD]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD1]](s256)
+  ; RV64I-NEXT:   $x10 = COPY [[TRUNC]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10
+  %2 = trunc i256 %y to i64
+  ret i64 %2
+}
+
+
+define i64 @callee_i256_indirect_reference_in_reg(i256 %x, i256 %y) {
+  ; RV64I-LABEL: name: callee_i256_indirect_reference_in_reg
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10, $x11
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[COPY1]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[ADD:%[0-9]+]]:_(s256) = G_ADD [[LOAD]], [[LOAD1]]
+  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[ADD]](s256)
+  ; RV64I-NEXT:   $x10 = COPY [[TRUNC]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10
+  %1 = add i256 %x, %y
+  %2 = trunc i256 %1 to i64
+  ret i64 %2
+}
+
+define i32 @caller_i256_indirect_reference_in_reg() {
+  ; LP64-LABEL: name: caller_i256_indirect_reference_in_reg
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_reg, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; LP64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
+  ; LP64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_i256_indirect_reference_in_reg
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64F-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64F-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_reg, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; LP64F-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
+  ; LP64F-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_i256_indirect_reference_in_reg
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64D-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64D-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_reg, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; LP64D-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
+  ; LP64D-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call i64 @callee_i256_indirect_reference_in_reg(i256 1, i256 2)
+  %2 = trunc i64 %1 to i32
+  ret i32 %2
+}
+
 ; Check that the stack is used once the GPRs are exhausted
 
 define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i128 %d, i32 %e, i32 %f, i128 %g, i32 %h) nounwind {
@@ -266,6 +556,296 @@ define i32 @caller_many_scalars() nounwind {
   ret i32 %1
 }
 
+; Check that i256 is passed indirectly.
+
+define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
+  ; RV64I-LABEL: name: callee_large_scalars
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10, $x11
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[COPY1]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s256), [[LOAD1]]
+  ; RV64I-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
+  ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10
+  %1 = icmp eq i256 %a, %b
+  %2 = zext i1 %1 to i64
+  ret i64 %2
+}
+
+define i64 @caller_large_scalars() nounwind {
+  ; LP64-LABEL: name: caller_large_scalars
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_large_scalars
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64F-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64F-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_large_scalars
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64D-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64D-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call i64 @callee_large_scalars(i256 1, i256 2)
+  ret i64 %1
+}
+
+; Check that arguments larger than 2*xlen are handled correctly when their
+; address is passed on the stack rather than in memory
+
+; Must keep define on a single line due to an update_llc_test_checks.py limitation
+define i64 @callee_large_scalars_exhausted_regs(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i256 %h, i64 %i, i256 %j) nounwind {
+  ; RV64I-LABEL: name: callee_large_scalars_exhausted_regs
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
+  ; RV64I-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
+  ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
+  ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
+  ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(p0) = COPY $x17
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY7]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.1, align 16)
+  ; RV64I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
+  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s256) = G_LOAD [[LOAD2]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s256), [[LOAD3]]
+  ; RV64I-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
+  ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10
+  %1 = icmp eq i256 %h, %j
+  %2 = zext i1 %1 to i64
+  ret i64 %2
+}
+
+define i64 @caller_large_scalars_exhausted_regs() nounwind {
+  ; LP64-LABEL: name: caller_large_scalars_exhausted_regs
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+  ; LP64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; LP64-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+  ; LP64-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+  ; LP64-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; LP64-NEXT:   [[C7:%[0-9]+]]:_(s256) = G_CONSTANT i256 8
+  ; LP64-NEXT:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
+  ; LP64-NEXT:   [[C9:%[0-9]+]]:_(s256) = G_CONSTANT i256 10
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64-NEXT:   G_STORE [[C7]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+  ; LP64-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
+  ; LP64-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
+  ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64-NEXT:   G_STORE [[C9]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
+  ; LP64-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 8)
+  ; LP64-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64-NEXT:   $x12 = COPY [[C2]](s64)
+  ; LP64-NEXT:   $x13 = COPY [[C3]](s64)
+  ; LP64-NEXT:   $x14 = COPY [[C4]](s64)
+  ; LP64-NEXT:   $x15 = COPY [[C5]](s64)
+  ; LP64-NEXT:   $x16 = COPY [[C6]](s64)
+  ; LP64-NEXT:   $x17 = COPY [[FRAME_INDEX]](p0)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   $x10 = COPY [[COPY1]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_large_scalars_exhausted_regs
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+  ; LP64F-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; LP64F-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+  ; LP64F-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+  ; LP64F-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; LP64F-NEXT:   [[C7:%[0-9]+]]:_(s256) = G_CONSTANT i256 8
+  ; LP64F-NEXT:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
+  ; LP64F-NEXT:   [[C9:%[0-9]+]]:_(s256) = G_CONSTANT i256 10
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64F-NEXT:   G_STORE [[C7]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+  ; LP64F-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
+  ; LP64F-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
+  ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64F-NEXT:   G_STORE [[C9]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64F-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
+  ; LP64F-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 8)
+  ; LP64F-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64F-NEXT:   $x12 = COPY [[C2]](s64)
+  ; LP64F-NEXT:   $x13 = COPY [[C3]](s64)
+  ; LP64F-NEXT:   $x14 = COPY [[C4]](s64)
+  ; LP64F-NEXT:   $x15 = COPY [[C5]](s64)
+  ; LP64F-NEXT:   $x16 = COPY [[C6]](s64)
+  ; LP64F-NEXT:   $x17 = COPY [[FRAME_INDEX]](p0)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   $x10 = COPY [[COPY1]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_large_scalars_exhausted_regs
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+  ; LP64D-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; LP64D-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
+  ; LP64D-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+  ; LP64D-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; LP64D-NEXT:   [[C7:%[0-9]+]]:_(s256) = G_CONSTANT i256 8
+  ; LP64D-NEXT:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 9
+  ; LP64D-NEXT:   [[C9:%[0-9]+]]:_(s256) = G_CONSTANT i256 10
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64D-NEXT:   G_STORE [[C7]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
+  ; LP64D-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
+  ; LP64D-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
+  ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; LP64D-NEXT:   G_STORE [[C9]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64D-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
+  ; LP64D-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 8)
+  ; LP64D-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64D-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64D-NEXT:   $x12 = COPY [[C2]](s64)
+  ; LP64D-NEXT:   $x13 = COPY [[C3]](s64)
+  ; LP64D-NEXT:   $x14 = COPY [[C4]](s64)
+  ; LP64D-NEXT:   $x15 = COPY [[C5]](s64)
+  ; LP64D-NEXT:   $x16 = COPY [[C6]](s64)
+  ; LP64D-NEXT:   $x17 = COPY [[FRAME_INDEX]](p0)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars_exhausted_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   $x10 = COPY [[COPY1]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call i64 @callee_large_scalars_exhausted_regs(
+      i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i256 8, i64 9,
+      i256 10)
+  ret i64 %1
+}
+
+; Check passing of coerced integer arrays
+
+define i64 @callee_small_coerced_struct([2 x i64] %a.coerce) nounwind {
+  ; RV64I-LABEL: name: callee_small_coerced_struct
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10, $x11
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s64), [[COPY1]]
+  ; RV64I-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
+  ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10
+  %1 = extractvalue [2 x i64] %a.coerce, 0
+  %2 = extractvalue [2 x i64] %a.coerce, 1
+  %3 = icmp eq i64 %1, %2
+  %4 = zext i1 %3 to i64
+  ret i64 %4
+}
+
+define i64 @caller_small_coerced_struct() nounwind {
+  ; LP64-LABEL: name: caller_small_coerced_struct
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_small_coerced_struct
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_small_coerced_struct
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   $x10 = COPY [[C]](s64)
+  ; LP64D-NEXT:   $x11 = COPY [[C1]](s64)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_coerced_struct, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   $x10 = COPY [[COPY]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call i64 @callee_small_coerced_struct([2 x i64] [i64 1, i64 2])
+  ret i64 %1
+}
+
 ; Check return of 2x xlen scalars
 
 define i128 @callee_small_scalar_ret() nounwind {
@@ -327,6 +907,51 @@ define i64 @caller_small_scalar_ret() nounwind {
   ret i64 %3
 }
 
+define fp128 @callee_fp128_ret() nounwind {
+  ; RV64I-LABEL: name: callee_fp128_ret
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C]](s128)
+  ; RV64I-NEXT:   $x10 = COPY [[UV]](s64)
+  ; RV64I-NEXT:   $x11 = COPY [[UV1]](s64)
+  ; RV64I-NEXT:   PseudoRET implicit $x10, implicit $x11
+  ret fp128 0xL00000000000000007FFF000000000000
+}
+
+define void @caller_fp128_ret() nounwind {
+  ; LP64-LABEL: name: caller_fp128_ret
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; LP64-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
+  ; LP64-NEXT:   PseudoRET
+  ;
+  ; LP64F-LABEL: name: caller_fp128_ret
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64F-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; LP64F-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
+  ; LP64F-NEXT:   PseudoRET
+  ;
+  ; LP64D-LABEL: name: caller_fp128_ret
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_fp128_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; LP64D-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; LP64D-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64)
+  ; LP64D-NEXT:   PseudoRET
+  %1 = call fp128 @callee_fp128_ret()
+  ret void
+}
+
 ; Check return of 2x xlen structs
 
 %struct.small = type { i64, ptr }
@@ -386,6 +1011,54 @@ define i64 @caller_small_struct_ret() nounwind {
   ret i64 %5
 }
 
+; Check return of >2x xlen scalars
+
+define i256 @callee_large_scalar_ret() nounwind {
+  ; RV64I-LABEL: name: callee_large_scalar_ret
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 -123456789
+  ; RV64I-NEXT:   G_STORE [[C]](s256), [[COPY]](p0) :: (store (s256), align 16)
+  ; RV64I-NEXT:   PseudoRET
+  ret i256 -123456789
+}
+
+define void @caller_large_scalar_ret() nounwind {
+  ; LP64-LABEL: name: caller_large_scalar_ret
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s256) from %stack.0, align 16)
+  ; LP64-NEXT:   PseudoRET
+  ;
+  ; LP64F-LABEL: name: caller_large_scalar_ret
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s256) from %stack.0, align 16)
+  ; LP64F-NEXT:   PseudoRET
+  ;
+  ; LP64D-LABEL: name: caller_large_scalar_ret
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s256) from %stack.0, align 16)
+  ; LP64D-NEXT:   PseudoRET
+  %1 = call i256 @callee_large_scalar_ret()
+  ret void
+}
+
 ; Check return of >2x xlen structs
 
 %struct.large = type { i64, i64, i64, i64 }
@@ -402,14 +1075,14 @@ define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result
   ; RV64I-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; RV64I-NEXT:   G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64) into %ir.agg.result, align 4)
   ; RV64I-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C4]](s64)
-  ; RV64I-NEXT:   G_STORE [[C1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.b, align 4)
+  ; RV64I-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C4]](s64)
+  ; RV64I-NEXT:   G_STORE [[C1]](s64), %3(p0) :: (store (s64) into %ir.b, align 4)
   ; RV64I-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C5]](s64)
-  ; RV64I-NEXT:   G_STORE [[C2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %ir.c, align 4)
+  ; RV64I-NEXT:   %6:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C5]](s64)
+  ; RV64I-NEXT:   G_STORE [[C2]](s64), %6(p0) :: (store (s64) into %ir.c, align 4)
   ; RV64I-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C6]](s64)
-  ; RV64I-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %ir.d, align 4)
+  ; RV64I-NEXT:   %9:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C6]](s64)
+  ; RV64I-NEXT:   G_STORE [[C3]](s64), %9(p0) :: (store (s64) into %ir.d, align 4)
   ; RV64I-NEXT:   PseudoRET
   store i64 1, ptr %agg.result, align 4
   %b = getelementptr inbounds %struct.large, ptr %agg.result, i64 0, i32 1
@@ -431,8 +1104,8 @@ define i64 @caller_large_struct_ret() nounwind {
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.1)
   ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
-  ; LP64-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.3)
+  ; LP64-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD %3(p0) :: (dereferenceable load (s64) from %ir.3)
   ; LP64-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
   ; LP64-NEXT:   $x10 = COPY [[ADD]](s64)
   ; LP64-NEXT:   PseudoRET implicit $x10
@@ -446,8 +1119,8 @@ define i64 @caller_large_struct_ret() nounwind {
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.1)
   ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
-  ; LP64F-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.3)
+  ; LP64F-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64F-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD %3(p0) :: (dereferenceable load (s64) from %ir.3)
   ; LP64F-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
   ; LP64F-NEXT:   $x10 = COPY [[ADD]](s64)
   ; LP64F-NEXT:   PseudoRET implicit $x10
@@ -461,8 +1134,8 @@ define i64 @caller_large_struct_ret() nounwind {
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.1)
   ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
-  ; LP64D-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.3)
+  ; LP64D-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64D-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD %3(p0) :: (dereferenceable load (s64) from %ir.3)
   ; LP64D-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
   ; LP64D-NEXT:   $x10 = COPY [[ADD]](s64)
   ; LP64D-NEXT:   PseudoRET implicit $x10
@@ -473,4 +1146,107 @@ define i64 @caller_large_struct_ret() nounwind {
   %4 = load i64, ptr %3
   %5 = add i64 %2, %4
   ret i64 %5
+}
+
+%struct.large2 = type { i64, i128, double, i64 }
+
+define %struct.large2 @callee_large_struct_ret2() nounwind {
+  ; RV64I-LABEL: name: callee_large_struct_ret2
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64I-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; RV64I-NEXT:   [[DEF1:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_CONSTANT i128 2
+  ; RV64I-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 3.000000e+00
+  ; RV64I-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; RV64I-NEXT:   G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64), align 16)
+  ; RV64I-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
+  ; RV64I-NEXT:   G_STORE [[C1]](s128), [[PTR_ADD]](p0) :: (store (s128))
+  ; RV64I-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C5]](s64)
+  ; RV64I-NEXT:   G_STORE [[C2]](s64), [[PTR_ADD1]](p0) :: (store (s64), align 16)
+  ; RV64I-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C6]](s64)
+  ; RV64I-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD2]](p0) :: (store (s64))
+  ; RV64I-NEXT:   PseudoRET
+  %a = insertvalue %struct.large2 poison, i64 1, 0
+  %b = insertvalue %struct.large2 %a, i128 2, 1
+  %c = insertvalue %struct.large2 %b, double 3.0, 2
+  %d = insertvalue %struct.large2 %c, i64 4, 3
+  ret %struct.large2 %d
+}
+
+define i64 @caller_large_struct_ret2() nounwind {
+  ; LP64-LABEL: name: caller_large_struct_ret2
+  ; LP64: bb.1 (%ir-block.0):
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %stack.0, align 16)
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %stack.0)
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
+  ; LP64-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %stack.0, align 16)
+  ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from %stack.0)
+  ; LP64-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD3]]
+  ; LP64-NEXT:   $x10 = COPY [[ADD]](s64)
+  ; LP64-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64F-LABEL: name: caller_large_struct_ret2
+  ; LP64F: bb.1 (%ir-block.0):
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %stack.0, align 16)
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64F-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %stack.0)
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
+  ; LP64F-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %stack.0, align 16)
+  ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64F-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from %stack.0)
+  ; LP64F-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD3]]
+  ; LP64F-NEXT:   $x10 = COPY [[ADD]](s64)
+  ; LP64F-NEXT:   PseudoRET implicit $x10
+  ;
+  ; LP64D-LABEL: name: caller_large_struct_ret2
+  ; LP64D: bb.1 (%ir-block.0):
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_struct_ret, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %stack.0, align 16)
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64D-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %stack.0)
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
+  ; LP64D-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %stack.0, align 16)
+  ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64D-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from %stack.0)
+  ; LP64D-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD3]]
+  ; LP64D-NEXT:   $x10 = COPY [[ADD]](s64)
+  ; LP64D-NEXT:   PseudoRET implicit $x10
+  %1 = call %struct.large2 @callee_large_struct_ret()
+  %2 = extractvalue %struct.large2 %1, 0
+  %3 = extractvalue %struct.large2 %1, 3
+  %4 = add i64 %2, %3
+  ret i64 %4
 }

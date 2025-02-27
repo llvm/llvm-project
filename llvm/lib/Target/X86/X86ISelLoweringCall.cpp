@@ -18,7 +18,6 @@
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86TargetMachine.h"
-#include "X86TargetObjectFile.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -26,6 +25,7 @@
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "x86-isel"
 
@@ -123,12 +123,14 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasX87())
     return MVT::i32;
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
-    return getRegisterTypeForCallingConv(Context, CC,
-                                         VT.changeVectorElementType(MVT::f16));
+  if (isTypeLegal(MVT::f16)) {
+    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+      return getRegisterTypeForCallingConv(
+          Context, CC, VT.changeVectorElementType(MVT::f16));
 
-  if (VT == MVT::bf16)
-    return MVT::f16;
+    if (VT == MVT::bf16)
+      return MVT::f16;
+  }
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
@@ -161,7 +163,8 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(Context, CC,
                                          VT.changeVectorElementType(MVT::f16));
 
@@ -193,7 +196,8 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -229,6 +233,14 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   return VT.changeVectorElementTypeToInteger();
 }
 
+bool X86TargetLowering::functionArgumentNeedsConsecutiveRegisters(
+    Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+    const DataLayout &DL) const {
+  // i128 split into i64 needs to be allocated to two consecutive registers,
+  // or spilled to the stack as a whole.
+  return Ty->isIntegerTy(128);
+}
+
 /// Helper for getByValTypeAlignment to determine
 /// the desired ByVal argument alignment.
 static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
@@ -258,20 +270,15 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
 /// function arguments in the caller parameter area. For X86, aggregates
 /// that contain SSE vectors are placed at 16-byte boundaries while the rest
 /// are at 4-byte boundaries.
-uint64_t X86TargetLowering::getByValTypeAlignment(Type *Ty,
-                                                  const DataLayout &DL) const {
-  if (Subtarget.is64Bit()) {
-    // Max of 8 and alignment of type.
-    Align TyAlign = DL.getABITypeAlign(Ty);
-    if (TyAlign > 8)
-      return TyAlign.value();
-    return 8;
-  }
+Align X86TargetLowering::getByValTypeAlignment(Type *Ty,
+                                               const DataLayout &DL) const {
+  if (Subtarget.is64Bit())
+    return std::max(DL.getABITypeAlign(Ty), Align::Constant<8>());
 
   Align Alignment(4);
   if (Subtarget.hasSSE1())
     getMaxByValAlign(Ty, Alignment);
-  return Alignment.value();
+  return Alignment;
 }
 
 /// It returns EVT::Other if the type should be determined using generic
@@ -417,7 +424,8 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
   if (isPositionIndependent() && Subtarget.isPICStyleGOT())
     return MachineJumpTableInfo::EK_Custom32;
   if (isPositionIndependent() &&
-      getTargetMachine().getCodeModel() == CodeModel::Large)
+      getTargetMachine().getCodeModel() == CodeModel::Large &&
+      !Subtarget.isTargetCOFF())
     return MachineJumpTableInfo::EK_LabelDifference64;
 
   // Otherwise, use the normal jump table encoding heuristics.
@@ -522,8 +530,9 @@ X86TargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
 unsigned X86TargetLowering::getAddressSpace() const {
   if (Subtarget.is64Bit())
-    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? 256 : 257;
-  return 256;
+    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? X86AS::GS
+                                                                    : X86AS::FS;
+  return X86AS::GS;
 }
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
@@ -658,7 +667,8 @@ X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
 
 bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_X86);
@@ -943,7 +953,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -954,7 +964,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   bool HasRet = false;
-  for (const SDNode *U : Copy->uses()) {
+  for (const SDNode *U : Copy->users()) {
     if (U->getOpcode() != X86ISD::RET_GLUE)
       return false;
     // If we are returning more than one value, we can definitely
@@ -1238,7 +1248,7 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
   return DAG.getMemcpy(
       Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
       /*isVolatile*/ false, /*AlwaysInline=*/true,
-      /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
+      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -1414,13 +1424,13 @@ static ArrayRef<MCPhysReg> get64BitArgumentGPRs(CallingConv::ID CallConv,
     static const MCPhysReg GPR64ArgRegsWin64[] = {
       X86::RCX, X86::RDX, X86::R8,  X86::R9
     };
-    return ArrayRef(std::begin(GPR64ArgRegsWin64), std::end(GPR64ArgRegsWin64));
+    return GPR64ArgRegsWin64;
   }
 
   static const MCPhysReg GPR64ArgRegs64Bit[] = {
     X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9
   };
-  return ArrayRef(std::begin(GPR64ArgRegs64Bit), std::end(GPR64ArgRegs64Bit));
+  return GPR64ArgRegs64Bit;
 }
 
 // FIXME: Get this from tablegen.
@@ -1433,20 +1443,20 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     // in their paired GPR.  So we only need to save the GPR to their home
     // slots.
     // TODO: __vectorcall will change this.
-    return std::nullopt;
+    return {};
   }
 
   bool isSoftFloat = Subtarget.useSoftFloat();
   if (isSoftFloat || !Subtarget.hasSSE1())
     // Kernel mode asks for SSE to be disabled, so there are no XMM argument
     // registers.
-    return std::nullopt;
+    return {};
 
   static const MCPhysReg XMMArgRegs64Bit[] = {
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
     X86::XMM4, X86::XMM5, X86::XMM6, X86::XMM7
   };
-  return ArrayRef(std::begin(XMMArgRegs64Bit), std::end(XMMArgRegs64Bit));
+  return XMMArgRegs64Bit;
 }
 
 #ifndef NDEBUG
@@ -1901,7 +1911,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   if (shouldDisableArgRegFromCSR(CallConv) ||
       F.hasFnAttribute("no_caller_saved_registers")) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (std::pair<Register, Register> Pair : MRI.liveins())
+    for (std::pair<MCRegister, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
@@ -2014,47 +2024,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool HasNoCfCheck = (CB && CB->doesNoCfCheck());
   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
   bool IsCFICall = IsIndirectCall && CLI.CFIType;
-  const Module *M = MF.getMMI().getModule();
+  const Module *M = MF.getFunction().getParent();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
 
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
-
-  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO && !IsMustTail) {
-    // If we are using a GOT, disable tail calls to external symbols with
-    // default visibility. Tail calling such a symbol requires using a GOT
-    // relocation, which forces early binding of the symbol. This breaks code
-    // that require lazy function symbol resolution. Using musttail or
-    // GuaranteedTailCallOpt will override this.
-    GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-    if (!G || (!G->getGlobal()->hasLocalLinkage() &&
-               G->getGlobal()->hasDefaultVisibility()))
-      isTailCall = false;
-  }
-
-  if (isTailCall && !IsMustTail) {
-    // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(
-        Callee, CallConv, IsCalleePopSRet, isVarArg, CLI.RetTy, Outs, OutVals,
-        Ins, DAG);
-
-    // Sibcalls are automatically detected tailcalls which do not require
-    // ABI changes.
-    if (!IsGuaranteeTCO && isTailCall)
-      IsSibcall = true;
-
-    if (isTailCall)
-      ++NumTailCalls;
-  }
-
-  if (IsMustTail && !isTailCall)
-    report_fatal_error("failed to perform tail call elimination on a call "
-                       "site marked musttail");
-
-  assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
-         "Var args not supported with calling convention fastcc, ghc or hipe");
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2071,6 +2046,40 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CallingConv::X86_VectorCall == CallConv) {
     CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
   }
+
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO && !IsMustTail) {
+    // If we are using a GOT, disable tail calls to external symbols with
+    // default visibility. Tail calling such a symbol requires using a GOT
+    // relocation, which forces early binding of the symbol. This breaks code
+    // that require lazy function symbol resolution. Using musttail or
+    // GuaranteedTailCallOpt will override this.
+    GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
+    if (!G || (!G->getGlobal()->hasLocalLinkage() &&
+               G->getGlobal()->hasDefaultVisibility()))
+      isTailCall = false;
+  }
+
+  if (isTailCall && !IsMustTail) {
+    // Check if it's really possible to do a tail call.
+    isTailCall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
+                                                   IsCalleePopSRet);
+
+    // Sibcalls are automatically detected tailcalls which do not require
+    // ABI changes.
+    if (!IsGuaranteeTCO && isTailCall)
+      IsSibcall = true;
+
+    if (isTailCall)
+      ++NumTailCalls;
+  }
+
+  if (IsMustTail && !isTailCall)
+    report_fatal_error("failed to perform tail call elimination on a call "
+                       "site marked musttail");
+
+  assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
+         "Var args not supported with calling convention fastcc, ghc or hipe");
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getAlignedCallFrameSize();
@@ -2317,12 +2326,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // shuffling arguments passed in memory.
   if (!IsSibcall && isTailCall) {
     // Force all the incoming stack arguments to be loaded from the stack
-    // before any new outgoing arguments are stored to the stack, because the
-    // outgoing stack slots may alias the incoming argument stack slots, and
-    // the alias isn't otherwise explicit. This is slightly more conservative
-    // than necessary, because it means that each store effectively depends
-    // on every argument instead of just those arguments it would clobber.
-    SDValue ArgChain = DAG.getStackArgumentTokenFactor(Chain);
+    // before any new outgoing arguments or the return address are stored to the
+    // stack, because the outgoing stack slots may alias the incoming argument
+    // stack slots, and the alias isn't otherwise explicit. This is slightly
+    // more conservative than necessary, because it means that each store
+    // effectively depends on every argument instead of just those arguments it
+    // would clobber.
+    Chain = DAG.getStackArgumentTokenFactor(Chain);
 
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
@@ -2364,13 +2374,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Source = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
                              StackPtr, Source);
 
-        MemOpChains2.push_back(CreateCopyOfByValArgument(Source, FIN,
-                                                         ArgChain,
-                                                         Flags, DAG, dl));
+        MemOpChains2.push_back(
+            CreateCopyOfByValArgument(Source, FIN, Chain, Flags, DAG, dl));
       } else {
         // Store relative to framepointer.
         MemOpChains2.push_back(DAG.getStore(
-            ArgChain, dl, Arg, FIN,
+            Chain, dl, Arg, FIN,
             MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI)));
       }
     }
@@ -2412,8 +2421,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Callee = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Callee);
   }
 
-  // Returns a chain & a glue for retval copy to use.
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && isTailCall && !IsMustTail) {
@@ -2425,7 +2432,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(DAG.getTargetConstant(FPDiff, dl, MVT::i32));
+    Ops.push_back(DAG.getSignedTargetConstant(FPDiff, dl, MVT::i32));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -2448,6 +2455,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return RegInfo->getCallPreservedMask(MF, AdaptedCC);
   }();
   assert(Mask && "Missing call preserved mask for calling convention");
+
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getFramePtr())) {
+    X86Info->setFPClobberedByCall(true);
+    if (CLI.CB && isa<InvokeInst>(CLI.CB))
+      X86Info->setFPClobberedByInvoke(true);
+  }
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getBaseRegister())) {
+    X86Info->setBPClobberedByCall(true);
+    if (CLI.CB && isa<InvokeInst>(CLI.CB))
+      X86Info->setBPClobberedByInvoke(true);
+  }
 
   // If this is an invoke in a 32-bit function using a funclet-based
   // personality, assume the function clobbers all registers. If an exception
@@ -2506,7 +2524,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, MVT::Other, Ops);
 
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -2516,6 +2534,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return Ret;
   }
 
+  // Returns a chain & a glue for retval copy to use.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   if (HasNoCfCheck && IsCFProtectionSupported && IsIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
@@ -2723,11 +2743,20 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 
 /// Check whether the call is eligible for tail call optimization. Targets
 /// that want to do tail call optimization should implement this function.
+/// Note that the x86 backend does not check musttail calls for eligibility! The
+/// rest of x86 tail call lowering must be prepared to forward arguments of any
+/// type.
 bool X86TargetLowering::IsEligibleForTailCallOptimization(
-    SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleePopSRet,
-    bool isVarArg, Type *RetTy, const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+    TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+    SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const {
+  SelectionDAG &DAG = CLI.DAG;
+  const SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  const SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  SDValue Callee = CLI.Callee;
+  CallingConv::ID CalleeCC = CLI.CallConv;
+  bool isVarArg = CLI.IsVarArg;
+
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 
@@ -2738,7 +2767,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   // If the function return type is x86_fp80 and the callee return type is not,
   // then the FP_EXTEND of the call result is not a nop. It's not safe to
   // perform a tailcall optimization here.
-  if (CallerF.getReturnType()->isX86_FP80Ty() && !RetTy->isX86_FP80Ty())
+  if (CallerF.getReturnType()->isX86_FP80Ty() && !CLI.RetTy->isX86_FP80Ty())
     return false;
 
   CallingConv::ID CallerCC = CallerF.getCallingConv();
@@ -2791,9 +2820,6 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     if (IsCalleeWin64 || IsCallerWin64)
       return false;
 
-    SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
-    CCInfo.AnalyzeCallOperands(Outs, CC_X86);
     for (const auto &VA : ArgLocs)
       if (!VA.isRegLoc())
         return false;
@@ -2811,8 +2837,8 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   }
   if (Unused) {
     SmallVector<CCValAssign, 16> RVLocs;
-    CCState CCInfo(CalleeCC, false, MF, RVLocs, C);
-    CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
+    CCState RVCCInfo(CalleeCC, false, MF, RVLocs, C);
+    RVCCInfo.AnalyzeCallResult(Ins, RetCC_X86);
     for (const auto &VA : RVLocs) {
       if (VA.getLocReg() == X86::FP0 || VA.getLocReg() == X86::FP1)
         return false;
@@ -2832,24 +2858,19 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       return false;
   }
 
-  unsigned StackArgsSize = 0;
+  // The stack frame of the caller cannot be replaced by the tail-callee one's
+  // if the function is required to preserve all the registers. Conservatively
+  // prevent tail optimization even if hypothetically all the registers are used
+  // for passing formal parameters or returning values.
+  if (CallerF.hasFnAttribute("no_caller_saved_registers"))
+    return false;
+
+  unsigned StackArgsSize = CCInfo.getStackSize();
 
   // If the callee takes no arguments then go on to check the results of the
   // call.
   if (!Outs.empty()) {
-    // Check if stack adjustment is needed. For now, do not do this if any
-    // argument is passed on the stack.
-    SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
-
-    // Allocate shadow area for Win64
-    if (IsCalleeWin64)
-      CCInfo.AllocateStack(32, Align(8));
-
-    CCInfo.AnalyzeCallOperands(Outs, CC_X86);
-    StackArgsSize = CCInfo.getStackSize();
-
-    if (CCInfo.getStackSize()) {
+    if (StackArgsSize > 0) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
       MachineFrameInfo &MFI = MF.getFrameInfo();

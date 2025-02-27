@@ -86,6 +86,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -100,7 +101,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -380,14 +380,13 @@ void FastISel::updateValueMap(const Value *I, Register Reg, unsigned NumRegs) {
   }
 }
 
-Register FastISel::getRegForGEPIndex(const Value *Idx) {
+Register FastISel::getRegForGEPIndex(MVT PtrVT, const Value *Idx) {
   Register IdxN = getRegForValue(Idx);
   if (!IdxN)
     // Unhandled operand. Halt "fast" selection and bail.
     return Register();
 
   // If the index is smaller or larger than intptr_t, truncate or extend it.
-  MVT PtrVT = TLI.getPointerTy(DL);
   EVT IdxVT = EVT::getEVT(Idx->getType(), /*HandleUnknown=*/false);
   if (IdxVT.bitsLT(PtrVT)) {
     IdxN = fastEmit_r(IdxVT.getSimpleVT(), PtrVT, ISD::SIGN_EXTEND, IdxN);
@@ -543,7 +542,8 @@ bool FastISel::selectGetElementPtr(const User *I) {
   uint64_t TotalOffs = 0;
   // FIXME: What's a good SWAG number for MaxOffs?
   uint64_t MaxOffs = 2048;
-  MVT VT = TLI.getPointerTy(DL);
+  MVT VT = TLI.getValueType(DL, I->getType()).getSimpleVT();
+
   for (gep_type_iterator GTI = gep_type_begin(I), E = gep_type_end(I);
        GTI != E; ++GTI) {
     const Value *Idx = GTI.getOperand();
@@ -584,7 +584,7 @@ bool FastISel::selectGetElementPtr(const User *I) {
 
       // N = N + Idx * ElementSize;
       uint64_t ElementSize = GTI.getSequentialElementStride(DL);
-      Register IdxN = getRegForGEPIndex(Idx);
+      Register IdxN = getRegForGEPIndex(VT, Idx);
       if (!IdxN) // Unhandled operand. Halt "fast" selection and bail.
         return false;
 
@@ -1001,7 +1001,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   GetReturnInfo(CLI.CallConv, CLI.RetTy, getReturnAttrs(CLI), Outs, TLI, DL);
 
   bool CanLowerReturn = TLI.CanLowerReturn(
-      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext());
+      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
 
   // FIXME: sret demotion isn't supported yet - bail out.
   if (!CanLowerReturn)
@@ -1078,7 +1078,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       // For ByVal, alignment should come from FE. BE will guess if this info
       // is not there, but there are cases it cannot get right.
       if (!MemAlign)
-        MemAlign = Align(TLI.getByValTypeAlignment(Arg.IndirectType, DL));
+        MemAlign = TLI.getByValTypeAlignment(Arg.IndirectType, DL);
       Flags.setByValSize(FrameSize);
     } else if (!MemAlign) {
       MemAlign = DL.getABITypeAlign(Arg.Ty);
@@ -1203,11 +1203,6 @@ void FastISel::handleDbgInfo(const Instruction *II) {
 
     if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
       assert(DLR->getLabel() && "Missing label");
-      if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DLR << "\n");
-        continue;
-      }
-
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DLR->getDebugLoc(),
               TII.get(TargetOpcode::DBG_LABEL))
           .addMetadata(DLR->getLabel());
@@ -1234,7 +1229,7 @@ void FastISel::handleDbgInfo(const Instruction *II) {
     }
 
     if (!Res)
-      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n";);
+      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n");
   }
 }
 
@@ -1402,12 +1397,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst *DI = cast<DbgDeclareInst>(II);
     assert(DI->getVariable() && "Missing variable");
-    if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI
-                        << " (!hasDebugInfo)\n");
-      return true;
-    }
-
     if (FuncInfo.PreprocessedDbgDeclares.contains(DI))
       return true;
 
@@ -1424,7 +1413,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     // happened (such as an optimised function being always-inlined into an
     // optnone function). We will not be using the extra information in the
     // dbg.assign in that case, just use its dbg.value fields.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);
@@ -1446,11 +1435,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::dbg_label: {
     const DbgLabelInst *DI = cast<DbgLabelInst>(II);
     assert(DI->getLabel() && "Missing label");
-    if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
-      return true;
-    }
-
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::DBG_LABEL)).addMetadata(DI->getLabel());
     return true;
@@ -1472,13 +1456,17 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
-  case Intrinsic::expect: {
+  case Intrinsic::expect:
+  case Intrinsic::expect_with_probability: {
     Register ResultReg = getRegForValue(II->getArgOperand(0));
     if (!ResultReg)
       return false;
     updateValueMap(II, ResultReg);
     return true;
   }
+  case Intrinsic::fake_use:
+    // At -O0, we don't need fake use, so just ignore it.
+    return true;
   case Intrinsic::experimental_stackmap:
     return selectStackmap(II);
   case Intrinsic::experimental_patchpoint_void:
@@ -1680,8 +1668,12 @@ bool FastISel::selectInstruction(const Instruction *I) {
 /// (fall-through) successor, and update the CFG.
 void FastISel::fastEmitBranch(MachineBasicBlock *MSucc,
                               const DebugLoc &DbgLoc) {
-  if (FuncInfo.MBB->getBasicBlock()->sizeWithoutDebug() > 1 &&
-      FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
+  const BasicBlock *BB = FuncInfo.MBB->getBasicBlock();
+  bool BlockHasMultipleInstrs = &BB->front() != &BB->back();
+  // Handle legacy case of debug intrinsics
+  if (BlockHasMultipleInstrs && !BB->getModule()->IsNewDbgInfoFormat)
+    BlockHasMultipleInstrs = BB->sizeWithoutDebug() > 1;
+  if (BlockHasMultipleInstrs && FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
     // For more accurate line information if this is the only non-debug
     // instruction in the block then emit it, otherwise we have the
     // unconditional fall-through case, which needs no instructions.
@@ -1849,7 +1841,7 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
 
     if (BI->isUnconditional()) {
       const BasicBlock *LLVMSucc = BI->getSuccessor(0);
-      MachineBasicBlock *MSucc = FuncInfo.MBBMap[LLVMSucc];
+      MachineBasicBlock *MSucc = FuncInfo.getMBB(LLVMSucc);
       fastEmitBranch(MSucc, BI->getDebugLoc());
       return true;
     }
@@ -1859,11 +1851,19 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return false;
   }
 
-  case Instruction::Unreachable:
-    if (TM.Options.TrapUnreachable)
+  case Instruction::Unreachable: {
+    if (TM.Options.TrapUnreachable) {
+      if (TM.Options.NoTrapAfterNoreturn) {
+        const auto *Call =
+            dyn_cast_or_null<CallInst>(cast<Instruction>(I)->getPrevNode());
+        if (Call && Call->doesNotReturn())
+          return true;
+      }
+
       return fastEmit_(MVT::Other, MVT::Other, ISD::TRAP) != 0;
-    else
-      return true;
+    }
+    return true;
+  }
 
   case Instruction::Alloca:
     // FunctionLowering has the static-sized case covered.
@@ -2259,7 +2259,7 @@ bool FastISel::handlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
   for (const BasicBlock *SuccBB : successors(LLVMBB)) {
     if (!isa<PHINode>(SuccBB->begin()))
       continue;
-    MachineBasicBlock *SuccMBB = FuncInfo.MBBMap[SuccBB];
+    MachineBasicBlock *SuccMBB = FuncInfo.getMBB(SuccBB);
 
     // If this terminator has multiple identical successors (common for
     // switches), only handle each succ once.
@@ -2383,7 +2383,7 @@ bool FastISel::canFoldAddIntoGEP(const User *GEP, const Value *Add) {
     return false;
   // Must be in the same basic block.
   if (isa<Instruction>(Add) &&
-      FuncInfo.MBBMap[cast<Instruction>(Add)->getParent()] != FuncInfo.MBB)
+      FuncInfo.getMBB(cast<Instruction>(Add)->getParent()) != FuncInfo.MBB)
     return false;
   // Must have a constant operand.
   return isa<ConstantInt>(cast<AddOperator>(Add)->getOperand(1));

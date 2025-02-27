@@ -8,6 +8,8 @@
 
 #include "ConstCorrectnessCheck.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -41,7 +43,9 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       TransformValues(Options.get("TransformValues", true)),
       TransformReferences(Options.get("TransformReferences", true)),
       TransformPointersAsValues(
-          Options.get("TransformPointersAsValues", false)) {
+          Options.get("TransformPointersAsValues", false)),
+      AllowedTypes(
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {
   if (AnalyzeValues == false && AnalyzeReferences == false)
     this->configurationDiag(
         "The check 'misc-const-correctness' will not "
@@ -57,6 +61,8 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "TransformValues", TransformValues);
   Options.store(Opts, "TransformReferences", TransformReferences);
   Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
+  Options.store(Opts, "AllowedTypes",
+                utils::options::serializeStringList(AllowedTypes));
 }
 
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
@@ -73,6 +79,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
+  const auto AllowedType = hasType(qualType(anyOf(
+      hasDeclaration(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
+      references(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
+      pointerType(pointee(hasDeclaration(
+          namedDecl(matchers::matchesAnyListedName(AllowedTypes))))))));
+
   const auto AutoTemplateType = varDecl(
       anyOf(hasType(autoType()), hasType(referenceType(pointee(autoType()))),
             hasType(pointerType(pointee(autoType())))));
@@ -87,19 +99,19 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), AutoTemplateType,
                    RValueReference, FunctionPointerRef,
-                   hasType(cxxRecordDecl(isLambda())), isImplicit())));
+                   hasType(cxxRecordDecl(isLambda())), isImplicit(),
+                   AllowedType)));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
   const auto FunctionScope =
       functionDecl(
-          hasBody(
-              compoundStmt(forEachDescendant(
-                               declStmt(containsAnyDeclaration(
-                                            LocalValDecl.bind("local-value")),
-                                        unless(has(decompositionDecl())))
-                                   .bind("decl-stmt")))
-                  .bind("scope")))
+          hasBody(stmt(forEachDescendant(
+                           declStmt(containsAnyDeclaration(
+                                        LocalValDecl.bind("local-value")),
+                                    unless(has(decompositionDecl())))
+                               .bind("decl-stmt")))
+                      .bind("scope")))
           .bind("function-decl");
 
   Finder->addMatcher(FunctionScope, this);
@@ -109,7 +121,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 enum class VariableCategory { Value, Reference, Pointer };
 
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *LocalScope = Result.Nodes.getNodeAs<CompoundStmt>("scope");
+  const auto *LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("local-value");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
 
@@ -173,8 +185,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   using namespace utils::fixit;
   if (VC == VariableCategory::Value && TransformValues) {
-    Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                  DeclSpec::TQ_const, QualifierTarget::Value,
+    Diag << addQualifierToVarDecl(*Variable, *Result.Context, Qualifiers::Const,
+                                  QualifierTarget::Value,
                                   QualifierPolicy::Right);
     // FIXME: Add '{}' for default initialization if no user-defined default
     // constructor exists and there is no initializer.
@@ -182,8 +194,8 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (VC == VariableCategory::Reference && TransformReferences) {
-    Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                  DeclSpec::TQ_const, QualifierTarget::Value,
+    Diag << addQualifierToVarDecl(*Variable, *Result.Context, Qualifiers::Const,
+                                  QualifierTarget::Value,
                                   QualifierPolicy::Right);
     return;
   }
@@ -191,14 +203,14 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   if (VC == VariableCategory::Pointer) {
     if (WarnPointersAsValues && TransformPointersAsValues) {
       Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                    DeclSpec::TQ_const, QualifierTarget::Value,
+                                    Qualifiers::Const, QualifierTarget::Value,
                                     QualifierPolicy::Right);
     }
     return;
   }
 }
 
-void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
+void ConstCorrectnessCheck::registerScope(const Stmt *LocalScope,
                                           ASTContext *Context) {
   auto &Analyzer = ScopesCache[LocalScope];
   if (!Analyzer)

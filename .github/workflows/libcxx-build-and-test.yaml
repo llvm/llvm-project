@@ -33,40 +33,27 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-
-env:
-  # LLVM POST-BRANCH bump version
-  # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
-  # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-  LLVM_HEAD_VERSION: "19"   # Used compiler, update POST-BRANCH.
-  LLVM_PREVIOUS_VERSION: "18"
-  LLVM_OLDEST_VERSION: "17"
-  GCC_STABLE_VERSION: "13"
-  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
-  CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
-
-
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-self-hosted-linux
+    container: ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9
     continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         config: [
+          'frozen-cxx03-headers',
           'generic-cxx03',
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-19' ]
-        cxx: [ 'clang++-19' ]
-        clang_tidy: [ 'ON' ]
+        cc: [  'clang-21' ]
+        cxx: [ 'clang++-21' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
@@ -74,7 +61,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -82,12 +68,14 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: libcxx-self-hosted-linux
+    container: ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -100,22 +88,22 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-19' ]
-        cxx: [ 'clang++-19' ]
-        clang_tidy: [ 'ON' ]
+        cc: [ 'clang-21' ]
+        cxx: [ 'clang++-21' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
-          - config: 'generic-cxx23'
-            cc: 'clang-17'
-            cxx: 'clang++-17'
-            clang_tidy: 'OFF'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
           - config: 'generic-cxx26'
+            cc: 'clang-20'
+            cxx: 'clang++-20'
+          - config: 'generic-cxx26'
+            cc: 'clang-19'
+            cxx: 'clang++-19'
+          # Release transition
+          - config: 'generic-cxx23'
             cc: 'clang-18'
             cxx: 'clang++-18'
-            clang_tidy: 'ON'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -123,7 +111,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
@@ -131,12 +118,13 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
-    needs: [ stage1, stage2 ]
+    needs: [ stage2 ]
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -154,6 +142,7 @@ jobs:
           'generic-no-experimental',
           'generic-no-filesystem',
           'generic-no-localization',
+          'generic-no-terminal',
           'generic-no-random_device',
           'generic-no-threads',
           'generic-no-tzdb',
@@ -162,33 +151,30 @@ jobs:
           'generic-no-rtti',
           'generic-optimized-speed',
           'generic-static',
-          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
-          # or don't provide much value since the benchmark run results are too noise on the bots.
-          'benchmarks',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-8-set' ]
+        machine: [ 'libcxx-self-hosted-linux' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-asan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-tsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         - config: 'generic-ubsan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-8-set
+          machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
+    container: ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-19
-          CXX: clang++-19
-          ENABLE_CLANG_TIDY: "OFF"
+          CC: clang-21
+          CXX: clang++-21
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -196,12 +182,57 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+
+  macos:
+    needs: [ stage3 ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - config: generic-cxx03
+          os: macos-15
+        - config: generic-cxx23
+          os: macos-15
+        - config: generic-modules
+          os: macos-15
+        - config: apple-configuration
+          os: macos-15
+        - config: apple-system
+          os: macos-13
+        - config: apple-system-hardened
+          os: macos-13
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest'
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Build and test
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install psutil
+          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        if: always()  # Upload artifacts even if the build or test suite fails
+        with:
+          name: macos-${{ matrix.config }}-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeConfigureLog.yaml
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*
+
   windows:
     runs-on: windows-2022
-    needs: [ stage1 ]
+    needs: [ stage2 ]
     strategy:
       fail-fast: false
       matrix:
@@ -214,24 +245,31 @@ jobs:
         - { config: mingw-dll, mingw: true }
         - { config: mingw-static, mingw: true }
         - { config: mingw-dll-i686, mingw: true }
+        - { config: mingw-incomplete-sysroot, mingw: true }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          choco install -y ninja wget
+          choco install -y ninja
           pip install psutil
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
-          choco install -y llvm --version=17.0.6
+          choco install -y llvm --version=18.1.6 --allow-downgrade
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20231128/llvm-mingw-20231128-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240606/llvm-mingw-20240606-ucrt-x86_64.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw
           echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Simulate a from-scratch build of llvm-mingw
+        if: ${{ matrix.config == 'mingw-incomplete-sysroot' }}
+        run: |
+          rm -r c:\llvm-mingw\include\c++
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libc++*
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libunwind*
       - name: Add Git Bash to the path
         run: |
           echo "c:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append

@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
@@ -54,6 +55,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
@@ -330,20 +332,20 @@ static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
   }
 }
 
-void CompilerInstance::createDiagnostics(DiagnosticConsumer *Client,
+void CompilerInstance::createDiagnostics(llvm::vfs::FileSystem &VFS,
+                                         DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
-  Diagnostics = createDiagnostics(&getDiagnosticOpts(), Client,
+  Diagnostics = createDiagnostics(VFS, &getDiagnosticOpts(), Client,
                                   ShouldOwnClient, &getCodeGenOpts());
 }
 
-IntrusiveRefCntPtr<DiagnosticsEngine>
-CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
-                                    DiagnosticConsumer *Client,
-                                    bool ShouldOwnClient,
-                                    const CodeGenOptions *CodeGenOpts) {
+IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
+    llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
+    DiagnosticConsumer *Client, bool ShouldOwnClient,
+    const CodeGenOptions *CodeGenOpts) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine>
-      Diags(new DiagnosticsEngine(DiagID, Opts));
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      new DiagnosticsEngine(DiagID, Opts));
 
   // Create the diagnostic client for reporting errors or for
   // implementing -verify.
@@ -367,7 +369,7 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
                                Opts->DiagnosticSerializationFile);
 
   // Configure our handling of diagnostics.
-  ProcessWarningOptions(*Diags, *Opts);
+  ProcessWarningOptions(*Diags, *Opts, VFS);
 
   return Diags;
 }
@@ -381,6 +383,9 @@ FileManager *CompilerInstance::createFileManager(
                   : createVFSFromCompilerInvocation(getInvocation(),
                                                     getDiagnostics());
   assert(VFS && "FileManager has no VFS?");
+  if (getFrontendOpts().ShowStats)
+    VFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(VFS));
   FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
   return FileMgr.get();
 }
@@ -411,8 +416,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
       SourceMgr.overrideFileContents(FromFile, RB.second->getMemBufferRef());
     else
       SourceMgr.overrideFileContents(
-          FromFile, std::unique_ptr<llvm::MemoryBuffer>(
-                        const_cast<llvm::MemoryBuffer *>(RB.second)));
+          FromFile, std::unique_ptr<llvm::MemoryBuffer>(RB.second));
   }
 
   // Remap files in the source manager (with other files).
@@ -425,12 +429,8 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
     }
 
     // Create the file entry for the file that we're mapping from.
-    const FileEntry *FromFile =
-        FileMgr.getVirtualFile(RF.first, ToFile->getSize(), 0);
-    if (!FromFile) {
-      Diags.Report(diag::err_fe_remap_missing_from_file) << RF.first;
-      continue;
-    }
+    FileEntryRef FromFile =
+        FileMgr.getVirtualFileRef(RF.first, ToFile->getSize(), 0);
 
     // Override the contents of the "from" file with the contents of
     // the "to" file.
@@ -722,11 +722,8 @@ void CompilerInstance::createCodeCompletionConsumer() {
 }
 
 void CompilerInstance::createFrontendTimer() {
-  FrontendTimerGroup.reset(
-      new llvm::TimerGroup("frontend", "Clang front-end time report"));
-  FrontendTimer.reset(
-      new llvm::Timer("frontend", "Clang front-end timer",
-                      *FrontendTimerGroup));
+  timerGroup.reset(new llvm::TimerGroup("clang", "Clang time report"));
+  FrontendTimer.reset(new llvm::Timer("frontend", "Front end", *timerGroup));
 }
 
 CodeCompleteConsumer *
@@ -1041,9 +1038,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
        << LLVM_VERSION_STRING << " default target "
        << llvm::sys::getDefaultTargetTriple() << "\n";
 
-  if (getCodeGenOpts().TimePasses)
-    createFrontendTimer();
-
   if (getFrontendOpts().ShowStats || !getFrontendOpts().StatsFile.empty())
     llvm::EnableStatistics(false);
 
@@ -1237,9 +1231,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
-  Instance.createDiagnostics(new ForwardingDiagnosticConsumer(
-                                   ImportingInstance.getDiagnosticClient()),
-                             /*ShouldOwnClient=*/true);
+  Instance.createDiagnostics(
+      ImportingInstance.getVirtualFileSystem(),
+      new ForwardingDiagnosticConsumer(ImportingInstance.getDiagnosticClient()),
+      /*ShouldOwnClient=*/true);
 
   if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
     Instance.getDiagnostics().setSuppressSystemWarnings(false);
@@ -1292,6 +1287,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build_done)
     << ModuleName;
+
+  // Propagate the statistics to the parent FileManager.
+  if (!FrontendOpts.ModulesShareFileManager)
+    ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
 
   if (Crashed) {
     // Clear the ASTConsumer if it hasn't been already, in case it owns streams
@@ -1377,7 +1376,6 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     std::string InferredModuleMapContent;
     llvm::raw_string_ostream OS(InferredModuleMapContent);
     Module->print(OS);
-    OS.flush();
 
     Result = compileModuleImpl(
         ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
@@ -1656,9 +1654,8 @@ static void pruneModuleCache(const HeaderSearchOptions &HSOpts) {
   // Walk the entire module cache, looking for unused module files and module
   // indices.
   std::error_code EC;
-  SmallString<128> ModuleCachePathNative;
-  llvm::sys::path::native(HSOpts.ModuleCachePath, ModuleCachePathNative);
-  for (llvm::sys::fs::directory_iterator Dir(ModuleCachePathNative, EC), DirEnd;
+  for (llvm::sys::fs::directory_iterator Dir(HSOpts.ModuleCachePath, EC),
+       DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     // If we don't have a directory, there's nothing to look into.
     if (!llvm::sys::fs::is_directory(Dir->path()))
@@ -1723,10 +1720,9 @@ void CompilerInstance::createASTReader() {
   const FrontendOptions &FEOpts = getFrontendOpts();
   std::unique_ptr<llvm::Timer> ReadTimer;
 
-  if (FrontendTimerGroup)
+  if (timerGroup)
     ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
-                                                "Reading modules",
-                                                *FrontendTimerGroup);
+                                              "Reading modules", *timerGroup);
   TheASTReader = new ASTReader(
       getPreprocessor(), getModuleCache(), &getASTContext(),
       getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
@@ -1755,10 +1751,10 @@ void CompilerInstance::createASTReader() {
 bool CompilerInstance::loadModuleFile(
     StringRef FileName, serialization::ModuleFile *&LoadedModuleFile) {
   llvm::Timer Timer;
-  if (FrontendTimerGroup)
+  if (timerGroup)
     Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
-               *FrontendTimerGroup);
-  llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
+               *timerGroup);
+  llvm::TimeRegion TimeLoading(timerGroup ? &Timer : nullptr);
 
   // If we don't already have an ASTReader, create one now.
   if (!TheASTReader)
@@ -1889,10 +1885,10 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
   // Time how long it takes to load the module.
   llvm::Timer Timer;
-  if (FrontendTimerGroup)
+  if (timerGroup)
     Timer.init("loading." + ModuleFilename, "Loading " + ModuleFilename,
-               *FrontendTimerGroup);
-  llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
+               *timerGroup);
+  llvm::TimeRegion TimeLoading(timerGroup ? &Timer : nullptr);
   llvm::TimeTraceScope TimeScope("Module Load", ModuleName);
 
   // Try to load the module file. If we are not trying to load from the
@@ -1922,7 +1918,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFile())
-      if (auto ModuleFile = FileMgr->getFile(ModuleFilename))
+      if (auto ModuleFile = FileMgr->getOptionalFileRef(ModuleFilename))
         if (*ModuleFile == M->getASTFile())
           return M;
 

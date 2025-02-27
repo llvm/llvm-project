@@ -237,7 +237,7 @@ void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
   Value.printPretty(OS, Ctx, Ty);
-  JOS.attribute("value", OS.str());
+  JOS.attribute("value", Str);
 }
 
 void JSONNodeDumper::Visit(const ConceptReference *CR) {
@@ -737,6 +737,9 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
     break;
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     JOS.attribute("vectorKind", "fixed-length rvv mask vector");
     break;
   }
@@ -802,7 +805,7 @@ void JSONNodeDumper::VisitTemplateSpecializationType(
   std::string Str;
   llvm::raw_string_ostream OS(Str);
   TST->getTemplateName().print(OS, PrintPolicy);
-  JOS.attribute("templateName", OS.str());
+  JOS.attribute("templateName", Str);
 }
 
 void JSONNodeDumper::VisitInjectedClassNameType(
@@ -824,7 +827,7 @@ void JSONNodeDumper::VisitElaboratedType(const ElaboratedType *ET) {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     NNS->print(OS, PrintPolicy, /*ResolveTemplateArgs*/ true);
-    JOS.attribute("qualifier", OS.str());
+    JOS.attribute("qualifier", Str);
   }
   if (const TagDecl *TD = ET->getOwnedTagDecl())
     JOS.attribute("ownedTagDecl", createBareDeclRef(TD));
@@ -883,9 +886,8 @@ void JSONNodeDumper::VisitNamespaceDecl(const NamespaceDecl *ND) {
   VisitNamedDecl(ND);
   attributeOnlyIfTrue("isInline", ND->isInline());
   attributeOnlyIfTrue("isNested", ND->isNested());
-  if (!ND->isOriginalNamespace())
-    JOS.attribute("originalNamespace",
-                  createBareDeclRef(ND->getOriginalNamespace()));
+  if (!ND->isFirstDecl())
+    JOS.attribute("originalNamespace", createBareDeclRef(ND->getFirstDecl()));
 }
 
 void JSONNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *UDD) {
@@ -1001,6 +1003,11 @@ void JSONNodeDumper::VisitRecordDecl(const RecordDecl *RD) {
 void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
   VisitRecordDecl(RD);
 
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    if (CTSD->hasStrictPackMatch())
+      JOS.attribute("strict-pack-match", true);
+  }
+
   // All other information requires a complete definition.
   if (!RD->isCompleteDefinition())
     return;
@@ -1028,7 +1035,7 @@ void JSONNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
 
   if (D->hasDefaultArgument())
     JOS.attributeObject("defaultArg", [=] {
-      Visit(D->getDefaultArgument(), SourceRange(),
+      Visit(D->getDefaultArgument().getArgument(), SourceRange(),
             D->getDefaultArgStorage().getInheritedFrom(),
             D->defaultArgumentWasInherited() ? "inherited from" : "previous");
     });
@@ -1044,7 +1051,7 @@ void JSONNodeDumper::VisitNonTypeTemplateParmDecl(
 
   if (D->hasDefaultArgument())
     JOS.attributeObject("defaultArg", [=] {
-      Visit(D->getDefaultArgument(), SourceRange(),
+      Visit(D->getDefaultArgument().getArgument(), SourceRange(),
             D->getDefaultArgStorage().getInheritedFrom(),
             D->defaultArgumentWasInherited() ? "inherited from" : "previous");
     });
@@ -1088,6 +1095,7 @@ void JSONNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *ASD) {
 void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   if (const TypeSourceInfo *T = FD->getFriendType())
     JOS.attribute("type", createQualType(T->getType()));
+  attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }
 
 void JSONNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
@@ -1246,7 +1254,7 @@ void JSONNodeDumper::VisitObjCMessageExpr(const ObjCMessageExpr *OME) {
   llvm::raw_string_ostream OS(Str);
 
   OME->getSelector().print(OS);
-  JOS.attribute("selector", OS.str());
+  JOS.attribute("selector", Str);
 
   switch (OME->getReceiverKind()) {
   case ObjCMessageExpr::Instance:
@@ -1277,7 +1285,7 @@ void JSONNodeDumper::VisitObjCBoxedExpr(const ObjCBoxedExpr *OBE) {
     llvm::raw_string_ostream OS(Str);
 
     MD->getSelector().print(OS);
-    JOS.attribute("selector", OS.str());
+    JOS.attribute("selector", Str);
   }
 }
 
@@ -1286,7 +1294,7 @@ void JSONNodeDumper::VisitObjCSelectorExpr(const ObjCSelectorExpr *OSE) {
   llvm::raw_string_ostream OS(Str);
 
   OSE->getSelector().print(OS);
-  JOS.attribute("selector", OS.str());
+  JOS.attribute("selector", Str);
 }
 
 void JSONNodeDumper::VisitObjCProtocolExpr(const ObjCProtocolExpr *OPE) {
@@ -1350,6 +1358,9 @@ void JSONNodeDumper::VisitSYCLUniqueStableNameExpr(
   JOS.attribute("typeSourceInfo",
                 createQualType(E->getTypeSourceInfo()->getType()));
 }
+
+void JSONNodeDumper::VisitOpenACCAsteriskSizeExpr(
+    const OpenACCAsteriskSizeExpr *E) {}
 
 void JSONNodeDumper::VisitPredefinedExpr(const PredefinedExpr *PE) {
   JOS.attribute("name", PredefinedExpr::getIdentKindName(PE->getIdentKind()));
@@ -1531,9 +1542,9 @@ void JSONNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *EWC) {
   if (EWC->getNumObjects()) {
     JOS.attributeArray("cleanups", [this, EWC] {
       for (const ExprWithCleanups::CleanupObject &CO : EWC->getObjects())
-        if (auto *BD = CO.dyn_cast<BlockDecl *>()) {
+        if (auto *BD = dyn_cast<BlockDecl *>(CO)) {
           JOS.value(createBareDeclRef(BD));
-        } else if (auto *CLE = CO.dyn_cast<CompoundLiteralExpr *>()) {
+        } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(CO)) {
           llvm::json::Object Obj;
           Obj["id"] = createPointerRepresentation(CLE);
           Obj["kind"] = CLE->getStmtClassName();
@@ -1634,7 +1645,7 @@ void JSONNodeDumper::VisitStringLiteral(const StringLiteral *SL) {
   std::string Buffer;
   llvm::raw_string_ostream SS(Buffer);
   SL->outputString(SS);
-  JOS.attribute("value", SS.str());
+  JOS.attribute("value", Buffer);
 }
 void JSONNodeDumper::VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE) {
   JOS.attribute("value", BLE->getValue());
@@ -1693,6 +1704,10 @@ void JSONNodeDumper::VisitNullPtrTemplateArgument(const TemplateArgument &TA) {
 }
 void JSONNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("value", TA.getAsIntegral().getSExtValue());
+}
+void JSONNodeDumper::VisitStructuralValueTemplateArgument(
+    const TemplateArgument &TA) {
+  Visit(TA.getAsStructuralValue(), TA.getStructuralValueType());
 }
 void JSONNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
   // FIXME: cannot just call dump() on the argument, as that doesn't specify

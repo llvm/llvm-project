@@ -9,6 +9,7 @@
 #define FORTRAN_LOWER_OPENMP_CLAUSES_H
 
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
@@ -21,36 +22,85 @@
 #include <type_traits>
 #include <utility>
 
+namespace Fortran::semantics {
+class Symbol;
+}
+
 namespace Fortran::lower::omp {
 using namespace Fortran;
-using SomeType = evaluate::SomeType;
 using SomeExpr = semantics::SomeExpr;
 using MaybeExpr = semantics::MaybeExpr;
+using TypeTy = evaluate::DynamicType;
 
-using TypeTy = SomeType;
-using IdTy = semantics::Symbol *;
+template <typename ExprTy>
+struct IdTyTemplate {
+  // "symbol" is always non-null for id's of actual objects.
+  Fortran::semantics::Symbol *symbol;
+  std::optional<ExprTy> designator;
+
+  bool operator==(const IdTyTemplate &other) const {
+    // If symbols are different, then the objects are different.
+    if (symbol != other.symbol)
+      return false;
+    if (symbol == nullptr)
+      return true;
+    // Equal symbols don't necessarily indicate identical objects,
+    // for example, a derived object component may use a single symbol,
+    // which will refer to different objects for different designators,
+    // e.g. a%c and b%c.
+    return designator == other.designator;
+  }
+
+  // Defining an "ordering" which allows types derived from this to be
+  // utilised in maps and other containers that require comparison
+  // operators for ordering
+  bool operator<(const IdTyTemplate &other) const {
+    return symbol < other.symbol;
+  }
+
+  operator bool() const { return symbol != nullptr; }
+};
+
 using ExprTy = SomeExpr;
 
 template <typename T>
 using List = tomp::ListT<T>;
 } // namespace Fortran::lower::omp
 
+// Specialization of the ObjectT template
 namespace tomp::type {
 template <>
-struct ObjectT<Fortran::lower::omp::IdTy, Fortran::lower::omp::ExprTy> {
-  using IdTy = Fortran::lower::omp::IdTy;
+struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
+               Fortran::lower::omp::ExprTy> {
+  using IdTy = Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>;
   using ExprTy = Fortran::lower::omp::ExprTy;
 
-  const IdTy &id() const { return symbol; }
-  const std::optional<ExprTy> &ref() const { return designator; }
+  IdTy id() const { return identity; }
+  Fortran::semantics::Symbol *sym() const { return identity.symbol; }
+  const std::optional<ExprTy> &ref() const { return identity.designator; }
 
-  IdTy symbol;
-  std::optional<ExprTy> designator;
+  bool operator<(const ObjectT<IdTy, ExprTy> &other) const {
+    return identity < other.identity;
+  }
+
+  IdTy identity;
 };
 } // namespace tomp::type
 
 namespace Fortran::lower::omp {
+using IdTy = IdTyTemplate<ExprTy>;
+}
 
+namespace std {
+template <>
+struct hash<Fortran::lower::omp::IdTy> {
+  size_t operator()(const Fortran::lower::omp::IdTy &id) const {
+    return static_cast<size_t>(reinterpret_cast<uintptr_t>(id.symbol));
+  }
+};
+} // namespace std
+
+namespace Fortran::lower::omp {
 using Object = tomp::ObjectT<IdTy, ExprTy>;
 using ObjectList = tomp::ObjectListT<IdTy, ExprTy>;
 
@@ -100,23 +150,40 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
                                    const std::optional<ArgTy> &arg) {
   if (!arg)
     return std::nullopt;
-  return std::move(func(*arg));
+  return func(*arg);
 }
 
-std::optional<Object>
-getBaseObject(const Object &object,
-              Fortran::semantics::SemanticsContext &semaCtx);
+template <           //
+    typename FuncTy, //
+    typename ArgTy,  //
+    typename ResultTy =
+        std::invoke_result_t<FuncTy, decltype(std::declval<ArgTy>().v)>>
+std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
+  if (!arg)
+    return std::nullopt;
+  return func(arg->v);
+}
+
+std::optional<Object> getBaseObject(const Object &object,
+                                    semantics::SemanticsContext &semaCtx);
 
 namespace clause {
+using Range = tomp::type::RangeT<ExprTy>;
+using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
+using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
+using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
+using DependenceType = tomp::type::DependenceType;
+using Prescriptiveness = tomp::type::Prescriptiveness;
 
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.
 // These clauses are still handled here to cover all alternatives in the
 // main clause variant.
 
+using Absent = tomp::clause::AbsentT<TypeTy, IdTy, ExprTy>;
 using AcqRel = tomp::clause::AcqRelT<TypeTy, IdTy, ExprTy>;
 using Acquire = tomp::clause::AcquireT<TypeTy, IdTy, ExprTy>;
 using AdjustArgs = tomp::clause::AdjustArgsT<TypeTy, IdTy, ExprTy>;
@@ -133,6 +200,7 @@ using Bind = tomp::clause::BindT<TypeTy, IdTy, ExprTy>;
 using Capture = tomp::clause::CaptureT<TypeTy, IdTy, ExprTy>;
 using Collapse = tomp::clause::CollapseT<TypeTy, IdTy, ExprTy>;
 using Compare = tomp::clause::CompareT<TypeTy, IdTy, ExprTy>;
+using Contains = tomp::clause::ContainsT<TypeTy, IdTy, ExprTy>;
 using Copyin = tomp::clause::CopyinT<TypeTy, IdTy, ExprTy>;
 using Copyprivate = tomp::clause::CopyprivateT<TypeTy, IdTy, ExprTy>;
 using Defaultmap = tomp::clause::DefaultmapT<TypeTy, IdTy, ExprTy>;
@@ -157,6 +225,7 @@ using Full = tomp::clause::FullT<TypeTy, IdTy, ExprTy>;
 using Grainsize = tomp::clause::GrainsizeT<TypeTy, IdTy, ExprTy>;
 using HasDeviceAddr = tomp::clause::HasDeviceAddrT<TypeTy, IdTy, ExprTy>;
 using Hint = tomp::clause::HintT<TypeTy, IdTy, ExprTy>;
+using Holds = tomp::clause::HoldsT<TypeTy, IdTy, ExprTy>;
 using If = tomp::clause::IfT<TypeTy, IdTy, ExprTy>;
 using Inbranch = tomp::clause::InbranchT<TypeTy, IdTy, ExprTy>;
 using Inclusive = tomp::clause::InclusiveT<TypeTy, IdTy, ExprTy>;
@@ -171,6 +240,11 @@ using Map = tomp::clause::MapT<TypeTy, IdTy, ExprTy>;
 using Match = tomp::clause::MatchT<TypeTy, IdTy, ExprTy>;
 using Mergeable = tomp::clause::MergeableT<TypeTy, IdTy, ExprTy>;
 using Message = tomp::clause::MessageT<TypeTy, IdTy, ExprTy>;
+using NoOpenmp = tomp::clause::NoOpenmpT<TypeTy, IdTy, ExprTy>;
+using NoOpenmpRoutines = tomp::clause::NoOpenmpRoutinesT<TypeTy, IdTy, ExprTy>;
+using NoOpenmpConstructs =
+    tomp::clause::NoOpenmpConstructsT<TypeTy, IdTy, ExprTy>;
+using NoParallelism = tomp::clause::NoParallelismT<TypeTy, IdTy, ExprTy>;
 using Nocontext = tomp::clause::NocontextT<TypeTy, IdTy, ExprTy>;
 using Nogroup = tomp::clause::NogroupT<TypeTy, IdTy, ExprTy>;
 using Nontemporal = tomp::clause::NontemporalT<TypeTy, IdTy, ExprTy>;
@@ -185,6 +259,7 @@ using OmpxBare = tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy>;
 using OmpxDynCgroupMem = tomp::clause::OmpxDynCgroupMemT<TypeTy, IdTy, ExprTy>;
 using Ordered = tomp::clause::OrderedT<TypeTy, IdTy, ExprTy>;
 using Order = tomp::clause::OrderT<TypeTy, IdTy, ExprTy>;
+using Otherwise = tomp::clause::OtherwiseT<TypeTy, IdTy, ExprTy>;
 using Partial = tomp::clause::PartialT<TypeTy, IdTy, ExprTy>;
 using Priority = tomp::clause::PriorityT<TypeTy, IdTy, ExprTy>;
 using Private = tomp::clause::PrivateT<TypeTy, IdTy, ExprTy>;
@@ -202,6 +277,7 @@ using Shared = tomp::clause::SharedT<TypeTy, IdTy, ExprTy>;
 using Simdlen = tomp::clause::SimdlenT<TypeTy, IdTy, ExprTy>;
 using Simd = tomp::clause::SimdT<TypeTy, IdTy, ExprTy>;
 using Sizes = tomp::clause::SizesT<TypeTy, IdTy, ExprTy>;
+using Permutation = tomp::clause::PermutationT<TypeTy, IdTy, ExprTy>;
 using TaskReduction = tomp::clause::TaskReductionT<TypeTy, IdTy, ExprTy>;
 using ThreadLimit = tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy>;
 using Threads = tomp::clause::ThreadsT<TypeTy, IdTy, ExprTy>;
@@ -221,6 +297,8 @@ using Weak = tomp::clause::WeakT<TypeTy, IdTy, ExprTy>;
 using When = tomp::clause::WhenT<TypeTy, IdTy, ExprTy>;
 using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
 } // namespace clause
+
+using tomp::type::operator==;
 
 struct CancellationConstructType {
   using EmptyTrait = std::true_type;
@@ -244,20 +322,25 @@ using ClauseBase = tomp::ClauseT<TypeTy, IdTy, ExprTy,
                                  MemoryOrder, Threadprivate>;
 
 struct Clause : public ClauseBase {
+  Clause(ClauseBase &&base, const parser::CharBlock source = {})
+      : ClauseBase(std::move(base)), source(source) {}
+  // "source" will be ignored by tomp::type::operator==.
   parser::CharBlock source;
 };
 
 template <typename Specific>
 Clause makeClause(llvm::omp::Clause id, Specific &&specific,
                   parser::CharBlock source = {}) {
-  return Clause{{id, specific}, source};
+  return Clause(typename Clause::BaseT{id, specific}, source);
 }
 
-Clause makeClause(const Fortran::parser::OmpClause &cls,
+Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx);
 
 List<Clause> makeClauses(const parser::OmpClauseList &clauses,
                          semantics::SemanticsContext &semaCtx);
+
+bool transferLocations(const List<Clause> &from, List<Clause> &to);
 } // namespace Fortran::lower::omp
 
 #endif // FORTRAN_LOWER_OPENMP_CLAUSES_H

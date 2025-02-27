@@ -22,7 +22,7 @@ config.host_cxx = "@CMAKE_CXX_COMPILER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.have_zstd = @LLVM_ENABLE_ZSTD@
-config.clang_arcmt = @CLANG_ENABLE_ARCMT@
+config.clang_objc_rewriter = @CLANG_ENABLE_OBJC_REWRITER@
 config.clang_default_pie_on_linux = @CLANG_DEFAULT_PIE_ON_LINUX@
 config.clang_default_cxx_stdlib = "@CLANG_DEFAULT_CXX_STDLIB@"
 config.clang_staticanalyzer = @CLANG_ENABLE_STATIC_ANALYZER@
@@ -34,6 +34,7 @@ config.enable_backtrace = @ENABLE_BACKTRACES@
 config.enable_threads = @LLVM_ENABLE_THREADS@
 config.reverse_iteration = @LLVM_ENABLE_REVERSE_ITERATION@
 config.host_arch = "@HOST_ARCH@"
+config.perl_executable = "@PERL_EXECUTABLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
 config.has_plugins = @CLANG_PLUGIN_SUPPORT@
@@ -42,6 +43,8 @@ config.llvm_external_lit = path(r"@LLVM_EXTERNAL_LIT@")
 config.standalone_build = @CLANG_BUILT_STANDALONE@
 config.ppc_linux_default_ieeelongdouble = @PPC_LINUX_DEFAULT_IEEELONGDOUBLE@
 config.have_llvm_driver = @LLVM_TOOL_LLVM_DRIVER_BUILD@
+config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
+config.substitutions.append(("%llvm-version-major", "@LLVM_VERSION_MAJOR@"))
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

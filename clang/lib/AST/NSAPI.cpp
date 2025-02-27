@@ -453,7 +453,12 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
   case BuiltinType::BoundMember:
+  case BuiltinType::UnresolvedTemplate:
   case BuiltinType::Dependent:
   case BuiltinType::Overload:
   case BuiltinType::UnknownAny:
@@ -462,7 +467,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   case BuiltinType::PseudoObject:
   case BuiltinType::BuiltinFn:
   case BuiltinType::IncompleteMatrixIdx:
-  case BuiltinType::OMPArraySection:
+  case BuiltinType::ArraySection:
   case BuiltinType::OMPArrayShaping:
   case BuiltinType::OMPIterator:
   case BuiltinType::BFloat16:

@@ -17,15 +17,18 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
-#include "clang/Analysis/FlowSensitive/NoopLattice.h"
+#include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/SmartPointerAccessorCaching.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -38,10 +41,25 @@
 namespace clang {
 namespace dataflow {
 
-static bool isTopLevelNamespaceWithName(const NamespaceDecl &NS,
-                                        llvm::StringRef Name) {
-  return NS.getDeclName().isIdentifier() && NS.getName() == Name &&
-         NS.getParent() != nullptr && NS.getParent()->isTranslationUnit();
+// Note: the Names appear in reverse order. E.g., to check
+// if NS is foo::bar::, call isFullyQualifiedNamespaceEqualTo(NS, "bar", "foo")
+template <class... NameTypes>
+static bool isFullyQualifiedNamespaceEqualTo(const NamespaceDecl &NS,
+                                             llvm::StringRef Name,
+                                             NameTypes... Names) {
+  if (!(NS.getDeclName().isIdentifier() && NS.getName() == Name &&
+        NS.getParent() != nullptr))
+    return false;
+
+  if constexpr (sizeof...(NameTypes) > 0) {
+    if (NS.getParent()->isTranslationUnit())
+      return false;
+    if (const auto *NextNS = dyn_cast_or_null<NamespaceDecl>(NS.getParent()))
+      return isFullyQualifiedNamespaceEqualTo(*NextNS, Names...);
+    return false;
+  } else {
+    return NS.getParent()->isTranslationUnit();
+  }
 }
 
 static bool hasOptionalClassName(const CXXRecordDecl &RD) {
@@ -50,15 +68,23 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
 
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
-      return N->isStdNamespace() || isTopLevelNamespaceWithName(*N, "absl");
+      return N->isStdNamespace() ||
+             isFullyQualifiedNamespaceEqualTo(*N, "absl") ||
+             isFullyQualifiedNamespaceEqualTo(*N, "bsl");
     return false;
   }
 
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
-    return N != nullptr && (isTopLevelNamespaceWithName(*N, "base") ||
-                            isTopLevelNamespaceWithName(*N, "folly"));
+    return N != nullptr && (isFullyQualifiedNamespaceEqualTo(*N, "base") ||
+                            isFullyQualifiedNamespaceEqualTo(*N, "folly"));
+  }
+
+  if (RD.getName() == "NullableValue") {
+    const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
+    return N != nullptr &&
+           isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
 
   return false;
@@ -81,10 +107,17 @@ static const CXXRecordDecl *getOptionalBaseClass(const CXXRecordDecl *RD) {
   return nullptr;
 }
 
+static bool isSupportedOptionalType(QualType Ty) {
+  const CXXRecordDecl *Optional =
+      getOptionalBaseClass(Ty->getAsCXXRecordDecl());
+  return Optional != nullptr;
+}
+
 namespace {
 
 using namespace ::clang::ast_matchers;
-using LatticeTransferState = TransferState<NoopLattice>;
+
+using LatticeTransferState = TransferState<UncheckedOptionalAccessLattice>;
 
 AST_MATCHER(CXXRecordDecl, optionalClass) { return hasOptionalClassName(Node); }
 
@@ -195,22 +228,25 @@ auto isOptionalOperatorCallWithName(
 }
 
 auto isMakeOptionalCall() {
-  return callExpr(callee(functionDecl(hasAnyName(
-                      "std::make_optional", "base::make_optional",
-                      "absl::make_optional", "folly::make_optional"))),
-                  hasOptionalType());
+  return callExpr(
+      callee(functionDecl(hasAnyName(
+          "std::make_optional", "base::make_optional", "absl::make_optional",
+          "folly::make_optional", "bsl::make_optional"))),
+      hasOptionalType());
 }
 
 auto nulloptTypeDecl() {
   return namedDecl(hasAnyName("std::nullopt_t", "absl::nullopt_t",
-                              "base::nullopt_t", "folly::None"));
+                              "base::nullopt_t", "folly::None",
+                              "bsl::nullopt_t"));
 }
 
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
 auto inPlaceClass() {
   return recordDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
-                               "base::in_place_t", "folly::in_place_t"));
+                               "base::in_place_t", "folly::in_place_t",
+                               "bsl::in_place_t"));
 }
 
 auto isOptionalNulloptConstructor() {
@@ -299,6 +335,24 @@ auto isValueOrNotEqX() {
                                ComparesToSame(integerLiteral(equals(0)))));
 }
 
+auto isZeroParamConstMemberCall() {
+  return cxxMemberCallExpr(
+      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
+}
+
+auto isZeroParamConstMemberOperatorCall() {
+  return cxxOperatorCallExpr(
+      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
+}
+
+auto isNonConstMemberCall() {
+  return cxxMemberCallExpr(callee(cxxMethodDecl(unless(isConst()))));
+}
+
+auto isNonConstMemberOperatorCall() {
+  return cxxOperatorCallExpr(callee(cxxMethodDecl(unless(isConst()))));
+}
+
 auto isCallReturningOptional() {
   return callExpr(hasType(qualType(
       anyOf(desugarsToOptionalOrDerivedType(),
@@ -337,17 +391,6 @@ StorageLocation &locForValue(const RecordStorageLocation &OptionalLoc) {
 void setHasValue(RecordStorageLocation &OptionalLoc, BoolValue &HasValueVal,
                  Environment &Env) {
   Env.setValue(locForHasValue(OptionalLoc), HasValueVal);
-}
-
-/// Creates a symbolic value for an `optional` value at an existing storage
-/// location. Uses `HasValueVal` as the symbolic value of the "has_value"
-/// property.
-RecordValue &createOptionalValue(RecordStorageLocation &Loc,
-                                 BoolValue &HasValueVal, Environment &Env) {
-  auto &OptionalVal = Env.create<RecordValue>(Loc);
-  Env.setValue(Loc, OptionalVal);
-  setHasValue(Loc, HasValueVal, Env);
-  return OptionalVal;
 }
 
 /// Returns the symbolic value that represents the "has_value" property of the
@@ -413,9 +456,8 @@ void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
 void transferMakeOptionalCall(const CallExpr *E,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
-  State.Env.setValue(
-      *E, createOptionalValue(State.Env.getResultObjectLocation(*E),
-                              State.Env.getBoolLiteralValue(true), State.Env));
+  setHasValue(State.Env.getResultObjectLocation(*E),
+              State.Env.getBoolLiteralValue(true), State.Env);
 }
 
 void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
@@ -424,6 +466,15 @@ void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
   if (auto *HasValueVal = getHasValue(
           State.Env, getImplicitObjectLocation(*CallExpr, State.Env))) {
     State.Env.setValue(*CallExpr, *HasValueVal);
+  }
+}
+
+void transferOptionalIsNullCall(const CXXMemberCallExpr *CallExpr,
+                                const MatchFinder::MatchResult &,
+                                LatticeTransferState &State) {
+  if (auto *HasValueVal = getHasValue(
+          State.Env, getImplicitObjectLocation(*CallExpr, State.Env))) {
+    State.Env.setValue(*CallExpr, State.Env.makeNot(*HasValueVal));
   }
 }
 
@@ -483,9 +534,6 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
 void transferCallReturningOptional(const CallExpr *E,
                                    const MatchFinder::MatchResult &Result,
                                    LatticeTransferState &State) {
-  if (State.Env.getValue(*E) != nullptr)
-    return;
-
   RecordStorageLocation *Loc = nullptr;
   if (E->isPRValue()) {
     Loc = &State.Env.getResultObjectLocation(*E);
@@ -497,16 +545,123 @@ void transferCallReturningOptional(const CallExpr *E,
     }
   }
 
-  RecordValue &Val =
-      createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
-  if (E->isPRValue())
-    State.Env.setValue(*E, Val);
+  if (State.Env.getValue(locForHasValue(*Loc)) != nullptr)
+    return;
+
+  setHasValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
+}
+
+void handleConstMemberCall(const CallExpr *CE,
+                           dataflow::RecordStorageLocation *RecordLoc,
+                           const MatchFinder::MatchResult &Result,
+                           LatticeTransferState &State) {
+  // If the const method returns an optional or reference to an optional.
+  if (RecordLoc != nullptr && isSupportedOptionalType(CE->getType())) {
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return;
+    StorageLocation &Loc =
+        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
+              setHasValue(cast<RecordStorageLocation>(Loc),
+                          State.Env.makeAtomicBoolValue(), State.Env);
+            });
+    if (CE->isGLValue()) {
+      // If the call to the const method returns a reference to an optional,
+      // link the call expression to the cached StorageLocation.
+      State.Env.setStorageLocation(*CE, Loc);
+    } else {
+      // If the call to the const method returns an optional by value, we
+      // need to use CopyRecord to link the optional to the result object
+      // of the call expression.
+      auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
+      copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
+    }
+    return;
+  }
+
+  // Cache if the const method returns a boolean or pointer type.
+  // We may decide to cache other return types in the future.
+  if (RecordLoc != nullptr &&
+      (CE->getType()->isBooleanType() || CE->getType()->isPointerType())) {
+    Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
+                                                                 State.Env);
+    if (Val == nullptr)
+      return;
+    State.Env.setValue(*CE, *Val);
+    return;
+  }
+
+  // Perform default handling if the call returns an optional
+  // but wasn't handled above (if RecordLoc is nullptr).
+  if (isSupportedOptionalType(CE->getType())) {
+    transferCallReturningOptional(CE, Result, State);
+  }
+}
+
+void transferValue_ConstMemberCall(const CXXMemberCallExpr *MCE,
+                                   const MatchFinder::MatchResult &Result,
+                                   LatticeTransferState &State) {
+  handleConstMemberCall(
+      MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result, State);
+}
+
+void transferValue_ConstMemberOperatorCall(
+    const CXXOperatorCallExpr *OCE, const MatchFinder::MatchResult &Result,
+    LatticeTransferState &State) {
+  auto *RecordLoc = cast_or_null<dataflow::RecordStorageLocation>(
+      State.Env.getStorageLocation(*OCE->getArg(0)));
+  handleConstMemberCall(OCE, RecordLoc, Result, State);
+}
+
+void handleNonConstMemberCall(const CallExpr *CE,
+                              dataflow::RecordStorageLocation *RecordLoc,
+                              const MatchFinder::MatchResult &Result,
+                              LatticeTransferState &State) {
+  if (RecordLoc != nullptr) {
+    // When a non-const member function is called, clear all (non-const)
+    // optional fields of the receiver. Const-qualified fields can't be
+    // changed (at least, not without UB).
+    for (const auto &[Field, FieldLoc] : RecordLoc->children()) {
+      QualType FieldType = Field->getType();
+      if (!FieldType.isConstQualified() &&
+          isSupportedOptionalType(Field->getType())) {
+        auto *FieldRecordLoc = cast_or_null<RecordStorageLocation>(FieldLoc);
+        if (FieldRecordLoc) {
+          setHasValue(*FieldRecordLoc, State.Env.makeAtomicBoolValue(),
+                      State.Env);
+        }
+      }
+    }
+    State.Lattice.clearConstMethodReturnValues(*RecordLoc);
+    State.Lattice.clearConstMethodReturnStorageLocations(*RecordLoc);
+  }
+
+  // Perform default handling if the call returns an optional.
+  if (isSupportedOptionalType(CE->getType())) {
+    transferCallReturningOptional(CE, Result, State);
+  }
+}
+
+void transferValue_NonConstMemberCall(const CXXMemberCallExpr *MCE,
+                                      const MatchFinder::MatchResult &Result,
+                                      LatticeTransferState &State) {
+  handleNonConstMemberCall(
+      MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result, State);
+}
+
+void transferValue_NonConstMemberOperatorCall(
+    const CXXOperatorCallExpr *OCE, const MatchFinder::MatchResult &Result,
+    LatticeTransferState &State) {
+  auto *RecordLoc = cast_or_null<dataflow::RecordStorageLocation>(
+      State.Env.getStorageLocation(*OCE->getArg(0)));
+  handleNonConstMemberCall(OCE, RecordLoc, Result, State);
 }
 
 void constructOptionalValue(const Expr &E, Environment &Env,
                             BoolValue &HasValueVal) {
   RecordStorageLocation &Loc = Env.getResultObjectLocation(E);
-  Env.setValue(E, createOptionalValue(Loc, HasValueVal, Env));
+  setHasValue(Loc, HasValueVal, Env);
 }
 
 /// Returns a symbolic value for the "has_value" property of an `optional<T>`
@@ -555,7 +710,7 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
   assert(E->getNumArgs() > 0);
 
   if (auto *Loc = State.Env.get<RecordStorageLocation>(*E->getArg(0))) {
-    createOptionalValue(*Loc, HasValueVal, State.Env);
+    setHasValue(*Loc, HasValueVal, State.Env);
 
     // Assign a storage location for the whole expression.
     State.Env.setStorageLocation(*E, *Loc);
@@ -587,11 +742,11 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
 
   if (Loc1 == nullptr) {
     if (Loc2 != nullptr)
-      createOptionalValue(*Loc2, Env.makeAtomicBoolValue(), Env);
+      setHasValue(*Loc2, Env.makeAtomicBoolValue(), Env);
     return;
   }
   if (Loc2 == nullptr) {
-    createOptionalValue(*Loc1, Env.makeAtomicBoolValue(), Env);
+    setHasValue(*Loc1, Env.makeAtomicBoolValue(), Env);
     return;
   }
 
@@ -609,8 +764,8 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
   if (BoolVal2 == nullptr)
     BoolVal2 = &Env.makeAtomicBoolValue();
 
-  createOptionalValue(*Loc1, *BoolVal2, Env);
-  createOptionalValue(*Loc2, *BoolVal1, Env);
+  setHasValue(*Loc1, *BoolVal2, Env);
+  setHasValue(*Loc2, *BoolVal1, Env);
 }
 
 void transferSwapCall(const CXXMemberCallExpr *E,
@@ -799,6 +954,12 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
 
+      // NullableValue::isNull
+      // Only NullableValue has isNull
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(hasName("isNull")),
+          transferOptionalIsNullCall)
+
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("emplace")),
@@ -806,8 +967,7 @@ auto buildTransferMatchSwitch() {
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
                     getImplicitObjectLocation(*E, State.Env)) {
-              createOptionalValue(*Loc, State.Env.getBoolLiteralValue(true),
-                                  State.Env);
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
             }
           })
 
@@ -818,8 +978,8 @@ auto buildTransferMatchSwitch() {
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
                     getImplicitObjectLocation(*E, State.Env)) {
-              createOptionalValue(*Loc, State.Env.getBoolLiteralValue(false),
-                                  State.Env);
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(false),
+                          State.Env);
             }
           })
 
@@ -874,7 +1034,61 @@ auto buildTransferMatchSwitch() {
             transferOptionalAndValueCmp(Cmp, Cmp->getArg(1), State.Env);
           })
 
-      // returns optional
+      // Smart-pointer-like operator* and operator-> calls that may look like
+      // const accessors (below) but need special handling to allow mixing
+      // the accessor calls.
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorStar(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorArrow(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeValueMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeGetMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
+          })
+
+      // const accessor calls
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isZeroParamConstMemberCall(),
+                                        transferValue_ConstMemberCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isZeroParamConstMemberOperatorCall(),
+                                          transferValue_ConstMemberOperatorCall)
+      // non-const member calls that may modify the state of an object.
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
+                                        transferValue_NonConstMemberCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isNonConstMemberOperatorCall(),
+          transferValue_NonConstMemberOperatorCall)
+
+      // other cases of returning optional
       .CaseOfCFGStmt<CallExpr>(isCallReturningOptional(),
                                transferCallReturningOptional)
 
@@ -933,7 +1147,8 @@ UncheckedOptionalAccessModel::optionalClassDecl() {
 
 UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
                                                            Environment &Env)
-    : DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice>(Ctx),
+    : DataflowAnalysis<UncheckedOptionalAccessModel,
+                       UncheckedOptionalAccessLattice>(Ctx),
       TransferMatchSwitch(buildTransferMatchSwitch()) {
   Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
       [&Ctx](QualType Ty) -> llvm::StringMap<QualType> {
@@ -947,7 +1162,8 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
 }
 
 void UncheckedOptionalAccessModel::transfer(const CFGElement &Elt,
-                                            NoopLattice &L, Environment &Env) {
+                                            UncheckedOptionalAccessLattice &L,
+                                            Environment &Env) {
   LatticeTransferState State(L, Env);
   TransferMatchSwitch(Elt, getASTContext(), State);
 }

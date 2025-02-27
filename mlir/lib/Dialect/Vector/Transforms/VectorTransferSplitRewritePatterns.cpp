@@ -145,8 +145,8 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
     return MemRefType();
   int64_t aOffset, bOffset;
   SmallVector<int64_t, 4> aStrides, bStrides;
-  if (failed(getStridesAndOffset(aT, aStrides, aOffset)) ||
-      failed(getStridesAndOffset(bT, bStrides, bOffset)) ||
+  if (failed(aT.getStridesAndOffset(aStrides, aOffset)) ||
+      failed(bT.getStridesAndOffset(bStrides, bOffset)) ||
       aStrides.size() != bStrides.size())
     return MemRefType();
 
@@ -171,7 +171,7 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
 /// is first inserted, followed by a `memref.cast`.
 static Value castToCompatibleMemRefType(OpBuilder &b, Value memref,
                                         MemRefType compatibleMemRefType) {
-  MemRefType sourceType = memref.getType().cast<MemRefType>();
+  MemRefType sourceType = cast<MemRefType>(memref.getType());
   Value res = memref;
   if (sourceType.getMemorySpace() != compatibleMemRefType.getMemorySpace()) {
     sourceType = MemRefType::get(

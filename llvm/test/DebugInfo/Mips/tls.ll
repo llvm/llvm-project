@@ -1,5 +1,5 @@
-; RUN: llc -O0 -march=mips -mcpu=mips32r2 -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-WORD
-; RUN: llc -O0 -march=mips64 -mcpu=mips64r2 -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-DWORD
+; RUN: llc -O0 -mtriple=mips-elf -mcpu=mips32r2 -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-WORD
+; RUN: llc -O0 -mtriple=mips64-elf -mcpu=mips64r2 -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-DWORD
 
 @x = thread_local global i32 5, align 4, !dbg !0
 

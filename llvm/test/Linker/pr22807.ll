@@ -1,9 +1,6 @@
-; RUN: llvm-link -S -o - %p/pr22807.ll %p/Inputs/pr22807-1.ll %p/Inputs/pr22807-2.ll | FileCheck %s
+; RUN: not llvm-link -S -o - %p/pr22807.ll %p/Inputs/pr22807-1.ll %p/Inputs/pr22807-2.ll 2>&1 | FileCheck %s
 
-; CHECK-NOT: type
-; CHECK: %struct.B = type { %struct.A }
-; CHECK-NEXT: %struct.A = type { %struct.B }
-; CHECK-NOT: type
+; CHECK: error: identified structure type 'struct.A' is recursive
 
 %struct.B = type { %struct.A }
 %struct.A = type opaque

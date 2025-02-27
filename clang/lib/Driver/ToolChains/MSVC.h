@@ -12,6 +12,7 @@
 #include "AMDGPU.h"
 #include "Cuda.h"
 #include "LazyDetector.h"
+#include "SYCL.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -61,9 +62,8 @@ public:
   /// formats, and to DWARF otherwise. Users can use -gcodeview and -gdwarf to
   /// override the default.
   llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const override {
-    return getTriple().isOSBinFormatMachO()
-               ? llvm::codegenoptions::DIF_DWARF
-               : llvm::codegenoptions::DIF_CodeView;
+    return getTriple().isOSBinFormatCOFF() ? llvm::codegenoptions::DIF_CodeView
+                                           : llvm::codegenoptions::DIF_DWARF;
   }
 
   /// Set the debugger tuning to "default", since we're definitely not tuning
@@ -100,6 +100,9 @@ public:
 
   void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs) const override;
+
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
 
   bool getWindowsSDKLibraryPath(
       const llvm::opt::ArgList &Args, std::string &path) const;
@@ -139,6 +142,7 @@ private:
   llvm::ToolsetLayout VSLayout = llvm::ToolsetLayout::OlderVS;
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
+  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
 };
 
 } // end namespace toolchains

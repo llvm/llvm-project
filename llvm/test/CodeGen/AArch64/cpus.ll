@@ -18,9 +18,11 @@
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-a77 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-a78 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-x1 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=grace 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-e1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-n1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-n2 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-n3 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-512tvb 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-v1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-v2 2>&1 | FileCheck %s
@@ -35,6 +37,7 @@
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=tsv110 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=apple-latest 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=a64fx 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=fujitsu-monaka 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=ampere1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=ampere1a 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=ampere1b 2>&1 | FileCheck %s

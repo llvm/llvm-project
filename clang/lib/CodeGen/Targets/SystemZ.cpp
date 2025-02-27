@@ -38,8 +38,8 @@ public:
   ABIArgInfo classifyArgumentType(QualType ArgTy) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -110,8 +110,8 @@ public:
     if (Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()) {
       llvm::Module &M = CGM.getModule();
       auto &Ctx = M.getContext();
-      llvm::Function *TDCFunc =
-          llvm::Intrinsic::getDeclaration(&M, llvm::Intrinsic::s390_tdc, Ty);
+      llvm::Function *TDCFunc = llvm::Intrinsic::getOrInsertDeclaration(
+          &M, llvm::Intrinsic::s390_tdc, Ty);
       unsigned TDCBits = 0;
       switch (BuiltinID) {
       case Builtin::BI__builtin_isnan:
@@ -243,8 +243,8 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
   return Ty;
 }
 
-Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
+RValue SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
   // Assume that va_list type is correct; should be pointer to LLVM type:
   // struct {
   //   i64 __gpr;
@@ -272,7 +272,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   SZCGI.handleExternallyVisibleObjABI(Ty.getTypePtr(), CGT.getCGM(),
                                       /*IsParam*/true);
   if (IsIndirect) {
-    DirectTy = llvm::PointerType::getUnqual(DirectTy);
+    DirectTy = llvm::PointerType::getUnqual(DirectTy->getContext());
     UnpaddedSize = DirectAlign = CharUnits::fromQuantity(8);
   } else {
     if (AI.getCoerceToType())
@@ -310,7 +310,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
         PaddedSizeV, "overflow_arg_area");
     CGF.Builder.CreateStore(NewOverflowArgArea, OverflowArgAreaPtr);
 
-    return MemAddr;
+    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(MemAddr, Ty), Slot);
   }
 
   assert(PaddedSize.getQuantity() == 8);
@@ -397,7 +397,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     ResAddr = Address(CGF.Builder.CreateLoad(ResAddr, "indirect_arg"), ArgTy,
                       TyInfo.Align);
 
-  return ResAddr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(ResAddr, Ty), Slot);
 }
 
 ABIArgInfo SystemZABIInfo::classifyReturnType(QualType RetTy) const {
@@ -406,19 +406,23 @@ ABIArgInfo SystemZABIInfo::classifyReturnType(QualType RetTy) const {
   if (isVectorArgumentType(RetTy))
     return ABIArgInfo::getDirect();
   if (isCompoundType(RetTy) || getContext().getTypeSize(RetTy) > 64)
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
+  // Handle transparent union types.
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerTypeForABI(Ty))
-    return ABIArgInfo::getExtend(Ty);
+    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
 
   // Handle vector types and vector-like structure types.  Note that
   // as opposed to float-like structure types, we do not allow any
@@ -431,7 +435,8 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
   // Values that are not 1, 2, 4 or 8 bytes in size are passed indirectly.
   if (Size != 8 && Size != 16 && Size != 32 && Size != 64)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
 
   // Handle small structures.
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
@@ -439,24 +444,26 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
     // fail the size test above.
     const RecordDecl *RD = RT->getDecl();
     if (RD->hasFlexibleArrayMember())
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
 
     // The structure is passed as an unextended integer, a float, or a double.
-    llvm::Type *PassTy;
     if (isFPArgumentType(SingleElementTy)) {
       assert(Size == 32 || Size == 64);
-      if (Size == 32)
-        PassTy = llvm::Type::getFloatTy(getVMContext());
-      else
-        PassTy = llvm::Type::getDoubleTy(getVMContext());
-    } else
-      PassTy = llvm::IntegerType::get(getVMContext(), Size);
-    return ABIArgInfo::getDirect(PassTy);
+      return ABIArgInfo::getDirect(
+          Size == 32 ? llvm::Type::getFloatTy(getVMContext())
+                     : llvm::Type::getDoubleTy(getVMContext()));
+    } else {
+      llvm::IntegerType *PassTy = llvm::IntegerType::get(getVMContext(), Size);
+      return Size <= 32 ? ABIArgInfo::getNoExtend(PassTy)
+                        : ABIArgInfo::getDirect(PassTy);
+    }
   }
 
   // Non-structure compounds are passed indirectly.
   if (isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
 
   return ABIArgInfo::getDirect(nullptr);
 }

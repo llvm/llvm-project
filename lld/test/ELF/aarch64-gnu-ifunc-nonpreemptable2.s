@@ -1,5 +1,5 @@
 # REQUIRES: aarch64
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -S -s %t | FileCheck %s --check-prefix=SEC
 # RUN: llvm-readelf -x .rodata -x .data %t | FileCheck --check-prefix=HEX %s

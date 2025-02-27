@@ -272,7 +272,7 @@ static cl::opt<bool>
                               "expressed in bytes."),
                      cat(DwarfDumpCategory));
 static cl::opt<bool> ManuallyGenerateUnitIndex(
-    "manaully-generate-unit-index",
+    "manually-generate-unit-index",
     cl::desc("if the input is dwp file, parse .debug_info "
              "section and use it to populate "
              "DW_SECT_INFO contributions in cu-index. "
@@ -502,7 +502,7 @@ static void filterByAccelName(
     getDies(DICtx, DICtx.getDebugNames(), Name, Dies);
   }
   llvm::sort(Dies);
-  Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
+  Dies.erase(llvm::unique(Dies), Dies.end());
 
   DIDumpOptions DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
@@ -646,7 +646,7 @@ static bool collectObjectSources(ObjectFile &Obj, DWARFContext &DICtx,
 
   // Dedup and order the sources.
   llvm::sort(Sources);
-  Sources.erase(std::unique(Sources.begin(), Sources.end()), Sources.end());
+  Sources.erase(llvm::unique(Sources), Sources.end());
 
   for (StringRef Name : Sources)
     OS << Name << "\n";
@@ -681,7 +681,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
         return StringRef(RegName);

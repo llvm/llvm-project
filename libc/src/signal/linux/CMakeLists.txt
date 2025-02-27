@@ -41,7 +41,7 @@ add_object_library(
     __restore.cpp
   COMPILE_OPTIONS
     -fomit-frame-pointer
-    -O3
+    ${libc_opt_high_flag}
     -Wframe-larger-than=0
     -Wno-attributes
     # asan creates asan.module_ctor which uses stack space, causing warnings.
@@ -60,6 +60,7 @@ add_entrypoint_object(
   DEPENDS
     .__restore
     libc.hdr.types.sigset_t
+    libc.hdr.types.struct_sigaction
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -76,6 +77,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    libc.hdr.types.stack_t
 )
 
 add_entrypoint_object(
@@ -124,7 +126,7 @@ add_entrypoint_object(
     ../signal.h
   DEPENDS
     .sigaction
-    libc.include.signal
+    libc.hdr.signal_macros
 )
 
 add_entrypoint_object(

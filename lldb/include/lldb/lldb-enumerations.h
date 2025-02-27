@@ -253,6 +253,7 @@ enum StopReason {
   eStopReasonFork,
   eStopReasonVFork,
   eStopReasonVForkDone,
+  eStopReasonInterrupt, ///< Thread requested interrupt
 };
 
 /// Command Return Status Types.
@@ -654,6 +655,8 @@ enum CommandArgumentType {
   eArgTypeRemotePath,
   eArgTypeRemoteFilename,
   eArgTypeModule,
+  eArgTypeCPUName,
+  eArgTypeCPUFeatures,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -760,6 +763,8 @@ enum SectionType {
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
   eSectionTypeCTF,
+  eSectionTypeLLDBTypeSummaries,
+  eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
 };
 
@@ -1107,7 +1112,12 @@ enum MemberFunctionKind {
 };
 
 /// String matching algorithm used by SBTarget.
-enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
+enum MatchType {
+  eMatchTypeNormal,
+  eMatchTypeRegex,
+  eMatchTypeStartsWith,
+  eMatchTypeRegexInsensitive
+};
 
 /// Bitmask that describes details about a type.
 FLAGS_ENUM(TypeFlags){
@@ -1216,6 +1226,7 @@ enum SaveCoreStyle {
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
   eSaveCoreStackOnly = 3,
+  eSaveCoreCustomOnly = 4,
 };
 
 /// Events that might happen during a trace session.
@@ -1344,7 +1355,26 @@ enum DebuggerBroadcastBit {
   eBroadcastBitProgress = (1 << 0),
   eBroadcastBitWarning = (1 << 1),
   eBroadcastBitError = (1 << 2),
-  eBroadcastBitProgressCategory = (1 << 3),
+  eBroadcastSymbolChange = (1 << 3),
+  eBroadcastBitProgressCategory = (1 << 4),
+  eBroadcastBitExternalProgress = (1 << 5),
+  eBroadcastBitExternalProgressCategory = (1 << 6),
+};
+
+/// Used for expressing severity in logs and diagnostics.
+enum Severity {
+  eSeverityError,
+  eSeverityWarning,
+  eSeverityInfo, // Equivalent to Remark used in clang.
+};
+
+/// Callback return value, indicating whether it handled printing the
+/// CommandReturnObject or deferred doing so to the CommandInterpreter.
+enum CommandReturnObjectCallbackResult {
+  /// The callback deferred printing the command return object.
+  eCommandReturnObjectPrintCallbackSkipped = 0,
+  /// The callback handled printing the command return object.
+  eCommandReturnObjectPrintCallbackHandled = 1,
 };
 
 } // namespace lldb

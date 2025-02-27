@@ -30,10 +30,12 @@
     %loop_ub = llvm.mlir.constant(9 : i32) : i32
     %loop_lb = llvm.mlir.constant(0 : i32) : i32
     %loop_step = llvm.mlir.constant(1 : i32) : i32 
-    omp.wsloop byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) for (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
-      llvm.store %0, %arg0 : i32, !llvm.ptr
-      llvm.store %0, %arg1 : i32, !llvm.ptr
-      omp.terminator
+    omp.wsloop reduction(byref @add_reduction_i_32 %1 -> %arg0, byref @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+        llvm.store %0, %arg0 : i32, !llvm.ptr
+        llvm.store %0, %arg1 : i32, !llvm.ptr
+        omp.yield
+      }
     }
     llvm.return
   }
@@ -49,11 +51,11 @@
   llvm.func @free(%arg0 : !llvm.ptr) -> ()
 
 // Private reduction variable and its initialization.
-// CHECK: %[[MALLOC_I:.+]] = call ptr @malloc(i64 4)
 // CHECK: %[[PRIV_PTR_I:.+]] = alloca ptr
+// CHECK: %[[PRIV_PTR_J:.+]] = alloca ptr
+// CHECK: %[[MALLOC_I:.+]] = call ptr @malloc(i64 4)
 // CHECK: store ptr %[[MALLOC_I]], ptr %[[PRIV_PTR_I]]
 // CHECK: %[[MALLOC_J:.+]] = call ptr @malloc(i64 4)
-// CHECK: %[[PRIV_PTR_J:.+]] = alloca ptr
 // CHECK: store ptr %[[MALLOC_J]], ptr %[[PRIV_PTR_J]]
 
 // Call to the reduction function.

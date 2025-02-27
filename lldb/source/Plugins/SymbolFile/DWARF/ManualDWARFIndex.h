@@ -21,9 +21,11 @@ class SymbolFileDWARFDwo;
 class ManualDWARFIndex : public DWARFIndex {
 public:
   ManualDWARFIndex(Module &module, SymbolFileDWARF &dwarf,
-                   llvm::DenseSet<dw_offset_t> units_to_avoid = {})
+                   llvm::DenseSet<dw_offset_t> units_to_avoid = {},
+                   llvm::DenseSet<uint64_t> type_sigs_to_avoid = {})
       : DWARFIndex(module), m_dwarf(&dwarf),
-        m_units_to_avoid(std::move(units_to_avoid)) {}
+        m_units_to_avoid(std::move(units_to_avoid)),
+        m_type_sigs_to_avoid(std::move(type_sigs_to_avoid)) {}
 
   void Preload() override { Index(); }
 
@@ -166,10 +168,21 @@ private:
                             const lldb::LanguageType cu_language,
                             IndexSet &set);
 
+  /// Return true if this manual DWARF index is covering only part of the DWARF.
+  ///
+  /// An instance of this class will be used to index all of the DWARF, but also
+  /// when we have .debug_names we will use one to index any compile or type
+  /// units that are not covered by the .debug_names table.
+  ///
+  /// \return
+  ///   True if this index is a partial index, false otherwise.
+  bool IsPartial() const;
+
   /// The DWARF file which we are indexing.
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;
+  llvm::DenseSet<uint64_t> m_type_sigs_to_avoid;
 
   IndexSet m_set;
   bool m_indexed = false;

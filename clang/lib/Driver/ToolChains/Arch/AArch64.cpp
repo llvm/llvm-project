@@ -98,16 +98,12 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
 
-  if (CPU == "generic") {
-    Extensions.enable(llvm::AArch64::AEK_SIMD);
-  } else {
-    const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
-        llvm::AArch64::parseCpu(CPU);
-    if (!CpuInfo)
-      return false;
+  const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
+      llvm::AArch64::parseCpu(CPU);
+  if (!CpuInfo)
+    return false;
 
-    Extensions.addCPUDefaults(*CpuInfo);
-  }
+  Extensions.addCPUDefaults(*CpuInfo);
 
   if (Split.second.size() &&
       !DecodeAArch64Features(D, Split.second, Extensions))
@@ -139,14 +135,20 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   return true;
 }
 
-static bool
-getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                               const ArgList &Args,
-                               llvm::AArch64::ExtensionSet &Extensions) {
+static bool getAArch64ArchFeaturesFromMcpu(
+    const Driver &D, StringRef Mcpu, const ArgList &Args,
+    llvm::AArch64::ExtensionSet &Extensions, std::vector<StringRef> &Features) {
   StringRef CPU;
   std::string McpuLowerCase = Mcpu.lower();
   if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, Extensions))
     return false;
+
+  if (Mcpu == "native") {
+    llvm::StringMap<bool> HostFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto &[Feature, Enabled] : HostFeatures) {
+      Features.push_back(Args.MakeArgString((Enabled ? "+" : "-") + Feature));
+    }
+  }
 
   return true;
 }
@@ -214,11 +216,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success =
         getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions,
+                                             Features);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions);
+        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions, Features);
   else
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
@@ -402,6 +404,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   if (Args.hasArg(options::OPT_ffixed_x28))
     Features.push_back("+reserve-x28");
 
+  if (Args.hasArg(options::OPT_mlr_for_calls_only))
+    Features.push_back("+reserve-lr-for-ra");
+
   if (Args.hasArg(options::OPT_fcall_saved_x8))
     Features.push_back("+call-saved-x8");
 
@@ -449,4 +454,25 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
     Features.push_back("+no-bti-at-return-twice");
+}
+
+void aarch64::setPAuthABIInTriple(const Driver &D, const ArgList &Args,
+                                  llvm::Triple &Triple) {
+  Arg *ABIArg = Args.getLastArg(options::OPT_mabi_EQ);
+  bool HasPAuthABI =
+      ABIArg ? (StringRef(ABIArg->getValue()) == "pauthtest") : false;
+
+  switch (Triple.getEnvironment()) {
+  case llvm::Triple::UnknownEnvironment:
+    if (HasPAuthABI)
+      Triple.setEnvironment(llvm::Triple::PAuthTest);
+    break;
+  case llvm::Triple::PAuthTest:
+    break;
+  default:
+    if (HasPAuthABI)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << ABIArg->getAsString(Args) << Triple.getTriple();
+    break;
+  }
 }

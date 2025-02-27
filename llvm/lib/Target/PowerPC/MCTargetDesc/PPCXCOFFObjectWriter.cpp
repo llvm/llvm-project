@@ -11,7 +11,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 

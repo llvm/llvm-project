@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -103,9 +104,8 @@ class RAIIMutexDescriptor {
       // this function is called instead of early returning it. To avoid this, a
       // bool variable (IdentifierInfoInitialized) is used and the function will
       // be run only once.
-      Guard = &Call.getCalleeAnalysisDeclContext()->getASTContext().Idents.get(
-          GuardName);
-      IdentifierInfoInitialized = true;
+      const auto &ASTCtx = Call.getState()->getStateManager().getContext();
+      Guard = &ASTCtx.Idents.get(GuardName);
     }
   }
 
@@ -145,33 +145,96 @@ using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
                  RAIIMutexDescriptor>;
 
+class SuppressNonBlockingStreams : public BugReporterVisitor {
+private:
+  const CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
+  SymbolRef StreamSym;
+  const int NonBlockMacroVal;
+  bool Satisfied = false;
+
+public:
+  SuppressNonBlockingStreams(SymbolRef StreamSym, int NonBlockMacroVal)
+      : StreamSym(StreamSym), NonBlockMacroVal(NonBlockMacroVal) {}
+
+  static void *getTag() {
+    static bool Tag;
+    return &Tag;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
+  }
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override {
+    if (Satisfied)
+      return nullptr;
+
+    std::optional<StmtPoint> Point = N->getLocationAs<StmtPoint>();
+    if (!Point)
+      return nullptr;
+
+    const auto *CE = Point->getStmtAs<CallExpr>();
+    if (!CE || !OpenFunction.matchesAsWritten(*CE))
+      return nullptr;
+
+    if (N->getSVal(CE).getAsSymbol() != StreamSym)
+      return nullptr;
+
+    Satisfied = true;
+
+    // Check if open's second argument contains O_NONBLOCK
+    const llvm::APSInt *FlagVal = N->getSVal(CE->getArg(1)).getAsInteger();
+    if (!FlagVal)
+      return nullptr;
+
+    if ((*FlagVal & NonBlockMacroVal) != 0)
+      BR.markInvalid(getTag(), nullptr);
+
+    return nullptr;
+  }
+};
+
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
+      // NOTE: There are standard library implementations where some methods
+      // of `std::mutex` are inherited from an implementation detail base
+      // class, and those aren't matched by the name specification {"std",
+      // "mutex", "lock"}.
+      // As a workaround here we omit the class name and only require the
+      // presence of the name parts "std" and "lock"/"unlock".
+      // TODO: Ensure that CallDescription understands inherited methods.
       MemberMutexDescriptor(
-          CallDescription(/*QualifiedName=*/{"std", "mutex", "lock"},
-                          /*RequiredArgs=*/0),
-          CallDescription({"std", "mutex", "unlock"}, 0)),
-      FirstArgMutexDescriptor(CallDescription({"pthread_mutex_lock"}, 1),
-                              CallDescription({"pthread_mutex_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"mtx_lock"}, 1),
-                              CallDescription({"mtx_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"pthread_mutex_trylock"}, 1),
-                              CallDescription({"pthread_mutex_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"mtx_trylock"}, 1),
-                              CallDescription({"mtx_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"mtx_timedlock"}, 1),
-                              CallDescription({"mtx_unlock"}, 1)),
+          {/*MatchAs=*/CDM::CXXMethod,
+           /*QualifiedName=*/{"std", /*"mutex",*/ "lock"},
+           /*RequiredArgs=*/0},
+          {CDM::CXXMethod, {"std", /*"mutex",*/ "unlock"}, 0}),
+      FirstArgMutexDescriptor({CDM::CLibrary, {"pthread_mutex_lock"}, 1},
+                              {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
+      FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_lock"}, 1},
+                              {CDM::CLibrary, {"mtx_unlock"}, 1}),
+      FirstArgMutexDescriptor({CDM::CLibrary, {"pthread_mutex_trylock"}, 1},
+                              {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
+      FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_trylock"}, 1},
+                              {CDM::CLibrary, {"mtx_unlock"}, 1}),
+      FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_timedlock"}, 1},
+                              {CDM::CLibrary, {"mtx_unlock"}, 1}),
       RAIIMutexDescriptor("lock_guard"),
       RAIIMutexDescriptor("unique_lock")};
 
-  const std::array<CallDescription, 5> BlockingFunctions{
-      ArrayRef{StringRef{"sleep"}}, ArrayRef{StringRef{"getc"}},
-      ArrayRef{StringRef{"fgets"}}, ArrayRef{StringRef{"read"}},
-      ArrayRef{StringRef{"recv"}}};
+  const CallDescriptionSet BlockingFunctions{{CDM::CLibrary, {"sleep"}},
+                                             {CDM::CLibrary, {"getc"}},
+                                             {CDM::CLibrary, {"fgets"}},
+                                             {CDM::CLibrary, {"read"}},
+                                             {CDM::CLibrary, {"recv"}}};
 
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
+
+  using O_NONBLOCKValueTy = std::optional<int>;
+  mutable std::optional<O_NONBLOCKValueTy> O_NONBLOCKValue;
 
   void reportBlockInCritSection(const CallEvent &call, CheckerContext &C) const;
 
@@ -202,13 +265,12 @@ public:
 
 REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
 
-namespace std {
 // Iterator traits for ImmutableList data structure
 // that enable the use of STL algorithms.
 // TODO: Move these to llvm::ImmutableList when overhauling immutable data
 // structures for proper iterator concept support.
 template <>
-struct iterator_traits<
+struct std::iterator_traits<
     typename llvm::ImmutableList<CritSectionMarker>::iterator> {
   using iterator_category = std::forward_iterator_tag;
   using value_type = CritSectionMarker;
@@ -216,7 +278,6 @@ struct iterator_traits<
   using reference = CritSectionMarker &;
   using pointer = CritSectionMarker *;
 };
-} // namespace std
 
 std::optional<MutexDescriptor>
 BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
@@ -235,12 +296,22 @@ BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
   return std::nullopt;
 }
 
+static const MemRegion *skipStdBaseClassRegion(const MemRegion *Reg) {
+  while (Reg) {
+    const auto *BaseClassRegion = dyn_cast<CXXBaseObjectRegion>(Reg);
+    if (!BaseClassRegion || !isWithinStdNamespace(BaseClassRegion->getDecl()))
+      break;
+    Reg = BaseClassRegion->getSuperRegion();
+  }
+  return Reg;
+}
+
 static const MemRegion *getRegion(const CallEvent &Call,
                                   const MutexDescriptor &Descriptor,
                                   bool IsLock) {
   return std::visit(
-      [&Call, IsLock](auto &&Descriptor) {
-        return Descriptor.getRegion(Call, IsLock);
+      [&Call, IsLock](auto &Descr) -> const MemRegion * {
+        return skipStdBaseClassRegion(Descr.getRegion(Call, IsLock));
       },
       Descriptor);
 }
@@ -291,8 +362,7 @@ void BlockInCriticalSectionChecker::handleUnlock(
 
 bool BlockInCriticalSectionChecker::isBlockingInCritSection(
     const CallEvent &Call, CheckerContext &C) const {
-  return llvm::any_of(BlockingFunctions,
-                      [&Call](auto &&Fn) { return Fn.matches(Call); }) &&
+  return BlockingFunctions.contains(Call) &&
          !C.getState()->get<ActiveCritSections>().isEmpty();
 }
 
@@ -321,6 +391,28 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
      << "' inside of critical section";
   auto R = std::make_unique<PathSensitiveBugReport>(BlockInCritSectionBugType,
                                                     os.str(), ErrNode);
+  // for 'read' and 'recv' call, check whether it's file descriptor(first
+  // argument) is
+  // created by 'open' API with O_NONBLOCK flag or is equal to -1, they will
+  // not cause block in these situations, don't report
+  StringRef FuncName = Call.getCalleeIdentifier()->getName();
+  if (FuncName == "read" || FuncName == "recv") {
+    SVal SV = Call.getArgSVal(0);
+    SValBuilder &SVB = C.getSValBuilder();
+    ProgramStateRef state = C.getState();
+    ConditionTruthVal CTV =
+        state->areEqual(SV, SVB.makeIntVal(-1, C.getASTContext().IntTy));
+    if (CTV.isConstrainedTrue())
+      return;
+
+    if (SymbolRef SR = SV.getAsSymbol()) {
+      if (!O_NONBLOCKValue)
+        O_NONBLOCKValue = tryExpandAsInteger(
+            "O_NONBLOCK", C.getBugReporter().getPreprocessor());
+      if (*O_NONBLOCKValue)
+        R->addVisitor<SuppressNonBlockingStreams>(SR, **O_NONBLOCKValue);
+    }
+  }
   R->addRange(Call.getSourceRange());
   R->markInteresting(Call.getReturnValue());
   C.emitReport(std::move(R));

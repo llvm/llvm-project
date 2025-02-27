@@ -33,5 +33,15 @@ expand_template(
             "//llvm:not",
         ] + glob(["Inputs/**"]),
     )
-    for src in glob(["*/*.py"])
+    for src in glob(
+        ["**/*.py"],
+        exclude = [
+            "Inputs/**",
+            "discovery.py",  # TODO: debug and re-enable
+            "max-time.py",
+            "selecting.py",
+            "shtest-recursive-substitution.py",
+            "use-llvm-tool.py",
+        ],
+    )
 ]

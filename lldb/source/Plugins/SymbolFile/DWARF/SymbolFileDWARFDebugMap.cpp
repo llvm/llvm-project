@@ -248,9 +248,8 @@ SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
 }
 
 SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFileSP objfile_sp)
-    : SymbolFileCommon(std::move(objfile_sp)), m_flags(), m_compile_unit_infos(),
-      m_func_indexes(), m_glob_indexes(),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
+    : SymbolFileCommon(std::move(objfile_sp)), m_flags(),
+      m_compile_unit_infos(), m_func_indexes(), m_glob_indexes() {}
 
 SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() = default;
 
@@ -426,10 +425,11 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
         // modification timestamp, since it will never match.
         if (comp_unit_info->oso_mod_time != llvm::sys::TimePoint<>() &&
             oso_mod_time != comp_unit_info->oso_mod_time) {
-          comp_unit_info->oso_load_error.SetErrorStringWithFormat(
+          comp_unit_info->oso_load_error = Status::FromErrorStringWithFormat(
               "debug map object file \"%s\" changed (actual: 0x%8.8x, debug "
               "map: 0x%8.8x) since this executable was linked, debug info "
-              "will not be loaded", oso_file.GetPath().c_str(),
+              "will not be loaded",
+              oso_file.GetPath().c_str(),
               (uint32_t)llvm::sys::toTimeT(oso_mod_time),
               (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
           obj_file->GetModule()->ReportError(
@@ -442,7 +442,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
 
         if (!ObjectFile::SplitArchivePathWithObject(oso_path, oso_file,
                                                     oso_object, must_exist)) {
-          comp_unit_info->oso_load_error.SetErrorStringWithFormat(
+          comp_unit_info->oso_load_error = Status::FromErrorStringWithFormat(
               "debug map object file \"%s\" containing debug info does not "
               "exist, debug info will not be loaded",
               comp_unit_info->oso_path.GetCString());
@@ -474,7 +474,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
         // If we are loading a .o file from a .a file the "oso_object" will
         // have a valid value name and if the .a file exists, either the .o
         // file didn't exist in the .a file or the mod time didn't match.
-        comp_unit_info->oso_load_error.SetErrorStringWithFormat(
+        comp_unit_info->oso_load_error = Status::FromErrorStringWithFormat(
             "\"%s\" object from the \"%s\" archive: "
             "either the .o file doesn't exist in the archive or the "
             "modification time (0x%8.8x) of the .o file doesn't match",
@@ -848,9 +848,17 @@ SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
                 debug_map_entry->data.GetOSOFileAddress();
             Address oso_so_addr;
             if (oso_module->ResolveFileAddress(oso_file_addr, oso_so_addr)) {
-              resolved_flags |=
-                  oso_module->GetSymbolFile()->ResolveSymbolContext(
-                      oso_so_addr, resolve_scope, sc);
+              if (SymbolFile *sym_file = oso_module->GetSymbolFile()) {
+                resolved_flags |= sym_file->ResolveSymbolContext(
+                    oso_so_addr, resolve_scope, sc);
+              } else {
+                ObjectFile *obj_file = GetObjectFile();
+                LLDB_LOG(GetLog(DWARFLog::DebugMap),
+                         "Failed to get symfile for OSO: {0} in module: {1}",
+                         oso_module->GetFileSpec(),
+                         obj_file ? obj_file->GetFileSpec()
+                                  : FileSpec("unknown"));
+              }
             }
           }
         }
@@ -1053,8 +1061,7 @@ static void RemoveFunctionsWithModuleNotEqualTo(const ModuleSP &module_sp,
     SymbolContext sc;
     sc_list.GetContextAtIndex(i, sc);
     if (sc.function) {
-      const SectionSP section_sp(
-          sc.function->GetAddressRange().GetBaseAddress().GetSection());
+      const SectionSP section_sp = sc.function->GetAddress().GetSection();
       if (section_sp->GetModule() != module_sp) {
         sc_list.RemoveContextAtIndex(i);
         continue;
@@ -1139,30 +1146,13 @@ SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(
   return {};
 }
 
-TypeSP SymbolFileDWARFDebugMap::FindDefinitionTypeForDWARFDeclContext(
-    const DWARFDIE &die) {
-  TypeSP type_sp;
+DWARFDIE SymbolFileDWARFDebugMap::FindDefinitionDIE(const DWARFDIE &die) {
+  DWARFDIE result;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-    type_sp = oso_dwarf->FindDefinitionTypeForDWARFDeclContext(die);
-    return type_sp ? IterationAction::Stop : IterationAction::Continue;
+    result = oso_dwarf->FindDefinitionDIE(die);
+    return result ? IterationAction::Stop : IterationAction::Continue;
   });
-  return type_sp;
-}
-
-bool SymbolFileDWARFDebugMap::Supports_DW_AT_APPLE_objc_complete_type(
-    SymbolFileDWARF *skip_dwarf_oso) {
-  if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolCalculate) {
-    m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolNo;
-    ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-      if (skip_dwarf_oso != oso_dwarf &&
-          oso_dwarf->Supports_DW_AT_APPLE_objc_complete_type(nullptr)) {
-        m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-        return IterationAction::Stop;
-      }
-      return IterationAction::Continue;
-    });
-  }
-  return m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolYes;
+  return result;
 }
 
 TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
@@ -1566,11 +1556,12 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
             // we weren't able to open the .o file. Display an appropriate
             // error
             if (comp_unit_info->oso_load_error.Fail())
-              return comp_unit_info->oso_load_error;
+              return comp_unit_info->oso_load_error.Clone();
             else
-              return Status("unable to load debug map object file \"%s\" "
-                            "exist, debug info will not be loaded",
-                            comp_unit_info->oso_path.GetCString());
+              return Status::FromErrorStringWithFormat(
+                  "unable to load debug map object file \"%s\" "
+                  "exist, debug info will not be loaded",
+                  comp_unit_info->oso_path.GetCString());
           }
         }
       }

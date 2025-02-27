@@ -377,18 +377,18 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     int64_t orginalZeroDim = it.value().getDimPosition(0);
     if (orginalZeroDim != dimToDrop) {
       // There are two reasons to be in this path, 1. We need to
-      // tranpose the operand to make the dim to be dropped
+      // transpose the operand to make the dim to be dropped
       // leading. 2. The dim to be dropped does not exist and in
-      // that case we dont want to add a unit tranpose but we must
+      // that case we dont want to add a unit transpose but we must
       // check all the indices to make sure this is the case.
-      bool tranposeNeeded = false;
+      bool transposeNeeded = false;
       SmallVector<int64_t> perm;
       SmallVector<AffineExpr> transposeResults;
 
       for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
         int64_t currDim = map.getDimPosition(i);
         if (currDim == dimToDrop) {
-          tranposeNeeded = true;
+          transposeNeeded = true;
           perm.insert(perm.begin(), i);
           auto targetExpr = rewriter.getAffineDimExpr(currDim);
           transposeResults.insert(transposeResults.begin(), targetExpr);
@@ -403,7 +403,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       // Such transposes do not materially effect the underlying vector and can
       // be omitted. EG: perm [1, 0, 2] applied to vector<1x1x8xi32>
       bool transposeNonOuterUnitDims = false;
-      auto operandShape = operands[it.index()].getType().cast<ShapedType>();
+      auto operandShape = cast<ShapedType>(operands[it.index()].getType());
       for (auto [index, dim] :
            llvm::enumerate(ArrayRef<int64_t>(perm).drop_back(1))) {
         if (dim != static_cast<int64_t>(index) &&
@@ -413,9 +413,9 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
         }
       }
 
-      // Do the tranpose now if needed so that we can drop the
+      // Do the transpose now if needed so that we can drop the
       // correct dim using extract later.
-      if (tranposeNeeded) {
+      if (transposeNeeded) {
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
         if (transposeNonOuterUnitDims) {
@@ -474,7 +474,7 @@ namespace {
 
 /// Turns vector.contract on vector with leading 1 dimensions into
 /// vector.extract followed by vector.contract on vector without leading
-/// 1 dimensions. Also performs tranpose of lhs and rhs operands if required
+/// 1 dimensions. Also performs transpose of lhs and rhs operands if required
 /// prior to extract.
 struct CastAwayContractionLeadingOneDim
     : public MaskableOpRewritePattern<vector::ContractionOp> {
@@ -550,20 +550,18 @@ struct CastAwayConstantMaskLeadingOneDim
       return failure();
 
     int64_t dropDim = oldType.getRank() - newType.getRank();
-    SmallVector<int64_t> dimSizes;
-    for (auto attr : mask.getMaskDimSizes())
-      dimSizes.push_back(llvm::cast<IntegerAttr>(attr).getInt());
+    ArrayRef<int64_t> dimSizes = mask.getMaskDimSizes();
 
     // If any of the dropped unit dims has a size of `0`, the entire mask is a
     // zero mask, else the unit dim has no effect on the mask.
     int64_t flatLeadingSize =
         std::accumulate(dimSizes.begin(), dimSizes.begin() + dropDim + 1,
                         static_cast<int64_t>(1), std::multiplies<int64_t>());
-    SmallVector<int64_t> newDimSizes({flatLeadingSize});
+    SmallVector<int64_t> newDimSizes = {flatLeadingSize};
     newDimSizes.append(dimSizes.begin() + dropDim + 1, dimSizes.end());
 
     auto newMask = rewriter.create<vector::ConstantMaskOp>(
-        mask.getLoc(), newType, rewriter.getI64ArrayAttr(newDimSizes));
+        mask.getLoc(), newType, newDimSizes);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(mask, oldType, newMask);
     return success();
   }

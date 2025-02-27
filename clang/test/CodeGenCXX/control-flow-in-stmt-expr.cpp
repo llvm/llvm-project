@@ -158,16 +158,15 @@ void ArrayInit() {
   // CHECK-LABEL: define dso_local void @_Z9ArrayInitv()
   // CHECK: %arrayinit.endOfInit = alloca ptr, align 8
   // CHECK: %cleanup.dest.slot = alloca i32, align 4
-  // CHECK: %arrayinit.begin = getelementptr inbounds [4 x %struct.Printy], ptr %arr, i64 0, i64 0
-  // CHECK: store ptr %arrayinit.begin, ptr %arrayinit.endOfInit, align 8
+  // CHECK: store ptr %arr, ptr %arrayinit.endOfInit, align 8
   Printy arr[4] = {
     Printy("a"),
-    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) %arrayinit.begin, ptr noundef @.str)
-    // CHECK: [[ARRAYINIT_ELEMENT1:%.+]] = getelementptr inbounds %struct.Printy, ptr %arrayinit.begin, i64 1
+    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) %arr, ptr noundef @.str)
+    // CHECK: [[ARRAYINIT_ELEMENT1:%.+]] = getelementptr inbounds %struct.Printy, ptr %arr, i64 1
     // CHECK: store ptr [[ARRAYINIT_ELEMENT1]], ptr %arrayinit.endOfInit, align 8
     Printy("b"),
     // CHECK: call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT1]], ptr noundef @.str.1)
-    // CHECK: [[ARRAYINIT_ELEMENT2:%.+]] = getelementptr inbounds %struct.Printy, ptr [[ARRAYINIT_ELEMENT1]], i64 1
+    // CHECK: [[ARRAYINIT_ELEMENT2:%.+]] = getelementptr inbounds %struct.Printy, ptr %arr, i64 2
     // CHECK: store ptr [[ARRAYINIT_ELEMENT2]], ptr %arrayinit.endOfInit, align 8
     ({
     // CHECK: br i1 {{.*}}, label %if.then, label %if.end
@@ -180,7 +179,7 @@ void ArrayInit() {
       // CHECK:       if.end:
       Printy("c");
       // CHECK-NEXT:    call void @_ZN6PrintyC1EPKc
-      // CHECK-NEXT:    %arrayinit.element2 = getelementptr inbounds %struct.Printy, ptr %arrayinit.element1, i64 1
+      // CHECK-NEXT:    %arrayinit.element2 = getelementptr inbounds %struct.Printy, ptr %arr, i64 3
       // CHECK-NEXT:    store ptr %arrayinit.element2, ptr %arrayinit.endOfInit, align 8
     }),
     ({
@@ -212,14 +211,14 @@ void ArrayInit() {
 
   // CHECK:       cleanup:
   // CHECK-NEXT:    %1 = load ptr, ptr %arrayinit.endOfInit, align 8
-  // CHECK-NEXT:    %arraydestroy.isempty = icmp eq ptr %arrayinit.begin, %1
+  // CHECK-NEXT:    %arraydestroy.isempty = icmp eq ptr %arr, %1
   // CHECK-NEXT:    br i1 %arraydestroy.isempty, label %[[ARRAY_DESTROY_DONE2:.+]], label %[[ARRAY_DESTROY_BODY2:.+]]
 
   // CHECK:       [[ARRAY_DESTROY_BODY2]]:
   // CHECK-NEXT:    %arraydestroy.elementPast = phi ptr [ %1, %cleanup ], [ %arraydestroy.element, %[[ARRAY_DESTROY_BODY2]] ]
   // CHECK-NEXT:    %arraydestroy.element = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast, i64 -1
   // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
-  // CHECK-NEXT:    %arraydestroy.done = icmp eq ptr %arraydestroy.element, %arrayinit.begin
+  // CHECK-NEXT:    %arraydestroy.done = icmp eq ptr %arraydestroy.element, %arr
   // CHECK-NEXT:    br i1 %arraydestroy.done, label %[[ARRAY_DESTROY_DONE2]], label %[[ARRAY_DESTROY_BODY2]]
 
   // CHECK:       [[ARRAY_DESTROY_DONE2]]:
@@ -238,8 +237,7 @@ void ArraySubobjects() {
       // CHECK: call void @_ZN6PrintyC1EPKc
       // CHECK: call void @_ZN6PrintyC1EPKc
       {Printy("a"),
-      // CHECK: [[ARRAYINIT_BEGIN:%.+]] = getelementptr inbounds [2 x %struct.Printy]
-      // CHECK: store ptr [[ARRAYINIT_BEGIN]], ptr %arrayinit.endOfInit, align 8
+      // CHECK: store ptr %arr2, ptr %arrayinit.endOfInit, align 8
       // CHECK: call void @_ZN6PrintyC1EPKc
       // CHECK: [[ARRAYINIT_ELEMENT:%.+]] = getelementptr inbounds %struct.Printy
       // CHECK: store ptr [[ARRAYINIT_ELEMENT]], ptr %arrayinit.endOfInit, align 8
@@ -248,7 +246,7 @@ void ArraySubobjects() {
            return;
            // CHECK:      if.then:
            // CHECK-NEXT:   [[V0:%.+]] = load ptr, ptr %arrayinit.endOfInit, align 8
-           // CHECK-NEXT:   %arraydestroy.isempty = icmp eq ptr [[ARRAYINIT_BEGIN]], [[V0]]
+           // CHECK-NEXT:   %arraydestroy.isempty = icmp eq ptr %arr2, [[V0]]
            // CHECK-NEXT:   br i1 %arraydestroy.isempty, label %[[ARRAY_DESTROY_DONE:.+]], label %[[ARRAY_DESTROY_BODY:.+]]
          }
          Printy("b");
@@ -268,7 +266,7 @@ void ArraySubobjects() {
     // CHECK-NEXT:    %arraydestroy.elementPast = phi ptr [ %0, %if.then ], [ %arraydestroy.element, %[[ARRAY_DESTROY_BODY]] ]
     // CHECK-NEXT:    %arraydestroy.element = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast, i64 -1
     // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
-    // CHECK-NEXT:    %arraydestroy.done = icmp eq ptr %arraydestroy.element, [[ARRAYINIT_BEGIN]]
+    // CHECK-NEXT:    %arraydestroy.done = icmp eq ptr %arraydestroy.element, %arr2
     // CHECK-NEXT:    br i1 %arraydestroy.done, label %[[ARRAY_DESTROY_DONE]], label %[[ARRAY_DESTROY_BODY]]
 
     // CHECK:       [[ARRAY_DESTROY_DONE]]
@@ -277,11 +275,11 @@ void ArraySubobjects() {
     // CHECK-NEXT:    br label %[[ARRAY_DESTROY_BODY2:.+]]
 
     // CHECK:       [[ARRAY_DESTROY_BODY2]]:
-    // CHECK-NEXT:    %arraydestroy.elementPast5 = phi ptr [ %1, %[[ARRAY_DESTROY_DONE]] ], [ %arraydestroy.element6, %[[ARRAY_DESTROY_BODY2]] ]
-    // CHECK-NEXT:    %arraydestroy.element6 = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast5, i64 -1
-    // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element6)
-    // CHECK-NEXT:    %arraydestroy.done7 = icmp eq ptr %arraydestroy.element6, [[ARRAY_BEGIN]]
-    // CHECK-NEXT:    br i1 %arraydestroy.done7, label %[[ARRAY_DESTROY_DONE2:.+]], label %[[ARRAY_DESTROY_BODY2]]
+    // CHECK-NEXT:    %arraydestroy.elementPast4 = phi ptr [ %1, %[[ARRAY_DESTROY_DONE]] ], [ %arraydestroy.element5, %[[ARRAY_DESTROY_BODY2]] ]
+    // CHECK-NEXT:    %arraydestroy.element5 = getelementptr inbounds %struct.Printy, ptr %arraydestroy.elementPast4, i64 -1
+    // CHECK-NEXT:    call void @_ZN6PrintyD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element5)
+    // CHECK-NEXT:    %arraydestroy.done6 = icmp eq ptr %arraydestroy.element5, [[ARRAY_BEGIN]]
+    // CHECK-NEXT:    br i1 %arraydestroy.done6, label %[[ARRAY_DESTROY_DONE2:.+]], label %[[ARRAY_DESTROY_BODY2]]
 
 
     // CHECK:     [[ARRAY_DESTROY_DONE2]]:
@@ -301,12 +299,21 @@ void LambdaInit() {
                              })]() { return a; };
 }
 
+struct PrintyRefBind {
+  const Printy &a;
+  const Printy &b;
+};
+
+struct Temp {
+  Temp();
+  ~Temp();
+};
+Temp CreateTemp();
+Printy CreatePrinty();
+Printy CreatePrinty(const Temp&);
+
 void LifetimeExtended() {
   // CHECK-LABEL: define dso_local void @_Z16LifetimeExtendedv
-  struct PrintyRefBind {
-    const Printy &a;
-    const Printy &b;
-  };
   PrintyRefBind ps = {Printy("a"), ({
                         if (foo()) {
                           return;
@@ -316,6 +323,41 @@ void LifetimeExtended() {
                         }
                         Printy("b");
                       })};
+}
+
+void ConditionalLifetimeExtended() {
+  // CHECK-LABEL: @_Z27ConditionalLifetimeExtendedv()
+
+  // Verify that we create two cleanup flags.
+  //  1. First for the cleanup which is deactivated after full expression.
+  //  2. Second for the life-ext cleanup which is activated if the branch is taken.
+
+  // Note: We use `CreateTemp()` to ensure that life-ext destroy cleanup is not at
+  // the top of EHStack on deactivation. This ensures using active flags.
+
+  Printy* p1 = nullptr;
+  // CHECK:       store i1 false, ptr [[BRANCH1_DEFERRED:%cleanup.cond]], align 1
+  // CHECK-NEXT:  store i1 false, ptr [[BRANCH1_LIFEEXT:%cleanup.cond.*]], align 1
+  PrintyRefBind ps = {
+      p1 != nullptr ? static_cast<const Printy&>(CreatePrinty())
+      // CHECK:       cond.true:
+      // CHECK-NEXT:    call void @_Z12CreatePrintyv
+      // CHECK-NEXT:    store i1 true, ptr [[BRANCH1_DEFERRED]], align 1
+      // CHECK-NEXT:    store i1 true, ptr [[BRANCH1_LIFEEXT]], align 1
+      // CHECK-NEXT:    br label %{{.*}}
+      : foo() ? static_cast<const Printy&>(CreatePrinty(CreateTemp()))
+              : *p1,
+      ({
+        if (foo()) return;
+        Printy("c");
+        // CHECK:       if.end:
+        // CHECK-NEXT:    call void @_ZN6PrintyC1EPKc
+        // CHECK-NEXT:    store ptr
+      })};
+      // CHECK-NEXT:      store i1 false, ptr [[BRANCH1_DEFERRED]], align 1
+      // CHECK-NEXT:      store i32 0, ptr %cleanup.dest.slot, align 4
+      // CHECK-NEXT:      br label %cleanup
+
 }
 
 void NewArrayInit() {
@@ -407,3 +449,72 @@ void TrivialABI() {
                      0;
                    }));
 }
+
+namespace CleanupFlag {
+struct A {
+  A() {}
+  ~A() {}
+};
+
+struct B {
+  B(const A&) {}
+  B() {}
+  ~B() {}
+};
+
+struct S {
+  A a;
+  B b;
+};
+
+int AcceptS(S s);
+
+void Accept2(int x, int y);
+
+void InactiveNormalCleanup() {
+  // CHECK-LABEL: define {{.*}}InactiveNormalCleanupEv()
+  
+  // The first A{} below is an inactive normal cleanup which
+  // is not popped from EHStack on deactivation. This needs an
+  // "active" cleanup flag.
+
+  // CHECK: [[ACTIVE:%cleanup.isactive.*]] = alloca i1, align 1
+  // CHECK: call void [[A_CTOR:@.*AC1Ev]]
+  // CHECK: store i1 true, ptr [[ACTIVE]], align 1
+  // CHECK: call void [[A_CTOR]]
+  // CHECK: call void [[B_CTOR:@.*BC1ERKNS_1AE]]
+  // CHECK: store i1 false, ptr [[ACTIVE]], align 1
+  // CHECK: call noundef i32 [[ACCEPTS:@.*AcceptSENS_1SE]]
+  Accept2(AcceptS({.a = A{}, .b = A{}}), ({
+            if (foo()) return;
+            // CHECK: if.then:
+            // CHECK:   br label %cleanup
+            0;
+            // CHECK: if.end:
+            // CHECK:   call void [[ACCEPT2:@.*Accept2Eii]]
+            // CHECK:   br label %cleanup
+          }));
+  // CHECK: cleanup:
+  // CHECK:   call void [[S_DTOR:@.*SD1Ev]]
+  // CHECK:   call void [[A_DTOR:@.*AD1Ev]]
+  // CHECK:   %cleanup.is_active = load i1, ptr [[ACTIVE]]
+  // CHECK:   br i1 %cleanup.is_active, label %cleanup.action, label %cleanup.done
+
+  // CHECK: cleanup.action:
+  // CHECK:   call void [[A_DTOR]]
+
+  // The "active" cleanup flag is not required for unused cleanups.
+  Accept2(AcceptS({.a = A{}, .b = A{}}), 0);
+  // CHECK: cleanup.cont:
+  // CHECK:   call void [[A_CTOR]]
+  // CHECK-NOT: store i1 true
+  // CHECK:   call void [[A_CTOR]]
+  // CHECK:   call void [[B_CTOR]]
+  // CHECK-NOT: store i1 false
+  // CHECK:   call noundef i32 [[ACCEPTS]]
+  // CHECK:   call void [[ACCEPT2]]
+  // CHECK:   call void [[S_DTOR]]
+  // CHECK:   call void [[A_DTOR]]
+  // CHECK:   br label %return
+}
+}  // namespace CleanupFlag

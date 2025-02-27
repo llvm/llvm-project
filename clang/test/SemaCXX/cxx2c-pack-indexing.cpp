@@ -154,3 +154,193 @@ void f() {
 }
 
 }
+
+namespace GH88929 {
+    bool b = a...[0];  // expected-error {{use of undeclared identifier 'a'}}
+    using E = P...[0]; // expected-error {{unknown type name 'P'}} \
+                       // expected-error {{expected ';' after alias declaration}}
+}
+
+namespace GH88925 {
+template <typename...> struct S {};
+
+template <auto...> struct W {};
+
+template <int...> struct sequence {};
+
+template <typename... args, int... indices> auto f(sequence<indices...>) {
+  return S<args...[indices]...>(); // #use
+}
+
+template <auto... args, int... indices> auto g(sequence<indices...>) {
+  return W<args...[indices]...>(); // #nttp-use
+}
+
+void h() {
+  static_assert(__is_same(decltype(f<int>(sequence<0, 0>())), S<int, int>));
+  static_assert(__is_same(decltype(f<int, long>(sequence<0, 0>())), S<int, int>));
+  static_assert(__is_same(decltype(f<int, long>(sequence<0, 1>())), S<int, long>));
+  f<int, long>(sequence<3>());
+  // expected-error@#use {{invalid index 3 for pack 'args' of size 2}}}
+  // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
+
+  struct foo {};
+  struct bar {};
+  struct baz {};
+
+  static_assert(__is_same(decltype(g<foo{}, bar{}, baz{}>(sequence<0, 2, 1>())), W<foo{}, baz{}, bar{}>));
+  g<foo{}>(sequence<4>());
+  // expected-error@#nttp-use {{invalid index 4 for pack args of size 1}}
+  // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
+}
+}
+
+namespace GH91885 {
+
+void test(auto...args){
+    [&]<int idx>(){
+        using R = decltype( args...[idx] ) ;
+    }.template operator()<0>();
+}
+
+template<int... args>
+void test2(){
+  [&]<int idx>(){
+    using R = decltype( args...[idx] ) ; // #test2-R
+  }.template operator()<0>(); // #test2-call
+}
+
+void f( ) {
+  test(1);
+  test2<1>();
+  test2();
+  // expected-error@#test2-R {{invalid index 0 for pack args of size 0}}
+  // expected-note@#test2-call {{requested here}}
+  // expected-note@-3 {{requested here}}
+}
+
+
+}
+
+namespace std {
+struct type_info {
+  const char *name;
+};
+} // namespace std
+
+namespace GH93650 {
+auto func(auto... inputArgs) { return typeid(inputArgs...[0]); }
+} // namespace GH93650
+
+
+namespace GH105900 {
+
+template <typename... opts>
+struct types  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> opts...[get_index<s>()] {}
+};
+
+template <auto... opts>
+struct vars  {
+    template <unsigned idx>
+    static constexpr __SIZE_TYPE__ get_index() { return idx; }
+
+    template <unsigned s>
+    static auto x() -> decltype(opts...[get_index<s>()]) {return 0;}
+};
+
+void f() {
+    types<void>::x<0>();
+    vars<0>::x<0>();
+}
+
+} // namespace GH105900
+
+namespace GH105903 {
+
+template <typename... opts> struct temp {
+  template <unsigned s> static auto x() -> opts... [s] {} // expected-note {{invalid index 0 for pack 'opts' of size 0}}
+};
+
+void f() {
+  temp<>::x<0>(); // expected-error {{no matching}}
+}
+
+} // namespace GH105903
+
+namespace GH116105 {
+
+template <unsigned long Np, class... Ts> using pack_type = Ts...[Np];
+
+template <unsigned long Np, auto... Ts> using pack_expr = decltype(Ts...[Np]);
+
+template <class...> struct types;
+
+template <class, long... Is> struct indices;
+
+template <class> struct repack;
+
+template <long... Idx> struct repack<indices<long, Idx...>> {
+  template <class... Ts>
+  using pack_type_alias = types<pack_type<Idx, Ts...>...>;
+
+  template <class... Ts>
+  using pack_expr_alias = types<pack_expr<Idx, Ts{}...>...>;
+};
+
+template <class... Args> struct mdispatch_ {
+  using Idx = __make_integer_seq<indices, long, sizeof...(Args)>;
+
+  static_assert(__is_same(
+      typename repack<Idx>::template pack_type_alias<Args...>, types<Args...>));
+
+  static_assert(__is_same(
+      typename repack<Idx>::template pack_expr_alias<Args...>, types<Args...>));
+};
+
+mdispatch_<int, int> d;
+
+} // namespace GH116105
+
+namespace GH121242 {
+    // Non-dependent type pack access
+    template <int...x>
+    int y = x...[0];
+
+    struct X {};
+
+    template <X...x>
+    X z = x...[0];
+
+    void foo() {
+        (void)y<0>;
+        (void)z<X{}>;
+    }
+} // namespace GH121242
+
+namespace GH123033 {
+  template <class... Types>
+  requires __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  requires  __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d) {
+      return static_cast<Types...[0]>(d);
+  }
+
+  void f() {
+      print<int, int>(12.34);
+      convert<int, int>(12.34);
+  }
+}

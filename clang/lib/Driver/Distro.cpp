@@ -8,7 +8,6 @@
 
 #include "clang/Driver/Distro.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorOr.h"
@@ -95,6 +94,8 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("lunar", Distro::UbuntuLunar)
                     .Case("mantic", Distro::UbuntuMantic)
                     .Case("noble", Distro::UbuntuNoble)
+                    .Case("oracular", Distro::UbuntuOracular)
+                    .Case("plucky", Distro::UbuntuPlucky)
                     .Default(Distro::UnknownDistro);
   return Version;
 }

@@ -19,6 +19,12 @@
 	.align 16
 	larl %r14, target@got
 
+# CHECK: larl %r14, target@GOTENT               # encoding: [0xc0,0xe0,A,A,A,A]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: target@GOTENT+2, kind: FK_390_PC32DBL
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_GOTENT target 0x2
+	.align 16
+	larl %r14, target@gotent
+
 # CHECK: larl %r14, target@INDNTPOFF            # encoding: [0xc0,0xe0,A,A,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@INDNTPOFF+2, kind: FK_390_PC32DBL
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_TLS_IEENT target 0x2

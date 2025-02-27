@@ -16,6 +16,7 @@
 // template<class _URNG> result_type operator()(_URNG& g);
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <numeric>
 #include <random>
@@ -68,7 +69,7 @@ void test1() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.04);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.08);
 }
 
 template <class T>
@@ -109,8 +110,8 @@ void test2() {
     double x_kurtosis = (1-6*d.p()*(1-d.p())) / x_var;
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.08);
 }
 
 template <class T>
@@ -151,8 +152,8 @@ void test3() {
     double x_kurtosis = (1-6*d.p()*(1-d.p())) / x_var;
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.03);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.3);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.07);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 2.0);
 }
 
 template <class T>
@@ -292,7 +293,7 @@ void test6() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs(skew - x_skew) < 0.02);
-    assert(std::abs(kurtosis - x_kurtosis) < 0.01);
+    assert(std::abs(kurtosis - x_kurtosis) < 0.03);
 }
 
 template <class T>

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <array>
@@ -72,6 +73,23 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
+#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
+struct RootSignatureYamlDesc {
+  RootSignatureYamlDesc() = default;
+  RootSignatureYamlDesc(const object::DirectX::RootSignature &Data);
+
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t RootParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplersOffset;
+
+  uint32_t getEncodedFlags();
+
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+using ResourceFlags = dxbc::PSV::ResourceFlags;
 using ResourceBindInfo = dxbc::PSV::v2::ResourceBindInfo;
 
 struct SignatureElement {
@@ -158,6 +176,7 @@ struct Part {
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
+  std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
 };
 
 struct Object {
@@ -176,6 +195,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
@@ -218,6 +239,10 @@ template <> struct MappingTraits<DXContainerYAML::Object> {
   static void mapping(IO &IO, DXContainerYAML::Object &Obj);
 };
 
+template <> struct MappingTraits<DXContainerYAML::ResourceFlags> {
+  static void mapping(IO &IO, DXContainerYAML::ResourceFlags &Flags);
+};
+
 template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
   static void mapping(IO &IO, DXContainerYAML::ResourceBindInfo &Res);
 };
@@ -232,6 +257,11 @@ template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {
 
 template <> struct MappingTraits<DXContainerYAML::Signature> {
   static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
+  static void mapping(IO &IO,
+                      DXContainerYAML::RootSignatureYamlDesc &RootSignature);
 };
 
 } // namespace yaml

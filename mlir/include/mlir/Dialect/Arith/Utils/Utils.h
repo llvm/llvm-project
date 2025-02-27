@@ -24,6 +24,29 @@
 
 namespace mlir {
 
+using ReassociationIndices = SmallVector<int64_t, 2>;
+
+/// Infer the output shape for a {memref|tensor}.expand_shape when it is
+/// possible to do so.
+///
+/// Note: This should *only* be used to implement
+/// `ExpandShapeOp::inferOutputShape` in both the memref and tensor namespaces.
+/// If you need to infer the output shape you should use the static method of
+/// `ExpandShapeOp` instead of calling this.
+///
+/// `inputShape` is the shape of the tensor or memref being expanded as a
+/// sequence of SSA values or constants. `expandedType` is the output shape of
+/// the expand_shape operation. `reassociation` is the reassociation denoting
+/// the output dims each input dim is mapped to.
+///
+/// Returns the output shape in `outputShape` and `staticOutputShape`, following
+/// the conventions for the output_shape and static_output_shape inputs to the
+/// expand_shape ops.
+std::optional<SmallVector<OpFoldResult>>
+inferExpandShapeOutputShape(OpBuilder &b, Location loc, ShapedType expandedType,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            ArrayRef<OpFoldResult> inputShape);
+
 /// Matches a ConstantIndexOp.
 detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
 
@@ -31,7 +54,13 @@ llvm::SmallBitVector getPositionsOfShapeOne(unsigned rank,
                                             ArrayRef<int64_t> shape);
 
 /// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
-/// a Value or creates a ConstantIndexOp if it casts to an IntegerAttribute.
+/// a Value or creates a ConstantOp if it casts to an Integer Attribute.
+/// Other attribute types are not supported.
+Value getValueOrCreateConstantIntOp(OpBuilder &b, Location loc,
+                                    OpFoldResult ofr);
+
+/// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
+/// a Value or creates a ConstantIndexOp if it casts to an Integer Attribute.
 /// Other attribute types are not supported.
 Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                       OpFoldResult ofr);
@@ -65,6 +94,10 @@ Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
 Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
                                   const APFloat &value);
 
+/// Returns the int type of the integer in ofr.
+/// Other attribute types are not supported.
+Type getType(OpFoldResult ofr);
+
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.
 struct ArithBuilder {
@@ -97,6 +130,10 @@ namespace arith {
 Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values);
 Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
                     Type resultType);
+
+// Map strings to float types.
+std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name);
+
 } // namespace arith
 } // namespace mlir
 

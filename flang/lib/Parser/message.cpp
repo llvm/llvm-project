@@ -185,6 +185,24 @@ Message &Message::set_severity(Severity severity) {
   return *this;
 }
 
+std::optional<common::LanguageFeature> Message::languageFeature() const {
+  return languageFeature_;
+}
+
+Message &Message::set_languageFeature(common::LanguageFeature feature) {
+  languageFeature_ = feature;
+  return *this;
+}
+
+std::optional<common::UsageWarning> Message::usageWarning() const {
+  return usageWarning_;
+}
+
+Message &Message::set_usageWarning(common::UsageWarning warning) {
+  usageWarning_ = warning;
+  return *this;
+}
+
 std::string Message::ToString() const {
   return common::visit(
       common::visitors{

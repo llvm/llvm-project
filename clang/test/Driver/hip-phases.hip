@@ -4,9 +4,6 @@
 // - Host/device-only compilation;
 // - User-requested final phase - binary or assembly.
 
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-//
 // Test single gpu architecture with complete compilation.
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \

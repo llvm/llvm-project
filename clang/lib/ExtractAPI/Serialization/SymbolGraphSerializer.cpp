@@ -31,7 +31,6 @@
 using namespace clang;
 using namespace clang::extractapi;
 using namespace llvm;
-using namespace llvm::json;
 
 namespace {
 
@@ -105,6 +104,10 @@ Object serializePlatform(const Triple &T) {
   Object Platform;
   Platform["architecture"] = T.getArchName();
   Platform["vendor"] = T.getVendorName();
+
+  if (!T.getEnvironmentName().empty())
+    Platform["environment"] = T.getEnvironmentName();
+
   Platform["operatingSystem"] = serializeOperatingSystem(T);
   return Platform;
 }
@@ -164,28 +167,33 @@ std::optional<Array> serializeAvailability(const AvailabilityInfo &Avail) {
   if (Avail.isDefault())
     return std::nullopt;
 
-  Object Availability;
   Array AvailabilityArray;
-  Availability["domain"] = Avail.Domain;
-  serializeObject(Availability, "introduced",
-                  serializeSemanticVersion(Avail.Introduced));
-  serializeObject(Availability, "deprecated",
-                  serializeSemanticVersion(Avail.Deprecated));
-  serializeObject(Availability, "obsoleted",
-                  serializeSemanticVersion(Avail.Obsoleted));
+
   if (Avail.isUnconditionallyDeprecated()) {
     Object UnconditionallyDeprecated;
     UnconditionallyDeprecated["domain"] = "*";
     UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
     AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
   }
-  if (Avail.isUnconditionallyUnavailable()) {
-    Object UnconditionallyUnavailable;
-    UnconditionallyUnavailable["domain"] = "*";
-    UnconditionallyUnavailable["isUnconditionallyUnavailable"] = true;
-    AvailabilityArray.emplace_back(std::move(UnconditionallyUnavailable));
+
+  if (Avail.Domain.str() != "") {
+    Object Availability;
+    Availability["domain"] = Avail.Domain;
+
+    if (Avail.isUnavailable()) {
+      Availability["isUnconditionallyUnavailable"] = true;
+    } else {
+      serializeObject(Availability, "introduced",
+                      serializeSemanticVersion(Avail.Introduced));
+      serializeObject(Availability, "deprecated",
+                      serializeSemanticVersion(Avail.Deprecated));
+      serializeObject(Availability, "obsoleted",
+                      serializeSemanticVersion(Avail.Obsoleted));
+    }
+
+    AvailabilityArray.emplace_back(std::move(Availability));
   }
-  AvailabilityArray.emplace_back(std::move(Availability));
+
   return AvailabilityArray;
 }
 
@@ -205,7 +213,6 @@ StringRef getLanguageName(Language Lang) {
   case Language::OpenCL:
   case Language::OpenCLCXX:
   case Language::CUDA:
-  case Language::RenderScript:
   case Language::HIP:
   case Language::HLSL:
 
@@ -512,7 +519,7 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
 /// which is prefixed by the source language name, useful for tooling to parse
 /// the kind, and a \c displayName for rendering human-readable names.
 Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
-  return serializeSymbolKind(Record.getKind(), Lang);
+  return serializeSymbolKind(Record.KindForDisplay, Lang);
 }
 
 /// Serialize the function signature field, as specified by the
@@ -589,8 +596,8 @@ Array generateParentContexts(const SmallVectorImpl<SymbolReference> &Parents,
     Elem["usr"] = Parent.USR;
     Elem["name"] = Parent.Name;
     if (Parent.Record)
-      Elem["kind"] =
-          serializeSymbolKind(Parent.Record->getKind(), Lang)["identifier"];
+      Elem["kind"] = serializeSymbolKind(Parent.Record->KindForDisplay,
+                                         Lang)["identifier"];
     else
       Elem["kind"] =
           serializeSymbolKind(APIRecord::RK_Unknown, Lang)["identifier"];
@@ -915,9 +922,13 @@ bool SymbolGraphSerializer::visitObjCInterfaceRecord(
 
 bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     const ObjCCategoryRecord *Record) {
+  if (SkipSymbolsInCategoriesToExternalTypes &&
+      !API.findRecordForUSR(Record->Interface.USR))
+    return true;
+
   auto *CurrentModule = ModuleForCurrentSymbol;
-  if (Record->isExtendingExternalModule())
-    ModuleForCurrentSymbol = &ExtendedModules[Record->Interface.Source];
+  if (auto ModuleExtendedByRecord = Record->getExtendedExternalModule())
+    ModuleForCurrentSymbol = &ExtendedModules[*ModuleExtendedByRecord];
 
   if (!walkUpFromObjCCategoryRecord(Record))
     return false;
@@ -1022,16 +1033,19 @@ void SymbolGraphSerializer::serializeGraphToStream(
     ExtendedModule &&EM) {
   Object Root = serializeGraph(ModuleName, std::move(EM));
   if (Options.Compact)
-    OS << formatv("{0}", Value(std::move(Root))) << "\n";
+    OS << formatv("{0}", json::Value(std::move(Root))) << "\n";
   else
-    OS << formatv("{0:2}", Value(std::move(Root))) << "\n";
+    OS << formatv("{0:2}", json::Value(std::move(Root))) << "\n";
 }
 
 void SymbolGraphSerializer::serializeMainSymbolGraph(
     raw_ostream &OS, const APISet &API, const APIIgnoresList &IgnoresList,
     SymbolGraphSerializerOption Options) {
-  SymbolGraphSerializer Serializer(API, IgnoresList,
-                                   Options.EmitSymbolLabelsForTesting);
+  SymbolGraphSerializer Serializer(
+      API, IgnoresList, Options.EmitSymbolLabelsForTesting,
+      /*ForceEmitToMainModule=*/true,
+      /*SkipSymbolsInCategoriesToExternalTypes=*/true);
+
   Serializer.traverseAPISet();
   Serializer.serializeGraphToStream(OS, Options, API.ProductName,
                                     std::move(Serializer.MainModule));
@@ -1053,9 +1067,8 @@ void SymbolGraphSerializer::serializeWithExtensionGraphs(
 
   for (auto &ExtensionSGF : Serializer.ExtendedModules) {
     if (auto ExtensionOS =
-            CreateOutputStream(ExtensionSGF.getKey() + "@" + API.ProductName))
-      Serializer.serializeGraphToStream(*ExtensionOS, Options,
-                                        ExtensionSGF.getKey(),
+            CreateOutputStream(API.ProductName + "@" + ExtensionSGF.getKey()))
+      Serializer.serializeGraphToStream(*ExtensionOS, Options, API.ProductName,
                                         std::move(ExtensionSGF.getValue()));
   }
 }

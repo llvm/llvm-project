@@ -52,7 +52,7 @@ template<> void Foo<int>(int Bar);
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",
@@ -186,7 +186,7 @@ template<> void Foo<int>(int Bar);
         },
         {
           "kind": "text",
-          "spelling": "<> "
+          "spelling": " <> "
         },
         {
           "kind": "typeIdentifier",

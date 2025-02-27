@@ -30,12 +30,12 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/TilingInterface.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
+#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -43,7 +43,7 @@ namespace mlir::linalg {
 
 using MeshAxis = mesh::MeshAxis;
 using ReductionKind = mesh::ReductionKind;
-using MeshShardingAttr = mesh::MeshShardingAttr;
+using MeshSharding = mesh::MeshSharding;
 using ShardingArray = mesh::ShardingArray;
 using MeshOp = mesh::MeshOp;
 
@@ -102,19 +102,18 @@ static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
   return getReductionKind(reductionOp.value());
 }
 
-static MeshOp getMesh(Operation *op,
-                      ArrayRef<MeshShardingAttr> operandShardings,
-                      ArrayRef<MeshShardingAttr> resultShardings,
+static MeshOp getMesh(Operation *op, ArrayRef<MeshSharding> operandShardings,
+                      ArrayRef<MeshSharding> resultShardings,
                       SymbolTableCollection &symbolTable) {
-  for (MeshShardingAttr sharding : operandShardings) {
+  for (const MeshSharding &sharding : operandShardings) {
     if (sharding) {
-      return mesh::getMesh(op, sharding.getMesh(), symbolTable);
+      return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }
   }
 
-  for (MeshShardingAttr sharding : resultShardings) {
+  for (const MeshSharding &sharding : resultShardings) {
     if (sharding) {
-      return mesh::getMesh(op, sharding.getMesh(), symbolTable);
+      return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }
   }
 
@@ -130,8 +129,9 @@ static MeshOp getMesh(Operation *op,
 // the original operand.
 // The other processes would use the reduction operation neutral tensor.
 static Value createDestinationPassingStyleInitOperand(
-    LinalgOp op, Value spmdizedOperand, ArrayRef<MeshAxis> reductionMeshAxes,
-    MeshOp meshOp, ImplicitLocOpBuilder &builder) {
+    LinalgOp op, int operandNumber, Value spmdizedOperand,
+    ArrayRef<MeshAxis> reductionMeshAxes, MeshOp meshOp,
+    ImplicitLocOpBuilder &builder) {
   Value processLinearIndexInReductionGroup = mesh::createProcessLinearIndex(
       meshOp.getSymName(), reductionMeshAxes, builder);
   Value zero = builder.create<arith::ConstantIndexOp>(0);
@@ -153,14 +153,21 @@ static Value createDestinationPassingStyleInitOperand(
     builder.setInsertionPointToEnd(&ifOp.getElseRegion().front());
     SmallVector<OpFoldResult> shape =
         tensor::getMixedSizes(builder, builder.getLoc(), spmdizedOperand);
-    PartialReductionOpInterface partialReductionIface =
-        llvm::cast<PartialReductionOpInterface>(op.getOperation());
-    FailureOr<Operation *> reductionNeutralTensorOp =
-        partialReductionIface.generateInitialTensorForPartialReduction(
-            builder, builder.getLoc(), shape, {});
-    assert(succeeded(reductionNeutralTensorOp));
-    builder.create<scf::YieldOp>(
-        reductionNeutralTensorOp.value()->getResult(0));
+
+    SmallVector<Operation *> combinerOps;
+    matchReduction(op.getRegionOutputArgs(), operandNumber, combinerOps);
+    assert(combinerOps.size() == 1);
+    std::optional<TypedAttr> neutralEl =
+        arith::getNeutralElement(combinerOps[0]);
+
+    Value init = builder.create<tensor::EmptyOp>(op.getLoc(), shape,
+                                                 neutralEl.value().getType());
+    Value constant =
+        builder.create<arith::ConstantOp>(op.getLoc(), neutralEl.value());
+    Value fill = builder.create<linalg::FillOp>(op.getLoc(), constant, init)
+                     .getResult(0);
+
+    builder.create<scf::YieldOp>(fill);
   }
   return ifOp.getResult(0);
 }
@@ -173,20 +180,19 @@ static SmallVector<Value> createDestinationPassingStyleInitOperands(
     ImplicitLocOpBuilder &builder) {
   // TODO: add support for multiple destination passing style initial value
   // operands.
-  // PartialReductionOpInterface::generateInitialTensorForPartialReduction
-  // needs to also support multiple DPS initial operands.
+  assert(op.getNumDpsInits() == 1 && "Multiple initial values not supported.");
   SmallVector<Value> newOperands = llvm::to_vector(spmdizedOperands);
   auto operandIdx = op.getDpsInitOperand(0)->getOperandNumber();
   Value spmdizedInitOperand =
       spmdizationMap.lookup(op->getOperands()[operandIdx]);
   newOperands[operandIdx] = createDestinationPassingStyleInitOperand(
-      op, spmdizedInitOperand, reductionMeshAxes, meshOp, builder);
+      op, 0, spmdizedInitOperand, reductionMeshAxes, meshOp, builder);
   return newOperands;
 }
 
 static void createAllReduceForResultWithoutPartialSharding(
     Value unshardedLinalgOpResult, ArrayRef<MeshAxis> opReductionMeshAxes,
-    MeshShardingAttr resultSharding, ReductionKind reductionKind,
+    MeshSharding resultSharding, ReductionKind reductionKind,
     IRMapping &spmdizationMap, ImplicitLocOpBuilder &builder) {
   SmallVector<MeshAxis> allReduceMeshAxes;
   llvm::copy_if(opReductionMeshAxes, std::back_inserter(allReduceMeshAxes),
@@ -200,14 +206,14 @@ static void createAllReduceForResultWithoutPartialSharding(
 
   Value spmdizedLinalgOpResult = spmdizationMap.lookup(unshardedLinalgOpResult);
   Value reducedValue = builder.create<mesh::AllReduceOp>(
-      spmdizedLinalgOpResult, resultSharding.getMesh().getValue(),
-      allReduceMeshAxes, reductionKind);
+      spmdizedLinalgOpResult, resultSharding.getMesh(), allReduceMeshAxes,
+      reductionKind);
   spmdizationMap.map(unshardedLinalgOpResult, reducedValue);
 }
 
 static void createAllReduceForResultsWithoutPartialShardings(
     LinalgOp unshardedOp, ArrayRef<MeshAxis> opReductionMeshAxes,
-    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    ArrayRef<MeshSharding> resultShardings, IRMapping &spmdizationMap,
     ImplicitLocOpBuilder &builder) {
   ReductionKind reductionKind = getReductionKindOfLinalgOp(unshardedOp);
   for (auto [unshardedLinalgOpResult, resultSharding] :
@@ -220,8 +226,8 @@ static void createAllReduceForResultsWithoutPartialShardings(
 
 static void spmdizeLinalgOpWithShardedReduction(
     LinalgOp op, ArrayRef<Value> spmdizedOperands,
-    ArrayRef<MeshShardingAttr> operandShardings,
-    ArrayRef<MeshShardingAttr> resultShardings,
+    ArrayRef<MeshSharding> operandShardings,
+    ArrayRef<MeshSharding> resultShardings,
     ArrayRef<utils::IteratorType> loopIteratorTypes,
     ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators,
     IRMapping &spmdizationMap, SymbolTableCollection &symbolTable,
@@ -279,9 +285,23 @@ struct StructuredOpShardingInterface
     return res;
   }
 
+  SmallVector<ReductionKind>
+  getReductionLoopIteratorKinds(Operation *op) const {
+    LinalgOp linalgOp = llvm::cast<LinalgOp>(op);
+    SmallVector<utils::IteratorType> iteratorTypes =
+        linalgOp.getIteratorTypesArray();
+    unsigned reductionItersCount = std::accumulate(
+        iteratorTypes.begin(), iteratorTypes.end(), 0,
+        [](unsigned count, utils::IteratorType iter) {
+          return count + (iter == utils::IteratorType::reduction);
+        });
+    mesh::ReductionKind reductionKind = getReductionKindOfLinalgOp(linalgOp);
+    return SmallVector<ReductionKind>(reductionItersCount, reductionKind);
+  }
+
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshShardingAttr> operandShardings,
-                        ArrayRef<MeshShardingAttr> resultShardings,
+                        ArrayRef<MeshSharding> operandShardings,
+                        ArrayRef<MeshSharding> resultShardings,
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {

@@ -41,26 +41,26 @@ extern bool EnableARCOpts;
 /// Test if the given module looks interesting to run ARC optimization
 /// on.
 inline bool ModuleHasARC(const Module &M) {
-  return
-    M.getNamedValue("llvm.objc.retain") ||
-    M.getNamedValue("llvm.objc.release") ||
-    M.getNamedValue("llvm.objc.autorelease") ||
-    M.getNamedValue("llvm.objc.retainAutoreleasedReturnValue") ||
-    M.getNamedValue("llvm.objc.unsafeClaimAutoreleasedReturnValue") ||
-    M.getNamedValue("llvm.objc.retainBlock") ||
-    M.getNamedValue("llvm.objc.autoreleaseReturnValue") ||
-    M.getNamedValue("llvm.objc.autoreleasePoolPush") ||
-    M.getNamedValue("llvm.objc.loadWeakRetained") ||
-    M.getNamedValue("llvm.objc.loadWeak") ||
-    M.getNamedValue("llvm.objc.destroyWeak") ||
-    M.getNamedValue("llvm.objc.storeWeak") ||
-    M.getNamedValue("llvm.objc.initWeak") ||
-    M.getNamedValue("llvm.objc.moveWeak") ||
-    M.getNamedValue("llvm.objc.copyWeak") ||
-    M.getNamedValue("llvm.objc.retainedObject") ||
-    M.getNamedValue("llvm.objc.unretainedObject") ||
-    M.getNamedValue("llvm.objc.unretainedPointer") ||
-    M.getNamedValue("llvm.objc.clang.arc.use");
+  return M.getNamedValue("llvm.objc.retain") ||
+         M.getNamedValue("llvm.objc.release") ||
+         M.getNamedValue("llvm.objc.autorelease") ||
+         M.getNamedValue("llvm.objc.retainAutoreleasedReturnValue") ||
+         M.getNamedValue("llvm.objc.unsafeClaimAutoreleasedReturnValue") ||
+         M.getNamedValue("llvm.objc.retainBlock") ||
+         M.getNamedValue("llvm.objc.autoreleaseReturnValue") ||
+         M.getNamedValue("llvm.objc.autoreleasePoolPush") ||
+         M.getNamedValue("llvm.objc.loadWeakRetained") ||
+         M.getNamedValue("llvm.objc.loadWeak") ||
+         M.getNamedValue("llvm.objc.destroyWeak") ||
+         M.getNamedValue("llvm.objc.storeWeak") ||
+         M.getNamedValue("llvm.objc.initWeak") ||
+         M.getNamedValue("llvm.objc.moveWeak") ||
+         M.getNamedValue("llvm.objc.copyWeak") ||
+         M.getNamedValue("llvm.objc.retainedObject") ||
+         M.getNamedValue("llvm.objc.unretainedObject") ||
+         M.getNamedValue("llvm.objc.unretainedPointer") ||
+         M.getNamedValue("llvm.objc.clang.arc.noop.use") ||
+         M.getNamedValue("llvm.objc.clang.arc.use");
 }
 
 /// This is a wrapper around getUnderlyingObject which also knows how to

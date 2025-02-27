@@ -17,9 +17,9 @@ in  `the official SPIR-V specification <https://www.khronos.org/registry/SPIR-V/
 Usage
 =====
 
-The SPIR-V backend can be invoked either from LLVM's Static Compiler (llc) or Clang, 
-allowing developers to compile LLVM intermediate language (IL) files or OpenCL kernel 
-sources directly to SPIR-V. This section outlines the usage of various commands to 
+The SPIR-V backend can be invoked either from LLVM's Static Compiler (llc) or Clang,
+allowing developers to compile LLVM intermediate language (IL) files or OpenCL kernel
+sources directly to SPIR-V. This section outlines the usage of various commands to
 leverage the SPIR-V backend for different purposes.
 
 Static Compiler Commands
@@ -33,7 +33,11 @@ Static Compiler Commands
    Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers input.ll -o output.spvt`
    Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_INTEL_arbitrary_precision_integers extension.
 
-3. **SPIR-V Binary Generation**
+3. **Compilation with experimental NonSemantic.Shader.DebugInfo.100 support**
+   Command: `llc --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with additional NonSemantic.Shader.DebugInfo.100 instructions. It enables the required SPV_KHR_non_semantic_info extension.
+
+4. **SPIR-V Binary Generation**
    Command: `llc -O0 -mtriple=spirv64-unknown-unknown -filetype=obj input.ll -o output.spvt`
    Description: Generates a SPIR-V object file (`output.spvt`) from an LLVM module, targeting a 64-bit SPIR-V architecture with no optimizations.
 
@@ -89,18 +93,22 @@ to specify the target triple:
      Vendor                Description
      ===================== ==============================================================
      *<empty>*/``unknown``  Generic SPIR-V target without any vendor-specific settings.
+     ``amd``                AMDGCN SPIR-V target, with support for target specific
+                            builtins and ASM, meant to be consumed by AMDGCN toolchains.
      ===================== ==============================================================
 
   .. table:: Operating Systems
 
-     ===================== ============================================================
+     ===================== ==============================================================
      OS                    Description
-     ===================== ============================================================
+     ===================== ==============================================================
      *<empty>*/``unknown``  Defaults to the OpenCL runtime.
      ``vulkan``             Vulkan shader runtime.
      ``vulkan1.2``          Vulkan 1.2 runtime, corresponding to SPIR-V 1.5.
      ``vulkan1.3``          Vulkan 1.3 runtime, corresponding to SPIR-V 1.6.
-     ===================== ============================================================
+     ``amdhsa``             AMDHSA runtime, meant to be used on HSA compatible runtimes,
+                            corresponding to SPIR-V 1.6.
+     ===================== ==============================================================
 
   .. table:: SPIR-V Environments
 
@@ -114,15 +122,17 @@ Example:
 
 ``-target spirv64v1.0`` can be used to compile for SPIR-V version 1.0 with 64-bit pointer width.
 
+``-target spirv64-amd-amdhsa`` can be used to compile for AMDGCN flavoured SPIR-V with 64-bit pointer width.
+
 .. _spirv-extensions:
 
 Extensions
 ----------
 
-The SPIR-V backend supports a variety of `extensions <https://github.com/KhronosGroup/SPIRV-Registry/tree/main/extensions>`_ 
-that enable or enhance features beyond the core SPIR-V specification. 
-These extensions can be enabled using the ``-spirv-extensions`` option 
-followed by the name of the extension(s) you wish to enable. Below is a 
+The SPIR-V backend supports a variety of `extensions <https://github.com/KhronosGroup/SPIRV-Registry/tree/main/extensions>`_
+that enable or enhance features beyond the core SPIR-V specification.
+These extensions can be enabled using the ``-spirv-extensions`` option
+followed by the name of the extension(s) you wish to enable. Below is a
 list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
 .. list-table:: Supported SPIR-V Extensions
@@ -131,6 +141,12 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
 
    * - Extension Name
      - Description
+   * - ``SPV_EXT_arithmetic_fence``
+     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
+   * - ``SPV_EXT_demote_to_helper_invocation``
+     - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
+   * - ``SPV_EXT_optnone``
+     - Adds OptNoneEXT value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_EXT_shader_atomic_float16_add``
      - Extends the SPV_EXT_shader_atomic_float_add extension to support atomically adding to 16-bit floating-point numbers in memory.
    * - ``SPV_EXT_shader_atomic_float_add``
@@ -139,34 +155,58 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic min and max instruction on floating-point numbers.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
+   * - ``SPV_INTEL_bindless_images``
+     - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
+   * - ``SPV_INTEL_cache_controls``
+     - Allows cache control information to be applied to memory access instructions.
+   * - ``SPV_INTEL_float_controls2``
+     - Adds execution modes and decorations to control floating-point computations.
    * - ``SPV_INTEL_function_pointers``
      - Allows translation of function pointers.
+   * - ``SPV_INTEL_inline_assembly``
+     - Allows to use inline assembly.
+   * - ``SPV_INTEL_global_variable_host_access``
+     - Adds decorations that can be applied to global (module scope) variables.
+   * - ``SPV_INTEL_global_variable_fpga_decorations``
+     - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
+   * - ``SPV_INTEL_media_block_io``
+     - Adds additional subgroup block read and write functionality that allow applications to flexibly specify the width and height of the block to read from or write to a 2D image.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
+   * - ``SPV_INTEL_split_barrier``
+     - Adds SPIR-V instructions to split a control barrier into two separate operations: the first indicates that an invocation has "arrived" at the barrier but should continue executing, and the second indicates that an invocation should "wait" for other invocations to arrive at the barrier before executing further.
    * - ``SPV_INTEL_subgroups``
      - Allows work items in a subgroup to share data without the use of local memory and work group barriers, and to utilize specialized hardware to load and store blocks of data from images or buffers.
    * - ``SPV_INTEL_usm_storage_classes``
      - Introduces two new storage classes that are subclasses of the CrossWorkgroup storage class that provides additional information that can enable optimization.
    * - ``SPV_INTEL_variable_length_array``
      - Allows to allocate local arrays whose number of elements is unknown at compile time.
+   * - ``SPV_INTEL_joint_matrix``
+     - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multuply-add instruction.
    * - ``SPV_KHR_bit_instructions``
      - Enables bit instructions to be used by SPIR-V modules without requiring the Shader capability.
    * - ``SPV_KHR_expect_assume``
      - Provides additional information to a compiler, similar to the llvm.assume and llvm.expect intrinsics.
    * - ``SPV_KHR_float_controls``
      - Provides new execution modes to control floating-point computations by overriding an implementation’s default behavior for rounding modes, denormals, signed zero, and infinities.
+   * - ``SPV_KHR_integer_dot_product``
+     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8 bit integers and 4-component vectors of 8 bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
+   * - ``SPV_KHR_shader_clock``
+     - Adds the extension cl_khr_kernel_clock that adds the ability for a kernel to sample the value from clocks provided by compute units.
    * - ``SPV_KHR_subgroup_rotate``
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``
      - Allows support for additional group operations within uniform control flow.
+   * - ``SPV_KHR_non_semantic_info``
+     - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
 
-To enable multiple extensions, list them separated by spaces. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
+To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
 ``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
 
@@ -179,14 +219,14 @@ To enable all extensions except specified, specify ``all`` followed by a list of
 SPIR-V representation in LLVM IR
 ================================
 
-SPIR-V is intentionally designed for seamless integration with various Intermediate 
-Representations (IRs), including LLVM IR, facilitating straightforward mappings for 
-most of its entities. The development of the SPIR-V backend has been guided by a 
+SPIR-V is intentionally designed for seamless integration with various Intermediate
+Representations (IRs), including LLVM IR, facilitating straightforward mappings for
+most of its entities. The development of the SPIR-V backend has been guided by a
 principle of compatibility with the `Khronos Group SPIR-V LLVM Translator <https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
-Consequently, the input representation accepted by the SPIR-V backend aligns closely 
-with that detailed in `the SPIR-V Representation in LLVM document <https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/main/docs/SPIRVRepresentationInLLVM.rst>`_. 
-This document, along with the sections that follow, delineate the main points and focus 
-on any differences between the LLVM IR that this backend processes and the conventions 
+Consequently, the input representation accepted by the SPIR-V backend aligns closely
+with that detailed in `the SPIR-V Representation in LLVM document <https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/main/docs/SPIRVRepresentationInLLVM.rst>`_.
+This document, along with the sections that follow, delineate the main points and focus
+on any differences between the LLVM IR that this backend processes and the conventions
 used by other tools.
 
 .. _spirv-special-types:
@@ -199,19 +239,19 @@ using target extension types and are represented as follows:
 
   .. table:: SPIR-V Opaque Types
 
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
      SPIR-V Type        LLVM type name         LLVM type arguments
-     ================== ====================== =========================================================================================
-     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     ================== ====================== ===========================================================================================
+     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeSampler      ``spirv.Sampler``      (none)
-     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeEvent        ``spirv.Event``        (none)
      OpTypeDeviceEvent  ``spirv.DeviceEvent``  (none)
      OpTypeReserveId    ``spirv.ReserveId``    (none)
      OpTypeQueue        ``spirv.Queue``        (none)
      OpTypePipe         ``spirv.Pipe``         access qualifier
      OpTypePipeStorage  ``spirv.PipeStorage``  (none)
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
 
 All integer arguments take the same value as they do in their `corresponding
 SPIR-V instruction <https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_type_declaration_instructions>`_.
@@ -227,10 +267,10 @@ previous type has the representation
 Target Intrinsics
 -----------------
 
-The SPIR-V backend employs several LLVM IR intrinsics that facilitate various low-level 
-operations essential for generating correct and efficient SPIR-V code. These intrinsics 
-cover a range of functionalities from type assignment and memory management to control 
-flow and atomic operations. Below is a detailed table of selected intrinsics used in the 
+The SPIR-V backend employs several LLVM IR intrinsics that facilitate various low-level
+operations essential for generating correct and efficient SPIR-V code. These intrinsics
+cover a range of functionalities from type assignment and memory management to control
+flow and atomic operations. Below is a detailed table of selected intrinsics used in the
 SPIR-V backend, along with their descriptions and argument details.
 
 .. list-table:: LLVM IR Intrinsics for SPIR-V
@@ -253,6 +293,14 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, Vararg]`
      - Assigns names to types or values, enhancing readability and debuggability of SPIR-V code. Not emitted directly but used for metadata enrichment.
+   * - `int_spv_value_md`
+     - None
+     - `[Metadata]`
+     - Assigns a set of attributes (such as name and data type) to a value that is the argument of the associated `llvm.fake.use` intrinsic call. The latter is used as a mean to map virtual registers created by IRTranslator to the original value.
+   * - `int_spv_assign_decoration`
+     - None
+     - `[Type, Metadata]`
+     - Assigns decoration to values by associating them with metadatas. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
@@ -294,7 +342,7 @@ SPIR-V backend, along with their descriptions and argument details.
      - `[Type, Type, Any Integer]`
      - Inserts an element into an aggregate type at a specified index. Allows for building and modifying arrays and vectors.
    * - `int_spv_const_composite`
-     - 32-bit Integer
+     - Type
      - `[Vararg]`
      - Constructs a composite type from given elements. Key for creating arrays, structs, and vectors from individual components.
    * - `int_spv_bitcast`
@@ -329,6 +377,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - 32-bit Integer
      - `[]`
      - Generates an undefined value. Useful for optimizations and indicating uninitialized variables.
+   * - `int_spv_inline_asm`
+     - None
+     - `[Metadata, Metadata, Vararg]`
+     - Associates inline assembly features to inline assembly call instances by creating metadatas and preserving original arguments. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_assume`
      - None
      - `[1-bit Integer]`
@@ -345,86 +397,106 @@ SPIR-V backend, along with their descriptions and argument details.
      - Pointer
      - `[8-bit Integer]`
      - Creates a resource handle for graphics or compute resources. Facilitates the management and use of resources in shaders.
+   * - `int_spv_resource_handlefrombinding`
+     - spirv.Image
+     - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, bool isUniformIndex]`
+     - Returns the handle for the resource at the given set and binding.\
+       If `arraySize > 1`, then the binding represents an array of resources\
+       of the given size, and the handle for the resource at the given index is returned.\
+       If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
+   * - `int_spv_typeBufferLoad`
+     - Scalar or vector
+     - `[spirv.Image ImageBuffer, 32-bit Integer coordinate]`
+     - Loads a value from a Vulkan image buffer at the given coordinate. The \
+       image buffer data is assumed to be stored as a 4-element vector. If the \
+       return type is a scalar, then the first element of the vector is \
+       returned. If the return type is an n-element vector, then the first \
+       n-elements of the 4-element vector are returned.
+   * - `int_spv_resource_store_typedbuffer`
+     - void
+     - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
+     - Stores the data to the image buffer at the given coordinate. The \
+       data must be a 4-element vector.
 
 .. _spirv-builtin-functions:
 
 Builtin Functions
 -----------------
 
-The following section highlights the representation of SPIR-V builtins in LLVM IR, 
+The following section highlights the representation of SPIR-V builtins in LLVM IR,
 emphasizing builtins that do not have direct counterparts in LLVM.
 
 Instructions as Function Calls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SPIR-V builtins without direct LLVM counterparts are represented as LLVM function calls. 
-These functions, termed SPIR-V builtin functions, follow an IA64 mangling scheme with 
-SPIR-V-specific extensions. Parsing non-mangled calls to builtins is supported in some cases, 
+SPIR-V builtins without direct LLVM counterparts are represented as LLVM function calls.
+These functions, termed SPIR-V builtin functions, follow an IA64 mangling scheme with
+SPIR-V-specific extensions. Parsing non-mangled calls to builtins is supported in some cases,
 but not tested extensively. The general format is:
 
 .. code-block:: c
 
   __spirv_{OpCodeName}{_OptionalPostfixes}
 
-Where `{OpCodeName}` is the SPIR-V opcode name sans the "Op" prefix, and 
-`{OptionalPostfixes}` are decoration-specific postfixes, if any. The mangling and 
-postfixes allow for the representation of SPIR-V's rich instruction set within LLVM's 
+Where `{OpCodeName}` is the SPIR-V opcode name sans the "Op" prefix, and
+`{OptionalPostfixes}` are decoration-specific postfixes, if any. The mangling and
+postfixes allow for the representation of SPIR-V's rich instruction set within LLVM's
 framework.
 
 Extended Instruction Sets
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SPIR-V defines several extended instruction sets for additional functionalities, such as 
-OpenCL-specific operations. In LLVM IR, these are represented by function calls to 
+SPIR-V defines several extended instruction sets for additional functionalities, such as
+OpenCL-specific operations. In LLVM IR, these are represented by function calls to
 mangled builtins and selected based on the environment. For example:
 
 .. code-block:: c
 
   acos_f32
 
-represents the `acos` function from the OpenCL extended instruction set for a float32 
+represents the `acos` function from the OpenCL extended instruction set for a float32
 input.
 
 Builtin Variables
 ~~~~~~~~~~~~~~~~~
 
-SPIR-V builtin variables, which provide access to special hardware or execution model 
-properties, are mapped to either LLVM function calls or LLVM global variables. The 
+SPIR-V builtin variables, which provide access to special hardware or execution model
+properties, are mapped to either LLVM function calls or LLVM global variables. The
 representation follows the naming convention:
 
 .. code-block:: c
 
   __spirv_BuiltIn{VariableName}
 
-For instance, the SPIR-V builtin `GlobalInvocationId` is accessible in LLVM IR as 
+For instance, the SPIR-V builtin `GlobalInvocationId` is accessible in LLVM IR as
 `__spirv_BuiltInGlobalInvocationId`.
 
 Vector Load and Store Builtins
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SPIR-V's capabilities for loading and storing vectors are represented in LLVM IR using 
-functions that mimic the SPIR-V instructions. These builtins handle cases that LLVM's 
-native instructions do not directly support, enabling fine-grained control over memory 
+SPIR-V's capabilities for loading and storing vectors are represented in LLVM IR using
+functions that mimic the SPIR-V instructions. These builtins handle cases that LLVM's
+native instructions do not directly support, enabling fine-grained control over memory
 operations.
 
 Atomic Operations
 ~~~~~~~~~~~~~~~~~
 
-SPIR-V's atomic operations, especially those operating on floating-point data, are 
-represented in LLVM IR with corresponding function calls. These builtins ensure 
-atomicity in operations where LLVM might not have direct support, essential for parallel 
+SPIR-V's atomic operations, especially those operating on floating-point data, are
+represented in LLVM IR with corresponding function calls. These builtins ensure
+atomicity in operations where LLVM might not have direct support, essential for parallel
 execution and synchronization.
 
 Image Operations
 ~~~~~~~~~~~~~~~~
 
-SPIR-V provides extensive support for image and sampler operations, which LLVM 
-represents through function calls to builtins. These include image reads, writes, and 
+SPIR-V provides extensive support for image and sampler operations, which LLVM
+represents through function calls to builtins. These include image reads, writes, and
 queries, allowing detailed manipulation of image data and parameters.
 
 Group and Subgroup Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For workgroup and subgroup operations, LLVM uses function calls to represent SPIR-V's 
-group-based instructions. These builtins facilitate group synchronization, data sharing, 
+For workgroup and subgroup operations, LLVM uses function calls to represent SPIR-V's
+group-based instructions. These builtins facilitate group synchronization, data sharing,
 and collective operations essential for efficient parallel computation.

@@ -107,7 +107,23 @@ Region *AnalysisState::getEnclosingRepetitiveRegion(
   return region;
 }
 
-void AnalysisState::resetCache() { enclosingRepetitiveRegionCache.clear(); }
+bool AnalysisState::insideMutuallyExclusiveRegions(Operation *op0,
+                                                   Operation *op1) {
+  auto key = std::make_pair(op0, op1);
+  if (auto iter = insideMutuallyExclusiveRegionsCache.find(key);
+      iter != insideMutuallyExclusiveRegionsCache.end())
+    return iter->second;
+  bool result = ::mlir::insideMutuallyExclusiveRegions(op0, op1);
+  // Populate results for both orderings of the ops.
+  insideMutuallyExclusiveRegionsCache[key] = result;
+  insideMutuallyExclusiveRegionsCache[std::make_pair(op1, op0)] = result;
+  return result;
+}
+
+void AnalysisState::resetCache() {
+  enclosingRepetitiveRegionCache.clear();
+  insideMutuallyExclusiveRegionsCache.clear();
+}
 
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
@@ -174,7 +190,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
             resultDims[llvm::cast<OpResult>(shapedValue).getResultNumber()];
         for (const auto &dim : enumerate(tensorType.getShape()))
           if (ShapedType::isDynamic(dim.value()))
-            dynamicSizes.push_back(shape[dim.index()].get<Value>());
+            dynamicSizes.push_back(cast<Value>(shape[dim.index()]));
       }
     }
 
@@ -465,9 +481,8 @@ bool AnalysisState::isValueRead(Value value) const {
 
   while (!workingSet.empty()) {
     OpOperand *uMaybeReading = workingSet.pop_back_val();
-    if (visited.contains(uMaybeReading))
+    if (!visited.insert(uMaybeReading).second)
       continue;
-    visited.insert(uMaybeReading);
 
     // Skip over all ops that neither read nor write (but create an alias).
     if (bufferizesToAliasOnly(*uMaybeReading))
@@ -481,16 +496,21 @@ bool AnalysisState::isValueRead(Value value) const {
   return false;
 }
 
-// Starting from `value`, follow the use-def chain in reverse, always selecting
-// the aliasing OpOperands. Find and return Values for which `condition`
-// evaluates to true. OpOperands of such matching Values are not traversed any
-// further.
+// Starting from `opOperand`, follow the use-def chain in reverse, always
+// selecting the aliasing OpOperands. Find and return Values for which
+// `condition` evaluates to true. Uses of such matching Values are not
+// traversed any further, the visited aliasing opOperands will be preserved
+// through `visitedOpOperands`.
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
-    Value value, llvm::function_ref<bool(Value)> condition,
-    TraversalConfig config) const {
+    OpOperand *opOperand, llvm::function_ref<bool(Value)> condition,
+    TraversalConfig config,
+    llvm::DenseSet<OpOperand *> *visitedOpOperands) const {
   llvm::DenseSet<Value> visited;
   llvm::SetVector<Value> result, workingSet;
-  workingSet.insert(value);
+  workingSet.insert(opOperand->get());
+
+  if (visitedOpOperands)
+    visitedOpOperands->insert(opOperand);
 
   while (!workingSet.empty()) {
     Value value = workingSet.pop_back_val();
@@ -554,18 +574,22 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
       }
 
       workingSet.insert(a.opOperand->get());
+      if (visitedOpOperands)
+        visitedOpOperands->insert(a.opOperand);
     }
   }
 
   return result;
 }
 
-// Find the values that define the contents of the given value.
-llvm::SetVector<Value> AnalysisState::findDefinitions(Value value) const {
+// Find the values that define the contents of the given operand's value.
+llvm::SetVector<Value>
+AnalysisState::findDefinitions(OpOperand *opOperand) const {
   TraversalConfig config;
   config.alwaysIncludeLeaves = false;
   return findValueInReverseUseDefChain(
-      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); }, config);
+      opOperand, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
+      config);
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
@@ -684,7 +708,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
 
   // Op is not bufferizable.
   auto memSpace =
-      options.defaultMemorySpaceFn(value.getType().cast<TensorType>());
+      options.defaultMemorySpaceFn(cast<TensorType>(value.getType()));
   if (!memSpace.has_value())
     return op->emitError("could not infer memory space");
 
@@ -719,7 +743,7 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
       // loose all of its users and eventually DCE away.
       rewriter.setInsertionPointAfter(op);
       replacement = rewriter.create<bufferization::ToTensorOp>(
-          replacement.getLoc(), replacement);
+          replacement.getLoc(), opResult.getType(), replacement);
     }
     replacements.push_back(replacement);
   }
@@ -889,7 +913,7 @@ bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
   config.alwaysIncludeLeaves = false;
   for (AliasingOpOperand alias : opOperands) {
     if (!state
-             .findValueInReverseUseDefChain(alias.opOperand->get(),
+             .findValueInReverseUseDefChain(alias.opOperand,
                                             isMemoryWriteInsideOp, config)
              .empty())
       return true;
@@ -939,7 +963,7 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
   // If we do not know the memory space and there is no default memory space,
   // report a failure.
   auto memSpace =
-      options.defaultMemorySpaceFn(value.getType().cast<TensorType>());
+      options.defaultMemorySpaceFn(cast<TensorType>(value.getType()));
   if (!memSpace.has_value())
     return op->emitError("could not infer memory space");
 
@@ -987,7 +1011,7 @@ bufferization::detail::unknownGetAliasingValues(OpOperand &opOperand) {
   for (Region &region : opOperand.getOwner()->getRegions())
     if (!region.getBlocks().empty())
       for (BlockArgument bbArg : region.getBlocks().front().getArguments())
-        if (bbArg.getType().isa<TensorType>())
+        if (isa<TensorType>(bbArg.getType()))
           r.addAlias({bbArg, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
 }

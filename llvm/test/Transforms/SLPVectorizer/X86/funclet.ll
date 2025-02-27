@@ -7,16 +7,24 @@ define void @test1(ptr %a, ptr %b, ptr %c) #0 personality ptr @__CxxFrameHandler
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @_CxxThrowException(ptr null, ptr null)
-; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.floor.v2f64(<2 x double> [[TMP6]]) [ "funclet"(token [[TMP1]]) ]
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[I0:%.*]] = load double, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[I1:%.*]] = load double, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[I0]], [[I1]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call double @floor(double [[MUL]]) #[[ATTR1:[0-9]+]] [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[I3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    [[I4:%.*]] = load double, ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[MUL5:%.*]] = fmul double [[I3]], [[I4]]
+; CHECK-NEXT:    [[CALL5:%.*]] = tail call double @floor(double [[MUL5]]) #[[ATTR1]] [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    store double [[CALL]], ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
+; CHECK-NEXT:    store double [[CALL5]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    catchret from [[TMP1]] to label [[TRY_CONT:%.*]]
 ; CHECK:       try.cont:
 ; CHECK-NEXT:    ret void

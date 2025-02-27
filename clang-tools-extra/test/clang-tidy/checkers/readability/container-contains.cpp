@@ -1,14 +1,19 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-container-contains %t
 
 // Some *very* simplified versions of `map` etc.
 namespace std {
 
 template <class Key, class T>
 struct map {
+  struct iterator {
+    bool operator==(const iterator &Other) const;
+    bool operator!=(const iterator &Other) const;
+  };
+
   unsigned count(const Key &K) const;
   bool contains(const Key &K) const;
-  void *find(const Key &K);
-  void *end();
+  iterator find(const Key &K);
+  iterator end();
 };
 
 template <class Key>
@@ -240,7 +245,7 @@ int testMacroExpansion(std::unordered_set<int> &MySet) {
   return 0;
 }
 
-// The following map has the same interface like `std::map`.
+// The following map has the same interface as `std::map`.
 template <class Key, class T>
 struct CustomMap {
   unsigned count(const Key &K) const;
@@ -249,13 +254,207 @@ struct CustomMap {
   void *end();
 };
 
-// The clang-tidy check is currently hard-coded against the `std::` containers
-// and hence won't annotate the following instance. We might change this in the
-// future and also detect the following case.
-void *testDifferentCheckTypes(CustomMap<int, int> &MyMap) {
-  if (MyMap.count(0))
-    // NO-WARNING.
-    // CHECK-FIXES: if (MyMap.count(0))
-    return nullptr;
-  return MyMap.find(2);
+void testDifferentCheckTypes(CustomMap<int, int> &MyMap) {
+  if (MyMap.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MyMap.contains(0)) {};
+
+  MyMap.find(0) != MyMap.end();
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: MyMap.contains(0);
+}
+
+struct MySubmap : public CustomMap<int, int> {};
+
+void testSubclass(MySubmap& MyMap) {
+  if (MyMap.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MyMap.contains(0)) {};
+}
+
+using UsingMap = CustomMap<int, int>;
+struct MySubmap2 : public UsingMap {};
+using UsingMap2 = MySubmap2;
+
+void testUsing(UsingMap2& MyMap) {
+  if (MyMap.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MyMap.contains(0)) {};
+}
+
+template <class Key, class T>
+struct CustomMapContainsDeleted {
+  unsigned count(const Key &K) const;
+  bool contains(const Key &K) const = delete;
+  void *find(const Key &K);
+  void *end();
+};
+
+struct SubmapContainsDeleted : public CustomMapContainsDeleted<int, int> {};
+
+void testContainsDeleted(CustomMapContainsDeleted<int, int> &MyMap,
+                         SubmapContainsDeleted &MyMap2) {
+  // No warning if the `contains` method is deleted.
+  if (MyMap.count(0)) {};
+  if (MyMap2.count(0)) {};
+}
+
+template <class Key, class T>
+struct CustomMapPrivateContains {
+  unsigned count(const Key &K) const;
+  void *find(const Key &K);
+  void *end();
+
+private:
+  bool contains(const Key &K) const;
+};
+
+struct SubmapPrivateContains : public CustomMapPrivateContains<int, int> {};
+
+void testPrivateContains(CustomMapPrivateContains<int, int> &MyMap,
+                         SubmapPrivateContains &MyMap2) {
+  // No warning if the `contains` method is not public.
+  if (MyMap.count(0)) {};
+  if (MyMap2.count(0)) {};
+}
+
+struct MyString {};
+
+struct WeirdNonMatchingContains {
+  unsigned count(char) const;
+  bool contains(const MyString&) const;
+};
+
+void testWeirdNonMatchingContains(WeirdNonMatchingContains &MyMap) {
+  // No warning if there is no `contains` method with the right type.
+  if (MyMap.count('a')) {};
+}
+
+template <class T>
+struct SmallPtrSet {
+  using ConstPtrType = const T*;
+  unsigned count(ConstPtrType Ptr) const;
+  bool contains(ConstPtrType Ptr) const;
+};
+
+template <class T>
+struct SmallPtrPtrSet {
+  using ConstPtrType = const T**;
+  unsigned count(ConstPtrType Ptr) const;
+  bool contains(ConstPtrType Ptr) const;
+};
+
+template <class T>
+struct SmallPtrPtrPtrSet {
+  using ConstPtrType = const T***;
+  unsigned count(ConstPtrType Ptr) const;
+  bool contains(ConstPtrType Ptr) const;
+};
+
+void testSmallPtrSet(const int ***Ptr,
+                     SmallPtrSet<int> &MySet,
+                     SmallPtrPtrSet<int> &MySet2,
+                     SmallPtrPtrPtrSet<int> &MySet3) {
+  if (MySet.count(**Ptr)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MySet.contains(**Ptr)) {};
+  if (MySet2.count(*Ptr)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MySet2.contains(*Ptr)) {};
+  if (MySet3.count(Ptr)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MySet3.contains(Ptr)) {};
+}
+
+struct X {};
+struct Y : public X {};
+
+void testSubclassEntry(SmallPtrSet<X>& Set, Y* Entry) {
+  if (Set.count(Entry)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Set.contains(Entry)) {}
+}
+
+struct WeirdPointerApi {
+  unsigned count(int** Ptr) const;
+  bool contains(int* Ptr) const;
+};
+
+void testWeirdApi(WeirdPointerApi& Set, int* E) {
+  if (Set.count(&E)) {}
+}
+
+void testIntUnsigned(std::set<int>& S, unsigned U) {
+  if (S.count(U)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (S.contains(U)) {}
+}
+
+template <class T>
+struct CustomSetConvertible {
+  unsigned count(const T &K) const;
+  bool contains(const T &K) const;
+};
+
+struct A {};
+struct B { B() = default; B(const A&) {} };
+struct C { operator A() const; };
+
+void testConvertibleTypes() {
+  CustomSetConvertible<B> MyMap;
+  if (MyMap.count(A())) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MyMap.contains(A())) {};
+
+  CustomSetConvertible<A> MyMap2;
+  if (MyMap2.count(C())) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MyMap2.contains(C())) {};
+
+  if (MyMap2.count(C()) != 0) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (MyMap2.contains(C())) {};
+}
+
+template<class U>
+using Box = const U& ;
+
+template <class T>
+struct CustomBoxedSet {
+  unsigned count(Box<T> K) const;
+  bool contains(Box<T> K) const;
+};
+
+void testBox() {
+  CustomBoxedSet<int> Set;
+  if (Set.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Set.contains(0)) {};
+}
+
+void testOperandPermutations(std::map<int, int>& Map) {
+  if (Map.count(0) != 0) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (0 != Map.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (Map.count(0) == 0) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
+  if (0 == Map.count(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
+  if (Map.find(0) != Map.end()) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (Map.end() != Map.find(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Map.contains(0)) {};
+  if (Map.find(0) == Map.end()) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
+  if (Map.end() == Map.find(0)) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Map.contains(0)) {};
 }

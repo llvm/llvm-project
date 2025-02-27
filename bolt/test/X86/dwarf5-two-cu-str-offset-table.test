@@ -3,7 +3,7 @@
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_main.s -o %tmain.o
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_helper.s -o %thelper.o
 # RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 # RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.exe > %t.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s

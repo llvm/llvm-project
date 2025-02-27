@@ -103,8 +103,8 @@ struct PartHeader {
 
 struct BitcodeHeader {
   uint8_t Magic[4];     // ACSII "DXIL".
-  uint8_t MajorVersion; // DXIL version.
   uint8_t MinorVersion; // DXIL version.
+  uint8_t MajorVersion; // DXIL version.
   uint16_t Unused;
   uint32_t Offset; // Offset to LLVM bitcode (from start of header).
   uint32_t Size;   // Size of LLVM bitcode (in bytes).
@@ -119,8 +119,7 @@ struct BitcodeHeader {
 };
 
 struct ProgramHeader {
-  uint8_t MinorVersion : 4;
-  uint8_t MajorVersion : 4;
+  uint8_t Version;
   uint8_t Unused;
   uint16_t ShaderKind;
   uint32_t Size; // Size in uint32_t words including this header.
@@ -130,6 +129,11 @@ struct ProgramHeader {
     sys::swapByteOrder(ShaderKind);
     sys::swapByteOrder(Size);
     Bitcode.swapBytes();
+  }
+  uint8_t getMajorVersion() { return Version >> 4; }
+  uint8_t getMinorVersion() { return Version & 0xF; }
+  static uint8_t getVersion(uint8_t Major, uint8_t Minor) {
+    return (Major << 4) | Minor;
   }
 };
 
@@ -147,6 +151,11 @@ enum class FeatureFlags : uint64_t {
 };
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
+
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootElementFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
 
 PartType parsePartType(StringRef S);
 
@@ -295,6 +304,33 @@ enum class InterpolationMode : uint8_t {
 
 ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
 
+#define RESOURCE_TYPE(Val, Enum) Enum = Val,
+enum class ResourceType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ResourceType>> getResourceTypes();
+
+#define RESOURCE_KIND(Val, Enum) Enum = Val,
+enum class ResourceKind : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ResourceKind>> getResourceKinds();
+
+#define RESOURCE_FLAG(Index, Enum) bool Enum = false;
+struct ResourceFlags {
+  ResourceFlags() {};
+  struct FlagsBits {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  };
+  union {
+    uint32_t Flags;
+    FlagsBits Bits;
+  };
+  bool operator==(const uint32_t RFlags) const { return Flags == RFlags; }
+};
+
 namespace v0 {
 struct RuntimeInfo {
   PipelinePSVInfo StageInfo;
@@ -311,7 +347,7 @@ struct RuntimeInfo {
 };
 
 struct ResourceBindInfo {
-  uint32_t Type;
+  ResourceType Type;
   uint32_t Space;
   uint32_t LowerBound;
   uint32_t UpperBound;
@@ -413,13 +449,13 @@ struct RuntimeInfo : public v1::RuntimeInfo {
 };
 
 struct ResourceBindInfo : public v0::ResourceBindInfo {
-  uint32_t Kind;
-  uint32_t Flags;
+  ResourceKind Kind;
+  ResourceFlags Flags;
 
   void swapBytes() {
     v0::ResourceBindInfo::swapBytes();
     sys::swapByteOrder(Kind);
-    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(Flags.Flags);
   }
 };
 
@@ -509,6 +545,15 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
+
+struct RootSignatureValidations {
+
+  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
+
+  static bool isValidVersion(uint32_t Version) {
+    return (Version == 1 || Version == 2);
+  }
+};
 
 } // namespace dxbc
 } // namespace llvm

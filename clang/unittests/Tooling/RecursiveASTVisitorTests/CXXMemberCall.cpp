@@ -12,10 +12,9 @@ using namespace clang;
 
 namespace {
 
-class CXXMemberCallVisitor
-  : public ExpectedLocationVisitor<CXXMemberCallVisitor> {
+class CXXMemberCallVisitor : public ExpectedLocationVisitor {
 public:
-  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *Call) {
+  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *Call) override {
     Match(Call->getMethodDecl()->getQualifiedNameAsString(),
           Call->getBeginLoc());
     return true;

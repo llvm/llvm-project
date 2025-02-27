@@ -13,10 +13,10 @@ define i32 @t1(i32 %a, i32 %b) {
 ;
 ; SWIFT-LABEL: t1:
 ; SWIFT:       @ %bb.0: @ %common.ret
-; SWIFT-NEXT:    mov r2, #1
 ; SWIFT-NEXT:    cmp r0, #0
-; SWIFT-NEXT:    mvneq r2, #0
-; SWIFT-NEXT:    add r0, r1, r2
+; SWIFT-NEXT:    mov r0, #1
+; SWIFT-NEXT:    mvneq r0, #0
+; SWIFT-NEXT:    add r0, r1, r0
 ; SWIFT-NEXT:    bx lr
 	%tmp2 = icmp eq i32 %a, 0
 	br i1 %tmp2, label %cond_false, label %cond_true

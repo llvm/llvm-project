@@ -31,6 +31,7 @@ _warningFlags = [
     "-Wno-reserved-module-identifier",
     '-Wdeprecated-copy',
     '-Wdeprecated-copy-dtor',
+    "-Wshift-negative-value",
     # GCC warns about places where we might want to add sized allocation/deallocation
     # functions, but we know better what we're doing/testing in the test suite.
     "-Wno-sized-deallocation",
@@ -86,6 +87,17 @@ def getStdFlag(cfg, std):
     if std in fallbacks and hasCompileFlag(cfg, "-std=" + fallbacks[std]):
         return "-std=" + fallbacks[std]
     return None
+
+
+def getDefaultStdValue(cfg):
+    viable = [s for s in reversed(_allStandards) if getStdFlag(cfg, s)]
+
+    if not viable:
+        raise RuntimeError(
+            "Unable to successfully detect the presence of any -std=c++NN flag. This likely indicates an issue with your compiler."
+        )
+
+    return viable[0]
 
 
 def getSpeedOptimizationFlag(cfg):
@@ -144,6 +156,14 @@ def getSuitableClangTidy(cfg):
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
+        name="compiler",
+        type=str,
+        help="The path of the compiler to use for testing.",
+        actions=lambda cxx: [
+            AddSubstitution("%{cxx}", shlex.quote(cxx)),
+        ],
+    ),
+    Parameter(
         name="target_triple",
         type=str,
         help="The target triple to compile the test suite for. This must be "
@@ -162,14 +182,13 @@ DEFAULT_PARAMETERS = [
         choices=_allStandards,
         type=str,
         help="The version of the standard to compile the test suite with.",
-        default=lambda cfg: next(
-            s for s in reversed(_allStandards) if getStdFlag(cfg, s)
-        ),
+        default=lambda cfg: getDefaultStdValue(cfg),
         actions=lambda std: [
             AddFeature(std),
             AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
-        ],
+        ]
+        + [AddFeature(f"std-at-least-{s}") for s in _allStandards if s <= std],
     ),
     Parameter(
         name="optimization",
@@ -257,6 +276,19 @@ DEFAULT_PARAMETERS = [
         ),
     ),
     Parameter(
+        name="using_system_stdlib",
+        choices=[True, False],
+        type=bool,
+        default=False,
+        help="""Whether the Standard Library being tested is the one that shipped with the system by default.
+
+                This is different from the 'stdlib' parameter, which describes the flavor of libc++ being
+                tested. 'using_system_stdlib' describes whether the target system passed with 'target_triple'
+                also corresponds to the version of the library being tested.
+             """,
+        actions=lambda is_system: [AddFeature("stdlib=system")] if is_system else [],
+    ),
+    Parameter(
         name="enable_warnings",
         choices=[True, False],
         type=bool,
@@ -330,10 +362,19 @@ DEFAULT_PARAMETERS = [
         if experimental
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
-            AddFeature("libcpp-has-no-experimental-stop_token"),
-            AddFeature("libcpp-has-no-incomplete-tzdb"),
+            AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
         ],
+    ),
+    # TODO: This can be improved once we use a version of GoogleBenchmark that supports the dry-run mode.
+    #       See https://github.com/google/benchmark/issues/1827.
+    Parameter(
+        name="enable_benchmarks",
+        choices=["no", "run", "dry-run"],
+        type=str,
+        default="run",
+        help="Whether to run the benchmarks in the test suite, to only dry-run them or to disable them entirely.",
+        actions=lambda mode: [AddFeature(f"enable-benchmarks={mode}")],
     ),
     Parameter(
         name="long_tests",
@@ -353,11 +394,12 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["none", "fast", "extensive", "debug"],
+        choices=["none", "fast", "extensive", "debug", "undefined"],
         type=str,
-        default="none",
+        default="undefined",
         help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
-        "meaningful when running the tests against libc++.",
+        "meaningful when running the tests against libc++. By default, no hardening mode is specified "
+        "so the default hardening mode of the standard library will be used (if any).",
         actions=lambda hardening_mode: filter(
             None,
             [
@@ -365,7 +407,7 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")     if hardening_mode == "debug" else None,
-                AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
+                AddFeature("libcpp-hardening-mode={}".format(hardening_mode))               if hardening_mode != "undefined" else None,
             ],
         ),
     ),
@@ -407,6 +449,13 @@ DEFAULT_PARAMETERS = [
             AddFeature('has-clang-tidy'),
             AddSubstitution('%{clang-tidy}', exe),
         ]
+    ),
+    Parameter(
+        name='test_frozen_cxx03_headers',
+        type=bool,
+        default=False,
+        help="Whether to test the main or C++03-specific headers. Only changes behaviour when std=c++03.",
+        actions=lambda enabled: [] if not enabled else [AddFlag("-D_LIBCPP_USE_FROZEN_CXX03_HEADERS"), AddFeature("FROZEN-CXX03-HEADERS-FIXME")],
     ),
 ]
 # fmt: on

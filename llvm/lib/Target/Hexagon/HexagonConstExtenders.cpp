@@ -218,8 +218,8 @@ namespace {
     HexagonConstExtenders() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -253,7 +253,7 @@ namespace {
                           /*Kill*/false, /*Dead*/false, /*Undef*/false,
                           /*EarlyClobber*/false, Sub);
         if (Reg.isStack()) {
-          int FI = llvm::Register::stackSlot2Index(Reg);
+          int FI = Reg.stackSlotIndex();
           return MachineOperand::CreateFI(FI);
         }
         llvm_unreachable("Cannot create MachineOperand");
@@ -569,7 +569,7 @@ namespace {
 
 INITIALIZE_PASS_BEGIN(HexagonConstExtenders, "hexagon-cext-opt",
       "Hexagon constant-extender optimization", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(HexagonConstExtenders, "hexagon-cext-opt",
       "Hexagon constant-extender optimization", false, false)
 
@@ -1040,7 +1040,7 @@ unsigned HCE::getDirectRegReplacement(unsigned ExtOpc) const {
 // extender. It may be possible for MI to be tweaked to work for a register
 // defined with a slightly different value. For example
 //   ... = L2_loadrub_io Rb, 1
-// can be modifed to be
+// can be modified to be
 //   ... = L2_loadrub_io Rb', 0
 // if Rb' = Rb+1.
 // The range for Rb would be [Min+1, Max+1], where [Min, Max] is a range
@@ -1148,8 +1148,8 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
   bool IsStore = MI.mayStore();
 
   // Fixed stack slots have negative indexes, and they cannot be used
-  // with TRI::stackSlot2Index and TRI::index2StackSlot. This is somewhat
-  // unfortunate, but should not be a frequent thing.
+  // with Register::stackSlotIndex and Register::index2StackSlot. This is
+  // somewhat unfortunate, but should not be a frequent thing.
   for (MachineOperand &Op : MI.operands())
     if (Op.isFI() && Op.getIndex() < 0)
       return;
@@ -1222,6 +1222,10 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
   ExtRoot ER(ED.getOp());
   if (ER.Kind == MachineOperand::MO_GlobalAddress)
     if (ER.V.GV->getName().empty())
+      return;
+  // Ignore block address that points to block in another function
+  if (ER.Kind == MachineOperand::MO_BlockAddress)
+    if (ER.V.BA->getFunction() != &(MI.getMF()->getFunction()))
       return;
   Extenders.push_back(ED);
 }
@@ -1973,7 +1977,7 @@ bool HCE::runOnMachineFunction(MachineFunction &MF) {
   HST = &MF.getSubtarget<HexagonSubtarget>();
   HII = HST->getInstrInfo();
   HRI = HST->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MRI = &MF.getRegInfo();
   AssignmentMap IMap;
 

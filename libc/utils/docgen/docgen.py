@@ -10,60 +10,95 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Dict
+import os
 import sys
-import json
+import yaml
+
+from header import Header
 
 
-def load_api(hname: str) -> Dict:
-    p = Path(__file__).parent / Path(hname).with_suffix(".json")
-    api = p.read_text(encoding="utf-8")
-    return json.loads(api)
+class DocgenAPIFormatError(Exception):
+    """Raised on fatal formatting errors with a description of a formatting error"""
 
 
-# TODO: we may need to get more sophisticated for less generic implementations.
-# Does libc/src/{hname minus .h suffix}/{fname}.cpp exist?
-def is_implemented(hname: str, fname: str) -> bool:
-    path = Path(
-        Path(__file__).parent.parent.parent,
-        "src",
-        hname.rstrip(".h")
-    )
+def check_api(header: Header, api: Dict):
+    """
+    Checks that docgen yaml files are properly formatted. If there are any
+    fatal formatting errors, raises exceptions with error messages useful for
+    fixing formatting. Warnings are printed to stderr on non-fatal formatting
+    errors. The code that runs after ``check_api(api)`` is called expects that
+    ``check_api`` executed without raising formatting exceptions so the yaml
+    matches the formatting specified here.
 
-    if not path.exists():
-        raise FileNotFoundError(f"implementation dir does not exist: {path}")
+    The yaml file may contain:
+    * an optional macros object
+    * an optional functions object
 
-    if not path.is_dir():
-        raise NotADirectoryError(f"implementation dir is not a dir: {path}")
+    Formatting of ``macros`` and ``functions`` objects
+    ==================================================
 
-    # Recursively search for the target source file in the subdirectories under
-    # libc/src/{hname}.
-    for _ in path.glob("**/" + fname + ".cpp"):
-        return True
+    If a macros or functions object is present, then it may contain nested
+    objects. Each of these nested objects should have a name matching a macro
+    or function's name, and each nested object must have the property:
+    ``"c-definition"`` or ``"posix-definition"``.
 
-    return False
+    Description of properties
+    =========================
+    The defined property is intended to be a reference to a part of the
+    standard that defines the function or macro. For the ``"c-definition"`` property,
+    this should be a C standard section number. For the ``"posix-definition"`` property,
+    this should be a link to the definition.
+
+    :param api: docgen yaml file contents parsed into a dict
+    """
+    errors = []
+    # We require entries to have at least one of these.
+    possible_keys = [
+        "c-definition",
+        "in-latest-posix",
+        "removed-in-posix-2008",
+        "removed-in-posix-2024",
+    ]
+
+    # Validate macros
+    if "macros" in api:
+        if not header.macro_file_exists():
+            print(
+                f"warning: Macro definitions are listed for {header.name}, but no macro file can be found in the directory tree rooted at {header.macros_dir}. All macros will be listed as not implemented.",
+                file=sys.stderr,
+            )
+
+        macros = api["macros"]
+
+        for name, obj in macros.items():
+            if not any(k in obj for k in possible_keys):
+                err = f"error: Macro {name} does not contain at least one required property: {possible_keys}"
+                errors.append(err)
+
+    # Validate functions
+    if "functions" in api:
+        if not header.fns_dir_exists():
+            print(
+                f"warning: Function definitions are listed for {header.name}, but no function implementation directory exists at {header.fns_dir}. All functions will be listed as not implemented.",
+                file=sys.stderr,
+            )
+
+        fns = api["functions"]
+        for name, obj in fns.items():
+            if not any(k in obj for k in possible_keys):
+                err = f"error: function {name} does not contain at least one required property: {possible_keys}"
+                errors.append(err)
+
+    if errors:
+        raise DocgenAPIFormatError("\n".join(errors))
 
 
-def print_functions(header: str, functions: Dict):
-    for key in sorted(functions.keys()):
-        print(f"  * - {key}")
-
-        if is_implemented(header, key):
-            print("    - |check|")
-        else:
-            print("    -")
-
-        # defined is optional. Having any content is optional.
-        if functions[key] is not None and "defined" in functions[key]:
-            print(f'    - {functions[key]["defined"]}')
-        else:
-            print("    -")
+def load_api(header: Header) -> Dict:
+    api = header.docgen_yaml.read_text(encoding="utf-8")
+    return yaml.safe_load(api)
 
 
-def print_header(header: str, api: Dict):
-    print(".. include:: check.rst\n")
-    fns = f"{header} Functions"
-    print(fns)
-    print("=" * (len(fns)))
+def print_tbl_dir(name):
     print(
         f"""
 .. list-table::
@@ -71,23 +106,120 @@ def print_header(header: str, api: Dict):
   :align: center
   :header-rows: 1
 
-  * - Function
+  * - {name}
     - Implemented
-    - Standard"""
+    - C23 Standard Section
+    - POSIX Docs"""
     )
-    # TODO: how do we want to signal implementation of macros?
-    print_functions(header, api["functions"])
+
+
+def print_functions_rst(header: Header, functions: Dict):
+    tbl_hdr = "Functions"
+    print(tbl_hdr)
+    print("=" * len(tbl_hdr))
+
+    print_tbl_dir("Function")
+
+    for name in sorted(functions.keys()):
+        print(f"  * - {name}")
+
+        if header.fns_dir_exists() and header.implements_fn(name):
+            print("    - |check|")
+        else:
+            print("    -")
+
+        if "c-definition" in functions[name]:
+            print(f'    - {functions[name]["c-definition"]}')
+        else:
+            print("    -")
+
+        if "in-latest-posix" in functions[name]:
+            print(
+                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/{name}.html>`__"
+            )
+        elif "removed-in-posix-2008" in functions[name]:
+            print(
+                f"    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/{name}.html>`__"
+            )
+        elif "removed-in-posix-2024" in functions[name]:
+            print(
+                f"    - `removed in POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/{name}.html>`__"
+            )
+        else:
+            print("    -")
+
+
+def print_macros_rst(header: Header, macros: Dict):
+    tbl_hdr = "Macros"
+    print(tbl_hdr)
+    print("=" * len(tbl_hdr))
+
+    print_tbl_dir("Macro")
+
+    for name in sorted(macros.keys()):
+        print(f"  * - {name}")
+
+        if header.macro_file_exists() and header.implements_macro(name):
+            print("    - |check|")
+        else:
+            print("    -")
+
+        if "c-definition" in macros[name]:
+            print(f'    - {macros[name]["c-definition"]}')
+        else:
+            print("    -")
+
+        if "in-latest-posix" in macros[name]:
+            print(
+                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{header.name}.html>`__"
+            )
+        else:
+            print("    -")
+    print()
+
+
+def print_impl_status_rst(header: Header, api: Dict):
+    if os.sep in header.name:
+        print(".. include:: ../../check.rst\n")
+    else:
+        print(".. include:: ../check.rst\n")
+
+    print("=" * len(header.name))
+    print(header.name)
+    print("=" * len(header.name))
+    print()
+
+    # the macro and function sections are both optional
+    if "macros" in api:
+        print_macros_rst(header, api["macros"])
+
+    if "functions" in api:
+        print_functions_rst(header, api["functions"])
+
+
+# This code implicitly relies on docgen.py being in the same dir as the yaml
+# files and is likely to need to be fixed when re-integrating docgen into
+# hdrgen.
+def get_choices() -> list:
+    choices = []
+    for path in Path(__file__).parent.rglob("*.yaml"):
+        fname = path.with_suffix(".h").name
+        if path.parent != Path(__file__).parent:
+            fname = path.parent.name + os.sep + fname
+        choices.append(fname)
+    return choices
 
 
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.json")]
-    parser.add_argument("header_name", choices=choices)
+    parser.add_argument("header_name", choices=get_choices())
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    api = load_api(args.header_name)
+    header = Header(args.header_name)
+    api = load_api(header)
+    check_api(header, api)
 
-    print_header(args.header_name, api)
+    print_impl_status_rst(header, api)

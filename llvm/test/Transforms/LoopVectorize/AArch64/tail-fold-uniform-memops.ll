@@ -27,7 +27,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP5]], ptr [[TMP7]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i64 [[IDX]], 4
 ; CHECK-NEXT:    [[NEXT_ACTIVE_LANE_MASK]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[IDX]], i64 [[N2]])
-; CHECK-NEXT:    [[NOT_ACTIVE_LANE_MASK:%.*]] = xor <4 x i1> [[NEXT_ACTIVE_LANE_MASK]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_ACTIVE_LANE_MASK:%.*]] = xor <4 x i1> [[NEXT_ACTIVE_LANE_MASK]], splat (i1 true)
 ; CHECK-NEXT:    [[FIRST_LANE_SET:%.*]] = extractelement <4 x i1> [[NOT_ACTIVE_LANE_MASK]], i32 0
 ; CHECK-NEXT:    br i1 [[FIRST_LANE_SET]], label %middle.block, label %vector.body
 
@@ -63,7 +63,7 @@ define void @cond_uniform_load(ptr nocapture %dst, ptr nocapture readonly %src, 
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IDX]], 0
 ; CHECK:         [[COND_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr {{%.*}}, i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[COND_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
 ; CHECK-NEXT:    [[MASK:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[SRC_SPLAT]], i32 4, <4 x i1> [[MASK]], <4 x i32> poison)
 entry:

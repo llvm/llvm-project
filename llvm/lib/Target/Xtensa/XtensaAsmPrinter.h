@@ -15,6 +15,7 @@
 
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -34,6 +35,28 @@ public:
 
   StringRef getPassName() const override { return "Xtensa Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
+
+  void emitConstantPool() override;
+
+  void emitMachineConstantPoolEntry(const MachineConstantPoolEntry &CPE, int i);
+
+  void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+
+  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
+
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &O) override;
+
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &OS) override;
+
+  MCSymbol *GetConstantPoolIndexSymbol(const MachineOperand &MO) const;
+
+  MCSymbol *GetJumpTableSymbol(const MachineOperand &MO) const;
+
+  MCOperand LowerSymbolOperand(const MachineOperand &MO,
+                               MachineOperand::MachineOperandType MOTy,
+                               unsigned Offset) const;
 
   // Lower MachineInstr MI to MCInst OutMI.
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) const;

@@ -7,34 +7,34 @@ target triple = "aarch64"
 ; Check that the function gets vectorized.
 
 define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
-; CHECK-LABEL: define i32 @quant_4x4
-; CHECK-SAME: (ptr nocapture noundef [[DCT:%.*]], ptr nocapture noundef readonly [[MF:%.*]], ptr nocapture noundef readonly [[BIAS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define range(i32 0, 2) i32 @quant_4x4
+; CHECK-SAME: (ptr noundef captures(none) [[DCT:%.*]], ptr noundef readonly captures(none) [[MF:%.*]], ptr noundef readonly captures(none) [[BIAS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DCT]], i64 32
 ; CHECK-NEXT:    [[SCEVGEP23:%.*]] = getelementptr i8, ptr [[BIAS]], i64 32
 ; CHECK-NEXT:    [[SCEVGEP24:%.*]] = getelementptr i8, ptr [[MF]], i64 32
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP23]], [[DCT]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[BIAS]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DCT]], [[SCEVGEP23]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BIAS]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND025:%.*]] = icmp ugt ptr [[SCEVGEP24]], [[DCT]]
-; CHECK-NEXT:    [[BOUND126:%.*]] = icmp ugt ptr [[SCEVGEP]], [[MF]]
+; CHECK-NEXT:    [[BOUND025:%.*]] = icmp ult ptr [[DCT]], [[SCEVGEP24]]
+; CHECK-NEXT:    [[BOUND126:%.*]] = icmp ult ptr [[MF]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT27:%.*]] = and i1 [[BOUND025]], [[BOUND126]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT27]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 16
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[DCT]], align 2, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD29:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[WIDE_LOAD]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i16> [[WIDE_LOAD29]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD29]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD30:%.*]] = load <8 x i16>, ptr [[BIAS]], align 2, !alias.scope [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD31:%.*]] = load <8 x i16>, ptr [[TMP5]], align 2, !alias.scope [[META6]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i16> [[WIDE_LOAD30]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <8 x i16> [[WIDE_LOAD31]] to <8 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 16
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD32:%.*]] = load <8 x i16>, ptr [[MF]], align 2, !alias.scope [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD33:%.*]] = load <8 x i16>, ptr [[TMP8]], align 2, !alias.scope [[META7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <8 x i16> [[WIDE_LOAD32]] to <8 x i32>
@@ -43,8 +43,8 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub nsw <8 x i32> [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul <8 x i32> [[TMP11]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul <8 x i32> [[TMP12]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr <8 x i32> [[TMP13]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP16:%.*]] = lshr <8 x i32> [[TMP14]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr <8 x i32> [[TMP13]], splat (i32 16)
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr <8 x i32> [[TMP14]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP17:%.*]] = trunc nuw <8 x i32> [[TMP15]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP18:%.*]] = trunc nuw <8 x i32> [[TMP16]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub <8 x i16> zeroinitializer, [[TMP17]]
@@ -53,8 +53,8 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = add nuw nsw <8 x i32> [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = mul <8 x i32> [[TMP21]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul <8 x i32> [[TMP22]], [[TMP10]]
-; CHECK-NEXT:    [[TMP25:%.*]] = lshr <8 x i32> [[TMP23]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP26:%.*]] = lshr <8 x i32> [[TMP24]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP25:%.*]] = lshr <8 x i32> [[TMP23]], splat (i32 16)
+; CHECK-NEXT:    [[TMP26:%.*]] = lshr <8 x i32> [[TMP24]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc nuw <8 x i32> [[TMP25]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc nuw <8 x i32> [[TMP26]] to <8 x i16>
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP3]], <8 x i16> [[TMP27]], <8 x i16> [[TMP19]]
@@ -95,14 +95,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[CONV28]], [[IF_ELSE]] ], [ [[CONV12]], [[IF_THEN]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[DCT]], align 2
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 2
 ; CHECK-NEXT:    [[TMP34:%.*]] = load i16, ptr [[ARRAYIDX_1]], align 2
 ; CHECK-NEXT:    [[CONV_1:%.*]] = sext i16 [[TMP34]] to i32
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp sgt i16 [[TMP34]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 2
 ; CHECK-NEXT:    [[TMP35:%.*]] = load i16, ptr [[ARRAYIDX4_1]], align 2
 ; CHECK-NEXT:    [[CONV5_1:%.*]] = zext i16 [[TMP35]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_1:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX10_1:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 2
 ; CHECK-NEXT:    [[TMP36:%.*]] = load i16, ptr [[ARRAYIDX10_1]], align 2
 ; CHECK-NEXT:    [[CONV11_1:%.*]] = zext i16 [[TMP36]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[IF_THEN_1:%.*]], label [[IF_ELSE_1:%.*]]
@@ -123,14 +123,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_1:%.*]] = phi i16 [ [[CONV28_1]], [[IF_ELSE_1]] ], [ [[CONV12_1]], [[IF_THEN_1]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_1]], ptr [[ARRAYIDX_1]], align 2
 ; CHECK-NEXT:    [[OR_137:%.*]] = or i16 [[STOREMERGE]], [[STOREMERGE_1]]
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 4
 ; CHECK-NEXT:    [[TMP38:%.*]] = load i16, ptr [[ARRAYIDX_2]], align 2
 ; CHECK-NEXT:    [[CONV_2:%.*]] = sext i16 [[TMP38]] to i32
 ; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp sgt i16 [[TMP38]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_2:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX4_2:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 4
 ; CHECK-NEXT:    [[TMP39:%.*]] = load i16, ptr [[ARRAYIDX4_2]], align 2
 ; CHECK-NEXT:    [[CONV5_2:%.*]] = zext i16 [[TMP39]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_2:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX10_2:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 4
 ; CHECK-NEXT:    [[TMP40:%.*]] = load i16, ptr [[ARRAYIDX10_2]], align 2
 ; CHECK-NEXT:    [[CONV11_2:%.*]] = zext i16 [[TMP40]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_2]], label [[IF_THEN_2:%.*]], label [[IF_ELSE_2:%.*]]
@@ -151,14 +151,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_2:%.*]] = phi i16 [ [[CONV28_2]], [[IF_ELSE_2]] ], [ [[CONV12_2]], [[IF_THEN_2]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_2]], ptr [[ARRAYIDX_2]], align 2
 ; CHECK-NEXT:    [[OR_238:%.*]] = or i16 [[OR_137]], [[STOREMERGE_2]]
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 6
 ; CHECK-NEXT:    [[TMP42:%.*]] = load i16, ptr [[ARRAYIDX_3]], align 2
 ; CHECK-NEXT:    [[CONV_3:%.*]] = sext i16 [[TMP42]] to i32
 ; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp sgt i16 [[TMP42]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_3:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX4_3:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 6
 ; CHECK-NEXT:    [[TMP43:%.*]] = load i16, ptr [[ARRAYIDX4_3]], align 2
 ; CHECK-NEXT:    [[CONV5_3:%.*]] = zext i16 [[TMP43]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_3:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX10_3:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 6
 ; CHECK-NEXT:    [[TMP44:%.*]] = load i16, ptr [[ARRAYIDX10_3]], align 2
 ; CHECK-NEXT:    [[CONV11_3:%.*]] = zext i16 [[TMP44]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_3]], label [[IF_THEN_3:%.*]], label [[IF_ELSE_3:%.*]]
@@ -179,14 +179,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_3:%.*]] = phi i16 [ [[CONV28_3]], [[IF_ELSE_3]] ], [ [[CONV12_3]], [[IF_THEN_3]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_3]], ptr [[ARRAYIDX_3]], align 2
 ; CHECK-NEXT:    [[OR_339:%.*]] = or i16 [[OR_238]], [[STOREMERGE_3]]
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 8
 ; CHECK-NEXT:    [[TMP46:%.*]] = load i16, ptr [[ARRAYIDX_4]], align 2
 ; CHECK-NEXT:    [[CONV_4:%.*]] = sext i16 [[TMP46]] to i32
 ; CHECK-NEXT:    [[CMP1_4:%.*]] = icmp sgt i16 [[TMP46]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_4:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX4_4:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 8
 ; CHECK-NEXT:    [[TMP47:%.*]] = load i16, ptr [[ARRAYIDX4_4]], align 2
 ; CHECK-NEXT:    [[CONV5_4:%.*]] = zext i16 [[TMP47]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_4:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX10_4:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 8
 ; CHECK-NEXT:    [[TMP48:%.*]] = load i16, ptr [[ARRAYIDX10_4]], align 2
 ; CHECK-NEXT:    [[CONV11_4:%.*]] = zext i16 [[TMP48]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_4]], label [[IF_THEN_4:%.*]], label [[IF_ELSE_4:%.*]]
@@ -207,14 +207,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_4:%.*]] = phi i16 [ [[CONV28_4]], [[IF_ELSE_4]] ], [ [[CONV12_4]], [[IF_THEN_4]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_4]], ptr [[ARRAYIDX_4]], align 2
 ; CHECK-NEXT:    [[OR_440:%.*]] = or i16 [[OR_339]], [[STOREMERGE_4]]
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 10
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 10
 ; CHECK-NEXT:    [[TMP50:%.*]] = load i16, ptr [[ARRAYIDX_5]], align 2
 ; CHECK-NEXT:    [[CONV_5:%.*]] = sext i16 [[TMP50]] to i32
 ; CHECK-NEXT:    [[CMP1_5:%.*]] = icmp sgt i16 [[TMP50]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_5:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 10
+; CHECK-NEXT:    [[ARRAYIDX4_5:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 10
 ; CHECK-NEXT:    [[TMP51:%.*]] = load i16, ptr [[ARRAYIDX4_5]], align 2
 ; CHECK-NEXT:    [[CONV5_5:%.*]] = zext i16 [[TMP51]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_5:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 10
+; CHECK-NEXT:    [[ARRAYIDX10_5:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 10
 ; CHECK-NEXT:    [[TMP52:%.*]] = load i16, ptr [[ARRAYIDX10_5]], align 2
 ; CHECK-NEXT:    [[CONV11_5:%.*]] = zext i16 [[TMP52]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_5]], label [[IF_THEN_5:%.*]], label [[IF_ELSE_5:%.*]]
@@ -235,14 +235,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_5:%.*]] = phi i16 [ [[CONV28_5]], [[IF_ELSE_5]] ], [ [[CONV12_5]], [[IF_THEN_5]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_5]], ptr [[ARRAYIDX_5]], align 2
 ; CHECK-NEXT:    [[OR_541:%.*]] = or i16 [[OR_440]], [[STOREMERGE_5]]
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 12
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 12
 ; CHECK-NEXT:    [[TMP54:%.*]] = load i16, ptr [[ARRAYIDX_6]], align 2
 ; CHECK-NEXT:    [[CONV_6:%.*]] = sext i16 [[TMP54]] to i32
 ; CHECK-NEXT:    [[CMP1_6:%.*]] = icmp sgt i16 [[TMP54]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_6:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 12
+; CHECK-NEXT:    [[ARRAYIDX4_6:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 12
 ; CHECK-NEXT:    [[TMP55:%.*]] = load i16, ptr [[ARRAYIDX4_6]], align 2
 ; CHECK-NEXT:    [[CONV5_6:%.*]] = zext i16 [[TMP55]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_6:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 12
+; CHECK-NEXT:    [[ARRAYIDX10_6:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 12
 ; CHECK-NEXT:    [[TMP56:%.*]] = load i16, ptr [[ARRAYIDX10_6]], align 2
 ; CHECK-NEXT:    [[CONV11_6:%.*]] = zext i16 [[TMP56]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_6]], label [[IF_THEN_6:%.*]], label [[IF_ELSE_6:%.*]]
@@ -263,14 +263,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_6:%.*]] = phi i16 [ [[CONV28_6]], [[IF_ELSE_6]] ], [ [[CONV12_6]], [[IF_THEN_6]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_6]], ptr [[ARRAYIDX_6]], align 2
 ; CHECK-NEXT:    [[OR_642:%.*]] = or i16 [[OR_541]], [[STOREMERGE_6]]
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 14
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 14
 ; CHECK-NEXT:    [[TMP58:%.*]] = load i16, ptr [[ARRAYIDX_7]], align 2
 ; CHECK-NEXT:    [[CONV_7:%.*]] = sext i16 [[TMP58]] to i32
 ; CHECK-NEXT:    [[CMP1_7:%.*]] = icmp sgt i16 [[TMP58]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_7:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 14
+; CHECK-NEXT:    [[ARRAYIDX4_7:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 14
 ; CHECK-NEXT:    [[TMP59:%.*]] = load i16, ptr [[ARRAYIDX4_7]], align 2
 ; CHECK-NEXT:    [[CONV5_7:%.*]] = zext i16 [[TMP59]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_7:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 14
+; CHECK-NEXT:    [[ARRAYIDX10_7:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 14
 ; CHECK-NEXT:    [[TMP60:%.*]] = load i16, ptr [[ARRAYIDX10_7]], align 2
 ; CHECK-NEXT:    [[CONV11_7:%.*]] = zext i16 [[TMP60]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_7]], label [[IF_THEN_7:%.*]], label [[IF_ELSE_7:%.*]]
@@ -291,14 +291,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_7:%.*]] = phi i16 [ [[CONV28_7]], [[IF_ELSE_7]] ], [ [[CONV12_7]], [[IF_THEN_7]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_7]], ptr [[ARRAYIDX_7]], align 2
 ; CHECK-NEXT:    [[OR_743:%.*]] = or i16 [[OR_642]], [[STOREMERGE_7]]
-; CHECK-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 16
+; CHECK-NEXT:    [[ARRAYIDX_8:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 16
 ; CHECK-NEXT:    [[TMP62:%.*]] = load i16, ptr [[ARRAYIDX_8]], align 2
 ; CHECK-NEXT:    [[CONV_8:%.*]] = sext i16 [[TMP62]] to i32
 ; CHECK-NEXT:    [[CMP1_8:%.*]] = icmp sgt i16 [[TMP62]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_8:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 16
+; CHECK-NEXT:    [[ARRAYIDX4_8:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 16
 ; CHECK-NEXT:    [[TMP63:%.*]] = load i16, ptr [[ARRAYIDX4_8]], align 2
 ; CHECK-NEXT:    [[CONV5_8:%.*]] = zext i16 [[TMP63]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_8:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 16
+; CHECK-NEXT:    [[ARRAYIDX10_8:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 16
 ; CHECK-NEXT:    [[TMP64:%.*]] = load i16, ptr [[ARRAYIDX10_8]], align 2
 ; CHECK-NEXT:    [[CONV11_8:%.*]] = zext i16 [[TMP64]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_8]], label [[IF_THEN_8:%.*]], label [[IF_ELSE_8:%.*]]
@@ -319,14 +319,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_8:%.*]] = phi i16 [ [[CONV28_8]], [[IF_ELSE_8]] ], [ [[CONV12_8]], [[IF_THEN_8]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_8]], ptr [[ARRAYIDX_8]], align 2
 ; CHECK-NEXT:    [[OR_844:%.*]] = or i16 [[OR_743]], [[STOREMERGE_8]]
-; CHECK-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 18
+; CHECK-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 18
 ; CHECK-NEXT:    [[TMP66:%.*]] = load i16, ptr [[ARRAYIDX_9]], align 2
 ; CHECK-NEXT:    [[CONV_9:%.*]] = sext i16 [[TMP66]] to i32
 ; CHECK-NEXT:    [[CMP1_9:%.*]] = icmp sgt i16 [[TMP66]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_9:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 18
+; CHECK-NEXT:    [[ARRAYIDX4_9:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 18
 ; CHECK-NEXT:    [[TMP67:%.*]] = load i16, ptr [[ARRAYIDX4_9]], align 2
 ; CHECK-NEXT:    [[CONV5_9:%.*]] = zext i16 [[TMP67]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_9:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 18
+; CHECK-NEXT:    [[ARRAYIDX10_9:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 18
 ; CHECK-NEXT:    [[TMP68:%.*]] = load i16, ptr [[ARRAYIDX10_9]], align 2
 ; CHECK-NEXT:    [[CONV11_9:%.*]] = zext i16 [[TMP68]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_9]], label [[IF_THEN_9:%.*]], label [[IF_ELSE_9:%.*]]
@@ -347,14 +347,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_9:%.*]] = phi i16 [ [[CONV28_9]], [[IF_ELSE_9]] ], [ [[CONV12_9]], [[IF_THEN_9]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_9]], ptr [[ARRAYIDX_9]], align 2
 ; CHECK-NEXT:    [[OR_945:%.*]] = or i16 [[OR_844]], [[STOREMERGE_9]]
-; CHECK-NEXT:    [[ARRAYIDX_10:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 20
+; CHECK-NEXT:    [[ARRAYIDX_10:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 20
 ; CHECK-NEXT:    [[TMP70:%.*]] = load i16, ptr [[ARRAYIDX_10]], align 2
 ; CHECK-NEXT:    [[CONV_10:%.*]] = sext i16 [[TMP70]] to i32
 ; CHECK-NEXT:    [[CMP1_10:%.*]] = icmp sgt i16 [[TMP70]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_10:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 20
+; CHECK-NEXT:    [[ARRAYIDX4_10:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 20
 ; CHECK-NEXT:    [[TMP71:%.*]] = load i16, ptr [[ARRAYIDX4_10]], align 2
 ; CHECK-NEXT:    [[CONV5_10:%.*]] = zext i16 [[TMP71]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_10:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 20
+; CHECK-NEXT:    [[ARRAYIDX10_10:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 20
 ; CHECK-NEXT:    [[TMP72:%.*]] = load i16, ptr [[ARRAYIDX10_10]], align 2
 ; CHECK-NEXT:    [[CONV11_10:%.*]] = zext i16 [[TMP72]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_10]], label [[IF_THEN_10:%.*]], label [[IF_ELSE_10:%.*]]
@@ -375,14 +375,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_10:%.*]] = phi i16 [ [[CONV28_10]], [[IF_ELSE_10]] ], [ [[CONV12_10]], [[IF_THEN_10]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_10]], ptr [[ARRAYIDX_10]], align 2
 ; CHECK-NEXT:    [[OR_1046:%.*]] = or i16 [[OR_945]], [[STOREMERGE_10]]
-; CHECK-NEXT:    [[ARRAYIDX_11:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 22
+; CHECK-NEXT:    [[ARRAYIDX_11:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 22
 ; CHECK-NEXT:    [[TMP74:%.*]] = load i16, ptr [[ARRAYIDX_11]], align 2
 ; CHECK-NEXT:    [[CONV_11:%.*]] = sext i16 [[TMP74]] to i32
 ; CHECK-NEXT:    [[CMP1_11:%.*]] = icmp sgt i16 [[TMP74]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_11:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 22
+; CHECK-NEXT:    [[ARRAYIDX4_11:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 22
 ; CHECK-NEXT:    [[TMP75:%.*]] = load i16, ptr [[ARRAYIDX4_11]], align 2
 ; CHECK-NEXT:    [[CONV5_11:%.*]] = zext i16 [[TMP75]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_11:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 22
+; CHECK-NEXT:    [[ARRAYIDX10_11:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 22
 ; CHECK-NEXT:    [[TMP76:%.*]] = load i16, ptr [[ARRAYIDX10_11]], align 2
 ; CHECK-NEXT:    [[CONV11_11:%.*]] = zext i16 [[TMP76]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_11]], label [[IF_THEN_11:%.*]], label [[IF_ELSE_11:%.*]]
@@ -403,14 +403,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_11:%.*]] = phi i16 [ [[CONV28_11]], [[IF_ELSE_11]] ], [ [[CONV12_11]], [[IF_THEN_11]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_11]], ptr [[ARRAYIDX_11]], align 2
 ; CHECK-NEXT:    [[OR_1147:%.*]] = or i16 [[OR_1046]], [[STOREMERGE_11]]
-; CHECK-NEXT:    [[ARRAYIDX_12:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 24
+; CHECK-NEXT:    [[ARRAYIDX_12:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 24
 ; CHECK-NEXT:    [[TMP78:%.*]] = load i16, ptr [[ARRAYIDX_12]], align 2
 ; CHECK-NEXT:    [[CONV_12:%.*]] = sext i16 [[TMP78]] to i32
 ; CHECK-NEXT:    [[CMP1_12:%.*]] = icmp sgt i16 [[TMP78]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_12:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 24
+; CHECK-NEXT:    [[ARRAYIDX4_12:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 24
 ; CHECK-NEXT:    [[TMP79:%.*]] = load i16, ptr [[ARRAYIDX4_12]], align 2
 ; CHECK-NEXT:    [[CONV5_12:%.*]] = zext i16 [[TMP79]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_12:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 24
+; CHECK-NEXT:    [[ARRAYIDX10_12:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 24
 ; CHECK-NEXT:    [[TMP80:%.*]] = load i16, ptr [[ARRAYIDX10_12]], align 2
 ; CHECK-NEXT:    [[CONV11_12:%.*]] = zext i16 [[TMP80]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_12]], label [[IF_THEN_12:%.*]], label [[IF_ELSE_12:%.*]]
@@ -431,14 +431,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_12:%.*]] = phi i16 [ [[CONV28_12]], [[IF_ELSE_12]] ], [ [[CONV12_12]], [[IF_THEN_12]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_12]], ptr [[ARRAYIDX_12]], align 2
 ; CHECK-NEXT:    [[OR_1248:%.*]] = or i16 [[OR_1147]], [[STOREMERGE_12]]
-; CHECK-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 26
+; CHECK-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 26
 ; CHECK-NEXT:    [[TMP82:%.*]] = load i16, ptr [[ARRAYIDX_13]], align 2
 ; CHECK-NEXT:    [[CONV_13:%.*]] = sext i16 [[TMP82]] to i32
 ; CHECK-NEXT:    [[CMP1_13:%.*]] = icmp sgt i16 [[TMP82]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_13:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 26
+; CHECK-NEXT:    [[ARRAYIDX4_13:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 26
 ; CHECK-NEXT:    [[TMP83:%.*]] = load i16, ptr [[ARRAYIDX4_13]], align 2
 ; CHECK-NEXT:    [[CONV5_13:%.*]] = zext i16 [[TMP83]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_13:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 26
+; CHECK-NEXT:    [[ARRAYIDX10_13:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 26
 ; CHECK-NEXT:    [[TMP84:%.*]] = load i16, ptr [[ARRAYIDX10_13]], align 2
 ; CHECK-NEXT:    [[CONV11_13:%.*]] = zext i16 [[TMP84]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_13]], label [[IF_THEN_13:%.*]], label [[IF_ELSE_13:%.*]]
@@ -459,14 +459,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_13:%.*]] = phi i16 [ [[CONV28_13]], [[IF_ELSE_13]] ], [ [[CONV12_13]], [[IF_THEN_13]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_13]], ptr [[ARRAYIDX_13]], align 2
 ; CHECK-NEXT:    [[OR_1349:%.*]] = or i16 [[OR_1248]], [[STOREMERGE_13]]
-; CHECK-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 28
+; CHECK-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 28
 ; CHECK-NEXT:    [[TMP86:%.*]] = load i16, ptr [[ARRAYIDX_14]], align 2
 ; CHECK-NEXT:    [[CONV_14:%.*]] = sext i16 [[TMP86]] to i32
 ; CHECK-NEXT:    [[CMP1_14:%.*]] = icmp sgt i16 [[TMP86]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_14:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 28
+; CHECK-NEXT:    [[ARRAYIDX4_14:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 28
 ; CHECK-NEXT:    [[TMP87:%.*]] = load i16, ptr [[ARRAYIDX4_14]], align 2
 ; CHECK-NEXT:    [[CONV5_14:%.*]] = zext i16 [[TMP87]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_14:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 28
+; CHECK-NEXT:    [[ARRAYIDX10_14:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 28
 ; CHECK-NEXT:    [[TMP88:%.*]] = load i16, ptr [[ARRAYIDX10_14]], align 2
 ; CHECK-NEXT:    [[CONV11_14:%.*]] = zext i16 [[TMP88]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_14]], label [[IF_THEN_14:%.*]], label [[IF_ELSE_14:%.*]]
@@ -487,14 +487,14 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[STOREMERGE_14:%.*]] = phi i16 [ [[CONV28_14]], [[IF_ELSE_14]] ], [ [[CONV12_14]], [[IF_THEN_14]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_14]], ptr [[ARRAYIDX_14]], align 2
 ; CHECK-NEXT:    [[OR_1450:%.*]] = or i16 [[OR_1349]], [[STOREMERGE_14]]
-; CHECK-NEXT:    [[ARRAYIDX_15:%.*]] = getelementptr inbounds i8, ptr [[DCT]], i64 30
+; CHECK-NEXT:    [[ARRAYIDX_15:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 30
 ; CHECK-NEXT:    [[TMP90:%.*]] = load i16, ptr [[ARRAYIDX_15]], align 2
 ; CHECK-NEXT:    [[CONV_15:%.*]] = sext i16 [[TMP90]] to i32
 ; CHECK-NEXT:    [[CMP1_15:%.*]] = icmp sgt i16 [[TMP90]], 0
-; CHECK-NEXT:    [[ARRAYIDX4_15:%.*]] = getelementptr inbounds i8, ptr [[BIAS]], i64 30
+; CHECK-NEXT:    [[ARRAYIDX4_15:%.*]] = getelementptr inbounds nuw i8, ptr [[BIAS]], i64 30
 ; CHECK-NEXT:    [[TMP91:%.*]] = load i16, ptr [[ARRAYIDX4_15]], align 2
 ; CHECK-NEXT:    [[CONV5_15:%.*]] = zext i16 [[TMP91]] to i32
-; CHECK-NEXT:    [[ARRAYIDX10_15:%.*]] = getelementptr inbounds i8, ptr [[MF]], i64 30
+; CHECK-NEXT:    [[ARRAYIDX10_15:%.*]] = getelementptr inbounds nuw i8, ptr [[MF]], i64 30
 ; CHECK-NEXT:    [[TMP92:%.*]] = load i16, ptr [[ARRAYIDX10_15]], align 2
 ; CHECK-NEXT:    [[CONV11_15:%.*]] = zext i16 [[TMP92]] to i32
 ; CHECK-NEXT:    br i1 [[CMP1_15]], label [[IF_THEN_15:%.*]], label [[IF_ELSE_15:%.*]]

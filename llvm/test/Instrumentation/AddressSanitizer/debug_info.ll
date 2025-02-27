@@ -28,8 +28,8 @@ entry:
 ; Note: these dbg.declares used to contain `ptrtoint` operands. The instruction
 ; selector would then decline to put the variable in the MachineFunction side
 ; table. Check that the dbg.declares have `alloca` operands.
-;   CHECK: call void @llvm.dbg.declare(metadata ptr [[MyAlloca]], metadata ![[ARG_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 32))
-;   CHECK: call void @llvm.dbg.declare(metadata ptr [[MyAlloca]], metadata ![[VAR_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 48))
+;   CHECK: #dbg_declare(ptr [[MyAlloca]], ![[ARG_ID:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 32),
+;   CHECK: #dbg_declare(ptr [[MyAlloca]], ![[VAR_ID:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 48),
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 

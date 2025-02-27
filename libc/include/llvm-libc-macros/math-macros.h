@@ -27,7 +27,8 @@
 #define MATH_ERREXCEPT 2
 
 #define HUGE_VAL __builtin_huge_val()
-#define INFINITY __builtin_inf()
+#define HUGE_VALF __builtin_huge_valf()
+#define INFINITY __builtin_inff()
 #define NAN __builtin_nanf("")
 
 #define FP_ILOGB0 (-INT_MAX - 1)
@@ -41,19 +42,12 @@
 #define FP_LLOGBNAN LONG_MAX
 #endif
 
-#ifdef __FAST_MATH__
+#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__FAST_MATH__)
 #define math_errhandling 0
 #elif defined(__NO_MATH_ERRNO__)
 #define math_errhandling (MATH_ERREXCEPT)
-#elif defined(__NVPTX__) || defined(__AMDGPU__)
-#define math_errhandling (MATH_ERRNO)
 #else
 #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
 #endif
-
-// TODO: Move generic functional math macros to a separate header file.
-#define isfinite(x) __builtin_isfinite(x)
-#define isinf(x) __builtin_isinf(x)
-#define isnan(x) __builtin_isnan(x)
 
 #endif // LLVM_LIBC_MACROS_MATH_MACROS_H

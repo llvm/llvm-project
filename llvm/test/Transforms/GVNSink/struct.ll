@@ -5,12 +5,12 @@
 
 ; Struct indices cannot be variant.
 
-; CHECK-LABEL: @f() {
+; CHECK-LABEL: @f(i1 %arg) {
 ; CHECK: getelementptr
 ; CHECK: getelementptr
-define void @f() {
+define void @f(i1 %arg) {
 bb:
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
   %tmp = getelementptr inbounds %struct, ptr null, i64 0, i32 1
@@ -27,12 +27,12 @@ bb4:                                              ; preds = %bb2, %bb1
 
 ; Struct indices cannot be variant.
 
-; CHECK-LABEL: @g() {
+; CHECK-LABEL: @g(i1 %arg) {
 ; CHECK: getelementptr
 ; CHECK: getelementptr
-define void @g() {
+define void @g(i1 %arg) {
 bb:
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
   %tmp = getelementptr inbounds %struct2, ptr null, i64 0, i32 0, i32 1
@@ -50,12 +50,12 @@ bb4:                                              ; preds = %bb2, %bb1
 
 ; ... but the first parameter to a GEP can.
 
-; CHECK-LABEL: @h() {
+; CHECK-LABEL: @h(i1 %arg) {
 ; CHECK: getelementptr
 ; CHECK-NOT: getelementptr
-define void @h() {
+define void @h(i1 %arg) {
 bb:
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
   %tmp = getelementptr inbounds %struct, ptr null, i32 1, i32 0

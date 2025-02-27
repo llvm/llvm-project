@@ -23,284 +23,37 @@
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.h.inc"
 
+#include "mlir/Dialect/OpenMP/OpenMPClauseOps.h.inc"
+
 namespace mlir {
 namespace omp {
 
 //===----------------------------------------------------------------------===//
-// Mixin structures defining MLIR operands associated with each OpenMP clause.
+// Extra clause operand structures.
 //===----------------------------------------------------------------------===//
 
-struct AlignedClauseOps {
-  llvm::SmallVector<Value> alignedVars;
-  llvm::SmallVector<Attribute> alignmentAttrs;
-};
-
-struct AllocateClauseOps {
-  llvm::SmallVector<Value> allocatorVars, allocateVars;
-};
-
-struct CollapseClauseOps {
-  llvm::SmallVector<Value> loopLBVar, loopUBVar, loopStepVar;
-};
-
-struct CopyprivateClauseOps {
-  llvm::SmallVector<Value> copyprivateVars;
-  llvm::SmallVector<Attribute> copyprivateFuncs;
-};
-
-struct DependClauseOps {
-  llvm::SmallVector<Attribute> dependTypeAttrs;
-  llvm::SmallVector<Value> dependVars;
-};
-
-struct DeviceClauseOps {
-  Value deviceVar;
-};
-
 struct DeviceTypeClauseOps {
-  // The default capture type.
+  /// The default capture type.
   DeclareTargetDeviceType deviceType = DeclareTargetDeviceType::any;
 };
 
-struct DistScheduleClauseOps {
-  UnitAttr distScheduleStaticAttr;
-  Value distScheduleChunkSizeVar;
-};
-
-struct DoacrossClauseOps {
-  llvm::SmallVector<Value> doacrossVectorVars;
-  ClauseDependAttr doacrossDependTypeAttr;
-  IntegerAttr doacrossNumLoopsAttr;
-};
-
-struct FinalClauseOps {
-  Value finalVar;
-};
-
-struct GrainsizeClauseOps {
-  Value grainsizeVar;
-};
-
-struct HasDeviceAddrClauseOps {
-  llvm::SmallVector<Value> hasDeviceAddrVars;
-};
-struct HintClauseOps {
-  IntegerAttr hintAttr;
-};
-
-struct IfClauseOps {
-  Value ifVar;
-};
-
-struct InReductionClauseOps {
-  llvm::SmallVector<Value> inReductionVars;
-  llvm::SmallVector<Attribute> inReductionDeclSymbols;
-};
-
-struct IsDevicePtrClauseOps {
-  llvm::SmallVector<Value> isDevicePtrVars;
-};
-
-struct LinearClauseOps {
-  llvm::SmallVector<Value> linearVars, linearStepVars;
-};
-
-struct LoopRelatedOps {
-  UnitAttr loopInclusiveAttr;
-};
-
-struct MapClauseOps {
-  llvm::SmallVector<Value> mapVars;
-};
-
-struct MergeableClauseOps {
-  UnitAttr mergeableAttr;
-};
-
-struct NameClauseOps {
-  StringAttr nameAttr;
-};
-
-struct NogroupClauseOps {
-  UnitAttr nogroupAttr;
-};
-
-struct NontemporalClauseOps {
-  llvm::SmallVector<Value> nontemporalVars;
-};
-
-struct NowaitClauseOps {
-  UnitAttr nowaitAttr;
-};
-
-struct NumTasksClauseOps {
-  Value numTasksVar;
-};
-
-struct NumTeamsClauseOps {
-  Value numTeamsLowerVar, numTeamsUpperVar;
-};
-
-struct NumThreadsClauseOps {
-  Value numThreadsVar;
-};
-
-struct OrderClauseOps {
-  ClauseOrderKindAttr orderAttr;
-};
-
-struct OrderedClauseOps {
-  IntegerAttr orderedAttr;
-};
-
-struct ParallelizationLevelClauseOps {
-  UnitAttr parLevelSimdAttr;
-};
-
-struct PriorityClauseOps {
-  Value priorityVar;
-};
-
-struct PrivateClauseOps {
-  // SSA values that correspond to "original" values being privatized.
-  // They refer to the SSA value outside the OpenMP region from which a clone is
-  // created inside the region.
-  llvm::SmallVector<Value> privateVars;
-  // The list of symbols referring to delayed privatizer ops (i.e. `omp.private`
-  // ops).
-  llvm::SmallVector<Attribute> privatizers;
-};
-
-struct ProcBindClauseOps {
-  ClauseProcBindKindAttr procBindKindAttr;
-};
-
-struct ReductionClauseOps {
-  llvm::SmallVector<Value> reductionVars;
-  llvm::SmallVector<Attribute> reductionDeclSymbols;
-  UnitAttr reductionByRefAttr;
-};
-
-struct SafelenClauseOps {
-  IntegerAttr safelenAttr;
-};
-
-struct ScheduleClauseOps {
-  ClauseScheduleKindAttr scheduleValAttr;
-  ScheduleModifierAttr scheduleModAttr;
-  Value scheduleChunkVar;
-  UnitAttr scheduleSimdAttr;
-};
-
-struct SimdlenClauseOps {
-  IntegerAttr simdlenAttr;
-};
-
-struct TaskReductionClauseOps {
-  llvm::SmallVector<Value> taskReductionVars;
-  llvm::SmallVector<Attribute> taskReductionDeclSymbols;
-};
-
-struct ThreadLimitClauseOps {
-  Value threadLimitVar;
-};
-
-struct UntiedClauseOps {
-  UnitAttr untiedAttr;
-};
-
-struct UseDeviceClauseOps {
-  llvm::SmallVector<Value> useDevicePtrVars, useDeviceAddrVars;
-};
-
 //===----------------------------------------------------------------------===//
-// Structures defining clause operands associated with each OpenMP leaf
-// construct.
-//
-// These mirror the arguments expected by the corresponding OpenMP MLIR ops.
+// Extra operation operand structures.
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-template <typename... Mixins>
-struct Clauses : public Mixins... {};
-} // namespace detail
+/// Clauses that correspond to operations other than omp.target, but might have
+/// to be evaluated outside of a parent target region.
+using HostEvaluatedOperands =
+    detail::Clauses<LoopRelatedClauseOps, NumTeamsClauseOps,
+                    NumThreadsClauseOps, ThreadLimitClauseOps>;
 
-using CriticalClauseOps = detail::Clauses<HintClauseOps, NameClauseOps>;
+// TODO: Add `indirect` clause.
+using DeclareTargetOperands = detail::Clauses<DeviceTypeClauseOps>;
 
-// TODO `indirect` clause.
-using DeclareTargetClauseOps = detail::Clauses<DeviceTypeClauseOps>;
-
-using DistributeClauseOps =
-    detail::Clauses<AllocateClauseOps, DistScheduleClauseOps, OrderClauseOps,
-                    PrivateClauseOps>;
-
-using LoopNestClauseOps = detail::Clauses<CollapseClauseOps, LoopRelatedOps>;
-
-// TODO `filter` clause.
-using MaskedClauseOps = detail::Clauses<>;
-
-using OrderedOpClauseOps = detail::Clauses<DoacrossClauseOps>;
-
-using OrderedRegionClauseOps = detail::Clauses<ParallelizationLevelClauseOps>;
-
-using ParallelClauseOps =
-    detail::Clauses<AllocateClauseOps, IfClauseOps, NumThreadsClauseOps,
-                    PrivateClauseOps, ProcBindClauseOps, ReductionClauseOps>;
-
-using SectionsClauseOps = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
-                                          PrivateClauseOps, ReductionClauseOps>;
-
-// TODO `linear` clause.
-using SimdLoopClauseOps =
-    detail::Clauses<AlignedClauseOps, CollapseClauseOps, IfClauseOps,
-                    LoopRelatedOps, NontemporalClauseOps, OrderClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, SafelenClauseOps,
-                    SimdlenClauseOps>;
-
-using SingleClauseOps = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
-                                        NowaitClauseOps, PrivateClauseOps>;
-
-// TODO `defaultmap`, `uses_allocators` clauses.
-using TargetClauseOps =
-    detail::Clauses<AllocateClauseOps, DependClauseOps, DeviceClauseOps,
-                    HasDeviceAddrClauseOps, IfClauseOps, InReductionClauseOps,
-                    IsDevicePtrClauseOps, MapClauseOps, NowaitClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
-
-using TargetDataClauseOps = detail::Clauses<DeviceClauseOps, IfClauseOps,
-                                            MapClauseOps, UseDeviceClauseOps>;
-
-using TargetEnterExitUpdateDataClauseOps =
-    detail::Clauses<DependClauseOps, DeviceClauseOps, IfClauseOps, MapClauseOps,
-                    NowaitClauseOps>;
-
-// TODO `affinity`, `detach` clauses.
-using TaskClauseOps =
-    detail::Clauses<AllocateClauseOps, DependClauseOps, FinalClauseOps,
-                    IfClauseOps, InReductionClauseOps, MergeableClauseOps,
-                    PriorityClauseOps, PrivateClauseOps, UntiedClauseOps>;
-
-using TaskgroupClauseOps =
-    detail::Clauses<AllocateClauseOps, TaskReductionClauseOps>;
-
-using TaskloopClauseOps =
-    detail::Clauses<AllocateClauseOps, CollapseClauseOps, FinalClauseOps,
-                    GrainsizeClauseOps, IfClauseOps, InReductionClauseOps,
-                    LoopRelatedOps, MergeableClauseOps, NogroupClauseOps,
-                    NumTasksClauseOps, PriorityClauseOps, PrivateClauseOps,
-                    ReductionClauseOps, UntiedClauseOps>;
-
-using TaskwaitClauseOps = detail::Clauses<DependClauseOps, NowaitClauseOps>;
-
-using TeamsClauseOps =
-    detail::Clauses<AllocateClauseOps, IfClauseOps, NumTeamsClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
-
-using WsloopClauseOps =
-    detail::Clauses<AllocateClauseOps, CollapseClauseOps, LinearClauseOps,
-                    LoopRelatedOps, NowaitClauseOps, OrderClauseOps,
-                    OrderedClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    ScheduleClauseOps>;
+/// omp.target_enter_data, omp.target_exit_data and omp.target_update take the
+/// same clauses, so we give the structure to be shared by all of them a
+/// representative name.
+using TargetEnterExitUpdateDataOperands = TargetEnterDataOperands;
 
 } // namespace omp
 } // namespace mlir

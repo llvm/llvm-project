@@ -14,6 +14,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -113,16 +114,17 @@ static GpuIdBuilderFnType commonLinearIdBuilderFn(int64_t multiplicity = 1) {
     // clang-format on
 
     // Return n-D ids for indexing and 1-D size + id for predicate generation.
-    return IdBuilderResult{
-        /*mappingIdOps=*/ids,
-        /*availableMappingSizes=*/
-        SmallVector<int64_t>{computeProduct(originalBasis)},
-        // `forallMappingSizes` iterate in the scaled basis, they need to be
-        // scaled back into the original basis to provide tight
-        // activeMappingSizes quantities for predication.
-        /*activeMappingSizes=*/
-        SmallVector<int64_t>{computeProduct(forallMappingSizes) * multiplicity},
-        /*activeIdOps=*/SmallVector<Value>{linearId.get<Value>()}};
+      return IdBuilderResult{
+          /*mappingIdOps=*/ids,
+          /*availableMappingSizes=*/
+          SmallVector<int64_t>{computeProduct(originalBasis)},
+          // `forallMappingSizes` iterate in the scaled basis, they need to be
+          // scaled back into the original basis to provide tight
+          // activeMappingSizes quantities for predication.
+          /*activeMappingSizes=*/
+          SmallVector<int64_t>{computeProduct(forallMappingSizes) *
+                               multiplicity},
+          /*activeIdOps=*/SmallVector<Value>{cast<Value>(linearId)}};
   };
 
   return res;
@@ -144,12 +146,10 @@ static GpuIdBuilderFnType common3DIdBuilderFn(int64_t multiplicity = 1) {
     // In the 3-D mapping case, scale the first dimension by the multiplicity.
     SmallVector<Value> scaledIds = ids;
     AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
-    scaledIds[0] = affine::makeComposedFoldedAffineApply(
-                       rewriter, loc, d0.floorDiv(multiplicity), {scaledIds[0]})
-                       .get<Value>();
+    scaledIds[0] = cast<Value>(affine::makeComposedFoldedAffineApply(
+        rewriter, loc, d0.floorDiv(multiplicity), {scaledIds[0]}));
     // In the 3-D mapping case, unscale the first dimension by the multiplicity.
-    SmallVector<int64_t> forallMappingSizeInOriginalBasis(
-        forallMappingSizes.begin(), forallMappingSizes.end());
+    SmallVector<int64_t> forallMappingSizeInOriginalBasis(forallMappingSizes);
     forallMappingSizeInOriginalBasis[0] *= multiplicity;
     return IdBuilderResult{
         /*mappingIdOps=*/scaledIds,
@@ -238,25 +238,17 @@ DiagnosedSilenceableFailure checkGpuLimits(TransformOpInterface transformOp,
                                            std::optional<int64_t> blockDimZ) {
 
   // TODO: pass a configuration object to set the limits properly.
-  static constexpr int maxTotalBlockdim = 1024;
-  static constexpr int maxBlockdimx = 1024;
-  static constexpr int maxBlockdimy = 1024;
-  static constexpr int maxBlockdimz = 64;
-  static constexpr int maxTotalGriddim = 2147483647;
-  static constexpr int maxGriddimx = 2147483647;
-  static constexpr int maxGriddimy = 65535;
-  static constexpr int maxGriddimz = 65535;
 
   if ((blockDimX.value_or(1) * blockDimY.value_or(1) * blockDimZ.value_or(1)) >
-          maxTotalBlockdim ||
+          kMaxTotalBlockdim ||
       (gridDimX.value_or(1) * gridDimY.value_or(1) * gridDimZ.value_or(1)) >
-          maxTotalGriddim ||
-      blockDimX.value_or(1) > maxBlockdimx ||
-      blockDimY.value_or(1) > maxBlockdimy ||
-      blockDimZ.value_or(1) > maxBlockdimz ||
-      gridDimY.value_or(1) > maxGriddimy ||
-      gridDimZ.value_or(1) > maxGriddimz ||
-      gridDimX.value_or(1) > maxGriddimx) {
+          kMaxTotalGriddim ||
+      blockDimX.value_or(1) > kMaxBlockdimx ||
+      blockDimY.value_or(1) > kMaxBlockdimy ||
+      blockDimZ.value_or(1) > kMaxBlockdimz ||
+      gridDimY.value_or(1) > kMaxGriddimy ||
+      gridDimZ.value_or(1) > kMaxGriddimz ||
+      gridDimX.value_or(1) > kMaxGriddimx) {
     return transformOp.emitSilenceableError()
            << "Trying to launch a GPU kernel with grid_dims = ("
            << gridDimX.value_or(1) << ", " << gridDimY.value_or(1) << ", "

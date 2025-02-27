@@ -8,9 +8,6 @@
 
 // Although RegisterBankSelection is disabled we need to distinct the banks
 // as InstructionSelector RegClass checking code relies on them
-def IDRegBank : RegisterBank<"IDBank", [ID]>;
-def fIDRegBank : RegisterBank<"fIDBank", [fID]>;
-def vIDRegBank : RegisterBank<"vIDBank", [vID]>;
-def vfIDRegBank : RegisterBank<"vfIDBank", [vfID]>;
-def vpIDRegBank : RegisterBank<"vpIDBank", [vpID]>;
+
 def TYPERegBank : RegisterBank<"TYPEBank", [TYPE]>;
+def IDRegBank : RegisterBank<"IDBank", [ID]>;

@@ -382,6 +382,8 @@ class DwarfDebug : public DebugHandlerBase {
                               SmallPtrSet<const MDNode *, 2>>;
   DenseMap<const DILocalScope *, MDNodeSet> LocalDeclsPerLS;
 
+  SmallDenseSet<const MachineInstr *> ForceIsStmtInstrs;
+
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
 
@@ -408,6 +410,9 @@ class DwarfDebug : public DebugHandlerBase {
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
 
+  /// Symbol pointing to the current function's DWARF line table entries.
+  MCSymbol *FunctionLineTableLabel;
+
   /// Used to set a uniqe ID for a Type Unit.
   /// This counter represents number of DwarfTypeUnits created, not necessarily
   /// number of type units that will be emitted.
@@ -432,8 +437,8 @@ class DwarfDebug : public DebugHandlerBase {
   /// temp symbols inside DWARF sections.
   bool UseSectionsAsReferences = false;
 
-  ///Allow emission of the .debug_loc section.
-  bool UseLocSection = true;
+  /// Allow emission of .debug_aranges section
+  bool UseARangesSection = false;
 
   /// Generate DWARF v4 type units.
   bool GenerateTypeUnits;
@@ -694,6 +699,8 @@ private:
   /// Emit the reference to the section.
   void emitSectionReference(const DwarfCompileUnit &CU);
 
+  void findForceIsStmtInstrs(const MachineFunction *MF);
+
 protected:
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
@@ -721,11 +728,16 @@ public:
   /// Emit all Dwarf sections that should come after the content.
   void endModule() override;
 
-  /// Emits inital debug location directive.
-  DebugLoc emitInitialLocDirective(const MachineFunction &MF, unsigned CUID);
+  /// Emits inital debug location directive. Returns instruction at which
+  /// the function prologue ends.
+  const MachineInstr *emitInitialLocDirective(const MachineFunction &MF,
+                                              unsigned CUID);
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
+
+  /// Process beginning of code alignment.
+  void beginCodeAlignment(const MachineBasicBlock &MBB) override;
 
   /// Perform an MD5 checksum of \p Identifier and return the lower 64 bits.
   static uint64_t makeTypeSignature(StringRef Identifier);
@@ -782,9 +794,6 @@ public:
   bool useSectionsAsReferences() const {
     return UseSectionsAsReferences;
   }
-
-  /// Returns whether .debug_loc section should be emitted.
-  bool useLocSection() const { return UseLocSection; }
 
   /// Returns whether to generate DWARF v4 type units.
   bool generateTypeUnits() const { return GenerateTypeUnits; }

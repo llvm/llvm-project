@@ -86,16 +86,13 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                             ExpectedPrinted, "input.cc");
 }
 
-::testing::AssertionResult PrintedDeclCXX11Matches(
-                                  StringRef Code,
-                                  const DeclarationMatcher &NodeMatch,
-                                  StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclCXX11Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
+                        StringRef ExpectedPrinted,
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            NodeMatch,
-                            ExpectedPrinted,
-                            "input.cc");
+  return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.cc",
+                            PolicyModifier);
 }
 
 ::testing::AssertionResult PrintedDeclCXX11nonMSCMatches(
@@ -1554,4 +1551,26 @@ TEST(DeclPrinter, VarDeclWithInitializer) {
   ASSERT_TRUE(
       PrintedDeclCXX17Matches("void foo() {int arr[42]; for(int a : arr);}",
                               namedDecl(hasName("a")).bind("id"), "int a"));
+}
+
+TEST(DeclPrinter, TestTemplateFinal) {
+  // By default we should print 'final' keyword whether class is implicitly or
+  // explicitly marked final.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}"));
+}
+
+TEST(DeclPrinter, TestTemplateFinalWithPolishForDecl) {
+  // clangd relies on the 'final' keyword being printed when
+  // PolishForDeclaration is enabled, so make sure it is even if implicit attrs
+  // are disabled.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}",
+      [](PrintingPolicy &Policy) { Policy.PolishForDeclaration = true; }));
 }

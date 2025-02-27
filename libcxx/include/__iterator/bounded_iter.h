@@ -11,12 +11,18 @@
 #define _LIBCPP___ITERATOR_BOUNDED_ITER_H
 
 #include <__assert>
+#include <__compare/ordering.h>
+#include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/make_const_lvalue_ref.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -45,8 +51,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //    pointer, it is undefined at the language level (see [expr.add]). If
 //    bounded iterators exhibited this undefined behavior, we risk compiler
 //    optimizations deleting non-redundant bounds checks.
-template <class _Iterator, class = __enable_if_t< __libcpp_is_contiguous_iterator<_Iterator>::value > >
+template <class _Iterator>
 struct __bounded_iter {
+  static_assert(__libcpp_is_contiguous_iterator<_Iterator>::value,
+                "Only contiguous iterators can be adapted by __bounded_iter.");
+
   using value_type        = typename iterator_traits<_Iterator>::value_type;
   using difference_type   = typename iterator_traits<_Iterator>::difference_type;
   using pointer           = typename iterator_traits<_Iterator>::pointer;
@@ -58,14 +67,19 @@ struct __bounded_iter {
 
   // Create a singular iterator.
   //
-  // Such an iterator points past the end of an empty span, so it is not dereferenceable.
-  // Observing operations like comparison and assignment are valid.
+  // Such an iterator points past the end of an empty range, so it is not dereferenceable.
+  // Operations like comparison and assignment are valid.
   _LIBCPP_HIDE_FROM_ABI __bounded_iter() = default;
 
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter const&) = default;
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter&&)      = default;
 
-  template <class _OtherIterator, __enable_if_t< is_convertible<_OtherIterator, _Iterator>::value, int> = 0>
+  template < class _OtherIterator,
+             __enable_if_t<
+                 _And< is_convertible<const _OtherIterator&, _Iterator>,
+                       _Or<is_same<reference, __iter_reference<_OtherIterator> >,
+                           is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIterator> > > > >::value,
+                 int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter(__bounded_iter<_OtherIterator> const& __other) _NOEXCEPT
       : __current_(__other.__current_),
         __begin_(__other.__begin_),
@@ -84,8 +98,8 @@ private:
   //
   // Since it is non-standard for iterators to have this constructor, __bounded_iter must
   // be created via `std::__make_bounded_iter`.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __bounded_iter(
-      _Iterator __current, _Iterator __begin, _Iterator __end)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __bounded_iter(_Iterator __current, _Iterator __begin, _Iterator __end)
       : __current_(__current), __begin_(__begin), __end_(__end) {
     _LIBCPP_ASSERT_INTERNAL(
         __begin <= __current, "__bounded_iter(current, begin, end): current and begin are inconsistent");
@@ -201,10 +215,13 @@ public:
   operator==(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ == __y.__current_;
   }
+
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR friend bool
   operator!=(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ != __y.__current_;
   }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR friend bool
   operator<(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ < __y.__current_;
@@ -222,9 +239,28 @@ public:
     return __x.__current_ >= __y.__current_;
   }
 
+#else
+  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
+  operator<=>(__bounded_iter const& __x, __bounded_iter const& __y) noexcept {
+    if constexpr (three_way_comparable<_Iterator, strong_ordering>) {
+      return __x.__current_ <=> __y.__current_;
+    } else {
+      if (__x.__current_ < __y.__current_)
+        return strong_ordering::less;
+
+      if (__x.__current_ == __y.__current_)
+        return strong_ordering::equal;
+
+      return strong_ordering::greater;
+    }
+  }
+#endif // _LIBCPP_STD_VER >= 20
+
 private:
   template <class>
   friend struct pointer_traits;
+  template <class>
+  friend struct __bounded_iter;
   _Iterator __current_;       // current iterator
   _Iterator __begin_, __end_; // valid range represented as [begin, end]
 };

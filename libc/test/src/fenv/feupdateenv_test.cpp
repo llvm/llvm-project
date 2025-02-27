@@ -10,11 +10,12 @@
 #include "src/fenv/feupdateenv.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <signal.h>
+using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
-TEST(LlvmLibcFEnvTest, UpdateEnvTest) {
+TEST_F(LlvmLibcFEnvTest, UpdateEnvTest) {
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 

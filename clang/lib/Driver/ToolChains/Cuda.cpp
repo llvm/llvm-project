@@ -17,6 +17,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -82,6 +83,14 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_122;
   if (raw_version < 12040)
     return CudaVersion::CUDA_123;
+  if (raw_version < 12050)
+    return CudaVersion::CUDA_124;
+  if (raw_version < 12060)
+    return CudaVersion::CUDA_125;
+  if (raw_version < 12070)
+    return CudaVersion::CUDA_126;
+  if (raw_version < 12090)
+    return CudaVersion::CUDA_128;
   return CudaVersion::NEW;
 }
 
@@ -114,7 +123,7 @@ CudaVersion parseCudaHFile(llvm::StringRef Input) {
 }
 } // namespace
 
-void CudaInstallationDetector::WarnIfUnsupportedVersion() {
+void CudaInstallationDetector::WarnIfUnsupportedVersion() const {
   if (Version > CudaVersion::PARTIALLY_SUPPORTED) {
     std::string VersionString = CudaVersionToString(Version);
     if (!VersionString.empty())
@@ -187,7 +196,8 @@ CudaInstallationDetector::CudaInstallationDetector(
       Candidates.emplace_back(D.SysRoot + "/usr/lib/cuda");
   }
 
-  bool NoCudaLib = Args.hasArg(options::OPT_nogpulib);
+  bool NoCudaLib =
+      !Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true);
 
   for (const auto &Candidate : Candidates) {
     InstallPath = Candidate.Path;
@@ -219,13 +229,13 @@ CudaInstallationDetector::CudaInstallationDetector(
       // CUDA-9+ uses single libdevice file for all GPU variants.
       std::string FilePath = LibDevicePath + "/libdevice.10.bc";
       if (FS.exists(FilePath)) {
-        for (int Arch = (int)CudaArch::SM_30, E = (int)CudaArch::LAST; Arch < E;
-             ++Arch) {
-          CudaArch GpuArch = static_cast<CudaArch>(Arch);
-          if (!IsNVIDIAGpuArch(GpuArch))
+        for (int Arch = (int)OffloadArch::SM_30, E = (int)OffloadArch::LAST;
+             Arch < E; ++Arch) {
+          OffloadArch OA = static_cast<OffloadArch>(Arch);
+          if (!IsNVIDIAOffloadArch(OA))
             continue;
-          std::string GpuArchName(CudaArchToString(GpuArch));
-          LibDeviceMap[GpuArchName] = FilePath;
+          std::string OffloadArchName(OffloadArchToString(OA));
+          LibDeviceMap[OffloadArchName] = FilePath;
         }
       }
     } else {
@@ -308,17 +318,17 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 }
 
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(
-    CudaArch Arch) const {
-  if (Arch == CudaArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
+    OffloadArch Arch) const {
+  if (Arch == OffloadArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
       ArchsWithBadVersion[(int)Arch])
     return;
 
-  auto MinVersion = MinVersionForCudaArch(Arch);
-  auto MaxVersion = MaxVersionForCudaArch(Arch);
+  auto MinVersion = MinVersionForOffloadArch(Arch);
+  auto MaxVersion = MaxVersionForOffloadArch(Arch);
   if (Version < MinVersion || Version > MaxVersion) {
     ArchsWithBadVersion[(int)Arch] = true;
     D.Diag(diag::err_drv_cuda_version_unsupported)
-        << CudaArchToString(Arch) << CudaVersionToString(MinVersion)
+        << OffloadArchToString(Arch) << CudaVersionToString(MinVersion)
         << CudaVersionToString(MaxVersion) << InstallPath
         << CudaVersionToString(Version);
   }
@@ -397,8 +407,8 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Obtain architecture from the action.
-  CudaArch gpu_arch = StringToCudaArch(GPUArchName);
-  assert(gpu_arch != CudaArch::UNKNOWN &&
+  OffloadArch gpu_arch = StringToOffloadArch(GPUArchName);
+  assert(gpu_arch != OffloadArch::UNKNOWN &&
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
@@ -453,17 +463,10 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   CmdArgs.push_back("--gpu-name");
-  CmdArgs.push_back(Args.MakeArgString(CudaArchToString(gpu_arch)));
+  CmdArgs.push_back(Args.MakeArgString(OffloadArchToString(gpu_arch)));
   CmdArgs.push_back("--output-file");
   std::string OutputFileName = TC.getInputFilename(Output);
 
-  // If we are invoking `nvlink` internally we need to output a `.cubin` file.
-  // FIXME: This should hopefully be removed if NVIDIA updates their tooling.
-  if (!C.getInputArgs().getLastArg(options::OPT_c)) {
-    SmallString<256> Filename(Output.getFilename());
-    llvm::sys::path::replace_extension(Filename, "cubin");
-    OutputFileName = Filename.str();
-  }
   if (Output.isFilename() && OutputFileName != Output.getFilename())
     C.addTempFile(Args.MakeArgString(OutputFileName));
 
@@ -506,7 +509,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 static bool shouldIncludePTX(const ArgList &Args, StringRef InputArch) {
   // The new driver does not include PTX by default to avoid overhead.
   bool includePTX = !Args.hasFlag(options::OPT_offload_new_driver,
-                                  options::OPT_no_offload_new_driver, false);
+                                  options::OPT_no_offload_new_driver, true);
   for (Arg *A : Args.filtered(options::OPT_cuda_include_ptx_EQ,
                               options::OPT_no_cuda_include_ptx_EQ)) {
     A->claim();
@@ -549,7 +552,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
     const char *gpu_arch_str = A->getOffloadingArch();
     assert(gpu_arch_str &&
            "Device action expected to have associated a GPU architecture!");
-    CudaArch gpu_arch = StringToCudaArch(gpu_arch_str);
+    OffloadArch gpu_arch = StringToOffloadArch(gpu_arch_str);
 
     if (II.getType() == types::TY_PP_Asm &&
         !shouldIncludePTX(Args, gpu_arch_str))
@@ -557,7 +560,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
     // We need to pass an Arch of the form "sm_XX" for cubin files and
     // "compute_XX" for ptx.
     const char *Arch = (II.getType() == types::TY_PP_Asm)
-                           ? CudaArchToVirtualArchString(gpu_arch)
+                           ? OffloadArchToVirtualArchString(gpu_arch)
                            : gpu_arch_str;
     CmdArgs.push_back(
         Args.MakeArgString(llvm::Twine("--image=profile=") + Arch +
@@ -599,14 +602,24 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  if (GPUArch.empty()) {
+  if (GPUArch.empty() && !C.getDriver().isUsingLTO()) {
     C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
         << getToolChain().getArchName() << getShortName();
     return;
   }
 
-  CmdArgs.push_back("-arch");
-  CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  if (!GPUArch.empty()) {
+    CmdArgs.push_back("-arch");
+    CmdArgs.push_back(Args.MakeArgString(GPUArch));
+  }
+
+  if (Args.hasArg(options::OPT_ptxas_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        "--pxtas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
+
+  if (Args.hasArg(options::OPT_cuda_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        "--cuda-path=" + Args.getLastArgValue(options::OPT_cuda_path_EQ)));
 
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
@@ -614,6 +627,18 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Add standard library search paths passed on the command line.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+
+  if (C.getDriver().isUsingLTO())
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+                  C.getDriver().getLTOMode() == LTOK_Thin);
+
+  // Forward the PTX features if the nvlink-wrapper needs it.
+  std::vector<StringRef> Features;
+  getNVPTXTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
+                         Features);
+  CmdArgs.push_back(
+      Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
@@ -621,51 +646,23 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
-  for (const auto &II : Inputs) {
-    if (II.getType() == types::TY_LLVM_IR || II.getType() == types::TY_LTO_IR ||
-        II.getType() == types::TY_LTO_BC || II.getType() == types::TY_LLVM_BC) {
-      C.getDriver().Diag(diag::err_drv_no_linker_llvm_support)
-          << getToolChain().getTripleString();
-      continue;
-    }
-
-    // The 'nvlink' application performs RDC-mode linking when given a '.o'
-    // file and device linking when given a '.cubin' file. We always want to
-    // perform device linking, so just rename any '.o' files.
-    // FIXME: This should hopefully be removed if NVIDIA updates their tooling.
-    if (II.isFilename()) {
-      auto InputFile = getToolChain().getInputFilename(II);
-      if (llvm::sys::path::extension(InputFile) != ".cubin") {
-        // If there are no actions above this one then this is direct input and
-        // we can copy it. Otherwise the input is internal so a `.cubin` file
-        // should exist.
-        if (II.getAction() && II.getAction()->getInputs().size() == 0) {
-          const char *CubinF =
-              Args.MakeArgString(getToolChain().getDriver().GetTemporaryPath(
-                  llvm::sys::path::stem(InputFile), "cubin"));
-          if (llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
-            continue;
-
-          CmdArgs.push_back(CubinF);
-        } else {
-          SmallString<256> Filename(InputFile);
-          llvm::sys::path::replace_extension(Filename, "cubin");
-          CmdArgs.push_back(Args.MakeArgString(Filename));
-        }
-      } else {
-        CmdArgs.push_back(Args.MakeArgString(InputFile));
-      }
-    } else if (!II.isNothing()) {
-      II.getInputArg().renderAsInput(Args, CmdArgs);
-    }
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
   }
 
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
                           "--options-file"},
-      Args.MakeArgString(getToolChain().GetProgramPath("nvlink")), CmdArgs,
-      Inputs, Output));
+      Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper")),
+      CmdArgs, Inputs, Output));
 }
 
 void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -688,6 +685,10 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(128, 87);
+    CASE_CUDA_VERSION(126, 85);
+    CASE_CUDA_VERSION(125, 85);
+    CASE_CUDA_VERSION(124, 84);
     CASE_CUDA_VERSION(123, 83);
     CASE_CUDA_VERSION(122, 82);
     CASE_CUDA_VERSION(121, 81);
@@ -708,6 +709,10 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CASE_CUDA_VERSION(91, 61);
     CASE_CUDA_VERSION(90, 60);
 #undef CASE_CUDA_VERSION
+  // TODO: Use specific CUDA version once it's public.
+  case clang::CudaVersion::NEW:
+    PtxFeature = "+ptx86";
+    break;
   default:
     PtxFeature = "+ptx42";
   }
@@ -719,9 +724,8 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 /// toolchain.
 NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const llvm::Triple &HostTriple,
-                               const ArgList &Args, bool Freestanding = false)
-    : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args),
-      Freestanding(Freestanding) {
+                               const ArgList &Args)
+    : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args) {
   if (CudaInstallation.isValid())
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
   // Lookup binaries into the driver directory, this is used to
@@ -733,8 +737,7 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 /// system's default triple if not provided.
 NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
-    : NVPTXToolChain(D, Triple, llvm::Triple(LLVM_HOST_TRIPLE), Args,
-                     /*Freestanding=*/true) {}
+    : NVPTXToolChain(D, Triple, llvm::Triple(LLVM_HOST_TRIPLE), Args) {}
 
 llvm::opt::DerivedArgList *
 NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
@@ -752,7 +755,7 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      CudaArchToString(CudaArch::CudaDefault));
+                      OffloadArchToString(OffloadArch::CudaDefault));
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic" &&
              OffloadKind == Action::OFK_None) {
     DAL->eraseArg(options::OPT_march_EQ);
@@ -775,13 +778,7 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
 void NVPTXToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  // If we are compiling with a standalone NVPTX toolchain we want to try to
-  // mimic a standard environment as much as possible. So we enable lowering
-  // ctor / dtor functions to global symbols that can be registered.
-  if (Freestanding)
-    CC1Args.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
-}
+    Action::OffloadKind DeviceOffloadingKind) const {}
 
 bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
   const Option &O = A->getOption();
@@ -850,24 +847,27 @@ void CudaToolChain::addClangTargetOptions(
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-  assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
           DeviceOffloadingKind == Action::OFK_Cuda) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  if (DeviceOffloadingKind == Action::OFK_Cuda) {
-    CC1Args.append(
-        {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
+  CC1Args.append({"-fcuda-is-device", "-mllvm",
+                  "-enable-memcpyopt-without-libcalls",
+                  "-fno-threadsafe-statics"});
 
-    // Unsized function arguments used for variadics were introduced in CUDA-9.0
-    // We still do not support generating code that actually uses variadic
-    // arguments yet, but we do need to allow parsing them as recent CUDA
-    // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
-    if (CudaInstallation.version() >= CudaVersion::CUDA_90)
-      CC1Args.push_back("-fcuda-allow-variadic-functions");
-  }
+  // Unsized function arguments used for variadics were introduced in CUDA-9.0
+  // We still do not support generating code that actually uses variadic
+  // arguments yet, but we do need to allow parsing them as recent CUDA
+  // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
+  if (CudaInstallation.version() >= CudaVersion::CUDA_90)
+    CC1Args.push_back("-fcuda-allow-variadic-functions");
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
+                         options::OPT_fno_cuda_short_ptr, false))
+    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
+
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP &&
@@ -883,11 +883,14 @@ void CudaToolChain::addClangTargetOptions(
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
 
-  clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
+  // For now, we don't use any Offload/OpenMP device runtime when we offload
+  // CUDA via LLVM/Offload. We should split the Offload/OpenMP device runtime
+  // and include the "generic" (or CUDA-specific) parts.
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false))
+    return;
 
-  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
-                         options::OPT_fno_cuda_short_ptr, false))
-    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
+  clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
 
   if (CudaInstallationVersion >= CudaVersion::UNKNOWN)
     CC1Args.push_back(
@@ -903,7 +906,7 @@ void CudaToolChain::addClangTargetOptions(
     }
 
     // Link the bitcode library late if we're using device LTO.
-    if (getDriver().isUsingLTO(/* IsOffload */ true))
+    if (getDriver().isUsingOffloadLTO())
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
@@ -932,7 +935,7 @@ void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
       !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
     StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
     assert(!Arch.empty() && "Must have an explicit GPU arch.");
-    CudaInstallation.CheckCudaVersionSupportsArch(StringToCudaArch(Arch));
+    CudaInstallation.CheckCudaVersionSupportsArch(StringToOffloadArch(Arch));
   }
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
@@ -943,11 +946,7 @@ std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   if (Input.getType() != types::TY_Object || getDriver().offloadDeviceOnly())
     return ToolChain::getInputFilename(Input);
 
-  // Replace extension for object files with cubin because nvlink relies on
-  // these particular file names.
-  SmallString<256> Filename(ToolChain::getInputFilename(Input));
-  llvm::sys::path::replace_extension(Filename, "cubin");
-  return std::string(Filename);
+  return ToolChain::getInputFilename(Input);
 }
 
 llvm::opt::DerivedArgList *
@@ -960,34 +959,6 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     DAL = new DerivedArgList(Args.getBaseArgs());
 
   const OptTable &Opts = getDriver().getOpts();
-
-  // For OpenMP device offloading, append derived arguments. Make sure
-  // flags are not duplicated.
-  // Also append the compute capability.
-  if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args)
-      if (!llvm::is_contained(*DAL, A))
-        DAL->append(A);
-
-    if (!DAL->hasArg(options::OPT_march_EQ)) {
-      StringRef Arch = BoundArch;
-      if (Arch.empty()) {
-        auto ArchsOrErr = getSystemGPUArchs(Args);
-        if (!ArchsOrErr) {
-          std::string ErrMsg =
-              llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
-          getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-              << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
-          Arch = CudaArchToString(CudaArch::CudaDefault);
-        } else {
-          Arch = Args.MakeArgString(ArchsOrErr->front());
-        }
-      }
-      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
-    }
-
-    return DAL;
-  }
 
   for (Arg *A : Args) {
     // Make sure flags are not duplicated.

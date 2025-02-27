@@ -92,8 +92,8 @@ define <vscale x 8 x half> @fsqrt_recip_8f16(<vscale x 8 x half> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frsqrte z1.h, z0.h
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fmul z2.h, z1.h, z1.h
 ; CHECK-NEXT:    fcmne p0.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    fmul z2.h, z1.h, z1.h
 ; CHECK-NEXT:    frsqrts z2.h, z0.h, z2.h
 ; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
@@ -117,8 +117,8 @@ define <vscale x 4 x float> @fsqrt_recip_4f32(<vscale x 4 x float> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frsqrte z1.s, z0.s
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fmul z2.s, z1.s, z1.s
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fmul z2.s, z1.s, z1.s
 ; CHECK-NEXT:    frsqrts z2.s, z0.s, z2.s
 ; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
 ; CHECK-NEXT:    fmul z2.s, z1.s, z1.s
@@ -145,8 +145,8 @@ define <vscale x 2 x double> @fsqrt_recip_2f64(<vscale x 2 x double> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frsqrte z1.d, z0.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fmul z2.d, z1.d, z1.d
 ; CHECK-NEXT:    fcmne p0.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    fmul z2.d, z1.d, z1.d
 ; CHECK-NEXT:    frsqrts z2.d, z0.d, z2.d
 ; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
 ; CHECK-NEXT:    fmul z2.d, z1.d, z1.d

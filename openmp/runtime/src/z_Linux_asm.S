@@ -19,6 +19,16 @@
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 
+# if defined(__ELF__) && defined(__CET__) && defined(__has_include)
+# if __has_include(<cet.h>)
+# include <cet.h>
+# endif
+# endif
+
+# if !defined(_CET_ENDBR)
+# define _CET_ENDBR
+# endif
+
 # if KMP_MIC
 // the 'delay r16/r32/r64' should be used instead of the 'pause'.
 // The delay operation has the effect of removing the current thread from
@@ -66,6 +76,7 @@
 	ALIGN  4
 	.globl KMP_PREFIX_UNDERSCORE($0)
 KMP_PREFIX_UNDERSCORE($0):
+	_CET_ENDBR
 .endmacro
 # else // KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) x //no extra underscore for Linux* OS symbols
@@ -92,6 +103,7 @@ KMP_PREFIX_UNDERSCORE($0):
         .globl KMP_PREFIX_UNDERSCORE(\proc)
 KMP_PREFIX_UNDERSCORE(\proc):
 	.cfi_startproc
+	_CET_ENDBR
 .endm
 .macro KMP_CFI_DEF_OFFSET sz
 	.cfi_def_cfa_offset	\sz
@@ -176,6 +188,53 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
+# if KMP_OS_LINUX
+// BTI and PAC gnu property note
+#  define NT_GNU_PROPERTY_TYPE_0 5
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
+#  define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
+
+#  define GNU_PROPERTY(type, value)                                            \
+  .pushsection .note.gnu.property, "a";                                        \
+  .p2align 3;                                                                  \
+  .word 4;                                                                     \
+  .word 16;                                                                    \
+  .word NT_GNU_PROPERTY_TYPE_0;                                                \
+  .asciz "GNU";                                                                \
+  .word type;                                                                  \
+  .word 4;                                                                     \
+  .word value;                                                                 \
+  .word 0;                                                                     \
+  .popsection
+# endif
+
+# if defined(__ARM_FEATURE_BTI_DEFAULT)
+#  define BTI_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_BTI
+# else
+#  define BTI_FLAG 0
+# endif
+# if __ARM_FEATURE_PAC_DEFAULT & 3
+#  define PAC_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_PAC
+# else
+#  define PAC_FLAG 0
+# endif
+
+# if (BTI_FLAG | PAC_FLAG) != 0
+#  if PAC_FLAG != 0
+#   define PACBTI_C hint #25
+#   define PACBTI_RET hint #29
+#  else
+#   define PACBTI_C hint #34
+#   define PACBTI_RET
+#  endif
+#  define GNU_PROPERTY_BTI_PAC \
+    GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND, BTI_FLAG | PAC_FLAG)
+# else
+#  define PACBTI_C
+#  define PACBTI_RET
+#  define GNU_PROPERTY_BTI_PAC
+# endif
 #endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
 
 .macro COMMON name, size, align_power
@@ -1150,6 +1209,9 @@ KMP_LABEL(kmp_invoke_pass_parms):	// put 1st - 6th parms to pkfn in registers.
 	movq	%rdi, %rbx	// pkfn -> %rbx
 	leaq	__gtid(%rbp), %rdi // &gtid -> %rdi (store 1st parm to pkfn)
 	leaq	__tid(%rbp), %rsi  // &tid -> %rsi (store 2nd parm to pkfn)
+	// Check if argc is 0
+	cmpq $0, %rax
+	je KMP_LABEL(kmp_no_args) // Jump ahead
 
 	movq	%r8, %r11	// p_argv -> %r11
 
@@ -1195,6 +1257,7 @@ KMP_LABEL(kmp_1_exit):
 	cmovnsq	(%r11), %rdx	// p_argv[0] -> %rdx (store 3rd parm to pkfn)
 #endif // KMP_MIC
 
+KMP_LABEL(kmp_no_args):
 	call	*%rbx		// call (*pkfn)();
 	movq	$1, %rax	// move 1 into return register;
 
@@ -1292,6 +1355,7 @@ __tid = 8
 // mark_begin;
 	.text
 	PROC __kmp_invoke_microtask
+	PACBTI_C
 
 	stp	x29, x30, [sp, #-16]!
 # if OMPT_SUPPORT
@@ -1355,6 +1419,7 @@ KMP_LABEL(kmp_1):
 	ldp	x19, x20, [sp], #16
 # endif
 	ldp	x29, x30, [sp], #16
+	PACBTI_RET
 	ret
 
 	DEBUG_INFO __kmp_invoke_microtask
@@ -2405,7 +2470,7 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_S390X */
 
-#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32
+#if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2449,22 +2514,6 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 # endif
 #endif
 
-#if KMP_ARCH_WASM
-.data
-.global .gomp_critical_user_
-.global .gomp_critical_user_.var
-.global .gomp_critical_user_.reduction.var
-.global __kmp_unnamed_critical_addr
-.gomp_critical_user_:
-.zero 4
-.size .gomp_critical_user_, 4
-.gomp_critical_user_.var:
-.zero 4
-.size .gomp_critical_user_.var, 4
-.gomp_critical_user_.reduction.var:
-.zero 4
-.size .gomp_critical_user_.reduction.var, 4
-__kmp_unnamed_critical_addr:
-    .4byte .gomp_critical_user_
-    .size __kmp_unnamed_critical_addr, 4
+#if KMP_OS_LINUX && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
+GNU_PROPERTY_BTI_PAC
 #endif

@@ -56,8 +56,9 @@
 //       objects that are equally or less cv-qualified.
 
 #include <functional>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 #include "invoke_helpers.h"
@@ -261,8 +262,8 @@ struct ReferenceWrapper {
     constexpr operator Type&() const noexcept { return *ptr; }
 
     template <class... _ArgTypes>
-    constexpr typename std::__invoke_of<Type&, _ArgTypes...>::type operator() (_ArgTypes&&... __args) const {
-        return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
+    constexpr std::__invoke_result_t<Type&, _ArgTypes...> operator()(_ArgTypes&&... __args) const {
+      return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
     }
 };
 

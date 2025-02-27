@@ -97,8 +97,8 @@ DanglingHandleCheck::DanglingHandleCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       HandleClasses(utils::options::parseStringList(Options.get(
-          "HandleClasses",
-          "std::basic_string_view;std::experimental::basic_string_view"))),
+          "HandleClasses", "std::basic_string_view;std::experimental::basic_"
+                           "string_view;std::span"))),
       IsAHandle(cxxRecordDecl(hasAnyName(HandleClasses)).bind("handle")) {}
 
 void DanglingHandleCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

@@ -8,13 +8,18 @@
 
 #include "FPExceptMatcher.h"
 
+#include "src/__support/macros/config.h"
+#include "test/UnitTest/ExecuteFunction.h" // FunctionCaller
+#include "test/UnitTest/Test.h"
+
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
-#include <memory>
 #include <setjmp.h>
 #include <signal.h>
 
-namespace LIBC_NAMESPACE {
+#if LIBC_TEST_HAS_MATCHERS()
+
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 #if defined(_WIN32)
@@ -32,14 +37,14 @@ static void sigfpeHandler(int sig) {
 }
 
 FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
-  auto oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
-  std::unique_ptr<FunctionCaller> funcUP(func);
+  auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
 
   caughtExcept = false;
   fenv_t oldEnv;
   fputil::get_env(&oldEnv);
   if (sigsetjmp(jumpBuffer, 1) == 0)
-    funcUP->call();
+    func->call();
+  delete func;
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
   fputil::set_env(&oldEnv);
@@ -48,4 +53,6 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TEST_HAS_MATCHERS()

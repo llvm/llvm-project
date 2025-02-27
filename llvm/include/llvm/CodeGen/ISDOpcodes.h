@@ -83,6 +83,12 @@ enum NodeType {
   ExternalSymbol,
   BlockAddress,
 
+  /// A ptrauth constant.
+  /// ptr, key, addr-disc, disc
+  /// Note that the addr-disc can be a non-constant value, to allow representing
+  /// a constant global address signed using address-diversification, in code.
+  PtrAuthGlobalAddress,
+
   /// The address of the GOT
   GLOBAL_OFFSET_TABLE,
 
@@ -205,14 +211,15 @@ enum NodeType {
   /// CopyFromReg - This node indicates that the input value is a virtual or
   /// physical register that is defined outside of the scope of this
   /// SelectionDAG.  The register is available from the RegisterSDNode object.
+  /// Note that CopyFromReg is considered as also freezing the value.
   CopyFromReg,
 
   /// UNDEF - An undefined node.
   UNDEF,
 
-  // FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
-  // is evaluated to UNDEF), or returns VAL otherwise. Note that each
-  // read of UNDEF can yield different value, but FREEZE(UNDEF) cannot.
+  /// FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
+  /// is evaluated to UNDEF), or returns VAL otherwise. Note that each
+  /// read of UNDEF can yield different value, but FREEZE(UNDEF) cannot.
   FREEZE,
 
   /// EXTRACT_ELEMENT - This is used to get the lower or upper (determined by
@@ -293,7 +300,7 @@ enum NodeType {
   /// it to the add/sub hardware instruction, and then inverting the outgoing
   /// carry/borrow.
   ///
-  /// The use of these opcodes is preferable to adde/sube if the target supports
+  /// The use of these opcodes is preferable to ADDE/SUBE if the target supports
   /// it, as the carry is a regular value rather than a glue, which allows
   /// further optimisation.
   ///
@@ -414,6 +421,14 @@ enum NodeType {
   STRICT_FLDEXP,
   STRICT_FSIN,
   STRICT_FCOS,
+  STRICT_FTAN,
+  STRICT_FASIN,
+  STRICT_FACOS,
+  STRICT_FATAN,
+  STRICT_FATAN2,
+  STRICT_FSINH,
+  STRICT_FCOSH,
+  STRICT_FTANH,
   STRICT_FEXP,
   STRICT_FEXP2,
   STRICT_FLOG,
@@ -476,7 +491,7 @@ enum NodeType {
   STRICT_FSETCC,
   STRICT_FSETCCS,
 
-  // FPTRUNC_ROUND - This corresponds to the fptrunc_round intrinsic.
+  /// FPTRUNC_ROUND - This corresponds to the fptrunc_round intrinsic.
   FPTRUNC_ROUND,
 
   /// FMA - Perform a * b + c with no intermediate rounding step.
@@ -645,6 +660,14 @@ enum NodeType {
   /// non-constant operands.
   STEP_VECTOR,
 
+  /// VECTOR_COMPRESS(Vec, Mask, Passthru)
+  /// consecutively place vector elements based on mask
+  /// e.g., vec = {A, B, C, D} and mask = {1, 0, 1, 0}
+  ///         --> {A, C, ?, ?} where ? is undefined
+  /// If passthru is defined, ?s are replaced with elements from passthru.
+  /// If passthru is undef, ?s remain undefined.
+  VECTOR_COMPRESS,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
@@ -662,10 +685,10 @@ enum NodeType {
   AVGCEILS,
   AVGCEILU,
 
-  // ABDS/ABDU - Absolute difference - Return the absolute difference between
-  // two numbers interpreted as signed/unsigned.
-  // i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
-  //  or trunc(abs(zext(Op0) - zext(Op1))) becomes abdu(Op0, Op1)
+  /// ABDS/ABDU - Absolute difference - Return the absolute difference between
+  /// two numbers interpreted as signed/unsigned.
+  /// i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
+  ///  or trunc(abs(zext(Op0) - zext(Op1))) becomes abdu(Op0, Op1)
   ABDS,
   ABDU,
 
@@ -675,6 +698,12 @@ enum NodeType {
   SMAX,
   UMIN,
   UMAX,
+
+  /// [US]CMP - 3-way comparison of signed or unsigned integers. Returns -1, 0,
+  /// or 1 depending on whether Op0 <, ==, or > Op1. The operands can have type
+  /// different to the result.
+  SCMP,
+  UCMP,
 
   /// Bitwise operators - logical and, logical or, logical xor.
   AND,
@@ -700,8 +729,9 @@ enum NodeType {
   /// amount modulo the element size of the first operand.
   ///
   /// Funnel 'double' shifts take 3 operands, 2 inputs and the shift amount.
-  /// fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
-  /// fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+  ///
+  ///     fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+  ///     fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
   SHL,
   SRA,
   SRL,
@@ -759,7 +789,8 @@ enum NodeType {
 
   /// SHL_PARTS/SRA_PARTS/SRL_PARTS - These operators are used for expanded
   /// integer shift operations.  The operation ordering is:
-  ///       [Lo,Hi] = op [LoLHS,HiLHS], Amt
+  ///
+  ///     [Lo,Hi] = op [LoLHS,HiLHS], Amt
   SHL_PARTS,
   SRA_PARTS,
   SRL_PARTS,
@@ -784,6 +815,26 @@ enum NodeType {
 
   /// TRUNCATE - Completely drop the high bits.
   TRUNCATE,
+  /// TRUNCATE_[SU]SAT_[SU] - Truncate for saturated operand
+  /// [SU] located in middle, prefix for `SAT` means indicates whether
+  /// existing truncate target was a signed operation. For examples,
+  /// If `truncate(smin(smax(x, C), C))` was saturated then become `S`.
+  /// If `truncate(umin(x, C))` was saturated then become `U`.
+  /// [SU] located in last indicates whether range of truncated values is
+  /// sign-saturated. For example, if `truncate(smin(smax(x, C), C))` is a
+  /// truncation to `i8`, then if value of C ranges from `-128 to 127`, it will
+  /// be saturated against signed values, resulting in `S`, which will combine
+  /// to `TRUNCATE_SSAT_S`. If the value of C ranges from `0 to 255`, it will
+  /// be saturated against unsigned values, resulting in `U`, which will
+  /// combine to `TRUNCATE_SSAT_U`. Similarly, in `truncate(umin(x, C))`, if
+  /// value of C ranges from `0 to 255`, it becomes `U` because it is saturated
+  /// for unsigned values. As a result, it combines to `TRUNCATE_USAT_U`.
+  TRUNCATE_SSAT_S, // saturate signed input to signed result -
+                   // truncate(smin(smax(x, C), C))
+  TRUNCATE_SSAT_U, // saturate signed input to unsigned result -
+                   // truncate(smin(smax(x, 0), C))
+  TRUNCATE_USAT_U, // saturate unsigned input to unsigned result -
+                   // truncate(umin(x, C))
 
   /// [SU]INT_TO_FP - These operators convert integers (whose interpreted sign
   /// depends on the first letter) to floating point.
@@ -933,10 +984,19 @@ enum NodeType {
   FCBRT,
   FSIN,
   FCOS,
+  FTAN,
+  FASIN,
+  FACOS,
+  FATAN,
+  FSINH,
+  FCOSH,
+  FTANH,
   FPOW,
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
   FLDEXP,
+  /// FATAN2 - atan2, inspired by libm.
+  FATAN2,
 
   /// FFREXP - frexp, extract fractional and exponent component of a
   /// floating-point value. Returns the two components as separate return
@@ -961,20 +1021,36 @@ enum NodeType {
   LRINT,
   LLRINT,
 
-  /// FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
-  /// values.
-  //
-  /// In the case where a single input is a NaN (either signaling or quiet),
-  /// the non-NaN input is returned.
+  /// FMINNUM/FMAXNUM - Perform floating-point minimum maximum on two values,
+  /// following IEEE-754 definitions except for signed zero behavior.
   ///
-  /// The return value of (FMINNUM 0.0, -0.0) could be either 0.0 or -0.0.
+  /// If one input is a signaling NaN, returns a quiet NaN. This matches
+  /// IEEE-754 2008's minNum/maxNum behavior for signaling NaNs (which differs
+  /// from 2019).
+  ///
+  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
+  /// 2019's minimumNumber/maximumNumber.
+  ///
+  /// Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
+  /// so arithmetic feeding into a minnum/maxnum can produce inconsistent
+  /// results. FMAXIMUN/FMINIMUM or FMAXIMUMNUM/FMINIMUMNUM may be better choice
+  /// for non-distinction of sNaN/qNaN handling.
   FMINNUM,
   FMAXNUM,
 
-  /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimum or maximum on
-  /// two values, following the IEEE-754 2008 definition. This differs from
-  /// FMINNUM/FMAXNUM in the handling of signaling NaNs. If one input is a
-  /// signaling NaN, returns a quiet NaN.
+  /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
+  /// maximumNumber on two values, following IEEE-754 definitions. This differs
+  /// from FMINNUM/FMAXNUM in the handling of signaling NaNs, and signed zero.
+  ///
+  /// If one input is a signaling NaN, returns a quiet NaN. This matches
+  /// IEEE-754 2008's minnum/maxnum behavior for signaling NaNs (which differs
+  /// from 2019).
+  ///
+  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
+  /// 2019's minimumNumber/maximumNumber.
+  ///
+  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
+  /// semantics now.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
@@ -984,8 +1060,21 @@ enum NodeType {
   FMINIMUM,
   FMAXIMUM,
 
+  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
+  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  FMINIMUMNUM,
+  FMAXIMUMNUM,
+
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
+
+  /// FSINCOSPI - Compute both the sine and cosine times pi more accurately
+  /// than FSINCOS(pi*x), especially for large x.
+  FSINCOSPI,
+
+  /// FMODF - Decomposes the operand into integral and fractional parts, each
+  /// having the same type and sign as the operand.
+  FMODF,
 
   /// Gets the current floating-point environment. The first operand is a token
   /// chain. The results are FP environment, represented by an integer value,
@@ -1155,11 +1244,11 @@ enum NodeType {
   VAEND,
   VASTART,
 
-  // PREALLOCATED_SETUP - This has 2 operands: an input chain and a SRCVALUE
-  // with the preallocated call Value.
+  /// PREALLOCATED_SETUP - This has 2 operands: an input chain and a SRCVALUE
+  /// with the preallocated call Value.
   PREALLOCATED_SETUP,
-  // PREALLOCATED_ARG - This has 3 operands: an input chain, a SRCVALUE
-  // with the preallocated call Value, and a constant int.
+  /// PREALLOCATED_ARG - This has 3 operands: an input chain, a SRCVALUE
+  /// with the preallocated call Value, and a constant int.
   PREALLOCATED_ARG,
 
   /// SRCVALUE - This is a node type that holds a Value* that is used to
@@ -1236,7 +1325,7 @@ enum NodeType {
   /// This corresponds to "load atomic" instruction.
   ATOMIC_LOAD,
 
-  /// OUTCHAIN = ATOMIC_STORE(INCHAIN, ptr, val)
+  /// OUTCHAIN = ATOMIC_STORE(INCHAIN, val, ptr)
   /// This corresponds to "store atomic" instruction.
   ATOMIC_STORE,
 
@@ -1277,25 +1366,27 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
+  ATOMIC_LOAD_USUB_COND,
+  ATOMIC_LOAD_USUB_SAT,
 
-  // Masked load and store - consecutive vector load and store operations
-  // with additional mask operand that prevents memory accesses to the
-  // masked-off lanes.
-  //
-  // Val, OutChain = MLOAD(BasePtr, Mask, PassThru)
-  // OutChain = MSTORE(Value, BasePtr, Mask)
+  /// Masked load and store - consecutive vector load and store operations
+  /// with additional mask operand that prevents memory accesses to the
+  /// masked-off lanes.
+  ///
+  ///     Val, OutChain = MLOAD(BasePtr, Mask, PassThru)
+  ///     OutChain = MSTORE(Value, BasePtr, Mask)
   MLOAD,
   MSTORE,
 
-  // Masked gather and scatter - load and store operations for a vector of
-  // random addresses with additional mask operand that prevents memory
-  // accesses to the masked-off lanes.
-  //
-  // Val, OutChain = GATHER(InChain, PassThru, Mask, BasePtr, Index, Scale)
-  // OutChain = SCATTER(InChain, Value, Mask, BasePtr, Index, Scale)
-  //
-  // The Index operand can have more vector elements than the other operands
-  // due to type legalization. The extra elements are ignored.
+  /// Masked gather and scatter - load and store operations for a vector of
+  /// random addresses with additional mask operand that prevents memory
+  /// accesses to the masked-off lanes.
+  ///
+  ///     Val, OutChain = GATHER(InChain, PassThru, Mask, BasePtr, Index, Scale)
+  ///     OutChain = SCATTER(InChain, Value, Mask, BasePtr, Index, Scale)
+  ///
+  /// The Index operand can have more vector elements than the other operands
+  /// due to type legalization. The extra elements are ignored.
   MGATHER,
   MSCATTER,
 
@@ -1303,6 +1394,11 @@ enum NodeType {
   /// is the chain and the second operand is the alloca pointer.
   LIFETIME_START,
   LIFETIME_END,
+
+  /// FAKE_USE represents a use of the operand but does not do anything.
+  /// Its purpose is the extension of the operand's lifetime mainly for
+  /// debugging purposes.
+  FAKE_USE,
 
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
@@ -1344,9 +1440,11 @@ enum NodeType {
   /// pow-of-2 vectors, one valid legalizer expansion is to use a tree
   /// reduction, i.e.:
   /// For RES = VECREDUCE_FADD <8 x f16> SRC_VEC
-  ///   PART_RDX = FADD SRC_VEC[0:3], SRC_VEC[4:7]
-  ///   PART_RDX2 = FADD PART_RDX[0:1], PART_RDX[2:3]
-  ///   RES = FADD PART_RDX2[0], PART_RDX2[1]
+  ///
+  ///     PART_RDX = FADD SRC_VEC[0:3], SRC_VEC[4:7]
+  ///     PART_RDX2 = FADD PART_RDX[0:1], PART_RDX[2:3]
+  ///     RES = FADD PART_RDX2[0], PART_RDX2[1]
+  ///
   /// For non-pow-2 vectors, this can be computed by extracting each element
   /// and performing the operation as if it were scalarized.
   VECREDUCE_FADD,
@@ -1370,6 +1468,23 @@ enum NodeType {
   VECREDUCE_SMIN,
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
+
+  // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
+  // The partial reduction nodes sign or zero extend Input1 and Input2 to the
+  // element type of Accumulator before multiplying their results.
+  // This result is concatenated to the Accumulator, and this is then reduced,
+  // using addition, to the result type.
+  // The output is only expected to either be given to another partial reduction
+  // operation or an equivalent vector reduce operation, so the order in which
+  // the elements are reduced is deliberately not specified.
+  // Input1 and Input2 must be the same type. Accumulator and the output must be
+  // the same type.
+  // The number of elements in Input1 and Input2 must be a positive integer
+  // multiple of the number of elements in the Accumulator / output type.
+  // Input1 and Input2 must have an element type which is the same as or smaller
+  // than the element type of the Accumulator and output.
+  PARTIAL_REDUCE_SMLA,
+  PARTIAL_REDUCE_UMLA,
 
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
@@ -1395,26 +1510,33 @@ enum NodeType {
   // which is later translated to an implicit use in the MIR.
   CONVERGENCECTRL_GLUE,
 
+  // Experimental vector histogram intrinsic
+  // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
+  // Output: Output Chain
+  EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  // Finds the index of the last active mask element
+  // Operands: Mask
+  VECTOR_FIND_LAST_ACTIVE,
+
+  // llvm.clear_cache intrinsic
+  // Operands: Input Chain, Start Addres, End Address
+  // Outputs: Output Chain
+  CLEAR_CACHE,
+
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.
   BUILTIN_OP_END
 };
 
-/// FIRST_TARGET_STRICTFP_OPCODE - Target-specific pre-isel operations
-/// which cannot raise FP exceptions should be less than this value.
-/// Those that do must not be less than this value.
-static const int FIRST_TARGET_STRICTFP_OPCODE = BUILTIN_OP_END + 400;
-
-/// FIRST_TARGET_MEMORY_OPCODE - Target-specific pre-isel operations
-/// which do not reference a specific memory location should be less than
-/// this value. Those that do must not be less than this value, and can
-/// be used with SelectionDAG::getMemIntrinsicNode.
-static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END + 500;
-
 /// Whether this is bitwise logic opcode.
 inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
+
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
+/// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
+NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
@@ -1439,7 +1561,7 @@ std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
-unsigned getVPForBaseOpcode(unsigned Opcode);
+std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed

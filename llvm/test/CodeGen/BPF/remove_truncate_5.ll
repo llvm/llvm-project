@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel | FileCheck -check-prefixes=CHECK %s
+; RUN: llc < %s -mtriple=bpfel | FileCheck -check-prefixes=CHECK %s
 
 ; Source code:
 ; struct test_t {

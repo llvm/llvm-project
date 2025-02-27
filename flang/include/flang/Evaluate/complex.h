@@ -61,10 +61,11 @@ public:
 
   template <typename INT>
   static ValueWithRealFlags<Complex> FromInteger(const INT &n,
+      bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding) {
     ValueWithRealFlags<Complex> result;
-    result.value.re_ =
-        Part::FromInteger(n, rounding).AccumulateFlags(result.flags);
+    result.value.re_ = Part::FromInteger(n, isUnsigned, rounding)
+                           .AccumulateFlags(result.flags);
     return result;
   }
 
@@ -104,7 +105,7 @@ extern template class Complex<Real<Integer<16>, 11>>;
 extern template class Complex<Real<Integer<16>, 8>>;
 extern template class Complex<Real<Integer<32>, 24>>;
 extern template class Complex<Real<Integer<64>, 53>>;
-extern template class Complex<Real<Integer<80>, 64>>;
+extern template class Complex<Real<X87IntegerContainer, 64>>;
 extern template class Complex<Real<Integer<128>, 113>>;
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_COMPLEX_H_

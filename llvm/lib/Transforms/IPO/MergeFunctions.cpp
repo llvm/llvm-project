@@ -94,7 +94,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -172,14 +171,14 @@ namespace {
 
 class FunctionNode {
   mutable AssertingVH<Function> F;
-  IRHash Hash;
+  stable_hash Hash;
 
 public:
   // Note the hash is recalculated potentially multiple times, but it is cheap.
   FunctionNode(Function *F) : F(F), Hash(StructuralHash(*F)) {}
 
   Function *getFunc() const { return F; }
-  IRHash getHash() const { return Hash; }
+  stable_hash getHash() const { return Hash; }
 
   /// Replace the reference to the function F by the function G, assuming their
   /// implementations are equal.
@@ -197,7 +196,10 @@ public:
   MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
   }
 
-  bool runOnModule(Module &M);
+  template <typename FuncContainer> bool run(FuncContainer &Functions);
+  DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> F);
+
+  SmallPtrSet<GlobalValue *, 4> &getUsed();
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -298,15 +300,34 @@ private:
   // dangling iterators into FnTree. The invariant that preserves this is that
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
+
+  /// Deleted-New functions mapping
+  DenseMap<Function *, Function *> DelToNewMap;
 };
 } // end anonymous namespace
 
 PreservedAnalyses MergeFunctionsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  MergeFunctions MF;
-  if (!MF.runOnModule(M))
+  if (!MergeFunctionsPass::runOnModule(M))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
+}
+
+SmallPtrSet<GlobalValue *, 4> &MergeFunctions::getUsed() { return Used; }
+
+bool MergeFunctionsPass::runOnModule(Module &M) {
+  MergeFunctions MF;
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
+  MF.getUsed().insert(UsedV.begin(), UsedV.end());
+  return MF.run(M);
+}
+
+DenseMap<Function *, Function *>
+MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> F) {
+  MergeFunctions MF;
+  return MF.runOnFunctions(F);
 }
 
 #ifndef NDEBUG
@@ -410,20 +431,19 @@ static bool isEligibleForMerging(Function &F) {
          !hasDistinctMetadataIntrinsic(F);
 }
 
-bool MergeFunctions::runOnModule(Module &M) {
-  bool Changed = false;
+inline Function *asPtr(Function *Fn) { return Fn; }
+inline Function *asPtr(Function &Fn) { return &Fn; }
 
-  SmallVector<GlobalValue *, 4> UsedV;
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
-  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-  Used.insert(UsedV.begin(), UsedV.end());
+template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
+  bool Changed = false;
 
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
-  std::vector<std::pair<IRHash, Function *>> HashedFuncs;
-  for (Function &Func : M) {
-    if (isEligibleForMerging(Func)) {
-      HashedFuncs.push_back({StructuralHash(Func), &Func});
+  std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
+  for (auto &Func : M) {
+    Function *FuncPtr = asPtr(Func);
+    if (isEligibleForMerging(*FuncPtr)) {
+      HashedFuncs.push_back({StructuralHash(*FuncPtr), FuncPtr});
     }
   }
 
@@ -434,7 +454,7 @@ bool MergeFunctions::runOnModule(Module &M) {
     // If the hash value matches the previous value or the next one, we must
     // consider merging it. Otherwise it is dropped and never considered again.
     if ((I != S && std::prev(I)->first == I->first) ||
-        (std::next(I) != IE && std::next(I)->first == I->first) ) {
+        (std::next(I) != IE && std::next(I)->first == I->first)) {
       Deferred.push_back(WeakTrackingVH(I->second));
     }
   }
@@ -468,9 +488,16 @@ bool MergeFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
+DenseMap<Function *, Function *>
+MergeFunctions::runOnFunctions(ArrayRef<Function *> F) {
+  [[maybe_unused]] bool MergeResult = this->run(F);
+  assert(MergeResult == !DelToNewMap.empty());
+  return this->DelToNewMap;
+}
+
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
-  for (Use &U : llvm::make_early_inc_range(Old->uses())) {
+  for (Use &U : make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
       // Do not copy attributes from the called function to the call-site.
@@ -769,8 +796,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   ReturnInst *RI = nullptr;
   bool isSwiftTailCall = F->getCallingConv() == CallingConv::SwiftTail &&
                          G->getCallingConv() == CallingConv::SwiftTail;
-  CI->setTailCallKind(isSwiftTailCall ? llvm::CallInst::TCK_MustTail
-                                      : llvm::CallInst::TCK_Tail);
+  CI->setTailCallKind(isSwiftTailCall ? CallInst::TCK_MustTail
+                                      : CallInst::TCK_Tail);
   CI->setCallingConv(F->getCallingConv());
   CI->setAttributes(F->getAttributes());
   if (H->getReturnType()->isVoidTy()) {
@@ -862,10 +889,20 @@ bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
   return false;
 }
 
+/// Returns true if \p F is either weak_odr or linkonce_odr.
+static bool isODR(const Function *F) {
+  return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
+}
+
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
-  if (F->isInterposable()) {
-    assert(G->isInterposable());
+
+  // Create a new thunk that both F and G can call, if F cannot call G directly.
+  // That is the case if F is either interposable or if G is either weak_odr or
+  // linkonce_odr.
+  if (F->isInterposable() || (isODR(F) && isODR(G))) {
+    assert((!isODR(G) || isODR(F)) &&
+           "if G is ODR, F must also be ODR due to ordering");
 
     // Both writeThunkOrAlias() calls below must succeed, either because we can
     // create aliases for G and NewF, or because a thunk for F is profitable.
@@ -885,6 +922,13 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     copyMetadataIfPresent(F, NewF, "kcfi_type");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
+
+    // If G or NewF are (weak|linkonce)_odr, update all callers to call the
+    // thunk.
+    if (isODR(G))
+      replaceDirectCallers(G, F);
+    if (isODR(F))
+      replaceDirectCallers(NewF, F);
 
     // We collect alignment before writeThunkOrAlias that overwrites NewF and
     // G's content.
@@ -959,16 +1003,24 @@ void MergeFunctions::replaceFunctionInTree(const FunctionNode &FN,
 
 // Ordering for functions that are equal under FunctionComparator
 static bool isFuncOrderCorrect(const Function *F, const Function *G) {
+  if (isODR(F) != isODR(G)) {
+    // ODR functions before non-ODR functions. A ODR function can call a non-ODR
+    // function if it is not interposable, but not the other way around.
+    return isODR(G);
+  }
+
   if (F->isInterposable() != G->isInterposable()) {
     // Strong before weak, because the weak function may call the strong
     // one, but not the other way around.
     return !F->isInterposable();
   }
+
   if (F->hasLocalLinkage() != G->hasLocalLinkage()) {
     // External before local, because we definitely have to keep the external
     // function, but may be able to drop the local one.
     return !F->hasLocalLinkage();
   }
+
   // Impose a total order (by name) on the replacement of functions. This is
   // important when operating on more than one module independently to prevent
   // cycles of thunks calling each other when the modules are linked together.
@@ -1004,6 +1056,7 @@ bool MergeFunctions::insert(Function *NewFunction) {
 
   Function *DeleteF = NewFunction;
   mergeTwoFunctions(OldF.getFunc(), DeleteF);
+  this->DelToNewMap.insert({DeleteF, OldF.getFunc()});
   return true;
 }
 

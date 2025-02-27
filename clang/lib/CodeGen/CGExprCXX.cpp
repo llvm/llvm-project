@@ -84,23 +84,24 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, GlobalDecl GD,
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
     const CXXMethodDecl *MD, const CGCallee &Callee,
-    ReturnValueSlot ReturnValue,
-    llvm::Value *This, llvm::Value *ImplicitParam, QualType ImplicitParamTy,
-    const CallExpr *CE, CallArgList *RtlArgs) {
+    ReturnValueSlot ReturnValue, llvm::Value *This, llvm::Value *ImplicitParam,
+    QualType ImplicitParamTy, const CallExpr *CE, CallArgList *RtlArgs,
+    llvm::CallBase **CallOrInvoke) {
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   CallArgList Args;
   MemberCallInfo CallInfo = commonEmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
       Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
-  return EmitCall(FnInfo, Callee, ReturnValue, Args, nullptr,
+  return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke,
                   CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation());
 }
 
 RValue CodeGenFunction::EmitCXXDestructorCall(
     GlobalDecl Dtor, const CGCallee &Callee, llvm::Value *This, QualType ThisTy,
-    llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE) {
+    llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE,
+    llvm::CallBase **CallOrInvoke) {
   const CXXMethodDecl *DtorDecl = cast<CXXMethodDecl>(Dtor.getDecl());
 
   assert(!ThisTy.isNull());
@@ -120,7 +121,8 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   commonEmitCXXMemberOrOperatorCall(*this, Dtor, This, ImplicitParam,
                                     ImplicitParamTy, CE, Args, nullptr);
   return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
-                  ReturnValueSlot(), Args, nullptr, CE && CE == MustTailCall,
+                  ReturnValueSlot(), Args, CallOrInvoke,
+                  CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation{});
 }
 
@@ -142,7 +144,7 @@ RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
       BaseQuals = PTy->getPointeeType().getQualifiers();
     } else {
       LValue BaseLV = EmitLValue(BaseExpr);
-      BaseValue = BaseLV.getAddress(*this);
+      BaseValue = BaseLV.getAddress();
       QualType BaseTy = BaseExpr->getType();
       BaseQuals = BaseTy.getQualifiers();
     }
@@ -186,11 +188,12 @@ static CXXRecordDecl *getCXXRecord(const Expr *E) {
 // Note: This function also emit constructor calls to support a MSVC
 // extensions allowing explicit constructor function call.
 RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
-                                              ReturnValueSlot ReturnValue) {
+                                              ReturnValueSlot ReturnValue,
+                                              llvm::CallBase **CallOrInvoke) {
   const Expr *callee = CE->getCallee()->IgnoreParens();
 
   if (isa<BinaryOperator>(callee))
-    return EmitCXXMemberPointerCallExpr(CE, ReturnValue);
+    return EmitCXXMemberPointerCallExpr(CE, ReturnValue, CallOrInvoke);
 
   const MemberExpr *ME = cast<MemberExpr>(callee);
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(ME->getMemberDecl());
@@ -200,7 +203,7 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
     CGCallee callee =
         CGCallee::forDirect(CGM.GetAddrOfFunction(MD), GlobalDecl(MD));
     return EmitCall(getContext().getPointerType(MD->getType()), callee, CE,
-                    ReturnValue);
+                    ReturnValue, /*Chain=*/nullptr, CallOrInvoke);
   }
 
   bool HasQualifier = ME->hasQualifier();
@@ -208,14 +211,15 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   bool IsArrow = ME->isArrow();
   const Expr *Base = ME->getBase();
 
-  return EmitCXXMemberOrOperatorMemberCallExpr(
-      CE, MD, ReturnValue, HasQualifier, Qualifier, IsArrow, Base);
+  return EmitCXXMemberOrOperatorMemberCallExpr(CE, MD, ReturnValue,
+                                               HasQualifier, Qualifier, IsArrow,
+                                               Base, CallOrInvoke);
 }
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
     bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
-    const Expr *Base) {
+    const Expr *Base, llvm::CallBase **CallOrInvoke) {
   assert(isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE));
 
   // Compute the object pointer.
@@ -298,9 +302,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
         /*ImplicitParamTy=*/QualType(), CE, Args, nullptr);
 
     EmitCXXConstructorCall(Ctor, Ctor_Complete, /*ForVirtualBase=*/false,
-                           /*Delegating=*/false, This.getAddress(*this), Args,
+                           /*Delegating=*/false, This.getAddress(), Args,
                            AggValueSlot::DoesNotOverlap, CE->getExprLoc(),
-                           /*NewPointerIsChecked=*/false);
+                           /*NewPointerIsChecked=*/false, CallOrInvoke);
     return RValue::get(nullptr);
   }
 
@@ -374,9 +378,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
            "Destructor shouldn't have explicit parameters");
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
-      CGM.getCXXABI().EmitVirtualDestructorCall(*this, Dtor, Dtor_Complete,
-                                                This.getAddress(*this),
-                                                cast<CXXMemberCallExpr>(CE));
+      CGM.getCXXABI().EmitVirtualDestructorCall(
+          *this, Dtor, Dtor_Complete, This.getAddress(),
+          cast<CXXMemberCallExpr>(CE), CallOrInvoke);
     } else {
       GlobalDecl GD(Dtor, Dtor_Complete);
       CGCallee Callee;
@@ -393,7 +397,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           IsArrow ? Base->getType()->getPointeeType() : Base->getType();
       EmitCXXDestructorCall(GD, Callee, This.getPointer(*this), ThisTy,
                             /*ImplicitParam=*/nullptr,
-                            /*ImplicitParamTy=*/QualType(), CE);
+                            /*ImplicitParamTy=*/QualType(), CE, CallOrInvoke);
     }
     return RValue::get(nullptr);
   }
@@ -403,14 +407,14 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   CGCallee Callee;
   if (UseVirtualCall) {
-    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(*this), Ty);
+    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(), Ty);
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&
         MD->getParent()->isDynamicClass()) {
       llvm::Value *VTable;
       const CXXRecordDecl *RD;
       std::tie(VTable, RD) = CGM.getCXXABI().LoadVTablePtr(
-          *this, This.getAddress(*this), CalleeDecl->getParent());
+          *this, This.getAddress(), CalleeDecl->getParent());
       EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getBeginLoc());
     }
 
@@ -429,18 +433,19 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (MD->isVirtual()) {
     Address NewThisAddr =
         CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
-            *this, CalleeDecl, This.getAddress(*this), UseVirtualCall);
+            *this, CalleeDecl, This.getAddress(), UseVirtualCall);
     This.setAddress(NewThisAddr);
   }
 
   return EmitCXXMemberOrOperatorCall(
       CalleeDecl, Callee, ReturnValue, This.getPointer(*this),
-      /*ImplicitParam=*/nullptr, QualType(), CE, RtlArgs);
+      /*ImplicitParam=*/nullptr, QualType(), CE, RtlArgs, CallOrInvoke);
 }
 
 RValue
 CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
-                                              ReturnValueSlot ReturnValue) {
+                                              ReturnValueSlot ReturnValue,
+                                              llvm::CallBase **CallOrInvoke) {
   const BinaryOperator *BO =
       cast<BinaryOperator>(E->getCallee()->IgnoreParens());
   const Expr *BaseExpr = BO->getLHS();
@@ -456,7 +461,7 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   if (BO->getOpcode() == BO_PtrMemI)
     This = EmitPointerWithAlignment(BaseExpr, nullptr, nullptr, KnownNonNull);
   else
-    This = EmitLValue(BaseExpr, KnownNonNull).getAddress(*this);
+    This = EmitLValue(BaseExpr, KnownNonNull).getAddress();
 
   EmitTypeCheck(TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
                 QualType(MPT->getClass(), 0));
@@ -484,24 +489,25 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   EmitCallArgs(Args, FPT, E->arguments());
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
                                                       /*PrefixSize=*/0),
-                  Callee, ReturnValue, Args, nullptr, E == MustTailCall,
+                  Callee, ReturnValue, Args, CallOrInvoke, E == MustTailCall,
                   E->getExprLoc());
 }
 
-RValue
-CodeGenFunction::EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
-                                               const CXXMethodDecl *MD,
-                                               ReturnValueSlot ReturnValue) {
+RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
+    const CXXOperatorCallExpr *E, const CXXMethodDecl *MD,
+    ReturnValueSlot ReturnValue, llvm::CallBase **CallOrInvoke) {
   assert(MD->isImplicitObjectMemberFunction() &&
          "Trying to emit a member call expr on a static method!");
   return EmitCXXMemberOrOperatorMemberCallExpr(
       E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
-      /*IsArrow=*/false, E->getArg(0));
+      /*IsArrow=*/false, E->getArg(0), CallOrInvoke);
 }
 
 RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
-                                               ReturnValueSlot ReturnValue) {
-  return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue);
+                                               ReturnValueSlot ReturnValue,
+                                               llvm::CallBase **CallOrInvoke) {
+  return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,
+                                                     CallOrInvoke);
 }
 
 static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
@@ -726,8 +732,8 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   // Emit the array size expression.
   // We multiply the size of all dimensions for NumElements.
   // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
-  numElements =
-    ConstantEmitter(CGF).tryEmitAbstract(*e->getArraySize(), e->getType());
+  numElements = ConstantEmitter(CGF).tryEmitAbstract(
+      *e->getArraySize(), (*e->getArraySize())->getType());
   if (!numElements)
     numElements = CGF.EmitScalarExpr(*e->getArraySize());
   assert(isa<llvm::IntegerType>(numElements->getType()));
@@ -1237,7 +1243,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RType->getDecl()))
           NumElements = CXXRD->getNumBases();
         for (auto *Field : RType->getDecl()->fields())
-          if (!Field->isUnnamedBitfield())
+          if (!Field->isUnnamedBitField())
             ++NumElements;
         // FIXME: Recurse into nested InitListExprs.
         if (ILE->getNumInits() == NumElements)
@@ -1765,14 +1771,6 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
   llvm::Value *resultPtr = result.emitRawPointer(*this);
-  if (E->isArray()) {
-    // NewPtr is a pointer to the base element type.  If we're
-    // allocating an array of arrays, we'll need to cast back to the
-    // array pointer type.
-    llvm::Type *resultType = ConvertTypeForMem(E->getType());
-    if (resultPtr->getType() != resultType)
-      resultPtr = Builder.CreateBitCast(resultPtr, resultType);
-  }
 
   // Deactivate the 'operator delete' cleanup if we finished
   // initialization.
@@ -1799,7 +1797,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 }
 
 void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
-                                     llvm::Value *Ptr, QualType DeleteTy,
+                                     llvm::Value *DeletePtr, QualType DeleteTy,
                                      llvm::Value *NumElements,
                                      CharUnits CookieSize) {
   assert((!NumElements && CookieSize.isZero()) ||
@@ -1813,7 +1811,6 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
 
   // Pass the pointer itself.
   QualType ArgTy = *ParamTypeIt++;
-  llvm::Value *DeletePtr = Builder.CreateBitCast(Ptr, ConvertType(ArgTy));
   DeleteArgs.add(RValue::get(DeletePtr), ArgTy);
 
   // Pass the std::destroying_delete tag if present.
@@ -2143,42 +2140,11 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 }
 
-static bool isGLValueFromPointerDeref(const Expr *E) {
-  E = E->IgnoreParens();
-
-  if (const auto *CE = dyn_cast<CastExpr>(E)) {
-    if (!CE->getSubExpr()->isGLValue())
-      return false;
-    return isGLValueFromPointerDeref(CE->getSubExpr());
-  }
-
-  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return isGLValueFromPointerDeref(OVE->getSourceExpr());
-
-  if (const auto *BO = dyn_cast<BinaryOperator>(E))
-    if (BO->getOpcode() == BO_Comma)
-      return isGLValueFromPointerDeref(BO->getRHS());
-
-  if (const auto *ACO = dyn_cast<AbstractConditionalOperator>(E))
-    return isGLValueFromPointerDeref(ACO->getTrueExpr()) ||
-           isGLValueFromPointerDeref(ACO->getFalseExpr());
-
-  // C++11 [expr.sub]p1:
-  //   The expression E1[E2] is identical (by definition) to *((E1)+(E2))
-  if (isa<ArraySubscriptExpr>(E))
-    return true;
-
-  if (const auto *UO = dyn_cast<UnaryOperator>(E))
-    if (UO->getOpcode() == UO_Deref)
-      return true;
-
-  return false;
-}
-
 static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
-                                         llvm::Type *StdTypeInfoPtrTy) {
+                                         llvm::Type *StdTypeInfoPtrTy,
+                                         bool HasNullCheck) {
   // Get the vtable pointer.
-  Address ThisPtr = CGF.EmitLValue(E).getAddress(CGF);
+  Address ThisPtr = CGF.EmitLValue(E).getAddress();
 
   QualType SrcRecordTy = E->getType();
 
@@ -2189,16 +2155,11 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
   CGF.EmitTypeCheck(CodeGenFunction::TCK_DynamicOperation, E->getExprLoc(),
                     ThisPtr, SrcRecordTy);
 
-  // C++ [expr.typeid]p2:
-  //   If the glvalue expression is obtained by applying the unary * operator to
-  //   a pointer and the pointer is a null pointer value, the typeid expression
-  //   throws the std::bad_typeid exception.
-  //
-  // However, this paragraph's intent is not clear.  We choose a very generous
-  // interpretation which implores us to consider comma operators, conditional
-  // operators, parentheses and other such constructs.
-  if (CGF.CGM.getCXXABI().shouldTypeidBeNullChecked(
-          isGLValueFromPointerDeref(E), SrcRecordTy)) {
+  // Whether we need an explicit null pointer check. For example, with the
+  // Microsoft ABI, if this is a call to __RTtypeid, the null pointer check and
+  // exception throw is inside the __RTtypeid(nullptr) call
+  if (HasNullCheck &&
+      CGF.CGM.getCXXABI().shouldTypeidBeNullChecked(SrcRecordTy)) {
     llvm::BasicBlock *BadTypeidBlock =
         CGF.createBasicBlock("typeid.bad_typeid");
     llvm::BasicBlock *EndBlock = CGF.createBasicBlock("typeid.end");
@@ -2216,7 +2177,12 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
 }
 
 llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  llvm::Type *PtrTy = llvm::PointerType::getUnqual(getLLVMContext());
+  // Ideally, we would like to use GlobalsInt8PtrTy here, however, we cannot,
+  // primarily because the result of applying typeid is a value of type
+  // type_info, which is declared & defined by the standard library
+  // implementation and expects to operate on the generic (default) AS.
+  // https://reviews.llvm.org/D157452 has more context, and a possible solution.
+  llvm::Type *PtrTy = Int8PtrTy;
   LangAS GlobAS = CGM.GetGlobalVarAddressSpace(nullptr);
 
   auto MaybeASCast = [=](auto &&TypeInfo) {
@@ -2239,7 +2205,8 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
   //   type) to which the glvalue refers.
   // If the operand is already most derived object, no need to look up vtable.
   if (E->isPotentiallyEvaluated() && !E->isMostDerived(getContext()))
-    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy);
+    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy,
+                                E->hasNullCheck());
 
   QualType OperandTy = E->getExprOperand()->getType();
   return MaybeASCast(CGM.GetAddrOfRTTIDescriptor(OperandTy));

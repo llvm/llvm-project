@@ -35,7 +35,7 @@ define i32 @test2(i32 %a, ptr %p) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[A:%.*]], 2
 ; CHECK-NEXT:    store i32 [[DIV1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = shl nuw nsw i32 [[DIV1]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;

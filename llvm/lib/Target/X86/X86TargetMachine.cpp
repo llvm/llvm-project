@@ -19,7 +19,6 @@
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -31,9 +30,10 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -63,7 +63,7 @@ static cl::opt<bool>
                      cl::desc("Enable the tile register allocation pass"),
                      cl::init(true), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   // Register the target.
   RegisterTargetMachine<X86TargetMachine> X(getTheX86_32Target());
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
@@ -100,10 +100,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86PartialReductionPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
-  initializeX86DAGToDAGISelPass(PR);
+  initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
+  initializeX86DynAllocaExpanderPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -232,14 +233,15 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
-          T, computeDataLayout(TT), TT, CPU, FS, Options,
-          getEffectiveRelocModel(TT, JIT, RM),
-          getEffectiveX86CodeModel(TT, CM, JIT),
-          OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, JIT, RM),
+                               getEffectiveX86CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
-  // the calling function, and TrapUnreachable is an easy way to get that.
+  // the calling function. Note that this also includes __stack_chk_fail,
+  // so there was some target-specific logic in the instruction selectors
+  // to handle that. That code has since been generalized, so the only thing
+  // needed is to set TrapUnreachable here.
   if (TT.isPS() || TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
@@ -344,12 +346,46 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+yaml::MachineFunctionInfo *X86TargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::X86MachineFunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+X86TargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  const auto *MFI = MF.getInfo<X86MachineFunctionInfo>();
+  return new yaml::X86MachineFunctionInfo(*MFI);
+}
+
+bool X86TargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI = static_cast<const yaml::X86MachineFunctionInfo &>(MFI);
+  PFS.MF.getInfo<X86MachineFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
+  return false;
+}
+
 bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   assert(SrcAS != DestAS && "Expected different address spaces!");
   if (getPointerSize(SrcAS) != getPointerSize(DestAS))
     return false;
   return SrcAS < 256 && DestAS < 256;
+}
+
+void X86TargetMachine::reset() { SubtargetMap.clear(); }
+
+ScheduleDAGInstrs *
+X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
 }
 
 //===----------------------------------------------------------------------===//
@@ -375,20 +411,6 @@ public:
 
   X86TargetMachine &getX86TargetMachine() const {
     return getTM<X86TargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -505,11 +527,14 @@ bool X86PassConfig::addRegBankSelect() {
 
 bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
+  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
+  if (isGlobalISelAbortEnabled())
+    addPass(createX86GlobalBaseRegPass());
   return false;
 }
 
 bool X86PassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConverterPass());
@@ -527,6 +552,7 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
+    addPass(createX86WinFixupBufferSecurityCheckPass());
     addPass(createX86FixupSetCC());
     addPass(createX86OptimizeLEAs());
     addPass(createX86CallFrameOptimization());
@@ -652,8 +678,10 @@ std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
 }
 
 static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
-                                      const TargetRegisterClass &RC) {
-  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(&RC);
+                                      const MachineRegisterInfo &MRI,
+                                      const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
 }
 
 bool X86PassConfig::addRegAssignAndRewriteOptimized() {

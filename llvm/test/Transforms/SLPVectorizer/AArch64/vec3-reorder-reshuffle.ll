@@ -191,12 +191,12 @@ define i32 @reorder_indices_1(float %0) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[NOR1:%.*]] = alloca [0 x [3 x float]], i32 0, align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[NOR1]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
-; NON-POW2-NEXT:    [[TMP3:%.*]] = fneg <3 x float> [[TMP2]]
+; NON-POW2-NEXT:    [[TMP3:%.*]] = fneg <3 x float> [[TMP1]]
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i32 0
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <3 x i32> zeroinitializer
 ; NON-POW2-NEXT:    [[TMP6:%.*]] = fmul <3 x float> [[TMP3]], [[TMP5]]
-; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> zeroinitializer, <3 x float> [[TMP6]])
+; NON-POW2-NEXT:    [[TMP10:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> zeroinitializer, <3 x float> [[TMP10]])
 ; NON-POW2-NEXT:    [[TMP8:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP5]], <3 x float> [[TMP7]], <3 x float> zeroinitializer)
 ; NON-POW2-NEXT:    [[TMP9:%.*]] = fmul <3 x float> [[TMP8]], zeroinitializer
 ; NON-POW2-NEXT:    store <3 x float> [[TMP9]], ptr [[NOR1]], align 4
@@ -263,7 +263,8 @@ define void @reorder_indices_2(ptr %spoint) {
 ; NON-POW2-NEXT:    [[DSCO:%.*]] = getelementptr float, ptr [[SPOINT]], i64 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> zeroinitializer, <3 x float> zeroinitializer, <3 x float> zeroinitializer)
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = fmul <3 x float> [[TMP0]], zeroinitializer
-; NON-POW2-NEXT:    store <3 x float> [[TMP1]], ptr [[DSCO]], align 4
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; NON-POW2-NEXT:    store <3 x float> [[TMP2]], ptr [[DSCO]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: define void @reorder_indices_2(
@@ -537,24 +538,18 @@ entry:
 }
 
 define void @vec3_extract(<3 x i16> %pixel.sroa.0.4.vec.insert606, ptr %call3.i536) {
-; NON-POW2-LABEL: define void @vec3_extract(
-; NON-POW2-SAME: <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606:%.*]], ptr [[CALL3_I536:%.*]]) {
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    store <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], ptr [[CALL3_I536]], align 2
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: define void @vec3_extract(
-; POW2-ONLY-SAME: <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606:%.*]], ptr [[CALL3_I536:%.*]]) {
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[PIXEL_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 2
-; POW2-ONLY-NEXT:    [[RED668:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 2
-; POW2-ONLY-NEXT:    store i16 [[PIXEL_SROA_0_4_VEC_EXTRACT]], ptr [[RED668]], align 2
-; POW2-ONLY-NEXT:    [[PIXEL_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 1
-; POW2-ONLY-NEXT:    [[GREEN670:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 1
-; POW2-ONLY-NEXT:    store i16 [[PIXEL_SROA_0_2_VEC_EXTRACT]], ptr [[GREEN670]], align 2
-; POW2-ONLY-NEXT:    [[PIXEL_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 0
-; POW2-ONLY-NEXT:    store i16 [[PIXEL_SROA_0_0_VEC_EXTRACT]], ptr [[CALL3_I536]], align 2
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: define void @vec3_extract(
+; CHECK-SAME: <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606:%.*]], ptr [[CALL3_I536:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PIXEL_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 2
+; CHECK-NEXT:    [[RED668:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 2
+; CHECK-NEXT:    store i16 [[PIXEL_SROA_0_4_VEC_EXTRACT]], ptr [[RED668]], align 2
+; CHECK-NEXT:    [[PIXEL_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 1
+; CHECK-NEXT:    [[GREEN670:%.*]] = getelementptr i16, ptr [[CALL3_I536]], i64 1
+; CHECK-NEXT:    store i16 [[PIXEL_SROA_0_2_VEC_EXTRACT]], ptr [[GREEN670]], align 2
+; CHECK-NEXT:    [[PIXEL_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <3 x i16> [[PIXEL_SROA_0_4_VEC_INSERT606]], i64 0
+; CHECK-NEXT:    store i16 [[PIXEL_SROA_0_0_VEC_EXTRACT]], ptr [[CALL3_I536]], align 2
+; CHECK-NEXT:    ret void
 ;
 entry:
   %pixel.sroa.0.4.vec.extract = extractelement <3 x i16> %pixel.sroa.0.4.vec.insert606, i64 2
@@ -572,11 +567,11 @@ define void @can_reorder_vec3_op_with_padding(ptr %A, <3 x float> %in) {
 ; NON-POW2-LABEL: define void @can_reorder_vec3_op_with_padding(
 ; NON-POW2-SAME: ptr [[A:%.*]], <3 x float> [[IN:%.*]]) {
 ; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[TMP0:%.*]] = shufflevector <3 x float> [[IN]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
-; NON-POW2-NEXT:    [[TMP1:%.*]] = fsub <3 x float> [[TMP0]], [[TMP0]]
-; NON-POW2-NEXT:    [[TMP2:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, <3 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>)
-; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul <3 x float> [[TMP2]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
-; NON-POW2-NEXT:    store <3 x float> [[TMP3]], ptr [[A]], align 4
+; NON-POW2-NEXT:    [[TMP1:%.*]] = fsub <3 x float> [[IN]], [[IN]]
+; NON-POW2-NEXT:    [[TMP2:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> splat (float 2.000000e+00), <3 x float> splat (float 3.000000e+00))
+; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul <3 x float> [[TMP2]], splat (float 3.000000e+00)
+; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; NON-POW2-NEXT:    store <3 x float> [[TMP4]], ptr [[A]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: define void @can_reorder_vec3_op_with_padding(
@@ -589,8 +584,8 @@ define void @can_reorder_vec3_op_with_padding(ptr %A, <3 x float> %in) {
 ; POW2-ONLY-NEXT:    [[MUL6_I_I_I_I:%.*]] = fmul float [[TMP1]], 3.000000e+00
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[IN]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fsub <2 x float> [[TMP2]], [[TMP2]]
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> <float 3.000000e+00, float 3.000000e+00>)
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP4]], <float 3.000000e+00, float 3.000000e+00>
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> splat (float 2.000000e+00), <2 x float> splat (float 3.000000e+00))
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP4]], splat (float 3.000000e+00)
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[A]], align 4
 ; POW2-ONLY-NEXT:    store float [[MUL6_I_I_I_I]], ptr [[ARRAYIDX42_I]], align 4
 ; POW2-ONLY-NEXT:    ret void

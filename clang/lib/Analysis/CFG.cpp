@@ -760,6 +760,7 @@ private:
   void cleanupConstructionContext(Expr *E);
 
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
+
   CFGBlock *createBlock(bool add_successor = true);
   CFGBlock *createNoReturnBlock();
 
@@ -818,15 +819,21 @@ private:
     B->appendStmt(const_cast<Stmt*>(S), cfg->getBumpVectorContext());
   }
 
-  void appendConstructor(CFGBlock *B, CXXConstructExpr *CE) {
+  void appendConstructor(CXXConstructExpr *CE) {
+    CXXConstructorDecl *C = CE->getConstructor();
+    if (C && C->isNoReturn())
+      Block = createNoReturnBlock();
+    else
+      autoCreateBlock();
+
     if (const ConstructionContext *CC =
             retrieveAndCleanupConstructionContext(CE)) {
-      B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
+      Block->appendConstructor(CE, CC, cfg->getBumpVectorContext());
       return;
     }
 
     // No valid construction context found. Fall back to statement.
-    B->appendStmt(CE, cfg->getBumpVectorContext());
+    Block->appendStmt(CE, cfg->getBumpVectorContext());
   }
 
   void appendCall(CFGBlock *B, CallExpr *CE) {
@@ -2034,6 +2041,8 @@ void CFGBuilder::addImplicitDtorsForDestructor(const CXXDestructorDecl *DD) {
   }
 
   // First destroy member objects.
+  if (RD->isUnion())
+    return;
   for (auto *FI : RD->fields()) {
     // Check for constant size array. Set type to array element type.
     QualType QT = FI->getType();
@@ -3177,10 +3186,13 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
     if (!I->isConsteval())
       KnownVal = tryEvaluateBool(I->getCond());
 
-    // Add the successors.  If we know that specific branches are
+    // Add the successors. If we know that specific branches are
     // unreachable, inform addSuccessor() of that knowledge.
     addSuccessor(Block, ThenBlock, /* IsReachable = */ !KnownVal.isFalse());
     addSuccessor(Block, ElseBlock, /* IsReachable = */ !KnownVal.isTrue());
+
+    if (I->isConsteval())
+      return Block;
 
     // Add the condition as the last statement in the new block.  This may
     // create new blocks as the condition may contain control-flow.  Any newly
@@ -4829,9 +4841,7 @@ CFGBlock *CFGBuilder::VisitCXXConstructExpr(CXXConstructExpr *C,
   // construct these objects. Construction contexts we find here aren't for the
   // constructor C, they're for its arguments only.
   findConstructionContextsForArguments(C);
-
-  autoCreateBlock();
-  appendConstructor(Block, C);
+  appendConstructor(C);
 
   return VisitChildren(C);
 }
@@ -4889,16 +4899,15 @@ CFGBlock *CFGBuilder::VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *E,
   return Visit(E->getSubExpr(), asc);
 }
 
-CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *C,
+CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E,
                                                   AddStmtChoice asc) {
   // If the constructor takes objects as arguments by value, we need to properly
   // construct these objects. Construction contexts we find here aren't for the
   // constructor C, they're for its arguments only.
-  findConstructionContextsForArguments(C);
+  findConstructionContextsForArguments(E);
+  appendConstructor(E);
 
-  autoCreateBlock();
-  appendConstructor(Block, C);
-  return VisitChildren(C);
+  return VisitChildren(E);
 }
 
 CFGBlock *CFGBuilder::VisitImplicitCastExpr(ImplicitCastExpr *E,
@@ -6164,7 +6173,7 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
 
   printTerminator(TempOut, LO);
 
-  Out << JsonFormat(TempOut.str(), AddQuotes);
+  Out << JsonFormat(Buf, AddQuotes);
 }
 
 // Returns true if by simply looking at the block, we can be sure that it
@@ -6345,10 +6354,9 @@ struct DOTGraphTraits<const CFG*> : public DefaultDOTGraphTraits {
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getNodeLabel(const CFGBlock *Node, const CFG *Graph) {
-    std::string OutSStr;
-    llvm::raw_string_ostream Out(OutSStr);
+    std::string OutStr;
+    llvm::raw_string_ostream Out(OutStr);
     print_block(Out,Graph, *Node, *GraphHelper, false, false);
-    std::string& OutStr = Out.str();
 
     if (OutStr[0] == '\n') OutStr.erase(OutStr.begin());
 

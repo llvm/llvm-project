@@ -117,14 +117,14 @@ define void @int8_float_pair(i8 signext %tmp1, float %tmp2, ptr %ref.tmp) {
 define void @int32_int32_pair(i32 %tmp1, i32 %tmp2, ptr %ref.tmp) {
 ; RV32-LABEL: int32_int32_pair:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    sw a0, 0(a2)
+; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV32D-LABEL: int32_int32_pair:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    sw a1, 4(a2)
 ; RV32D-NEXT:    sw a0, 0(a2)
+; RV32D-NEXT:    sw a1, 4(a2)
 ; RV32D-NEXT:    ret
 ;
 ; RV64-LABEL: int32_int32_pair:

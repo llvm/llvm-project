@@ -11,6 +11,7 @@ define void @pr77468(ptr noalias %src, ptr noalias %dst, i1 %x) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[BROADCAST_SPLAT]] to <4 x i16>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -19,7 +20,6 @@ define void @pr77468(ptr noalias %src, ptr noalias %dst, i1 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[SRC]], i16 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[BROADCAST_SPLAT]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[WIDE_LOAD]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i16> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[DST]], i16 [[TMP0]]

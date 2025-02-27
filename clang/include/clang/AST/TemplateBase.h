@@ -283,7 +283,7 @@ public:
   }
 
   static TemplateArgument getEmptyPack() {
-    return TemplateArgument(std::nullopt);
+    return TemplateArgument(ArrayRef<TemplateArgument>());
   }
 
   /// Create a new template argument pack by copying the given set of
@@ -459,7 +459,7 @@ public:
              bool IncludeType) const;
 
   /// Debugging aid that dumps the template argument.
-  void dump(raw_ostream &Out) const;
+  void dump(raw_ostream &Out, const ASTContext &Context) const;
 
   /// Debugging aid that dumps the template argument to standard error.
   void dump() const;
@@ -484,7 +484,7 @@ private:
       Pointer;
 
   TemplateTemplateArgLocInfo *getTemplate() const {
-    return Pointer.get<TemplateTemplateArgLocInfo *>();
+    return cast<TemplateTemplateArgLocInfo *>(Pointer);
   }
 
 public:
@@ -499,10 +499,10 @@ public:
                           SourceLocation EllipsisLoc);
 
   TypeSourceInfo *getAsTypeSourceInfo() const {
-    return Pointer.get<TypeSourceInfo *>();
+    return cast<TypeSourceInfo *>(Pointer);
   }
 
-  Expr *getAsExpr() const { return Pointer.get<Expr *>(); }
+  Expr *getAsExpr() const { return cast<Expr *>(Pointer); }
 
   NestedNameSpecifierLoc getTemplateQualifierLoc() const {
     const auto *Template = getTemplate();

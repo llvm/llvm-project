@@ -10,10 +10,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXX_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace formatters {
@@ -25,7 +25,8 @@ GetChildMemberWithName(ValueObject &obj,
 
 lldb::ValueObjectSP GetFirstValueOfLibCXXCompressedPair(ValueObject &pair);
 lldb::ValueObjectSP GetSecondValueOfLibCXXCompressedPair(ValueObject &pair);
-
+bool isOldCompressedPairLayout(ValueObject &pair_obj);
+bool isStdTemplate(ConstString type_name, llvm::StringRef type);
 
 bool LibcxxStringSummaryProviderASCII(
     ValueObject &valobj, Stream &stream,
@@ -87,81 +88,6 @@ bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
 bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
 
-class LibCxxMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
-public:
-  LibCxxMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  llvm::Expected<uint32_t> CalculateNumChildren() override;
-
-  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
-
-  lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
-  ~LibCxxMapIteratorSyntheticFrontEnd() override;
-
-private:
-  ValueObject *m_pair_ptr;
-  lldb::ValueObjectSP m_pair_sp;
-};
-
-SyntheticChildrenFrontEnd *
-LibCxxMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                          lldb::ValueObjectSP);
-
-/// Formats libcxx's std::unordered_map iterators
-///
-/// In raw form a std::unordered_map::iterator is represented as follows:
-///
-/// (lldb) var it --raw --ptr-depth 1
-/// (std::__1::__hash_map_iterator<
-///    std::__1::__hash_iterator<
-///      std::__1::__hash_node<
-///        std::__1::__hash_value_type<
-///            std::__1::basic_string<char, std::__1::char_traits<char>,
-///            std::__1::allocator<char> >, std::__1::basic_string<char,
-///            std::__1::char_traits<char>, std::__1::allocator<char> > >,
-///        void *> *> >)
-///  it = {
-///   __i_ = {
-///     __node_ = 0x0000600001700040 {
-///       __next_ = 0x0000600001704000
-///     }
-///   }
-/// }
-class LibCxxUnorderedMapIteratorSyntheticFrontEnd
-    : public SyntheticChildrenFrontEnd {
-public:
-  LibCxxUnorderedMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  ~LibCxxUnorderedMapIteratorSyntheticFrontEnd() override = default;
-
-  llvm::Expected<uint32_t> CalculateNumChildren() override;
-
-  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
-
-  lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
-private:
-  ValueObject *m_iter_ptr = nullptr; ///< Held, not owned. Child of iterator
-                                     ///< ValueObject supplied at construction.
-
-  lldb::ValueObjectSP m_pair_sp; ///< ValueObject for the key/value pair
-                                 ///< that the iterator currently points
-                                 ///< to.
-};
-
-SyntheticChildrenFrontEnd *
-LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                                   lldb::ValueObjectSP);
-
 SyntheticChildrenFrontEnd *
 LibCxxVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                              lldb::ValueObjectSP);
@@ -175,8 +101,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -195,8 +119,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -248,8 +170,16 @@ LibcxxStdMapSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibCxxMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                          lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibcxxStdUnorderedMapSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                               lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                                   lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
 LibcxxInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,

@@ -131,7 +131,7 @@ if [[ $FAIL -eq "0" ]]; then
         fi
     else
         echo "Did it pass? Type the return code [0 = pass, 1 = fail]"
-        read -n1 PASS
+        read -n1 FAIL
     fi
     if [[ $FAIL -eq "0" ]] ; then
         echo "  Warning: optimized binary passes."
@@ -205,7 +205,7 @@ while [[ "$CONTINUE" -ne "0" ]] ; do
             echo "  OPTIMIZED_BINARY failure=$FAIL"
         else
             echo "Did it pass? Type the return code [0 = pass, 1 = fail]"
-            read -n1 PASS
+            read -n1 FAIL
         fi
     else
         FAIL=1

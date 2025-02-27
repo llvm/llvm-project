@@ -21,6 +21,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DroppedVariableStatsIR.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
@@ -171,7 +173,7 @@ public:
                     FunctionAnalysisManager::Invalidator &);
   };
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<StringRef, 8> PassStack;
 #endif
 
@@ -461,7 +463,8 @@ class VerifyInstrumentation {
 
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                         ModuleAnalysisManager *MAM);
 };
 
 /// This class implements --time-trace functionality for new pass manager.
@@ -594,6 +597,7 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
+  DroppedVariableStatsIR DroppedStatsIR;
 
   bool VerifyEach;
 

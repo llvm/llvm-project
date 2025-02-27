@@ -41,8 +41,8 @@ private:
       Arg.info = classifyArgumentType(Arg.type);
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
@@ -103,7 +103,8 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))
       return ABIArgInfo::getIgnore();
@@ -155,15 +156,15 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
   return defaultInfo.classifyReturnType(RetTy);
 }
 
-Address WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                      QualType Ty) const {
+RValue WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                     QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = isAggregateTypeForABI(Ty) &&
                     !isEmptyRecord(getContext(), Ty, true) &&
                     !isSingleElementStruct(Ty, getContext());
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(4),
-                          /*AllowHigherAlign=*/true);
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

@@ -17,83 +17,101 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIPROGRAMINFO_H
 
 #include "llvm/IR/CallingConv.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
 class GCNSubtarget;
+class MCContext;
+class MCExpr;
+class MachineFunction;
 
 /// Track resource usage for kernels / entry functions.
-struct SIProgramInfo {
-    // Fields set in PGM_RSRC1 pm4 packet.
-    uint32_t VGPRBlocks = 0;
-    uint32_t SGPRBlocks = 0;
-    uint32_t Priority = 0;
-    uint32_t FloatMode = 0;
-    uint32_t Priv = 0;
-    uint32_t DX10Clamp = 0;
-    uint32_t DebugMode = 0;
-    uint32_t IEEEMode = 0;
-    uint32_t WgpMode = 0; // GFX10+
-    uint32_t MemOrdered = 0; // GFX10+
-    uint32_t RrWgMode = 0;   // GFX12+
-    uint64_t ScratchSize = 0;
+struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
+  std::optional<uint64_t> CodeSizeInBytes;
 
-    // State used to calculate fields set in PGM_RSRC2 pm4 packet.
-    uint32_t LDSBlocks = 0;
-    uint32_t ScratchBlocks = 0;
+  // Fields set in PGM_RSRC1 pm4 packet.
+  const MCExpr *VGPRBlocks = nullptr;
+  const MCExpr *SGPRBlocks = nullptr;
+  uint32_t Priority = 0;
+  uint32_t FloatMode = 0;
+  uint32_t Priv = 0;
+  uint32_t DX10Clamp = 0;
+  uint32_t DebugMode = 0;
+  uint32_t IEEEMode = 0;
+  uint32_t WgpMode = 0;    // GFX10+
+  uint32_t MemOrdered = 0; // GFX10+
+  uint32_t RrWgMode = 0;   // GFX12+
+  const MCExpr *ScratchSize = nullptr;
 
-    // Fields set in PGM_RSRC2 pm4 packet
-    uint32_t ScratchEnable = 0;
-    uint32_t UserSGPR = 0;
-    uint32_t TrapHandlerEnable = 0;
-    uint32_t TGIdXEnable = 0;
-    uint32_t TGIdYEnable = 0;
-    uint32_t TGIdZEnable = 0;
-    uint32_t TGSizeEnable = 0;
-    uint32_t TIdIGCompCount = 0;
-    uint32_t EXCPEnMSB = 0;
-    uint32_t LdsSize = 0;
-    uint32_t EXCPEnable = 0;
+  // State used to calculate fields set in PGM_RSRC2 pm4 packet.
+  uint32_t LDSBlocks = 0;
+  const MCExpr *ScratchBlocks = nullptr;
 
-    uint64_t ComputePGMRSrc3GFX90A = 0;
+  // Fields set in PGM_RSRC2 pm4 packet
+  const MCExpr *ScratchEnable = nullptr;
+  uint32_t UserSGPR = 0;
+  uint32_t TrapHandlerEnable = 0;
+  uint32_t TGIdXEnable = 0;
+  uint32_t TGIdYEnable = 0;
+  uint32_t TGIdZEnable = 0;
+  uint32_t TGSizeEnable = 0;
+  uint32_t TIdIGCompCount = 0;
+  uint32_t EXCPEnMSB = 0;
+  uint32_t LdsSize = 0;
+  uint32_t EXCPEnable = 0;
 
-    uint32_t NumVGPR = 0;
-    uint32_t NumArchVGPR = 0;
-    uint32_t NumAccVGPR = 0;
-    uint32_t AccumOffset = 0;
-    uint32_t TgSplit = 0;
-    uint32_t NumSGPR = 0;
-    unsigned SGPRSpill = 0;
-    unsigned VGPRSpill = 0;
-    uint32_t LDSSize = 0;
-    bool FlatUsed = false;
+  const MCExpr *ComputePGMRSrc3GFX90A = nullptr;
 
-    // Number of SGPRs that meets number of waves per execution unit request.
-    uint32_t NumSGPRsForWavesPerEU = 0;
+  const MCExpr *NumVGPR = nullptr;
+  const MCExpr *NumArchVGPR = nullptr;
+  const MCExpr *NumAccVGPR = nullptr;
+  const MCExpr *AccumOffset = nullptr;
+  uint32_t TgSplit = 0;
+  const MCExpr *NumSGPR = nullptr;
+  unsigned SGPRSpill = 0;
+  unsigned VGPRSpill = 0;
+  uint32_t LDSSize = 0;
+  const MCExpr *FlatUsed = nullptr;
 
-    // Number of VGPRs that meets number of waves per execution unit request.
-    uint32_t NumVGPRsForWavesPerEU = 0;
+  // Number of SGPRs that meets number of waves per execution unit request.
+  const MCExpr *NumSGPRsForWavesPerEU = nullptr;
 
-    // Final occupancy.
-    uint32_t Occupancy = 0;
+  // Number of VGPRs that meets number of waves per execution unit request.
+  const MCExpr *NumVGPRsForWavesPerEU = nullptr;
 
-    // Whether there is recursion, dynamic allocas, indirect calls or some other
-    // reason there may be statically unknown stack usage.
-    bool DynamicCallStack = false;
+  // Final occupancy.
+  const MCExpr *Occupancy = nullptr;
 
-    // Bonus information for debugging.
-    bool VCCUsed = false;
+  // Whether there is recursion, dynamic allocas, indirect calls or some other
+  // reason there may be statically unknown stack usage.
+  const MCExpr *DynamicCallStack = nullptr;
 
-    SIProgramInfo() = default;
+  // Bonus information for debugging.
+  const MCExpr *VCCUsed = nullptr;
 
-    /// Compute the value of the ComputePGMRsrc1 register.
-    uint64_t getComputePGMRSrc1(const GCNSubtarget &ST) const;
-    uint64_t getPGMRSrc1(CallingConv::ID CC, const GCNSubtarget &ST) const;
+  SIProgramInfo() = default;
 
-    /// Compute the value of the ComputePGMRsrc2 register.
-    uint64_t getComputePGMRSrc2() const;
-    uint64_t getPGMRSrc2(CallingConv::ID CC) const;
+  // The constructor sets the values for each member as shown in the struct.
+  // However, setting the MCExpr members to their zero value equivalent
+  // happens in reset together with (duplicated) value re-set for the
+  // non-MCExpr members.
+  void reset(const MachineFunction &MF);
+
+  // Get function code size and cache the value.
+  uint64_t getFunctionCodeSize(const MachineFunction &MF);
+
+  /// Compute the value of the ComputePGMRsrc1 register.
+  const MCExpr *getComputePGMRSrc1(const GCNSubtarget &ST,
+                                   MCContext &Ctx) const;
+  const MCExpr *getPGMRSrc1(CallingConv::ID CC, const GCNSubtarget &ST,
+                            MCContext &Ctx) const;
+
+  /// Compute the value of the ComputePGMRsrc2 register.
+  const MCExpr *getComputePGMRSrc2(MCContext &Ctx) const;
+  const MCExpr *getPGMRSrc2(CallingConv::ID CC, MCContext &Ctx) const;
 };
 
 } // namespace llvm

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' -polly-import-jscop-postfix=transformed -S < %s | FileCheck %s
 ;
 ; This text case has a partial write of PHI in a region-statement. It
 ; requires that the new PHINode from the region's exiting block is

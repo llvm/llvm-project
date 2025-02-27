@@ -159,7 +159,7 @@ class SiFive7GetReductionCycles<string mx, int sew> {
   );
 }
 
-/// Cycles for ordered reductions take approximatley 6*VL cycles
+/// Cycles for ordered reductions take approximately 6*VL cycles
 class SiFive7GetOrderedReductionCycles<string mx, int sew> {
   defvar VLEN = 512;
   // (VLEN * LMUL) / SEW
@@ -199,7 +199,6 @@ def SiFive7Model : SchedMachineModel {
   let LoadLatency = 3;
   let MispredictPenalty = 3;
   let CompleteModel = 0;
-  let PostRAScheduler = true;
   let EnableIntervals = true;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
@@ -224,8 +223,8 @@ def SiFive7VS          : ProcResource<1>; // Store sequencer
 // The VCQ accepts instructions from the the A Pipe and holds them until the
 // vector unit is ready to dequeue them. The unit dequeues up to one instruction
 // per cycle, in order, as soon as the sequencer for that type of instruction is
-// avaliable. This resource is meant to be used for 1 cycle by all vector
-// instructions, to model that only one vector instruction may be dequed at a
+// available. This resource is meant to be used for 1 cycle by all vector
+// instructions, to model that only one vector instruction may be dequeued at a
 // time. The actual dequeueing into the sequencer is modeled by the VA, VL, and
 // VS sequencer resources below. Each of them will only accept a single
 // instruction at a time and remain busy for the number of cycles associated
@@ -480,10 +479,6 @@ foreach mx = SchedMxList in {
 // resource, we do not need to use LMULSEWXXX constructors. However, we do
 // use the SEW from the name to determine the number of Cycles.
 
-// This predicate is true when the rs2 operand of vlse or vsse is x0, false
-// otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
-
 foreach mx = SchedMxList in {
   defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 8>.c;
@@ -636,21 +631,26 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICALUV",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUX",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUI",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVShiftV",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVShiftX",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVShiftI",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMV",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMX",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVICALUMI",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMinMaxV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMinMaxX",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVIMulV",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVIMulX",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVIMulAddV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVIMulAddX",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeV",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeX",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeI",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMovV",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMovX",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMovI",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+  }
+  let Latency = 8, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVShiftV",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVShiftX",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVShiftI",    [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMulV",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMulX",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMulAddV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMulAddX",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
   }
   // Mask results can't chain.
   let Latency = !add(Cycles, 3), AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
@@ -928,6 +928,7 @@ foreach mx = SchedMxList in {
     defvar IsWorstCase = SiFive7IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
     let Latency = !add(Cycles, 3), AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SiFive7VCQ, SiFive7VA], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SiFive7VCQ, SiFive7VA], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [SiFive7VCQ, SiFive7VA], mx, sew, IsWorstCase>;
     }
   }
@@ -937,10 +938,11 @@ foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
-    defm "" : LMULWriteResMX<"WriteVISlideX",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVISlideI",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVISlide1X",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFSlide1F",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideUpX",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideI",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1X",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1F",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
   }
 }
 
@@ -964,15 +966,18 @@ def : InstRW<[WriteIALU], (instrs COPY)>;
 
 // VCIX
 //
-// In principle we don't know the latency of any VCIX instructions. But instead
-// of taking the default of 1, which can lead to issues [1], we assume that they
-// have a fairly high latency.
+// In principle we don't know the latency of any VCIX instructions (they
+// depends on a particular coprocessor implementation). However, the default
+// latency of 1 can lead to issues [1]. So instead we set the latency to the
+// default provided by `SiFive7GetCyclesDefault`. This is still not accurate
+// and can lead to suboptimal codegen, but should hopefully be a better
+// starting point.
 //
 // [1] https://github.com/llvm/llvm-project/issues/83391
 foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !mul(Cycles, 10),
+  let Latency = Cycles,
       AcquireAtCycles = [0, 1],
       ReleaseAtCycles = [1, !add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVC_V_I",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
@@ -1272,6 +1277,8 @@ defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
 defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_data", 0>;
 defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_index", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_data", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_data", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVI_data", 0>;
@@ -1284,11 +1291,11 @@ def : ReadAdvance<ReadVMov8V, 0>;
 
 // Others
 def : ReadAdvance<ReadVMask, 0>;
-def : ReadAdvance<ReadVMergeOp_WorstCase, 0>;
+def : ReadAdvance<ReadVPassthru_WorstCase, 0>;
 foreach mx = SchedMxList in {
-  def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx), 0>;
+  def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx), 0>;
   foreach sew = SchedSEWSet<mx>.val in
-    def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx  # "_E" # sew), 0>;
+    def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx  # "_E" # sew), 0>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1298,4 +1305,5 @@ defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
+defm : UnsupportedSchedZvk;
 }

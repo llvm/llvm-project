@@ -1,8 +1,8 @@
 ! Test the MLIR pass pipeline
 
-! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline -o /dev/null %s 2>&1 | FileCheck --check-prefixes=ALL,NOTO2 %s
+! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline -o /dev/null %s 2>&1 | FileCheck --check-prefixes=ALL %s
 ! -O0 is the default:
-! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O0 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,NOTO2 %s
+! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O0 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL %s
 ! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O2 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,O2 %s
 
 ! REQUIRES: asserts
@@ -10,15 +10,58 @@
 end program
 
 ! ALL: Pass statistics report
+! ALL: Fortran::lower::VerifierPass
+
+! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
 ! O2-NEXT: Canonicalizer
-! O2-NEXT: 'func.func' Pipeline
+! ALL:     Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT:'fir.global' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
+! ALL-NEXT:'func.func' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! ALL:       InlineElementals
+! ALL-NEXT:'omp.declare_reduction' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! ALL:       InlineElementals
+! ALL-NEXT:'omp.private' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! ALL:       InlineElementals
+! O2-NEXT: Canonicalizer
+! O2-NEXT: CSE
+! O2-NEXT: (S) {{.*}} num-cse'd
+! O2-NEXT: (S) {{.*}} num-dce'd
+! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! O2-NEXT: 'fir.global' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   OptimizedBufferization
+! O2-NEXT:   InlineHLFIRAssign
+! O2-NEXT: 'func.func' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   OptimizedBufferization
+! O2-NEXT:   InlineHLFIRAssign
+! O2-NEXT: 'omp.declare_reduction' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   OptimizedBufferization
+! O2-NEXT:   InlineHLFIRAssign
+! O2-NEXT: 'omp.private' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   OptimizedBufferization
+! O2-NEXT:   InlineHLFIRAssign
 ! ALL: LowerHLFIROrderedAssignments
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
+! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! O2-NEXT:   'fir.global' Pipeline
+! O2-NEXT:     InlineHLFIRAssign
+! O2-NEXT:   'func.func' Pipeline
+! O2-NEXT:     InlineHLFIRAssign
+! O2-NEXT:   'omp.declare_reduction' Pipeline
+! O2-NEXT:     InlineHLFIRAssign
+! O2-NEXT:   'omp.private' Pipeline
+! O2-NEXT:     InlineHLFIRAssign
 ! ALL-NEXT: ConvertHLFIRtoFIR
 ! ALL-NEXT: CSE
 ! Ideally, we need an output with only the pass names, but
@@ -28,8 +71,15 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: 'fir.global' Pipeline
+! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   ArrayValueCopy
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.declare_reduction' Pipeline
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   CharacterConversion
 
 ! ALL-NEXT: Canonicalizer
@@ -49,15 +99,23 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! O2-NEXT:    'func.func' Pipeline
-! O2-NEXT:      PolymorphicOpConversion
+! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: AssumedRankOpConversion
 ! O2-NEXT:  AddAliasTags
-! ALL-NEXT: Pipeline Collection : ['func.func', 'omp.declare_reduction']
+
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT:    'fir.global' Pipeline
+! ALL-NEXT:      StackReclaim
+! ALL-NEXT:      CFGConversion
 ! ALL-NEXT:    'func.func' Pipeline
-! NOTO2-NEXT:      PolymorphicOpConversion
-! ALL-NEXT:      CFGConversionOnFunc
+! ALL-NEXT:      StackReclaim
+! ALL-NEXT:      CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
-! ALL-NEXT:      CFGConversionOnReduction
+! ALL-NEXT:      StackReclaim
+! ALL-NEXT:      CFGConversion
+! ALL-NEXT:   'omp.private' Pipeline
+! ALL-NEXT:      StackReclaim
+! ALL-NEXT:      CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
@@ -65,17 +123,32 @@ end program
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+! O2-NEXT:  'func.func' Pipeline
+! O2-NEXT:    SetRuntimeCallAttributes
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
-! ALL-NEXT:    AbstractResultOnGlobalOpt
+! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'func.func' Pipeline
-! ALL-NEXT:    AbstractResultOnFuncOpt
+! ALL-NEXT:    AbstractResultOpt
+! ALL-NEXT:  'gpu.module' Pipeline
+! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
+! ALL-NEXT:   'func.func' Pipeline 
+! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:   'gpu.func' Pipeline 
+! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:  'omp.declare_reduction' Pipeline
+! ALL-NEXT:    AbstractResultOpt
+! ALL-NEXT:  'omp.private' Pipeline
+! ALL-NEXT:    AbstractResultOpt
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
-! ALL-NEXT: TargetRewrite
 ! ALL-NEXT: ExternalNameConversion
+! ALL-NEXT: TargetRewrite
+! ALL-NEXT: CompilerGeneratedNamesConversion
+! ALL-NEXT:  'func.func' Pipeline
+! ALL-NEXT:   FunctionAttr
 ! ALL-NEXT: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

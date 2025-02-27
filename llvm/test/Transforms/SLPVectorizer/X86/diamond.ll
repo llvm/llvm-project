@@ -16,10 +16,10 @@ define i32 @foo(ptr noalias nocapture %B, ptr noalias nocapture %A, i32 %n, i32 
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL238:%.*]] = add i32 [[M:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -59,13 +59,13 @@ define i32 @extr_user(ptr noalias nocapture %B, ptr noalias nocapture %A, i32 %n
 ; CHECK-LABEL: @extr_user(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL238:%.*]] = add i32 [[M:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %0 = load i32, ptr %A, align 4
@@ -95,13 +95,14 @@ define i32 @extr_user1(ptr noalias nocapture %B, ptr noalias nocapture %A, i32 %
 ; CHECK-LABEL: @extr_user1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL238:%.*]] = add i32 [[M:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %0 = load i32, ptr %A, align 4

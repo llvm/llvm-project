@@ -43,7 +43,7 @@ void neg() {
 
 template <long int I>
 void tooBig() {
-  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388586)}}
+  __attribute__((address_space(I))) int *bounds; // expected-error {{address space is larger than the maximum supported (8388585)}}
 }
 
 template <long int I>
@@ -116,4 +116,17 @@ int main() {
   static_assert(partial_spec_deduce_as<int __attribute__((address_space(3))) *>::value == 3, "address space value has been incorrectly deduced");
 
   return 0;
+}
+
+namespace gh101685 {
+template <int AS>
+using ASPtrTy = void [[clang::address_space(AS)]] *;
+
+template <int AS>
+struct EntryTy {
+  ASPtrTy<AS> Base;
+};
+
+ASPtrTy<1> x;
+EntryTy<2> y;
 }

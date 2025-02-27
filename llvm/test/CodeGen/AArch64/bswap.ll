@@ -3,17 +3,84 @@
 ; RUN: llc -mtriple=aarch64 -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; ====== Scalar Tests =====
-define i16 @bswap_i16(i16 %a){
-; CHECK-LABEL: bswap_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev w8, w0
-; CHECK-NEXT:    lsr w0, w8, #16
-; CHECK-NEXT:    ret
+
+; ====== Scalar bswap.i16 Tests =====
+define i16 @bswap_i16_to_i16_anyext(i16 %a){
+; CHECK-SD-LABEL: bswap_i16_to_i16_anyext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    rev16 w0, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bswap_i16_to_i16_anyext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    rev w8, w0
+; CHECK-GI-NEXT:    lsr w0, w8, #16
+; CHECK-GI-NEXT:    ret
     %3 = call i16 @llvm.bswap.i16(i16 %a)
     ret i16 %3
 }
 declare i16 @llvm.bswap.i16(i16)
 
+; The zext here is optimised to an any_extend during isel.
+define i64 @bswap_i16_to_i64_anyext(i16 %a) {
+; CHECK-SD-LABEL: bswap_i16_to_i64_anyext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    rev16 x8, x0
+; CHECK-SD-NEXT:    lsl x0, x8, #48
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bswap_i16_to_i64_anyext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    rev w8, w0
+; CHECK-GI-NEXT:    lsr w8, w8, #16
+; CHECK-GI-NEXT:    and x8, x8, #0xffff
+; CHECK-GI-NEXT:    lsl x0, x8, #48
+; CHECK-GI-NEXT:    ret
+    %3 = call i16 @llvm.bswap.i16(i16 %a)
+    %4 = zext i16 %3 to i64
+    %5 = shl i64 %4, 48
+    ret i64 %5
+}
+
+; The zext here is optimised to an any_extend during isel..
+define i128 @bswap_i16_to_i128_anyext(i16 %a) {
+; CHECK-SD-LABEL: bswap_i16_to_i128_anyext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, w0
+; CHECK-SD-NEXT:    mov x0, xzr
+; CHECK-SD-NEXT:    rev w8, w8
+; CHECK-SD-NEXT:    lsr w8, w8, #16
+; CHECK-SD-NEXT:    lsl x1, x8, #48
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bswap_i16_to_i128_anyext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x0, xzr
+; CHECK-GI-NEXT:    rev w8, w8
+; CHECK-GI-NEXT:    lsr w8, w8, #16
+; CHECK-GI-NEXT:    and x8, x8, #0xffff
+; CHECK-GI-NEXT:    lsl x1, x8, #48
+; CHECK-GI-NEXT:    ret
+    %3 = call i16 @llvm.bswap.i16(i16 %a)
+    %4 = zext i16 %3 to i128
+    %5 = shl i128 %4, 112
+    ret i128 %5
+}
+
+define i32 @bswap_i16_to_i32_zext(i16 %a){
+; CHECK-LABEL: bswap_i16_to_i32_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev w8, w0
+; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    ret
+  %3 = call i16 @llvm.bswap.i16(i16 %a)
+  %4 = zext i16 %3 to i32
+  ret i32 %4
+}
+
+; ====== Other scalar bswap tests =====
 define i32 @bswap_i32(i32 %a){
 ; CHECK-LABEL: bswap_i32:
 ; CHECK:       // %bb.0:
@@ -109,12 +176,8 @@ define <2 x i16> @bswap_v2i16(<2 x i16> %a){
 ;
 ; CHECK-GI-LABEL: bswap_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -146,7 +209,7 @@ define <1 x i32> @bswap_v1i32(<1 x i32> %a){
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:

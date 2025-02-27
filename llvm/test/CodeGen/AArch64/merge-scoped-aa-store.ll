@@ -15,7 +15,7 @@
 define void @blam0(ptr %g0, ptr %g1) {
 ; MIR-LABEL: name: blam0
 ; MIR: LDRDui %0, 0 :: (load (s64) from %ir.g0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR: STRDui killed %5, %1, 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope ![[SET1]], !noalias ![[SET0]])
+; MIR: STRDui killed %{{[0-9]*}}, %1, 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope ![[SET1]], !noalias ![[SET0]])
   %tmp4 = getelementptr inbounds <3 x float>, ptr %g1, i64 0, i64 0
   %tmp5 = load <3 x float>, ptr %g0, align 4, !alias.scope !0, !noalias !1
   %tmp6 = extractelement <3 x float> %tmp5, i64 0
@@ -35,7 +35,7 @@ define void @blam1(ptr %g0, ptr %g1) {
 ; MIR-DAG: ![[MMSET1:[0-9]+]] = !{}
 ; MIR: body:
 ; MIR: LDRDui %0, 0 :: (load (s64) from %ir.g0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR: STRDui killed %5, %1, 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
+; MIR: STRDui killed %{{[0-9]*}}, %1, 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
   %tmp4 = getelementptr inbounds <3 x float>, ptr %g1, i64 0, i64 0
   %tmp5 = load <3 x float>, ptr %g0, align 4, !alias.scope !0, !noalias !1
   %tmp6 = extractelement <3 x float> %tmp5, i64 0

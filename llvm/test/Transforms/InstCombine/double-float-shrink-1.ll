@@ -249,10 +249,10 @@ define double @exp10_test2(float %f)   {
 
 define float @log_test1(float %f)   {
 ; CHECK-LABEL: @log_test1(
-; LINUX-NEXT:    [[LOGF:%.*]] = call fast float @logf(float [[F:%.*]])
+; LINUX-NEXT:    [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[LOGF]]
-; MS32:          [[LOGF:%.*]] = call fast double @log(double [[F:%.*]])
-; MS64-NEXT:     [[LOGF:%.*]] = call fast float @logf(float [[F:%.*]])
+; MS32:          [[LOGF:%.*]] = call fast double @llvm.log.f64(double [[F:%.*]])
+; MS64-NEXT:     [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @log(double %conv)
@@ -263,7 +263,7 @@ define float @log_test1(float %f)   {
 define double @log_test2(float %f)   {
 ; CHECK-LABEL: @log_test2(
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[F:%.*]] to double
-; CHECK-NEXT:    [[CALL:%.*]] = call fast double @log(double [[CONV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call fast double @llvm.log.f64(double [[CONV]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %conv = fpext float %f to double
@@ -273,10 +273,10 @@ define double @log_test2(float %f)   {
 
 define float @log10_test1(float %f)   {
 ; CHECK-LABEL: @log10_test1(
-; LINUX-NEXT:    [[LOG10F:%.*]] = call fast float @log10f(float [[F:%.*]])
+; LINUX-NEXT:    [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[LOG10F]]
-; MS32:          [[LOG10F:%.*]] = call fast double @log10(double [[F:%.*]])
-; MS64-NEXT:     [[LOG10F:%.*]] = call fast float @log10f(float [[F:%.*]])
+; MS32:          [[LOG10F:%.*]] = call fast double @llvm.log10.f64(double [[F:%.*]])
+; MS64-NEXT:     [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @log10(double %conv)
@@ -287,7 +287,7 @@ define float @log10_test1(float %f)   {
 define double @log10_test2(float %f) {
 ; CHECK-LABEL: @log10_test2(
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[F:%.*]] to double
-; CHECK-NEXT:    [[CALL:%.*]] = call fast double @log10(double [[CONV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call fast double @llvm.log10.f64(double [[CONV]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %conv = fpext float %f to double
@@ -320,7 +320,7 @@ define double @log1p_test2(float %f)   {
 
 define float @log2_test1(float %f)   {
 ; CHECK-LABEL: @log2_test1(
-; ISC99-NEXT:    [[LOG2F:%.*]] = call fast float @log2f(float [[F:%.*]])
+; ISC99-NEXT:    [[LOG2F:%.*]] = call fast float @llvm.log2.f32(float [[F:%.*]])
 ; ISC99-NEXT:    ret float [[LOG2F]]
 ; ISC89:         [[LOG2F:%.*]] = call fast double @log2(double [[F:%.*]])
 ;
@@ -333,7 +333,8 @@ define float @log2_test1(float %f)   {
 define double @log2_test2(float %f)   {
 ; CHECK-LABEL: @log2_test2(
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[F:%.*]] to double
-; CHECK-NEXT:    [[CALL:%.*]] = call fast double @log2(double [[CONV]])
+; ISC99-NEXT:    [[CALL:%.*]] = call fast double @llvm.log2.f64(double [[CONV]])
+; ISC89-NEXT:    [[LOG2F:%.*]] = call fast double @log2(double [[F:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %conv = fpext float %f to double

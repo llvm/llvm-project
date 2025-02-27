@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !CHECK: omp.critical.declare @help2
 !CHECK: omp.critical.declare @help1 hint(contended)
@@ -28,3 +28,46 @@ subroutine omp_critical()
 !CHECK: omp.terminator
 !$OMP END CRITICAL
 end subroutine omp_critical
+
+
+! Tests that privatization for pre-determined variables (here `i`) is properly
+! handled.
+subroutine predetermined_privatization()
+  integer :: a(10), i
+
+  !CHECK: omp.parallel
+  !$omp parallel do
+
+  do i = 2, 10
+    !CHECK: omp.wsloop private(@{{.*}} %{{.*}} -> %[[PRIV_I_ALLOC:.*]] : !fir.ref<i32>)
+    !CHECK: omp.loop_nest (%[[IV:[^[:space:]]+]])
+    !CHECK: %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I_ALLOC]]
+    !CHECK: fir.store %[[IV]] to %[[PRIV_I_DECL]]#1
+    !CHECK: omp.critical
+    !$omp critical
+    a(i) = a(i-1) + 1
+    !$omp end critical
+  end do
+  !$omp end parallel do
+end
+
+! https://github.com/llvm/llvm-project/issues/75767
+!CHECK-LABEL: func @_QPparallel_critical_privatization(
+subroutine parallel_critical_privatization()
+  integer :: i
+
+  !CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFparallel_critical_privatizationEi"}
+  !CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]] {uniq_name = "_QFparallel_critical_privatizationEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK: omp.parallel private(@{{.*}} %[[I_DECL]]#0 -> %[[PRIV_I:.*]] : !fir.ref<i32>) {
+  !CHECK:   %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFparallel_critical_privatizationEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !$omp parallel default(firstprivate)
+    !CHECK: omp.critical {
+    !$omp critical
+      !CHECK: %[[C200:.*]] = arith.constant 200 : i32
+      !CHECK: hlfir.assign %[[C200]] to %[[PRIV_I_DECL]]#0 : i32, !fir.ref<i32>
+      i = 200
+    !CHECK: }
+    !$omp end critical
+  !CHECK: }
+  !$omp end parallel
+end subroutine

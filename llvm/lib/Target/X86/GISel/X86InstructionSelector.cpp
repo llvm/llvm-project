@@ -38,7 +38,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsX86.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -193,6 +192,15 @@ X86InstructionSelector::getRegClass(LLT Ty, const RegisterBank &RB) const {
       return STI.hasAVX512() ? &X86::VR256XRegClass : &X86::VR256RegClass;
     if (Ty.getSizeInBits() == 512)
       return &X86::VR512RegClass;
+  }
+
+  if (RB.getID() == X86::PSRRegBankID) {
+    if (Ty.getSizeInBits() == 80)
+      return &X86::RFP80RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &X86::RFP64RegClass;
+    if (Ty.getSizeInBits() == 32)
+      return &X86::RFP32RegClass;
   }
 
   llvm_unreachable("Unknown RegBank!");
@@ -462,6 +470,8 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
                     : (HasAVX512 ? X86::VMOVSSZmr :
                        HasAVX    ? X86::VMOVSSmr :
                                    X86::MOVSSmr);
+    if (X86::PSRRegBankID == RB.getID())
+      return Isload ? X86::LD_Fp32m : X86::ST_Fp32m;
   } else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64)) {
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV64rm : X86::MOV64mr;
@@ -472,6 +482,10 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
                     : (HasAVX512 ? X86::VMOVSDZmr :
                        HasAVX    ? X86::VMOVSDmr :
                                    X86::MOVSDmr);
+    if (X86::PSRRegBankID == RB.getID())
+      return Isload ? X86::LD_Fp64m : X86::ST_Fp64m;
+  } else if (Ty == LLT::scalar(80)) {
+    return Isload ? X86::LD_Fp80m : X86::ST_FpP80m;
   } else if (Ty.isVector() && Ty.getSizeInBits() == 128) {
     if (Alignment >= Align(16))
       return Isload ? (HasVLX ? X86::VMOVAPSZ128rm
@@ -548,7 +562,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   unsigned Opc = I.getOpcode();
 
   assert((Opc == TargetOpcode::G_STORE || Opc == TargetOpcode::G_LOAD) &&
-         "unexpected instruction");
+         "Only G_STORE and G_LOAD are expected for selection");
 
   const Register DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
@@ -576,11 +590,32 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   if (NewOpc == Opc)
     return false;
 
-  X86AddressMode AM;
-  X86SelectAddress(*MRI.getVRegDef(I.getOperand(1).getReg()), MRI, AM);
-
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
+  const MachineInstr *Ptr = MRI.getVRegDef(I.getOperand(1).getReg());
+
+  if (Ptr->getOpcode() == TargetOpcode::G_CONSTANT_POOL) {
+    assert(Opc == TargetOpcode::G_LOAD &&
+           "Only G_LOAD from constant pool is expected");
+    // TODO: Need a separate move for Large model
+    if (TM.getCodeModel() == CodeModel::Large)
+      return false;
+
+    unsigned char OpFlag = STI.classifyLocalReference(nullptr);
+    unsigned PICBase = 0;
+    if (OpFlag == X86II::MO_GOTOFF)
+      PICBase = TII.getGlobalBaseReg(&MF);
+    else if (STI.is64Bit())
+      PICBase = X86::RIP;
+
+    I.removeOperand(1);
+    addConstantPoolReference(MIB, Ptr->getOperand(1).getIndex(), PICBase,
+                             OpFlag);
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
+  X86AddressMode AM;
+  X86SelectAddress(*Ptr, MRI, AM);
   if (Opc == TargetOpcode::G_LOAD) {
     I.removeOperand(1);
     addFullAddress(MIB, AM);
@@ -590,7 +625,9 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
     I.removeOperand(0);
     addFullAddress(MIB, AM).addUse(DefReg);
   }
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  bool Constrained = constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  I.addImplicitDefUseOperands(MF);
+  return Constrained;
 }
 
 static unsigned getLeaOP(LLT Ty, const X86Subtarget &STI) {
@@ -1011,6 +1048,13 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     break;
   }
 
+  assert((LhsReg.isVirtual() && RhsReg.isVirtual()) &&
+         "Both arguments of FCMP need to be virtual!");
+  auto *LhsBank = RBI.getRegBank(LhsReg, MRI, TRI);
+  [[maybe_unused]] auto *RhsBank = RBI.getRegBank(RhsReg, MRI, TRI);
+  assert((LhsBank == RhsBank) &&
+         "Both banks assigned to FCMP arguments need to be same!");
+
   // Compute the opcode for the CMP instruction.
   unsigned OpCmp;
   LLT Ty = MRI.getType(LhsReg);
@@ -1018,10 +1062,15 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   default:
     return false;
   case 32:
-    OpCmp = X86::UCOMISSrr;
+    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr32
+                                                  : X86::UCOMISSrr;
     break;
   case 64:
-    OpCmp = X86::UCOMISDrr;
+    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr64
+                                                  : X86::UCOMISDrr;
+    break;
+  case 80:
+    OpCmp = X86::UCOM_FpIr80;
     break;
   }
 
@@ -1217,16 +1266,16 @@ bool X86InstructionSelector::selectExtract(MachineInstr &I,
 
   if (SrcTy.getSizeInBits() == 256 && DstTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Z256rr));
+      I.setDesc(TII.get(X86::VEXTRACTF32X4Z256rri));
     else if (HasAVX)
-      I.setDesc(TII.get(X86::VEXTRACTF128rr));
+      I.setDesc(TII.get(X86::VEXTRACTF128rri));
     else
       return false;
   } else if (SrcTy.getSizeInBits() == 512 && HasAVX512) {
     if (DstTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Zrr));
+      I.setDesc(TII.get(X86::VEXTRACTF32X4Zrri));
     else if (DstTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VEXTRACTF64x4Zrr));
+      I.setDesc(TII.get(X86::VEXTRACTF64X4Zrri));
     else
       return false;
   } else
@@ -1350,16 +1399,16 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
 
   if (DstTy.getSizeInBits() == 256 && InsertRegTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VINSERTF32x4Z256rr));
+      I.setDesc(TII.get(X86::VINSERTF32X4Z256rri));
     else if (HasAVX)
-      I.setDesc(TII.get(X86::VINSERTF128rr));
+      I.setDesc(TII.get(X86::VINSERTF128rri));
     else
       return false;
   } else if (DstTy.getSizeInBits() == 512 && HasAVX512) {
     if (InsertRegTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VINSERTF32x4Zrr));
+      I.setDesc(TII.get(X86::VINSERTF32X4Zrri));
     else if (InsertRegTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VINSERTF64x4Zrr));
+      I.setDesc(TII.get(X86::VINSERTF64X4Zrri));
     else
       return false;
   } else
@@ -1482,14 +1531,15 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
   const Register DstReg = I.getOperand(0).getReg();
   const LLT DstTy = MRI.getType(DstReg);
   const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
-  Align Alignment = Align(DstTy.getSizeInBytes());
+  // Create the load from the constant pool.
+  const ConstantFP *CFP = I.getOperand(1).getFPImm();
+  const auto &DL = MF.getDataLayout();
+  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
   const DebugLoc &DbgLoc = I.getDebugLoc();
 
   unsigned Opc =
       getLoadStoreOp(DstTy, RegBank, TargetOpcode::G_LOAD, Alignment);
 
-  // Create the load from the constant pool.
-  const ConstantFP *CFP = I.getOperand(1).getFPImm();
   unsigned CPI = MF.getConstantPool()->getConstantPoolIndex(CFP, Alignment);
   MachineInstr *LoadInst = nullptr;
   unsigned char OpFlag = STI.classifyLocalReference(nullptr);
@@ -1504,7 +1554,7 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
-        LLT::pointer(0, MF.getDataLayout().getPointerSizeInBits()), Alignment);
+        LLT::pointer(0, DL.getPointerSizeInBits()), Alignment);
 
     LoadInst =
         addDirectMem(BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg),
@@ -1832,7 +1882,7 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
 
 InstructionSelector *
 llvm::createX86InstructionSelector(const X86TargetMachine &TM,
-                                   X86Subtarget &Subtarget,
-                                   X86RegisterBankInfo &RBI) {
+                                   const X86Subtarget &Subtarget,
+                                   const X86RegisterBankInfo &RBI) {
   return new X86InstructionSelector(TM, Subtarget, RBI);
 }

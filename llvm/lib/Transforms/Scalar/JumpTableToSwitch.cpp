@@ -53,10 +53,10 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
     return std::nullopt;
 
   Function &F = *GEP->getParent()->getParent();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const unsigned BitWidth =
       DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
     return std::nullopt;

@@ -72,3 +72,30 @@ template<>
 void f(A, int***); // expected-error {{'f<A, int>' is missing exception specification 'noexcept'}}
 
 }
+
+namespace N3 {
+
+template<typename T, typename U>
+void f(T, U) noexcept(T::y); // #1
+
+template<typename T, typename U> // #2
+void f(T, U*) noexcept(T::x);
+
+// Deduction should succeed for both candidates, and #2 should be selected by overload resolution.
+// Only the exception specification of #2 should be instantiated.
+void (*x)(A, int*) = f;
+}
+
+namespace N4 {
+
+template<typename T, typename U>
+void f(T, U) noexcept(T::x); // #1
+
+template<typename T, typename U>
+void f(T, U*) noexcept(T::y); // #2
+// expected-error@-1 {{no member named 'y' in 'A'}}
+
+// Deduction should succeed for both candidates, and #2 should be selected by overload resolution.
+// Only the exception specification of #2 should be instantiated.
+void (*x)(A, int*) = f; // expected-note {{in instantiation of exception specification for 'f<A, int>' requested here}}
+}

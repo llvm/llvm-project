@@ -1,9 +1,9 @@
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers %t.o | FileCheck %s --check-prefixes=SEC,SEC32
 ; RUN: llvm-objdump -r %t.o | FileCheck %s --check-prefix=RELO
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t64.o < %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --section-headers %t64.o | FileCheck %s --check-prefixes=SEC,SEC64
 ; RUN: llvm-objdump -r %t64.o | FileCheck %s --check-prefix=RELO64
 

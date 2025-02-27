@@ -8,9 +8,9 @@
 
 define <4 x i32> @icmp_eq_v4i32(<4 x i32> %a, ptr %b) {
 ; CHECK-LABEL: @icmp_eq_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
@@ -38,9 +38,9 @@ define <4 x i32> @icmp_eq_v4i32(<4 x i32> %a, ptr %b) {
 
 define <4 x i32> @icmp_ne_v4i32(<4 x i32> %a, ptr %b) {
 ; CHECK-LABEL: @icmp_ne_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i32> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
@@ -68,9 +68,9 @@ define <4 x i32> @icmp_ne_v4i32(<4 x i32> %a, ptr %b) {
 
 define <4 x i32> @fcmp_oeq_v4i32(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: @fcmp_oeq_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oeq <4 x float> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq <4 x float> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
@@ -98,9 +98,9 @@ define <4 x i32> @fcmp_oeq_v4i32(<4 x float> %a, ptr %b) {
 
 define <4 x i32> @fcmp_uno_v4i32(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: @fcmp_uno_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp uno <4 x float> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp uno <4 x float> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
@@ -132,9 +132,9 @@ define <4 x i32> @fcmp_uno_v4i32(<4 x float> %a, ptr %b) {
 
 define <4 x i32> @icmp_sgt_slt_v4i32(<4 x i32> %a, ptr %b) {
 ; CHECK-LABEL: @icmp_sgt_slt_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
@@ -162,9 +162,9 @@ define <4 x i32> @icmp_sgt_slt_v4i32(<4 x i32> %a, ptr %b) {
 
 define <4 x i32> @icmp_uge_ule_v4i32(<4 x i32> %a, ptr %b) {
 ; CHECK-LABEL: @icmp_uge_ule_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i32> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <4 x i32> [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
@@ -192,9 +192,9 @@ define <4 x i32> @icmp_uge_ule_v4i32(<4 x i32> %a, ptr %b) {
 
 define <4 x i32> @fcmp_ogt_olt_v4i32(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: @fcmp_ogt_olt_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
@@ -222,11 +222,11 @@ define <4 x i32> @fcmp_ogt_olt_v4i32(<4 x float> %a, ptr %b) {
 
 define <4 x i32> @fcmp_ord_uno_v4i32(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: @fcmp_ord_uno_v4i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ord <4 x float> [[TMP2]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[TMP2]], [[A]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ord <4 x float> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp uno <4 x float> [[TMP1]], [[A]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0

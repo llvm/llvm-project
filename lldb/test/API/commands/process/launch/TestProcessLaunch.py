@@ -8,6 +8,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from pathlib import Path
 
 
 class ProcessLaunchTestCase(TestBase):
@@ -206,3 +207,60 @@ class ProcessLaunchTestCase(TestBase):
         self.assertEqual(value, evil_var)
         process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
+
+    @skipIfRemote
+    def test_target_launch_working_dir_prop(self):
+        """Test that the setting `target.launch-working-dir` is correctly used when launching a process."""
+        d = {"CXX_SOURCES": "print_cwd.cpp"}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(d)
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe)
+
+        mywd = "my_working_dir"
+        out_file_name = "my_working_dir_test.out"
+
+        my_working_dir_path = self.getBuildArtifact(mywd)
+        lldbutil.mkdir_p(my_working_dir_path)
+        out_file_path = os.path.join(my_working_dir_path, out_file_name)
+        another_working_dir_path = Path(
+            os.path.join(my_working_dir_path, "..")
+        ).resolve()
+
+        # If -w is not passed to process launch, then the setting will be used.
+        self.runCmd(
+            f"settings set target.launch-working-dir {another_working_dir_path}"
+        )
+        launch_command = f"process launch -o {out_file_path}"
+
+        self.expect(
+            launch_command,
+            patterns=["Process .* launched: .*a.out"],
+        )
+
+        out = lldbutil.read_file_on_target(self, out_file_path)
+
+        self.assertIn(f"stdout: {another_working_dir_path}", out)
+
+        # If -w is passed to process launch, that value will be used instead of the setting.
+        launch_command = f"process launch -w {my_working_dir_path} -o {out_file_path}"
+
+        self.expect(
+            launch_command,
+            patterns=["Process .* launched: .*a.out"],
+        )
+
+        out = lldbutil.read_file_on_target(self, out_file_path)
+        self.assertIn(f"stdout: {my_working_dir_path}", out)
+
+        # If set to empty, then LLDB's cwd will be used to launch the process.
+        self.runCmd(f"settings set target.launch-working-dir ''")
+        launch_command = f"process launch -o {out_file_path}"
+
+        self.expect(
+            launch_command,
+            patterns=["Process .* launched: .*a.out"],
+        )
+
+        out = lldbutil.read_file_on_target(self, out_file_path)
+        self.assertNotIn(f"stdout: {another_working_dir_path}", out)

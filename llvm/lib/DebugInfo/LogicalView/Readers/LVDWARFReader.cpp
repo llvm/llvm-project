@@ -19,7 +19,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -254,15 +253,18 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
   // We are processing .debug_info section, implicit_const attribute
   // values are not really stored here, but in .debug_abbrev section.
   auto GetAsUnsignedConstant = [&]() -> int64_t {
-    return AttrSpec.isImplicitConst() ? AttrSpec.getImplicitConstValue()
-                                      : *FormValue.getAsUnsignedConstant();
+    if (AttrSpec.isImplicitConst())
+      return AttrSpec.getImplicitConstValue();
+    if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
+      return *Val;
+    return 0;
   };
 
   auto GetFlag = [](const DWARFFormValue &FormValue) -> bool {
     return FormValue.isFormClass(DWARFFormValue::FC_Flag);
   };
 
-  auto GetBoundValue = [](const DWARFFormValue &FormValue) -> int64_t {
+  auto GetBoundValue = [&AttrSpec](const DWARFFormValue &FormValue) -> int64_t {
     switch (FormValue.getForm()) {
     case dwarf::DW_FORM_ref_addr:
     case dwarf::DW_FORM_ref1:
@@ -283,6 +285,8 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       return *FormValue.getAsUnsignedConstant();
     case dwarf::DW_FORM_sdata:
       return *FormValue.getAsSignedConstant();
+    case dwarf::DW_FORM_implicit_const:
+      return AttrSpec.getImplicitConstValue();
     default:
       return 0;
     }
@@ -295,21 +299,21 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
 
   switch (AttrSpec.Attr) {
   case dwarf::DW_AT_accessibility:
-    CurrentElement->setAccessibilityCode(*FormValue.getAsUnsignedConstant());
+    CurrentElement->setAccessibilityCode(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_artificial:
     CurrentElement->setIsArtificial();
     break;
   case dwarf::DW_AT_bit_size:
-    CurrentElement->setBitSize(*FormValue.getAsUnsignedConstant());
+    CurrentElement->setBitSize(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_file:
-    CurrentElement->setCallFilenameIndex(GetAsUnsignedConstant());
+    CurrentElement->setCallFilenameIndex(IncrementFileIndex
+                                             ? GetAsUnsignedConstant() + 1
+                                             : GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_line:
-    CurrentElement->setCallLineNumber(IncrementFileIndex
-                                          ? GetAsUnsignedConstant() + 1
-                                          : GetAsUnsignedConstant());
+    CurrentElement->setCallLineNumber(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_comp_dir:
     CompileUnit->setCompilationDirectory(dwarf::toStringRef(FormValue));
@@ -333,13 +337,12 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
         Stream << hexString(Value, 2);
         CurrentElement->setValue(Stream.str());
       } else
-        CurrentElement->setValue(
-            hexString(*FormValue.getAsUnsignedConstant(), 2));
+        CurrentElement->setValue(hexString(GetAsUnsignedConstant(), 2));
     } else
       CurrentElement->setValue(dwarf::toStringRef(FormValue));
     break;
   case dwarf::DW_AT_count:
-    CurrentElement->setCount(*FormValue.getAsUnsignedConstant());
+    CurrentElement->setCount(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_decl_line:
     CurrentElement->setLineNumber(GetAsUnsignedConstant());
@@ -358,16 +361,19 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       CurrentElement->setIsExternal();
     break;
   case dwarf::DW_AT_GNU_discriminator:
-    CurrentElement->setDiscriminator(*FormValue.getAsUnsignedConstant());
+    CurrentElement->setDiscriminator(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_inline:
-    CurrentElement->setInlineCode(*FormValue.getAsUnsignedConstant());
+    CurrentElement->setInlineCode(GetAsUnsignedConstant());
     break;
   case dwarf::DW_AT_lower_bound:
     CurrentElement->setLowerBound(GetBoundValue(FormValue));
     break;
   case dwarf::DW_AT_name:
     CurrentElement->setName(dwarf::toStringRef(FormValue));
+    break;
+  case dwarf::DW_AT_GNU_template_name:
+    CurrentElement->setValue(dwarf::toStringRef(FormValue));
     break;
   case dwarf::DW_AT_linkage_name:
   case dwarf::DW_AT_MIPS_linkage_name:
@@ -381,7 +387,7 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     CurrentElement->setUpperBound(GetBoundValue(FormValue));
     break;
   case dwarf::DW_AT_virtuality:
-    CurrentElement->setVirtualityCode(*FormValue.getAsUnsignedConstant());
+    CurrentElement->setVirtualityCode(GetAsUnsignedConstant());
     break;
 
   case dwarf::DW_AT_abstract_origin:
@@ -559,12 +565,8 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
     // Insert the newly created element into the element symbol table. If the
     // element is in the list, it means there are previously created elements
     // referencing this element.
-    if (ElementTable.find(Offset) == ElementTable.end()) {
-      // No previous references to this offset.
-      ElementTable.emplace(std::piecewise_construct,
-                           std::forward_as_tuple(Offset),
-                           std::forward_as_tuple(CurrentElement));
-    } else {
+    auto [It, Inserted] = ElementTable.try_emplace(Offset, CurrentElement);
+    if (!Inserted) {
       // There are previous references to this element. We need to update the
       // element and all the references pointing to this element.
       LVElementEntry &Reference = ElementTable[Offset];
@@ -789,7 +791,7 @@ std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
         return StringRef(RegName);
@@ -1082,10 +1084,17 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
   // FIXME: We are assuming that at most one Reference (DW_AT_specification,
   // DW_AT_abstract_origin, ...) and at most one Type (DW_AT_import, DW_AT_type)
   // appear in any single DIE, but this may not be true.
-  uint64_t Reference = *FormValue.getAsReference();
+  uint64_t Offset;
+  if (std::optional<uint64_t> Off = FormValue.getAsRelativeReference())
+    Offset = FormValue.getUnit()->getOffset() + *Off;
+  else if (Off = FormValue.getAsDebugInfoReference(); Off)
+    Offset = *Off;
+  else
+    llvm_unreachable("Unsupported reference type");
+
   // Get target for the given reference, if already created.
   LVElement *Target = getElementForOffset(
-      Reference, CurrentElement,
+      Offset, CurrentElement,
       /*IsType=*/Attr == dwarf::DW_AT_import || Attr == dwarf::DW_AT_type);
   // Check if we are dealing with cross CU references.
   if (FormValue.getForm() == dwarf::DW_FORM_ref_addr) {
@@ -1093,10 +1102,10 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
       // The global reference is ready. Mark it as global.
       Target->setIsGlobalReference();
       // Remove global reference from the unseen list.
-      removeGlobalOffset(Reference);
+      removeGlobalOffset(Offset);
     } else
       // Record the unseen cross CU reference.
-      addGlobalOffset(Reference);
+      addGlobalOffset(Offset);
   }
 
   // At this point, 'Target' can be null, in the case of the target element
@@ -1132,9 +1141,8 @@ void LVDWARFReader::updateReference(dwarf::Attribute Attr,
 // Get an element given the DIE offset.
 LVElement *LVDWARFReader::getElementForOffset(LVOffset Offset,
                                               LVElement *Element, bool IsType) {
-  auto Iter = ElementTable.try_emplace(Offset).first;
   // Update the element and all the references pointing to this element.
-  LVElementEntry &Entry = Iter->second;
+  LVElementEntry &Entry = ElementTable[Offset];
   if (!Entry.Element) {
     if (IsType)
       Entry.Types.insert(Element);

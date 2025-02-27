@@ -14,7 +14,6 @@
 #include "src/sys/mman/munmap.h"
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;

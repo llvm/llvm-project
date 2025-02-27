@@ -147,12 +147,10 @@ namespace {
     unsigned GlobalBaseReg = 0;
 
   public:
-    static char ID;
-
     PPCDAGToDAGISel() = delete;
 
     explicit PPCDAGToDAGISel(PPCTargetMachine &tm, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {}
+        : SelectionDAGISel(tm, OptLevel), TM(tm) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Make sure we re-emit a set of the global base reg if necessary
@@ -195,8 +193,8 @@ namespace {
     }
 
     /// getSmallIPtrImm - Return a target constant of pointer type.
-    inline SDValue getSmallIPtrImm(uint64_t Imm, const SDLoc &dl) {
-      return CurDAG->getTargetConstant(
+    inline SDValue getSmallIPtrImm(int64_t Imm, const SDLoc &dl) {
+      return CurDAG->getSignedTargetConstant(
           Imm, dl, PPCLowering->getPointerTy(CurDAG->getDataLayout()));
     }
 
@@ -209,7 +207,7 @@ namespace {
     /// base register.  Return the virtual register that holds this value.
     SDNode *getGlobalBaseReg();
 
-    void selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset = 0);
+    void selectFrameIndex(SDNode *SN, SDNode *N, int64_t Offset = 0);
 
     // Select - Convert the specified operand from a target-independent to a
     // target-specific node if it hasn't already been changed.
@@ -447,11 +445,19 @@ private:
     void transferMemOperands(SDNode *N, SDNode *Result);
   };
 
+  class PPCDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+  public:
+    static char ID;
+    explicit PPCDAGToDAGISelLegacy(PPCTargetMachine &tm,
+                                   CodeGenOptLevel OptLevel)
+        : SelectionDAGISelLegacy(
+              ID, std::make_unique<PPCDAGToDAGISel>(tm, OptLevel)) {}
+  };
 } // end anonymous namespace
 
-char PPCDAGToDAGISel::ID = 0;
+char PPCDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(PPCDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(PPCDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// getGlobalBaseReg - Output the instructions required to put the
 /// base address to use for accessing globals into a register.
@@ -510,7 +516,7 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
 }
 
 // Check if a SDValue has the toc-data attribute.
-static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
+static bool hasTocDataAttr(SDValue Val) {
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
   if (!GA)
     return false;
@@ -633,7 +639,7 @@ static bool isOpcWithIntImmediate(SDNode *N, unsigned Opc, unsigned& Imm) {
          && isInt32Immediate(N->getOperand(1).getNode(), Imm);
 }
 
-void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset) {
+void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, int64_t Offset) {
   SDLoc dl(SN);
   int FI = cast<FrameIndexSDNode>(N)->getIndex();
   SDValue TFI = CurDAG->getTargetFrameIndex(FI, N->getValueType(0));
@@ -744,7 +750,7 @@ static bool canOptimizeTLSDFormToXForm(SelectionDAG *CurDAG, SDValue Base) {
   // Base is expected to be an ADD_TLS node.
   if (Base.getOpcode() != PPCISD::ADD_TLS)
     return false;
-  for (auto *ADDTLSUse : Base.getNode()->uses()) {
+  for (auto *ADDTLSUse : Base.getNode()->users()) {
     // The optimization to convert the D-Form load/store into its X-Form
     // counterpart should only occur if the source value offset of the load/
     // store is 0. This also means that The offset should always be undefined.
@@ -948,22 +954,22 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
   // Cannot use range-based for loop here as we need the actual use (i.e. we
   // need the operand number corresponding to the use). A range-based for
   // will unbox the use and provide an SDNode*.
-  for (SDNode::use_iterator Use = N->use_begin(), UseEnd = N->use_end();
-       Use != UseEnd; ++Use) {
+  for (SDUse &Use : N->uses()) {
+    SDNode *User = Use.getUser();
     unsigned Opc =
-      Use->isMachineOpcode() ? Use->getMachineOpcode() : Use->getOpcode();
+        User->isMachineOpcode() ? User->getMachineOpcode() : User->getOpcode();
     switch (Opc) {
     default: return 0;
     case ISD::TRUNCATE:
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      MaxTruncation =
-        std::max(MaxTruncation, (unsigned)Use->getValueType(0).getSizeInBits());
+      MaxTruncation = std::max(MaxTruncation,
+                               (unsigned)User->getValueType(0).getSizeInBits());
       continue;
     case ISD::STORE: {
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      StoreSDNode *STN = cast<StoreSDNode>(*Use);
+      StoreSDNode *STN = cast<StoreSDNode>(User);
       unsigned MemVTSize = STN->getMemoryVT().getSizeInBits();
       if (MemVTSize == 64 || Use.getOperandNo() != 0)
         return 0;
@@ -1290,7 +1296,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> TZ) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDIC, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TZ), getI32Imm(LZ));
   }
@@ -1312,7 +1318,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> (30 - LZ)) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(30 - LZ), getI32Imm(LZ));
   }
@@ -1325,7 +1331,7 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
     APInt SignedInt34 = APInt(34, (Imm >> TO) & 0x3ffffffff);
     APInt Extended = SignedInt34.sext(64);
     Result = CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
-                                    getI64Imm(*Extended.getRawData()));
+                                    getI64Imm(Extended.getZExtValue()));
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TO), getI32Imm(LZ));
   }
@@ -3980,7 +3986,7 @@ static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
     return true;
   // We want the value in a GPR if it is being extended, used for a select, or
   // used in logical operations.
-  for (auto *CompareUse : Compare.getNode()->uses())
+  for (auto *CompareUse : Compare.getNode()->users())
     if (CompareUse->getOpcode() != ISD::SIGN_EXTEND &&
         CompareUse->getOpcode() != ISD::ZERO_EXTEND &&
         CompareUse->getOpcode() != ISD::SELECT &&
@@ -5302,9 +5308,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       SDValue MDV = N->getOperand(MDIndex);
       const MDNode *MD = cast<MDNodeSDNode>(MDV)->getMD();
       assert(MD->getNumOperands() != 0 && "Empty MDNode in operands!");
-      assert((isa<MDString>(MD->getOperand(0)) && cast<MDString>(
-           MD->getOperand(0))->getString().equals("ppc-trap-reason")) 
-           && "Unsupported annotation data type!");
+      assert((isa<MDString>(MD->getOperand(0)) &&
+              cast<MDString>(MD->getOperand(0))->getString() ==
+                  "ppc-trap-reason") &&
+             "Unsupported annotation data type!");
       for (unsigned i = 1; i < MD->getNumOperands(); i++) {
         assert(isa<MDString>(MD->getOperand(i)) && 
                "Invalid data type for annotation ppc-trap-reason!");
@@ -5466,10 +5473,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // generate secure plt code for TLS symbols.
     getGlobalBaseReg();
   } break;
-  case PPCISD::CALL: {
-    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
-        !TM.isPositionIndependent() || !Subtarget->isSecurePlt() ||
-        !Subtarget->isTargetELF())
+  case PPCISD::CALL:
+  case PPCISD::CALL_RM: {
+    if (Subtarget->isPPC64() || !TM.isPositionIndependent() ||
+        !Subtarget->isSecurePlt() || !Subtarget->isTargetELF())
       break;
 
     SDValue Op = N->getOperand(1);
@@ -5482,8 +5489,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       if (ES->getTargetFlags() == PPCII::MO_PLT)
         getGlobalBaseReg();
     }
-  }
-    break;
+  } break;
 
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
@@ -6095,8 +6101,15 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                                    EVT OperandTy) {
       SDValue GA = TocEntry->getOperand(0);
       SDValue TocBase = TocEntry->getOperand(1);
-      SDNode *MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
-      transferMemOperands(TocEntry, MN);
+      SDNode *MN = nullptr;
+      if (OpCode == PPC::ADDItoc || OpCode == PPC::ADDItoc8)
+        // toc-data access doesn't involve in loading from got, no need to
+        // keep memory operands.
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, TocBase, GA);
+      else {
+        MN = CurDAG->getMachineNode(OpCode, dl, OperandTy, GA, TocBase);
+        transferMemOperands(TocEntry, MN);
+      }
       ReplaceNode(TocEntry, MN);
     };
 
@@ -6115,8 +6128,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
       assert(isAIXABI && "ELF ABI already handled");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
@@ -6128,8 +6140,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (isPPC64 && CModel == CodeModel::Small) {
       assert(isAIXABI && "ELF ABI handled in common SelectCode");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc8, N, MVT::i64);
         return;
       }
@@ -6143,23 +6154,39 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     assert((isPPC64 || (isAIXABI && !isPPC64)) && "We are dealing with 64-bit"
            " ELF/AIX or 32-bit AIX in the following.");
 
-    // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode
-    // or 64-bit medium (ELF-only) or large (ELF and AIX) code model code. We
-    // generate two instructions as described below. The first source operand
-    // is a symbol reference. If it must be toc-referenced according to
-    // Subtarget, we generate:
+    // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode,
+    // 64-bit medium (ELF-only), or 64-bit large (ELF and AIX) code model code
+    // that does not contain TOC data symbols. We generate two instructions as
+    // described below. The first source operand is a symbol reference. If it
+    // must be referenced via the TOC according to Subtarget, we generate:
     // [32-bit AIX]
     //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
     // [64-bit ELF/AIX]
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
-    // Otherwise we generate:
+    // Otherwise for medium code model ELF we generate:
     //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
+
+    // And finally for AIX with toc-data we generate:
+    // [32-bit AIX]
+    //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
+    // [64-bit AIX]
+    //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
+
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
 
-    EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
+    EVT VT = Subtarget->getScalarIntVT();
     SDNode *Tmp = CurDAG->getMachineNode(
         isPPC64 ? PPC::ADDIStocHA8 : PPC::ADDIStocHA, dl, VT, TOCbase, GA);
+
+    // On AIX, if the symbol has the toc-data attribute it will be defined
+    // in the TOC entry, so we use an ADDItocL/ADDItocL8.
+    if (isAIXABI && hasTocDataAttr(GA)) {
+      ReplaceNode(
+          N, CurDAG->getMachineNode(isPPC64 ? PPC::ADDItocL8 : PPC::ADDItocL,
+                                    dl, VT, SDValue(Tmp, 0), GA));
+      return;
+    }
 
     if (PPCLowering->isAccessedAsGotIndirect(GA)) {
       // If it is accessed as got-indirect, we need an extra LWZ/LD to load
@@ -6172,6 +6199,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     }
 
+    assert(isPPC64 && "TOC_ENTRY already handled for 32-bit.");
     // Build the address relative to the TOC-pointer.
     ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL8, dl, MVT::i64,
                                           SDValue(Tmp, 0), GA));
@@ -6280,7 +6308,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     SDValue ZeroReg =
         CurDAG->getRegister(Subtarget->isPPC64() ? PPC::ZERO8 : PPC::ZERO,
-                            Subtarget->isPPC64() ? MVT::i64 : MVT::i32);
+                            Subtarget->getScalarIntVT());
     unsigned LIOpcode = Subtarget->isPPC64() ? PPC::LI8 : PPC::LI;
     // v16i8 LD_SPLAT addr
     // ======>
@@ -6576,12 +6604,12 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue Cond = N->getOperand(0);
-  SDValue ConstTrue =
-    CurDAG->getConstant(N->getOpcode() == ISD::SIGN_EXTEND ? -1 : 1, dl, VT);
+  SDValue ConstTrue = CurDAG->getSignedConstant(
+      N->getOpcode() == ISD::SIGN_EXTEND ? -1 : 1, dl, VT);
   SDValue ConstFalse = CurDAG->getConstant(0, dl, VT);
 
   do {
-    SDNode *User = *N->use_begin();
+    SDNode *User = *N->user_begin();
     if (User->getNumOperands() != 2)
       break;
 
@@ -6672,7 +6700,7 @@ void PPCDAGToDAGISel::PostprocessISelDAG() {
 // be folded with the isel so that we don't need to materialize a register
 // containing zero.
 bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     if (!User->isMachineOpcode())
       return false;
     if (User->getMachineOpcode() != PPC::SELECT_I4 &&
@@ -6702,7 +6730,7 @@ bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
 
 void PPCDAGToDAGISel::SwapAllSelectUsers(SDNode *N) {
   SmallVector<SDNode *, 4> ToReplace;
-  for (SDNode *User : N->uses()) {
+  for (SDNode *User : N->users()) {
     assert((User->getMachineOpcode() == PPC::SELECT_I4 ||
             User->getMachineOpcode() == PPC::SELECT_I8) &&
            "Must have all select users");
@@ -7353,7 +7381,7 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
     // (except for the original INSERT_SUBREG), then abort the transformation.
     bool OutsideUse = false;
     for (SDNode *PN : ToPromote) {
-      for (SDNode *UN : PN->uses()) {
+      for (SDNode *UN : PN->users()) {
         if (!ToPromote.count(UN) && UN != ISR.getNode()) {
           OutsideUse = true;
           break;
@@ -7535,7 +7563,7 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
     while (V->isMachineOpcode() &&
            V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS) {
       // All values in the chain should have single use.
-      if (V->use_empty() || !V->use_begin()->isOnlyUserOf(V.getNode()))
+      if (V->use_empty() || !V->user_begin()->isOnlyUserOf(V.getNode()))
         return SDValue();
       V = V->getOperand(0);
     }
@@ -7568,29 +7596,23 @@ static bool hasAIXSmallTLSAttr(SDValue Val) {
   return false;
 }
 
-// Is an ADDI eligible for folding for non-TOC-based local-exec accesses?
-static bool isEligibleToFoldADDIForLocalExecAccesses(SelectionDAG *DAG,
-                                                     SDValue ADDIToFold) {
+// Is an ADDI eligible for folding for non-TOC-based local-[exec|dynamic]
+// accesses?
+static bool isEligibleToFoldADDIForFasterLocalAccesses(SelectionDAG *DAG,
+                                                       SDValue ADDIToFold) {
   // Check if ADDIToFold (the ADDI that we want to fold into local-exec
   // accesses), is truly an ADDI.
   if (!ADDIToFold.isMachineOpcode() ||
       (ADDIToFold.getMachineOpcode() != PPC::ADDI8))
     return false;
 
-  // Folding is only allowed for the AIX small-local-exec TLS target attribute
-  // or when the 'aix-small-tls' global variable attribute is present.
+  // Folding is only allowed for the AIX small-local-[exec|dynamic] TLS target
+  // attribute or when the 'aix-small-tls' global variable attribute is present.
   const PPCSubtarget &Subtarget =
       DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
   SDValue TLSVarNode = ADDIToFold.getOperand(1);
-  if (!(Subtarget.hasAIXSmallLocalExecTLS() || hasAIXSmallTLSAttr(TLSVarNode)))
-    return false;
-
-  // The first operand of the ADDIToFold should be the thread pointer.
-  // This transformation is only performed if the first operand of the
-  // addi is the thread pointer.
-  SDValue TPRegNode = ADDIToFold.getOperand(0);
-  RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
-  if (!TPReg || (TPReg->getReg() != Subtarget.getThreadPointerRegister()))
+  if (!(Subtarget.hasAIXSmallLocalDynamicTLS() ||
+        Subtarget.hasAIXSmallLocalExecTLS() || hasAIXSmallTLSAttr(TLSVarNode)))
     return false;
 
   // The second operand of the ADDIToFold should be the global TLS address
@@ -7600,24 +7622,36 @@ static bool isEligibleToFoldADDIForLocalExecAccesses(SelectionDAG *DAG,
   if (!GA)
     return false;
 
-  // The local-exec TLS variable should only have the MO_TPREL_FLAG target flag,
-  // so this optimization is not performed otherwise if the flag is not set.
+  if (DAG->getTarget().getTLSModel(GA->getGlobal()) == TLSModel::LocalExec) {
+    // The first operand of the ADDIToFold should be the thread pointer.
+    // This transformation is only performed if the first operand of the
+    // addi is the thread pointer.
+    SDValue TPRegNode = ADDIToFold.getOperand(0);
+    RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
+    if (!TPReg || (TPReg->getReg() != Subtarget.getThreadPointerRegister()))
+      return false;
+  }
+
+  // The local-[exec|dynamic] TLS variable should only have the
+  // [MO_TPREL_FLAG|MO_TLSLD_FLAG] target flags, so this optimization is not
+  // performed otherwise if the flag is not set.
   unsigned TargetFlags = GA->getTargetFlags();
-  if (TargetFlags != PPCII::MO_TPREL_FLAG)
+  if (!(TargetFlags == PPCII::MO_TPREL_FLAG ||
+        TargetFlags == PPCII::MO_TLSLD_FLAG))
     return false;
 
   // If all conditions are satisfied, the ADDI is valid for folding.
   return true;
 }
 
-// For non-TOC-based local-exec access where an addi is feeding into another
-// addi, fold this sequence into a single addi if possible.
-// Before this optimization, the sequence appears as:
-//    addi rN, r13, sym@le
+// For non-TOC-based local-[exec|dynamic] access where an addi is feeding into
+// another addi, fold this sequence into a single addi if possible. Before this
+// optimization, the sequence appears as:
+//    addi rN, r13, sym@[le|ld]
 //    addi rM, rN, imm
 // After this optimization, we can fold the two addi into a single one:
-//    addi rM, r13, sym@le + imm
-static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
+//    addi rM, r13, sym@[le|ld] + imm
+static void foldADDIForFasterLocalAccesses(SDNode *N, SelectionDAG *DAG) {
   if (N->getMachineOpcode() != PPC::ADDI8)
     return;
 
@@ -7625,27 +7659,17 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   // we want optimized out.
   SDValue InitialADDI = N->getOperand(0);
 
-  if (!isEligibleToFoldADDIForLocalExecAccesses(DAG, InitialADDI))
+  if (!isEligibleToFoldADDIForFasterLocalAccesses(DAG, InitialADDI))
     return;
 
-  // At this point, InitialADDI can be folded into a non-TOC-based local-exec
-  // access. The first operand of InitialADDI should be the thread pointer,
-  // which has been checked in isEligibleToFoldADDIForLocalExecAccesses().
-  SDValue TPRegNode = InitialADDI.getOperand(0);
-  [[maybe_unused]] RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
-  [[maybe_unused]] const PPCSubtarget &Subtarget =
-      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
-  assert((TPReg && (TPReg->getReg() == Subtarget.getThreadPointerRegister())) &&
-         "Expecting the first operand to be a thread pointer for folding addi "
-         "in local-exec accesses!");
-
   // The second operand of the InitialADDI should be the global TLS address
-  // (the local-exec TLS variable), with the MO_TPREL_FLAG target flag.
-  // This has been checked in isEligibleToFoldADDIForLocalExecAccesses().
+  // (the local-[exec|dynamic] TLS variable), with the
+  // [MO_TPREL_FLAG|MO_TLSLD_FLAG] target flag. This has been checked in
+  // isEligibleToFoldADDIForFasterLocalAccesses().
   SDValue TLSVarNode = InitialADDI.getOperand(1);
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(TLSVarNode);
   assert(GA && "Expecting a valid GlobalAddressSDNode when folding addi into "
-               "local-exec accesses!");
+               "local-[exec|dynamic] accesses!");
   unsigned TargetFlags = GA->getTargetFlags();
 
   // The second operand of the addi that we want to preserve will be an
@@ -7657,7 +7681,7 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   TLSVarNode = DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA), MVT::i64,
                                            Offset, TargetFlags);
 
-  (void)DAG->UpdateNodeOperands(N, TPRegNode, TLSVarNode);
+  (void)DAG->UpdateNodeOperands(N, InitialADDI.getOperand(0), TLSVarNode);
   if (InitialADDI.getNode()->use_empty())
     DAG->RemoveDeadNode(InitialADDI.getNode());
 }
@@ -7674,8 +7698,9 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     if (isVSXSwap(SDValue(N, 0)))
       reduceVSXSwap(N, CurDAG);
 
-    // This optimization is performed for non-TOC-based local-exec accesses.
-    foldADDIForLocalExecAccesses(N, CurDAG);
+    // This optimization is performed for non-TOC-based local-[exec|dynamic]
+    // accesses.
+    foldADDIForFasterLocalAccesses(N, CurDAG);
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
@@ -7761,6 +7786,10 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       Flags = PPCII::MO_TLSLD_LO;
       break;
     case PPC::ADDItocL8:
+      // Skip the following peephole optimizations for ADDItocL8 on AIX which
+      // is used for toc-data access.
+      if (Subtarget->isAIXABI())
+        continue;
       Flags = PPCII::MO_TOC_LO;
       break;
     }
@@ -7833,13 +7862,15 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
                                             ImmOpnd.getValueType());
       } else if (Offset != 0) {
-        // This optimization is performed for non-TOC-based local-exec accesses.
-        if (isEligibleToFoldADDIForLocalExecAccesses(CurDAG, Base)) {
+        // This optimization is performed for non-TOC-based local-[exec|dynamic]
+        // accesses.
+        if (isEligibleToFoldADDIForFasterLocalAccesses(CurDAG, Base)) {
           // Add the non-zero offset information into the load or store
-          // instruction to be used for non-TOC-based local-exec accesses.
+          // instruction to be used for non-TOC-based local-[exec|dynamic]
+          // accesses.
           GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);
           assert(GA && "Expecting a valid GlobalAddressSDNode when folding "
-                       "addi into local-exec accesses!");
+                       "addi into local-[exec|dynamic] accesses!");
           ImmOpnd = CurDAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
                                                    MVT::i64, Offset,
                                                    GA->getTargetFlags());
@@ -7902,5 +7933,5 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 ///
 FunctionPass *llvm::createPPCISelDag(PPCTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new PPCDAGToDAGISel(TM, OptLevel);
+  return new PPCDAGToDAGISelLegacy(TM, OptLevel);
 }

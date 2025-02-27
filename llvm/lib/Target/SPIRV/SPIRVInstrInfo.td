@@ -15,14 +15,14 @@ include "SPIRVSymbolicOperands.td"
 
 // Codegen only metadata instructions
 let isCodeGenOnly=1 in {
-  def ASSIGN_TYPE: Pseudo<(outs ANYID:$dst_id), (ins ANYID:$src_id, TYPE:$src_ty)>;
-  def DECL_TYPE: Pseudo<(outs ANYID:$dst_id), (ins ANYID:$src_id, TYPE:$src_ty)>;
-  def GET_ID: Pseudo<(outs ID:$dst_id), (ins ANYID:$src)>;
-  def GET_fID: Pseudo<(outs fID:$dst_id), (ins ANYID:$src)>;
-  def GET_pID: Pseudo<(outs pID:$dst_id), (ins ANYID:$src)>;
-  def GET_vID: Pseudo<(outs vID:$dst_id), (ins ANYID:$src)>;
-  def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins ANYID:$src)>;
-  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins ANYID:$src)>;
+  def ASSIGN_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
+  def DECL_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
+  def GET_ID: Pseudo<(outs iID:$dst_id), (ins iID:$src)>;
+  def GET_fID: Pseudo<(outs fID:$dst_id), (ins fID:$src)>;
+  def GET_pID: Pseudo<(outs pID:$dst_id), (ins pID:$src)>;
+  def GET_vID: Pseudo<(outs vID:$dst_id), (ins vID:$src)>;
+  def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins vfID:$src)>;
+  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins vpID:$src)>;
 }
 
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
@@ -32,22 +32,24 @@ def assigntype : SDNode<"SPIRVISD::AssignType", SPVTypeBin>;
 def : GINodeEquiv<ASSIGN_TYPE, assigntype>;
 
 class BinOp<string name, bits<16> opCode, list<dag> pattern=[]>
-                : Op<opCode, (outs ANYID:$dst), (ins TYPE:$src_ty, ANYID:$src, ANYID:$src2),
+                : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, ID:$src, ID:$src2),
                   "$dst = "#name#" $src_ty $src $src2", pattern>;
 
 class BinOpTyped<string name, bits<16> opCode, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, CID:$src, CID:$src2),
-                  "$dst = "#name#" $src_ty $src $src2", [(set ID:$dst, (assigntype (node CID:$src, CID:$src2), TYPE:$src_ty))]>;
+                : Op<opCode, (outs CID:$dst), (ins TYPE:$src_ty, CID:$src, CID:$src2),
+                  "$dst = "#name#" $src_ty $src $src2",
+                  [(set CID:$dst, (assigntype (node CID:$src, CID:$src2), TYPE:$src_ty))]>;
 
 class TernOpTyped<string name, bits<16> opCode, RegisterClass CCond, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, CCond:$cond, CID:$src1, CID:$src2),
-                  "$dst = "#name#" $src_ty $cond $src1 $src2", [(set ID:$dst, (assigntype (node CCond:$cond, CID:$src1, CID:$src2), TYPE:$src_ty))]>;
+                : Op<opCode, (outs CID:$dst), (ins TYPE:$src_ty, CCond:$cond, CID:$src1, CID:$src2),
+                  "$dst = "#name#" $src_ty $cond $src1 $src2",
+                  [(set CID:$dst, (assigntype (node CCond:$cond, CID:$src1, CID:$src2), TYPE:$src_ty))]>;
 
 multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0, bit genV = 0> {
   if genF then
     def S: BinOpTyped<name, opCode, fID, node>;
   else
-    def S: BinOpTyped<name, opCode, ID, node>;
+    def S: BinOpTyped<name, opCode, iID, node>;
   if genV then {
     if genF then
       def V: BinOpTyped<name, opCode, vfID, node>;
@@ -57,40 +59,40 @@ multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0
 }
 
 multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genP = 1, bit genI = 1, bit genF = 0, bit genV = 0> {
-  if genF then {
-    def SFSCond: TernOpTyped<name, opCode, ID, fID, node>;
-    def SFVCond: TernOpTyped<name, opCode, vID, fID, node>;
-  }
-  if genI then {
-    def SISCond: TernOpTyped<name, opCode, ID, ID, node>;
-    def SIVCond: TernOpTyped<name, opCode, vID, ID, node>;
-  }
   if genP then {
-    def SPSCond: TernOpTyped<name, opCode, ID, pID, node>;
+    def SPSCond: TernOpTyped<name, opCode, iID, pID, node>;
     def SPVCond: TernOpTyped<name, opCode, vID, pID, node>;
   }
+  if genI then {
+    def SISCond: TernOpTyped<name, opCode, iID, iID, node>;
+    def SIVCond: TernOpTyped<name, opCode, vID, iID, node>;
+  }
+  if genF then {
+    def SFSCond: TernOpTyped<name, opCode, iID, fID, node>;
+    def SFVCond: TernOpTyped<name, opCode, vID, fID, node>;
+  }
   if genV then {
-    if genF then {
-      def VFSCond: TernOpTyped<name, opCode, ID, vfID, node>;
-      def VFVCond: TernOpTyped<name, opCode, vID, vfID, node>;
+    if genP then {
+      def VPSCond: TernOpTyped<name, opCode, iID, vpID, node>;
+      def VPVCond: TernOpTyped<name, opCode, vID, vpID, node>;
     }
     if genI then {
-      def VISCond: TernOpTyped<name, opCode, ID, vID, node>;
+      def VISCond: TernOpTyped<name, opCode, iID, vID, node>;
       def VIVCond: TernOpTyped<name, opCode, vID, vID, node>;
     }
-    if genP then {
-      def VPSCond: TernOpTyped<name, opCode, ID, vpID, node>;
-      def VPVCond: TernOpTyped<name, opCode, vID, vpID, node>;
+    if genF then {
+      def VFSCond: TernOpTyped<name, opCode, iID, vfID, node>;
+      def VFVCond: TernOpTyped<name, opCode, vID, vfID, node>;
     }
   }
 }
 
 class UnOp<string name, bits<16> opCode, list<dag> pattern=[]>
-                : Op<opCode, (outs ANYID:$dst), (ins TYPE:$type, ANYID:$src),
+                : Op<opCode, (outs ID:$dst), (ins TYPE:$type, ID:$src),
                   "$dst = "#name#" $type $src", pattern>;
 class UnOpTyped<string name, bits<16> opCode, RegisterClass CID, SDNode node>
-                : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, CID:$src),
-                  "$dst = "#name#" $src_ty $src", [(set ID:$dst, (assigntype (node CID:$src), TYPE:$src_ty))]>;
+                : Op<opCode, (outs CID:$dst), (ins TYPE:$src_ty, CID:$src),
+                  "$dst = "#name#" $src_ty $src", [(set CID:$dst, (assigntype (node CID:$src), TYPE:$src_ty))]>;
 
 class SimpleOp<string name, bits<16> opCode>: Op<opCode, (outs), (ins), name>;
 
@@ -144,9 +146,12 @@ def OpMemberDecorateString: Op<5633, (outs),
 def OpExtension: Op<10, (outs), (ins StringImm:$name, variable_ops), "OpExtension $name">;
 def OpExtInstImport: Op<11, (outs ID:$res), (ins StringImm:$extInstsName, variable_ops),
                   "$res = OpExtInstImport $extInstsName">;
-def OpExtInst: Op<12, (outs ID:$res), (ins TYPE:$ty, ID:$set, Extension:$inst, variable_ops),
+// $set should have been a register by the SPIR-V specification,
+// however, OpExtInst and OpExtInstImport get its own special case treatment
+// after instruction selection, so `i32imm` is the correct definition from the
+// perspective of the instruction selection pass
+def OpExtInst: Op<12, (outs ID:$res), (ins TYPE:$ty, i32imm:$set, Extension:$inst, variable_ops),
                   "$res = OpExtInst $ty $set $inst">;
-
 // 3.42.5 Mode-Setting Instructions
 
 def OpMemoryModel: Op<14, (outs), (ins AddressingModel:$addr, MemoryModel:$mem),
@@ -183,6 +188,8 @@ def OpTypeArray: Op<28, (outs TYPE:$type), (ins TYPE:$elementType, ID:$length),
 def OpTypeRuntimeArray: Op<29, (outs TYPE:$type), (ins TYPE:$elementType),
                   "$type = OpTypeRuntimeArray $elementType">;
 def OpTypeStruct: Op<30, (outs TYPE:$res), (ins variable_ops), "$res = OpTypeStruct">;
+def OpTypeStructContinuedINTEL: Op<6090, (outs), (ins variable_ops),
+                  "OpTypeStructContinuedINTEL">;
 def OpTypeOpaque: Op<31, (outs TYPE:$res), (ins StringImm:$name, variable_ops),
                   "$res = OpTypeOpaque $name">;
 def OpTypePointer: Op<32, (outs TYPE:$res), (ins StorageClass:$storage, TYPE:$type),
@@ -203,6 +210,9 @@ def OpTypeAccelerationStructureNV: Op<5341, (outs TYPE:$res), (ins),
 def OpTypeCooperativeMatrixNV: Op<5358, (outs TYPE:$res),
                   (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols),
                   "$res = OpTypeCooperativeMatrixNV $compType $scope $rows $cols">;
+def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
+                  (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
+                  "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols $use">;
 
 // 3.42.7 Constant-Creation Instructions
 
@@ -211,44 +221,46 @@ return CurDAG->getTargetConstant(
   N->getValueAP().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
-def fimm_to_i32 : SDNodeXForm<imm, [{
+def fimm_to_i64 : SDNodeXForm<imm, [{
 return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
+  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
-def gi_bitcast_fimm_to_i32 : GICustomOperandRenderer<"renderFImm32">,
-  GISDNodeXFormEquiv<fimm_to_i32>;
+def gi_bitcast_fimm_to_i64 : GICustomOperandRenderer<"renderFImm64">,
+  GISDNodeXFormEquiv<fimm_to_i64>;
 
 def gi_bitcast_imm_to_i32 : GICustomOperandRenderer<"renderImm32">,
   GISDNodeXFormEquiv<imm_to_i32>;
 
-def PseudoConstI: IntImmLeaf<i32, [{ return Imm.getBitWidth() <= 32; }], imm_to_i32>;
-def PseudoConstF: FPImmLeaf<f32, [{  return true; }], fimm_to_i32>;
-def ConstPseudoTrue: IntImmLeaf<i32, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
-def ConstPseudoFalse: IntImmLeaf<i32, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
+def PseudoConstI: IntImmLeaf<i64, [{ return Imm.getBitWidth() <= 32; }], imm_to_i32>;
+def PseudoConstF: FPImmLeaf<f64, [{  return true; }], fimm_to_i64>;
+def ConstPseudoTrue: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
+def ConstPseudoFalse: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
 def ConstPseudoNull: IntImmLeaf<i64, [{ return Imm.isZero(); }]>;
 
 multiclass IntFPImm<bits<16> opCode, string name> {
-  def I: Op<opCode, (outs ID:$dst), (ins TYPE:$type, ID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set ID:$dst, (assigntype PseudoConstI:$src, TYPE:$type))]>;
-  def F: Op<opCode, (outs ID:$dst), (ins TYPE:$type, fID:$src, variable_ops),
-                  "$dst = "#name#" $type", [(set ID:$dst, (assigntype PseudoConstF:$src, TYPE:$type))]>;
+  def I: Op<opCode, (outs iID:$dst), (ins TYPE:$type, iID:$src, variable_ops),
+                  "$dst = "#name#" $type", [(set iID:$dst, (assigntype PseudoConstI:$src, TYPE:$type))]>;
+  def F: Op<opCode, (outs fID:$dst), (ins TYPE:$type, fID:$src, variable_ops),
+                  "$dst = "#name#" $type", [(set fID:$dst, (assigntype PseudoConstF:$src, TYPE:$type))]>;
 }
 
-def OpConstantTrue: Op<41, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantTrue $src_ty",
-                      [(set ID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
-def OpConstantFalse: Op<42, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantFalse $src_ty",
-                      [(set ID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
+def OpConstantTrue: Op<41, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantTrue $src_ty",
+                      [(set iID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
+def OpConstantFalse: Op<42, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantFalse $src_ty",
+                      [(set iID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
 
 defm OpConstant: IntFPImm<43, "OpConstant">;
 
 def OpConstantComposite: Op<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpConstantComposite $type">;
+def OpConstantCompositeContinuedINTEL: Op<6091, (outs), (ins variable_ops),
+                  "OpConstantCompositeContinuedINTEL">;
+
 def OpConstantSampler: Op<45, (outs ID:$res),
                   (ins TYPE:$t, SamplerAddressingMode:$s, i32imm:$p, SamplerFilterMode:$f),
                   "$res = OpConstantSampler $t $s $p $f">;
-def OpConstantNull: Op<46, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantNull $src_ty",
-                      [(set ID:$dst, (assigntype ConstPseudoNull, TYPE:$src_ty))]>;
+def OpConstantNull: Op<46, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantNull $src_ty">;
 
 def OpSpecConstantTrue: Op<48, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantTrue $t">;
 def OpSpecConstantFalse: Op<49, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantFalse $t">;
@@ -256,6 +268,8 @@ def OpSpecConstant: Op<50, (outs ID:$res), (ins TYPE:$type, i32imm:$imm, variabl
                   "$res = OpSpecConstant $type $imm">;
 def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpSpecConstantComposite $type">;
+def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
+                  "OpSpecConstantCompositeContinuedINTEL">;
 def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, i32imm:$c, ID:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
@@ -458,8 +472,10 @@ def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
 // 3.42.12 Composite Instructions
 
+//def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
+//                  "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
-                  "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
+                  "$res = OpVectorExtractDynamic $type $vec $idx">;
 
 def OpVectorInsertDynamic: Op<78, (outs ID:$res), (ins TYPE:$ty, ID:$vec, ID:$comp, ID:$idx),
                   "$res = OpVectorInsertDynamic $ty $vec $comp $idx">;
@@ -467,6 +483,8 @@ def OpVectorShuffle: Op<79, (outs ID:$res), (ins TYPE:$ty, ID:$v1, ID:$v2, varia
                   "$res = OpVectorShuffle $ty $v1 $v2">;
 def OpCompositeConstruct: Op<80, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpCompositeConstruct $type">;
+def OpCompositeConstructContinuedINTEL: Op<6096, (outs), (ins variable_ops),
+                  "OpCompositeConstructContinuedINTEL">;
 def OpCompositeExtract: Op<81, (outs ID:$res), (ins TYPE:$type, ID:$base, variable_ops),
                   "$res = OpCompositeExtract $type $base">;
 def OpCompositeInsert: Op<82, (outs ID:$r), (ins TYPE:$ty, ID:$obj, ID:$base, variable_ops),
@@ -482,16 +500,20 @@ def OpFNegate: UnOpTyped<"OpFNegate", 127, fID, fneg>;
 def OpFNegateV: UnOpTyped<"OpFNegate", 127, vfID, fneg>;
 defm OpIAdd: BinOpTypedGen<"OpIAdd", 128, add, 0, 1>;
 defm OpFAdd: BinOpTypedGen<"OpFAdd", 129, fadd, 1, 1>;
+defm OpStrictFAdd: BinOpTypedGen<"OpFAdd", 129, strict_fadd, 1, 1>;
 
 defm OpISub: BinOpTypedGen<"OpISub", 130, sub, 0, 1>;
 defm OpFSub: BinOpTypedGen<"OpFSub", 131, fsub, 1, 1>;
+defm OpStrictFSub: BinOpTypedGen<"OpFSub", 131, strict_fsub, 1, 1>;
 
 defm OpIMul: BinOpTypedGen<"OpIMul", 132, mul, 0, 1>;
 defm OpFMul: BinOpTypedGen<"OpFMul", 133, fmul, 1, 1>;
+defm OpStrictFMul: BinOpTypedGen<"OpFMul", 133, strict_fmul, 1, 1>;
 
 defm OpUDiv: BinOpTypedGen<"OpUDiv", 134, udiv, 0, 1>;
 defm OpSDiv: BinOpTypedGen<"OpSDiv", 135, sdiv, 0, 1>;
 defm OpFDiv: BinOpTypedGen<"OpFDiv", 136, fdiv, 1, 1>;
+defm OpStrictFDiv: BinOpTypedGen<"OpFDiv", 136, strict_fdiv, 1, 1>;
 
 defm OpUMod: BinOpTypedGen<"OpUMod", 137, urem, 0, 1>;
 defm OpSRem: BinOpTypedGen<"OpSRem", 138, srem, 0, 1>;
@@ -499,6 +521,8 @@ defm OpSRem: BinOpTypedGen<"OpSRem", 138, srem, 0, 1>;
 def OpSMod: BinOp<"OpSMod", 139>;
 
 defm OpFRem: BinOpTypedGen<"OpFRem", 140, frem, 1, 1>;
+defm OpStrictFRem: BinOpTypedGen<"OpFRem", 140, strict_frem, 1, 1>;
+
 def OpFMod: BinOp<"OpFMod", 141>;
 
 def OpVectorTimesScalar: BinOp<"OpVectorTimesScalar", 142>;
@@ -510,10 +534,23 @@ def OpMatrixTimesMatrix: BinOp<"OpMatrixTimesMatrix", 146>;
 def OpOuterProduct: BinOp<"OpOuterProduct", 147>;
 def OpDot: BinOp<"OpDot", 148>;
 
-def OpIAddCarry: BinOpTyped<"OpIAddCarry", 149, ID, addc>;
-def OpISubBorrow: BinOpTyped<"OpISubBorrow", 150, ID, subc>;
+defm OpIAddCarry: BinOpTypedGen<"OpIAddCarry", 149, addc, 0, 1>;
+defm OpISubBorrow: BinOpTypedGen<"OpISubBorrow", 150, subc, 0, 1>;
 def OpUMulExtended: BinOp<"OpUMulExtended", 151>;
 def OpSMulExtended: BinOp<"OpSMulExtended", 152>;
+
+def OpSDot: Op<4450, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, variable_ops),
+                  "$res = OpSDot $type $vec1 $vec2">;
+def OpUDot: Op<4451, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, variable_ops),
+                  "$res = OpUDot $type $vec1 $vec2">;
+def OpSUDot: Op<4452, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, variable_ops),
+                  "$res = OpSUDot $type $vec1 $vec2">;
+def OpSDotAccSat: Op<4453, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
+                  "$res = OpSDotAccSat $type $vec1 $vec2 $acc">;
+def OpUDotAccSat: Op<4454, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
+                  "$res = OpUDotAccSat $type $vec1 $vec2 $acc">;
+def OpSUDotAccSat: Op<4455, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
+                  "$res = OpSUDotAccSat $type $vec1 $vec2 $acc">;
 
 // 3.42.14 Bit Instructions
 
@@ -608,25 +645,26 @@ def OpFwidthCoarse: UnOp<"OpFwidthCoarse", 215>;
 
 def OpPhi: Op<245, (outs ID:$res), (ins TYPE:$type, ID:$var0, ID:$block0, variable_ops),
                   "$res = OpPhi $type $var0 $block0">;
-def OpLoopMerge: Op<246, (outs), (ins ID:$merge, ID:$continue, LoopControl:$lc, variable_ops),
-                  "OpLoopMerge $merge $merge $continue $lc">;
-def OpSelectionMerge: Op<247, (outs), (ins ID:$merge, SelectionControl:$sc),
+def OpLoopMerge: Op<246, (outs), (ins unknown:$merge, unknown:$continue, LoopControl:$lc, variable_ops),
+                  "OpLoopMerge $merge $continue $lc">;
+def OpSelectionMerge: Op<247, (outs), (ins unknown:$merge, SelectionControl:$sc),
                   "OpSelectionMerge $merge $sc">;
 def OpLabel: Op<248, (outs ID:$label), (ins), "$label = OpLabel">;
-let isTerminator=1 in {
-  def OpBranch: Op<249, (outs), (ins ID:$label), "OpBranch $label">;
-  def OpBranchConditional: Op<250, (outs), (ins ID:$cond, ID:$true, ID:$false, variable_ops),
+let isBarrier = 1, isTerminator = 1, isBranch = 1 in {
+  def OpBranch: Op<249, (outs), (ins unknown:$label), "OpBranch $label">;
+  def OpBranchConditional: Op<250, (outs), (ins ID:$cond, unknown:$true, unknown:$false, variable_ops),
                   "OpBranchConditional $cond $true $false">;
   def OpSwitch: Op<251, (outs), (ins ID:$sel, ID:$dflt, variable_ops), "OpSwitch $sel $dflt">;
 }
-let isReturn = 1, hasDelaySlot=0, isBarrier = 0, isTerminator=1, isNotDuplicable = 1 in {
+let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplicable = 1 in {
   def OpKill: SimpleOp<"OpKill", 252>;
   def OpReturn: SimpleOp<"OpReturn", 253>;
-  def OpReturnValue: Op<254, (outs), (ins ANYID:$ret), "OpReturnValue $ret">;
+  def OpReturnValue: Op<254, (outs), (ins ID:$ret), "OpReturnValue $ret">;
   def OpUnreachable: SimpleOp<"OpUnreachable", 255>;
 }
 def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr, $sz">;
 def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr, $sz">;
+def OpDemoteToHelperInvocation: SimpleOp<"OpDemoteToHelperInvocation", 5380>;
 
 // 3.42.18 Atomic Instructions
 
@@ -693,6 +731,12 @@ def OpMemoryBarrier: Op<225, (outs), (ins ID:$mem, ID:$sem),
 def OpNamedBarrierInitialize: UnOp<"OpNamedBarrierInitialize", 328>;
 def OpMemoryNamedBarrier: Op<329, (outs), (ins ID:$barr, ID:$mem, ID:$sem),
                   "OpMemoryNamedBarrier $barr $mem $sem">;
+
+// SPV_INTEL_split_barrier
+def OpControlBarrierArriveINTEL: Op<6142, (outs), (ins ID:$exec, ID:$mem, ID:$sem),
+                  "OpControlBarrierArriveINTEL $exec $mem $sem">;
+def OpControlBarrierWaitINTEL: Op<6143, (outs), (ins ID:$exec, ID:$mem, ID:$sem),
+                  "OpControlBarrierWaitINTEL $exec $mem $sem">;
 
 // 3.42.21. Group and Subgroup Instructions
 
@@ -796,6 +840,11 @@ def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
                   (ins TYPE:$type, ID:$scope, ID:$value, ID:$delta, variable_ops),
                   "$res = OpGroupNonUniformRotateKHR $type $scope $value $delta">;
 
+// SPV_KHR_shader_clock
+def OpReadClockKHR: Op<5056, (outs ID:$res),
+                  (ins TYPE:$type, ID:$scope),
+                  "$res = OpReadClockKHR $type $scope">;
+
 // 3.49.7, Constant-Creation Instructions
 
 //  - SPV_INTEL_function_pointers
@@ -826,6 +875,12 @@ def OpSubgroupImageBlockReadINTEL: Op<5577, (outs ID:$res), (ins TYPE:$type, ID:
 def OpSubgroupImageBlockWriteINTEL: Op<5578, (outs), (ins ID:$image, ID:$coordinate, ID:$data),
                   "OpSubgroupImageBlockWriteINTEL $image $coordinate $data">;
 
+// SPV_INTEL_media_block_io
+def OpSubgroupImageMediaBlockReadINTEL: Op<5580, (outs ID:$res), (ins TYPE:$type, ID:$image, ID:$coordinate, ID:$width, ID:$height),
+                  "$res = OpSubgroupImageMediaBlockReadINTEL $type $image $coordinate $width $height">;
+def OpSubgroupImageMediaBlockWriteINTEL: Op<5581, (outs), (ins ID:$image, ID:$coordinate, ID:$width, ID:$height, ID:$data),
+                  "OpSubgroupImageMediaBlockWriteINTEL $image $coordinate $width $height $data">;
+
 // - SPV_KHR_uniform_group_instructions
 def OpGroupIMulKHR: Op<6401, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
                   "$res = OpGroupIMulKHR $type $scope $groupOp $value">;
@@ -843,3 +898,53 @@ def OpGroupLogicalOrKHR: Op<6407, (outs ID:$res), (ins TYPE:$type, ID:$scope, i3
                   "$res = OpGroupLogicalOrKHR $type $scope $groupOp $value">;
 def OpGroupLogicalXorKHR: Op<6408, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
                   "$res = OpGroupLogicalXorKHR $type $scope $groupOp $value">;
+
+// Inline Assembly Instructions
+def OpAsmTargetINTEL: Op<5609, (outs ID:$res), (ins StringImm:$str, variable_ops), "$res = OpAsmTargetINTEL $str">;
+def OpAsmINTEL: Op<5610, (outs ID:$res), (ins TYPE:$type, TYPE:$asm_type, ID:$target,
+                                          StringImm:$asm, StringImm:$constraints, variable_ops),
+                  "$res = OpAsmINTEL $type $asm_type $target $asm">;
+def OpAsmCallINTEL: Op<5611, (outs ID:$res), (ins TYPE:$type, ID:$asm, variable_ops),
+                  "$res = OpAsmCallINTEL $type $asm">;
+
+// SPV_KHR_cooperative_matrix
+def OpCooperativeMatrixLoadKHR: Op<4457, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$pointer, ID:$memory_layout, variable_ops),
+                  "$res = OpCooperativeMatrixLoadKHR $resType $pointer $memory_layout">;
+def OpCooperativeMatrixStoreKHR: Op<4458, (outs),
+                  (ins ID:$pointer, ID:$objectToStore, ID:$memory_layout, variable_ops),
+                  "OpCooperativeMatrixStoreKHR $pointer $objectToStore $memory_layout">;
+def OpCooperativeMatrixMulAddKHR: Op<4459, (outs ID:$res),
+                  (ins TYPE:$type, ID:$A, ID:$B, ID:$C, variable_ops),
+                  "$res = OpCooperativeMatrixMulAddKHR $type $A $B $C">;
+def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, ID:$coop_matr_type),
+                  "$res = OpCooperativeMatrixLengthKHR $type $coop_matr_type">;
+
+// SPV_INTEL_joint_matrix
+def OpCooperativeMatrixLoadCheckedINTEL: Op<6193, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$pointer, ID:$xOffset, ID:$yOffset, ID:$memory_layout, ID:$height, ID:$width, variable_ops),
+                  "$res = OpCooperativeMatrixLoadCheckedINTEL $resType $pointer $xOffset $yOffset $memory_layout $height $width">;
+def OpCooperativeMatrixStoreCheckedINTEL: Op<6194, (outs),
+                  (ins ID:$pointer, ID:$xOffset, ID:$yOffset, ID:$objectToStore, ID:$memory_layout, ID:$height, ID:$width, variable_ops),
+                  "OpCooperativeMatrixStoreCheckedINTEL $pointer $xOffset $yOffset $objectToStore $memory_layout $height $width">;
+def OpCooperativeMatrixConstructCheckedINTEL: Op<6195, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$xOffset, ID:$yOffset, ID:$height, ID:$width, ID:$value),
+                  "$res = OpCooperativeMatrixConstructCheckedINTEL $resType $xOffset $yOffset $height $width $value">;
+def OpCooperativeMatrixGetElementCoordINTEL: Op<6440, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$matrix, ID:$index),
+                  "$res = OpCooperativeMatrixGetElementCoordINTEL $resType $matrix $index">;
+def OpCooperativeMatrixPrefetchINTEL: Op<6449, (outs),
+                  (ins ID:$pointer, ID:$rows, ID:$columns, i32imm:$cacheLevel, ID:$memory_layout, variable_ops),
+                  "OpCooperativeMatrixPrefetchINTEL $pointer $rows $columns $cacheLevel $memory_layout">;
+
+// SPV_EXT_arithmetic_fence
+def OpArithmeticFenceEXT: Op<6145, (outs ID:$res), (ins TYPE:$type, ID:$target),
+                  "$res = OpArithmeticFenceEXT $type $target">;
+
+// SPV_INTEL_bindless_images
+def OpConvertHandleToImageINTEL: Op<6529, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToImageINTEL $type $operand">;
+def OpConvertHandleToSamplerINTEL: Op<6530, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToSamplerINTEL $type $operand">;
+def OpConvertHandleToSampledImageINTEL: Op<6531, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToSampledImageINTEL $type $operand">;

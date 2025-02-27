@@ -39,7 +39,6 @@ define void @calls_declared_non_convergent() convergent {
 }
 
 ; CHECK: Function Attrs: convergent
-; CHECK-NEXT: declare i32 @declared_convergent()
 declare i32 @declared_convergent() convergent
 
 define i32 @calls_declared_convergent() convergent {
@@ -112,14 +111,14 @@ declare void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %src, i64 %size, i1 %isVolati
 define void @calls_intrinsic(ptr %dest, ptr %src, i64 %size) convergent {
 ; TUNIT: Function Attrs: convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@calls_intrinsic
-; TUNIT-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR2:[0-9]+]] {
-; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nocapture nofree writeonly [[DEST]], ptr nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR5]]
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[DEST:%.*]], ptr nofree readonly captures(none) [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR2:[0-9]+]] {
+; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nofree writeonly captures(none) [[DEST]], ptr nofree readonly captures(none) [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@calls_intrinsic
-; CGSCC-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR3:[0-9]+]] {
-; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nocapture nofree writeonly [[DEST]], ptr nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR7]]
+; CGSCC-SAME: (ptr nofree writeonly captures(none) [[DEST:%.*]], ptr nofree readonly captures(none) [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR3:[0-9]+]] {
+; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nofree writeonly captures(none) [[DEST]], ptr nofree readonly captures(none) [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR7]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %src, i64 %size, i1 false)

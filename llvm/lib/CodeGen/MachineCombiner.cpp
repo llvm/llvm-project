@@ -77,9 +77,6 @@ class MachineCombiner : public MachineFunctionPass {
 
   TargetSchedModel TSchedModel;
 
-  /// True if optimizing for code size.
-  bool OptSize = false;
-
 public:
   static char ID;
   MachineCombiner() : MachineFunctionPass(ID) {
@@ -132,18 +129,18 @@ char &llvm::MachineCombinerID = MachineCombiner::ID;
 
 INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE,
                       "Machine InstCombiner", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
 INITIALIZE_PASS_END(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner",
                     false, false)
 
 void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
-  AU.addRequired<MachineTraceMetrics>();
-  AU.addPreserved<MachineTraceMetrics>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addRequired<MachineTraceMetricsWrapperPass>();
+  AU.addPreserved<MachineTraceMetricsWrapperPass>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -229,8 +226,10 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
         assert(DefInstr &&
                "There must be a definition for a new virtual register");
         DepthOp = InstrDepth[II->second];
-        int DefIdx = DefInstr->findRegisterDefOperandIdx(MO.getReg());
-        int UseIdx = InstrPtr->findRegisterUseOperandIdx(MO.getReg());
+        int DefIdx =
+            DefInstr->findRegisterDefOperandIdx(MO.getReg(), /*TRI=*/nullptr);
+        int UseIdx =
+            InstrPtr->findRegisterUseOperandIdx(MO.getReg(), /*TRI=*/nullptr);
         LatencyOp = TSchedModel.computeOperandLatency(DefInstr, DefIdx,
                                                       InstrPtr, UseIdx);
       } else {
@@ -241,8 +240,12 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
           DepthOp = BlockTrace.getInstrCycles(*DefInstr).Depth;
           if (!isTransientMI(DefInstr))
             LatencyOp = TSchedModel.computeOperandLatency(
-                DefInstr, DefInstr->findRegisterDefOperandIdx(MO.getReg()),
-                InstrPtr, InstrPtr->findRegisterUseOperandIdx(MO.getReg()));
+                DefInstr,
+                DefInstr->findRegisterDefOperandIdx(MO.getReg(),
+                                                    /*TRI=*/nullptr),
+                InstrPtr,
+                InstrPtr->findRegisterUseOperandIdx(MO.getReg(),
+                                                    /*TRI=*/nullptr));
         }
       }
       IDepth = std::max(IDepth, DepthOp + LatencyOp);
@@ -280,8 +283,10 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
     unsigned LatencyOp = 0;
     if (UseMO && BlockTrace.isDepInTrace(*Root, *UseMO)) {
       LatencyOp = TSchedModel.computeOperandLatency(
-          NewRoot, NewRoot->findRegisterDefOperandIdx(MO.getReg()), UseMO,
-          UseMO->findRegisterUseOperandIdx(MO.getReg()));
+          NewRoot,
+          NewRoot->findRegisterDefOperandIdx(MO.getReg(), /*TRI=*/nullptr),
+          UseMO,
+          UseMO->findRegisterUseOperandIdx(MO.getReg(), /*TRI=*/nullptr));
     } else {
       LatencyOp = TSchedModel.computeInstrLatency(NewRoot);
     }
@@ -394,7 +399,7 @@ bool MachineCombiner::improvesCriticalPathLen(
                     << RootSlack << " SlackIsAccurate=" << SlackIsAccurate
                     << "\n\tNewRootDepth + NewRootLatency = " << NewCycleCount
                     << "\n\tRootDepth + RootLatency + RootSlack = "
-                    << OldCycleCount;);
+                    << OldCycleCount);
   LLVM_DEBUG(NewCycleCount <= OldCycleCount
                  ? dbgs() << "\n\t  It IMPROVES PathLen because"
                  : dbgs() << "\n\t  It DOES NOT improve PathLen because");
@@ -447,7 +452,7 @@ bool MachineCombiner::preservesResourceLen(
 
   LLVM_DEBUG(dbgs() << "\t\tResource length before replacement: "
                     << ResLenBeforeCombine
-                    << " and after: " << ResLenAfterCombine << "\n";);
+                    << " and after: " << ResLenAfterCombine << "\n");
   LLVM_DEBUG(
       ResLenAfterCombine <=
       ResLenBeforeCombine + TII->getExtendResourceLenLimit()
@@ -563,7 +568,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   SparseSet<LiveRegUnit> RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());
 
-  bool OptForSize = OptSize || llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
+  bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
 
   bool DoRegPressureReduce =
       TII->shouldReduceRegisterPressure(MBB, &RegClassInfo);
@@ -718,14 +723,13 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   SchedModel = STI->getSchedModel();
   TSchedModel.init(STI);
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
-  Traces = &getAnalysis<MachineTraceMetrics>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   MBFI = (PSI && PSI->hasProfileSummary()) ?
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
          nullptr;
   TraceEnsemble = nullptr;
-  OptSize = MF.getFunction().hasOptSize();
   RegClassInfo.runOnMachineFunction(MF);
 
   LLVM_DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');

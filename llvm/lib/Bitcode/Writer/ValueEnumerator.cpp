@@ -620,8 +620,8 @@ void ValueEnumerator::EnumerateNamedMetadata(const Module &M) {
 }
 
 void ValueEnumerator::EnumerateNamedMDNode(const NamedMDNode *MD) {
-  for (unsigned i = 0, e = MD->getNumOperands(); i != e; ++i)
-    EnumerateMetadata(nullptr, MD->getOperand(i));
+  for (const MDNode *N : MD->operands())
+    EnumerateMetadata(nullptr, N);
 }
 
 unsigned ValueEnumerator::getMetadataFunctionID(const Function *F) const {
@@ -931,10 +931,9 @@ void ValueEnumerator::EnumerateValue(const Value *V) {
       // itself.  This makes it more likely that we can avoid forward references
       // in the reader.  We know that there can be no cycles in the constants
       // graph that don't go through a global variable.
-      for (User::const_op_iterator I = C->op_begin(), E = C->op_end();
-           I != E; ++I)
-        if (!isa<BasicBlock>(*I)) // Don't enumerate BB operand to BlockAddress.
-          EnumerateValue(*I);
+      for (const Use &U : C->operands())
+        if (!isa<BasicBlock>(U)) // Don't enumerate BB operand to BlockAddress.
+          EnumerateValue(U);
       if (auto *CE = dyn_cast<ConstantExpr>(C)) {
         if (CE->getOpcode() == Instruction::ShuffleVector)
           EnumerateValue(CE->getShuffleMaskForBitcode());
@@ -1144,12 +1143,12 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   }
 
   // Add all of the function-local metadata.
-  for (unsigned i = 0, e = FnLocalMDVector.size(); i != e; ++i) {
+  for (const LocalAsMetadata *Local : FnLocalMDVector) {
     // At this point, every local values have been incorporated, we shouldn't
     // have a metadata operand that references a value that hasn't been seen.
-    assert(ValueMap.count(FnLocalMDVector[i]->getValue()) &&
+    assert(ValueMap.count(Local->getValue()) &&
            "Missing value for metadata operand");
-    EnumerateFunctionLocalMetadata(F, FnLocalMDVector[i]);
+    EnumerateFunctionLocalMetadata(F, Local);
   }
   // DIArgList entries must come after function-local metadata, as it is not
   // possible to forward-reference them.
@@ -1159,8 +1158,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
 
 void ValueEnumerator::purgeFunction() {
   /// Remove purged values from the ValueMap.
-  for (unsigned i = NumModuleValues, e = Values.size(); i != e; ++i)
-    ValueMap.erase(Values[i].first);
+  for (const auto &V : llvm::drop_begin(Values, NumModuleValues))
+    ValueMap.erase(V.first);
   for (const Metadata *MD : llvm::drop_begin(MDs, NumModuleMDs))
     MetadataMap.erase(MD);
   for (const BasicBlock *BB : BasicBlocks)
@@ -1191,6 +1190,6 @@ unsigned ValueEnumerator::getGlobalBasicBlockID(const BasicBlock *BB) const {
   return getGlobalBasicBlockID(BB);
 }
 
-uint64_t ValueEnumerator::computeBitsRequiredForTypeIndicies() const {
+uint64_t ValueEnumerator::computeBitsRequiredForTypeIndices() const {
   return Log2_32_Ceil(getTypes().size() + 1);
 }

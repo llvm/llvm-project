@@ -154,9 +154,9 @@ export namespace std {
   using std::reinterpret_pointer_cast;
   using std::static_pointer_cast;
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
   using std::get_deleter;
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
   // [util.smartptr.shared.io], shared_ptr I/O
 
@@ -177,22 +177,21 @@ export namespace std {
   // [util.smartptr.atomic], atomic smart pointers
   // using std::atomic;
 
+#if _LIBCPP_STD_VER >= 23
   // [out.ptr.t], class template out_ptr_t
-  //  using std::out_ptr_t;
+  using std::out_ptr_t;
 
   // [out.ptr], function template out_ptr
-  //  using std::out_ptr;
+  using std::out_ptr;
 
   // [inout.ptr.t], class template inout_ptr_t
-  //  using std::inout_ptr_t;
+  using std::inout_ptr_t;
 
   // [inout.ptr], function template inout_ptr
-  //  using std::inout_ptr;
+  using std::inout_ptr;
+#endif // _LIBCPP_STD_VER >= 23
 
-#ifndef _LIBCPP_HAS_NO_THREADS
-
-#  if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
-
+#if _LIBCPP_HAS_THREADS
   // [depr.util.smartptr.shared.atomic]
   using std::atomic_is_lock_free;
 
@@ -209,8 +208,5 @@ export namespace std {
   using std::atomic_compare_exchange_strong_explicit;
   using std::atomic_compare_exchange_weak;
   using std::atomic_compare_exchange_weak_explicit;
-
-#  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
-
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 } // namespace std

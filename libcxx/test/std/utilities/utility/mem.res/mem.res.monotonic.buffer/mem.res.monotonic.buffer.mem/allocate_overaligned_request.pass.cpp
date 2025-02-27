@@ -14,8 +14,9 @@
 
 // class monotonic_buffer_resource
 
-#include <memory_resource>
 #include <cassert>
+#include <cstddef>
+#include <memory_resource>
 
 #include "test_macros.h"
 #include "count_new.h"

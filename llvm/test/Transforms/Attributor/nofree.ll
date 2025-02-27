@@ -33,8 +33,8 @@ define void @only_return() #0 {
 define void @only_free(ptr nocapture %0) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@only_free
-; CHECK-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    tail call void @free(ptr nocapture [[TMP0]]) #[[ATTR0:[0-9]+]]
+; CHECK-SAME: (ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    tail call void @free(ptr captures(none) [[TMP0]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @free(ptr %0) #1
@@ -56,8 +56,8 @@ define void @only_free(ptr nocapture %0) local_unnamed_addr #0 {
 define void @free_in_scc1(ptr nocapture %0) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@free_in_scc1
-; CHECK-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CHECK-NEXT:    tail call void @free_in_scc2(ptr nocapture [[TMP0]]) #[[ATTR0]]
+; CHECK-SAME: (ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CHECK-NEXT:    tail call void @free_in_scc2(ptr captures(none) [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @free_in_scc2(ptr %0) #1
@@ -68,14 +68,14 @@ define void @free_in_scc1(ptr nocapture %0) local_unnamed_addr #0 {
 define void @free_in_scc2(ptr nocapture %0) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@free_in_scc2
-; CHECK-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CHECK-SAME: (ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[TMP0]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[REC:%.*]], label [[CALL:%.*]]
 ; CHECK:       call:
-; CHECK-NEXT:    tail call void @free(ptr nocapture nonnull [[TMP0]]) #[[ATTR0]]
+; CHECK-NEXT:    tail call void @free(ptr nonnull captures(none) [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       rec:
-; CHECK-NEXT:    tail call void @free_in_scc1(ptr nocapture [[TMP0]]) #[[ATTR0]]
+; CHECK-NEXT:    tail call void @free_in_scc1(ptr captures(none) [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -169,8 +169,8 @@ define void @_Z9delete_opPc(ptr %0) local_unnamed_addr #0 {
 define noalias ptr @call_realloc(ptr nocapture %0, i64 %1) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_realloc
-; CHECK-SAME: (ptr nocapture [[TMP0:%.*]], i64 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CHECK-NEXT:    [[RET:%.*]] = tail call ptr @realloc(ptr nocapture [[TMP0]], i64 [[TMP1]]) #[[ATTR2]]
+; CHECK-SAME: (ptr captures(none) [[TMP0:%.*]], i64 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CHECK-NEXT:    [[RET:%.*]] = tail call ptr @realloc(ptr captures(none) [[TMP0]], i64 [[TMP1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
   %ret = tail call ptr @realloc(ptr %0, i64 %1) #2
@@ -183,7 +183,6 @@ define noalias ptr @call_realloc(ptr nocapture %0, i64 %1) local_unnamed_addr #0
 
 
 ; CHECK: Function Attrs:  nofree noinline nounwind memory(none) uwtable
-; CHECK-NEXT: declare void @nofree_function()
 declare void @nofree_function() nofree readnone #0
 
 define void @call_nofree_function() #0 {
@@ -206,7 +205,6 @@ define void @call_nofree_function() #0 {
 
 
 ; CHECK: Function Attrs: noinline nounwind uwtable
-; CHECK-NEXT: declare void @maybe_free()
 declare void @maybe_free() #0
 
 
@@ -241,7 +239,6 @@ define void @call_both() #0 {
 ; TEST 10 (positive case)
 ; Call intrinsic function
 ; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
@@ -257,8 +254,8 @@ define void @call_floor(float %a) #0 {
 define float @call_floor2(float %a) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor2
-; CHECK-SAME: (float nofpclass(sub) [[A:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float nofpclass(sub) [[A]]) #[[ATTR14:[0-9]+]]
+; CHECK-SAME: (float [[A:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
@@ -302,7 +299,7 @@ define void @f2() #0 {
 define double @test12(ptr nocapture readonly %a) {
 ; CHECK: Function Attrs: nofree nounwind
 ; CHECK-LABEL: define {{[^@]+}}@test12
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call double @cos(double [[TMP0]]) #[[ATTR8:[0-9]+]]
@@ -321,7 +318,7 @@ declare double @cos(double) nobuiltin nounwind nofree
 define noalias ptr @test13(ptr nocapture readonly %a) {
 ; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@test13
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @malloc(i64 [[TMP0]]) #[[ATTR2]]
@@ -336,8 +333,8 @@ entry:
 define void @test14(ptr nocapture %0, ptr nocapture %1) {
 ; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@test14
-; CHECK-SAME: (ptr nocapture [[TMP0:%.*]], ptr nocapture nofree readnone [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    tail call void @free(ptr nocapture [[TMP0]]) #[[ATTR0]]
+; CHECK-SAME: (ptr captures(none) [[TMP0:%.*]], ptr nofree readnone captures(none) [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    tail call void @free(ptr captures(none) [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @free(ptr %0) #1
@@ -399,16 +396,16 @@ define void @nonnull_assume_call(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4) {
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_call
 ; CHECK-SAME: (ptr [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr [[ARG3:%.*]], ptr [[ARG4:%.*]]) {
 ; CHECK-NEXT:    call void @unknown(ptr [[ARG1]], ptr [[ARG2]], ptr [[ARG3]], ptr [[ARG4]])
-; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[ARG1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[ARG2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG1]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG2]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
-; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[ARG3]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[ARG4]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree readnone [[ARG1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree readnone [[ARG2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG3]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr(ptr noalias nofree readnone captures(none) [[ARG4]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG1]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG2]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG4]]) ]
-; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree readnone [[ARG3]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nocapture nofree readnone [[ARG4]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG3]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @use_i8_ptr_ret(ptr noalias nofree readnone captures(none) [[ARG4]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4)

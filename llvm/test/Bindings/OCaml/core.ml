@@ -48,10 +48,21 @@ let test_contained_types () =
   insist ([| i32_type; i8_type |] = struct_element_types ar)
 
 (*===-- Pointer types  ----------------------------------------------------===*)
+
 let test_pointer_types () =
+  insist (TypeKind.Pointer = classify_type (pointer_type context));
   insist (0 = address_space (pointer_type context));
   insist (0 = address_space (qualified_pointer_type context 0));
   insist (1 = address_space (qualified_pointer_type context 1))
+
+(*===-- Other types  ------------------------------------------------------===*)
+
+let test_other_types () =
+  insist (TypeKind.Void = classify_type void_type);
+  insist (TypeKind.Label = classify_type (label_type context));
+  insist (TypeKind.X86_amx = classify_type (x86_amx_type context));
+  insist (TypeKind.Token = classify_type (token_type context));
+  insist (TypeKind.Metadata = classify_type (metadata_type context))
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -260,11 +271,7 @@ let test_constants () =
    * CHECK: @const_sub = global i64 sub
    * CHECK: @const_nsw_sub = global i64 sub nsw
    * CHECK: @const_nuw_sub = global i64 sub nuw
-   * CHECK: @const_mul = global i64 mul
-   * CHECK: @const_nsw_mul = global i64 mul nsw
-   * CHECK: @const_nuw_mul = global i64 mul nuw
    * CHECK: @const_xor = global i64 xor
-   * CHECK: @const_icmp = global i1 icmp sle
    *)
   let void_ptr = pointer_type context in
   let five = const_int i64_type 5 in
@@ -280,11 +287,7 @@ let test_constants () =
   ignore (define_global "const_sub" (const_sub foldbomb five) m);
   ignore (define_global "const_nsw_sub" (const_nsw_sub foldbomb five) m);
   ignore (define_global "const_nuw_sub" (const_nuw_sub foldbomb five) m);
-  ignore (define_global "const_mul" (const_mul foldbomb five) m);
-  ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
-  ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
-  ignore (define_global "const_icmp" (const_icmp Icmp.Sle foldbomb five) m);
 
   group "constant casts";
   (* CHECK: const_trunc{{.*}}trunc
@@ -1152,7 +1155,7 @@ let test_builder () =
     (* CHECK: ret{{.*}}P1
      *)
     let ret = build_ret p1 atentry in
-    position_before ret atentry
+    position_before_dbg_records ret atentry
   end;
 
   (* see test/Feature/exception.ll *)
@@ -1463,6 +1466,7 @@ let _ =
   suite "modules"          test_modules;
   suite "contained types"  test_contained_types;
   suite "pointer types"    test_pointer_types;
+  suite "other types"      test_other_types;
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;

@@ -34,7 +34,7 @@ public:
 
   explicit operator bool() { return m_pid != LLDB_INVALID_PROCESS_ID; }
 
-  lldb_private::Status GetError() { return m_error; }
+  lldb_private::Status GetError() { return m_error.Clone(); }
 
 private:
   Process(lldb::pid_t p);

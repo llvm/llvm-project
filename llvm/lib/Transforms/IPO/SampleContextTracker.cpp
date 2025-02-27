@@ -71,8 +71,8 @@ SampleContextTracker::moveContextSamples(ContextTrieNode &ToNodeParent,
   std::map<uint64_t, ContextTrieNode> &AllChildContext =
       ToNodeParent.getAllChildContext();
   assert(!AllChildContext.count(Hash) && "Node to remove must exist");
-  AllChildContext[Hash] = NodeToMove;
   ContextTrieNode &NewNode = AllChildContext[Hash];
+  NewNode = NodeToMove;
   NewNode.setCallSiteLoc(CallSite);
 
   // Walk through nodes in the moved the subtree, and update
@@ -624,7 +624,7 @@ void SampleContextTracker::createContextLessProfileMap(
     FunctionSamples *FProfile = Node->getFunctionSamples();
     // Profile's context can be empty, use ContextNode's func name.
     if (FProfile)
-      ContextLessProfiles.Create(Node->getFuncName()).merge(*FProfile);
+      ContextLessProfiles.create(Node->getFuncName()).merge(*FProfile);
   }
 }
 } // namespace llvm

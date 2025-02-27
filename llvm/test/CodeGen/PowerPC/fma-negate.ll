@@ -155,7 +155,7 @@ define <4 x float> @test_neg_fma_v4f32(<4 x float> %a, <4 x float> %b,
 ; NO-VSX:       # %bb.0: # %entry
 ; NO-VSX-NEXT:    vspltisb 5, -1
 ; NO-VSX-NEXT:    vslw 5, 5, 5
-; NO-VSX-NEXT:    vsubfp 2, 5, 2
+; NO-VSX-NEXT:    vxor 2, 2, 5
 ; NO-VSX-NEXT:    vmaddfp 2, 2, 3, 4
 ; NO-VSX-NEXT:    blr
                                        <4 x float> %c) {

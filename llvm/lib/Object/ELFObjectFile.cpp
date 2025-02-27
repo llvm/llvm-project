@@ -21,10 +21,9 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributeParser.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -310,6 +309,8 @@ static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
     return "v71";
   case 73:
     return "v73";
+  case 75:
+    return "v75";
   default:
     return {};
   }
@@ -441,6 +442,8 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
+  case ELF::EM_BPF:
+    return StringRef("v4");
   default:
     return std::nullopt;
   }
@@ -542,12 +545,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx90a";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
     return "gfx90c";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:
-    return "gfx940";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:
-    return "gfx941";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:
     return "gfx942";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:
+    return "gfx950";
 
   // AMDGCN GFX10.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
@@ -586,6 +587,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1150";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151:
     return "gfx1151";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152:
+    return "gfx1152";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153:
+    return "gfx1153";
 
   // AMDGCN GFX12.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
@@ -596,12 +601,16 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
     return "gfx9-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:
+    return "gfx9-4-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:
     return "gfx10-1-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:
     return "gfx10-3-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:
     return "gfx11-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:
+    return "gfx12-generic";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }
@@ -788,6 +797,10 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
     case Triple::aarch64:
     case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
+      break;
+    case Triple::hexagon:
+      JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
+      GlobDatReloc = ELF::R_HEX_GLOB_DAT;
       break;
     default:
       return {};
@@ -1008,4 +1021,15 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
                            TextSectionIndex, PGOAnalyses);
+}
+
+StringRef ELFObjectFileBase::getCrelDecodeProblem(SectionRef Sec) const {
+  auto Data = Sec.getRawDataRefImpl();
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  return cast<ELF64BEObjectFile>(this)->getCrelDecodeProblem(Data);
 }

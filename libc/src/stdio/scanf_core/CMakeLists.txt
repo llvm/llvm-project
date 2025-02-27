@@ -1,8 +1,40 @@
+if(LIBC_CONF_SCANF_DISABLE_FLOAT)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+endif()
+if(scanf_config_copts)
+  list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
+endif()
+
+
+list(APPEND file_deps libc.hdr.types.FILE)
+if(LIBC_TARGET_OS_IS_GPU)
+  list(APPEND file_deps
+    libc.src.stdio.getc
+    libc.src.stdio.ungetc
+    libc.src.stdio.ferror
+  )
+elseif(LLVM_LIBC_FULL_BUILD)
+  list(APPEND file_deps
+    libc.src.__support.File.file
+  )
+endif()
+
+add_header_library(
+  scanf_config
+  HDRS
+    scanf_config.h
+  ${scanf_config_copts}
+)
+
 add_header_library(
   core_structs
   HDRS
     core_structs.h
   DEPENDS
+    .scanf_config
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.bitset
     libc.src.__support.FPUtil.fp_bits
@@ -22,6 +54,13 @@ add_header_library(
     libc.src.__support.CPP.string_view
 )
 
+if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
+  (NOT LIBC_TARGET_OS_IS_GPU))
+  # Not all platforms have a file implementation. If file is unvailable, and a
+  # full build is requested, then we must skip all file based scanf sections.
+  return()
+endif()
+
 add_object_library(
   scanf_main
   SRCS
@@ -34,16 +73,18 @@ add_object_library(
     .converter
     .core_structs
     libc.src.__support.arg_list
+    ${file_deps}
+  ${use_system_file}
 )
 
-add_object_library(
+add_header_library(
   reader
-  SRCS
-    reader.cpp
   HDRS
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
+    ${file_deps}
+  ${use_system_file}
 )
 
 add_object_library(
@@ -72,23 +113,19 @@ add_object_library(
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
+    ${file_deps}
+  ${use_system_file}
 )
 
-if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
-  # Not all platforms have a file implementation. If file is unvailable, and a
-  # full build is requested, then we must skip all file based printf sections.
-  return()
-endif()
-
+#TODO: condense the file-related code as possible.
 add_header_library(
-  vfscanf_internal
-  HDRS
-    vfscanf_internal.h
-  DEPENDS
-    .reader
-    .scanf_main
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.arg_list
-  ${use_system_file}
+    vfscanf_internal
+    HDRS
+      vfscanf_internal.h
+    DEPENDS
+      .reader
+      .scanf_main
+      libc.src.__support.arg_list
+      ${file_deps}
+    ${use_system_file}
 )

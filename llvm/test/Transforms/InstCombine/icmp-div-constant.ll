@@ -16,8 +16,8 @@ define i1 @is_rem2_neg_i8(i8 %x) {
 
 define <2 x i1> @is_rem2_pos_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: @is_rem2_pos_v2i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -127, i8 -127>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -127)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s = srem <2 x i8> %x, <i8 2, i8 2>
@@ -118,8 +118,8 @@ define i32 @icmp_div(i16 %a, i16 %c) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP_NOT]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
@@ -173,8 +173,8 @@ define i32 @icmp_div3(i16 %a, i16 %c) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[C:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP_NOT]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
@@ -210,8 +210,8 @@ define i1 @udiv_eq_umax(i8 %x, i8 %y) {
 
 define <2 x i1> @udiv_ne_umax(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @udiv_ne_umax(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i5> [[Y:%.*]], <i5 1, i5 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i5> [[X:%.*]], splat (i5 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i5> [[Y:%.*]], splat (i5 1)
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -299,8 +299,8 @@ define i1 @sdiv_eq_smin(i8 %x, i8 %y) {
 
 define <2 x i1> @sdiv_ne_smin(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @sdiv_ne_smin(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -16, i5 -16>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i5> [[Y:%.*]], <i5 1, i5 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i5> [[X:%.*]], splat (i5 -16)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i5> [[Y:%.*]], splat (i5 1)
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -381,8 +381,8 @@ define i1 @sdiv_eq_smin_use(i32 %x, i32 %y) {
 
 define i1 @sdiv_x_by_const_cmp_x(i32 %x) {
 ; CHECK-LABEL: @sdiv_x_by_const_cmp_x(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %v = sdiv i32 %x, 13
   %r = icmp eq i32 %v, %x
@@ -399,12 +399,33 @@ define i1 @udiv_x_by_const_cmp_x(i32 %x) {
   ret i1 %2
 }
 
+define <2 x i1> @udiv_x_by_const_cmp_x_non_splat(<2 x i32> %x) {
+; CHECK-LABEL: @udiv_x_by_const_cmp_x_non_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+  %1 = udiv <2 x i32> %x, <i32 123, i32 -123>
+  %2 = icmp slt <2 x i32> %1, %x
+  ret <2 x i1> %2
+}
+
+
+define <2 x i1> @sdiv_x_by_const_cmp_x_non_splat(<2 x i32> %x) {
+; CHECK-LABEL: @sdiv_x_by_const_cmp_x_non_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+  %1 = sdiv <2 x i32> %x, <i32 2, i32 3>
+  %2 = icmp eq <2 x i32> %1, %x
+  ret <2 x i1> %2
+}
+
 ; Same as above but with right shift instead of division (C != 0)
 
 define i1 @lshr_x_by_const_cmp_x(i32 %x) {
 ; CHECK-LABEL: @lshr_x_by_const_cmp_x(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %v = lshr i32 %x, 1
   %r = icmp eq i32 %v, %x
@@ -413,13 +434,35 @@ define i1 @lshr_x_by_const_cmp_x(i32 %x) {
 
 define <4 x i1> @lshr_by_const_cmp_sle_value(<4 x i32> %x) {
 ; CHECK-LABEL: @lshr_by_const_cmp_sle_value(
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %v = lshr <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
   %r = icmp sle <4 x i32> %v, %x
   ret <4 x i1> %r
 }
+
+define <4 x i1> @lshr_by_const_cmp_sle_value_non_splat(<4 x i32> %x) {
+; CHECK-LABEL: @lshr_by_const_cmp_sle_value_non_splat(
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[X:%.*]], splat (i32 -1)
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %v = lshr <4 x i32> %x, <i32 3, i32 3, i32 3, i32 5>
+  %r = icmp sle <4 x i32> %v, %x
+  ret <4 x i1> %r
+}
+
+
+define <4 x i1> @ashr_by_const_cmp_sge_value_non_splat(<4 x i32> %x) {
+; CHECK-LABEL: @ashr_by_const_cmp_sge_value_non_splat(
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <4 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %v = ashr <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>
+  %r = icmp sge <4 x i32> %v, %x
+  ret <4 x i1> %r
+}
+
 
 define i1 @lshr_by_const_cmp_sge_value(i32 %x) {
 ; CHECK-LABEL: @lshr_by_const_cmp_sge_value(

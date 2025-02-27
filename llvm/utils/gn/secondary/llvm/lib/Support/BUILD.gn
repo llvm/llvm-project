@@ -6,8 +6,8 @@ static_library("Support") {
     "//llvm/include/llvm/Support:write_vcsrevision",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
-    "//llvm/utils/gn/build/libs/terminfo",
     "//llvm/utils/gn/build/libs/zlib",
+    "//llvm/utils/gn/build/libs/zstd",
   ]
 
   # public_deps are used for depending on targets that generate headers
@@ -33,6 +33,7 @@ static_library("Support") {
     "Windows",
   ]
   sources = [
+    "AArch64BuildAttributes.cpp",
     "ABIBreak.cpp",
     "AMDGPUMetadata.cpp",
     "APFixedPoint.cpp",
@@ -40,7 +41,7 @@ static_library("Support") {
     "APInt.cpp",
     "APSInt.cpp",
     "ARMAttributeParser.cpp",
-    "ARMBuildAttrs.cpp",
+    "ARMBuildAttributes.cpp",
     "ARMWinEH.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
@@ -73,7 +74,9 @@ static_library("Support") {
     "Debug.cpp",
     "DebugCounter.cpp",
     "DeltaAlgorithm.cpp",
+    "DeltaTree.cpp",
     "DivisionByConstantInfo.cpp",
+    "DynamicAPInt.cpp",
     "ELFAttributeParser.cpp",
     "ELFAttributes.cpp",
     "Error.cpp",
@@ -89,7 +92,6 @@ static_library("Support") {
     "FormattedStream.cpp",
     "GlobPattern.cpp",
     "GraphWriter.cpp",
-    "Hashing.cpp",
     "HexagonAttributeParser.cpp",
     "HexagonAttributes.cpp",
     "InitLLVM.cpp",
@@ -110,8 +112,10 @@ static_library("Support") {
     "MemAlloc.cpp",
     "MemoryBuffer.cpp",
     "MemoryBufferRef.cpp",
+    "ModRef.cpp",
     "NativeFormatting.cpp",
     "OptimizedStructLayout.cpp",
+    "OptionStrCmp.cpp",
     "Optional.cpp",
     "PGOOptions.cpp",
     "Parallel.cpp",
@@ -119,15 +123,19 @@ static_library("Support") {
     "PrettyStackTrace.cpp",
     "RISCVAttributeParser.cpp",
     "RISCVAttributes.cpp",
-    "RISCVISAInfo.cpp",
+    "RISCVISAUtils.cpp",
     "RWMutex.cpp",
     "RandomNumberGenerator.cpp",
     "Regex.cpp",
+    "RewriteBuffer.cpp",
+    "RewriteRope.cpp",
     "SHA1.cpp",
     "SHA256.cpp",
     "ScaledNumber.cpp",
     "ScopedPrinter.cpp",
     "Signposts.cpp",
+    "SipHash.cpp",
+    "SlowDynamicAPInt.cpp",
     "SmallPtrSet.cpp",
     "SmallVector.cpp",
     "SourceMgr.cpp",
@@ -145,6 +153,7 @@ static_library("Support") {
     "TimeProfiler.cpp",
     "Timer.cpp",
     "ToolOutputFile.cpp",
+    "TrieRawHashMap.cpp",
     "Twine.cpp",
     "TypeSize.cpp",
     "Unicode.cpp",
@@ -190,7 +199,10 @@ static_library("Support") {
   if (current_os == "linux" || current_os == "android") {
     libs += [ "dl" ]
   } else if (current_os == "win") {
-    libs = [ "ws2_32.lib" ]
+    libs = [
+      "ntdll.lib",
+      "ws2_32.lib",
+    ]
 
     # Delay load shell32.dll if possible to speed up process startup.
     libs += [ "delayimp.lib" ]

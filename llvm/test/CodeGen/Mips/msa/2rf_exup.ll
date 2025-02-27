@@ -1,8 +1,8 @@
 ; Test the MSA floating point conversion intrinsics (e.g. float->double) that
 ; are encoded with the 2RF instruction format.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
 
 @llvm_mips_fexupl_w_ARG1 = global <8 x half> <half 0.000000e+00, half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00, half 5.000000e+00, half 6.000000e+00, half 7.000000e+00>, align 16
 @llvm_mips_fexupl_w_RES  = global <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, align 16

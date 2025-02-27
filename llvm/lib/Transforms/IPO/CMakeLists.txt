@@ -12,7 +12,9 @@ add_llvm_component_library(LLVMipo
   DeadArgumentElimination.cpp
   ElimAvailExtern.cpp
   EmbedBitcodePass.cpp
+  ExpandVariadics.cpp
   ExtractGV.cpp
+  FatLTOCleanup.cpp
   ForceFunctionAttrs.cpp
   FunctionAttrs.cpp
   FunctionImport.cpp
@@ -40,7 +42,6 @@ add_llvm_component_library(LLVMipo
   SCCP.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
-  SyntheticCountsPropagation.cpp
   ThinLTOBitcodeWriter.cpp
   WholeProgramDevirt.cpp
 

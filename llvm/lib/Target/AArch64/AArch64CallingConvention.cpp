@@ -17,7 +17,6 @@
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/CallingConv.h"
 using namespace llvm;
 
 static const MCPhysReg XRegList[] = {AArch64::X0, AArch64::X1, AArch64::X2,
@@ -38,6 +37,8 @@ static const MCPhysReg QRegList[] = {AArch64::Q0, AArch64::Q1, AArch64::Q2,
 static const MCPhysReg ZRegList[] = {AArch64::Z0, AArch64::Z1, AArch64::Z2,
                                      AArch64::Z3, AArch64::Z4, AArch64::Z5,
                                      AArch64::Z6, AArch64::Z7};
+static const MCPhysReg PRegList[] = {AArch64::P0, AArch64::P1, AArch64::P2,
+                                     AArch64::P3};
 
 static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
                              MVT LocVT, ISD::ArgFlagsTy &ArgFlags,
@@ -59,10 +60,16 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
     // CCAssignFn again we want it to behave as if all remaining registers are
     // allocated. This will force the code to pass the tuple indirectly in
     // accordance with the PCS.
-    bool RegsAllocated[8];
+    bool ZRegsAllocated[8];
     for (int I = 0; I < 8; I++) {
-      RegsAllocated[I] = State.isAllocated(ZRegList[I]);
+      ZRegsAllocated[I] = State.isAllocated(ZRegList[I]);
       State.AllocateReg(ZRegList[I]);
+    }
+    // The same applies to P registers.
+    bool PRegsAllocated[4];
+    for (int I = 0; I < 4; I++) {
+      PRegsAllocated[I] = State.isAllocated(PRegList[I]);
+      State.AllocateReg(PRegList[I]);
     }
 
     auto &It = PendingMembers[0];
@@ -79,8 +86,11 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
     // Return the register state back to how it was before, leaving any
     // unallocated registers available for other smaller types.
     for (int I = 0; I < 8; I++)
-      if (!RegsAllocated[I])
+      if (!ZRegsAllocated[I])
         State.DeallocateReg(ZRegList[I]);
+    for (int I = 0; I < 4; I++)
+      if (!PRegsAllocated[I])
+        State.DeallocateReg(PRegList[I]);
 
     // All pending members have now been allocated
     PendingMembers.clear();
@@ -140,9 +150,15 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     RegList = DRegList;
   else if (LocVT.SimpleTy == MVT::f128 || LocVT.is128BitVector())
     RegList = QRegList;
-  else if (LocVT.isScalableVector())
-    RegList = ZRegList;
-  else {
+  else if (LocVT.isScalableVector()) {
+    // Scalable masks should be pass by Predicate registers.
+    if (LocVT == MVT::nxv1i1 || LocVT == MVT::nxv2i1 || LocVT == MVT::nxv4i1 ||
+        LocVT == MVT::nxv8i1 || LocVT == MVT::nxv16i1 ||
+        LocVT == MVT::aarch64svcount)
+      RegList = PRegList;
+    else
+      RegList = ZRegList;
+  } else {
     // Not an array we want to split up after all.
     return false;
   }
@@ -160,27 +176,27 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // [N x i32] arguments get packed into x-registers on Darwin's arm64_32
   // because that's how the armv7k Clang front-end emits small structs.
   unsigned EltsPerReg = (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32) ? 2 : 1;
-  unsigned RegResult = State.AllocateRegBlock(
+  ArrayRef<MCPhysReg> RegResult = State.AllocateRegBlock(
       RegList, alignTo(PendingMembers.size(), EltsPerReg) / EltsPerReg);
-  if (RegResult && EltsPerReg == 1) {
-    for (auto &It : PendingMembers) {
-      It.convertToReg(RegResult);
+  if (!RegResult.empty() && EltsPerReg == 1) {
+    for (const auto &[It, Reg] : zip(PendingMembers, RegResult)) {
+      It.convertToReg(Reg);
       State.addLoc(It);
-      ++RegResult;
     }
     PendingMembers.clear();
     return true;
-  } else if (RegResult) {
+  } else if (!RegResult.empty()) {
     assert(EltsPerReg == 2 && "unexpected ABI");
     bool UseHigh = false;
     CCValAssign::LocInfo Info;
+    unsigned RegIdx = 0;
     for (auto &It : PendingMembers) {
       Info = UseHigh ? CCValAssign::AExtUpper : CCValAssign::ZExt;
-      State.addLoc(CCValAssign::getReg(It.getValNo(), MVT::i32, RegResult,
-                                       MVT::i64, Info));
+      State.addLoc(CCValAssign::getReg(It.getValNo(), MVT::i32,
+                                       RegResult[RegIdx], MVT::i64, Info));
       UseHigh = !UseHigh;
       if (!UseHigh)
-        ++RegResult;
+        ++RegIdx;
     }
     PendingMembers.clear();
     return true;
@@ -192,10 +208,11 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
       State.AllocateReg(Reg);
   }
 
-  const Align StackAlign =
+  const MaybeAlign StackAlign =
       State.getMachineFunction().getDataLayout().getStackAlignment();
+  assert(StackAlign && "data layout string is missing stack alignment");
   const Align MemAlign = ArgFlags.getNonZeroMemAlign();
-  Align SlotAlign = std::min(MemAlign, StackAlign);
+  Align SlotAlign = std::min(MemAlign, *StackAlign);
   if (!Subtarget.isTargetDarwin())
     SlotAlign = std::max(SlotAlign, Align(8));
 

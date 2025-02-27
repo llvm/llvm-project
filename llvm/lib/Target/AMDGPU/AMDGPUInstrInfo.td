@@ -100,8 +100,8 @@ def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
 >;
 
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
-  SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
-    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPInGlue]
+  SDTypeProfile<0, 1, [SDTCisVT<0, i16>]>,
+    [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPOptInGlue]
 >;
 
 def AMDGPUconstdata_ptr : SDNode<
@@ -376,6 +376,8 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
     [SDNPHasChain, SDNPOptInGlue]>;
 def AMDGPUendpgm_trap : SDNode<"AMDGPUISD::ENDPGM_TRAP", SDTNone,
+    [SDNPHasChain]>;
+def AMDGPUsimulated_trap : SDNode<"AMDGPUISD::SIMULATED_TRAP", SDTNone,
     [SDNPHasChain]>;
 
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,

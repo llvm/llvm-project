@@ -9,6 +9,10 @@
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with def operands.
 
+// This predicate is true when the rs2 operand of vlse or vsse is x0, false
+// otherwise.
+def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+
 defvar SchedMxList = ["MF8", "MF4", "MF2", "M1", "M2", "M4", "M8"];
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar SchedMxListW = !listremove(SchedMxList, ["M8"]);
@@ -66,7 +70,7 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
 // behavior is aliased to a Variant. The Variant has Latency predLad and
 // ReleaseAtCycles predCycles if the SchedPredicate Pred is true, otherwise has
 // Latency noPredLat and ReleaseAtCycles noPredCycles. The WorstCase SchedWrite
-// is created similiarly if IsWorstCase is true.
+// is created similarly if IsWorstCase is true.
 multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
                                  list<ProcResourceKind> resources,
                                  int predLat, list<int> predAcquireCycles,
@@ -360,6 +364,9 @@ defm "" : LMULSchedWrites<"WriteVExtV">;
 defm "" : LMULSchedWrites<"WriteVICALUV">;
 defm "" : LMULSchedWrites<"WriteVICALUX">;
 defm "" : LMULSchedWrites<"WriteVICALUI">;
+defm "" : LMULSchedWrites<"WriteVICALUMV">;
+defm "" : LMULSchedWrites<"WriteVICALUMX">;
+defm "" : LMULSchedWrites<"WriteVICALUMI">;
 // 11.6. Vector Single-Width Bit Shift Instructions
 defm "" : LMULSchedWrites<"WriteVShiftV">;
 defm "" : LMULSchedWrites<"WriteVShiftX">;
@@ -514,12 +521,14 @@ def WriteVMovXS : SchedWrite;
 def WriteVMovSF : SchedWrite;
 def WriteVMovFS : SchedWrite;
 // 16.3. Vector Slide Instructions
-defm "" : LMULSchedWrites<"WriteVISlideX">;
-defm "" : LMULSchedWrites<"WriteVISlideI">;
+defm "" : LMULSchedWrites<"WriteVSlideUpX">;
+defm "" : LMULSchedWrites<"WriteVSlideDownX">;
+defm "" : LMULSchedWrites<"WriteVSlideI">;
 defm "" : LMULSchedWrites<"WriteVISlide1X">;
 defm "" : LMULSchedWrites<"WriteVFSlide1F">;
 // 16.4. Vector Register Gather Instructions
 defm "" : LMULSEWSchedWrites<"WriteVRGatherVV">;
+defm "" : LMULSEWSchedWrites<"WriteVRGatherEI16VV">;
 defm "" : LMULSchedWrites<"WriteVRGatherVX">;
 defm "" : LMULSchedWrites<"WriteVRGatherVI">;
 // 16.5. Vector Compress Instruction
@@ -748,6 +757,8 @@ defm "" : LMULSchedReads<"ReadVFSlideF">;
 // 16.4. Vector Register Gather Instructions
 defm "" : LMULSEWSchedReads<"ReadVRGatherVV_data">;
 defm "" : LMULSEWSchedReads<"ReadVRGatherVV_index">;
+defm "" : LMULSEWSchedReads<"ReadVRGatherEI16VV_data">;
+defm "" : LMULSEWSchedReads<"ReadVRGatherEI16VV_index">;
 defm "" : LMULSchedReads<"ReadVRGatherVX_data">;
 defm "" : LMULSchedReads<"ReadVRGatherVX_index">;
 defm "" : LMULSchedReads<"ReadVRGatherVI_data">;
@@ -762,11 +773,11 @@ def ReadVMov8V        : SchedRead;
 
 // Others
 def ReadVMask         : SchedRead;
-def ReadVMergeOp_WorstCase : SchedRead;
+def ReadVPassthru_WorstCase : SchedRead;
 foreach mx = SchedMxList in {
-  def ReadVMergeOp_ # mx : SchedRead;
+  def ReadVPassthru_ # mx : SchedRead;
   foreach sew = SchedSEWSet<mx>.val in
-    def ReadVMergeOp_ # mx  # "_E" # sew : SchedRead;
+    def ReadVPassthru_ # mx  # "_E" # sew : SchedRead;
 }
 
 //===----------------------------------------------------------------------===//
@@ -848,6 +859,9 @@ defm "" : LMULWriteRes<"WriteVExtV", []>;
 defm "" : LMULWriteRes<"WriteVICALUV", []>;
 defm "" : LMULWriteRes<"WriteVICALUX", []>;
 defm "" : LMULWriteRes<"WriteVICALUI", []>;
+defm "" : LMULWriteRes<"WriteVICALUMV", []>;
+defm "" : LMULWriteRes<"WriteVICALUMX", []>;
+defm "" : LMULWriteRes<"WriteVICALUMI", []>;
 defm "" : LMULWriteRes<"WriteVShiftV", []>;
 defm "" : LMULWriteRes<"WriteVShiftX", []>;
 defm "" : LMULWriteRes<"WriteVShiftI", []>;
@@ -949,11 +963,13 @@ def : WriteRes<WriteVMovSX, []>;
 def : WriteRes<WriteVMovXS, []>;
 def : WriteRes<WriteVMovSF, []>;
 def : WriteRes<WriteVMovFS, []>;
-defm "" : LMULWriteRes<"WriteVISlideX", []>;
-defm "" : LMULWriteRes<"WriteVISlideI", []>;
+defm "" : LMULWriteRes<"WriteVSlideUpX", []>;
+defm "" : LMULWriteRes<"WriteVSlideDownX", []>;
+defm "" : LMULWriteRes<"WriteVSlideI", []>;
 defm "" : LMULWriteRes<"WriteVISlide1X", []>;
 defm "" : LMULWriteRes<"WriteVFSlide1F", []>;
 defm "" : LMULSEWWriteRes<"WriteVRGatherVV", []>;
+defm "" : LMULSEWWriteRes<"WriteVRGatherEI16VV", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVX", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVI", []>;
 defm "" : LMULSEWWriteRes<"WriteVCompressV", []>;
@@ -1079,7 +1095,7 @@ defm "" : LMULReadAdvance<"ReadVFCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceW<"ReadVFWCvtIToFV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
-defm "" : LMULSEWReadAdvanceFW<"SEWReadVFNCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
 
@@ -1118,6 +1134,8 @@ defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
 defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_data", 0>;
 defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_index", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_data", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_data", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVI_data", 0>;
@@ -1131,11 +1149,11 @@ def : ReadAdvance<ReadVMov8V, 0>;
 
 // Others
 def : ReadAdvance<ReadVMask, 0>;
-def : ReadAdvance<ReadVMergeOp_WorstCase, 0>;
+def : ReadAdvance<ReadVPassthru_WorstCase, 0>;
 foreach mx = SchedMxList in {
-  def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx), 0>;
+  def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx), 0>;
   foreach sew = SchedSEWSet<mx>.val in
-    def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx  # "_E" # sew), 0>;
+    def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx  # "_E" # sew), 0>;
 }
 
 } // Unsupported

@@ -69,6 +69,13 @@ int main(void) {
   P(issignaling, (1.));
   P(isfpclass, (1., 1));
 
+  Q(fmaximum_num, (1.0, 2.0));
+  Q(fmaximum_numf, (1.0, 2.0));
+  Q(fmaximum_numl, (1.0, 2.0));
+  Q(fminimum_num, (1.0, 2.0));
+  Q(fminimum_numf, (1.0, 2.0));
+  Q(fminimum_numl, (1.0, 2.0));
+
   // Bitwise & Numeric Functions
 
   P(abs, (N));
@@ -305,7 +312,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test_float_builtin_ops
-void test_float_builtin_ops(float F, double D, long double LD) {
+void test_float_builtin_ops(float F, double D, long double LD, int I) {
   volatile float resf;
   volatile double resd;
   volatile long double resld;
@@ -352,6 +359,58 @@ void test_float_builtin_ops(float F, double D, long double LD) {
 
   resld = __builtin_fmaxl(LD, LD);
   // CHECK: call x86_fp80 @llvm.maxnum.f80
+
+  resf = __builtin_fminimum_numf(F, F);
+  // CHECK: call float @llvm.minimumnum.f32
+
+  resf = __builtin_fminimum_numf(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: call float @llvm.minimumnum.f32
+
+  resf = __builtin_fminimum_numf(1.0, 2.0);
+  // CHECK: store volatile float 1.000000e+00, ptr %resf
+
+  resd = __builtin_fminimum_num(D, D);
+  // CHECK: call double @llvm.minimumnum.f64
+
+  resd = __builtin_fminimum_num(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: call double @llvm.minimumnum.f64
+
+  resd = __builtin_fminimum_num(1.0, 2.0);
+  // CHECK: store volatile double 1.000000e+00, ptr %resd
+
+  //FIXME: __builtin_fminimum_numl is not supported well yet.
+  resld = __builtin_fminimum_numl(1.0, 2.0);
+  // CHECK: store volatile x86_fp80 0xK3FFF8000000000000000, ptr %resld, align 16
+
+  resf = __builtin_fmaximum_numf(F, F);
+  // CHECK: call float @llvm.maximumnum.f32
+
+  resf = __builtin_fmaximum_numf(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: call float @llvm.maximumnum.f32
+
+  resf = __builtin_fmaximum_numf(1.0, 2.0);
+  // CHECK: store volatile float 2.000000e+00, ptr %resf
+
+  resd = __builtin_fmaximum_num(D, D);
+  // CHECK: call double @llvm.maximumnum.f64
+
+  resd = __builtin_fmaximum_num(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: call double @llvm.maximumnum.f64
+
+  resd = __builtin_fmaximum_num(1.0, 2.0);
+  // CHECK: store volatile double 2.000000e+00, ptr %resd
+
+  //FIXME: __builtin_fmaximum_numl is not supported well yet.
+  resld = __builtin_fmaximum_numl(1.0, 2.0);
+  // CHECK: store volatile x86_fp80 0xK40008000000000000000, ptr %resld, align 16
 
   resf = __builtin_fabsf(F);
   // CHECK: call float @llvm.fabs.f32
@@ -905,9 +964,9 @@ void test_builtin_os_log_long_double(void *buf, long double ld) {
   // CHECK: %[[V2:.*]] = bitcast x86_fp80 %[[V1]] to i80
   // CHECK: %[[V3:.*]] = zext i80 %[[V2]] to i128
   // CHECK: store i128 %[[V3]], ptr %[[COERCE]], align 16
-  // CHECK: %[[V5:.*]] = getelementptr inbounds { i64, i64 }, ptr %[[COERCE]], i32 0, i32 0
+  // CHECK: %[[V5:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[COERCE]], i32 0, i32 0
   // CHECK: %[[V6:.*]] = load i64, ptr %[[V5]], align 16
-  // CHECK: %[[V7:.*]] = getelementptr inbounds { i64, i64 }, ptr %[[COERCE]], i32 0, i32 1
+  // CHECK: %[[V7:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[COERCE]], i32 0, i32 1
   // CHECK: %[[V8:.*]] = load i64, ptr %[[V7]], align 8
   // CHECK: call void @__os_log_helper_1_0_1_16_0(ptr noundef %[[V0]], i64 noundef %[[V6]], i64 noundef %[[V8]])
 
@@ -920,9 +979,9 @@ void test_builtin_os_log_long_double(void *buf, long double ld) {
 // CHECK: %[[ARG0:.*]] = alloca i128, align 16
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca ptr, align 8
 // CHECK: %[[ARG0_ADDR:.*]] = alloca i128, align 16
-// CHECK: %[[V1:.*]] = getelementptr inbounds { i64, i64 }, ptr %[[ARG0]], i32 0, i32 0
+// CHECK: %[[V1:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[ARG0]], i32 0, i32 0
 // CHECK: store i64 %[[ARG0_COERCE0]], ptr %[[V1]], align 16
-// CHECK: %[[V2:.*]] = getelementptr inbounds { i64, i64 }, ptr %[[ARG0]], i32 0, i32 1
+// CHECK: %[[V2:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[ARG0]], i32 0, i32 1
 // CHECK: store i64 %[[ARG0_COERCE1]], ptr %[[V2]], align 8
 // CHECK: %[[ARG01:.*]] = load i128, ptr %[[ARG0]], align 16
 // CHECK: store ptr %[[BUFFER]], ptr %[[BUFFER_ADDR]], align 8
@@ -949,12 +1008,12 @@ void test_builtin_popcountg(unsigned char uc, unsigned short us,
   pop = __builtin_popcountg(uc);
   // CHECK: %1 = load i8, ptr %uc.addr, align 1
   // CHECK-NEXT: %2 = call i8 @llvm.ctpop.i8(i8 %1)
-  // CHECK-NEXT: %cast = sext i8 %2 to i32
+  // CHECK-NEXT: %cast = zext i8 %2 to i32
   // CHECK-NEXT: store volatile i32 %cast, ptr %pop, align 4
   pop = __builtin_popcountg(us);
   // CHECK-NEXT: %3 = load i16, ptr %us.addr, align 2
   // CHECK-NEXT: %4 = call i16 @llvm.ctpop.i16(i16 %3)
-  // CHECK-NEXT: %cast1 = sext i16 %4 to i32
+  // CHECK-NEXT: %cast1 = zext i16 %4 to i32
   // CHECK-NEXT: store volatile i32 %cast1, ptr %pop, align 4
   pop = __builtin_popcountg(ui);
   // CHECK-NEXT: %5 = load i32, ptr %ui.addr, align 4
@@ -992,12 +1051,12 @@ void test_builtin_clzg(unsigned char uc, unsigned short us, unsigned int ui,
   lz = __builtin_clzg(uc);
   // CHECK: %1 = load i8, ptr %uc.addr, align 1
   // CHECK-NEXT: %2 = call i8 @llvm.ctlz.i8(i8 %1, i1 true)
-  // CHECK-NEXT: %cast = sext i8 %2 to i32
+  // CHECK-NEXT: %cast = zext i8 %2 to i32
   // CHECK-NEXT: store volatile i32 %cast, ptr %lz, align 4
   lz = __builtin_clzg(us);
   // CHECK-NEXT: %3 = load i16, ptr %us.addr, align 2
   // CHECK-NEXT: %4 = call i16 @llvm.ctlz.i16(i16 %3, i1 true)
-  // CHECK-NEXT: %cast1 = sext i16 %4 to i32
+  // CHECK-NEXT: %cast1 = zext i16 %4 to i32
   // CHECK-NEXT: store volatile i32 %cast1, ptr %lz, align 4
   lz = __builtin_clzg(ui);
   // CHECK-NEXT: %5 = load i32, ptr %ui.addr, align 4
@@ -1026,7 +1085,7 @@ void test_builtin_clzg(unsigned char uc, unsigned short us, unsigned int ui,
   lz = __builtin_clzg(uc, sc);
   // CHECK-NEXT: %15 = load i8, ptr %uc.addr, align 1
   // CHECK-NEXT: %16 = call i8 @llvm.ctlz.i8(i8 %15, i1 true)
-  // CHECK-NEXT: %cast6 = sext i8 %16 to i32
+  // CHECK-NEXT: %cast6 = zext i8 %16 to i32
   // CHECK-NEXT: %iszero = icmp eq i8 %15, 0
   // CHECK-NEXT: %17 = load i8, ptr %sc.addr, align 1
   // CHECK-NEXT: %conv = sext i8 %17 to i32
@@ -1035,7 +1094,7 @@ void test_builtin_clzg(unsigned char uc, unsigned short us, unsigned int ui,
   lz = __builtin_clzg(us, uc);
   // CHECK-NEXT: %18 = load i16, ptr %us.addr, align 2
   // CHECK-NEXT: %19 = call i16 @llvm.ctlz.i16(i16 %18, i1 true)
-  // CHECK-NEXT: %cast7 = sext i16 %19 to i32
+  // CHECK-NEXT: %cast7 = zext i16 %19 to i32
   // CHECK-NEXT: %iszero8 = icmp eq i16 %18, 0
   // CHECK-NEXT: %20 = load i8, ptr %uc.addr, align 1
   // CHECK-NEXT: %conv9 = zext i8 %20 to i32
@@ -1094,12 +1153,12 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
   tz = __builtin_ctzg(uc);
   // CHECK: %1 = load i8, ptr %uc.addr, align 1
   // CHECK-NEXT: %2 = call i8 @llvm.cttz.i8(i8 %1, i1 true)
-  // CHECK-NEXT: %cast = sext i8 %2 to i32
+  // CHECK-NEXT: %cast = zext i8 %2 to i32
   // CHECK-NEXT: store volatile i32 %cast, ptr %tz, align 4
   tz = __builtin_ctzg(us);
   // CHECK-NEXT: %3 = load i16, ptr %us.addr, align 2
   // CHECK-NEXT: %4 = call i16 @llvm.cttz.i16(i16 %3, i1 true)
-  // CHECK-NEXT: %cast1 = sext i16 %4 to i32
+  // CHECK-NEXT: %cast1 = zext i16 %4 to i32
   // CHECK-NEXT: store volatile i32 %cast1, ptr %tz, align 4
   tz = __builtin_ctzg(ui);
   // CHECK-NEXT: %5 = load i32, ptr %ui.addr, align 4
@@ -1128,7 +1187,7 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
   tz = __builtin_ctzg(uc, sc);
   // CHECK-NEXT: %15 = load i8, ptr %uc.addr, align 1
   // CHECK-NEXT: %16 = call i8 @llvm.cttz.i8(i8 %15, i1 true)
-  // CHECK-NEXT: %cast6 = sext i8 %16 to i32
+  // CHECK-NEXT: %cast6 = zext i8 %16 to i32
   // CHECK-NEXT: %iszero = icmp eq i8 %15, 0
   // CHECK-NEXT: %17 = load i8, ptr %sc.addr, align 1
   // CHECK-NEXT: %conv = sext i8 %17 to i32
@@ -1137,7 +1196,7 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
   tz = __builtin_ctzg(us, uc);
   // CHECK-NEXT: %18 = load i16, ptr %us.addr, align 2
   // CHECK-NEXT: %19 = call i16 @llvm.cttz.i16(i16 %18, i1 true)
-  // CHECK-NEXT: %cast7 = sext i16 %19 to i32
+  // CHECK-NEXT: %cast7 = zext i16 %19 to i32
   // CHECK-NEXT: %iszero8 = icmp eq i16 %18, 0
   // CHECK-NEXT: %20 = load i8, ptr %uc.addr, align 1
   // CHECK-NEXT: %conv9 = zext i8 %20 to i32

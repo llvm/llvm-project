@@ -1,4 +1,5 @@
 static_library("Common") {
+  output_name = "LLVMTableGenCommon"
   deps = [
     "//llvm/include/llvm/CodeGen:GenVT",
     "//llvm/lib/CodeGenTypes",
@@ -21,7 +22,6 @@ static_library("Common") {
     "GlobalISel/CombinerUtils.cpp",
     "GlobalISel/GlobalISelMatchTable.cpp",
     "GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp",
-    "GlobalISel/MatchDataInfo.cpp",
     "GlobalISel/PatternParser.cpp",
     "GlobalISel/Patterns.cpp",
     "InfoByHwMode.cpp",
@@ -29,6 +29,7 @@ static_library("Common") {
     "PredicateExpander.cpp",
     "SubtargetFeatureInfo.cpp",
     "Types.cpp",
+    "Utils.cpp",
     "VarLenCodeEmitterGen.cpp",
   ]
 }

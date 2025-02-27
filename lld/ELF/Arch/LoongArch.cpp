@@ -11,6 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
@@ -23,7 +24,7 @@ using namespace lld::elf;
 namespace {
 class LoongArch final : public TargetInfo {
 public:
-  LoongArch();
+  LoongArch(Ctx &);
   uint32_t calcEFlags() const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -52,6 +53,7 @@ enum Op {
   ADDI_W = 0x02800000,
   ADDI_D = 0x02c00000,
   ANDI = 0x03400000,
+  PCADDI = 0x18000000,
   PCADDU12I = 0x1c000000,
   LD_W = 0x28800000,
   LD_D = 0x28c00000,
@@ -98,11 +100,13 @@ uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type) {
   case R_LARCH_PCALA64_LO20:
   case R_LARCH_GOT64_PC_LO20:
   case R_LARCH_TLS_IE64_PC_LO20:
+  case R_LARCH_TLS_DESC64_PC_LO20:
     pcalau12i_pc = pc - 8;
     break;
   case R_LARCH_PCALA64_HI12:
   case R_LARCH_GOT64_PC_HI12:
   case R_LARCH_TLS_IE64_PC_HI12:
+  case R_LARCH_TLS_DESC64_PC_HI12:
     pcalau12i_pc = pc - 12;
     break;
   default:
@@ -127,6 +131,10 @@ static uint32_t insn(uint32_t op, uint32_t d, uint32_t j, uint32_t k) {
 static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
   return begin == 63 ? v >> end : (v & ((1ULL << (begin + 1)) - 1)) >> end;
 }
+
+static uint32_t getD5(uint64_t v) { return extractBits(v, 4, 0); }
+
+static uint32_t getJ5(uint64_t v) { return extractBits(v, 9, 5); }
 
 static uint32_t setD5k16(uint32_t insn, uint32_t imm) {
   uint32_t immLo = extractBits(imm, 15, 0);
@@ -156,18 +164,18 @@ static bool isJirl(uint32_t insn) {
   return (insn & 0xfc000000) == JIRL;
 }
 
-static void handleUleb128(uint8_t *loc, uint64_t val) {
+static void handleUleb128(Ctx &ctx, uint8_t *loc, uint64_t val) {
   const uint32_t maxcount = 1 + 64 / 7;
   uint32_t count;
   const char *error = nullptr;
   uint64_t orig = decodeULEB128(loc, &count, nullptr, &error);
   if (count > maxcount || (count == maxcount && error))
-    errorOrWarn(getErrorLocation(loc) + "extra space for uleb128");
+    Err(ctx) << getErrorLoc(ctx, loc) << "extra space for uleb128";
   uint64_t mask = count < maxcount ? (1ULL << 7 * count) - 1 : -1ULL;
   encodeULEB128((orig + val) & mask, loc, count);
 }
 
-LoongArch::LoongArch() {
+LoongArch::LoongArch(Ctx &ctx) : TargetInfo(ctx) {
   // The LoongArch ISA itself does not have a limit on page sizes. According to
   // the ISA manual, the PS (page size) field in MTLB entries and CSR.STLBPS is
   // 6 bits wide, meaning the maximum page size is 2^63 which is equivalent to
@@ -185,16 +193,18 @@ LoongArch::LoongArch() {
   relativeRel = R_LARCH_RELATIVE;
   iRelativeRel = R_LARCH_IRELATIVE;
 
-  if (config->is64) {
+  if (ctx.arg.is64) {
     symbolicRel = R_LARCH_64;
     tlsModuleIndexRel = R_LARCH_TLS_DTPMOD64;
     tlsOffsetRel = R_LARCH_TLS_DTPREL64;
     tlsGotRel = R_LARCH_TLS_TPREL64;
+    tlsDescRel = R_LARCH_TLS_DESC64;
   } else {
     symbolicRel = R_LARCH_32;
     tlsModuleIndexRel = R_LARCH_TLS_DTPMOD32;
     tlsOffsetRel = R_LARCH_TLS_DTPREL32;
     tlsGotRel = R_LARCH_TLS_TPREL32;
+    tlsDescRel = R_LARCH_TLS_DESC32;
   }
 
   gotRel = symbolicRel;
@@ -207,8 +217,8 @@ LoongArch::LoongArch() {
   ipltEntrySize = 16;
 }
 
-static uint32_t getEFlags(const InputFile *f) {
-  if (config->is64)
+static uint32_t getEFlags(Ctx &ctx, const InputFile *f) {
+  if (ctx.arg.is64)
     return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
 }
@@ -237,7 +247,7 @@ uint32_t LoongArch::calcEFlags() const {
       continue;
 
     // Take the first non-zero e_flags as the reference.
-    uint32_t flags = getEFlags(f);
+    uint32_t flags = getEFlags(ctx, f);
     if (target == 0 && flags != 0) {
       target = flags;
       targetFile = f;
@@ -245,9 +255,9 @@ uint32_t LoongArch::calcEFlags() const {
 
     if ((flags & EF_LOONGARCH_ABI_MODIFIER_MASK) !=
         (target & EF_LOONGARCH_ABI_MODIFIER_MASK))
-      error(toString(f) +
-            ": cannot link object files with different ABI from " +
-            toString(targetFile));
+      ErrAlways(ctx) << f
+                     << ": cannot link object files with different ABI from "
+                     << targetFile;
 
     // We cannot process psABI v1.x / object ABI v0 files (containing stack
     // relocations), unlike ld.bfd.
@@ -265,7 +275,7 @@ uint32_t LoongArch::calcEFlags() const {
     // and the few impacted users are advised to simply rebuild world or
     // reinstall a recent system.
     if ((flags & EF_LOONGARCH_OBJABI_MASK) != EF_LOONGARCH_OBJABI_V1)
-      error(toString(f) + ": unsupported object file ABI version");
+      ErrAlways(ctx) << f << ": unsupported object file ABI version";
   }
 
   return target;
@@ -274,8 +284,7 @@ uint32_t LoongArch::calcEFlags() const {
 int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLocation(buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   case R_LARCH_32:
   case R_LARCH_TLS_DTPMOD32:
@@ -289,27 +298,31 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return read64le(buf);
   case R_LARCH_RELATIVE:
   case R_LARCH_IRELATIVE:
-    return config->is64 ? read64le(buf) : read32le(buf);
+    return ctx.arg.is64 ? read64le(buf) : read32le(buf);
   case R_LARCH_NONE:
   case R_LARCH_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
     return 0;
+  case R_LARCH_TLS_DESC32:
+    return read32le(buf + 4);
+  case R_LARCH_TLS_DESC64:
+    return read64le(buf + 8);
   }
 }
 
 void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->is64)
-    write64le(buf, in.plt->getVA());
+  if (ctx.arg.is64)
+    write64le(buf, ctx.in.plt->getVA());
   else
-    write32le(buf, in.plt->getVA());
+    write32le(buf, ctx.in.plt->getVA());
 }
 
 void LoongArch::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends) {
-    if (config->is64)
-      write64le(buf, s.getVA());
+  if (ctx.arg.writeAddends) {
+    if (ctx.arg.is64)
+      write64le(buf, s.getVA(ctx));
     else
-      write32le(buf, s.getVA());
+      write32le(buf, s.getVA(ctx));
   }
 }
 
@@ -332,18 +345,19 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   //   srli.[wd] $t1, $t1, (is64?1:2)             ; t1 = &.got.plt[i] - &.got.plt[0]
   //   ld.[wd]   $t0, $t0, Wordsize               ; t0 = link_map
   //   jr        $t3
-  uint32_t offset = in.gotPlt->getVA() - in.plt->getVA();
-  uint32_t sub = config->is64 ? SUB_D : SUB_W;
-  uint32_t ld = config->is64 ? LD_D : LD_W;
-  uint32_t addi = config->is64 ? ADDI_D : ADDI_W;
-  uint32_t srli = config->is64 ? SRLI_D : SRLI_W;
+  uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
+  uint32_t sub = ctx.arg.is64 ? SUB_D : SUB_W;
+  uint32_t ld = ctx.arg.is64 ? LD_D : LD_W;
+  uint32_t addi = ctx.arg.is64 ? ADDI_D : ADDI_W;
+  uint32_t srli = ctx.arg.is64 ? SRLI_D : SRLI_W;
   write32le(buf + 0, insn(PCADDU12I, R_T2, hi20(offset), 0));
   write32le(buf + 4, insn(sub, R_T1, R_T1, R_T3));
   write32le(buf + 8, insn(ld, R_T3, R_T2, lo12(offset)));
-  write32le(buf + 12, insn(addi, R_T1, R_T1, lo12(-target->pltHeaderSize - 12)));
+  write32le(buf + 12,
+            insn(addi, R_T1, R_T1, lo12(-ctx.target->pltHeaderSize - 12)));
   write32le(buf + 16, insn(addi, R_T0, R_T2, lo12(offset)));
-  write32le(buf + 20, insn(srli, R_T1, R_T1, config->is64 ? 1 : 2));
-  write32le(buf + 24, insn(ld, R_T0, R_T0, config->wordsize));
+  write32le(buf + 20, insn(srli, R_T1, R_T1, ctx.arg.is64 ? 1 : 2));
+  write32le(buf + 24, insn(ld, R_T0, R_T0, ctx.arg.wordsize));
   write32le(buf + 28, insn(JIRL, R_ZERO, R_T3, 0));
 }
 
@@ -356,17 +370,17 @@ void LoongArch::writePlt(uint8_t *buf, const Symbol &sym,
   //   ld.[wd]   $t3, $t3, %pcrel_lo12(f@.got.plt)
   //   jirl      $t1, $t3, 0
   //   nop
-  uint32_t offset = sym.getGotPltVA() - pltEntryAddr;
+  uint32_t offset = sym.getGotPltVA(ctx) - pltEntryAddr;
   write32le(buf + 0, insn(PCADDU12I, R_T3, hi20(offset), 0));
   write32le(buf + 4,
-            insn(config->is64 ? LD_D : LD_W, R_T3, R_T3, lo12(offset)));
+            insn(ctx.arg.is64 ? LD_D : LD_W, R_T3, R_T3, lo12(offset)));
   write32le(buf + 8, insn(JIRL, R_T1, R_T3, 0));
   write32le(buf + 12, insn(ANDI, R_ZERO, R_ZERO, 0));
 }
 
 RelType LoongArch::getDynRel(RelType type) const {
-  return type == target->symbolicRel ? type
-                                     : static_cast<RelType>(R_LARCH_NONE);
+  return type == ctx.target->symbolicRel ? type
+                                         : static_cast<RelType>(R_LARCH_NONE);
 }
 
 RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
@@ -399,7 +413,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_TPREL32:
   case R_LARCH_TLS_TPREL64:
   case R_LARCH_TLS_LE_HI20:
+  case R_LARCH_TLS_LE_HI20_R:
   case R_LARCH_TLS_LE_LO12:
+  case R_LARCH_TLS_LE_LO12_R:
   case R_LARCH_TLS_LE64_LO20:
   case R_LARCH_TLS_LE64_HI12:
     return R_TPREL;
@@ -417,7 +433,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_SUB_ULEB128:
     // The LoongArch add/sub relocs behave like the RISCV counterparts; reuse
     // the RelExpr to avoid code duplication.
-    return R_RISCV_ADD;
+    return RE_RISCV_ADD;
   case R_LARCH_32_PCREL:
   case R_LARCH_64_PCREL:
   case R_LARCH_PCREL20_S2:
@@ -433,17 +449,17 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_IE_PC_HI20:
   case R_LARCH_TLS_IE64_PC_LO20:
   case R_LARCH_TLS_IE64_PC_HI12:
-    return R_LOONGARCH_GOT_PAGE_PC;
+    return RE_LOONGARCH_GOT_PAGE_PC;
   case R_LARCH_GOT_PC_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
-    return R_LOONGARCH_GOT;
+    return RE_LOONGARCH_GOT;
   case R_LARCH_TLS_LD_PC_HI20:
   case R_LARCH_TLS_GD_PC_HI20:
-    return R_LOONGARCH_TLSGD_PAGE_PC;
+    return RE_LOONGARCH_TLSGD_PAGE_PC;
   case R_LARCH_PCALA_HI20:
-    // Why not R_LOONGARCH_PAGE_PC, majority of references don't go through PLT
-    // anyway so why waste time checking only to get everything relaxed back to
-    // it?
+    // Why not RE_LOONGARCH_PAGE_PC, majority of references don't go through
+    // PLT anyway so why waste time checking only to get everything relaxed back
+    // to it?
     //
     // This is again due to the R_LARCH_PCALA_LO12 on JIRL case, where we want
     // both the HI20 and LO12 to potentially refer to the PLT. But in reality
@@ -463,12 +479,12 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     //
     // So, unfortunately we have to again workaround this quirk the same way as
     // BFD: assuming every R_LARCH_PCALA_HI20 is potentially PLT-needing, only
-    // relaxing back to R_LOONGARCH_PAGE_PC if it's known not so at a later
+    // relaxing back to RE_LOONGARCH_PAGE_PC if it's known not so at a later
     // stage.
-    return R_LOONGARCH_PLT_PAGE_PC;
+    return RE_LOONGARCH_PLT_PAGE_PC;
   case R_LARCH_PCALA64_LO20:
   case R_LARCH_PCALA64_HI12:
-    return R_LOONGARCH_PAGE_PC;
+    return RE_LOONGARCH_PAGE_PC;
   case R_LARCH_GOT_HI20:
   case R_LARCH_GOT_LO12:
   case R_LARCH_GOT64_LO20:
@@ -482,10 +498,30 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     return R_TLSLD_GOT;
   case R_LARCH_TLS_GD_HI20:
     return R_TLSGD_GOT;
+  case R_LARCH_TLS_LE_ADD_R:
   case R_LARCH_RELAX:
-    return config->relax ? R_RELAX_HINT : R_NONE;
+    return ctx.arg.relax ? R_RELAX_HINT : R_NONE;
   case R_LARCH_ALIGN:
     return R_RELAX_HINT;
+  case R_LARCH_TLS_DESC_PC_HI20:
+  case R_LARCH_TLS_DESC64_PC_LO20:
+  case R_LARCH_TLS_DESC64_PC_HI12:
+    return RE_LOONGARCH_TLSDESC_PAGE_PC;
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_LD:
+  case R_LARCH_TLS_DESC_HI20:
+  case R_LARCH_TLS_DESC_LO12:
+  case R_LARCH_TLS_DESC64_LO20:
+  case R_LARCH_TLS_DESC64_HI12:
+    return R_TLSDESC;
+  case R_LARCH_TLS_DESC_CALL:
+    return R_TLSDESC_CALL;
+  case R_LARCH_TLS_LD_PCREL20_S2:
+    return R_TLSLD_PC;
+  case R_LARCH_TLS_GD_PCREL20_S2:
+    return R_TLSGD_PC;
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    return R_TLSDESC_PC;
 
   // Other known relocs that are explicitly unimplemented:
   //
@@ -496,8 +532,8 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   //
   // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -510,6 +546,8 @@ bool LoongArch::usesOnlyLowPageBits(RelType type) const {
   case R_LARCH_GOT_LO12:
   case R_LARCH_GOT_PC_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
+  case R_LARCH_TLS_DESC_LO12:
+  case R_LARCH_TLS_DESC_PC_LO12:
     return true;
   }
 }
@@ -518,7 +556,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
                          uint64_t val) const {
   switch (rel.type) {
   case R_LARCH_32_PCREL:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     [[fallthrough]];
   case R_LARCH_32:
   case R_LARCH_TLS_DTPREL32:
@@ -530,27 +568,31 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, val);
     return;
 
+  // Relocs intended for `pcaddi`.
   case R_LARCH_PCREL20_S2:
-    checkInt(loc, val, 22, rel);
-    checkAlignment(loc, val, 4, rel);
+  case R_LARCH_TLS_LD_PCREL20_S2:
+  case R_LARCH_TLS_GD_PCREL20_S2:
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    checkInt(ctx, loc, val, 22, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setJ20(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B16:
-    checkInt(loc, val, 18, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 18, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setK16(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B21:
-    checkInt(loc, val, 23, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 23, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setD5k16(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B26:
-    checkInt(loc, val, 28, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 28, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
 
@@ -560,9 +602,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     // immediate fields, the relocation range is [-128G - 0x20000, +128G -
     // 0x20000) (of course must be 4-byte aligned).
     if (((int64_t)val + 0x20000) != llvm::SignExtend64(val + 0x20000, 38))
-      reportRangeError(loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
+      reportRangeError(ctx, loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
                        llvm::maxIntN(38) - 0x20000);
-    checkAlignment(loc, val, 4, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     // Since jirl performs sign extension on the offset immediate, adds (1<<17)
     // to original val to get the correct hi20.
     uint32_t hi20 = extractBits(val + (1 << 17), 37, 18);
@@ -582,7 +624,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     // In this case, process like an R_LARCH_B16, but without overflow checking
     // and only taking the value's lowest 12 bits.
     if (isJirl(read32le(loc))) {
-      checkAlignment(loc, val, 4, rel);
+      checkAlignment(ctx, loc, val, 4, rel);
       val = SignExtend64<12>(val);
       write32le(loc, setK16(read32le(loc), val >> 2));
       return;
@@ -594,6 +636,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
   case R_LARCH_TLS_IE_LO12:
+  case R_LARCH_TLS_LE_LO12_R:
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_LO12:
     write32le(loc, setK12(read32le(loc), extractBits(val, 11, 0)));
     return;
 
@@ -609,7 +654,12 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LD_HI20:
   case R_LARCH_TLS_GD_PC_HI20:
   case R_LARCH_TLS_GD_HI20:
+  case R_LARCH_TLS_DESC_PC_HI20:
+  case R_LARCH_TLS_DESC_HI20:
     write32le(loc, setJ20(read32le(loc), extractBits(val, 31, 12)));
+    return;
+  case R_LARCH_TLS_LE_HI20_R:
+    write32le(loc, setJ20(read32le(loc), extractBits(val + 0x800, 31, 12)));
     return;
 
   // Relocs intended for `lu32i.d`.
@@ -620,6 +670,8 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE64_LO20:
   case R_LARCH_TLS_IE64_PC_LO20:
   case R_LARCH_TLS_IE64_LO20:
+  case R_LARCH_TLS_DESC64_PC_LO20:
+  case R_LARCH_TLS_DESC64_LO20:
     write32le(loc, setJ20(read32le(loc), extractBits(val, 51, 32)));
     return;
 
@@ -631,6 +683,8 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE64_HI12:
   case R_LARCH_TLS_IE64_PC_HI12:
   case R_LARCH_TLS_IE64_HI12:
+  case R_LARCH_TLS_DESC64_PC_HI12:
+  case R_LARCH_TLS_DESC64_HI12:
     write32le(loc, setK12(read32le(loc), extractBits(val, 63, 52)));
     return;
 
@@ -650,7 +704,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, read64le(loc) + val);
     return;
   case R_LARCH_ADD_ULEB128:
-    handleUleb128(loc, val);
+    handleUleb128(ctx, loc, val);
     return;
   case R_LARCH_SUB6:
     *loc = (*loc & 0xc0) | ((*loc - val) & 0x3f);
@@ -668,7 +722,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, read64le(loc) - val);
     return;
   case R_LARCH_SUB_ULEB128:
-    handleUleb128(loc, -val);
+    handleUleb128(ctx, loc, -val);
     return;
 
   case R_LARCH_MARK_LA:
@@ -676,15 +730,107 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     // no-op
     return;
 
+  case R_LARCH_TLS_LE_ADD_R:
   case R_LARCH_RELAX:
     return; // Ignored (for now)
+
+  case R_LARCH_TLS_DESC_LD:
+    return; // nothing to do.
+  case R_LARCH_TLS_DESC32:
+    write32le(loc + 4, val);
+    return;
+  case R_LARCH_TLS_DESC64:
+    write64le(loc + 8, val);
+    return;
 
   default:
     llvm_unreachable("unknown relocation");
   }
 }
 
-static bool relax(InputSection &sec) {
+static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return i + 1 < relocs.size() && relocs[i + 1].type == R_LARCH_RELAX;
+}
+
+static bool isPairRelaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return relaxable(relocs, i) && relaxable(relocs, i + 2) &&
+         relocs[i].offset + 4 == relocs[i + 2].offset;
+}
+
+// Relax code sequence.
+// From:
+//   pcalau12i $a0, %pc_hi20(sym)
+//   addi.w/d $a0, $a0, %pc_lo12(sym)
+// To:
+//   pcaddi $a0, %pc_lo12(sym)
+//
+// From:
+//   pcalau12i $a0, %got_pc_hi20(sym_got)
+//   ld.w/d $a0, $a0, %got_pc_lo12(sym_got)
+// To:
+//   pcaddi $a0, %got_pc_hi20(sym_got)
+static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
+                            uint64_t loc, Relocation &rHi20, Relocation &rLo12,
+                            uint32_t &remove) {
+  // check if the relocations are relaxable sequences.
+  if (!((rHi20.type == R_LARCH_PCALA_HI20 &&
+         rLo12.type == R_LARCH_PCALA_LO12) ||
+        (rHi20.type == R_LARCH_GOT_PC_HI20 &&
+         rLo12.type == R_LARCH_GOT_PC_LO12)))
+    return;
+
+  // GOT references to absolute symbols can't be relaxed to use pcaddi in
+  // position-independent code, because these instructions produce a relative
+  // address.
+  // Meanwhile skip undefined, preemptible and STT_GNU_IFUNC symbols, because
+  // these symbols may be resolve in runtime.
+  if (rHi20.type == R_LARCH_GOT_PC_HI20 &&
+      (!rHi20.sym->isDefined() || rHi20.sym->isPreemptible ||
+       rHi20.sym->isGnuIFunc() ||
+       (ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section)))
+    return;
+
+  uint64_t dest = 0;
+  if (rHi20.expr == RE_LOONGARCH_PLT_PAGE_PC)
+    dest = rHi20.sym->getPltVA(ctx);
+  else if (rHi20.expr == RE_LOONGARCH_PAGE_PC ||
+           rHi20.expr == RE_LOONGARCH_GOT_PAGE_PC)
+    dest = rHi20.sym->getVA(ctx);
+  else {
+    Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc) << "unknown expr ("
+             << rHi20.expr << ") against symbol " << rHi20.sym
+             << "in relaxPCHi20Lo12";
+    return;
+  }
+  dest += rHi20.addend;
+
+  const int64_t displace = dest - loc;
+  // Check if the displace aligns 4 bytes or exceeds the range of pcaddi.
+  if ((displace & 0x3) != 0 || !isInt<22>(displace))
+    return;
+
+  // Note: If we can ensure that the .o files generated by LLVM only contain
+  // relaxable instruction sequences with R_LARCH_RELAX, then we do not need to
+  // decode instructions. The relaxable instruction sequences imply the
+  // following constraints:
+  // * For relocation pairs related to got_pc, the opcodes of instructions
+  // must be pcalau12i + ld.w/d. In other cases, the opcodes must be pcalau12i +
+  // addi.w/d.
+  // * The destination register of pcalau12i is guaranteed to be used only by
+  // the immediately following instruction.
+  const uint32_t currInsn = read32le(sec.content().data() + rHi20.offset);
+  const uint32_t nextInsn = read32le(sec.content().data() + rLo12.offset);
+  // Check if use the same register.
+  if (getD5(currInsn) != getJ5(nextInsn) || getJ5(nextInsn) != getD5(nextInsn))
+    return;
+
+  sec.relaxAux->relocTypes[i] = R_LARCH_RELAX;
+  sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
+  sec.relaxAux->writes.push_back(insn(PCADDI, getD5(nextInsn), 0, 0));
+  remove = 4;
+}
+
+static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -714,14 +860,20 @@ static bool relax(InputSection &sec) {
         remove = allBytes - curBytes;
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLocation((const uint8_t *)loc) +
-                    "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(allBytes) + " bytes available for " +
-                    "requested alignment of " + Twine(align) + " bytes");
+        Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
+                 << "insufficient padding bytes for " << r.type << ": "
+                 << allBytes << " bytes available for "
+                 << "requested alignment of " << align << " bytes";
         remove = 0;
       }
       break;
     }
+    case R_LARCH_PCALA_HI20:
+    case R_LARCH_GOT_PC_HI20:
+      // The overflow check for i+2 will be carried out in isPairRelaxable.
+      if (isPairRelaxable(relocs, i))
+        relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
+      break;
     }
 
     // For all anchors whose offsets are <= r.offset, they are preceded by
@@ -748,7 +900,7 @@ static bool relax(InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    fatal("section size decrease is too large: " + Twine(delta));
+    Fatal(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }
@@ -761,27 +913,27 @@ static bool relax(InputSection &sec) {
 // change in section sizes can have cascading effect and require another
 // relaxation pass.
 bool LoongArch::relaxOnce(int pass) const {
-  if (config->relocatable)
+  if (ctx.arg.relocatable)
     return false;
 
   if (pass == 0)
-    initSymbolAnchors();
+    initSymbolAnchors(ctx);
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
-      changed |= relax(*sec);
+      changed |= relax(ctx, *sec);
   }
   return changed;
 }
 
 void LoongArch::finalizeRelax(int passes) const {
-  log("relaxation passes: " + Twine(passes));
+  Log(ctx) << "relaxation passes: " << passes;
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -792,7 +944,8 @@ void LoongArch::finalizeRelax(int passes) const {
       MutableArrayRef<Relocation> rels = sec->relocs();
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
-      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
+      size_t writesIdx = 0;
+      uint8_t *p = ctx.bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;
@@ -808,11 +961,29 @@ void LoongArch::finalizeRelax(int passes) const {
           continue;
 
         // Copy from last location to the current relocated location.
-        const Relocation &r = rels[i];
+        Relocation &r = rels[i];
         uint64_t size = r.offset - offset;
         memcpy(p, old.data() + offset, size);
         p += size;
-        offset = r.offset + remove;
+
+        int64_t skip = 0;
+        if (RelType newType = aux.relocTypes[i]) {
+          switch (newType) {
+          case R_LARCH_RELAX:
+            break;
+          case R_LARCH_PCREL20_S2:
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            // RelExpr is needed for relocating.
+            r.expr = r.sym->hasFlag(NEEDS_PLT) ? R_PLT_PC : R_PC;
+            break;
+          default:
+            llvm_unreachable("unsupported type");
+          }
+        }
+
+        p += skip;
+        offset = r.offset + skip + remove;
       }
       memcpy(p, old.data() + offset, old.size() - offset);
 
@@ -833,7 +1004,6 @@ void LoongArch::finalizeRelax(int passes) const {
   }
 }
 
-TargetInfo *elf::getLoongArchTargetInfo() {
-  static LoongArch target;
-  return &target;
+void elf::setLoongArchTargetInfo(Ctx &ctx) {
+  ctx.target.reset(new LoongArch(ctx));
 }

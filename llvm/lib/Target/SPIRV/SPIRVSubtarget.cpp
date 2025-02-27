@@ -38,25 +38,58 @@ static cl::opt<std::set<SPIRV::Extension::Extension>, false,
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
+// Provides access to the cl::opt<...> `Extensions` variable from outside of the
+// module.
+void SPIRVSubtarget::addExtensionsToClOpt(
+    const std::set<SPIRV::Extension::Extension> &AllowList) {
+  Extensions.insert(AllowList.begin(), AllowList.end());
+}
+
 // Compare version numbers, but allow 0 to mean unspecified.
-static bool isAtLeastVer(uint32_t Target, uint32_t VerToCompareTo) {
-  return Target == 0 || Target >= VerToCompareTo;
+static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
+  return Target.empty() || Target >= VerToCompareTo;
 }
 
 SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)), SPIRVVersion(0),
-      OpenCLVersion(0), InstrInfo(),
+      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)), InstrInfo(),
       FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       TargetTriple(TT) {
+  switch (TT.getSubArch()) {
+  case Triple::SPIRVSubArch_v10:
+    SPIRVVersion = VersionTuple(1, 0);
+    break;
+  case Triple::SPIRVSubArch_v11:
+    SPIRVVersion = VersionTuple(1, 1);
+    break;
+  case Triple::SPIRVSubArch_v12:
+    SPIRVVersion = VersionTuple(1, 2);
+    break;
+  case Triple::SPIRVSubArch_v13:
+    SPIRVVersion = VersionTuple(1, 3);
+    break;
+  case Triple::SPIRVSubArch_v14:
+  default:
+    SPIRVVersion = VersionTuple(1, 4);
+    break;
+  case Triple::SPIRVSubArch_v15:
+    SPIRVVersion = VersionTuple(1, 5);
+    break;
+  case Triple::SPIRVSubArch_v16:
+    SPIRVVersion = VersionTuple(1, 6);
+    break;
+  }
+  OpenCLVersion = VersionTuple(2, 2);
+
   // The order of initialization is important.
-  initAvailableExtensions();
+  initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
   GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
+  InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
   InstSelector.reset(
@@ -66,10 +99,6 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
 SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
                                                           StringRef FS) {
   ParseSubtargetFeatures(CPU, /*TuneCPU=*/CPU, FS);
-  if (SPIRVVersion == 0)
-    SPIRVVersion = 14;
-  if (OpenCLVersion == 0)
-    OpenCLVersion = 22;
   return *this;
 }
 
@@ -82,11 +111,19 @@ bool SPIRVSubtarget::canUseExtInstSet(
   return AvailableExtInstSets.contains(E);
 }
 
-bool SPIRVSubtarget::isAtLeastSPIRVVer(uint32_t VerToCompareTo) const {
+SPIRV::InstructionSet::InstructionSet
+SPIRVSubtarget::getPreferredInstructionSet() const {
+  if (isOpenCLEnv())
+    return SPIRV::InstructionSet::OpenCL_std;
+  else
+    return SPIRV::InstructionSet::GLSL_std_450;
+}
+
+bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
   return isAtLeastVer(SPIRVVersion, VerToCompareTo);
 }
 
-bool SPIRVSubtarget::isAtLeastOpenCLVer(uint32_t VerToCompareTo) const {
+bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
   if (!isOpenCLEnv())
     return false;
   return isAtLeastVer(OpenCLVersion, VerToCompareTo);
@@ -95,15 +132,15 @@ bool SPIRVSubtarget::isAtLeastOpenCLVer(uint32_t VerToCompareTo) const {
 // If the SPIR-V version is >= 1.4 we can call OpPtrEqual and OpPtrNotEqual.
 // In SPIR-V Translator compatibility mode this feature is not available.
 bool SPIRVSubtarget::canDirectlyComparePointers() const {
-  return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, 14);
+  return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
 }
 
-void SPIRVSubtarget::initAvailableExtensions() {
-  AvailableExtensions.clear();
-  if (!isOpenCLEnv())
-    return;
-
-  AvailableExtensions.insert(Extensions.begin(), Extensions.end());
+void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
+  if (canUseExtension(
+          SPIRV::Extension::SPV_AMD_shader_trinary_minmax_extension)) {
+    AvailableExtInstSets.insert(
+        SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
+  }
 }
 
 // TODO: use command line args for this rather than just defaults.
@@ -116,9 +153,14 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
     AvailableExtInstSets.insert(SPIRV::InstructionSet::OpenCL_std);
 
   // Handle extended instruction sets from extensions.
-  if (canUseExtension(
-          SPIRV::Extension::SPV_AMD_shader_trinary_minmax_extension)) {
-    AvailableExtInstSets.insert(
-        SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
-  }
+  accountForAMDShaderTrinaryMinmax();
+}
+
+// Set available extensions after SPIRVSubtarget is created.
+void SPIRVSubtarget::initAvailableExtensions(
+    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
+  AvailableExtensions.clear();
+  AvailableExtensions.insert(AllowedExtIds.begin(), AllowedExtIds.end());
+
+  accountForAMDShaderTrinaryMinmax();
 }

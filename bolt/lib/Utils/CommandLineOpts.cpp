@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/Support/VCSRevision.h"
+#include "VCSVersion.inc"
 
 using namespace llvm;
 
 namespace llvm {
 namespace bolt {
 const char *BoltRevision =
-#ifdef LLVM_REVISION
-    LLVM_REVISION;
+#ifdef BOLT_REVISION
+    BOLT_REVISION;
 #else
     "<unknown>";
 #endif
@@ -29,6 +29,7 @@ const char *BoltRevision =
 namespace opts {
 
 bool HeatmapMode = false;
+bool BinaryAnalysisMode = false;
 
 cl::OptionCategory BoltCategory("BOLT generic options");
 cl::OptionCategory BoltDiffCategory("BOLTDIFF generic options");
@@ -38,6 +39,7 @@ cl::OptionCategory BoltOutputCategory("Output options");
 cl::OptionCategory AggregatorCategory("Data aggregation options");
 cl::OptionCategory BoltInstrCategory("BOLT instrumentation options");
 cl::OptionCategory HeatmapCategory("Heatmap options");
+cl::OptionCategory BinaryAnalysisCategory("BinaryAnalysis options");
 
 cl::opt<unsigned> AlignText("align-text",
                             cl::desc("alignment of .text section"), cl::Hidden,
@@ -105,6 +107,12 @@ cl::opt<unsigned long long> HeatmapMinAddress(
     cl::desc("minimum address considered valid for heatmap (default 0)"),
     cl::Optional, cl::cat(HeatmapCategory));
 
+cl::opt<bool> HeatmapPrintMappings(
+    "print-mappings", cl::init(false),
+    cl::desc("print mappings in the legend, between characters/blocks and text "
+             "sections (default false)"),
+    cl::Optional, cl::cat(HeatmapCategory));
+
 cl::opt<bool> HotData("hot-data",
                       cl::desc("hot data symbols support (relocation mode)"),
                       cl::cat(BoltCategory));
@@ -127,6 +135,9 @@ cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
+
+cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
+                   cl::cat(BoltCategory));
 
 cl::opt<std::string>
 OutputFilename("o",
@@ -166,6 +177,10 @@ cl::opt<std::string> SaveProfile("w",
                                  cl::desc("save recorded profile to a file"),
                                  cl::cat(BoltOutputCategory));
 
+cl::opt<bool> ShowDensity("show-density",
+                          cl::desc("show profile density details"),
+                          cl::Optional, cl::cat(AggregatorCategory));
+
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
                       cl::Hidden, cl::cat(BoltOptCategory));
 
@@ -178,6 +193,10 @@ cl::opt<bool>
 cl::opt<bool> TimeOpts("time-opts",
                        cl::desc("print time spent in each optimization"),
                        cl::cat(BoltOptCategory));
+
+cl::opt<bool> TimeRewrite("time-rewrite",
+                          cl::desc("print time spent in rewriting passes"),
+                          cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> UseOldText(
     "use-old-text",

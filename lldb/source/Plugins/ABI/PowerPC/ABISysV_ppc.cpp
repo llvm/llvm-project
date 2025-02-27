@@ -14,9 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -29,6 +26,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
 using namespace lldb;
@@ -415,16 +415,12 @@ bool ABISysV_ppc::GetArgumentValues(Thread &thread, ValueList &values) const {
 Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                          lldb::ValueObjectSP &new_value_sp) {
   Status error;
-  if (!new_value_sp) {
-    error.SetErrorString("Empty value object for return value.");
-    return error;
-  }
+  if (!new_value_sp)
+    return Status::FromErrorString("Empty value object for return value.");
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
-  if (!compiler_type) {
-    error.SetErrorString("Null clang type for return value.");
-    return error;
-  }
+  if (!compiler_type)
+    return Status::FromErrorString("Null clang type for return value.");
 
   Thread *thread = frame_sp->GetThread().get();
 
@@ -442,12 +438,10 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     DataExtractor data;
     Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
-    if (data_error.Fail()) {
-      error.SetErrorStringWithFormat(
+    if (data_error.Fail())
+      return Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
           data_error.AsCString());
-      return error;
-    }
     lldb::offset_t offset = 0;
     if (num_bytes <= 8) {
       uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
@@ -455,18 +449,19 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       if (reg_ctx->WriteRegisterFromUnsigned(reg_info, raw_value))
         set_it_simple = true;
     } else {
-      error.SetErrorString("We don't support returning longer than 64 bit "
-                           "integer values at present.");
+      error = Status::FromErrorString(
+          "We don't support returning longer than 64 bit "
+          "integer values at present.");
     }
   } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
     if (is_complex)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "We don't support returning complex values at present");
     else {
       std::optional<uint64_t> bit_width =
           compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
-        error.SetErrorString("can't get type size");
+        error = Status::FromErrorString("can't get type size");
         return error;
       }
       if (*bit_width <= 64) {
@@ -474,7 +469,7 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         Status data_error;
         size_t num_bytes = new_value_sp->GetData(data, data_error);
         if (data_error.Fail()) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "Couldn't convert return value to raw data: %s",
               data_error.AsCString());
           return error;
@@ -487,7 +482,7 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         set_it_simple = true;
       } else {
         // FIXME - don't know how to do 80 bit long doubles yet.
-        error.SetErrorString(
+        error = Status::FromErrorString(
             "We don't support returning float values > 64 bits at present");
       }
     }
@@ -497,8 +492,9 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     // Okay we've got a structure or something that doesn't fit in a simple
     // register. We should figure out where it really goes, but we don't
     // support this yet.
-    error.SetErrorString("We only support setting simple integer and float "
-                         "return types at present.");
+    error = Status::FromErrorString(
+        "We only support setting simple integer and float "
+        "return types at present.");
   }
 
   return error;
@@ -861,10 +857,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_ppc::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_ppc::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = dwarf_lr;
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_pc;
@@ -874,21 +867,17 @@ bool ABISysV_ppc::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   // Our Call Frame Address is the stack pointer value
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // The previous PC is in the LR
+  // The previous PC is in the LR, all other registers are the same.
   row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
-  unwind_plan.AppendRow(row);
 
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("ppc at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("ppc at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_ppc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+UnwindPlanSP ABISysV_ppc::CreateDefaultUnwindPlan() {
 
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_lr;
@@ -902,13 +891,14 @@ bool ABISysV_ppc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("ppc default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(dwarf_lr);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("ppc default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  plan_sp->SetReturnAddressRegister(dwarf_lr);
+  return plan_sp;
 }
 
 bool ABISysV_ppc::RegisterIsVolatile(const RegisterInfo *reg_info) {

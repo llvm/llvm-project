@@ -26,7 +26,6 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/SmallVector.h"
@@ -69,7 +68,7 @@ public:
       FTy = llvm::FunctionType::get(RetTy, ArgTys, false);
     }
     else {
-      FTy = llvm::FunctionType::get(RetTy, std::nullopt, false);
+      FTy = llvm::FunctionType::get(RetTy, {}, false);
     }
   }
 
@@ -199,8 +198,7 @@ protected:
   llvm::Constant *MakeConstantString(StringRef Str, const char *Name = "") {
     ConstantAddress Array =
         CGM.GetAddrOfConstantCString(std::string(Str), Name);
-    return llvm::ConstantExpr::getGetElementPtr(Array.getElementType(),
-                                                Array.getPointer(), Zeros);
+    return Array.getPointer();
   }
 
   /// Emits a linkonce_odr string, whose name is the prefix followed by the
@@ -221,8 +219,7 @@ protected:
         GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
       ConstStr = GV;
     }
-    return llvm::ConstantExpr::getGetElementPtr(ConstStr->getValueType(),
-                                                ConstStr, Zeros);
+    return ConstStr;
   }
 
   /// Returns a property name and encoding string.
@@ -280,9 +277,9 @@ protected:
       Fields.addInt(IntTy, count);
       // int size; (only in GNUstep v2 ABI.
       if (isRuntime(ObjCRuntime::GNUstep, 2)) {
-        llvm::DataLayout td(&TheModule);
-        Fields.addInt(IntTy, td.getTypeSizeInBits(PropertyMetadataTy) /
-            CGM.getContext().getCharWidth());
+        const llvm::DataLayout &DL = TheModule.getDataLayout();
+        Fields.addInt(IntTy, DL.getTypeSizeInBits(PropertyMetadataTy) /
+                                 CGM.getContext().getCharWidth());
       }
       // struct objc_property_list *next;
       Fields.add(NULLPtr);
@@ -776,7 +773,9 @@ class CGObjCGNUstep : public CGObjCGNU {
 
       // The lookup function is guaranteed not to capture the receiver pointer.
       if (auto *LookupFn2 = dyn_cast<llvm::Function>(LookupFn.getCallee()))
-        LookupFn2->addParamAttr(0, llvm::Attribute::NoCapture);
+        LookupFn2->addParamAttr(
+            0, llvm::Attribute::getWithCaptureInfo(CGF.getLLVMContext(),
+                                                   llvm::CaptureInfo::none()));
 
       llvm::Value *args[] = {
           EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),
@@ -1192,9 +1191,9 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // int count;
     MethodList.addInt(IntTy, Methods.size());
     // int size; // sizeof(struct objc_method_description)
-    llvm::DataLayout td(&TheModule);
-    MethodList.addInt(IntTy, td.getTypeSizeInBits(ObjCMethodDescTy) /
-        CGM.getContext().getCharWidth());
+    const llvm::DataLayout &DL = TheModule.getDataLayout();
+    MethodList.addInt(IntTy, DL.getTypeSizeInBits(ObjCMethodDescTy) /
+                                 CGM.getContext().getCharWidth());
     // struct objc_method_description[]
     auto MethodArray = MethodList.beginArray(ObjCMethodDescTy);
     for (auto *M : Methods) {
@@ -1477,8 +1476,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
       TypesGlobal = GV;
     }
-    return llvm::ConstantExpr::getGetElementPtr(TypesGlobal->getValueType(),
-        TypesGlobal, Zeros);
+    return TypesGlobal;
   }
   llvm::Constant *GetConstantSelector(Selector Sel,
                                       const std::string &TypeEncoding) override {
@@ -1512,8 +1510,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   GetSectionBounds(StringRef Section) {
     if (CGM.getTriple().isOSBinFormatCOFF()) {
       if (emptyStruct == nullptr) {
-        emptyStruct = llvm::StructType::create(VMContext, ".objc_section_sentinel");
-        emptyStruct->setBody({}, /*isPacked*/true);
+        emptyStruct = llvm::StructType::create(
+            VMContext, {}, ".objc_section_sentinel", /*isPacked=*/true);
       }
       auto ZeroInit = llvm::Constant::getNullValue(emptyStruct);
       auto Sym = [&](StringRef Prefix, StringRef SecSuffix) {
@@ -1702,11 +1700,18 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   llvm::Value *EmitIvarOffset(CodeGenFunction &CGF,
                               const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar) override {
-    const std::string Name = GetIVarOffsetVariableName(Ivar->getContainingInterface(), Ivar);
+    const ObjCInterfaceDecl *ContainingInterface =
+        Ivar->getContainingInterface();
+    const std::string Name =
+        GetIVarOffsetVariableName(ContainingInterface, Ivar);
     llvm::GlobalVariable *IvarOffsetPointer = TheModule.getNamedGlobal(Name);
-    if (!IvarOffsetPointer)
+    if (!IvarOffsetPointer) {
       IvarOffsetPointer = new llvm::GlobalVariable(TheModule, IntTy, false,
               llvm::GlobalValue::ExternalLinkage, nullptr, Name);
+      if (Ivar->getAccessControl() != ObjCIvarDecl::Private &&
+          Ivar->getAccessControl() != ObjCIvarDecl::Package)
+        CGM.setGVProperties(IvarOffsetPointer, ContainingInterface);
+    }
     CharUnits Align = CGM.getIntAlign();
     llvm::Value *Offset =
         CGF.Builder.CreateAlignedLoad(IntTy, IvarOffsetPointer, Align);
@@ -1821,9 +1826,11 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       Context.getASTObjCInterfaceLayout(SuperClassDecl).getSize().getQuantity();
     // Instance size is negative for classes that have not yet had their ivar
     // layout calculated.
-    classFields.addInt(LongTy,
-      0 - (Context.getASTObjCImplementationLayout(OID).getSize().getQuantity() -
-      superInstanceSize));
+    classFields.addInt(
+        LongTy, 0 - (Context.getASTObjCInterfaceLayout(OID->getClassInterface())
+                         .getSize()
+                         .getQuantity() -
+                     superInstanceSize));
 
     if (classDecl->all_declared_ivar_begin() == nullptr)
       classFields.addNullPointer(PtrTy);
@@ -1831,7 +1838,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       int ivar_count = 0;
       for (const ObjCIvarDecl *IVD = classDecl->all_declared_ivar_begin(); IVD;
            IVD = IVD->getNextIvar()) ivar_count++;
-      llvm::DataLayout td(&TheModule);
+      const llvm::DataLayout &DL = TheModule.getDataLayout();
       // struct objc_ivar_list *ivars;
       ConstantInitBuilder b(CGM);
       auto ivarListBuilder = b.beginStruct();
@@ -1844,8 +1851,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         PtrToInt8Ty,
         Int32Ty,
         Int32Ty);
-      ivarListBuilder.addInt(SizeTy, td.getTypeSizeInBits(ObjCIvarTy) /
-          CGM.getContext().getCharWidth());
+      ivarListBuilder.addInt(SizeTy, DL.getTypeSizeInBits(ObjCIvarTy) /
+                                         CGM.getContext().getCharWidth());
       // struct objc_ivar ivars[]
       auto ivarArrayBuilder = ivarListBuilder.beginArray();
       for (const ObjCIvarDecl *IVD = classDecl->all_declared_ivar_begin(); IVD;
@@ -2072,7 +2079,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
 
         Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero),
                              SelfIsNilBlock, ContBlock,
-                             MDHelper.createBranchWeights(1, 1 << 20));
+                             MDHelper.createUnlikelyBranchWeights());
 
         CGF.EmitBlock(SelfIsNilBlock);
 
@@ -2095,10 +2102,15 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         auto *classStart =
             llvm::StructType::get(PtrTy, PtrTy, PtrTy, LongTy, LongTy);
         auto &astContext = CGM.getContext();
-        auto flags = Builder.CreateLoad(
-            Address{Builder.CreateStructGEP(classStart, selfValue, 4), LongTy,
-                    CharUnits::fromQuantity(
-                        astContext.getTypeAlign(astContext.UnsignedLongTy))});
+        // FIXME: The following few lines up to and including the call to
+        // `CreateLoad` were known to miscompile when MSVC 19.40.33813 is used
+        // to build Clang. When the bug is fixed in future MSVC releases, we
+        // should revert these lines to their previous state. See discussion in
+        // https://github.com/llvm/llvm-project/pull/102681
+        llvm::Value *Val = Builder.CreateStructGEP(classStart, selfValue, 4);
+        auto Align = CharUnits::fromQuantity(
+            astContext.getTypeAlign(astContext.UnsignedLongTy));
+        auto flags = Builder.CreateLoad(Address{Val, LongTy, Align});
         auto isInitialized =
             Builder.CreateAnd(flags, ClassFlags::ClassFlagInitialized);
         llvm::BasicBlock *notInitializedBlock =
@@ -2107,7 +2119,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
             CGF.createBasicBlock("objc_direct_method.class_initialized");
         Builder.CreateCondBr(Builder.CreateICmpEQ(isInitialized, Zeros[0]),
                              notInitializedBlock, initializedBlock,
-                             MDHelper.createBranchWeights(1, 1 << 20));
+                             MDHelper.createUnlikelyBranchWeights());
         CGF.EmitBlock(notInitializedBlock);
         Builder.SetInsertPoint(notInitializedBlock);
         CGF.EmitRuntimeCall(SentInitializeFn, selfValue);
@@ -2905,23 +2917,29 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
       break;
     case CodeGenOptions::Mixed:
     case CodeGenOptions::NonLegacy:
+      StringRef name = "objc_msgSend";
       if (CGM.ReturnTypeUsesFPRet(ResultType)) {
-        imp =
-            CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
-                                      "objc_msgSend_fpret")
-                .getCallee();
+        name = "objc_msgSend_fpret";
       } else if (CGM.ReturnTypeUsesSRet(MSI.CallInfo)) {
-        // The actual types here don't matter - we're going to bitcast the
-        // function anyway
-        imp =
-            CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
-                                      "objc_msgSend_stret")
-                .getCallee();
-      } else {
-        imp = CGM.CreateRuntimeFunction(
-                     llvm::FunctionType::get(IdTy, IdTy, true), "objc_msgSend")
-                  .getCallee();
+        name = "objc_msgSend_stret";
+
+        // The address of the memory block is be passed in x8 for POD type,
+        // or in x0 for non-POD type (marked as inreg).
+        bool shouldCheckForInReg =
+            CGM.getContext()
+                .getTargetInfo()
+                .getTriple()
+                .isWindowsMSVCEnvironment() &&
+            CGM.getContext().getTargetInfo().getTriple().isAArch64();
+        if (shouldCheckForInReg && CGM.ReturnTypeHasInReg(MSI.CallInfo)) {
+          name = "objc_msgSend_stret2";
+        }
       }
+      // The actual types here don't matter - we're going to bitcast the
+      // function anyway
+      imp = CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
+                                      name)
+                .getCallee();
     }
 
   // Reset the receiver in case the lookup modified it
@@ -3011,9 +3029,9 @@ GenerateMethodList(StringRef ClassName,
   bool isV2ABI = isRuntime(ObjCRuntime::GNUstep, 2);
   if (isV2ABI) {
     // size_t size;
-    llvm::DataLayout td(&TheModule);
-    MethodList.addInt(SizeTy, td.getTypeSizeInBits(ObjCMethodTy) /
-        CGM.getContext().getCharWidth());
+    const llvm::DataLayout &DL = TheModule.getDataLayout();
+    MethodList.addInt(SizeTy, DL.getTypeSizeInBits(ObjCMethodTy) /
+                                  CGM.getContext().getCharWidth());
     ObjCMethodTy =
       llvm::StructType::get(CGM.getLLVMContext(), {
         IMPTy,       // Method pointer
@@ -3153,10 +3171,9 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
   Elements.addInt(LongTy, info);
   // instance_size
   if (isMeta) {
-    llvm::DataLayout td(&TheModule);
-    Elements.addInt(LongTy,
-                    td.getTypeSizeInBits(ClassTy) /
-                      CGM.getContext().getCharWidth());
+    const llvm::DataLayout &DL = TheModule.getDataLayout();
+    Elements.addInt(LongTy, DL.getTypeSizeInBits(ClassTy) /
+                                CGM.getContext().getCharWidth());
   } else
     Elements.add(InstanceSize);
   // ivars
@@ -3624,8 +3641,9 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   }
 
   // Get the size of instances.
-  int instanceSize =
-    Context.getASTObjCImplementationLayout(OID).getSize().getQuantity();
+  int instanceSize = Context.getASTObjCInterfaceLayout(OID->getClassInterface())
+                         .getSize()
+                         .getQuantity();
 
   // Collect information about instance variables.
   SmallVector<llvm::Constant*, 16> IvarNames;

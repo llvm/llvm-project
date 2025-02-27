@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wparentheses -fsyntax-only -verify %s
-// RUN: %clang_cc1 -Wparentheses -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=parentheses -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-error=parentheses -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 bool someConditionFunc();
 
@@ -214,4 +214,15 @@ namespace PR20735 {
     // fix-it:"{{.*}}":{[[@LINE-8]]:9-[[@LINE-8]]:9}:"("
     // fix-it:"{{.*}}":{[[@LINE-9]]:20-[[@LINE-9]]:20}:")"
   }
+}
+
+void consecutive_builtin_compare(int x, int y, int z) {
+  (void)(x < y < z);  // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)(x < y > z);  // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)(x < y <= z); // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)(x <= y > z); // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)((x < y) < z);  // no-warning
+  (void)((x < y) >= z); // no-warning
+
+  // TODO: Also issue warning for consecutive comparisons that use overloaded comparison operators?
 }

@@ -230,7 +230,8 @@ AppleGetPendingItemsHandler::GetPendingItems(Thread &thread, addr_t queue,
   if (!thread.SafeToCallFunctions()) {
     LLDB_LOGF(log, "Not safe to call functions on thread 0x%" PRIx64,
               thread.GetID());
-    error.SetErrorString("Not safe to call functions on this thread.");
+    error =
+        Status::FromErrorString("Not safe to call functions on this thread.");
     return return_value;
   }
 
@@ -337,8 +338,9 @@ AppleGetPendingItemsHandler::GetPendingItems(Thread &thread, addr_t queue,
   thread.CalculateExecutionContext(exe_ctx);
 
   if (get_pending_items_caller == nullptr) {
-    error.SetErrorString("Unable to compile function to call "
-                         "__introspection_dispatch_queue_get_pending_items");
+    error = Status::FromErrorString(
+        "Unable to compile function to call "
+        "__introspection_dispatch_queue_get_pending_items");
     return return_value;
   }
 
@@ -352,9 +354,10 @@ AppleGetPendingItemsHandler::GetPendingItems(Thread &thread, addr_t queue,
               "__introspection_dispatch_queue_get_pending_items(), got "
               "ExpressionResults %d, error contains %s",
               func_call_ret, error.AsCString(""));
-    error.SetErrorString("Unable to call "
-                         "__introspection_dispatch_queue_get_pending_items() "
-                         "for list of queues");
+    error = Status::FromErrorString(
+        "Unable to call "
+        "__introspection_dispatch_queue_get_pending_items() "
+        "for list of queues");
     return return_value;
   }
 

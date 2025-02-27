@@ -280,8 +280,9 @@ unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   assert(ARC::GPR32RegClass.contains(SrcReg) &&
          "Only GPR32 src copy supported.");
   assert(ARC::GPR32RegClass.contains(DestReg) &&
@@ -293,7 +294,8 @@ void ARCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void ARCInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -322,7 +324,8 @@ void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();

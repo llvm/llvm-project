@@ -24,51 +24,6 @@
 namespace mlir {
 namespace dataflow {
 
-/// This lattice value represents the integer range of an SSA value.
-class IntegerValueRange {
-public:
-  /// Create a maximal range ([0, uint_max(t)] / [int_min(t), int_max(t)])
-  /// range that is used to mark the value as unable to be analyzed further,
-  /// where `t` is the type of `value`.
-  static IntegerValueRange getMaxRange(Value value);
-
-  /// Create an integer value range lattice value.
-  IntegerValueRange(std::optional<ConstantIntRanges> value = std::nullopt)
-      : value(std::move(value)) {}
-
-  /// Whether the range is uninitialized. This happens when the state hasn't
-  /// been set during the analysis.
-  bool isUninitialized() const { return !value.has_value(); }
-
-  /// Get the known integer value range.
-  const ConstantIntRanges &getValue() const {
-    assert(!isUninitialized());
-    return *value;
-  }
-
-  /// Compare two ranges.
-  bool operator==(const IntegerValueRange &rhs) const {
-    return value == rhs.value;
-  }
-
-  /// Take the union of two ranges.
-  static IntegerValueRange join(const IntegerValueRange &lhs,
-                                const IntegerValueRange &rhs) {
-    if (lhs.isUninitialized())
-      return rhs;
-    if (rhs.isUninitialized())
-      return lhs;
-    return IntegerValueRange{lhs.getValue().rangeUnion(rhs.getValue())};
-  }
-
-  /// Print the integer value range.
-  void print(raw_ostream &os) const { os << value; }
-
-private:
-  /// The known integer value range.
-  std::optional<ConstantIntRanges> value;
-};
-
 /// This lattice element represents the integer value range of an SSA value.
 /// When this lattice is updated, it automatically updates the constant value
 /// of the SSA value (if the range can be narrowed to one).
@@ -95,14 +50,15 @@ public:
   /// At an entry point, we cannot reason about interger value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {
     propagateIfChanged(lattice, lattice->join(IntegerValueRange::getMaxRange(
-                                    lattice->getPoint())));
+                                    lattice->getAnchor())));
   }
 
   /// Visit an operation. Invoke the transfer function on each operation that
   /// implements `InferIntRangeInterface`.
-  void visitOperation(Operation *op,
-                      ArrayRef<const IntegerValueRangeLattice *> operands,
-                      ArrayRef<IntegerValueRangeLattice *> results) override;
+  LogicalResult
+  visitOperation(Operation *op,
+                 ArrayRef<const IntegerValueRangeLattice *> operands,
+                 ArrayRef<IntegerValueRangeLattice *> results) override;
 
   /// Visit block arguments or operation results of an operation with region
   /// control-flow for which values are not defined by region control-flow. This
@@ -114,6 +70,18 @@ public:
                                ArrayRef<IntegerValueRangeLattice *> argLattices,
                                unsigned firstIndex) override;
 };
+
+/// Succeeds if an op can be converted to its unsigned equivalent without
+/// changing its semantics. This is the case when none of its openands or
+/// results can be below 0 when analyzed from a signed perspective.
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op);
+
+/// Succeeds when a value is statically non-negative in that it has a lower
+/// bound on its value (if it is treated as signed) and that bound is
+/// non-negative.
+/// Note, the results of this query may not be accurate for `index` if you plan
+/// to use a non-64-bit index.
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v);
 
 } // end namespace dataflow
 } // end namespace mlir

@@ -110,7 +110,7 @@ public:
 
 Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
                                            Type structType, Value source) {
-  Value metaData = builder.create<LLVM::UndefOp>(loc, structType);
+  Value metaData = builder.create<LLVM::PoisonOp>(loc, structType);
   SpecifierStructBuilder md(metaData);
   if (!source) {
     auto memSizeArrayType =
@@ -350,8 +350,8 @@ public:
 // Public method for populating conversion rules.
 //===----------------------------------------------------------------------===//
 
-void mlir::populateStorageSpecifierToLLVMPatterns(TypeConverter &converter,
-                                                  RewritePatternSet &patterns) {
+void mlir::populateStorageSpecifierToLLVMPatterns(
+    const TypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<StorageSpecifierGetOpConverter, StorageSpecifierSetOpConverter,
                StorageSpecifierInitOpConverter>(converter,
                                                 patterns.getContext());

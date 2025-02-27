@@ -24,7 +24,8 @@ using namespace sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 // Convert type range to new types range, with sparse tensors externalized.
-static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
+static void convTypes(bool &hasAnnotation, TypeRange types,
+                      SmallVectorImpl<Type> &convTypes,
                       SmallVectorImpl<Type> *extraTypes, bool directOut) {
   for (auto type : types) {
     // All "dense" data passes through unmodified.
@@ -32,6 +33,7 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
       convTypes.push_back(type);
       continue;
     }
+    hasAnnotation = true;
 
     // Convert the external representations of the pos/crd/val arrays.
     const SparseTensorType stt(cast<RankedTensorType>(type));
@@ -42,7 +44,7 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
           if (kind == SparseTensorFieldKind::PosMemRef ||
               kind == SparseTensorFieldKind::CrdMemRef ||
               kind == SparseTensorFieldKind::ValMemRef) {
-            auto rtp = t.cast<ShapedType>();
+            auto rtp = cast<ShapedType>(t);
             if (!directOut) {
               rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
               if (extraTypes)
@@ -97,7 +99,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
             mem = builder.create<sparse_tensor::ToValuesOp>(loc, inputs[0]);
           toVals.push_back(mem);
         } else {
-          ShapedType rtp = t.cast<ShapedType>();
+          ShapedType rtp = cast<ShapedType>(t);
           rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
           inputs.push_back(extraVals[extra++]);
           retTypes.push_back(rtp);
@@ -176,12 +178,14 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     SmallVector<Type> inputTypes;
     SmallVector<Type> outputTypes;
     SmallVector<Type> extraTypes;
-    convTypes(funcOp.getArgumentTypes(), inputTypes, nullptr, false);
-    convTypes(funcOp.getResultTypes(), outputTypes, &extraTypes, directOut);
+    bool hasAnnotation = false;
+    convTypes(hasAnnotation, funcOp.getArgumentTypes(), inputTypes, nullptr,
+              false);
+    convTypes(hasAnnotation, funcOp.getResultTypes(), outputTypes, &extraTypes,
+              directOut);
 
     // Only sparse inputs or outputs need a wrapper method.
-    if (inputTypes.size() == funcOp.getArgumentTypes().size() &&
-        outputTypes.size() == funcOp.getResultTypes().size())
+    if (!hasAnnotation)
       return failure();
 
     // Modify the original method into an internal, private method.

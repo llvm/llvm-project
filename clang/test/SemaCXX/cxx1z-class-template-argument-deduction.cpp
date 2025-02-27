@@ -12,14 +12,22 @@ namespace std {
     size_t n;
     initializer_list();
   };
-  // FIXME: This should probably not be necessary.
-  template<typename T> initializer_list(initializer_list<T>) -> initializer_list<T>;
 }
 
 template<typename T> constexpr bool has_type(...) { return false; }
 template<typename T> constexpr bool has_type(T&) { return true; }
 
-std::initializer_list il = {1, 2, 3, 4, 5};
+std::initializer_list il1 = {1, 2, 3, 4, 5};
+auto il2 = std::initializer_list{1, 2, 3, 4};
+auto il3 = std::initializer_list(il1);
+auto il4 = std::initializer_list{il1, il1, il1};
+static_assert(has_type<std::initializer_list<int>>(il1));
+static_assert(has_type<std::initializer_list<int>>(il2));
+static_assert(has_type<std::initializer_list<int>>(il3));
+static_assert(has_type<std::initializer_list<std::initializer_list<int>>>(il4));
+
+auto il5 = std::initializer_list{il1};
+// expected-error@-1 {{no viable conversion from 'std::initializer_list<int>' to 'const int'}}
 
 template<typename T> struct vector {
   template<typename Iter> vector(Iter, Iter);
@@ -134,11 +142,13 @@ namespace look_into_current_instantiation {
                     // templates, and members of the current instantiation
   A<float> &r = a;
 
-  template<typename T> struct B { // expected-note {{could not match 'B<T>' against 'int'}}
+  template<typename T> struct B { // expected-note {{could not match 'B<T>' against 'int'}} \
+                                  // expected-note {{implicit deduction guide declared as 'template <typename T> B(B<T>) -> B<T>'}}
     struct X {
       typedef T type;
     };
-    B(typename X::type); // expected-note {{couldn't infer template argument 'T'}}
+    B(typename X::type); // expected-note {{couldn't infer template argument 'T'}} \
+                         // expected-note {{implicit deduction guide declared as 'template <typename T> B(typename X::type) -> B<T>'}}
   };
   B b = 0; // expected-error {{no viable}}
 
@@ -559,8 +569,10 @@ namespace PR47175 {
 
 // Ensure we don't crash when CTAD fails.
 template <typename T1, typename T2>
-struct Foo {   // expected-note{{candidate function template not viable}}
-  Foo(T1, T2); // expected-note{{candidate function template not viable}}
+struct Foo {   // expected-note {{candidate function template not viable}} \
+               // expected-note {{implicit deduction guide declared as 'template <typename T1, typename T2> Foo(Foo<T1, T2>) -> Foo<T1, T2>'}}
+  Foo(T1, T2); // expected-note {{candidate function template not viable}} \
+               // expected-note {{implicit deduction guide declared as 'template <typename T1, typename T2> Foo(T1, T2) -> Foo<T1, T2>'}}
 };
 
 template <typename... Args>

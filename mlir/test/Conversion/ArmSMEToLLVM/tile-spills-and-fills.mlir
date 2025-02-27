@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -allocate-arm-sme-tiles -split-input-file -verify-diagnostics | \
+// RUN: mlir-opt %s -test-arm-sme-tile-allocation -split-input-file | \
 // RUN: FileCheck %s  --check-prefix=AFTER-TILE-ALLOC
-// RUN: mlir-opt %s -allocate-arm-sme-tiles -convert-arm-sme-to-llvm -canonicalize -cse \
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(convert-arm-sme-to-llvm,cse,canonicalize))" \
 // RUN:   -split-input-file -verify-diagnostics | \
 // RUN: FileCheck %s  --check-prefix=AFTER-LLVM-LOWERING
 
@@ -53,9 +53,13 @@
 /// These are obviously redundant, but there's no checks to avoid this.
 func.func @use_too_many_tiles() {
   %0 = arm_sme.zero : vector<[4]x[4]xi32>
+  "test.prevent_zero_merge"() : () -> ()
   %1 = arm_sme.zero : vector<[4]x[4]xi32>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %2 = arm_sme.zero : vector<[8]x[8]xi16>
+  "test.some_use"(%0) : (vector<[4]x[4]xi32>) -> ()
+  "test.some_use"(%1) : (vector<[4]x[4]xi32>) -> ()
+  "test.some_use"(%2) : (vector<[8]x[8]xi16>) -> ()
   return
 }
 // AFTER-TILE-ALLOC-LABEL: @use_too_many_tiles
@@ -72,17 +76,32 @@ func.func @use_too_many_tiles() {
 //  AFTER-LLVM-LOWERING-DAG: %[[C8:.*]] = arith.constant 8 : index
 //  AFTER-LLVM-LOWERING-DAG: %[[VSCALE:.*]] = vector.vscale
 //  AFTER-LLVM-LOWERING-DAG: %[[SVL_H:.*]] = arith.muli %[[VSCALE]], %[[C8]] : index
+
+///     0. Create an in-memory-tile
+///        Note: 16 is an in-memory tile ID, that is a tile ID >= 16
+
 //  AFTER-LLVM-LOWERING-DAG: %[[TILE_ALLOCA:.*]] = memref.alloca(%[[SVL_H]], %[[SVL_H]])
 // AFTER-LLVM-LOWERING-SAME:   {arm_sme.in_memory_tile_id = 16 : i32} : memref<?x?xi16>
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
-//                           Note: 17 is the mask for the 32-bit tile 0.
+
+///     1. The following instruciton corresponds to %0 after tile allocation
+///        Note: 17 is the mask for the 32-bit tile 0.
+
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 17 : i32}>
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
-//                           Note: 34 is the mask for the 32-bit tile 1.
+
+///     2. The following instruciton corresponds to %1 after tile allocation
+///        Note: 34 is the mask for the 32-bit tile 1.
+
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 34 : i32}>
-//
+
+///     3. swap(<in-memory-tile>, tile 0).
+///        This can be interpreted as spilling %0 (the 32-bit tile 0), so that
+///        %2 can be allocated a tile (16 bit tile 0). Note that this is
+///        swapping vector<[8]x[8]xi16> rather than vector<[4]x[4]xi32>.
+
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
@@ -92,8 +111,15 @@ func.func @use_too_many_tiles() {
 // AFTER-LLVM-LOWERING-NEXT:   "arm_sme.intr.ld1h.horiz"({{.*}}, %[[SLICE_PTR]], {{.*}}) <{tile_id = 0 : i32}>
 // AFTER-LLVM-LOWERING-NEXT:   vector.store %[[SLICE]], %[[TILE_ALLOCA]]
 // AFTER-LLVM-LOWERING-NEXT: }
-//                           Note: 85 is the mask for the 16-bit tile 0.
+
+///     4. The following instruciton corresponds to %3 after tile allocation
+///        Note: 85 is the mask for the 16-bit tile 0.
+
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 85 : i32}>
+
+///     5.  swap(<inMemoryTile>, tile 0)
+///         This can be interpreted as restoring %0.
+
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
@@ -109,18 +135,16 @@ func.func @use_too_many_tiles() {
 /// Note: In this example an entire tile swap is inserted before/after the
 /// `arm_sme.load_tile_slice` operation. Really, this only needs to spill a
 /// single tile slice (and can omit the initial load, like in the previous example).
-func.func @very_excessive_spills(%memref : memref<?x?xf32>) -> vector<[4]x[4]xf32> {
-  %useAllTiles = arm_sme.get_tile : vector<[16]x[16]xi8>
+func.func @very_excessive_spills(%useAllTiles : vector<[16]x[16]xi8>, %memref: memref<?x?xf32>) -> vector<[4]x[4]xf32> {
   %c0 = arith.constant 0 : index
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
   %mask = vector.constant_mask [4] : vector<[4]xi1>
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %loadSlice = arm_sme.load_tile_slice %memref[%c0, %c0], %mask, %tile, %c0 : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
-  return %loadSlice : vector<[4]x[4]xf32>
+  "test.some_use"(%useAllTiles) : (vector<[16]x[16]xi8>) -> ()
+  "test.some_use"(%loadSlice) : (vector<[4]x[4]xf32>) -> ()
 }
 // AFTER-TILE-ALLOC-LABEL: @very_excessive_spills
-//      AFTER-TILE-ALLOC: arm_sme.get_tile
-// AFTER-TILE-ALLOC-SAME:   tile_id = 0
 //      AFTER-TILE-ALLOC: arm_sme.load_tile_slice
 // AFTER-TILE-ALLOC-SAME:   tile_id = 16
 
@@ -133,22 +157,38 @@ func.func @very_excessive_spills(%memref : memref<?x?xf32>) -> vector<[4]x[4]xf3
 //  AFTER-LLVM-LOWERING-DAG: %[[TILE_ALLOCA:.*]] = memref.alloca(%[[SVL_S]], %[[SVL_S]])
 // AFTER-LLVM-LOWERING-SAME:   {arm_sme.in_memory_tile_id = 16 : i32} : memref<?x?xf32>
 //
+
+/// 1. Swap %useAllTiles and %tile - note that this will only swap one 32-bit
+///    tile (vector<[4]x[4]xf32>)
+
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_S]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
 //      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
 //      AFTER-LLVM-LOWERING:   %[[SLICE_PTR:.*]] = llvm.getelementptr %[[BASE_PTR]]
+// Read ZA tile slice -> vector
 //      AFTER-LLVM-LOWERING:   %[[SLICE:.*]] = "arm_sme.intr.read.horiz"{{.*}} <{tile_id = 0 : i32}>
+/// Load vector from memory -> ZA tile
 // AFTER-LLVM-LOWERING-NEXT:   "arm_sme.intr.ld1w.horiz"({{.*}}, %[[SLICE_PTR]], {{.*}}) <{tile_id = 0 : i32}>
+/// Store ZA tile slice in memory
 // AFTER-LLVM-LOWERING-NEXT:   vector.store %[[SLICE]], %[[TILE_ALLOCA]]
 // AFTER-LLVM-LOWERING-NEXT: }
+
+/// 2. Load into %tile
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.ld1w.horiz"{{.*}} <{tile_id = 0 : i32}>
+
+/// 3. Swap %useAllTiles and %tile - note that this will only swap one 32-bit
+///    tile (vector<[4]x[4]xf32>)
+
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_S]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
 //      AFTER-LLVM-LOWERING:   %[[BASE_PTR:.*]] = llvm.extractvalue %[[MEM_DESC]][1]
 //      AFTER-LLVM-LOWERING:   %[[SLICE_PTR:.*]] = llvm.getelementptr %[[BASE_PTR]]
+/// Read ZA tile slice -> vector
 //      AFTER-LLVM-LOWERING:   %[[SLICE:.*]] = "arm_sme.intr.read.horiz"{{.*}} <{tile_id = 0 : i32}>
+/// Load vector from memory -> ZA tile
 // AFTER-LLVM-LOWERING-NEXT:   "arm_sme.intr.ld1w.horiz"({{.*}}, %[[SLICE_PTR]], {{.*}}) <{tile_id = 0 : i32}>
+/// Store ZA tile slice in memory
 // AFTER-LLVM-LOWERING-NEXT:   vector.store %[[SLICE]], %[[TILE_ALLOCA]]
 // AFTER-LLVM-LOWERING-NEXT: }

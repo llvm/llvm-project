@@ -2148,7 +2148,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
       else
         consumeError(NameOrErr.takeError());
 
-      if (SectName.equals("__text")) {
+      if (SectName == "__text") {
         DataRefImpl Ref = Section.getRawDataRefImpl();
         StringRef SegName = MachOOF->getSectionFinalSegmentName(Ref);
         DisassembleMachO(FileName, MachOOF, SegName, SectName);
@@ -2394,8 +2394,16 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
       outs() << "    cpusubtype " << (cpusubtype & ~MachO::CPU_SUBTYPE_MASK)
              << "\n";
     }
-    if (verbose &&
-        (cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64)
+    if (verbose && cputype == MachO::CPU_TYPE_ARM64 &&
+        MachO::CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpusubtype)) {
+      outs() << "    capabilities CPU_SUBTYPE_ARM64E_";
+      if (MachO::CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpusubtype))
+        outs() << "KERNEL_";
+      outs() << format("PTRAUTH_VERSION %d",
+                       MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpusubtype))
+             << "\n";
+    } else if (verbose && (cpusubtype & MachO::CPU_SUBTYPE_MASK) ==
+                              MachO::CPU_SUBTYPE_LIB64)
       outs() << "    capabilities CPU_SUBTYPE_LIB64\n";
     else
       outs() << "    capabilities "
@@ -7179,7 +7187,7 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
     DSYMBuf = std::move(BufOrErr.get());
 
     Expected<std::unique_ptr<Binary>> BinaryOrErr =
-        createBinary(DSYMBuf.get()->getMemBufferRef());
+        createBinary(DSYMBuf->getMemBufferRef());
     if (!BinaryOrErr) {
       reportError(BinaryOrErr.takeError(), DSYMPath);
       return nullptr;
@@ -7321,6 +7329,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   // (32-bit and 64-bit) comments printed with different spacing before the
   // comment causing different diffs with the 'C' disassembler library API.
   // IP->setCommentStream(CommentStream);
+
+  for (StringRef Opt : DisassemblerOptions)
+    if (!IP->applyTargetSpecificCLOption(Opt))
+      reportError(Filename, "unrecognized disassembler option: " + Opt);
 
   // Set up separate thumb disassembler if needed.
   std::unique_ptr<const MCRegisterInfo> ThumbMRI;
@@ -8368,7 +8380,17 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
       outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
       break;
     }
-    if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64) {
+
+    if (cputype == MachO::CPU_TYPE_ARM64 &&
+        MachO::CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpusubtype)) {
+      const char *Format =
+          MachO::CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpusubtype)
+              ? " PAK%02d"
+              : " PAC%02d";
+      outs() << format(Format,
+                       MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpusubtype));
+    } else if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) ==
+               MachO::CPU_SUBTYPE_LIB64) {
       outs() << " LIB64";
     } else {
       outs() << format("  0x%02" PRIx32,

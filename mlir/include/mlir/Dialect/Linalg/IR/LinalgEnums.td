@@ -22,7 +22,14 @@ def UnaryFn : I32EnumAttr<"UnaryFn", "", [
   I32EnumAttrCase<"abs", 2>,
   I32EnumAttrCase<"ceil", 3>,
   I32EnumAttrCase<"floor", 4>,
-  I32EnumAttrCase<"negf", 5>
+  I32EnumAttrCase<"negf", 5>,
+  I32EnumAttrCase<"reciprocal", 6>,
+  I32EnumAttrCase<"round", 7>,
+  I32EnumAttrCase<"sqrt", 8>,
+  I32EnumAttrCase<"rsqrt", 9>,
+  I32EnumAttrCase<"square", 10>,
+  I32EnumAttrCase<"tanh", 11>,
+  I32EnumAttrCase<"erf", 12>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";
@@ -36,11 +43,77 @@ def BinaryFn : I32EnumAttr<"BinaryFn", "", [
   I32EnumAttrCase<"max_signed", 5>,
   I32EnumAttrCase<"min_signed", 6>,
   I32EnumAttrCase<"max_unsigned", 7>,
-  I32EnumAttrCase<"min_unsigned", 8>
+  I32EnumAttrCase<"min_unsigned", 8>,
+  I32EnumAttrCase<"powf", 9>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";
 }
+def TernaryFn : I32EnumAttr<"TernaryFn", "", [
+  I32EnumAttrCase<"select", 0>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
+// Join two I32EnumAttrCase lists. This joining takes care that the
+// 'int enum values' in the combined list do not overlap. It does this
+// by adding to each element of second list the offset '!size(a)'.
+class JoinTwoI32EnumAttrCaseList< list<I32EnumAttrCase> a,
+                                  list<I32EnumAttrCase> b> {
+  int aSize = !size(a);
+  list<I32EnumAttrCase> result =
+             !foldl(a, b, acc, var,
+                    acc # [I32EnumAttrCase<var.symbol,
+                                           !add(var.value, aSize)
+                                           >]);
+}
+
+// Flatten 'list of list of I32EnumAttrCase' to 'list of I32EnumAttrCase'.
+// The flattening (via call to 'join') ensures no overlap in enum values.
+class ConcatI32EnumAtrCaseList< list<list<I32EnumAttrCase>> l> {
+  list<I32EnumAttrCase> result =
+             !foldl([]<I32EnumAttrCase>, l, acc, var,
+                    JoinTwoI32EnumAttrCaseList<acc, var>.result);
+}
+
+// Define a unified `enum class : i32` for all element-wise op functions.
+def ElementwiseKind :
+            I32EnumAttr<"ElementwiseKind",
+                        "",
+                        ConcatI32EnumAtrCaseList<[UnaryFn.enumerants,
+                                                  BinaryFn.enumerants,
+                                                  TernaryFn.enumerants]>.result
+                      > {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
+// Define an `enum class : i32` that marks where each individual enum class
+// e.g. UnaryFn, BinaryFn, etc. end in the unified enum class ElementwiseKind.
+def ElementwiseCaseLimits : I32EnumAttr<"ElementwiseCaseLimits", "", []> {
+  int last_unary = !size(UnaryFn.enumerants);
+  int last_binary = !add(last_unary, !size(BinaryFn.enumerants));
+  int last_ternary = !add(last_binary, !size(TernaryFn.enumerants));
+
+  let enumerants =  [
+         I32EnumAttrCase<"LastUnary", last_unary>,
+         I32EnumAttrCase<"LastBinary", last_binary>,
+         I32EnumAttrCase<"LastTernary", last_ternary>];
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
+// Define an `enum class : i32` to categorise arity elementwise ops.
+def ElementwiseArityGroup : I32EnumAttr<"ElementwiseArityGroup", "", [
+  I32EnumAttrCase<"Unary", 1>,
+  I32EnumAttrCase<"Binary", 2>,
+  I32EnumAttrCase<"Ternary", 3>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
 def TypeFn : I32EnumAttr<"TypeFn", "", [
   I32EnumAttrCase<"cast_signed", 0>,
   I32EnumAttrCase<"cast_unsigned", 1>

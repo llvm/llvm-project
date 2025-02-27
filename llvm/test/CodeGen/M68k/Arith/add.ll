@@ -43,7 +43,7 @@ define fastcc void @test3(ptr inreg %a) nounwind {
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (%a0), %d0
-; CHECK-NEXT:    move.l #0, %d1
+; CHECK-NEXT:    moveq #0, %d1
 ; CHECK-NEXT:    move.l #-2147483648, %d2
 ; CHECK-NEXT:    add.l (4,%a0), %d2
 ; CHECK-NEXT:    addx.l %d0, %d1
@@ -64,8 +64,9 @@ define fastcc void @test4(ptr inreg %a) nounwind {
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (%a0), %d0
-; CHECK-NEXT:    move.l #0, %d1
-; CHECK-NEXT:    move.l #128, %d2
+; CHECK-NEXT:    moveq #0, %d1
+; CHECK-NEXT:    moveq #127, %d2
+; CHECK-NEXT:    not.b %d2
 ; CHECK-NEXT:    add.l (4,%a0), %d2
 ; CHECK-NEXT:    addx.l %d0, %d1
 ; CHECK-NEXT:    move.l %d2, (4,%a0)

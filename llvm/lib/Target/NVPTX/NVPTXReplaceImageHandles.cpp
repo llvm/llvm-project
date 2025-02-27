@@ -11,17 +11,15 @@
 // to work reliably, inlining of all function call must be performed.
 //
 //===----------------------------------------------------------------------===//
-
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -42,10 +40,8 @@ public:
 private:
   bool processInstr(MachineInstr &MI);
   bool replaceImageHandle(MachineOperand &Op, MachineFunction &MF);
-  bool findIndexForHandle(MachineOperand &Op, MachineFunction &MF,
-                          unsigned &Idx);
 };
-}
+} // namespace
 
 char NVPTXReplaceImageHandles::ID = 0;
 
@@ -1757,9 +1753,11 @@ bool NVPTXReplaceImageHandles::processInstr(MachineInstr &MI) {
     }
 
     return true;
-  } else if (MCID.TSFlags & NVPTXII::IsSuldMask) {
+  }
+  if (MCID.TSFlags & NVPTXII::IsSuldMask) {
     unsigned VecSize =
-      1 << (((MCID.TSFlags & NVPTXII::IsSuldMask) >> NVPTXII::IsSuldShift) - 1);
+        1 << (((MCID.TSFlags & NVPTXII::IsSuldMask) >> NVPTXII::IsSuldShift) -
+              1);
 
     // For a surface load of vector size N, the Nth operand will be the surfref
     MachineOperand &SurfHandle = MI.getOperand(VecSize);
@@ -1768,7 +1766,8 @@ bool NVPTXReplaceImageHandles::processInstr(MachineInstr &MI) {
       MI.setDesc(TII->get(suldRegisterToIndexOpcode(MI.getOpcode())));
 
     return true;
-  } else if (MCID.TSFlags & NVPTXII::IsSustFlag) {
+  }
+  if (MCID.TSFlags & NVPTXII::IsSustFlag) {
     // This is a surface store, so operand 0 is a surfref
     MachineOperand &SurfHandle = MI.getOperand(0);
 
@@ -1776,7 +1775,8 @@ bool NVPTXReplaceImageHandles::processInstr(MachineInstr &MI) {
       MI.setDesc(TII->get(sustRegisterToIndexOpcode(MI.getOpcode())));
 
     return true;
-  } else if (MCID.TSFlags & NVPTXII::IsSurfTexQueryFlag) {
+  }
+  if (MCID.TSFlags & NVPTXII::IsSurfTexQueryFlag) {
     // This is a query, so operand 1 is a surfref/texref
     MachineOperand &Handle = MI.getOperand(1);
 
@@ -1791,16 +1791,6 @@ bool NVPTXReplaceImageHandles::processInstr(MachineInstr &MI) {
 
 bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
                                                   MachineFunction &MF) {
-  unsigned Idx;
-  if (findIndexForHandle(Op, MF, Idx)) {
-    Op.ChangeToImmediate(Idx);
-    return true;
-  }
-  return false;
-}
-
-bool NVPTXReplaceImageHandles::
-findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   NVPTXMachineFunctionInfo *MFI = MF.getInfo<NVPTXMachineFunctionInfo>();
 
@@ -1810,28 +1800,19 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
   MachineInstr &TexHandleDef = *MRI.getVRegDef(Op.getReg());
 
   switch (TexHandleDef.getOpcode()) {
-  case NVPTX::LD_i64_avar: {
+  case NVPTX::LD_i64_asi: {
     // The handle is a parameter value being loaded, replace with the
     // parameter symbol
-    const NVPTXTargetMachine &TM =
-        static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-    if (TM.getDrvInterface() == NVPTX::CUDA) {
+    const auto &TM = static_cast<const NVPTXTargetMachine &>(MF.getTarget());
+    if (TM.getDrvInterface() == NVPTX::CUDA)
       // For CUDA, we preserve the param loads coming from function arguments
       return false;
-    }
 
-    assert(TexHandleDef.getOperand(6).isSymbol() && "Load is not a symbol!");
-    StringRef Sym = TexHandleDef.getOperand(6).getSymbolName();
-    std::string ParamBaseName = std::string(MF.getName());
-    ParamBaseName += "_param_";
-    assert(Sym.starts_with(ParamBaseName) && "Invalid symbol reference");
-    unsigned Param = atoi(Sym.data()+ParamBaseName.size());
-    std::string NewSym;
-    raw_string_ostream NewSymStr(NewSym);
-    NewSymStr << MF.getName() << "_param_" << Param;
-
+    assert(TexHandleDef.getOperand(7).isSymbol() && "Load is not a symbol!");
+    StringRef Sym = TexHandleDef.getOperand(7).getSymbolName();
     InstrsToRemove.insert(&TexHandleDef);
-    Idx = MFI->getImageHandleSymbolIndex(NewSymStr.str().c_str());
+    Op.ChangeToES(Sym.data());
+    MFI->getImageHandleSymbolIndex(Sym);
     return true;
   }
   case NVPTX::texsurf_handles: {
@@ -1840,15 +1821,14 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
     const GlobalValue *GV = TexHandleDef.getOperand(1).getGlobal();
     assert(GV->hasName() && "Global sampler must be named!");
     InstrsToRemove.insert(&TexHandleDef);
-    Idx = MFI->getImageHandleSymbolIndex(GV->getName().data());
+    Op.ChangeToGA(GV, 0);
     return true;
   }
   case NVPTX::nvvm_move_i64:
   case TargetOpcode::COPY: {
-    bool Res = findIndexForHandle(TexHandleDef.getOperand(1), MF, Idx);
-    if (Res) {
+    bool Res = replaceImageHandle(TexHandleDef.getOperand(1), MF);
+    if (Res)
       InstrsToRemove.insert(&TexHandleDef);
-    }
     return Res;
   }
   default:

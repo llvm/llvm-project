@@ -17,6 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -41,17 +42,18 @@ protected:
 
     const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};
 
-    Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+    auto VFS = llvm::vfs::getRealFileSystem();
+    Diags = CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
 
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
+    CIOpts.VFS = VFS;
     CInvok = createInvocation(Args, std::move(CIOpts));
 
     if (!CInvok)
       return nullptr;
 
-    FileManager *FileMgr =
-        new FileManager(FileSystemOptions(), vfs::getRealFileSystem());
+    FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
     PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
     return ASTUnit::LoadFromCompilerInvocation(
@@ -92,8 +94,8 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   auto HSOpts = std::make_shared<HeaderSearchOptions>();
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(ASTFileName.str()), PCHContainerOps->getRawReader(),
-      ASTUnit::LoadEverything, Diags, FileSystemOptions(), HSOpts);
+      ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
+      Diags, FileSystemOptions(), HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";
@@ -134,7 +136,8 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
 
   const char *Args[] = {"clang", "test.cpp", "-fmodule-map-file=m.modulemap",
                         "-fmodule-name=M"};
-  Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  Diags =
+      CompilerInstance::createDiagnostics(*InMemoryFs, new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CInvok = createInvocation(Args, std::move(CIOpts));
@@ -162,15 +165,16 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
 
   const char *Args[] = {"clang", "-target", "foobar", InputFileName.c_str()};
 
-  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  auto Diags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions());
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
   std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
-      CaptureDiagsKind::All, std::nullopt, true, 0, TU_Complete, false, false,
-      false, SkipFunctionBodiesScope::None, false, true, false, false,
-      std::nullopt, &ErrUnit, nullptr);
+      CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false, false,
+      SkipFunctionBodiesScope::None, false, true, false, false, std::nullopt,
+      &ErrUnit, nullptr);
 
   ASSERT_EQ(AST, nullptr);
   ASSERT_NE(ErrUnit, nullptr);
@@ -189,15 +193,16 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
   const char *Args[] = {"clang", "-working-directory", WorkingDir.c_str(),
                         InputFileName.c_str()};
 
-  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  auto Diags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions());
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
   std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
-      CaptureDiagsKind::All, std::nullopt, true, 0, TU_Complete, false, false,
-      false, SkipFunctionBodiesScope::None, false, true, false, false,
-      std::nullopt, &ErrUnit, nullptr);
+      CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false, false,
+      SkipFunctionBodiesScope::None, false, true, false, false, std::nullopt,
+      &ErrUnit, nullptr);
 
   ASSERT_NE(AST, nullptr);
   ASSERT_FALSE(Diags->hasErrorOccurred());

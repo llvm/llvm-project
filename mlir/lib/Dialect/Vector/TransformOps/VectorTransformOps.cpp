@@ -59,9 +59,15 @@ void transform::ApplyFoldArithExtensionPatternsOp::populatePatterns(
   vector::populateFoldArithExtensionPatterns(patterns);
 }
 
+void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateElementwiseToVectorOpsPatterns(patterns);
+}
+
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
@@ -77,6 +83,16 @@ void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
 void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+}
+
+void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateDropUnitDimWithShapeCastPatterns(patterns);
+}
+
+void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorBitCastLoweringPatterns(patterns);
 }
 
 void transform::ApplyLowerBroadcastPatternsOp::populatePatterns(
@@ -164,6 +180,11 @@ void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
   vector::populateVectorInterleaveLoweringPatterns(patterns);
 }
 
+void transform::ApplyInterleaveToShufflePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorInterleaveToShufflePatterns(patterns);
+}
+
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   populateVectorNarrowTypeRewritePatterns(patterns);
@@ -197,6 +218,8 @@ class VectorTransformDialectExtension
     : public transform::TransformDialectExtension<
           VectorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorTransformDialectExtension)
+
   VectorTransformDialectExtension() {
     declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();

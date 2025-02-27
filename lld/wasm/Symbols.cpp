@@ -35,7 +35,7 @@ std::string maybeDemangleSymbol(StringRef name) {
   // `main` in the case where we need to pass it arguments.
   if (name == "__main_argc_argv")
     return "main";
-  if (wasm::config->demangle)
+  if (wasm::ctx.arg.demangle)
     return demangle(name);
   return name.str();
 }
@@ -68,6 +68,10 @@ std::string toString(wasm::Symbol::Kind kind) {
     return "SectionKind";
   case wasm::Symbol::OutputSectionKind:
     return "OutputSectionKind";
+  case wasm::Symbol::SharedFunctionKind:
+    return "SharedFunctionKind";
+  case wasm::Symbol::SharedDataKind:
+    return "SharedDataKind";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -76,7 +80,6 @@ namespace wasm {
 DefinedFunction *WasmSym::callCtors;
 DefinedFunction *WasmSym::callDtors;
 DefinedFunction *WasmSym::initMemory;
-DefinedFunction *WasmSym::applyDataRelocs;
 DefinedFunction *WasmSym::applyGlobalRelocs;
 DefinedFunction *WasmSym::applyTLSRelocs;
 DefinedFunction *WasmSym::applyGlobalTLSRelocs;
@@ -96,8 +99,6 @@ GlobalSymbol *WasmSym::tlsSize;
 GlobalSymbol *WasmSym::tlsAlign;
 UndefinedGlobal *WasmSym::tableBase;
 DefinedData *WasmSym::definedTableBase;
-UndefinedGlobal *WasmSym::tableBase32;
-DefinedData *WasmSym::definedTableBase32;
 UndefinedGlobal *WasmSym::memoryBase;
 DefinedData *WasmSym::definedMemoryBase;
 TableSymbol *WasmSym::indirectFunctionTable;
@@ -223,20 +224,21 @@ void Symbol::setHidden(bool isHidden) {
 }
 
 bool Symbol::isImported() const {
-  return isUndefined() && (importName.has_value() || forceImport);
+  return isShared() ||
+         (isUndefined() && (importName.has_value() || forceImport));
 }
 
 bool Symbol::isExported() const {
-  if (!isDefined() || isLocal())
+  if (!isDefined() || isShared() || isLocal())
     return false;
 
   // Shared libraries must export all weakly defined symbols
   // in case they contain the version that will be chosen by
   // the dynamic linker.
-  if (config->shared && isLive() && isWeak() && !isHidden())
+  if (ctx.arg.shared && isLive() && isWeak() && !isHidden())
     return true;
 
-  if (config->exportAll || (config->exportDynamic && !isHidden()))
+  if (ctx.arg.exportAll || (ctx.arg.exportDynamic && !isHidden()))
     return true;
 
   return isExportedExplicit();
@@ -308,12 +310,11 @@ uint32_t DefinedFunction::getExportedFunctionIndex() const {
   return function->getFunctionIndex();
 }
 
-uint64_t DefinedData::getVA() const {
+uint64_t DefinedData::getVA(bool absolute) const {
   LLVM_DEBUG(dbgs() << "getVA: " << getName() << "\n");
-  // In the shared memory case, TLS symbols are relative to the start of the TLS
-  // output segment (__tls_base).  When building without shared memory, TLS
-  // symbols absolute, just like non-TLS.
-  if (isTLS() && config->sharedMemory)
+  // TLS symbols (by default) are relative to the start of the TLS output
+  // segment (__tls_base).
+  if (isTLS() && !absolute)
     return getOutputSegmentOffset();
   if (segment)
     return segment->getVA(value);

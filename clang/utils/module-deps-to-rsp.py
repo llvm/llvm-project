@@ -74,7 +74,7 @@ def main():
 
         if args.module_name:
             cmd = findModule(args.module_name, full_deps)["command-line"]
-        elif args.tu_index != None:
+        elif args.tu_index is not None:
             tu = full_deps.translation_units[args.tu_index]
             cmd = tu["commands"][args.tu_cmd_index]["command-line"]
 

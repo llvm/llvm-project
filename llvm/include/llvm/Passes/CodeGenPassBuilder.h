@@ -27,26 +27,56 @@
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"
-#include "llvm/CodeGen/FreeMachineFunction.h"
+#include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
+#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineCSE.h"
+#include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/OptimizePHIs.h"
+#include "llvm/CodeGen/PHIElimination.h"
+#include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
+#include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
+#include "llvm/CodeGen/RegUsageInfoCollector.h"
+#include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterCoalescerPass.h"
+#include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/StackSlotColoring.h"
+#include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -140,6 +170,9 @@ public:
 
 protected:
   template <typename PassT>
+  using has_required_t = decltype(std::declval<PassT &>().isRequired());
+
+  template <typename PassT>
   using is_module_pass_t = decltype(std::declval<PassT &>().run(
       std::declval<Module &>(), std::declval<ModuleAnalysisManager &>()));
 
@@ -169,8 +202,10 @@ protected:
       static_assert((is_detected<is_function_pass_t, PassT>::value ||
                      is_detected<is_module_pass_t, PassT>::value) &&
                     "Only module pass and function pass are supported.");
-
-      if (!PB.runBeforeAdding(Name))
+      bool Required = false;
+      if constexpr (is_detected<has_required_t, PassT>::value)
+        Required = PassT::isRequired();
+      if (!PB.runBeforeAdding(Name) && !Required)
         return;
 
       // Add Function Pass
@@ -199,8 +234,13 @@ protected:
     AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
         : MPM(MPM), PB(PB) {}
     ~AddMachinePass() {
-      if (!MFPM.isEmpty())
-        MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+      if (!MFPM.isEmpty()) {
+        FunctionPassManager FPM;
+        FPM.addPass(
+            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+        FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      }
     }
 
     template <typename PassT>
@@ -219,8 +259,8 @@ protected:
       } else {
         // Add Module Pass
         if (!MFPM.isEmpty()) {
-          MPM.addPass(
-              createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+          MPM.addPass(createModuleToFunctionPassAdaptor(
+              createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
           MFPM = MachineFunctionPassManager();
         }
 
@@ -416,7 +456,8 @@ protected:
   Error addFastRegAlloc(AddMachinePass &) const;
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// LLVMTargetMachine provides standard regalloc passes for most targets.
+  /// CodeGenTargetMachineImpl provides standard regalloc passes for most
+  /// targets.
   void addOptimizedRegAlloc(AddMachinePass &) const;
 
   /// Add passes that optimize machine instructions after register allocation.
@@ -512,6 +553,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
 
   {
     AddIRPass addIRPass(MPM, derived());
+    addIRPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
     addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
     addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
     addISelPasses(addIRPass);
@@ -528,6 +570,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (auto Err = derived().addMachinePasses(addPass))
     return std::move(Err);
 
+  if (!Opt.DisableVerify)
+    addPass(MachineVerifierPass());
+
   if (PrintAsm) {
     derived().addAsmPrinter(
         addPass, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
@@ -538,7 +583,6 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (PrintMIR)
     addPass(PrintMIRPass(Out), /*Force=*/true);
 
-  addPass(FreeMachineFunctionPass());
   return verifyStartStop(*StartStopInfo);
 }
 
@@ -593,13 +637,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::verifyStartStop(
 
   if (!Started)
     return make_error<StringError>(
-        "Can't find start pass \"" +
-            PIC->getPassNameForClassName(Info.StartPass) + "\".",
+        "Can't find start pass \"" + Info.StartPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
   if (!Stopped)
     return make_error<StringError>(
-        "Can't find stop pass \"" +
-            PIC->getPassNameForClassName(Info.StopPass) + "\".",
+        "Can't find stop pass \"" + Info.StopPass + "\".",
         std::make_error_code(std::errc::invalid_argument));
   return Error::success();
 }
@@ -611,7 +653,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
   if (TM.useEmulatedTLS())
     addPass(LowerEmuTLSPass());
 
-  addPass(PreISelIntrinsicLoweringPass(TM));
+  addPass(PreISelIntrinsicLoweringPass(&TM));
+  addPass(ExpandLargeDivRemPass(&TM));
+  addPass(ExpandLargeFpConvertPass(&TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -633,9 +677,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
     addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
                                             /*UseMemorySSA=*/true));
-    // FIXME: use -stop-after so we could remove PrintLSR
-    if (Opt.PrintLSR)
-      addPass(PrintFunctionPass(dbgs(), "\n\n*** Code after LSR ***\n"));
   }
 
   if (getOptLevel() != CodeGenOptLevel::None) {
@@ -684,6 +725,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
     addPass(SelectOptimizePass(&TM));
+
+  if (Opt.EnableGlobalMergeFunc)
+    addPass(GlobalMergeFuncPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
@@ -869,12 +913,13 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   } else {
     // If the target requests it, assign local variables to stack slots relative
     // to one another and simplify frame index references where possible.
-    addPass(LocalStackSlotPass());
+    addPass(LocalStackSlotAllocationPass());
   }
 
-  if (TM.Options.EnableIPRA)
+  if (TM.Options.EnableIPRA) {
+    addPass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>());
     addPass(RegUsageInfoPropagationPass());
-
+  }
   // Run pre-ra passes.
   derived().addPreRegAlloc(addPass);
 
@@ -919,9 +964,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (getOptLevel() != CodeGenOptLevel::None &&
       !TM.targetSchedulesPostRAScheduling()) {
     if (Opt.MISchedPostRA)
-      addPass(PostMachineSchedulerPass());
+      addPass(PostMachineSchedulerPass(&TM));
     else
-      addPass(PostRASchedulerPass());
+      addPass(PostRASchedulerPass(&TM));
   }
 
   // GC
@@ -983,7 +1028,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineSSAOptimization(
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.
-  addPass(LocalStackSlotPass());
+  addPass(LocalStackSlotAllocationPass());
 
   // With optimization, dead code should already be eliminated. However
   // there is one known exception: lowered code for arguments that are only
@@ -1025,7 +1070,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
   if (Optimized)
     addPass(RAGreedyPass());
   else
-    addPass(RAFastPass());
+    addPass(RegAllocFastPass());
 }
 
 /// Find and instantiate the register allocation pass requested by this target
@@ -1092,7 +1137,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
   if (Opt.EarlyLiveIntervals)
-    addPass(LiveIntervalsPass());
+    addPass(RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>());
 
   addPass(TwoAddressInstructionPass());
   addPass(RegisterCoalescerPass());
@@ -1103,7 +1148,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   addPass(RenameIndependentSubregsPass());
 
   // PreRA instruction scheduling.
-  addPass(MachineSchedulerPass());
+  addPass(MachineSchedulerPass(&TM));
 
   if (derived().addRegAssignmentOptimized(addPass)) {
     // Allow targets to expand pseudo instructions depending on the choice of

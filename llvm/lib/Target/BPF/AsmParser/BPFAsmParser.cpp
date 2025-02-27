@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "TargetInfo/BPFTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -17,7 +16,6 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -34,7 +32,7 @@ class BPFAsmParser : public MCTargetAsmParser {
 
   bool PreMatchCheck(OperandVector &Operands);
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -43,7 +41,7 @@ class BPFAsmParser : public MCTargetAsmParser {
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   // "=" is used as assignment operator for assembly statment, so can't be used
@@ -86,7 +84,7 @@ struct BPFOperand : public MCParsedAsmOperand {
   } Kind;
 
   struct RegOp {
-    unsigned RegNum;
+    MCRegister RegNum;
   };
 
   struct ImmOp {
@@ -206,10 +204,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<BPFOperand> createReg(unsigned RegNo, SMLoc S,
+  static std::unique_ptr<BPFOperand> createReg(MCRegister Reg, SMLoc S,
                                                SMLoc E) {
     auto Op = std::make_unique<BPFOperand>(Register);
-    Op->Reg.RegNum = RegNo;
+    Op->Reg.RegNum = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -304,7 +302,7 @@ bool BPFAsmParser::PreMatchCheck(OperandVector &Operands) {
   return false;
 }
 
-bool BPFAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool BPFAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
@@ -447,13 +445,13 @@ ParseStatus BPFAsmParser::parseRegister(OperandVector &Operands) {
     return ParseStatus::NoMatch;
   case AsmToken::Identifier:
     StringRef Name = getLexer().getTok().getIdentifier();
-    unsigned RegNo = MatchRegisterName(Name);
+    MCRegister Reg = MatchRegisterName(Name);
 
-    if (RegNo == 0)
+    if (!Reg)
       return ParseStatus::NoMatch;
 
     getLexer().Lex();
-    Operands.push_back(BPFOperand::createReg(RegNo, S, E));
+    Operands.push_back(BPFOperand::createReg(Reg, S, E));
   }
   return ParseStatus::Success;
 }
@@ -483,17 +481,16 @@ ParseStatus BPFAsmParser::parseImmediate(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-/// ParseInstruction - Parse an BPF instruction which is in BPF verifier
-/// format.
-bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+/// Parse an BPF instruction which is in BPF verifier format.
+bool BPFAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   // The first operand could be either register or actually an operator.
-  unsigned RegNo = MatchRegisterName(Name);
+  MCRegister Reg = MatchRegisterName(Name);
 
-  if (RegNo != 0) {
+  if (Reg) {
     SMLoc E = SMLoc::getFromPointer(NameLoc.getPointer() - 1);
-    Operands.push_back(BPFOperand::createReg(RegNo, NameLoc, E));
-  } else if (BPFOperand::isValidIdAtStart (Name))
+    Operands.push_back(BPFOperand::createReg(Reg, NameLoc, E));
+  } else if (BPFOperand::isValidIdAtStart(Name))
     Operands.push_back(BPFOperand::createToken(Name, NameLoc));
   else
     return Error(NameLoc, "invalid register/token name");

@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_ASMWRITERINST_H
-#define LLVM_UTILS_TABLEGEN_ASMWRITERINST_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
+#define LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 
 #include <string>
 #include <vector>
@@ -104,4 +104,4 @@ private:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H

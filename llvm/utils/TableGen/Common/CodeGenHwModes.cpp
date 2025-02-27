@@ -18,15 +18,14 @@ using namespace llvm;
 
 StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 
-HwMode::HwMode(Record *R) {
+HwMode::HwMode(const Record *R) {
   Name = R->getName();
   Features = std::string(R->getValueAsString("Features"));
 
-  std::vector<Record *> PredicateRecs = R->getValueAsListOfDefs("Predicates");
   SmallString<128> PredicateCheck;
   raw_svector_ostream OS(PredicateCheck);
   ListSeparator LS(" && ");
-  for (Record *Pred : PredicateRecs) {
+  for (const Record *Pred : R->getValueAsListOfDefs("Predicates")) {
     StringRef CondString = Pred->getValueAsString("CondString");
     if (CondString.empty())
       continue;
@@ -39,20 +38,12 @@ HwMode::HwMode(Record *R) {
 LLVM_DUMP_METHOD
 void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
 
-HwModeSelect::HwModeSelect(Record *R, CodeGenHwModes &CGH) {
-  std::vector<Record *> Modes = R->getValueAsListOfDefs("Modes");
-  std::vector<Record *> Objects = R->getValueAsListOfDefs("Objects");
-  if (Modes.size() != Objects.size()) {
-    PrintError(
-        R->getLoc(),
-        "in record " + R->getName() +
-            " derived from HwModeSelect: the lists Modes and Objects should "
-            "have the same size");
-    report_fatal_error("error in target description.");
-  }
-  for (unsigned i = 0, e = Modes.size(); i != e; ++i) {
-    unsigned ModeId = CGH.getHwModeId(Modes[i]);
-    Items.push_back(std::pair(ModeId, Objects[i]));
+HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
+  std::vector<const Record *> Modes = R->getValueAsListOfDefs("Modes");
+  std::vector<const Record *> Objects = R->getValueAsListOfDefs("Objects");
+  for (auto [Mode, Object] : zip_equal(Modes, Objects)) {
+    unsigned ModeId = CGH.getHwModeId(Mode);
+    Items.emplace_back(ModeId, Object);
   }
 }
 
@@ -64,24 +55,26 @@ void HwModeSelect::dump() const {
   dbgs() << " }\n";
 }
 
-CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
-  for (Record *R : Records.getAllDerivedDefinitions("HwMode")) {
+CodeGenHwModes::CodeGenHwModes(const RecordKeeper &RK) : Records(RK) {
+  for (const Record *R : Records.getAllDerivedDefinitions("HwMode")) {
     // The default mode needs a definition in the .td sources for TableGen
     // to accept references to it. We need to ignore the definition here.
     if (R->getName() == DefaultModeName)
       continue;
     Modes.emplace_back(R);
-    ModeIds.insert(std::pair(R, Modes.size()));
+    ModeIds.try_emplace(R, Modes.size());
   }
 
-  for (Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
-    auto P = ModeSelects.emplace(std::pair(R, HwModeSelect(R, *this)));
+  assert(Modes.size() <= 32 && "number of HwModes exceeds maximum of 32");
+
+  for (const Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
+    auto P = ModeSelects.emplace(R, HwModeSelect(R, *this));
     assert(P.second);
     (void)P;
   }
 }
 
-unsigned CodeGenHwModes::getHwModeId(Record *R) const {
+unsigned CodeGenHwModes::getHwModeId(const Record *R) const {
   if (R->getName() == DefaultModeName)
     return DefaultMode;
   auto F = ModeIds.find(R);
@@ -89,7 +82,7 @@ unsigned CodeGenHwModes::getHwModeId(Record *R) const {
   return F->second;
 }
 
-const HwModeSelect &CodeGenHwModes::getHwModeSelect(Record *R) const {
+const HwModeSelect &CodeGenHwModes::getHwModeSelect(const Record *R) const {
   auto F = ModeSelects.find(R);
   assert(F != ModeSelects.end() && "Record is not a \"mode select\"");
   return F->second;

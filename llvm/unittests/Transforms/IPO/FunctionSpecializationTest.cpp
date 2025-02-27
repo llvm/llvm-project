@@ -15,6 +15,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/IPO/FunctionSpecialization.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -42,6 +43,7 @@ protected:
   FunctionAnalysisManager FAM;
   std::unique_ptr<Module> M;
   std::unique_ptr<SCCPSolver> Solver;
+  SmallVector<Instruction *, 8> KnownConstants;
 
   FunctionSpecializationTest() {
     FAM.registerPass([&] { return TargetLibraryAnalysis(); });
@@ -96,21 +98,29 @@ protected:
                                GetAC);
   }
 
-  Bonus getInstCost(Instruction &I, bool SizeOnly = false) {
+  Cost getCodeSizeSavings(Instruction &I, bool HasLatencySavings = true) {
     auto &TTI = FAM.getResult<TargetIRAnalysis>(*I.getFunction());
-    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*I.getFunction());
 
     Cost CodeSize =
         TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
 
-    Cost Latency =
-        SizeOnly
-            ? 0
-            : BFI.getBlockFreq(I.getParent()).getFrequency() /
-                  BFI.getEntryFreq().getFrequency() *
-                  TTI.getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+    if (HasLatencySavings)
+      KnownConstants.push_back(&I);
 
-    return {CodeSize, Latency};
+    return CodeSize;
+  }
+
+  Cost getLatencySavings(Function *F) {
+    auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
+    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*F);
+
+    Cost Latency = 0;
+    for (const Instruction *I : KnownConstants)
+      Latency += BFI.getBlockFreq(I->getParent()).getFrequency() /
+                 BFI.getEntryFreq().getFrequency() *
+                 TTI.getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+
+    return Latency;
   }
 };
 
@@ -170,25 +180,32 @@ TEST_F(FunctionSpecializationTest, SwitchInst) {
   Instruction &BrLoop = BB2.back();
 
   // mul
-  Bonus Ref = getInstCost(Mul);
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
+  Cost Ref = getCodeSizeSavings(Mul);
+  Cost Test = Visitor.getCodeSizeSavingsForArg(F->getArg(0), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // and + or + add
-  Ref = getInstCost(And) + getInstCost(Or) + getInstCost(Add);
-  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
+  Ref = getCodeSizeSavings(And) + getCodeSizeSavings(Or) +
+        getCodeSizeSavings(Add);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(1), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // switch + sdiv + br + br
-  Ref = getInstCost(Switch) +
-        getInstCost(Sdiv, /*SizeOnly =*/ true) +
-        getInstCost(BrBB2, /*SizeOnly =*/ true) +
-        getInstCost(BrLoop, /*SizeOnly =*/ true);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), One);
+  Ref = getCodeSizeSavings(Switch) +
+        getCodeSizeSavings(Sdiv, /*HasLatencySavings=*/false) +
+        getCodeSizeSavings(BrBB2, /*HasLatencySavings=*/false) +
+        getCodeSizeSavings(BrLoop, /*HasLatencySavings=*/false);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(2), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
+
+  // Latency.
+  Ref = getLatencySavings(F);
+  Test = Visitor.getLatencySavingsForKnownConstants();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
 }
 
 TEST_F(FunctionSpecializationTest, BranchInst) {
@@ -237,27 +254,69 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
   Instruction &BrLoop = BB2.front();
 
   // mul
-  Bonus Ref = getInstCost(Mul);
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
+  Cost Ref = getCodeSizeSavings(Mul);
+  Cost Test = Visitor.getCodeSizeSavingsForArg(F->getArg(0), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // add
-  Ref = getInstCost(Add);
-  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
+  Ref = getCodeSizeSavings(Add);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(1), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // branch + sub + br + sdiv + br
-  Ref = getInstCost(Branch) +
-        getInstCost(Sub, /*SizeOnly =*/ true) +
-        getInstCost(BrBB1BB2) +
-        getInstCost(Sdiv, /*SizeOnly =*/ true) +
-        getInstCost(BrBB2, /*SizeOnly =*/ true) +
-        getInstCost(BrLoop, /*SizeOnly =*/ true);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), False);
+  Ref = getCodeSizeSavings(Branch) +
+        getCodeSizeSavings(Sub, /*HasLatencySavings=*/false) +
+        getCodeSizeSavings(BrBB1BB2) +
+        getCodeSizeSavings(Sdiv, /*HasLatencySavings=*/false) +
+        getCodeSizeSavings(BrBB2, /*HasLatencySavings=*/false) +
+        getCodeSizeSavings(BrLoop, /*HasLatencySavings=*/false);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(2), False);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
+
+  // Latency.
+  Ref = getLatencySavings(F);
+  Test = Visitor.getLatencySavingsForKnownConstants();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
+}
+
+TEST_F(FunctionSpecializationTest, SelectInst) {
+  const char *ModuleString = R"(
+    define i32 @foo(i1 %cond, i32 %a, i32 %b) {
+      %sel = select i1 %cond, i32 %a, i32 %b
+      ret i32 %sel
+    }
+  )";
+
+  Module &M = parseModule(ModuleString);
+  Function *F = M.getFunction("foo");
+  FunctionSpecializer Specializer = getSpecializerFor(F);
+  InstCostVisitor Visitor = Specializer.getInstCostVisitorFor(F);
+
+  Constant *One = ConstantInt::get(IntegerType::getInt32Ty(M.getContext()), 1);
+  Constant *Zero = ConstantInt::get(IntegerType::getInt32Ty(M.getContext()), 0);
+  Constant *False = ConstantInt::getFalse(M.getContext());
+  Instruction &Select = *F->front().begin();
+
+  Cost RefCodeSize = getCodeSizeSavings(Select);
+  Cost RefLatency = getLatencySavings(F);
+
+  Cost TestCodeSize = Visitor.getCodeSizeSavingsForArg(F->getArg(0), False);
+  EXPECT_TRUE(TestCodeSize == 0);
+  TestCodeSize = Visitor.getCodeSizeSavingsForArg(F->getArg(1), One);
+  EXPECT_TRUE(TestCodeSize == 0);
+  Cost TestLatency = Visitor.getLatencySavingsForKnownConstants();
+  EXPECT_TRUE(TestLatency == 0);
+
+  TestCodeSize = Visitor.getCodeSizeSavingsForArg(F->getArg(2), Zero);
+  EXPECT_EQ(TestCodeSize, RefCodeSize);
+  EXPECT_TRUE(TestCodeSize > 0);
+  TestLatency = Visitor.getLatencySavingsForKnownConstants();
+  EXPECT_EQ(TestLatency, RefLatency);
+  EXPECT_TRUE(TestLatency > 0);
 }
 
 TEST_F(FunctionSpecializationTest, Misc) {
@@ -303,26 +362,32 @@ TEST_F(FunctionSpecializationTest, Misc) {
   Instruction &Smax = *BlockIter++;
 
   // icmp + zext
-  Bonus Ref = getInstCost(Icmp) + getInstCost(Zext);
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
+  Cost Ref = getCodeSizeSavings(Icmp) + getCodeSizeSavings(Zext);
+  Cost Test = Visitor.getCodeSizeSavingsForArg(F->getArg(0), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // select
-  Ref = getInstCost(Select);
-  Test = Visitor.getSpecializationBonus(F->getArg(1), True);
+  Ref = getCodeSizeSavings(Select);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(1), True);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // gep + load + freeze + smax
-  Ref = getInstCost(Gep) + getInstCost(Load) + getInstCost(Freeze) +
-        getInstCost(Smax);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), GV);
+  Ref = getCodeSizeSavings(Gep) + getCodeSizeSavings(Load) +
+        getCodeSizeSavings(Freeze) + getCodeSizeSavings(Smax);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(2), GV);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
-  Test = Visitor.getSpecializationBonus(F->getArg(3), Undef);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(3), Undef);
+  EXPECT_TRUE(Test == 0);
+
+  // Latency.
+  Ref = getLatencySavings(F);
+  Test = Visitor.getLatencySavingsForKnownConstants();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
 }
 
 TEST_F(FunctionSpecializationTest, PhiNode) {
@@ -372,25 +437,70 @@ TEST_F(FunctionSpecializationTest, PhiNode) {
   Instruction &Icmp = *++BB.begin();
   Instruction &Branch = BB.back();
 
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Cost Test = Visitor.getCodeSizeSavingsForArg(F->getArg(0), One);
+  EXPECT_TRUE(Test == 0);
 
-  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(1), One);
+  EXPECT_TRUE(Test == 0);
+
+  Test = Visitor.getLatencySavingsForKnownConstants();
+  EXPECT_TRUE(Test == 0);
 
   // switch + phi + br
-  Bonus Ref = getInstCost(Switch) +
-              getInstCost(PhiCase2, /*SizeOnly =*/ true) +
-              getInstCost(BrBB, /*SizeOnly =*/ true);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), One);
+  Cost Ref = getCodeSizeSavings(Switch) +
+             getCodeSizeSavings(PhiCase2, /*HasLatencySavings=*/false) +
+             getCodeSizeSavings(BrBB, /*HasLatencySavings=*/false);
+  Test = Visitor.getCodeSizeSavingsForArg(F->getArg(2), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0 && Test > 0);
 
   // phi + phi + add + icmp + branch
-  Ref = getInstCost(PhiBB) + getInstCost(PhiLoop) + getInstCost(Add) +
-        getInstCost(Icmp) + getInstCost(Branch);
-  Test = Visitor.getBonusFromPendingPHIs();
+  Ref = getCodeSizeSavings(PhiBB) + getCodeSizeSavings(PhiLoop) +
+        getCodeSizeSavings(Add) + getCodeSizeSavings(Icmp) +
+        getCodeSizeSavings(Branch);
+  Test = Visitor.getCodeSizeSavingsFromPendingPHIs();
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
+
+  // Latency.
+  Ref = getLatencySavings(F);
+  Test = Visitor.getLatencySavingsForKnownConstants();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
 }
 
+TEST_F(FunctionSpecializationTest, BinOp) {
+  // Verify that we can handle binary operators even when only one operand is
+  // constant.
+  const char *ModuleString = R"(
+    define i32 @foo(i1 %a, i1 %b) {
+      %and1 = and i1 %a, %b
+      %and2 = and i1 %b, %and1
+      %sel = select i1 %and2, i32 1, i32 0
+      ret i32 %sel
+    }
+  )";
+
+  Module &M = parseModule(ModuleString);
+  Function *F = M.getFunction("foo");
+  FunctionSpecializer Specializer = getSpecializerFor(F);
+  InstCostVisitor Visitor = Specializer.getInstCostVisitorFor(F);
+
+  Constant *False = ConstantInt::getFalse(M.getContext());
+  BasicBlock &BB = F->front();
+  Instruction &And1 = BB.front();
+  Instruction &And2 = *++BB.begin();
+  Instruction &Select = *++BB.begin();
+
+  Cost RefCodeSize = getCodeSizeSavings(And1) + getCodeSizeSavings(And2) +
+                     getCodeSizeSavings(Select);
+  Cost RefLatency = getLatencySavings(F);
+
+  Cost TestCodeSize = Visitor.getCodeSizeSavingsForArg(F->getArg(0), False);
+  Cost TestLatency = Visitor.getLatencySavingsForKnownConstants();
+
+  EXPECT_EQ(TestCodeSize, RefCodeSize);
+  EXPECT_TRUE(TestCodeSize > 0);
+  EXPECT_EQ(TestLatency, RefLatency);
+  EXPECT_TRUE(TestLatency > 0);
+}

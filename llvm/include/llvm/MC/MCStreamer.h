@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCWinEH.h"
@@ -63,7 +64,7 @@ struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
 }
 
-using MCSectionSubPair = std::pair<MCSection *, const MCExpr *>;
+using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
 
 /// Target specific streamer interface. This is used so that targets can
 /// implement support for target specific assembly directives.
@@ -116,7 +117,7 @@ public:
   /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(const MCSection *CurSection, MCSection *Section,
-                             const MCExpr *SubSection, raw_ostream &OS);
+                             uint32_t SubSection, raw_ostream &OS);
 
   virtual void emitValue(const MCExpr *Value);
 
@@ -143,11 +144,11 @@ public:
   virtual void emitPersonality(const MCSymbol *Personality);
   virtual void emitPersonalityIndex(unsigned Index);
   virtual void emitHandlerData();
-  virtual void emitSetFP(unsigned FpReg, unsigned SpReg,
+  virtual void emitSetFP(MCRegister FpReg, MCRegister SpReg,
                          int64_t Offset = 0);
-  virtual void emitMovSP(unsigned Reg, int64_t Offset = 0);
+  virtual void emitMovSP(MCRegister Reg, int64_t Offset = 0);
   virtual void emitPad(int64_t Offset);
-  virtual void emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+  virtual void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                            bool isVector);
   virtual void emitUnwindRaw(int64_t StackOffset,
                              const SmallVectorImpl<uint8_t> &Opcodes);
@@ -167,6 +168,8 @@ public:
 
   virtual void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE);
 
+  // Note in the output that the specified \p Symbol is a Thumb mode function.
+  virtual void emitThumbFunc(MCSymbol *Symbol);
   virtual void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value);
 
   void emitConstantPools() override;
@@ -227,10 +230,6 @@ class MCStreamer {
   WinEH::FrameInfo *CurrentWinFrameInfo;
   size_t CurrentProcWinFrameInfoStartIndex;
 
-  /// Tracks an index to represent the order a symbol was emitted in.
-  /// Zero means we did not emit that symbol.
-  DenseMap<const MCSymbol *, unsigned> SymbolOrdering;
-
   /// This is stack of current and previous section values saved by
   /// pushSection.
   SmallVector<std::pair<MCSectionSubPair, MCSectionSubPair>, 4> SectionStack;
@@ -245,7 +244,7 @@ class MCStreamer {
   /// requires.
   unsigned NextWinCFIID = 0;
 
-  bool UseAssemblerInfoForParsing;
+  bool UseAssemblerInfoForParsing = true;
 
   /// Is the assembler allowed to insert padding automatically?  For
   /// correctness reasons, we sometimes need to ensure instructions aren't
@@ -255,7 +254,19 @@ class MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
+  // True if we are processing SEH directives in an epilogue.
+  bool InEpilogCFI = false;
+
+  // Symbol of the current epilog for which we are processing SEH directives.
+  MCSymbol *CurrentEpilog = nullptr;
+
+  MCFragment *CurFrag = nullptr;
+
   MCStreamer(MCContext &Ctx);
+
+  /// This is called by popSection and switchSection, if the current
+  /// section changes.
+  virtual void changeSection(MCSection *, uint32_t);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
@@ -296,6 +307,8 @@ public:
 
   MCContext &getContext() const { return Context; }
 
+  // MCObjectStreamer has an MCAssembler and allows more expression folding at
+  // parse time.
   virtual MCAssembler *getAssemblerPtr() { return nullptr; }
 
   void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
@@ -307,6 +320,8 @@ public:
 
   void setAllowAutoPadding(bool v) { AllowAutoPadding = v; }
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
+
+  MCSymbol *emitLineTableLabel();
 
   /// When emitting an object file, create and emit a real label. When emitting
   /// textual assembly, this should do nothing to avoid polluting our output.
@@ -325,6 +340,10 @@ public:
   ArrayRef<std::unique_ptr<WinEH::FrameInfo>> getWinFrameInfos() const {
     return WinFrameInfos;
   }
+
+  MCSymbol *getCurrentEpilog() const { return CurrentEpilog; }
+
+  bool isInEpilogCFI() const { return InEpilogCFI; }
 
   void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
@@ -390,7 +409,9 @@ public:
       return SectionStack.back().first;
     return MCSectionSubPair();
   }
-  MCSection *getCurrentSectionOnly() const { return getCurrentSection().first; }
+  MCSection *getCurrentSectionOnly() const {
+    return CurFrag->getParent();
+  }
 
   /// Return the previous section that the streamer is emitting code to.
   MCSectionSubPair getPreviousSection() const {
@@ -399,17 +420,11 @@ public:
     return MCSectionSubPair();
   }
 
-  /// Returns an index to represent the order a symbol was emitted in.
-  /// (zero if we did not emit that symbol)
-  unsigned getSymbolOrder(const MCSymbol *Sym) const {
-    return SymbolOrdering.lookup(Sym);
+  MCFragment *getCurrentFragment() const {
+    assert(!getCurrentSection().first ||
+           CurFrag->getParent() == getCurrentSection().first);
+    return CurFrag;
   }
-
-  /// Update streamer for a new active section.
-  ///
-  /// This is called by popSection and switchSection, if the current
-  /// section changes.
-  virtual void changeSection(MCSection *, const MCExpr *);
 
   /// Save the current and previous section on the section stack.
   void pushSection() {
@@ -421,62 +436,26 @@ public:
   /// Calls changeSection as needed.
   ///
   /// Returns false if the stack was empty.
-  bool popSection() {
-    if (SectionStack.size() <= 1)
-      return false;
-    auto I = SectionStack.end();
-    --I;
-    MCSectionSubPair OldSection = I->first;
-    --I;
-    MCSectionSubPair NewSection = I->first;
-
-    if (NewSection.first && OldSection != NewSection)
-      changeSection(NewSection.first, NewSection.second);
-    SectionStack.pop_back();
-    return true;
-  }
-
-  bool subSection(const MCExpr *Subsection) {
-    if (SectionStack.empty())
-      return false;
-
-    switchSection(SectionStack.back().first.first, Subsection);
-    return true;
-  }
+  virtual bool popSection();
 
   /// Set the current section where code is being emitted to \p Section.  This
   /// is required to update CurSection.
   ///
   /// This corresponds to assembler directives like .section, .text, etc.
-  virtual void switchSection(MCSection *Section,
-                             const MCExpr *Subsection = nullptr);
+  virtual void switchSection(MCSection *Section, uint32_t Subsec = 0);
+  bool switchSection(MCSection *Section, const MCExpr *);
 
-  /// Set the current section where code is being emitted to \p Section.
-  /// This is required to update CurSection. This version does not call
-  /// changeSection.
-  void switchSectionNoChange(MCSection *Section,
-                             const MCExpr *Subsection = nullptr) {
-    assert(Section && "Cannot switch to a null section!");
-    MCSectionSubPair curSection = SectionStack.back().first;
-    SectionStack.back().second = curSection;
-    if (MCSectionSubPair(Section, Subsection) != curSection)
-      SectionStack.back().first = MCSectionSubPair(Section, Subsection);
-  }
+  /// Similar to switchSection, but does not print the section directive.
+  virtual void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
 
-  /// Sets the symbol's section.
-  ///
-  /// Each emitted symbol will be tracked in the ordering table,
-  /// so we can sort on them later.
-  void assignFragment(MCSymbol *Symbol, MCFragment *Fragment);
-
   /// Returns the mnemonic for \p MI, if the streamer has access to a
   /// instruction printer and returns an empty string otherwise.
-  virtual StringRef getMnemonic(MCInst &MI) { return ""; }
+  virtual StringRef getMnemonic(const MCInst &MI) const { return ""; }
 
   /// Emit a label for \p Symbol into the current section.
   ///
@@ -523,10 +502,6 @@ public:
                             const VersionTuple &SDKVersion,
                             const Triple *DarwinTargetVariantTriple,
                             const VersionTuple &DarwinTargetVariantSDKVersion);
-
-  /// Note in the output that the specified \p Func is a Thumb mode
-  /// function (ARM target only).
-  virtual void emitThumbFunc(MCSymbol *Func);
 
   /// Emit an assignment of \p Value to \p Symbol.
   ///
@@ -601,6 +576,14 @@ public:
   ///
   /// \param Symbol - Symbol the image relative relocation should point to.
   virtual void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset);
+
+  /// Emits the physical number of the section containing the given symbol as
+  /// assigned during object writing (i.e., this is not a runtime relocation).
+  virtual void emitCOFFSecNumber(MCSymbol const *Symbol);
+
+  /// Emits the offset of the symbol from the beginning of the section during
+  /// object writing (i.e., this is not a runtime relocation).
+  virtual void emitCOFFSecOffset(MCSymbol const *Symbol);
 
   /// Emits an lcomm directive with XCOFF csect information.
   ///
@@ -947,6 +930,9 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);
 
+  /// This implements the '.loc_label Name' directive.
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
+
   /// Associate a filename with a specified logical file number, and also
   /// specify that file's checksum information.  This implements the '.cv_file 4
   /// "foo.c"' assembler directive. Returns true on success.
@@ -1054,6 +1040,10 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
+  virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
+  virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
+                                SMLoc Loc = {});
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProc(SMLoc Loc = SMLoc());
@@ -1074,6 +1064,8 @@ public:
                                  SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushFrame(bool Code, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProlog(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIBeginEpilogue(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());
@@ -1153,7 +1145,8 @@ public:
   virtual void emitDwarfLineStartLabel(MCSymbol *StartSym);
 
   /// Emit the debug line end entry.
-  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) {}
+  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel,
+                                     MCSymbol *EndLabel = nullptr) {}
 
   /// If targets does not support representing debug line section by .loc/.file
   /// directives in assembly output, we need to populate debug line section with
@@ -1162,9 +1155,6 @@ public:
                                         const MCSymbol *LastLabel,
                                         const MCSymbol *Label,
                                         unsigned PointerSize) {}
-
-  /// Do finalization for the streamer at the end of a section.
-  virtual void doFinalizationAtSectionEnd(MCSection *Section) {}
 };
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for

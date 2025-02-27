@@ -406,7 +406,7 @@ void Operation::updateOrderIfNecessary() {
   assert(block && "expected valid parent");
 
   // If the order is valid for this operation there is nothing to do.
-  if (hasValidOrder())
+  if (hasValidOrder() || llvm::hasSingleElement(*block))
     return;
   Operation *blockFront = &block->front();
   Operation *blockBack = &block->back();
@@ -619,8 +619,8 @@ static void checkFoldResultTypes(Operation *op,
     if (auto value = dyn_cast<Value>(ofr)) {
       if (value.getType() != opResult.getType()) {
         op->emitOpError() << "folder produced a value of incorrect type: "
-                          << opResult.getType()
-                          << ", expected: " << value.getType();
+                          << value.getType()
+                          << ", expected: " << opResult.getType();
         assert(false && "incorrect fold result type");
       }
     }
@@ -801,6 +801,8 @@ ParseResult OpState::genericParseProperties(OpAsmParser &parser,
 /// 'elidedProps'
 void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
                                      ArrayRef<StringRef> elidedProps) {
+  if (!properties)
+    return;
   auto dictAttr = dyn_cast_or_null<::mlir::DictionaryAttr>(properties);
   if (dictAttr && !elidedProps.empty()) {
     ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
@@ -1154,7 +1156,7 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
 
   // delegate function that returns rank of shaped type with known rank
   auto getRank = [](const Type type) {
-    return type.cast<ShapedType>().getRank();
+    return cast<ShapedType>(type).getRank();
   };
 
   auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
@@ -1307,10 +1309,10 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
   auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
-  auto resultMappableTypes = llvm::to_vector<1>(
-      llvm::make_filter_range(op->getResultTypes(), isMappableType));
-  auto operandMappableTypes = llvm::to_vector<2>(
-      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+  auto resultMappableTypes =
+      llvm::filter_to_vector<1>(op->getResultTypes(), isMappableType);
+  auto operandMappableTypes =
+      llvm::filter_to_vector<2>(op->getOperandTypes(), isMappableType);
 
   // If the op only has scalar operand/result types, then we have nothing to
   // check.

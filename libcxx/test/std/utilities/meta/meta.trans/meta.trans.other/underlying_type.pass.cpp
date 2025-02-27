@@ -14,6 +14,7 @@
 
 #include <type_traits>
 #include <climits>
+#include <cstddef>
 
 #include "test_macros.h"
 

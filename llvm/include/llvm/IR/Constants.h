@@ -28,6 +28,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/User.h"
@@ -50,6 +51,8 @@ template <class ConstantClass> struct ConstantAggrKeyType;
 /// Since they can be in use by unrelated modules (and are never based on
 /// GlobalValues), it never makes sense to RAUW them.
 class ConstantData : public Constant {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
   friend class Constant;
 
   Value *handleOperandChangeImpl(Value *From, Value *To) {
@@ -57,9 +60,9 @@ class ConstantData : public Constant {
   }
 
 protected:
-  explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, nullptr, 0) {}
+  explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, AllocMarker) {}
 
-  void *operator new(size_t S) { return User::operator new(S, 0); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
@@ -398,7 +401,8 @@ public:
 /// use operands.
 class ConstantAggregate : public Constant {
 protected:
-  ConstantAggregate(Type *T, ValueTy VT, ArrayRef<Constant *> V);
+  ConstantAggregate(Type *T, ValueTy VT, ArrayRef<Constant *> V,
+                    AllocInfo AllocInfo);
 
 public:
   /// Transparently provide more efficient getOperand methods.
@@ -424,7 +428,7 @@ class ConstantArray final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantArray>;
   friend class Constant;
 
-  ConstantArray(ArrayType *T, ArrayRef<Constant *> Val);
+  ConstantArray(ArrayType *T, ArrayRef<Constant *> Val, AllocInfo AllocInfo);
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -456,7 +460,7 @@ class ConstantStruct final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantStruct>;
   friend class Constant;
 
-  ConstantStruct(StructType *T, ArrayRef<Constant *> Val);
+  ConstantStruct(StructType *T, ArrayRef<Constant *> Val, AllocInfo AllocInfo);
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -508,7 +512,7 @@ class ConstantVector final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantVector>;
   friend class Constant;
 
-  ConstantVector(VectorType *T, ArrayRef<Constant *> Val);
+  ConstantVector(VectorType *T, ArrayRef<Constant *> Val, AllocInfo AllocInfo);
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -532,9 +536,9 @@ public:
   }
 
   /// If all elements of the vector constant have the same value, return that
-  /// value. Otherwise, return nullptr. Ignore undefined elements by setting
-  /// AllowUndefs to true.
-  Constant *getSplatValue(bool AllowUndefs = false) const;
+  /// value. Otherwise, return nullptr. Ignore poison elements by setting
+  /// AllowPoison to true.
+  Constant *getSplatValue(bool AllowPoison = false) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
@@ -889,9 +893,11 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
   BlockAddress(Function *F, BasicBlock *BB);
 
-  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -935,9 +941,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 class DSOLocalEquivalent final : public Constant {
   friend class Constant;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   DSOLocalEquivalent(GlobalValue *GV);
 
-  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -972,9 +980,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(DSOLocalEquivalent, Value)
 class NoCFIValue final : public Constant {
   friend class Constant;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   NoCFIValue(GlobalValue *GV);
 
-  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
 
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
@@ -1007,6 +1017,87 @@ struct OperandTraits<NoCFIValue> : public FixedNumOperandTraits<NoCFIValue, 1> {
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(NoCFIValue, Value)
 
+/// A signed pointer, in the ptrauth sense.
+class ConstantPtrAuth final : public Constant {
+  friend struct ConstantPtrAuthKeyType;
+  friend class Constant;
+
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{4};
+
+  ConstantPtrAuth(Constant *Ptr, ConstantInt *Key, ConstantInt *Disc,
+                  Constant *AddrDisc);
+
+  void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
+
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To);
+
+public:
+  /// Return a pointer signed with the specified parameters.
+  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                              ConstantInt *Disc, Constant *AddrDisc);
+
+  /// Produce a new ptrauth expression signing the given value using
+  /// the same schema as is stored in one.
+  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
+
+  /// The pointer that is signed in this ptrauth signed pointer.
+  Constant *getPointer() const { return cast<Constant>(Op<0>().get()); }
+
+  /// The Key ID, an i32 constant.
+  ConstantInt *getKey() const { return cast<ConstantInt>(Op<1>().get()); }
+
+  /// The integer discriminator, an i64 constant, or 0.
+  ConstantInt *getDiscriminator() const {
+    return cast<ConstantInt>(Op<2>().get());
+  }
+
+  /// The address discriminator if any, or the null constant.
+  /// If present, this must be a value equivalent to the storage location of
+  /// the only global-initializer user of the ptrauth signed pointer.
+  Constant *getAddrDiscriminator() const {
+    return cast<Constant>(Op<3>().get());
+  }
+
+  /// Whether there is any non-null address discriminator.
+  bool hasAddressDiscriminator() const {
+    return !getAddrDiscriminator()->isNullValue();
+  }
+
+  /// A constant value for the address discriminator which has special
+  /// significance to ctors/dtors lowering. Regular address discrimination can't
+  /// be applied for them since uses of llvm.global_{c|d}tors are disallowed
+  /// (see Verifier::visitGlobalVariable) and we can't emit getelementptr
+  /// expressions referencing these special arrays.
+  enum { AddrDiscriminator_CtorsDtors = 1 };
+
+  /// Whether the address uses a special address discriminator.
+  /// These discriminators can't be used in real pointer-auth values; they
+  /// can only be used in "prototype" values that indicate how some real
+  /// schema is supposed to be produced.
+  bool hasSpecialAddressDiscriminator(uint64_t Value) const;
+
+  /// Check whether an authentication operation with key \p Key and (possibly
+  /// blended) discriminator \p Discriminator is known to be compatible with
+  /// this ptrauth signed pointer.
+  bool isKnownCompatibleWith(const Value *Key, const Value *Discriminator,
+                             const DataLayout &DL) const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *V) {
+    return V->getValueID() == ConstantPtrAuthVal;
+  }
+};
+
+template <>
+struct OperandTraits<ConstantPtrAuth>
+    : public FixedNumOperandTraits<ConstantPtrAuth, 4> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantPtrAuth, Constant)
+
 //===----------------------------------------------------------------------===//
 /// A constant value that is initialized with an expression using
 /// other constant values.
@@ -1022,8 +1113,8 @@ class ConstantExpr : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
-  ConstantExpr(Type *ty, unsigned Opcode, Use *Ops, unsigned NumOps)
-      : Constant(ty, ConstantExprVal, Ops, NumOps) {
+  ConstantExpr(Type *ty, unsigned Opcode, AllocInfo AllocInfo)
+      : Constant(ty, ConstantExprVal, AllocInfo) {
     // Operation type (an Instruction opcode) is stored as the SubclassData.
     setValueSubclassData(Opcode);
   }
@@ -1052,11 +1143,7 @@ public:
                           bool HasNSW = false);
   static Constant *getSub(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
   static Constant *getXor(Constant *C1, Constant *C2);
-  static Constant *getShl(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
                                bool OnlyIfReduced = false);
@@ -1083,22 +1170,6 @@ public:
 
   static Constant *getNUWSub(Constant *C1, Constant *C2) {
     return getSub(C1, C2, true, false);
-  }
-
-  static Constant *getNSWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, false, true);
-  }
-
-  static Constant *getNUWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, true, false);
-  }
-
-  static Constant *getNSWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, false, true);
-  }
-
-  static Constant *getNUWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, true, false);
   }
 
   /// If C is a scalar/fixed width vector of known powers of 2, then this
@@ -1129,8 +1200,11 @@ public:
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for
   /// every X.  For example, this returns zero for integer multiplication.
-  /// It returns null if the operator doesn't have an absorbing element.
-  static Constant *getBinOpAbsorber(unsigned Opcode, Type *Ty);
+  /// If AllowLHSConstant is true, the LHS operand is a constant C that must be
+  /// defined as C op X = C. It returns null if the operator doesn't have
+  /// an absorbing element.
+  static Constant *getBinOpAbsorber(unsigned Opcode, Type *Ty,
+                                    bool AllowLHSConstant = false);
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
@@ -1167,29 +1241,12 @@ public:
   /// Return true if this is a convert constant expression
   bool isCast() const;
 
-  /// Return true if this is a compare constant expression
-  bool isCompare() const;
-
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
   ///
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *get(unsigned Opcode, Constant *C1, Constant *C2,
                        unsigned Flags = 0, Type *OnlyIfReducedTy = nullptr);
-
-  /// Return an ICmp or FCmp comparison operator constant expression.
-  ///
-  /// \param OnlyIfReduced see \a getWithOperands() docs.
-  static Constant *getCompare(unsigned short pred, Constant *C1, Constant *C2,
-                              bool OnlyIfReduced = false);
-
-  /// get* - Return some common constants without having to
-  /// specify the full Instruction::OPCODE identifier.
-  ///
-  static Constant *getICmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
-  static Constant *getFCmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
 
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
@@ -1198,26 +1255,27 @@ public:
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Constant *> IdxList,
-                   bool InBounds = false,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     return getGetElementPtr(
-        Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()),
-        InBounds, InRange, OnlyIfReducedTy);
+        Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()), NW,
+        InRange, OnlyIfReducedTy);
   }
   static Constant *
-  getGetElementPtr(Type *Ty, Constant *C, Constant *Idx, bool InBounds = false,
+  getGetElementPtr(Type *Ty, Constant *C, Constant *Idx,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
-    return getGetElementPtr(Ty, C, cast<Value>(Idx), InBounds, InRange,
+    return getGetElementPtr(Ty, C, cast<Value>(Idx), NW, InRange,
                             OnlyIfReducedTy);
   }
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
-                   bool InBounds = false,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
@@ -1225,18 +1283,18 @@ public:
   /// "inbounds" flag in LangRef.html for details.
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Constant *> IdxList) {
-    return getGetElementPtr(Ty, C, IdxList, true);
+    return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             Constant *Idx) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
-    return getGetElementPtr(Ty, C, Idx, true);
+    return getGetElementPtr(Ty, C, Idx, GEPNoWrapFlags::inBounds());
   }
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Value *> IdxList) {
-    return getGetElementPtr(Ty, C, IdxList, true);
+    return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
 
   static Constant *getExtractElement(Constant *Vec, Constant *Idx,
@@ -1249,10 +1307,6 @@ public:
 
   /// Return the opcode at the root of this constant expression
   unsigned getOpcode() const { return getSubclassDataFromValue(); }
-
-  /// Return the ICMP or FCMP predicate value. Assert if this is not an ICMP or
-  /// FCMP constant expression.
-  unsigned getPredicate() const;
 
   /// Assert that this is a shufflevector and return the mask. See class
   /// ShuffleVectorInst for a description of the mask representation.
@@ -1331,7 +1385,7 @@ private:
 
 template <>
 struct OperandTraits<ConstantExpr>
-    : public VariadicOperandTraits<ConstantExpr, 1> {};
+    : public VariadicOperandTraits<ConstantExpr> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantExpr, Constant)
 

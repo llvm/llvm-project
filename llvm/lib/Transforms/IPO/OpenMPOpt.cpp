@@ -19,6 +19,7 @@
 
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -28,7 +29,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -37,6 +37,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -130,7 +131,7 @@ static cl::opt<bool> PrintModuleBeforeOptimizations(
 
 static cl::opt<bool> AlwaysInlineDeviceFunctions(
     "openmp-opt-inline-device",
-    cl::desc("Inline all applicible functions on the device."), cl::Hidden,
+    cl::desc("Inline all applicable functions on the device."), cl::Hidden,
     cl::init(false));
 
 static cl::opt<bool>
@@ -287,6 +288,19 @@ struct OMPInformationCache : public InformationCache {
         OpenMPPostLink(OpenMPPostLink) {
 
     OMPBuilder.Config.IsTargetDevice = isOpenMPDevice(OMPBuilder.M);
+    const Triple T(OMPBuilder.M.getTargetTriple());
+    switch (T.getArch()) {
+    case llvm::Triple::nvptx:
+    case llvm::Triple::nvptx64:
+    case llvm::Triple::amdgcn:
+      assert(OMPBuilder.Config.IsTargetDevice &&
+             "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+      OMPBuilder.Config.IsGPU = true;
+      break;
+    default:
+      OMPBuilder.Config.IsGPU = false;
+      break;
+    }
     OMPBuilder.initialize();
     initializeRuntimeFunctions(M);
     initializeInternalControlVars();
@@ -555,7 +569,7 @@ struct OMPInformationCache : public InformationCache {
     for (RuntimeFunction Fn : Fns) {
       RuntimeFunctionInfo &RFI = RFIs[Fn];
 
-      if (RFI.Declaration && RFI.Declaration->isDeclaration())
+      if (!RFI.Declaration || RFI.Declaration->isDeclaration())
         return false;
     }
     return true;
@@ -880,7 +894,7 @@ private:
     if (BB != Before.getParent())
       return false;
 
-    const DataLayout &DL = Array.getModule()->getDataLayout();
+    const DataLayout &DL = Array.getDataLayout();
     const unsigned int PointerSize = DL.getPointerSize();
 
     for (Instruction &I : *BB) {
@@ -1081,6 +1095,7 @@ private:
       CGStartBB->getTerminator()->setSuccessor(0, StartBB);
       assert(EndBB != nullptr && "EndBB should not be null");
       EndBB->getTerminator()->setSuccessor(0, CGEndBB);
+      return Error::success();
     };
 
     auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &,
@@ -1089,7 +1104,7 @@ private:
       return CodeGenIP;
     };
 
-    auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+    auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
     /// Create a sequential execution region within a merged parallel region,
     /// encapsulated in a master construct with a barrier for synchronization.
@@ -1120,8 +1135,9 @@ private:
         CGStartBB->getTerminator()->setSuccessor(0, SeqStartBB);
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
         SeqEndBB->getTerminator()->setSuccessor(0, CGEndBB);
+        return Error::success();
       };
-      auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+      auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
       // Find outputs from the sequential region to outside users and
       // broadcast their values to them.
@@ -1164,10 +1180,10 @@ private:
 
       OpenMPIRBuilder::LocationDescription Loc(
           InsertPointTy(ParentBB, ParentBB->end()), DL);
-      InsertPointTy SeqAfterIP =
-          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB);
-
-      OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel);
+      OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
+          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
+      cantFail(
+          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
 
       BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
@@ -1239,9 +1255,10 @@ private:
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
-      InsertPointTy AfterIP = OMPInfoCache.OMPBuilder.createParallel(
-          Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-          OMP_PROC_BIND_default, /* IsCancellable */ false);
+      OpenMPIRBuilder::InsertPointTy AfterIP =
+          cantFail(OMPInfoCache.OMPBuilder.createParallel(
+              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
+              OMP_PROC_BIND_default, /* IsCancellable */ false));
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
@@ -1278,10 +1295,10 @@ private:
         if (CI != MergableCIs.back()) {
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
-          OMPInfoCache.OMPBuilder.createBarrier(
+          cantFail(OMPInfoCache.OMPBuilder.createBarrier(
               InsertPointTy(NewCI->getParent(),
                             NewCI->getNextNode()->getIterator()),
-              OMPD_parallel);
+              OMPD_parallel));
         }
 
         CI->eraseFromParent();
@@ -1453,7 +1470,6 @@ private:
       };
       emitRemark<OptimizationRemark>(CI, "OMP160", Remark);
 
-      CGUpdater.removeCallSite(*CI);
       CI->eraseFromParent();
       Changed = true;
       ++NumOpenMPParallelRegionsDeleted;
@@ -1518,26 +1534,12 @@ private:
     // required an RPC server. If its users were all optimized out then we can
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
-    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
-      if (!GV->getType()->isPointerTy())
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
+      if (GV->getNumUses() >= 1)
         return false;
-
-      Constant *C = GV->getInitializer();
-      if (!C)
-        return false;
-
-      // Check to see if the only user of the RPC client is the external handle.
-      GlobalVariable *Client = dyn_cast<GlobalVariable>(C->stripPointerCasts());
-      if (!Client || Client->getNumUses() > 1 ||
-          Client->user_back() != GV->getInitializer())
-        return false;
-
-      Client->replaceAllUsesWith(PoisonValue::get(Client->getType()));
-      Client->eraseFromParent();
 
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
       GV->eraseFromParent();
-
       return true;
     }
     return false;
@@ -1667,21 +1669,21 @@ private:
       BP->print(Printer);
       Printer << Separator;
     }
-    LLVM_DEBUG(dbgs() << "\t\toffload_baseptrs: " << Printer.str() << "\n");
+    LLVM_DEBUG(dbgs() << "\t\toffload_baseptrs: " << ValuesStr << "\n");
     ValuesStr.clear();
 
     for (auto *P : OAs[1].StoredValues) {
       P->print(Printer);
       Printer << Separator;
     }
-    LLVM_DEBUG(dbgs() << "\t\toffload_ptrs: " << Printer.str() << "\n");
+    LLVM_DEBUG(dbgs() << "\t\toffload_ptrs: " << ValuesStr << "\n");
     ValuesStr.clear();
 
     for (auto *S : OAs[2].StoredValues) {
       S->print(Printer);
       Printer << Separator;
     }
-    LLVM_DEBUG(dbgs() << "\t\toffload_sizes: " << Printer.str() << "\n");
+    LLVM_DEBUG(dbgs() << "\t\toffload_sizes: " << ValuesStr << "\n");
   }
 
   /// Returns the instruction where the "wait" counterpart \p RuntimeCall can be
@@ -1864,7 +1866,7 @@ private:
       if (!ReplVal)
         return false;
       assert(IP && "Expected insertion point!");
-      cast<Instruction>(ReplVal)->moveBefore(IP);
+      cast<Instruction>(ReplVal)->moveBefore(IP->getIterator());
     }
 
     // If we use a call as a replacement value we need to make sure the ident is
@@ -1895,7 +1897,6 @@ private:
       else
         emitRemark<OptimizationRemark>(&F, "OMP170", Remark);
 
-      CGUpdater.removeCallSite(*CI);
       CI->replaceAllUsesWith(ReplVal);
       CI->eraseFromParent();
       ++NumOpenMPRuntimeCallsDeduplicated;
@@ -2354,8 +2355,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
       /// TODO: Figure out a way to avoid adding entry in
       /// ICVReplacementValuesMap
       Instruction *Entry = &F->getEntryBlock().front();
-      if (HasChanged == ChangeStatus::CHANGED && !ValuesMap.count(Entry))
-        ValuesMap.insert(std::make_pair(Entry, nullptr));
+      if (HasChanged == ChangeStatus::CHANGED)
+        ValuesMap.try_emplace(Entry);
     }
 
     return HasChanged;
@@ -2368,7 +2369,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
     const auto *CB = dyn_cast<CallBase>(&I);
     if (!CB || CB->hasFnAttr("no_openmp") ||
-        CB->hasFnAttr("no_openmp_routines"))
+        CB->hasFnAttr("no_openmp_routines") ||
+        CB->hasFnAttr("no_openmp_constructs"))
       return std::nullopt;
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
@@ -3526,8 +3528,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
           PoisonValue::get(Int8ArrTy), CB->getName() + "_shared", nullptr,
           GlobalValue::NotThreadLocal,
           static_cast<unsigned>(AddressSpace::Shared));
-      auto *NewBuffer =
-          ConstantExpr::getPointerCast(SharedMem, Int8Ty->getPointerTo());
+      auto *NewBuffer = ConstantExpr::getPointerCast(
+          SharedMem, PointerType::getUnqual(M->getContext()));
 
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Replaced globalized variable with "
@@ -3763,6 +3765,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
     A.registerGlobalVariableSimplificationCallback(
         *KernelEnvGV, KernelConfigurationSimplifyCB);
 
+    // We cannot change to SPMD mode if the runtime functions aren't availible.
+    bool CanChangeToSPMD = OMPInfoCache.runtimeFnsAvailable(
+        {OMPRTL___kmpc_get_hardware_thread_id_in_block,
+         OMPRTL___kmpc_barrier_simple_spmd});
+
     // Check if we know we are in SPMD-mode already.
     ConstantInt *ExecModeC =
         KernelInfo::getExecModeFromKernelEnvironment(KernelEnvC);
@@ -3771,7 +3778,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         ExecModeC->getSExtValue() | OMP_TGT_EXEC_MODE_GENERIC_SPMD);
     if (ExecModeC->getSExtValue() & OMP_TGT_EXEC_MODE_SPMD)
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
-    else if (DisableOpenMPOptSPMDization)
+    else if (DisableOpenMPOptSPMDization || !CanChangeToSPMD)
       // This is a generic region but SPMDization is disabled so stop
       // tracking.
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
@@ -4118,7 +4125,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         LastEffect = &*IP;
       }
       for (auto &Reorder : Reorders)
-        Reorder.first->moveBefore(Reorder.second);
+        Reorder.first->moveBefore(Reorder.second->getIterator());
     }
 
     SmallVector<std::pair<Instruction *, Instruction *>, 4> GuardedRegions;
@@ -4218,12 +4225,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
   bool changeToSPMDMode(Attributor &A, ChangeStatus &Changed) {
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
 
-    // We cannot change to SPMD mode if the runtime functions aren't availible.
-    if (!OMPInfoCache.runtimeFnsAvailable(
-            {OMPRTL___kmpc_get_hardware_thread_id_in_block,
-             OMPRTL___kmpc_barrier_simple_spmd}))
-      return false;
-
     if (!SPMDCompatibilityTracker.isAssumed()) {
       for (Instruction *NonCompatibleI : SPMDCompatibilityTracker) {
         if (!NonCompatibleI)
@@ -4238,7 +4239,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           ORA << "Value has potential side effects preventing SPMD-mode "
                  "execution";
           if (isa<CallBase>(NonCompatibleI)) {
-            ORA << ". Add `__attribute__((assume(\"ompx_spmd_amenable\")))` to "
+            ORA << ". Add `[[omp::assume(\"ompx_spmd_amenable\")]]` to "
                    "the called function to override";
           }
           return ORA << ".";
@@ -4380,7 +4381,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           continue;
         auto Remark = [&](OptimizationRemarkAnalysis ORA) {
           return ORA << "Call may contain unknown parallel regions. Use "
-                     << "`__attribute__((assume(\"omp_no_parallelism\")))` to "
+                     << "`[[omp::assume(\"omp_no_parallelism\")]]` to "
                         "override.";
         };
         A.emitRemark<OptimizationRemarkAnalysis>(UnknownParallelRegionCB,
@@ -5572,6 +5573,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       bool UsedAssumedInformation = false;
       A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
                              UsedAssumedInformation, AA::Interprocedural);
+      A.getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*LI->getPointerOperand()));
       continue;
     }
     if (auto *CI = dyn_cast<CallBase>(&I)) {
@@ -5581,6 +5584,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     }
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
+      A.getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*SI->getPointerOperand()));
       continue;
     }
     if (auto *FI = dyn_cast<FenceInst>(&I)) {
@@ -5787,6 +5792,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   CallGraphUpdater CGUpdater;
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, PostLink);
 
@@ -5866,6 +5872,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
@@ -5902,33 +5909,19 @@ bool llvm::omp::isOpenMPKernel(Function &Fn) {
 }
 
 KernelSet llvm::omp::getDeviceKernels(Module &M) {
-  // TODO: Create a more cross-platform way of determining device kernels.
-  NamedMDNode *MD = M.getNamedMetadata("nvvm.annotations");
   KernelSet Kernels;
 
-  if (!MD)
-    return Kernels;
-
-  for (auto *Op : MD->operands()) {
-    if (Op->getNumOperands() < 2)
-      continue;
-    MDString *KindID = dyn_cast<MDString>(Op->getOperand(1));
-    if (!KindID || KindID->getString() != "kernel")
-      continue;
-
-    Function *KernelFn =
-        mdconst::dyn_extract_or_null<Function>(Op->getOperand(0));
-    if (!KernelFn)
-      continue;
-
-    // We are only interested in OpenMP target regions. Others, such as kernels
-    // generated by CUDA but linked together, are not interesting to this pass.
-    if (isOpenMPKernel(*KernelFn)) {
-      ++NumOpenMPTargetRegionKernels;
-      Kernels.insert(KernelFn);
-    } else
-      ++NumNonOpenMPTargetRegionKernels;
-  }
+  for (Function &F : M)
+    if (F.hasKernelCallingConv()) {
+      // We are only interested in OpenMP target regions. Others, such as
+      // kernels generated by CUDA but linked together, are not interesting to
+      // this pass.
+      if (isOpenMPKernel(F)) {
+        ++NumOpenMPTargetRegionKernels;
+        Kernels.insert(&F);
+      } else
+        ++NumNonOpenMPTargetRegionKernels;
+    }
 
   return Kernels;
 }

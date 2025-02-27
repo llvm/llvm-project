@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=post-RA-sched %s -o - | FileCheck %s
+# RUN: llc -passes=post-RA-sched %s -o - | FileCheck %s
 # CHECK: VLDMDIA
 --- |
   target triple = "thumbv7-w64-windows-gnu"

@@ -24,6 +24,7 @@
 #include "polly/Support/ISLTools.h"
 #include "polly/ZoneAlgo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 
 #include "polly/Support/PollyDebug.h"
@@ -1289,7 +1290,7 @@ public:
           continue;
         }
 
-        // Check for more than one element acces per statement instance.
+        // Check for more than one element access per statement instance.
         // Currently we expect write accesses to be functional, eg. disallow
         //
         //   { Stmt[0] -> [i] : 0 <= i < 2 }

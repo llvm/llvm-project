@@ -11,6 +11,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
@@ -188,7 +189,7 @@ TEST_F(TestClangASTImporter, MetadataPropagation) {
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
-  ASSERT_NE(nullptr, importer.GetDeclMetadata(imported));
+  ASSERT_NE(std::nullopt, importer.GetDeclMetadata(imported));
   EXPECT_EQ(metadata, importer.GetDeclMetadata(imported)->GetUserID());
 }
 
@@ -219,7 +220,7 @@ TEST_F(TestClangASTImporter, MetadataPropagationIndirectImport) {
   ASSERT_NE(nullptr, imported);
 
   // Check that we got the same Metadata.
-  ASSERT_NE(nullptr, importer.GetDeclMetadata(imported));
+  ASSERT_NE(std::nullopt, importer.GetDeclMetadata(imported));
   EXPECT_EQ(metadata, importer.GetDeclMetadata(imported)->GetUserID());
 }
 
@@ -244,7 +245,7 @@ TEST_F(TestClangASTImporter, MetadataPropagationAfterCopying) {
   source.ast->SetMetadataAsUserID(source.record_decl, metadata);
 
   // Check that we got the same Metadata.
-  ASSERT_NE(nullptr, importer.GetDeclMetadata(imported));
+  ASSERT_NE(std::nullopt, importer.GetDeclMetadata(imported));
   EXPECT_EQ(metadata, importer.GetDeclMetadata(imported)->GetUserID());
 }
 
@@ -273,6 +274,59 @@ TEST_F(TestClangASTImporter, RecordLayout) {
   EXPECT_EQ(2U, alignment);
   EXPECT_EQ(1U, field_offsets.size());
   EXPECT_EQ(1U, field_offsets[source.field_decl]);
+  EXPECT_EQ(0U, base_offsets.size());
+  EXPECT_EQ(0U, vbase_offsets.size());
+}
+
+TEST_F(TestClangASTImporter, RecordLayoutFromOrigin) {
+  // Tests that we can retrieve the layout of a record that has
+  // an origin with an already existing LayoutInfo. We expect
+  // the layout to be retrieved from the ClangASTImporter of the
+  // origin decl.
+
+  clang_utils::SourceASTWithRecord source;
+
+  auto *dwarf_parser =
+      static_cast<DWARFASTParserClang *>(source.ast->GetDWARFParser());
+  auto &importer = dwarf_parser->GetClangASTImporter();
+
+  // Set the layout for the origin decl in the origin ClangASTImporter.
+  ClangASTImporter::LayoutInfo layout_info;
+  layout_info.bit_size = 32;
+  layout_info.alignment = 16;
+  layout_info.field_offsets[source.field_decl] = 1;
+  importer.SetRecordLayout(source.record_decl, layout_info);
+
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("target ast");
+  auto *target_ast = holder->GetAST();
+
+  // Import the decl into a new TypeSystemClang.
+  CompilerType imported = importer.CopyType(*target_ast, source.record_type);
+  ASSERT_TRUE(imported.IsValid());
+
+  auto *imported_decl = cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(imported));
+  ClangASTImporter::DeclOrigin origin = importer.GetDeclOrigin(imported_decl);
+  ASSERT_TRUE(origin.Valid());
+  ASSERT_EQ(origin.decl, source.record_decl);
+
+  uint64_t bit_size;
+  uint64_t alignment;
+  llvm::DenseMap<const clang::FieldDecl *, uint64_t> field_offsets;
+  llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> base_offsets;
+  llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> vbase_offsets;
+
+  // Make sure we correctly read out the layout (despite not Having
+  // called SetRecordLayout on the new TypeSystem's ClangASTImporter).
+  auto success =
+      importer.LayoutRecordType(imported_decl, bit_size, alignment,
+                                field_offsets, base_offsets, vbase_offsets);
+  EXPECT_TRUE(success);
+
+  EXPECT_EQ(32U, bit_size);
+  EXPECT_EQ(16U, alignment);
+  EXPECT_EQ(1U, field_offsets.size());
+  EXPECT_EQ(1U, field_offsets[*imported_decl->field_begin()]);
   EXPECT_EQ(0U, base_offsets.size());
   EXPECT_EQ(0U, vbase_offsets.size());
 }

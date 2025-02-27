@@ -19,8 +19,8 @@
 
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCDecoderOps.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
@@ -83,6 +83,12 @@ static DecodeStatus DecodeXR32RegisterClass(MCInst &Inst, uint64_t RegNo,
   return DecodeRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
+static DecodeStatus DecodeXR32RegisterClass(MCInst &Inst, APInt RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  return DecodeRegisterClass(Inst, RegNo.getZExtValue(), Address, Decoder);
+}
+
 static DecodeStatus DecodeXR16RegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -108,6 +114,12 @@ static DecodeStatus DecodeFPCSCRegisterClass(MCInst &Inst, uint64_t RegNo,
 static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
                                             uint64_t Address,
                                             const void *Decoder) {
+  llvm_unreachable("unimplemented");
+}
+
+static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst, APInt &Insn,
+                                           uint64_t Address,
+                                           const void *Decoder) {
   llvm_unreachable("unimplemented");
 }
 

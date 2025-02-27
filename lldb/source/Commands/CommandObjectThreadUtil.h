@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_COMMANDS_COMMANDOBJECTTHREADUTIL_H
 
 #include "lldb/Interpreter/CommandObjectMultiword.h"
+#include <stack>
 
 namespace lldb_private {
 

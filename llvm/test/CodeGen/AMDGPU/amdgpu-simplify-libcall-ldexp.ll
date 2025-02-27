@@ -242,6 +242,47 @@ define float @test_ldexp_f32_strictfp(float %x, i32 %y) #4 {
   ret float %ldexp
 }
 
+;---------------------------------------------------------------------
+; Invalid signatures
+;---------------------------------------------------------------------
+
+; Declared with wrong type, second argument is float
+declare float @_Z5ldexpff(float noundef, float noundef)
+
+define float @call_wrong_typed_ldexp_f32_second_arg(float %x, float %wrongtype) {
+; CHECK-LABEL: define float @call_wrong_typed_ldexp_f32_second_arg
+; CHECK-SAME: (float [[X:%.*]], float [[WRONGTYPE:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call float @_Z5ldexpff(float [[X]], float [[WRONGTYPE]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @_Z5ldexpff(float %x, float %wrongtype)
+  ret float %call
+}
+
+declare <2 x float> @_Z5ldexpDv2_fS_(<2 x float>, <2 x float>)
+
+define <2 x float> @call_wrong_typed_ldexp_v2f32_second_arg(<2 x float> %x, <2 x float> %wrongtype) {
+; CHECK-LABEL: define <2 x float> @call_wrong_typed_ldexp_v2f32_second_arg
+; CHECK-SAME: (<2 x float> [[X:%.*]], <2 x float> [[WRONGTYPE:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @_Z5ldexpDv2_fS_(<2 x float> [[X]], <2 x float> [[WRONGTYPE]])
+; CHECK-NEXT:    ret <2 x float> [[CALL]]
+;
+  %call = call <2 x float> @_Z5ldexpDv2_fS_(<2 x float> %x, <2 x float> %wrongtype)
+  ret <2 x float> %call
+}
+
+declare <2 x float> @_Z5ldexpDv2_ff(<2 x float>, float)
+
+define <2 x float> @call_wrong_typed_ldexp_v2f32_f32(<2 x float> %x, float %wrongtype) {
+; CHECK-LABEL: define <2 x float> @call_wrong_typed_ldexp_v2f32_f32
+; CHECK-SAME: (<2 x float> [[X:%.*]], float [[WRONGTYPE:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @_Z5ldexpDv2_ff(<2 x float> [[X]], float [[WRONGTYPE]])
+; CHECK-NEXT:    ret <2 x float> [[CALL]]
+;
+  %call = call <2 x float> @_Z5ldexpDv2_ff(<2 x float> %x, float %wrongtype)
+  ret <2 x float> %call
+}
+
 attributes #0 = { nobuiltin }
 attributes #1 = { "no-builtins" }
 attributes #2 = { nounwind memory(none) }

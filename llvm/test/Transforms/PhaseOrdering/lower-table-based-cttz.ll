@@ -15,7 +15,7 @@
 
 ; RUN: opt -O3 -S < %s | FileCheck %s
 
-; CHECK: call i32 @llvm.cttz.i32
+; CHECK: call range(i32 0, 33) i32 @llvm.cttz.i32
 
 @ctz1.table = internal constant [32 x i8] c"\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09", align 16
 

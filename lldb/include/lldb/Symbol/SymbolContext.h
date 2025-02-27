@@ -91,15 +91,6 @@ public:
   /// their default state.
   void Clear(bool clear_target);
 
-  /// Dump a description of this object to a Stream.
-  ///
-  /// Dump a description of the contents of this object to the supplied stream
-  /// \a s.
-  ///
-  /// \param[in] s
-  ///     The stream to which to dump the object description.
-  void Dump(Stream *s, Target *target) const;
-
   /// Dump the stop context in this object to a Stream.
   ///
   /// Dump the best description of this object to the stream. The information
@@ -158,6 +149,7 @@ public:
       Stream *s, ExecutionContextScope *exe_scope, const Address &so_addr,
       bool show_fullpaths, bool show_module, bool show_inlined_frames,
       bool show_function_arguments, bool show_function_name,
+      bool show_function_display_name = false,
       std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   /// Get the address range contained within a symbol context.
@@ -173,8 +165,8 @@ public:
   ///     eSymbolContextSymbol is set in \a scope
   ///
   /// \param[in] scope
-  ///     A mask of symbol context bits telling this function which
-  ///     address ranges it can use when trying to extract one from
+  ///     A mask bits from the \b SymbolContextItem enum telling this function
+  ///     which address ranges it can use when trying to extract one from
   ///     the valid (non-nullptr) symbol context classes.
   ///
   /// \param[in] range_idx
@@ -200,8 +192,15 @@ public:
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
 
-  bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
-                                        Status &error);
+  /// Get the address of the function or symbol represented by this symbol
+  /// context.
+  ///
+  /// If both fields are present, the address of the function is returned. If
+  /// both are empty, the result is an invalid address.
+  Address GetFunctionOrSymbolAddress() const;
+
+  llvm::Error GetAddressRangeFromHereToEndLine(uint32_t end_line,
+                                               AddressRange &range);
 
   /// Find the best global data symbol visible from this context.
   ///
@@ -468,7 +467,7 @@ public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }
   const_iterator end() const { return m_symbol_contexts.end(); }
 
-  typedef AdaptedIterable<collection, SymbolContext, vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {
     return SymbolContextIterable(m_symbol_contexts);

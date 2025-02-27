@@ -76,7 +76,7 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
           "Entry intrinsic cannot be preceded by a convergent operation in the "
           "same basic block.",
           {Context.print(&I)});
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CONV_ANCHOR:
     Check(!TokenDef,
           "Entry or anchor intrinsic cannot have a convergencectrl token "
@@ -210,11 +210,10 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
     // Propagate token liveness
     for (auto *Succ : successors(BB)) {
       auto *SuccNode = DT.getNode(Succ);
-      auto LTIt = LiveTokenMap.find(Succ);
-      if (LTIt == LiveTokenMap.end()) {
+      auto [LTIt, Inserted] = LiveTokenMap.try_emplace(Succ);
+      if (Inserted) {
         // We're the first predecessor: all tokens which dominate the
         // successor are live for now.
-        LTIt = LiveTokenMap.try_emplace(Succ).first;
         for (auto LiveToken : LiveTokens) {
           if (!DT.dominates(DT.getNode(LiveToken->getParent()), SuccNode))
             break;

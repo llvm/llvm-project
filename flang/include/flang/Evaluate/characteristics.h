@@ -18,13 +18,13 @@
 #include "shape.h"
 #include "tools.h"
 #include "type.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 #include <string>
 #include <variant>
@@ -55,26 +55,25 @@ std::optional<bool> DistinguishableOpOrAssign(
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
 // values for explicit dimensions when constant.
-bool ShapesAreCompatible(
-    const Shape &, const Shape &, bool *possibleWarning = nullptr);
+bool ShapesAreCompatible(const std::optional<Shape> &,
+    const std::optional<Shape> &, bool *possibleWarning = nullptr);
 
 class TypeAndShape {
 public:
-  ENUM_CLASS(
-      Attr, AssumedRank, AssumedShape, AssumedSize, DeferredShape, Coarray)
+  ENUM_CLASS(Attr, AssumedRank, AssumedShape, AssumedSize, DeferredShape)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
 
-  explicit TypeAndShape(DynamicType t) : type_{t} { AcquireLEN(); }
-  TypeAndShape(DynamicType t, int rank) : type_{t}, shape_(rank) {
+  explicit TypeAndShape(DynamicType t) : type_{t}, shape_{Shape{}} {
+    AcquireLEN();
+  }
+  TypeAndShape(DynamicType t, int rank) : type_{t}, shape_{Shape(rank)} {
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, Shape &&s) : type_{t}, shape_{std::move(s)} {
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, std::optional<Shape> &&s) : type_{t} {
-    if (s) {
-      shape_ = std::move(*s);
-    }
+    shape_ = std::move(s);
     AcquireLEN();
   }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(TypeAndShape)
@@ -102,6 +101,7 @@ public:
     }
     if (auto type{x.GetType()}) {
       TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
+      result.corank_ = GetCorank(x);
       if (type->category() == TypeCategory::Character) {
         if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
           if (auto length{chExpr->LEN()}) {
@@ -172,16 +172,17 @@ public:
     LEN_ = std::move(len);
     return *this;
   }
-  const Shape &shape() const { return shape_; }
+  const std::optional<Shape> &shape() const { return shape_; }
   const Attrs &attrs() const { return attrs_; }
   int corank() const { return corank_; }
+  void set_corank(int n) { corank_ = n; }
 
-  int Rank() const { return GetRank(shape_); }
+  // Return -1 for assumed-rank as a safety.
+  int Rank() const { return shape_ ? GetRank(*shape_) : -1; }
 
   // Can sequence association apply to this argument?
   bool CanBeSequenceAssociated() const {
-    constexpr Attrs notAssumedOrExplicitShape{
-        ~Attrs{Attr::AssumedSize, Attr::Coarray}};
+    constexpr Attrs notAssumedOrExplicitShape{~Attrs{Attr::AssumedSize}};
     return Rank() > 0 && (attrs() & notAssumedOrExplicitShape).none();
   }
 
@@ -211,7 +212,7 @@ private:
 protected:
   DynamicType type_;
   std::optional<Expr<SubscriptInteger>> LEN_;
-  Shape shape_;
+  std::optional<Shape> shape_;
   Attrs attrs_;
   int corank_{0};
 };
@@ -365,7 +366,7 @@ struct Procedure {
   static std::optional<Procedure> Characterize(
       const semantics::Symbol &, FoldingContext &);
   static std::optional<Procedure> Characterize(
-      const ProcedureDesignator &, FoldingContext &);
+      const ProcedureDesignator &, FoldingContext &, bool emitError);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
   static std::optional<Procedure> Characterize(
@@ -386,7 +387,7 @@ struct Procedure {
   bool HasExplicitInterface() const {
     return !attrs.test(Attr::ImplicitInterface);
   }
-  int FindPassIndex(std::optional<parser::CharBlock>) const;
+  std::optional<int> FindPassIndex(std::optional<parser::CharBlock>) const;
   bool CanBeCalledViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
   bool IsCompatibleWith(const Procedure &, bool ignoreImplicitVsExplicit,

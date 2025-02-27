@@ -11,6 +11,8 @@
 // We don't control the implementation on windows
 // UNSUPPORTED: windows
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cassert>
 #include <cmath>
 #include <limits>
@@ -62,9 +64,23 @@ struct TestInt {
   }
 };
 
+template <typename T>
+struct ConvertibleTo {
+  operator T() const { return T(1); }
+};
+
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
+
+  // Make sure we can call `std::isnormal` with convertible types. This checks
+  // whether overloads for all cv-unqualified floating-point types are working
+  // as expected.
+  {
+    assert(std::isnormal(ConvertibleTo<float>()));
+    assert(std::isnormal(ConvertibleTo<double>()));
+    assert(std::isnormal(ConvertibleTo<long double>()));
+  }
 
   return 0;
 }

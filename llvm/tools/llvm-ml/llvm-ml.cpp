@@ -58,12 +58,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -73,7 +74,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class MLOptTable : public opt::GenericOptTable {
 public:
-  MLOptTable() : opt::GenericOptTable(InfoTable, /*IgnoreCase=*/false) {}
+  MLOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                             /*IgnoreCase=*/false) {}
 };
 } // namespace
 
@@ -263,6 +266,9 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
   MCTargetOptions MCOptions;
   MCOptions.AssemblyLanguage = "masm";
   MCOptions.MCFatalWarnings = InputArgs.hasArg(OPT_fatal_warnings);
+  MCOptions.MCSaveTempLabels = InputArgs.hasArg(OPT_save_temp_labels);
+  MCOptions.ShowMCInst = InputArgs.hasArg(OPT_show_inst);
+  MCOptions.AsmVerbose = true;
 
   Triple TheTriple = GetTriple(ProgName, InputArgs);
   std::string Error;
@@ -330,9 +336,6 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
       Ctx, /*PIC=*/false, /*LargeCodeModel=*/true));
   Ctx.setObjectFileInfo(MOFI.get());
 
-  if (InputArgs.hasArg(OPT_save_temp_labels))
-    Ctx.setAllowTemporaryLabels(false);
-
   // Set compilation information.
   SmallString<128> CWD;
   if (!sys::fs::current_path(CWD))
@@ -387,10 +390,8 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(TheTarget->createAsmStreamer(
-        Ctx, std::move(FOut), /*asmverbose*/ true,
-        /*useDwarfDirectory*/ true, IP, std::move(CE), std::move(MAB),
-        InputArgs.hasArg(OPT_show_inst)));
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+                                           std::move(CE), std::move(MAB)));
 
   } else if (FileType == "null") {
     Str.reset(TheTarget->createNullStreamer(Ctx));
@@ -404,9 +405,8 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE), *STI,
-        MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE),
+        *STI));
   } else {
     llvm_unreachable("Invalid file type!");
   }
@@ -427,9 +427,6 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     Str->emitSymbolAttribute(Feat00Sym, MCSA_Global);
     Str->emitAssignment(Feat00Sym, MCConstantExpr::create(Feat00Flags, Ctx));
   }
-
-  // Use Assembler information for parsing.
-  Str->setUseAssemblerInfoForParsing(true);
 
   int Res = 1;
   if (InputArgs.hasArg(OPT_as_lex)) {

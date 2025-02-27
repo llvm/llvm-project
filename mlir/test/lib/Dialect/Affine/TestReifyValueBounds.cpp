@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
@@ -16,6 +17,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Pass/Pass.h"
 
@@ -29,7 +31,8 @@ namespace {
 
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestReifyValueBounds
-    : public PassWrapper<TestReifyValueBounds, OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestReifyValueBounds,
+                         InterfacePass<FunctionOpInterface>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestReifyValueBounds)
 
   StringRef getArgument() const final { return PASS_NAME; }
@@ -73,7 +76,7 @@ invertComparisonOperator(ValueBoundsConstraintSet::ComparisonOperator cmp) {
 
 /// Look for "test.reify_bound" ops in the input and replace their results with
 /// the reified values.
-static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
+static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
                                           bool reifyToFuncArgs,
                                           bool useArithOps) {
   IRRewriter rewriter(funcOp.getContext());
@@ -147,7 +150,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
       return WalkResult::skip();
     }
     Value constOp = rewriter.create<arith::ConstantIndexOp>(
-        op->getLoc(), cast<IntegerAttr>(reified->get<Attribute>()).getInt());
+        op->getLoc(), cast<IntegerAttr>(cast<Attribute>(*reified)).getInt());
     rewriter.replaceOp(op, constOp);
     return WalkResult::skip();
   });
@@ -155,7 +158,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
 }
 
 /// Look for "test.compare" ops and emit errors/remarks.
-static LogicalResult testEquality(func::FuncOp funcOp) {
+static LogicalResult testEquality(FunctionOpInterface funcOp) {
   IRRewriter rewriter(funcOp.getContext());
   WalkResult result = funcOp.walk([&](test::CompareOp op) {
     auto cmpType = op.getComparisonOperator();

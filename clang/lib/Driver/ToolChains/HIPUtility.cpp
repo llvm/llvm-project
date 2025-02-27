@@ -52,17 +52,20 @@ static std::string normalizeForBundler(const llvm::Triple &T,
 // input object or archive files.
 class HIPUndefinedFatBinSymbols {
 public:
-  HIPUndefinedFatBinSymbols(const Compilation &C)
-      : C(C), DiagID(C.getDriver().getDiags().getCustomDiagID(
-                  DiagnosticsEngine::Error,
-                  "Error collecting HIP undefined fatbin symbols: %0")),
+  HIPUndefinedFatBinSymbols(const Compilation &C,
+                            const llvm::opt::ArgList &Args_)
+      : C(C), Args(Args_),
+        DiagID(C.getDriver().getDiags().getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "Error collecting HIP undefined fatbin symbols: %0")),
         Quiet(C.getArgs().hasArg(options::OPT__HASH_HASH_HASH)),
         Verbose(C.getArgs().hasArg(options::OPT_v)) {
     populateSymbols();
+    processStaticLibraries();
     if (Verbose) {
-      for (auto Name : FatBinSymbols)
+      for (const auto &Name : FatBinSymbols)
         llvm::errs() << "Found undefined HIP fatbin symbol: " << Name << "\n";
-      for (auto Name : GPUBinHandleSymbols)
+      for (const auto &Name : GPUBinHandleSymbols)
         llvm::errs() << "Found undefined HIP gpubin handle symbol: " << Name
                      << "\n";
     }
@@ -76,15 +79,77 @@ public:
     return GPUBinHandleSymbols;
   }
 
+  // Collect symbols from static libraries specified by -l options.
+  void processStaticLibraries() {
+    llvm::SmallVector<llvm::StringRef, 16> LibNames;
+    llvm::SmallVector<llvm::StringRef, 16> LibPaths;
+    llvm::SmallVector<llvm::StringRef, 16> ExactLibNames;
+    llvm::Triple Triple(C.getDriver().getTargetTriple());
+    bool IsMSVC = Triple.isWindowsMSVCEnvironment();
+    llvm::StringRef Ext = IsMSVC ? ".lib" : ".a";
+
+    for (const auto *Arg : Args.filtered(options::OPT_l)) {
+      llvm::StringRef Value = Arg->getValue();
+      if (Value.starts_with(":"))
+        ExactLibNames.push_back(Value.drop_front());
+      else
+        LibNames.push_back(Value);
+    }
+    for (const auto *Arg : Args.filtered(options::OPT_L)) {
+      auto Path = Arg->getValue();
+      LibPaths.push_back(Path);
+      if (Verbose)
+        llvm::errs() << "HIP fatbin symbol search uses library path:  " << Path
+                     << "\n";
+    }
+
+    auto ProcessLib = [&](llvm::StringRef LibName, bool IsExact) {
+      llvm::SmallString<256> FullLibName(
+          IsExact  ? Twine(LibName).str()
+          : IsMSVC ? (Twine(LibName) + Ext).str()
+                   : (Twine("lib") + LibName + Ext).str());
+
+      bool Found = false;
+      for (const auto Path : LibPaths) {
+        llvm::SmallString<256> FullPath = Path;
+        llvm::sys::path::append(FullPath, FullLibName);
+
+        if (llvm::sys::fs::exists(FullPath)) {
+          if (Verbose)
+            llvm::errs() << "HIP fatbin symbol search found library: "
+                         << FullPath << "\n";
+          auto BufferOrErr = llvm::MemoryBuffer::getFile(FullPath);
+          if (!BufferOrErr) {
+            errorHandler(llvm::errorCodeToError(BufferOrErr.getError()));
+            continue;
+          }
+          processInput(BufferOrErr.get()->getMemBufferRef());
+          Found = true;
+          break;
+        }
+      }
+      if (!Found && Verbose)
+        llvm::errs() << "HIP fatbin symbol search could not find library: "
+                     << FullLibName << "\n";
+    };
+
+    for (const auto LibName : ExactLibNames)
+      ProcessLib(LibName, true);
+
+    for (const auto LibName : LibNames)
+      ProcessLib(LibName, false);
+  }
+
 private:
   const Compilation &C;
+  const llvm::opt::ArgList &Args;
   unsigned DiagID;
   bool Quiet;
   bool Verbose;
   std::set<std::string> FatBinSymbols;
   std::set<std::string> GPUBinHandleSymbols;
-  std::set<std::string> DefinedFatBinSymbols;
-  std::set<std::string> DefinedGPUBinHandleSymbols;
+  std::set<std::string, std::less<>> DefinedFatBinSymbols;
+  std::set<std::string, std::less<>> DefinedGPUBinHandleSymbols;
   const std::string FatBinPrefix = "__hip_fatbin";
   const std::string GPUBinHandlePrefix = "__hip_gpubin_handle";
 
@@ -106,9 +171,9 @@ private:
         std::string ID = IA->getId().str();
         if (!ID.empty()) {
           ID = llvm::utohexstr(llvm::MD5Hash(ID), /*LowerCase=*/true);
-          FatBinSymbols.insert(Twine(FatBinPrefix + "_" + ID).str());
+          FatBinSymbols.insert((FatBinPrefix + Twine('_') + ID).str());
           GPUBinHandleSymbols.insert(
-              Twine(GPUBinHandlePrefix + "_" + ID).str());
+              (GPUBinHandlePrefix + Twine('_') + ID).str());
           continue;
         }
         if (IA->getInputArg().getNumValues() == 0)
@@ -195,11 +260,10 @@ private:
 
       // Add undefined symbols if they are not in the defined sets
       if (isFatBinSymbol &&
-          DefinedFatBinSymbols.find(Name.str()) == DefinedFatBinSymbols.end())
+          DefinedFatBinSymbols.find(Name) == DefinedFatBinSymbols.end())
         FatBinSymbols.insert(Name.str());
-      else if (isGPUBinHandleSymbol &&
-               DefinedGPUBinHandleSymbols.find(Name.str()) ==
-                   DefinedGPUBinHandleSymbols.end())
+      else if (isGPUBinHandleSymbol && DefinedGPUBinHandleSymbols.find(Name) ==
+                                           DefinedGPUBinHandleSymbols.end())
         GPUBinHandleSymbols.insert(Name.str());
     }
   }
@@ -227,7 +291,7 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 
   // ToDo: Remove the dummy host binary entry which is required by
   // clang-offload-bundler.
-  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux";
+  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux-gnu";
   // AMDGCN:
   // For code object version 2 and 3, the offload kind in bundle ID is 'hip'
   // for backward compatibility. For code object version 4 and greater, the
@@ -239,10 +303,14 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs) {
     const auto *A = II.getAction();
     auto ArchStr = llvm::StringRef(A->getOffloadingArch());
-    BundlerTargetArg +=
-        "," + OffloadKind + "-" + normalizeForBundler(TT, !ArchStr.empty());
+    BundlerTargetArg += ',' + OffloadKind + '-';
+    if (ArchStr == "amdgcnspirv")
+      BundlerTargetArg +=
+          normalizeForBundler(llvm::Triple("spirv64-amd-amdhsa"), true);
+    else
+      BundlerTargetArg += normalizeForBundler(TT, !ArchStr.empty());
     if (!ArchStr.empty())
-      BundlerTargetArg += "-" + ArchStr.str();
+      BundlerTargetArg += '-' + ArchStr.str();
   }
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
 
@@ -275,21 +343,21 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 void HIP::constructGenerateObjFileFromHIPFatBinary(
     Compilation &C, const InputInfo &Output, const InputInfoList &Inputs,
     const ArgList &Args, const JobAction &JA, const Tool &T) {
-  const ToolChain &TC = T.getToolChain();
+  const Driver &D = C.getDriver();
   std::string Name = std::string(llvm::sys::path::stem(Output.getFilename()));
 
   // Create Temp Object File Generator,
   // Offload Bundled file and Bundled Object file.
   // Keep them if save-temps is enabled.
-  const char *McinFile;
+  const char *ObjinFile;
   const char *BundleFile;
-  if (C.getDriver().isSaveTempsEnabled()) {
-    McinFile = C.getArgs().MakeArgString(Name + ".mcin");
+  if (D.isSaveTempsEnabled()) {
+    ObjinFile = C.getArgs().MakeArgString(Name + ".mcin");
     BundleFile = C.getArgs().MakeArgString(Name + ".hipfb");
   } else {
-    auto TmpNameMcin = C.getDriver().GetTemporaryPath(Name, "mcin");
-    McinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
-    auto TmpNameFb = C.getDriver().GetTemporaryPath(Name, "hipfb");
+    auto TmpNameMcin = D.GetTemporaryPath(Name, "mcin");
+    ObjinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
+    auto TmpNameFb = D.GetTemporaryPath(Name, "hipfb");
     BundleFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameFb));
   }
   HIP::constructHIPFatbinCommand(C, JA, BundleFile, Inputs, Args, T);
@@ -301,7 +369,7 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   auto HostTriple =
       C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple();
 
-  HIPUndefinedFatBinSymbols Symbols(C);
+  HIPUndefinedFatBinSymbols Symbols(C, Args);
 
   std::string PrimaryHipFatbinSymbol;
   std::string PrimaryGpuBinHandleSymbol;
@@ -381,7 +449,6 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   }
   if (HostTriple.isOSLinux() && HostTriple.isOSBinFormatELF())
     ObjStream << "  .section .note.GNU-stack, \"\", @progbits\n";
-  ObjStream.flush();
 
   // Dump the contents of the temp object file gen if the user requested that.
   // We support this option to enable testing of behavior with -###.
@@ -390,19 +457,20 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   // Open script file and write the contents.
   std::error_code EC;
-  llvm::raw_fd_ostream Objf(McinFile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream Objf(ObjinFile, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
-    C.getDriver().Diag(clang::diag::err_unable_to_make_temp) << EC.message();
+    D.Diag(clang::diag::err_unable_to_make_temp) << EC.message();
     return;
   }
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-triple", Args.MakeArgString(HostTriple.normalize()),
+  ArgStringList ClangArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
                        "-o",      Output.getFilename(),
-                       McinFile,  "--filetype=obj"};
-  const char *Mc = Args.MakeArgString(TC.GetProgramPath("llvm-mc"));
-  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(), Mc,
-                                         McArgs, Inputs, Output));
+                       "-x",      "assembler",
+                       ObjinFile, "-c"};
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         D.getClangProgramPath(), ClangArgs,
+                                         Inputs, Output, D.getPrependArg()));
 }

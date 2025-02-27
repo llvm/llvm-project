@@ -16,17 +16,19 @@
 #include "GISel/PPCRegisterBankInfo.h"
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include <cstdlib>
 
 using namespace llvm;
@@ -36,11 +38,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
-
-static cl::opt<bool>
-    UseSubRegLiveness("ppc-track-subreg-liveness",
-                      cl::desc("Enable subregister liveness tracking for PPC"),
-                      cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",
@@ -63,13 +60,20 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
               TargetTriple.getArch() == Triple::ppc64le),
       TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
+  TSInfo = std::make_unique<PPCSelectionDAGInfo>();
+
   CallLoweringInfo.reset(new PPCCallLowering(*getTargetLowering()));
   Legalizer.reset(new PPCLegalizerInfo(*this));
   auto *RBI = new PPCRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
 
-  InstSelector.reset(createPPCInstructionSelector(
-      *static_cast<const PPCTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createPPCInstructionSelector(TM, *this, *RBI));
+}
+
+PPCSubtarget::~PPCSubtarget() = default;
+
+const SelectionDAGTargetInfo *PPCSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 void PPCSubtarget::initializeEnvironment() {
@@ -83,13 +87,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
-    // If cross-compiling with -march=ppc64le without -mcpu
-    if (TargetTriple.getArch() == Triple::ppc64le)
-      CPUName = "ppc64le";
-    else if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
+    if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
       CPUName = "e500";
     else
-      CPUName = "generic";
+      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(TargetTriple));
   }
 
   // Determine the CPU to schedule for.
@@ -141,6 +142,11 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
                          "-data-sections.\n",
                          false);
   }
+
+  if (HasAIXShLibTLSModelOpt && (!TargetTriple.isOSAIX() || !IsPPC64))
+    report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
+                       "is only supported on AIX in 64-bit mode.\n",
+                       false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
@@ -181,9 +187,7 @@ bool PPCSubtarget::useAA() const {
   return true;
 }
 
-bool PPCSubtarget::enableSubRegLiveness() const {
-  return UseSubRegLiveness;
-}
+bool PPCSubtarget::enableSubRegLiveness() const { return true; }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   if (isAIXABI()) {

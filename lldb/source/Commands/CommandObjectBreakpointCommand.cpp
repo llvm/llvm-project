@@ -193,10 +193,12 @@ are no syntax errors may indicate that a function was declared but never called.
   Options *GetOptions() override { return &m_all_options; }
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(g_reader_instructions);
-      output_sp->Flush();
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(g_reader_instructions);
+      }
     }
   }
 
@@ -278,9 +280,8 @@ are no syntax errors may indicate that a function was declared but never called.
         m_stop_on_error =
             OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "invalid value for stop-on-error: \"%s\"",
-              option_arg.str().c_str());
+          return Status::FromErrorStringWithFormatv(
+              "invalid value for stop-on-error: \"{0}\"", option_arg);
       } break;
 
       case 'D':
@@ -323,7 +324,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
@@ -343,7 +344,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     m_bp_options_vec.clear();
@@ -390,7 +391,7 @@ protected:
               m_bp_options_vec, result);
         }
         if (!error.Success())
-          result.SetError(error);
+          result.SetError(std::move(error));
       } else {
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner)
@@ -481,7 +482,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
@@ -499,7 +500,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, &target, result, &valid_bp_ids,
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -548,9 +549,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target &target = GetTarget();
 
-    const BreakpointList &breakpoints = target->GetBreakpointList();
+    const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
@@ -575,7 +576,7 @@ protected:
         BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
-              target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
 
           if (bp) {
             BreakpointLocationSP bp_loc_sp;

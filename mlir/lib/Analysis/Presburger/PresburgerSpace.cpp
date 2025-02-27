@@ -18,9 +18,11 @@ using namespace presburger;
 bool Identifier::isEqual(const Identifier &other) const {
   if (value == nullptr || other.value == nullptr)
     return false;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   assert(value != other.value ||
          (value == other.value && idType == other.idType &&
           "Values of Identifiers are equal but their types do not match."));
+#endif
   return value == other.value;
 }
 
@@ -214,16 +216,17 @@ void PresburgerSpace::swapVar(VarKind kindA, VarKind kindB, unsigned posA,
     return;
 
   if (kindA == VarKind::Local) {
-    getId(kindB, posB) = Identifier();
+    setId(kindB, posB, Identifier());
     return;
   }
 
   if (kindB == VarKind::Local) {
-    getId(kindA, posA) = Identifier();
+    setId(kindA, posA, Identifier());
     return;
   }
 
-  std::swap(getId(kindA, posA), getId(kindB, posB));
+  std::swap(identifiers[getVarKindOffset(kindA) + posA],
+            identifiers[getVarKindOffset(kindB) + posB]);
 }
 
 bool PresburgerSpace::isCompatible(const PresburgerSpace &other) const {
@@ -285,7 +288,7 @@ bool PresburgerSpace::isAligned(const PresburgerSpace &other,
   return getNumVarKind(kind) == other.getNumVarKind(kind);
 }
 
-void PresburgerSpace::setVarSymbolSeperation(unsigned newSymbolCount) {
+void PresburgerSpace::setVarSymbolSeparation(unsigned newSymbolCount) {
   assert(newSymbolCount <= getNumDimAndSymbolVars() &&
          "invalid separation position");
   numRange = numRange + numSymbols - newSymbolCount;
@@ -311,7 +314,7 @@ void PresburgerSpace::mergeAndAlignSymbols(PresburgerSpace &other) {
       std::swap(findBegin, itr);
     } else {
       other.insertVar(VarKind::Symbol, i);
-      other.getId(VarKind::Symbol, i) = identifier;
+      other.setId(VarKind::Symbol, i, identifier);
     }
     ++i;
   }
@@ -319,7 +322,7 @@ void PresburgerSpace::mergeAndAlignSymbols(PresburgerSpace &other) {
   // Finally add identifiers that are in `other`, but not in `this` to `this`.
   for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; ++i) {
     insertVar(VarKind::Symbol, i);
-    getId(VarKind::Symbol, i) = other.getId(VarKind::Symbol, i);
+    setId(VarKind::Symbol, i, other.getId(VarKind::Symbol, i));
   }
 }
 

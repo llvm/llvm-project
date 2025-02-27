@@ -61,7 +61,7 @@ static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
                                                      PDLResultList &results,
                                                      ArrayRef<PDLValue> args) {
   auto *op = args[0].cast<Operation *>();
-  int numTypes = args[1].cast<Attribute>().cast<IntegerAttr>().getInt();
+  int numTypes = cast<IntegerAttr>(args[1].cast<Attribute>()).getInt();
 
   if (op->getName().getStringRef() == "test.success_op") {
     SmallVector<Type> types;
@@ -161,8 +161,8 @@ struct TestPDLByteCodePass
     patternList.add(std::move(pdlPattern));
 
     // Invoke the pattern driver with the provided patterns.
-    (void)applyPatternsAndFoldGreedily(irModule.getBodyRegion(),
-                                       std::move(patternList));
+    (void)applyPatternsGreedily(irModule.getBodyRegion(),
+                                std::move(patternList));
   }
 };
 } // namespace

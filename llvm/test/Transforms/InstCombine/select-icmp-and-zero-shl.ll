@@ -17,7 +17,7 @@ define i32 @test_eq(i32 %x) {
 
 define <2 x i32> @test_eq_vect(<2 x i32> %x) {
 ; CHECK-LABEL: @test_eq_vect(
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %shl.mask = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
@@ -41,7 +41,7 @@ define i32 @test_ne(i32 %x) {
 
 define <2 x i32> @test_ne_vect(<2 x i32> %x) {
 ; CHECK-LABEL: @test_ne_vect(
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %shl.mask = and <2 x i32> %x, <i32 1073741823, i32 1073741823>

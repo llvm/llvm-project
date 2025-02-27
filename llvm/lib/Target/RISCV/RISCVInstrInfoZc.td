@@ -31,7 +31,7 @@ def uimm2_lsb0 : RISCVOp,
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
-  let DecoderMethod = "decodeUImmOperand<8>";
+  let DecoderMethod = "decodeUImmOperandGE<8, 32>";
   let OperandType = "OPERAND_UIMM8_GE32";
 }
 
@@ -39,6 +39,7 @@ def RlistAsmOperand : AsmOperandClass {
   let Name = "Rlist";
   let ParserMethod = "parseReglist";
   let DiagnosticType = "InvalidRlist";
+  let DiagnosticString = "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}";
 }
 
 def StackAdjAsmOperand : AsmOperandClass {
@@ -112,8 +113,9 @@ class CLoadB_ri<bits<6> funct6, string OpcodeStr>
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr>
-    : RVInst16CLH<funct6, funct1, 0b00, (outs GPRC:$rd),
+class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
+                DAGOperand rty = GPRC>
+    : RVInst16CLH<funct6, funct1, 0b00, (outs rty:$rd),
                   (ins GPRCMem:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
@@ -132,9 +134,10 @@ class CStoreB_rri<bits<6> funct6, string OpcodeStr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr>
+class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr,
+                  DAGOperand rty = GPRC>
     : RVInst16CSH<funct6, funct1, 0b00, (outs),
-                  (ins GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (ins rty:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -183,8 +186,8 @@ let Predicates = [HasStdExtZcb] in
 def C_ZEXT_B  : RVZcArith_r<0b11000 , "c.zext.b">,
                 Sched<[WriteIALU, ReadIALU]>;
 
-let Predicates = [HasStdExtZcb, HasStdExtMOrZmmul] in
-def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul", GPRC>,
+let Predicates = [HasStdExtZcb, HasStdExtZmmul] in
+def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul">,
                 Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 
 let Predicates = [HasStdExtZcb] in {
@@ -202,7 +205,15 @@ def C_SB : CStoreB_rri<0b100010, "c.sb">,
            Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
 def C_SH : CStoreH_rri<0b100011, 0b0, "c.sh">,
            Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+
+// Compressed versions of Zhinx load/store.
+let isCodeGenOnly = 1 in {
+def C_LH_INX : CLoadH_ri<0b100001, 0b1, "c.lh", GPRF16C>,
+               Sched<[WriteLDH, ReadMemBase]>;
+def C_SH_INX : CStoreH_rri<0b100011, 0b0, "c.sh", GPRF16C>,
+               Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 }
+} // Predicates = [HasStdExtZcb]
 
 // Zcmp
 let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp],
@@ -270,13 +281,13 @@ def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
 } // DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt]...
 
 
-let Predicates = [HasStdExtZcb, HasStdExtMOrZmmul] in{
+let Predicates = [HasStdExtZcb, HasStdExtZmmul] in{
 def : CompressPat<(MUL GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
                   (C_MUL GPRC:$rs1, GPRC:$rs2)>;
 let isCompressOnly = true in
 def : CompressPat<(MUL GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
                   (C_MUL GPRC:$rs1, GPRC:$rs2)>;
-} // Predicates = [HasStdExtZcb, HasStdExtMOrZmmul]
+} // Predicates = [HasStdExtZcb, HasStdExtZmmul]
 
 let Predicates = [HasStdExtZcb, HasStdExtZbb] in{
 def : CompressPat<(SEXT_B GPRC:$rs1, GPRC:$rs1),
@@ -318,6 +329,13 @@ def : CompressPat<(SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
                   (C_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm)>;
 def : CompressPat<(SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
                   (C_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+
+let isCompressOnly = true in {
+def : CompressPat<(LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+}
 }// Predicates = [HasStdExtZcb]
 
 

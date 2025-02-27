@@ -15,6 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTBAA.h"
+#include "ABIInfoImpl.h"
+#include "CGCXXABI.h"
 #include "CGRecordLayout.h"
 #include "CodeGenTypes.h"
 #include "clang/AST/ASTContext.h"
@@ -23,8 +25,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -35,10 +35,11 @@ using namespace CodeGen;
 
 CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes,
                          llvm::Module &M, const CodeGenOptions &CGO,
-                         const LangOptions &Features, MangleContext &MContext)
+                         const LangOptions &Features)
     : Context(Ctx), CGTypes(CGTypes), Module(M), CodeGenOpts(CGO),
-      Features(Features), MContext(MContext), MDHelper(M.getContext()),
-      Root(nullptr), Char(nullptr) {}
+      Features(Features),
+      MangleCtx(ItaniumMangleContext::create(Ctx, Ctx.getDiagnostics())),
+      MDHelper(M.getContext()), Root(nullptr), Char(nullptr) {}
 
 CodeGenTBAA::~CodeGenTBAA() {
 }
@@ -77,6 +78,42 @@ llvm::MDNode *CodeGenTBAA::getChar() {
     Char = createScalarTypeNode("omnipotent char", getRoot(), /* Size= */ 1);
 
   return Char;
+}
+
+llvm::MDNode *CodeGenTBAA::getAnyPtr(unsigned PtrDepth) {
+  assert(PtrDepth >= 1 && "Pointer must have some depth");
+
+  // Populate at least PtrDepth elements in AnyPtrs. These are the type nodes
+  // for "any" pointers of increasing pointer depth, and are organized in the
+  // hierarchy: any pointer <- any p2 pointer <- any p3 pointer <- ...
+  //
+  // Note that AnyPtrs[Idx] is actually the node for pointer depth (Idx+1),
+  // since there is no node for pointer depth 0.
+  //
+  // These "any" pointer type nodes are used in pointer TBAA. The type node of
+  // a concrete pointer type has the "any" pointer type node of appropriate
+  // pointer depth as its parent. The "any" pointer type nodes are also used
+  // directly for accesses to void pointers, or to specific pointers that we
+  // conservatively do not distinguish in pointer TBAA (e.g. pointers to
+  // members). Essentially, this establishes that e.g. void** can alias with
+  // any type that can unify with T**, ignoring things like qualifiers. Here, T
+  // is a variable that represents an arbitrary type, including pointer types.
+  // As such, each depth is naturally a subtype of the previous depth, and thus
+  // transitively of all previous depths.
+  if (AnyPtrs.size() < PtrDepth) {
+    AnyPtrs.reserve(PtrDepth);
+    auto Size = Module.getDataLayout().getPointerSize();
+    // Populate first element.
+    if (AnyPtrs.empty())
+      AnyPtrs.push_back(createScalarTypeNode("any pointer", getChar(), Size));
+    // Populate further elements.
+    for (size_t Idx = AnyPtrs.size(); Idx < PtrDepth; ++Idx) {
+      auto Name = ("any p" + llvm::Twine(Idx + 1) + " pointer").str();
+      AnyPtrs.push_back(createScalarTypeNode(Name, AnyPtrs[Idx - 1], Size));
+    }
+  }
+
+  return AnyPtrs[PtrDepth - 1];
 }
 
 static bool TypeHasMayAlias(QualType QTy) {
@@ -185,10 +222,102 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getChar();
 
   // Handle pointers and references.
-  // TODO: Implement C++'s type "similarity" and consider dis-"similar"
-  // pointers distinct.
-  if (Ty->isPointerType() || Ty->isReferenceType())
-    return createScalarTypeNode("any pointer", getChar(), Size);
+  //
+  // C has a very strict rule for pointer aliasing. C23 6.7.6.1p2:
+  //     For two pointer types to be compatible, both shall be identically
+  //     qualified and both shall be pointers to compatible types.
+  //
+  // This rule is impractically strict; we want to at least ignore CVR
+  // qualifiers. Distinguishing by CVR qualifiers would make it UB to
+  // e.g. cast a `char **` to `const char * const *` and dereference it,
+  // which is too common and useful to invalidate. C++'s similar types
+  // rule permits qualifier differences in these nested positions; in fact,
+  // C++ even allows that cast as an implicit conversion.
+  //
+  // Other qualifiers could theoretically be distinguished, especially if
+  // they involve a significant representation difference.  We don't
+  // currently do so, however.
+  if (Ty->isPointerType() || Ty->isReferenceType()) {
+    if (!CodeGenOpts.PointerTBAA)
+      return getAnyPtr();
+    // C++ [basic.lval]p11 permits objects to accessed through an l-value of
+    // similar type. Two types are similar under C++ [conv.qual]p2 if the
+    // decomposition of the types into pointers, member pointers, and arrays has
+    // the same structure when ignoring cv-qualifiers at each level of the
+    // decomposition. Meanwhile, C makes T(*)[] and T(*)[N] compatible, which
+    // would really complicate any attempt to distinguish pointers to arrays by
+    // their bounds. It's simpler, and much easier to explain to users, to
+    // simply treat all pointers to arrays as pointers to their element type for
+    // aliasing purposes. So when creating a TBAA tag for a pointer type, we
+    // recursively ignore both qualifiers and array types when decomposing the
+    // pointee type. The only meaningful remaining structure is the number of
+    // pointer types we encountered along the way, so we just produce the tag
+    // "p<depth> <base type tag>". If we do find a member pointer type, for now
+    // we just conservatively bail out with AnyPtr (below) rather than trying to
+    // create a tag that honors the similar-type rules while still
+    // distinguishing different kinds of member pointer.
+    unsigned PtrDepth = 0;
+    do {
+      PtrDepth++;
+      Ty = Ty->getPointeeType()->getBaseElementTypeUnsafe();
+    } while (Ty->isPointerType());
+
+    // While there are no special rules in the standards regarding void pointers
+    // and strict aliasing, emitting distinct tags for void pointers break some
+    // common idioms and there is no good alternative to re-write the code
+    // without strict-aliasing violations.
+    if (Ty->isVoidType())
+      return getAnyPtr(PtrDepth);
+
+    assert(!isa<VariableArrayType>(Ty));
+    // When the underlying type is a builtin type, we compute the pointee type
+    // string recursively, which is implicitly more forgiving than the standards
+    // require.  Effectively, we are turning the question "are these types
+    // compatible/similar" into "are accesses to these types allowed to alias".
+    // In both C and C++, the latter question has special carve-outs for
+    // signedness mismatches that only apply at the top level.  As a result, we
+    // are allowing e.g. `int *` l-values to access `unsigned *` objects.
+    SmallString<256> TyName;
+    if (isa<BuiltinType>(Ty)) {
+      llvm::MDNode *ScalarMD = getTypeInfoHelper(Ty);
+      StringRef Name =
+          cast<llvm::MDString>(
+              ScalarMD->getOperand(CodeGenOpts.NewStructPathTBAA ? 2 : 0))
+              ->getString();
+      TyName = Name;
+    } else {
+      // Be conservative if the type isn't a RecordType. We are specifically
+      // required to do this for member pointers until we implement the
+      // similar-types rule.
+      const auto *RT = Ty->getAs<RecordType>();
+      if (!RT)
+        return getAnyPtr(PtrDepth);
+
+      // For unnamed structs or unions C's compatible types rule applies. Two
+      // compatible types in different compilation units can have different
+      // mangled names, meaning the metadata emitted below would incorrectly
+      // mark them as no-alias. Use AnyPtr for such types in both C and C++, as
+      // C and C++ types may be visible when doing LTO.
+      //
+      // Note that using AnyPtr is overly conservative. We could summarize the
+      // members of the type, as per the C compatibility rule in the future.
+      // This also covers anonymous structs and unions, which have a different
+      // compatibility rule, but it doesn't matter because you can never have a
+      // pointer to an anonymous struct or union.
+      if (!RT->getDecl()->getDeclName())
+        return getAnyPtr(PtrDepth);
+
+      // For non-builtin types use the mangled name of the canonical type.
+      llvm::raw_svector_ostream TyOut(TyName);
+      MangleCtx->mangleCanonicalTypeName(QualType(Ty, 0), TyOut);
+    }
+
+    SmallString<256> OutName("p");
+    OutName += std::to_string(PtrDepth);
+    OutName += " ";
+    OutName += TyName;
+    return createScalarTypeNode(OutName, getAnyPtr(PtrDepth), Size);
+  }
 
   // Accesses to arrays are accesses to objects of their element types.
   if (CodeGenOpts.NewStructPathTBAA && Ty->isArrayType())
@@ -209,7 +338,8 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
 
     SmallString<256> OutName;
     llvm::raw_svector_ostream Out(OutName);
-    MContext.mangleCanonicalTypeName(QualType(ETy, 0), Out);
+    CGTypes.getCXXABI().getMangleContext().mangleCanonicalTypeName(
+        QualType(ETy, 0), Out);
     return createScalarTypeNode(OutName, getChar(), Size);
   }
 
@@ -227,8 +357,10 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
 }
 
 llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
-  // At -O0 or relaxed aliasing, TBAA is not emitted for regular types.
-  if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
+  // At -O0 or relaxed aliasing, TBAA is not emitted for regular types (unless
+  // we're running TypeSanitizer).
+  if (!Features.Sanitize.has(SanitizerKind::Type) &&
+      (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing))
     return nullptr;
 
   // If the type has the may_alias attribute (even on a typedef), it is
@@ -271,7 +403,7 @@ TBAAAccessInfo CodeGenTBAA::getAccessInfo(QualType AccessType) {
 }
 
 TBAAAccessInfo CodeGenTBAA::getVTablePtrAccessInfo(llvm::Type *VTablePtrType) {
-  llvm::DataLayout DL(&Module);
+  const llvm::DataLayout &DL = Module.getDataLayout();
   unsigned Size = DL.getPointerTypeSize(VTablePtrType);
   return TBAAAccessInfo(createScalarTypeNode("vtable pointer", getRoot(), Size),
                         Size);
@@ -309,7 +441,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
          i != e; ++i, ++idx) {
-      if ((*i)->isZeroSize(Context))
+      if (isEmptyFieldForLayout(Context, *i))
         continue;
 
       uint64_t Offset =
@@ -414,7 +546,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
                  });
     }
     for (FieldDecl *Field : RD->fields()) {
-      if (Field->isZeroSize(Context) || Field->isUnnamedBitfield())
+      if (Field->isZeroSize(Context) || Field->isUnnamedBitField())
         continue;
       QualType FieldQTy = Field->getType();
       llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
@@ -434,7 +566,8 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
     if (Features.CPlusPlus) {
       // Don't use the mangler for C code.
       llvm::raw_svector_ostream Out(OutName);
-      MContext.mangleCanonicalTypeName(QualType(Ty, 0), Out);
+      CGTypes.getCXXABI().getMangleContext().mangleCanonicalTypeName(
+          QualType(Ty, 0), Out);
     } else {
       OutName = RD->getName();
     }

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -19,11 +21,15 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdarg>
+#include <initializer_list>
 #include <optional>
 
 using namespace llvm;
+using ::llvm::memprof::LineLocation;
+using ::testing::ElementsAre;
 using ::testing::EndsWith;
 using ::testing::IsSubsetOf;
+using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
@@ -343,34 +349,55 @@ TEST_F(InstrProfTest, test_merge_traces_sampled) {
       IsSubsetOf({FooTrace, BarTrace, GooTrace, BarTrace, GooTrace, FooTrace}));
 }
 
+using ::llvm::memprof::IndexedMemProfData;
 using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
-using FrameIdMapTy =
-    llvm::DenseMap<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
 
-static FrameIdMapTy getFrameMapping() {
-  FrameIdMapTy Mapping;
-  Mapping.insert({0, {0x123, 1, 2, false}});
-  Mapping.insert({1, {0x345, 3, 4, true}});
-  Mapping.insert({2, {0x125, 5, 6, false}});
-  Mapping.insert({3, {0x567, 7, 8, true}});
-  Mapping.insert({4, {0x124, 5, 6, false}});
-  Mapping.insert({5, {0x789, 8, 9, true}});
-  return Mapping;
+IndexedMemProfData getMemProfDataForTest() {
+  IndexedMemProfData MemProfData;
+
+  MemProfData.Frames.insert({0, {0x123, 1, 2, false}});
+  MemProfData.Frames.insert({1, {0x345, 3, 4, true}});
+  MemProfData.Frames.insert({2, {0x125, 5, 6, false}});
+  MemProfData.Frames.insert({3, {0x567, 7, 8, true}});
+  MemProfData.Frames.insert({4, {0x124, 5, 6, false}});
+  MemProfData.Frames.insert({5, {0x789, 8, 9, true}});
+
+  MemProfData.CallStacks.insert({0x111, {0, 1}});
+  MemProfData.CallStacks.insert({0x222, {2, 3}});
+  MemProfData.CallStacks.insert({0x333, {4, 5}});
+
+  return MemProfData;
 }
 
-IndexedMemProfRecord makeRecord(
-    std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
-        AllocFrames,
-    std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
-        CallSiteFrames,
-    const MemInfoBlock &Block = MemInfoBlock()) {
-  llvm::memprof::IndexedMemProfRecord MR;
-  for (const auto &Frames : AllocFrames)
-    MR.AllocSites.emplace_back(Frames, llvm::memprof::hashCallStack(Frames),
-                               Block);
-  for (const auto &Frames : CallSiteFrames)
-    MR.CallSites.push_back(Frames);
+// Populate all of the fields of MIB.
+MemInfoBlock makeFullMIB() {
+  MemInfoBlock MIB;
+#define MIBEntryDef(NameTag, Name, Type) MIB.NameTag;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+  return MIB;
+}
+
+// Populate those fields returned by getHotColdSchema.
+MemInfoBlock makePartialMIB() {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 1;
+  MIB.TotalSize = 5;
+  MIB.TotalLifetime = 10;
+  MIB.TotalLifetimeAccessDensity = 23;
+  return MIB;
+}
+
+IndexedMemProfRecord
+makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
+             std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
+             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
+  IndexedMemProfRecord MR;
+  for (const auto &CSId : AllocFrames)
+    MR.AllocSites.emplace_back(CSId, Block, Schema);
+  for (const auto &CSId : CallSiteFrames)
+    MR.CallSiteIds.push_back(CSId);
   return MR;
 }
 
@@ -384,7 +411,6 @@ MATCHER_P(EqualsRecord, Want, "") {
     Want.print(OS);
     OS << "Got:\n";
     Got.print(OS);
-    OS.flush();
     *result_listener << "MemProf Record differs!\n" << Buffer;
     return false;
   };
@@ -408,24 +434,21 @@ MATCHER_P(EqualsRecord, Want, "") {
   return true;
 }
 
-TEST_F(InstrProfTest, test_memprof) {
+TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
+  const MemInfoBlock MIB = makeFullMIB();
+
+  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfFullSchema(true);
+
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecord(
-      /*AllocFrames=*/
-      {
-          {0, 1},
-          {2, 3},
-      },
-      /*CallSiteFrames=*/{
-          {4, 5},
-      });
-  const FrameIdMapTy IdToFrameMap = getFrameMapping();
-  for (const auto &I : IdToFrameMap) {
-    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
-  }
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+      /*AllocFrames=*/{0x111, 0x222},
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
+  IndexedMemProfData MemProfData = getMemProfDataForTest();
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -434,49 +457,119 @@ TEST_F(InstrProfTest, test_memprof) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  std::optional<memprof::FrameId> LastUnmappedFrameId;
-  auto IdToFrameCallback = [&](const memprof::FrameId Id) {
-    auto Iter = IdToFrameMap.find(Id);
-    if (Iter == IdToFrameMap.end()) {
-      LastUnmappedFrameId = Id;
-      return memprof::Frame(0, 0, 0, false);
-    }
-    return Iter->second;
-  };
+  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
 
-  const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_FALSE(LastUnmappedFrameId.has_value())
-      << "could not map frame id: " << *LastUnmappedFrameId;
+  const ::llvm::memprof::MemProfRecord WantRecord =
+      IndexedMR.toMemProfRecord(CSIdConv);
+  ASSERT_EQ(CSIdConv.FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *CSIdConv.FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.CSIdConv.LastUnmappedId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
+}
+
+TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
+  const MemInfoBlock MIB = makePartialMIB();
+
+  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfFullSchema(false);
+
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+      /*AllocFrames=*/{0x111, 0x222},
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
+  IndexedMemProfData MemProfData = getMemProfDataForTest();
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto RecordOr = Reader->getMemProfRecord(0x9999);
+  ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
+  const memprof::MemProfRecord &Record = RecordOr.get();
+
+  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
+
+  const ::llvm::memprof::MemProfRecord WantRecord =
+      IndexedMR.toMemProfRecord(CSIdConv);
+  ASSERT_EQ(CSIdConv.FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *CSIdConv.FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.CSIdConv.LastUnmappedId;
+  EXPECT_THAT(WantRecord, EqualsRecord(Record));
+}
+
+TEST_F(InstrProfTest, test_caller_callee_pairs) {
+  const MemInfoBlock MIB = makePartialMIB();
+
+  Writer.setMemProfVersionRequested(memprof::Version3);
+  Writer.setMemProfFullSchema(false);
+
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  // Call Hierarchy
+  //
+  // Function GUID:0x123
+  //   Line: 1, Column: 2
+  //     Function GUID: 0x234
+  //       Line: 3, Column: 4
+  //         new(...)
+  //   Line: 5, Column: 6
+  //     Function GUID: 0x345
+  //       Line: 7, Column: 8
+  //         new(...)
+
+  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+      /*AllocFrames=*/{0x111, 0x222},
+      /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
+
+  IndexedMemProfData MemProfData;
+  MemProfData.Frames.try_emplace(0, 0x123, 1, 2, false);
+  MemProfData.Frames.try_emplace(1, 0x234, 3, 4, true);
+  MemProfData.Frames.try_emplace(2, 0x123, 5, 6, false);
+  MemProfData.Frames.try_emplace(3, 0x345, 7, 8, true);
+  MemProfData.CallStacks.try_emplace(
+      0x111, std::initializer_list<memprof::FrameId>{1, 0});
+  MemProfData.CallStacks.try_emplace(
+      0x222, std::initializer_list<memprof::FrameId>{3, 2});
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer.addMemProfData(MemProfData, Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto Pairs = Reader->getMemProfCallerCalleePairs();
+  ASSERT_THAT(Pairs, SizeIs(3));
+
+  auto It = Pairs.find(0x123);
+  ASSERT_NE(It, Pairs.end());
+  EXPECT_THAT(It->second, ElementsAre(Pair(LineLocation(1, 2), 0x234U),
+                                      Pair(LineLocation(5, 6), 0x345U)));
+
+  It = Pairs.find(0x234);
+  ASSERT_NE(It, Pairs.end());
+  EXPECT_THAT(It->second, ElementsAre(Pair(LineLocation(3, 4), 0U)));
+
+  It = Pairs.find(0x345);
+  ASSERT_NE(It, Pairs.end());
+  EXPECT_THAT(It->second, ElementsAre(Pair(LineLocation(7, 8), 0U)));
 }
 
 TEST_F(InstrProfTest, test_memprof_getrecord_error) {
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecord(
-      /*AllocFrames=*/
-      {
-          {0, 1},
-          {2, 3},
-      },
-      /*CallSiteFrames=*/{
-          {4, 5},
-      });
-  // We skip adding the frame mappings here unlike the test_memprof unit test
-  // above to exercise the failure path when getMemProfRecord is invoked.
-  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
-
+  Writer.setMemProfVersionRequested(memprof::Version3);
+  // Generate an empty profile.
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  // Missing frames give a hash_mismatch error.
-  auto RecordOr = Reader->getMemProfRecord(0x9999);
-  ASSERT_TRUE(
-      ErrorEquals(instrprof_error::hash_mismatch, RecordOr.takeError()));
-
   // Missing functions give a unknown_function error.
-  RecordOr = Reader->getMemProfRecord(0x1111);
+  auto RecordOr = Reader->getMemProfRecord(0x1111);
   ASSERT_TRUE(
       ErrorEquals(instrprof_error::unknown_function, RecordOr.takeError()));
 }
@@ -485,29 +578,23 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   Writer.addRecord({"func1", 0x1234, {42}}, Err);
 
   InstrProfWriter Writer2;
+  Writer2.setMemProfVersionRequested(memprof::Version3);
   ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecord(
-      /*AllocFrames=*/
-      {
-          {0, 1},
-          {2, 3},
-      },
-      /*CallSiteFrames=*/{
-          {4, 5},
-      });
+  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+      /*AllocFrames=*/{0x111, 0x222},
+      /*CallSiteFrames=*/{}, makePartialMIB(), memprof::getHotColdSchema());
 
-  const FrameIdMapTy IdToFrameMap = getFrameMapping();
-  for (const auto &I : IdToFrameMap) {
-    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
-  }
-  Writer2.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+  IndexedMemProfData MemProfData = getMemProfDataForTest();
+  MemProfData.Records.try_emplace(0x9999, IndexedMR);
+  Writer2.addMemProfData(MemProfData, Err);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(Writer2.getProfileKind()),
                     Succeeded());
   Writer.mergeRecordsFromWriter(std::move(Writer2), Err);
 
+  Writer.setMemProfVersionRequested(memprof::Version3);
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -520,22 +607,14 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameId LastUnmappedFrameId = 0;
-  bool HasFrameMappingError = false;
+  std::optional<memprof::FrameId> LastUnmappedFrameId;
 
-  auto IdToFrameCallback = [&](const memprof::FrameId Id) {
-    auto Iter = IdToFrameMap.find(Id);
-    if (Iter == IdToFrameMap.end()) {
-      LastUnmappedFrameId = Id;
-      HasFrameMappingError = true;
-      return memprof::Frame(0, 0, 0, false);
-    }
-    return Iter->second;
-  };
+  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
 
-  const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_FALSE(HasFrameMappingError)
-      << "could not map frame id: " << LastUnmappedFrameId;
+  const ::llvm::memprof::MemProfRecord WantRecord =
+      IndexedMR.toMemProfRecord(CSIdConv);
+  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
+      << "could not map frame id: " << *LastUnmappedFrameId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
@@ -679,13 +758,13 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
     Record1.reserveSites(IPVK_IndirectCallTarget, 4);
     InstrProfValueData VD0[] = {
         {(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}, {(uint64_t)callee3, 3}};
-    Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
     // No value profile data at the second site.
-    Record1.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 1, {}, nullptr);
     InstrProfValueData VD2[] = {{(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}};
-    Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, 2, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, nullptr);
     InstrProfValueData VD3[] = {{(uint64_t)callee7, 1}, {(uint64_t)callee8, 2}};
-    Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 2, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, nullptr);
   }
 
   // 2 vtable value sites.
@@ -699,8 +778,8 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
         {getCalleeAddress(vtable1), 1},
         {getCalleeAddress(vtable2), 2},
     };
-    Record1.addValueData(IPVK_VTableTarget, 0, VD0, 3, nullptr);
-    Record1.addValueData(IPVK_VTableTarget, 2, VD2, 2, nullptr);
+    Record1.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
+    Record1.addValueData(IPVK_VTableTarget, 1, VD2, nullptr);
   }
 
   Writer.addRecord(std::move(Record1), getProfWeight(), Err);
@@ -725,41 +804,37 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
   // Test the number of instrumented indirect call sites and the number of
   // profiled values at each site.
   ASSERT_EQ(4U, R->getNumValueSites(IPVK_IndirectCallTarget));
-  EXPECT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
-  EXPECT_EQ(0U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
-  EXPECT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
-  EXPECT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
 
   // Test the number of instrumented vtable sites and the number of profiled
   // values at each site.
   ASSERT_EQ(R->getNumValueSites(IPVK_VTableTarget), 2U);
-  EXPECT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 0), 3U);
-  EXPECT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 1), 2U);
 
   // First indirect site.
   {
-    uint64_t TotalC;
-    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0, &TotalC);
+    auto VD = R->getValueArrayForSite(IPVK_IndirectCallTarget, 0);
+    ASSERT_THAT(VD, SizeIs(3));
 
     EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
     EXPECT_EQ(VD[2].Count, 1U * getProfWeight());
-    EXPECT_EQ(TotalC, 6U * getProfWeight());
 
     EXPECT_STREQ((const char *)VD[0].Value, "callee3");
     EXPECT_STREQ((const char *)VD[1].Value, "callee2");
     EXPECT_STREQ((const char *)VD[2].Value, "callee1");
   }
 
+  EXPECT_THAT(R->getValueArrayForSite(IPVK_IndirectCallTarget, 1), SizeIs(0));
+  EXPECT_THAT(R->getValueArrayForSite(IPVK_IndirectCallTarget, 2), SizeIs(2));
+  EXPECT_THAT(R->getValueArrayForSite(IPVK_IndirectCallTarget, 3), SizeIs(2));
+
   // First vtable site.
   {
-    uint64_t TotalC;
-    auto VD = R->getValueForSite(IPVK_VTableTarget, 0, &TotalC);
+    auto VD = R->getValueArrayForSite(IPVK_VTableTarget, 0);
+    ASSERT_THAT(VD, SizeIs(3));
 
     EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
     EXPECT_EQ(VD[2].Count, 1U * getProfWeight());
-    EXPECT_EQ(TotalC, 6U * getProfWeight());
 
     EXPECT_EQ(VD[0].Value, getCalleeAddress(vtable3));
     EXPECT_EQ(VD[1].Value, getCalleeAddress(vtable2));
@@ -768,12 +843,11 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // Second vtable site.
   {
-    uint64_t TotalC;
-    auto VD = R->getValueForSite(IPVK_VTableTarget, 1, &TotalC);
+    auto VD = R->getValueArrayForSite(IPVK_VTableTarget, 1);
+    ASSERT_THAT(VD, SizeIs(2));
 
     EXPECT_EQ(VD[0].Count, 2U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 1U * getProfWeight());
-    EXPECT_EQ(TotalC, 3U * getProfWeight());
 
     EXPECT_EQ(VD[0].Value, getCalleeAddress(vtable2));
     EXPECT_EQ(VD[1].Value, getCalleeAddress(vtable1));
@@ -794,7 +868,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   Record.reserveSites(IPVK_IndirectCallTarget, 1);
   InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}, {5000, 5},
                               {4000, 4}, {6000, 6}};
-  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 6, nullptr);
+  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
   Writer.addRecord(std::move(Record), Err);
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -818,13 +892,10 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   Instruction *Inst2 = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0);
 
-  InstrProfValueData ValueData[5];
-  uint32_t N;
   uint64_t T;
-  bool Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
-                                      ValueData, N, T);
-  ASSERT_TRUE(Res);
-  ASSERT_EQ(3U, N);
+  auto ValueData =
+      getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(3));
   ASSERT_EQ(21U, T);
   // The result should be sorted already:
   ASSERT_EQ(6000U, ValueData[0].Value);
@@ -833,24 +904,19 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(5U, ValueData[1].Count);
   ASSERT_EQ(4000U, ValueData[2].Value);
   ASSERT_EQ(4U, ValueData[2].Count);
-  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 1, ValueData,
-                                 N, T);
-  ASSERT_TRUE(Res);
-  ASSERT_EQ(1U, N);
+  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 1, T);
+  ASSERT_THAT(ValueData, SizeIs(1));
   ASSERT_EQ(21U, T);
 
-  Res = getValueProfDataFromInst(*Inst2, IPVK_IndirectCallTarget, 5, ValueData,
-                                 N, T);
-  ASSERT_FALSE(Res);
+  ValueData = getValueProfDataFromInst(*Inst2, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(0));
 
   // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
-  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
-                                      ValueData, N, T);
-  ASSERT_TRUE(Res);
-  ASSERT_EQ(5U, N);
+  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(5));
   ASSERT_EQ(21U, T);
   ASSERT_EQ(6000U, ValueData[0].Value);
   ASSERT_EQ(6U, ValueData[0].Count);
@@ -870,10 +936,8 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
                               {5000, 2}, {6000, 1}};
   annotateValueSite(*M, *Inst, ArrayRef(VD0Sorted).slice(2), 10,
                     IPVK_IndirectCallTarget, 5);
-  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
-                                      ValueData, N, T);
-  ASSERT_TRUE(Res);
-  ASSERT_EQ(4U, N);
+  ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
+  ASSERT_THAT(ValueData, SizeIs(4));
   ASSERT_EQ(10U, T);
   ASSERT_EQ(3000U, ValueData[0].Value);
   ASSERT_EQ(4U, ValueData[0].Count);
@@ -897,21 +961,21 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
                                 {uint64_t(callee2), 2},
                                 {uint64_t(callee3), 3},
                                 {uint64_t(callee4), 4}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 0, VD0, 4, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
 
     // No value profile data at the second site.
-    Record11.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 1, {}, nullptr);
 
     InstrProfValueData VD2[] = {
         {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 2, VD2, 3, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 2, VD2, nullptr);
 
     InstrProfValueData VD3[] = {{uint64_t(callee7), 1}, {uint64_t(callee8), 2}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 3, VD3, 2, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 3, VD3, nullptr);
 
     InstrProfValueData VD4[] = {
         {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 4, VD4, 3, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 4, VD4, nullptr);
   }
   // 3 value sites for vtables.
   {
@@ -920,53 +984,53 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3},
                                 {getCalleeAddress(vtable4), 4}};
-    Record11.addValueData(IPVK_VTableTarget, 0, VD0, 4, nullptr);
+    Record11.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
 
     InstrProfValueData VD2[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record11.addValueData(IPVK_VTableTarget, 1, VD2, 3, nullptr);
+    Record11.addValueData(IPVK_VTableTarget, 1, VD2, nullptr);
 
     InstrProfValueData VD4[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record11.addValueData(IPVK_VTableTarget, 3, VD4, 3, nullptr);
+    Record11.addValueData(IPVK_VTableTarget, 2, VD4, nullptr);
   }
 
   // A different record for the same caller.
   Record12.reserveSites(IPVK_IndirectCallTarget, 5);
   InstrProfValueData VD02[] = {{uint64_t(callee2), 5}, {uint64_t(callee3), 3}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 0, VD02, 2, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 0, VD02, nullptr);
 
   // No value profile data at the second site.
-  Record12.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 1, {}, nullptr);
 
   InstrProfValueData VD22[] = {
       {uint64_t(callee2), 1}, {uint64_t(callee3), 3}, {uint64_t(callee4), 4}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 2, VD22, 3, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 2, VD22, nullptr);
 
-  Record12.addValueData(IPVK_IndirectCallTarget, 3, nullptr, 0, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 3, {}, nullptr);
 
   InstrProfValueData VD42[] = {
       {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 4, VD42, 3, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 4, VD42, nullptr);
 
   // 3 value sites for vtables.
   {
     Record12.reserveSites(IPVK_VTableTarget, 3);
     InstrProfValueData VD0[] = {{getCalleeAddress(vtable2), 5},
                                 {getCalleeAddress(vtable3), 3}};
-    Record12.addValueData(IPVK_VTableTarget, 0, VD0, 2, nullptr);
+    Record12.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
 
     InstrProfValueData VD2[] = {{getCalleeAddress(vtable2), 1},
                                 {getCalleeAddress(vtable3), 3},
                                 {getCalleeAddress(vtable4), 4}};
-    Record12.addValueData(IPVK_VTableTarget, 1, VD2, 3, nullptr);
+    Record12.addValueData(IPVK_VTableTarget, 1, VD2, nullptr);
 
     InstrProfValueData VD4[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record12.addValueData(IPVK_VTableTarget, 3, VD4, 3, nullptr);
+    Record12.addValueData(IPVK_VTableTarget, 2, VD4, nullptr);
   }
 
   Writer.addRecord(std::move(Record11), Err);
@@ -989,20 +1053,13 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
   EXPECT_THAT_ERROR(R.takeError(), Succeeded());
   // For indirect calls.
   ASSERT_EQ(5U, R->getNumValueSites(IPVK_IndirectCallTarget));
-  ASSERT_EQ(4U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
-  ASSERT_EQ(0U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
-  ASSERT_EQ(4U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
-  ASSERT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
-  ASSERT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 4));
   // For vtables.
   ASSERT_EQ(R->getNumValueSites(IPVK_VTableTarget), 3U);
-  ASSERT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 0), 4U);
-  ASSERT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 1), 4U);
-  ASSERT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
 
   // Test the merged values for indirect calls.
   {
-    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0);
+    auto VD = R->getValueArrayForSite(IPVK_IndirectCallTarget, 0);
+    ASSERT_THAT(VD, SizeIs(4));
     EXPECT_STREQ((const char *)VD[0].Value, "callee2");
     EXPECT_EQ(VD[0].Count, 7U);
     EXPECT_STREQ((const char *)VD[1].Value, "callee3");
@@ -1012,7 +1069,10 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     EXPECT_STREQ((const char *)VD[3].Value, "callee1");
     EXPECT_EQ(VD[3].Count, 1U);
 
-    auto VD_2(R->getValueForSite(IPVK_IndirectCallTarget, 2));
+    ASSERT_THAT(R->getValueArrayForSite(IPVK_IndirectCallTarget, 1), SizeIs(0));
+
+    auto VD_2 = R->getValueArrayForSite(IPVK_IndirectCallTarget, 2);
+    ASSERT_THAT(VD_2, SizeIs(4));
     EXPECT_STREQ((const char *)VD_2[0].Value, "callee3");
     EXPECT_EQ(VD_2[0].Count, 6U);
     EXPECT_STREQ((const char *)VD_2[1].Value, "callee4");
@@ -1022,13 +1082,15 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     EXPECT_STREQ((const char *)VD_2[3].Value, "callee1");
     EXPECT_EQ(VD_2[3].Count, 1U);
 
-    auto VD_3(R->getValueForSite(IPVK_IndirectCallTarget, 3));
+    auto VD_3 = R->getValueArrayForSite(IPVK_IndirectCallTarget, 3);
+    ASSERT_THAT(VD_3, SizeIs(2));
     EXPECT_STREQ((const char *)VD_3[0].Value, "callee8");
     EXPECT_EQ(VD_3[0].Count, 2U);
     EXPECT_STREQ((const char *)VD_3[1].Value, "callee7");
     EXPECT_EQ(VD_3[1].Count, 1U);
 
-    auto VD_4(R->getValueForSite(IPVK_IndirectCallTarget, 4));
+    auto VD_4 = R->getValueArrayForSite(IPVK_IndirectCallTarget, 4);
+    ASSERT_THAT(VD_4, SizeIs(3));
     EXPECT_STREQ((const char *)VD_4[0].Value, "callee3");
     EXPECT_EQ(VD_4[0].Count, 6U);
     EXPECT_STREQ((const char *)VD_4[1].Value, "callee2");
@@ -1039,7 +1101,8 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
 
   // Test the merged values for vtables
   {
-    auto VD0 = R->getValueForSite(IPVK_VTableTarget, 0);
+    auto VD0 = R->getValueArrayForSite(IPVK_VTableTarget, 0);
+    ASSERT_THAT(VD0, SizeIs(4));
     EXPECT_EQ(VD0[0].Value, getCalleeAddress(vtable2));
     EXPECT_EQ(VD0[0].Count, 7U);
     EXPECT_EQ(VD0[1].Value, getCalleeAddress(vtable3));
@@ -1049,7 +1112,8 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     EXPECT_EQ(VD0[3].Value, getCalleeAddress(vtable1));
     EXPECT_EQ(VD0[3].Count, 1U);
 
-    auto VD1 = R->getValueForSite(IPVK_VTableTarget, 1);
+    auto VD1 = R->getValueArrayForSite(IPVK_VTableTarget, 1);
+    ASSERT_THAT(VD1, SizeIs(4));
     EXPECT_EQ(VD1[0].Value, getCalleeAddress(vtable3));
     EXPECT_EQ(VD1[0].Count, 6U);
     EXPECT_EQ(VD1[1].Value, getCalleeAddress(vtable4));
@@ -1059,7 +1123,8 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     EXPECT_EQ(VD1[3].Value, getCalleeAddress(vtable1));
     EXPECT_EQ(VD1[3].Count, 1U);
 
-    auto VD2 = R->getValueForSite(IPVK_VTableTarget, 2);
+    auto VD2 = R->getValueArrayForSite(IPVK_VTableTarget, 2);
+    ASSERT_THAT(VD2, SizeIs(3));
     EXPECT_EQ(VD2[0].Value, getCalleeAddress(vtable3));
     EXPECT_EQ(VD2[0].Count, 6U);
     EXPECT_EQ(VD2[1].Value, getCalleeAddress(vtable2));
@@ -1105,7 +1170,7 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_saturation) {
   NamedInstrProfRecord Record4("baz", 0x5678, {3, 4});
   Record4.reserveSites(ValueKind, 1);
   InstrProfValueData VD4[] = {{ProfiledValue, 1}};
-  Record4.addValueData(ValueKind, 0, VD4, 1, nullptr);
+  Record4.addValueData(ValueKind, 0, VD4, nullptr);
   Result = instrprof_error::success;
   Writer.addRecord(std::move(Record4), Err);
   ASSERT_EQ(Result, instrprof_error::success);
@@ -1114,7 +1179,7 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_saturation) {
   NamedInstrProfRecord Record5("baz", 0x5678, {5, 6});
   Record5.reserveSites(ValueKind, 1);
   InstrProfValueData VD5[] = {{ProfiledValue, MaxValCount}};
-  Record5.addValueData(ValueKind, 0, VD5, 1, nullptr);
+  Record5.addValueData(ValueKind, 0, VD5, nullptr);
   Result = instrprof_error::success;
   Writer.addRecord(std::move(Record5), Err);
   ASSERT_EQ(Result, instrprof_error::counter_overflow);
@@ -1132,8 +1197,7 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_saturation) {
       Reader->getInstrProfRecord("baz", 0x5678);
   ASSERT_TRUE(bool(ReadRecord2));
   ASSERT_EQ(1U, ReadRecord2->getNumValueSites(ValueKind));
-  std::unique_ptr<InstrProfValueData[]> VD =
-      ReadRecord2->getValueForSite(ValueKind, 0);
+  auto VD = ReadRecord2->getValueArrayForSite(ValueKind, 0);
   EXPECT_EQ(ProfiledValue, VD[0].Value);
   EXPECT_EQ(MaxValCount, VD[0].Count);
 }
@@ -1155,8 +1219,8 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_site_trunc) {
     VD0[I].Count = 2 * I + 1000;
   }
 
-  Record11.addValueData(ValueKind, 0, VD0, 255, nullptr);
-  Record11.addValueData(ValueKind, 1, nullptr, 0, nullptr);
+  Record11.addValueData(ValueKind, 0, VD0, nullptr);
+  Record11.addValueData(ValueKind, 1, {}, nullptr);
 
   Record12.reserveSites(ValueKind, 2);
   InstrProfValueData VD1[255];
@@ -1165,8 +1229,8 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_site_trunc) {
     VD1[I].Count = 2 * I + 1001;
   }
 
-  Record12.addValueData(ValueKind, 0, VD1, 255, nullptr);
-  Record12.addValueData(ValueKind, 1, nullptr, 0, nullptr);
+  Record12.addValueData(ValueKind, 0, VD1, nullptr);
+  Record12.addValueData(ValueKind, 1, {}, nullptr);
 
   Writer.addRecord(std::move(Record11), Err);
   // Merge profile data.
@@ -1177,9 +1241,9 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_site_trunc) {
 
   Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
   ASSERT_THAT_ERROR(R.takeError(), Succeeded());
-  std::unique_ptr<InstrProfValueData[]> VD(R->getValueForSite(ValueKind, 0));
   ASSERT_EQ(2U, R->getNumValueSites(ValueKind));
-  EXPECT_EQ(255U, R->getNumValueDataForSite(ValueKind, 0));
+  auto VD = R->getValueArrayForSite(ValueKind, 0);
+  EXPECT_THAT(VD, SizeIs(255));
   for (unsigned I = 0; I < 255; I++) {
     EXPECT_EQ(VD[I].Value, 509 - I);
     EXPECT_EQ(VD[I].Count, 1509 - I);
@@ -1203,23 +1267,23 @@ static void addValueProfData(InstrProfRecord &Record) {
                                 {uint64_t(callee3), 500},
                                 {uint64_t(callee4), 300},
                                 {uint64_t(callee5), 100}};
-    Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 5, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
     InstrProfValueData VD1[] = {{uint64_t(callee5), 800},
                                 {uint64_t(callee3), 1000},
                                 {uint64_t(callee2), 2500},
                                 {uint64_t(callee1), 1300}};
-    Record.addValueData(IPVK_IndirectCallTarget, 1, VD1, 4, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 1, VD1, nullptr);
     InstrProfValueData VD2[] = {{uint64_t(callee6), 800},
                                 {uint64_t(callee3), 1000},
                                 {uint64_t(callee4), 5500}};
-    Record.addValueData(IPVK_IndirectCallTarget, 2, VD2, 3, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 2, VD2, nullptr);
     InstrProfValueData VD3[] = {{uint64_t(callee2), 1800},
                                 {uint64_t(callee3), 2000}};
-    Record.addValueData(IPVK_IndirectCallTarget, 3, VD3, 2, nullptr);
-    Record.addValueData(IPVK_IndirectCallTarget, 4, nullptr, 0, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 3, VD3, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 4, {}, nullptr);
     InstrProfValueData VD5[] = {{uint64_t(callee7), 1234},
                                 {uint64_t(callee8), 5678}};
-    Record.addValueData(IPVK_IndirectCallTarget, 5, VD5, 2, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 5, VD5, nullptr);
   }
 
   // Add test data for vtables
@@ -1241,10 +1305,10 @@ static void addValueProfData(InstrProfRecord &Record) {
     };
     InstrProfValueData VD3[] = {{getCalleeAddress(vtable2), 1800},
                                 {getCalleeAddress(vtable3), 2000}};
-    Record.addValueData(IPVK_VTableTarget, 0, VD0, 5, nullptr);
-    Record.addValueData(IPVK_VTableTarget, 1, VD1, 4, nullptr);
-    Record.addValueData(IPVK_VTableTarget, 2, VD2, 3, nullptr);
-    Record.addValueData(IPVK_VTableTarget, 3, VD3, 2, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 1, VD1, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 2, VD2, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 3, VD3, nullptr);
   }
 }
 
@@ -1259,20 +1323,15 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
 
   // Now read data from Record and sanity check the data
   ASSERT_EQ(6U, Record.getNumValueSites(IPVK_IndirectCallTarget));
-  ASSERT_EQ(5U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
-  ASSERT_EQ(4U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
-  ASSERT_EQ(3U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
-  ASSERT_EQ(2U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
-  ASSERT_EQ(0U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 4));
-  ASSERT_EQ(2U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 5));
 
   auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
     return VD1.Count > VD2.Count;
   };
 
-  std::unique_ptr<InstrProfValueData[]> VD_0(
-      Record.getValueForSite(IPVK_IndirectCallTarget, 0));
-  llvm::sort(&VD_0[0], &VD_0[5], Cmp);
+  SmallVector<InstrProfValueData> VD_0(
+      Record.getValueArrayForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_THAT(VD_0, SizeIs(5));
+  llvm::sort(VD_0, Cmp);
   EXPECT_STREQ((const char *)VD_0[0].Value, "callee2");
   EXPECT_EQ(1000U, VD_0[0].Count);
   EXPECT_STREQ((const char *)VD_0[1].Value, "callee3");
@@ -1284,9 +1343,10 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_STREQ((const char *)VD_0[4].Value, "callee5");
   EXPECT_EQ(100U, VD_0[4].Count);
 
-  std::unique_ptr<InstrProfValueData[]> VD_1(
-      Record.getValueForSite(IPVK_IndirectCallTarget, 1));
-  llvm::sort(&VD_1[0], &VD_1[4], Cmp);
+  SmallVector<InstrProfValueData> VD_1(
+      Record.getValueArrayForSite(IPVK_IndirectCallTarget, 1));
+  ASSERT_THAT(VD_1, SizeIs(4));
+  llvm::sort(VD_1, Cmp);
   EXPECT_STREQ((const char *)VD_1[0].Value, "callee2");
   EXPECT_EQ(VD_1[0].Count, 2500U);
   EXPECT_STREQ((const char *)VD_1[1].Value, "callee1");
@@ -1296,9 +1356,10 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_STREQ((const char *)VD_1[3].Value, "callee5");
   EXPECT_EQ(VD_1[3].Count, 800U);
 
-  std::unique_ptr<InstrProfValueData[]> VD_2(
-      Record.getValueForSite(IPVK_IndirectCallTarget, 2));
-  llvm::sort(&VD_2[0], &VD_2[3], Cmp);
+  SmallVector<InstrProfValueData> VD_2(
+      Record.getValueArrayForSite(IPVK_IndirectCallTarget, 2));
+  ASSERT_THAT(VD_2, SizeIs(3));
+  llvm::sort(VD_2, Cmp);
   EXPECT_STREQ((const char *)VD_2[0].Value, "callee4");
   EXPECT_EQ(VD_2[0].Count, 5500U);
   EXPECT_STREQ((const char *)VD_2[1].Value, "callee3");
@@ -1306,22 +1367,26 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_STREQ((const char *)VD_2[2].Value, "callee6");
   EXPECT_EQ(VD_2[2].Count, 800U);
 
-  std::unique_ptr<InstrProfValueData[]> VD_3(
-      Record.getValueForSite(IPVK_IndirectCallTarget, 3));
-  llvm::sort(&VD_3[0], &VD_3[2], Cmp);
+  SmallVector<InstrProfValueData> VD_3(
+      Record.getValueArrayForSite(IPVK_IndirectCallTarget, 3));
+  ASSERT_THAT(VD_3, SizeIs(2));
+  llvm::sort(VD_3, Cmp);
   EXPECT_STREQ((const char *)VD_3[0].Value, "callee3");
   EXPECT_EQ(VD_3[0].Count, 2000U);
   EXPECT_STREQ((const char *)VD_3[1].Value, "callee2");
   EXPECT_EQ(VD_3[1].Count, 1800U);
 
-  ASSERT_EQ(Record.getNumValueSites(IPVK_VTableTarget), 4U);
-  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 0), 5U);
-  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 1), 4U);
-  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
-  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 3), 2U);
+  ASSERT_THAT(Record.getValueArrayForSite(IPVK_IndirectCallTarget, 4),
+              SizeIs(0));
+  ASSERT_THAT(Record.getValueArrayForSite(IPVK_IndirectCallTarget, 5),
+              SizeIs(2));
 
-  auto VD0(Record.getValueForSite(IPVK_VTableTarget, 0));
-  llvm::sort(&VD0[0], &VD0[5], Cmp);
+  ASSERT_EQ(Record.getNumValueSites(IPVK_VTableTarget), 4U);
+
+  SmallVector<InstrProfValueData> VD0(
+      Record.getValueArrayForSite(IPVK_VTableTarget, 0));
+  ASSERT_THAT(VD0, SizeIs(5));
+  llvm::sort(VD0, Cmp);
   EXPECT_EQ(VD0[0].Value, getCalleeAddress(vtable2));
   EXPECT_EQ(VD0[0].Count, 1000U);
   EXPECT_EQ(VD0[1].Value, getCalleeAddress(vtable3));
@@ -1333,8 +1398,10 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD0[4].Value, getCalleeAddress(vtable5));
   EXPECT_EQ(VD0[4].Count, 100U);
 
-  auto VD1(Record.getValueForSite(IPVK_VTableTarget, 1));
-  llvm::sort(&VD1[0], &VD1[4], Cmp);
+  SmallVector<InstrProfValueData> VD1(
+      Record.getValueArrayForSite(IPVK_VTableTarget, 1));
+  ASSERT_THAT(VD1, SizeIs(4));
+  llvm::sort(VD1, Cmp);
   EXPECT_EQ(VD1[0].Value, getCalleeAddress(vtable2));
   EXPECT_EQ(VD1[0].Count, 2500U);
   EXPECT_EQ(VD1[1].Value, getCalleeAddress(vtable1));
@@ -1344,8 +1411,10 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD1[3].Value, getCalleeAddress(vtable5));
   EXPECT_EQ(VD1[3].Count, 800U);
 
-  auto VD2(Record.getValueForSite(IPVK_VTableTarget, 2));
-  llvm::sort(&VD2[0], &VD2[3], Cmp);
+  SmallVector<InstrProfValueData> VD2(
+      Record.getValueArrayForSite(IPVK_VTableTarget, 2));
+  ASSERT_THAT(VD2, SizeIs(3));
+  llvm::sort(VD2, Cmp);
   EXPECT_EQ(VD2[0].Value, getCalleeAddress(vtable4));
   EXPECT_EQ(VD2[0].Count, 5500U);
   EXPECT_EQ(VD2[1].Value, getCalleeAddress(vtable3));
@@ -1353,8 +1422,10 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD2[2].Value, getCalleeAddress(vtable6));
   EXPECT_EQ(VD2[2].Count, 800U);
 
-  auto VD3(Record.getValueForSite(IPVK_VTableTarget, 3));
-  llvm::sort(&VD3[0], &VD3[2], Cmp);
+  SmallVector<InstrProfValueData> VD3(
+      Record.getValueArrayForSite(IPVK_VTableTarget, 3));
+  ASSERT_THAT(VD3, SizeIs(2));
+  llvm::sort(VD3, Cmp);
   EXPECT_EQ(VD3[0].Value, getCalleeAddress(vtable3));
   EXPECT_EQ(VD3[0].Count, 2000U);
   EXPECT_EQ(VD3[1].Value, getCalleeAddress(vtable2));
@@ -1399,7 +1470,6 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   // Now read data from Record and sanity check the data
   ASSERT_EQ(Record.getNumValueSites(IPVK_IndirectCallTarget), 6U);
-  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 0), 5U);
 
   // Look up the value correpsonding to the middle of a vtable in symtab and
   // test that it's the hash of the name.
@@ -1415,8 +1485,10 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
   auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
     return VD1.Count > VD2.Count;
   };
-  auto VD_0(Record.getValueForSite(IPVK_IndirectCallTarget, 0));
-  llvm::sort(&VD_0[0], &VD_0[5], Cmp);
+  SmallVector<InstrProfValueData> VD_0(
+      Record.getValueArrayForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_THAT(VD_0, SizeIs(5));
+  llvm::sort(VD_0, Cmp);
   ASSERT_EQ(VD_0[0].Value, 0x2000ULL);
   ASSERT_EQ(VD_0[0].Count, 1000U);
   ASSERT_EQ(VD_0[1].Value, 0x3000ULL);
@@ -1432,9 +1504,10 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The first vtable site.
-    auto VD(Record.getValueForSite(IPVK_VTableTarget, 0));
-    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 0), 5U);
-    llvm::sort(&VD[0], &VD[5], Cmp);
+    SmallVector<InstrProfValueData> VD(
+        Record.getValueArrayForSite(IPVK_VTableTarget, 0));
+    ASSERT_THAT(VD, SizeIs(5));
+    llvm::sort(VD, Cmp);
     EXPECT_EQ(VD[0].Count, 1000U);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable2"));
     EXPECT_EQ(VD[1].Count, 500U);
@@ -1451,9 +1524,10 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The second vtable site.
-    auto VD(Record.getValueForSite(IPVK_VTableTarget, 1));
-    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 1), 4U);
-    llvm::sort(&VD[0], &VD[4], Cmp);
+    SmallVector<InstrProfValueData> VD(
+        Record.getValueArrayForSite(IPVK_VTableTarget, 1));
+    ASSERT_THAT(VD, SizeIs(4));
+    llvm::sort(VD, Cmp);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable2"));
     EXPECT_EQ(VD[0].Count, 2500U);
     EXPECT_EQ(VD[1].Value, MD5Hash("vtable1"));
@@ -1468,9 +1542,10 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The third vtable site.
-    auto VD(Record.getValueForSite(IPVK_VTableTarget, 2));
-    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
-    llvm::sort(&VD[0], &VD[3], Cmp);
+    SmallVector<InstrProfValueData> VD(
+        Record.getValueArrayForSite(IPVK_VTableTarget, 2));
+    ASSERT_THAT(VD, SizeIs(3));
+    llvm::sort(VD, Cmp);
     EXPECT_EQ(VD[0].Count, 5500U);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable4"));
     EXPECT_EQ(VD[1].Count, 1000U);
@@ -1482,9 +1557,10 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The fourth vtable site.
-    auto VD(Record.getValueForSite(IPVK_VTableTarget, 3));
-    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 3), 2U);
-    llvm::sort(&VD[0], &VD[2], Cmp);
+    SmallVector<InstrProfValueData> VD(
+        Record.getValueArrayForSite(IPVK_VTableTarget, 3));
+    ASSERT_THAT(VD, SizeIs(2));
+    llvm::sort(VD, Cmp);
     EXPECT_EQ(VD[0].Count, 2000U);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable3"));
     EXPECT_EQ(VD[1].Count, 1800U);
@@ -1603,6 +1679,34 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
   Function::Create(FTy, Function::WeakODRLinkage, "Wblah", M.get());
   Function::Create(FTy, Function::WeakODRLinkage, "Wbar", M.get());
 
+  // [ptr, ptr, ptr]
+  ArrayType *VTableArrayType = ArrayType::get(
+      PointerType::get(Ctx, M->getDataLayout().getDefaultGlobalsAddressSpace()),
+      3);
+  Constant *Int32TyNull =
+      llvm::ConstantExpr::getNullValue(PointerType::getUnqual(Ctx));
+  SmallVector<llvm::Type *, 1> tys = {VTableArrayType};
+  StructType *VTableType = llvm::StructType::get(Ctx, tys);
+
+  // Create two vtables in the module, one with external linkage and the other
+  // with local linkage.
+  for (auto [Name, Linkage] :
+       {std::pair{"ExternalGV", GlobalValue::ExternalLinkage},
+        {"LocalGV", GlobalValue::InternalLinkage}}) {
+    llvm::Twine FuncName(Name, StringRef("VFunc"));
+    Function *VFunc = Function::Create(FTy, Linkage, FuncName, M.get());
+    GlobalVariable *GV = new llvm::GlobalVariable(
+        *M, VTableType, /* isConstant= */ true, Linkage,
+        llvm::ConstantStruct::get(
+            VTableType,
+            {llvm::ConstantArray::get(VTableArrayType,
+                                      {Int32TyNull, Int32TyNull, VFunc})}),
+        Name);
+    // Add type metadata for the test data, since vtables with type metadata
+    // are added to symtab.
+    GV->addTypeMetadata(16, MDString::get(Ctx, Name));
+  }
+
   InstrProfSymtab ProfSymtab;
   EXPECT_THAT_ERROR(ProfSymtab.create(*M), Succeeded());
 
@@ -1623,6 +1727,22 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(PGOName));
     EXPECT_EQ(PGOName, PGOFuncName);
     EXPECT_THAT(PGOFuncName.str(), EndsWith(Funcs[I].str()));
+  }
+
+  for (auto [VTableName, PGOName] : {std::pair{"ExternalGV", "ExternalGV"},
+                                     {"LocalGV", "MyModule.cpp;LocalGV"}}) {
+    GlobalVariable *GV =
+        M->getGlobalVariable(VTableName, /* AllowInternal=*/true);
+
+    // Test that ProfSymtab returns the expected name given a hash.
+    std::string IRPGOName = getPGOName(*GV);
+    EXPECT_STREQ(IRPGOName.c_str(), PGOName);
+    uint64_t GUID = IndexedInstrProf::ComputeHash(IRPGOName);
+    EXPECT_EQ(IRPGOName, ProfSymtab.getFuncOrVarName(GUID));
+    EXPECT_EQ(VTableName, getParsedIRPGOName(IRPGOName).second);
+
+    // Test that ProfSymtab returns the expected global variable
+    EXPECT_EQ(GV, ProfSymtab.getGlobalVariable(GUID));
   }
 }
 

@@ -30,13 +30,38 @@
 //   * llvm.nvvm.max.ui  --> select(x ule y, x, y)
 //   * llvm.nvvm.max.ull --> ibid.
 //   * llvm.nvvm.h2f     --> llvm.convert.to.fp16.f32
+//   * llvm.nvvm.bitcast.f2i         --> bitcast
+//   * llvm.nvvm.bitcast.i2f         --> ibid.
+//   * llvm.nvvm.bitcast.d2ll        --> ibid.
+//   * llvm.nvvm.bitcast.ll2d        --> ibid.
+//   * llvm.nvvm.ptr.gen.to.global   --> addrspacecast
+//   * llvm.nvvm.ptr.gen.to.shared   --> ibid.
+//   * llvm.nvvm.ptr.gen.to.constant --> ibid.
+//   * llvm.nvvm.ptr.gen.to.local    --> ibid.
+//   * llvm.nvvm.ptr.global.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.shared.to.gen   --> ibid.
+//   * llvm.nvvm.ptr.constant.to.gen --> ibid.
+//   * llvm.nvvm.ptr.local.to.gen    --> ibid.
+//   * llvm.nvvm.ldg.global.i        --> load addrspace(1) !load.invariant
+//   * llvm.nvvm.ldg.global.f        --> ibid.
+//   * llvm.nvvm.ldg.global.p        --> ibid.
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
+def llvm_local_ptr_ty   : LLVMQualPointerType<5>;  // (local)ptr
+def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;  // (tensor memory)ptr
 
 //
 // MISC
 //
+
+// Helper class that concatenates list elements with
+// a given separator 'sep' and returns the result.
+// Handles empty strings.
+class StrJoin<string sep, list<string> str_list> {
+  string ret = !foldl("", str_list, a, b,
+               !if(!eq(a, ""), b, !if(!eq(b, ""), a, !strconcat(a, sep, b))));
+}
 
 // Helper class that represents a 'fragment' of an NVPTX *MMA instruction.
 // Geom: m<M>n<N>k<K>. E.g. m8n32k16
@@ -552,6 +577,93 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
+class CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_g2s_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // dst_smem_ptr
+                           llvm_shared_ptr_ty,  // mbarrier_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                           Im2ColOffsetsTy,     // im2col offsets
+                          [llvm_i16_ty,         // cta_mask
+                           llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty,          // Flag for cta_mask
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 5);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>,
+        ImmArg<ArgIndex<!add(FlagsStartIdx, 1)>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim # "d";
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
+  string Name = "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim # "d";
+
+  bit IsIm2Col = !if(!eq(mode, "im2col"), 1, 0);
+  int NumIm2ColOffsets = !if(IsIm2Col, !add(dim, -2), 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_ptr_ty],     // tensormap_ptr
+                           TensorDimsTy,     // actual tensor dims
+                           Im2ColOffsetsTy,  // im2col offsets
+                          [llvm_i64_ty,      // cache_hint
+                           llvm_i1_ty]       // Flag for cache_hint
+                          );
+
+  int TempFlagsStartIdx = !add(dim, 2);
+  int FlagsStartIdx = !add(TempFlagsStartIdx, NumIm2ColOffsets);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
+class CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode, string op> {
+  string Suffix = op # "_" # mode # "_" # dim # "d";
+  string Name = "int_nvvm_cp_async_bulk_tensor_reduce_" # Suffix;
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -735,6 +847,13 @@ let TargetPrefix = "nvvm" in {
         [IntrNoMem]>;
   def int_nvvm_div_rp_d : ClangBuiltin<"__nvvm_div_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
+        [IntrNoMem]>;
+
+  def int_nvvm_div_full : ClangBuiltin<"__nvvm_div_full">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+  def int_nvvm_div_full_ftz : ClangBuiltin<"__nvvm_div_full_ftz">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
 
 //
@@ -1003,6 +1122,8 @@ let TargetPrefix = "nvvm" in {
 
   def int_nvvm_rsqrt_approx_ftz_f : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+  def int_nvvm_rsqrt_approx_ftz_d : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_d">,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
   def int_nvvm_rsqrt_approx_f : ClangBuiltin<"__nvvm_rsqrt_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
   def int_nvvm_rsqrt_approx_d : ClangBuiltin<"__nvvm_rsqrt_approx_d">,
@@ -1049,6 +1170,40 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_add_rp_d : ClangBuiltin<"__nvvm_add_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
+
+//
+// Dot Product
+//
+  foreach a_type = ["s", "u"] in {
+    foreach b_type = ["s", "u"] in {
+      def int_nvvm_idp4a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable]>;
+      def int_nvvm_idp2a_ # a_type # _ # b_type :
+          DefaultAttrsIntrinsic<[llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+    }
+  }
+
+//
+// Funnel-shift
+//
+  foreach direction = ["l", "r"] in
+    def int_nvvm_fsh # direction # _clamp :
+      DefaultAttrsIntrinsic<[llvm_anyint_ty],
+        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+//
+// FLO - Find Leading One
+//
+  foreach sign = ["s", "u"] in
+    def int_nvvm_flo_ # sign :
+      DefaultAttrsIntrinsic<[llvm_i32_ty],
+        [llvm_anyint_ty, llvm_i1_ty],
+        [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
 //
 // Convert
@@ -1293,20 +1448,51 @@ let TargetPrefix = "nvvm" in {
 
   def int_nvvm_f2tf32_rna : ClangBuiltin<"__nvvm_f2tf32_rna">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rna_satfinite : ClangBuiltin<"__nvvm_f2tf32_rna_satfinite">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn : ClangBuiltin<"__nvvm_f2tf32_rn">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn_relu : ClangBuiltin<"__nvvm_f2tf32_rn_relu">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn_satfinite : ClangBuiltin<"__nvvm_f2tf32_rn_satfinite">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn_relu_satfinite : ClangBuiltin<"__nvvm_f2tf32_rn_relu_satfinite">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz : ClangBuiltin<"__nvvm_f2tf32_rz">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz_relu : ClangBuiltin<"__nvvm_f2tf32_rz_relu">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz_satfinite : ClangBuiltin<"__nvvm_f2tf32_rz_satfinite">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz_relu_satfinite : ClangBuiltin<"__nvvm_f2tf32_rz_relu_satfinite">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
-//
-// Bitcast
-//
+  def int_nvvm_ff_to_e4m3x2_rn : ClangBuiltin<"__nvvm_ff_to_e4m3x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e4m3x2_rn_relu : ClangBuiltin<"__nvvm_ff_to_e4m3x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e5m2x2_rn : ClangBuiltin<"__nvvm_ff_to_e5m2x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e5m2x2_rn_relu : ClangBuiltin<"__nvvm_ff_to_e5m2x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
-  def int_nvvm_bitcast_f2i : ClangBuiltin<"__nvvm_bitcast_f2i">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_bitcast_i2f : ClangBuiltin<"__nvvm_bitcast_i2f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_f16x2_to_e4m3x2_rn : ClangBuiltin<"__nvvm_f16x2_to_e4m3x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f16x2_to_e4m3x2_rn_relu : ClangBuiltin<"__nvvm_f16x2_to_e4m3x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f16x2_to_e5m2x2_rn : ClangBuiltin<"__nvvm_f16x2_to_e5m2x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f16x2_to_e5m2x2_rn_relu : ClangBuiltin<"__nvvm_f16x2_to_e5m2x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2f16_ty], [IntrNoMem, IntrNoCallback]>;
 
-  def int_nvvm_bitcast_ll2d : ClangBuiltin<"__nvvm_bitcast_ll2d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_bitcast_d2ll : ClangBuiltin<"__nvvm_bitcast_d2ll">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_e4m3x2_to_f16x2_rn : ClangBuiltin<"__nvvm_e4m3x2_to_f16x2_rn">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e4m3x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e4m3x2_to_f16x2_rn_relu">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e5m2x2_to_f16x2_rn : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e5m2x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn_relu">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
 
 // FNS
 
@@ -1415,6 +1601,20 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[], [], [IntrNoCallback]>;
   def int_nvvm_fence_sc_cluster:
       Intrinsic<[], [], [IntrNoCallback]>;
+
+// Proxy fence (uni-directional)
+foreach scope = ["cta", "cluster", "gpu", "sys"] in {
+
+  def int_nvvm_fence_proxy_tensormap_generic_release_ # scope:
+        Intrinsic<[], [], [IntrNoCallback],
+        "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
+
+  def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope:
+        Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+                  [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>],
+                  "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
+
+}
 
 // Async Copy
 def int_nvvm_cp_async_mbarrier_arrive :
@@ -1527,65 +1727,16 @@ def int_nvvm_mbarrier_pending_count :
 // pointer's alignment.
 def int_nvvm_ldu_global_i : Intrinsic<[llvm_anyint_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.i">;
 def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.f">;
 def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
-
-// Generated within nvvm. Use for ldg on sm_35 or later.  Second arg is the
-// pointer's alignment.
-def int_nvvm_ldg_global_i : Intrinsic<[llvm_anyint_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.i">;
-def int_nvvm_ldg_global_f : Intrinsic<[llvm_anyfloat_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.f">;
-def int_nvvm_ldg_global_p : Intrinsic<[llvm_anyptr_ty],
-  [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
-  "llvm.nvvm.ldg.global.p">;
-
-// Use for generic pointers
-// - These intrinsics are used to convert address spaces.
-// - The input pointer and output pointer must have the same type, except for
-//   the address-space. (This restriction is not enforced here as there is
-//   currently no way to describe it).
-// - This complements the llvm bitcast, which can be used to cast one type
-//   of pointer to another type of pointer, while the address space remains
-//   the same.
-def int_nvvm_ptr_local_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.local.to.gen">;
-def int_nvvm_ptr_shared_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.shared.to.gen">;
-def int_nvvm_ptr_global_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.global.to.gen">;
-def int_nvvm_ptr_constant_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.constant.to.gen">;
-
-def int_nvvm_ptr_gen_to_global: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.global">;
-def int_nvvm_ptr_gen_to_shared: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.shared">;
-def int_nvvm_ptr_gen_to_local: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.local">;
-def int_nvvm_ptr_gen_to_constant: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                 [llvm_anyptr_ty], [IntrNoMem, IntrSpeculatable],
-                 "llvm.nvvm.ptr.gen.to.constant">;
 
 // Used in nvvm internally to help address space opt and ptx code generation
 // This is for params that are passed to kernel functions by pointer by-val.
@@ -1593,6 +1744,12 @@ def int_nvvm_ptr_gen_to_param: Intrinsic<[llvm_anyptr_ty],
                                      [llvm_anyptr_ty],
                                    [IntrNoMem, IntrSpeculatable, IntrNoCallback],
                                    "llvm.nvvm.ptr.gen.to.param">;
+
+// sm70+, PTX7.7+
+def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                                     [llvm_anyptr_ty],
+                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
+                                   "llvm.nvvm.ptr.param.to.gen">;
 
 // Move intrinsics, used in nvvm internally
 
@@ -4424,22 +4581,6 @@ def int_nvvm_sust_p_3d_v4i32_trap
               "llvm.nvvm.sust.p.3d.v4i32.trap">,
     ClangBuiltin<"__nvvm_sust_p_3d_v4i32_trap">;
 
-
-def int_nvvm_rotate_b32
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-              [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.b32">,
-              ClangBuiltin<"__nvvm_rotate_b32">;
-
-def int_nvvm_rotate_b64
-  : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
-             [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.b64">,
-             ClangBuiltin<"__nvvm_rotate_b64">;
-
-def int_nvvm_rotate_right_b64
-  : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
-              [IntrNoMem, IntrSpeculatable], "llvm.nvvm.rotate.right.b64">,
-              ClangBuiltin<"__nvvm_rotate_right_b64">;
-
 def int_nvvm_swap_lo_hi_b64
   : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
               [IntrNoMem, IntrSpeculatable], "llvm.nvvm.swap.lo.hi.b64">,
@@ -4642,6 +4783,14 @@ def int_nvvm_match_all_sync_i64p :
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.match.all.sync.i64p">;
 
 //
+// ELECT.SYNC
+//
+// elect.sync dst|pred, membermask
+def int_nvvm_elect_sync :
+  DefaultAttrsIntrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty],
+                        [IntrInaccessibleMemOnly, IntrConvergent]>;
+
+//
 // REDUX.SYNC
 //
 // redux.sync.min.u32 dst, src, membermask;
@@ -4683,6 +4832,33 @@ def int_nvvm_redux_sync_xor : ClangBuiltin<"__nvvm_redux_sync_xor">,
 def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+            
+// redux.sync.op.{abs}.{NaN}.f32 dst, src, membermask;
+foreach binOp = ["min", "max"] in {
+  foreach abs = ["", "_abs"] in {
+    foreach NaN = ["", "_NaN"] in {
+      def int_nvvm_redux_sync_f # binOp # abs # NaN : 
+        ClangBuiltin<!strconcat("__nvvm_redux_sync_f", binOp, abs, NaN)>,
+        Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty],
+                  [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+    }
+  }
+}
+
+//
+// WGMMA fence instructions
+//
+// wgmma.fence.sync.aligned;
+def int_nvvm_wgmma_fence_sync_aligned 
+  : Intrinsic<[], [], [IntrConvergent]>;
+
+// wgmma.commit_group.sync.aligned;
+def int_nvvm_wgmma_commit_group_sync_aligned
+  : Intrinsic<[], [], [IntrConvergent], "llvm.nvvm.wgmma.commit_group.sync.aligned">;
+
+// wgmma.wait_group.sync.aligned N;
+def int_nvvm_wgmma_wait_group_sync_aligned
+  : Intrinsic<[], [llvm_i64_ty], [IntrConvergent, ImmArg<ArgIndex<0>>], "llvm.nvvm.wgmma.wait_group.sync.aligned">;
 
 //
 // WMMA instructions
@@ -4691,7 +4867,7 @@ def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
 class NVVM_WMMA_LD<WMMA_REGS Frag, string Layout, int WithStride>
   : Intrinsic<Frag.regs,
               !if(WithStride, [llvm_anyptr_ty, llvm_i32_ty], [llvm_anyptr_ty]),
-              [IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
+              [IntrWillReturn, IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
               WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.intr>;
 
 // WMMA.STORE.D
@@ -4819,5 +4995,195 @@ def int_nvvm_setmaxnreg_dec_sync_aligned_u32
 // Exit
 def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
+
+// Intrinsics for Tensor Copy using TMA
+// G2S -> From Global to Shared memory variants
+// S2G -> From Shared to Global memory variants
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach g2s = [CP_ASYNC_BULK_TENSOR_G2S_INTR<dim, mode>] in
+      def g2s.Name : DefaultAttrsIntrinsic<[], g2s.ArgsTy, g2s.IntrProp>;
+    foreach s2g = [CP_ASYNC_BULK_TENSOR_S2G_INTR<dim, mode>] in
+      def s2g.Name : DefaultAttrsIntrinsic<[], s2g.ArgsTy, s2g.IntrProp>;
+    foreach prefetch = [CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>] in
+      def prefetch.Name : DefaultAttrsIntrinsic<[], prefetch.ArgsTy, prefetch.IntrProp>;
+  }
+}
+
+// Intrinsics for TMA Copy with reduction
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in {
+      foreach reduce = [CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode, red_op>] in
+        def reduce.Name : DefaultAttrsIntrinsic<[], reduce.ArgsTy, reduce.IntrProp>;
+    }
+  }
+}
+
+// Intrinsics for Prefetch and Prefetchu
+def int_nvvm_prefetch_L1 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_L2 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L1 :  Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L2 :  Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_local_L1 :  Intrinsic<[], [llvm_local_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_local_L2 :  Intrinsic<[], [llvm_local_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+  
+def int_nvvm_prefetch_global_L2_evict_normal: Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L2_evict_last: Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+
+def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+
+// Intrinsics for Bulk Copy using TMA (non-tensor)
+// From Global to Shared Cluster
+def int_nvvm_cp_async_bulk_global_to_shared_cluster
+  : DefaultAttrsIntrinsic<[],
+      [llvm_shared_ptr_ty, // dst_smem_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i16_ty,        // cta_mask
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty,         // Flag for cta_mask
+       llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       NoCapture<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+       ImmArg<ArgIndex<7>>]>;
+
+// From Shared CTA to Shared Cluster
+def int_nvvm_cp_async_bulk_shared_cta_to_cluster
+  : DefaultAttrsIntrinsic<[],
+      [llvm_shared_ptr_ty, // dst_smem_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_shared_ptr_ty, // src_smem_ptr
+       llvm_i32_ty],       // copy_size
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       NoCapture<ArgIndex<2>>]>;
+
+// From Shared CTA to Global memory
+def int_nvvm_cp_async_bulk_shared_cta_to_global
+  : DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, // dst_gmem_ptr
+       llvm_shared_ptr_ty, // src_smem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       ImmArg<ArgIndex<4>>]>;
+
+// Intrinsics for Bulk Copy Prefetch L2
+def int_nvvm_cp_async_bulk_prefetch_L2
+  : DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>,
+       ImmArg<ArgIndex<3>>]>;
+
+def int_nvvm_griddepcontrol_launch_dependents: Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+def int_nvvm_griddepcontrol_wait: Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+//
+// Tcgen05 family of Intrinsics
+//
+
+// Tcgen05 alloc/dealloc related intrinsics
+
+foreach cta_group = ["cg1", "cg2"] in {
+  def int_nvvm_tcgen05_alloc_ # cta_group : Intrinsic<[],
+    [llvm_ptr_ty,        // dst_ptr
+     llvm_i32_ty] ,      // num_columns
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_alloc_shared_ # cta_group : Intrinsic<[],
+    [llvm_shared_ptr_ty, // dst_ptr
+     llvm_i32_ty],       // num_columns
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_dealloc_ # cta_group : Intrinsic<[],
+    [llvm_tmem_ptr_ty,   // tmem_addr
+     llvm_i32_ty],       // num_columns
+    [IntrConvergent, IntrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],
+    [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+  def int_nvvm_tcgen05_commit_ # cta_group : Intrinsic<[],
+    [llvm_ptr_ty],        // mbar_ptr
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_commit_shared_ # cta_group : Intrinsic<[],
+    [llvm_shared_ptr_ty], // mbar_ptr
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_commit_mc_ # cta_group : Intrinsic<[],
+    [llvm_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_commit_mc_shared_ # cta_group : Intrinsic<[],
+    [llvm_shared_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
+    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_shift_down_ # cta_group : Intrinsic<[],
+    [llvm_tmem_ptr_ty],   // tmem_addr
+    [IntrConvergent, IntrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
+}
+
+// Tcgen05 wait_ld/st intrinsics
+def int_nvvm_tcgen05_wait_ld : Intrinsic<[], [],
+  [IntrConvergent, IntrInaccessibleMemOnly]>;
+def int_nvvm_tcgen05_wait_st : Intrinsic<[], [],
+  [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// Tcgen05 Fence intrinsics
+def int_nvvm_tcgen05_fence_before_thread_sync : Intrinsic<[], [],
+  [IntrNoMem, IntrHasSideEffects]>;
+def int_nvvm_tcgen05_fence_after_thread_sync : Intrinsic<[], [],
+  [IntrNoMem, IntrHasSideEffects]>;
+
+// Tcgen05 cp intrinsics
+foreach cta_group = ["cg1", "cg2"] in {
+  foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
+    foreach shape = ["128x256b", "4x256b", "128x128b",
+                     "64x128b_warpx2_02_13",
+                     "64x128b_warpx2_01_23",
+                     "32x128b_warpx4"] in {
+      defvar intr_suffix = StrJoin<"_", [shape, src_fmt, cta_group]>.ret;
+      defvar name_suffix = StrJoin<".", [shape, src_fmt, cta_group]>.ret;
+
+      def int_nvvm_tcgen05_cp_ # intr_suffix : Intrinsic<[],
+        [llvm_tmem_ptr_ty,   // tmem_addr
+         llvm_i64_ty],       // smem descriptor
+        [IntrConvergent, IntrInaccessibleMemOrArgMemOnly, NoCapture<ArgIndex<0>>],
+        "llvm.nvvm.tcgen05.cp." # name_suffix>;
+    }
+  }
+}
 
 } // let TargetPrefix = "nvvm"

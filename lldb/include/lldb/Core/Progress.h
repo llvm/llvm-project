@@ -10,6 +10,7 @@
 #define LLDB_CORE_PROGRESS_H
 
 #include "lldb/Host/Alarm.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringMap.h"
@@ -42,8 +43,8 @@ namespace lldb_private {
 ///                                    uint64_t total,
 ///                                    void *baton);
 ///
-/// This callback will always initially be called with "completed" set to zero
-/// and "total" set to the total amount specified in the contructor. This is
+/// This callback will always initially be called with \a completed set to zero
+/// and \a total set to the total amount specified in the constructor. This is
 /// considered the progress start event. As Progress::Increment() is called,
 /// the callback will be called as long as the Progress::m_completed has not
 /// yet exceeded the Progress::m_total. When the callback is called with
@@ -52,17 +53,23 @@ namespace lldb_private {
 /// Progress::m_total, then this is considered a progress update event.
 ///
 /// This callback will be called in the destructor if Progress::m_completed is
-/// not equal to Progress::m_total with the "completed" set to
+/// not equal to Progress::m_total with the \a completed set to
 /// Progress::m_total. This ensures we always send a progress completed update
 /// even if the user does not.
 
 class Progress {
 public:
+  /// Enum to indicate the origin of a progress event, internal or external.
+  enum class Origin : uint8_t {
+    eInternal = 0,
+    eExternal = 1,
+  };
+
   /// Construct a progress object that will report information.
   ///
   /// The constructor will create a unique progress reporting object and
   /// immediately send out a progress update by calling the installed callback
-  /// with completed set to zero out of the specified total.
+  /// with \a completed set to zero out of the specified total.
   ///
   /// @param [in] title The title of this progress activity.
   ///
@@ -81,16 +88,18 @@ public:
   /// progress is to be reported only to specific debuggers.
   Progress(std::string title, std::string details = {},
            std::optional<uint64_t> total = std::nullopt,
-           lldb_private::Debugger *debugger = nullptr);
+           lldb_private::Debugger *debugger = nullptr,
+           Timeout<std::nano> minimum_report_time = std::nullopt,
+           Origin origin = Origin::eInternal);
 
   /// Destroy the progress object.
   ///
   /// If the progress has not yet sent a completion update, the destructor
-  /// will send out a notification where the completed == m_total. This ensures
-  /// that we always send out a progress complete notification.
+  /// will send out a notification where the \a completed == m_total. This
+  /// ensures that we always send out a progress complete notification.
   ~Progress();
 
-  /// Increment the progress and send a notification to the intalled callback.
+  /// Increment the progress and send a notification to the installed callback.
   ///
   /// If incrementing ends up exceeding m_total, m_completed will be updated
   /// to match m_total and no subsequent progress notifications will be sent.
@@ -116,26 +125,40 @@ public:
     /// The optional debugger ID to report progress to. If this has no value
     /// then all debuggers will receive this event.
     std::optional<lldb::user_id_t> debugger_id;
+
+    /// The origin of the progress event, wheter it is internal or external.
+    Origin origin;
   };
 
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;
+
+  /// Total amount of work, use a std::nullopt in the constructor for non
+  /// deterministic progress.
+  const uint64_t m_total;
+
+  // Minimum amount of time between two progress reports.
+  const Timeout<std::nano> m_minimum_report_time;
+
+  /// Data needed by the debugger to broadcast a progress event.
+  const ProgressData m_progress_data;
+
+  /// How much work ([0...m_total]) that has been completed.
+  std::atomic<uint64_t> m_completed = 0;
+
+  /// Time (in nanoseconds since epoch) of the last progress report.
+  std::atomic<uint64_t> m_last_report_time_ns;
+
+  /// Guards non-const non-atomic members of the class.
+  std::mutex m_mutex;
+
   /// More specific information about the current file being displayed in the
   /// report.
   std::string m_details;
-  /// How much work ([0...m_total]) that has been completed.
-  uint64_t m_completed;
-  /// Total amount of work, use a std::nullopt in the constructor for non
-  /// deterministic progress.
-  uint64_t m_total;
-  std::mutex m_mutex;
-  /// Set to true when progress has been reported where m_completed == m_total
-  /// to ensure that we don't send progress updates after progress has
-  /// completed.
-  bool m_complete = false;
-  /// Data needed by the debugger to broadcast a progress event.
-  ProgressData m_progress_data;
+
+  /// The "completed" value of the last reported event.
+  std::optional<uint64_t> m_prev_completed;
 };
 
 /// A class used to group progress reports by category. This is done by using a

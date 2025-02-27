@@ -71,14 +71,14 @@ def remark_fe_backend_optimization_remark_analysis : Remark<"%0">, BackendInfo,
     InGroup<BackendOptimizationRemarkAnalysis>;
 def remark_fe_backend_optimization_remark_analysis_fpcommute : Remark<"%0; "
     "allow reordering by specifying '#pragma clang loop vectorize(enable)' "
-    "before the loop or by providing the compiler option '-ffast-math'.">,
+    "before the loop or by providing the compiler option '-ffast-math'">,
     BackendInfo, InGroup<BackendOptimizationRemarkAnalysis>;
 def remark_fe_backend_optimization_remark_analysis_aliasing : Remark<"%0; "
     "allow reordering by specifying '#pragma clang loop vectorize(enable)' "
-    "before the loop. If the arrays will always be independent specify "
+    "before the loop; if the arrays will always be independent, specify "
     "'#pragma clang loop vectorize(assume_safety)' before the loop or provide "
-    "the '__restrict__' qualifier with the independent array arguments. "
-    "Erroneous results will occur if these options are incorrectly applied!">,
+    "the '__restrict__' qualifier with the independent array arguments -- "
+    "erroneous results will occur if these options are incorrectly applied">,
     BackendInfo, InGroup<BackendOptimizationRemarkAnalysis>;
 
 def warn_fe_backend_optimization_failure : Warning<"%0">, BackendInfo,
@@ -109,8 +109,6 @@ def err_fe_expected_clang_command : Error<
     "expected a clang compiler command">;
 def err_fe_remap_missing_to_file : Error<
     "could not remap file '%0' to the contents of file '%1'">, DefaultFatal;
-def err_fe_remap_missing_from_file : Error<
-    "could not remap from missing file '%0'">, DefaultFatal;
 def err_fe_unable_to_load_pch : Error<
     "unable to load PCH file">;
 def err_fe_unable_to_load_plugin : Error<
@@ -134,6 +132,8 @@ def err_fe_no_pch_in_dir : Error<
     "no suitable precompiled header file found in directory '%0'">;
 def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
+def err_fe_invalid_multiple_actions : Error<
+    "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
@@ -150,8 +150,8 @@ def warn_fe_serialized_diag_merge_failure : Warning<
 def warn_fe_serialized_diag_failure : Warning<
     "unable to open file %0 for serializing diagnostics (%1)">,
     InGroup<SerializedDiagnostics>;
-def warn_fe_serialized_diag_failure_during_finalisation : Warning<
-    "Received warning after diagnostic serialization teardown was underway: %0">,
+def warn_fe_serialized_diag_failure_during_finalization : Warning<
+    "received warning after diagnostic serialization teardown was underway: %0">,
     InGroup<SerializedDiagnostics>;
 
 def err_verify_missing_line : Error<
@@ -224,6 +224,7 @@ def err_module_map_not_found : Error<"module map file '%0' not found">,
 def err_missing_module_name : Error<
   "no module name provided; specify one with -fmodule-name=">,
   DefaultFatal;
+def err_file_is_not_module : Error<"file '%0' is not a module file">, DefaultFatal;
 def err_missing_module : Error<
   "no module named '%0' declared in module map file '%1'">, DefaultFatal;
 def err_no_submodule : Error<"no submodule named %0 in module '%1'">;
@@ -285,8 +286,13 @@ def err_function_needs_feature : Error<
 let CategoryName = "Codegen ABI Check" in {
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
+def warn_function_always_inline_attribute_mismatch : Warning<
+  "always_inline function %1 and its caller %0 have mismatching %2 attributes, "
+  "inlining may change runtime behaviour">, InGroup<AArch64SMEAttributes>;
 def err_function_always_inline_new_za : Error<
   "always_inline function %0 has new za state">;
+def err_function_always_inline_new_zt0
+    : Error<"always_inline function %0 has new zt0 state">;
 
 def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
@@ -331,11 +337,11 @@ def warn_atomic_op_misaligned : Warning<
 def warn_atomic_op_oversized : Warning<
   "large atomic operation may incur "
   "significant performance penalty"
-  "; the access size (%0 bytes) exceeds the max lock-free size (%1  bytes)">,
+  "; the access size (%0 bytes) exceeds the max lock-free size (%1 bytes)">,
 InGroup<AtomicAlignment>;
 
 def warn_sync_op_misaligned : Warning<
-  "__sync builtin operation MUST have natural alignment (consider using __atomic).">,
+  "__sync builtin operation must have natural alignment (consider using __atomic)">,
   InGroup<SyncAlignment>;
 
 def warn_alias_with_section : Warning<
@@ -357,17 +363,27 @@ def warn_profile_data_unprofiled : Warning<
   "no profile data available for file \"%0\"">,
   InGroup<ProfileInstrUnprofiled>;
 def warn_profile_data_misexpect : Warning<
-  "Potential performance regression from use of __builtin_expect(): "
-  "Annotation was correct on %0 of profiled executions.">,
-  BackendInfo,
-  InGroup<MisExpect>;
+  "potential performance regression from use of __builtin_expect(): "
+  "annotation was correct on %0 of profiled executions">,
+  BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 
 def warn_missing_symbol_graph_dir : Warning<
-  "Missing symbol graph output directory, defaulting to working directory">,
+  "missing symbol graph output directory, defaulting to working directory">,
   InGroup<ExtractAPIMisuse>;
 
+def err_ast_action_on_llvm_ir : Error<
+  "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
+
+def err_os_unsupport_riscv_fmv : Error<
+  "function multiversioning is currently only supported on Linux">;
+
+def warn_hlsl_langstd_minimal :
+  Warning<"support for HLSL language version %0 is incomplete, "
+          "recommend using %1 instead">,
+  InGroup<HLSLDXCCompat>;
 }

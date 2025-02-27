@@ -5,7 +5,11 @@
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
 from ._mlir_libs._mlir import register_type_caster, register_value_caster
-from ._mlir_libs import get_dialect_registry
+from ._mlir_libs import (
+    get_dialect_registry,
+    append_load_on_create_dialect,
+    get_load_on_create_dialects,
+)
 
 
 # Convenience decorator for registering user-friendly Attribute builders.
@@ -20,6 +24,11 @@ def register_attribute_builder(kind, replace=False):
 @register_attribute_builder("AffineMapAttr")
 def _affineMapAttr(x, context):
     return AffineMapAttr.get(x)
+
+
+@register_attribute_builder("IntegerSetAttr")
+def _integerSetAttr(x, context):
+    return IntegerSetAttr.get(x)
 
 
 @register_attribute_builder("BoolAttr")
@@ -68,7 +77,7 @@ def _si1Attr(x, context):
 
 
 @register_attribute_builder("SI8Attr")
-def _i8Attr(x, context):
+def _si8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_signed(8, context=context), x)
 
 
@@ -93,7 +102,7 @@ def _ui1Attr(x, context):
 
 
 @register_attribute_builder("UI8Attr")
-def _i8Attr(x, context):
+def _ui8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_unsigned(8, context=context), x)
 
 
@@ -274,7 +283,7 @@ try:
     @register_attribute_builder("F64ElementsAttr")
     def _f64ElementsAttr(x, context):
         return DenseElementsAttr.get(
-            np.array(x, dtype=np.int64),
+            np.array(x, dtype=np.float64),
             type=F64Type.get(context=context),
             context=context,
         )

@@ -42,6 +42,10 @@ namespace mlir {
 class Location;
 }
 
+namespace fir {
+class FortranProcedureFlagsEnumAttr;
+}
+
 namespace Fortran::lower {
 class AbstractConverter;
 class SymMap;
@@ -138,7 +142,7 @@ public:
     FirPlaceHolder(mlir::Type t, int passedPosition, Property p,
                    llvm::ArrayRef<mlir::NamedAttribute> attrs)
         : type{t}, passedEntityPosition{passedPosition}, property{p},
-          attributes{attrs.begin(), attrs.end()} {}
+          attributes{attrs} {}
     /// Type for this input/output
     mlir::Type type;
     /// Position of related passedEntity in passedArguments.
@@ -235,10 +239,16 @@ public:
     return characteristic && characteristic->CanBeCalledViaImplicitInterface();
   }
 
+  /// Translate Fortran procedure attributes into FIR attribute.
+  /// Return attribute is nullptr if the procedure has no attributes.
+  fir::FortranProcedureFlagsEnumAttr
+  getProcedureAttrs(mlir::MLIRContext *) const;
+
 protected:
   CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
   /// CRTP handle.
   T &side() { return *static_cast<T *>(this); }
+  const T &side() const { return *static_cast<const T *>(this); }
   /// Entry point to be called by child ctor to analyze the signature and
   /// create/find the mlir::func::FuncOp. Child needs to be initialized first.
   void declare();
@@ -391,9 +401,6 @@ public:
     llvm_unreachable("getting host associated type in CallerInterface");
   }
 
-  /// Set attributes on MLIR function.
-  void setFuncAttrs(mlir::func::FuncOp) const {}
-
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
@@ -444,7 +451,6 @@ public:
   bool hasHostAssociated() const;
   mlir::Type getHostAssociatedTy() const;
   mlir::Value getHostAssociatedTuple() const;
-  void setFuncAttrs(mlir::func::FuncOp) const;
 
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;

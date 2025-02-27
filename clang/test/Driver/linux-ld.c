@@ -2,11 +2,10 @@
 // General tests that ld invocations on Linux targets sane. Note that we use
 // sysroot to make these tests independent of the host system.
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### -Werror %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
-// CHECK-LD-32-NOT: warning:
 // CHECK-LD-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-32: "{{.*}}/usr/lib/gcc/i386-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0"
@@ -14,11 +13,10 @@
 // CHECK-LD-32: "-L[[SYSROOT]]/lib"
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64 %s
-// CHECK-LD-64-NOT: warning:
 // CHECK-LD-64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-64: "--eh-frame-hdr"
 // CHECK-LD-64: "-m" "elf_x86_64"
@@ -32,11 +30,10 @@
 // CHECK-LD-64: "-lc"
 // CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X32 %s
-// CHECK-LD-X32-NOT: warning:
 // CHECK-LD-X32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-X32: "--eh-frame-hdr"
 // CHECK-LD-X32: "-m" "elf32_x86_64"
@@ -45,13 +42,12 @@
 // CHECK-LD-X32: "-lc"
 // CHECK-LD-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT %s
-// CHECK-LD-RT-NOT: warning:
 // CHECK-LD-RT: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-LD-RT: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT: "--eh-frame-hdr"
@@ -67,13 +63,12 @@
 // CHECK-LD-RT: libclang_rt.builtins.a"
 // CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-I686 %s
-// CHECK-LD-RT-I686-NOT: warning:
 // CHECK-LD-RT-I686: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-LD-RT-I686: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT-I686: "--eh-frame-hdr"
@@ -89,13 +84,12 @@
 // CHECK-LD-RT-I686: libclang_rt.builtins.a"
 // CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}i686-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-ANDROID %s
-// CHECK-LD-RT-ANDROID-NOT: warning:
 // CHECK-LD-RT-ANDROID: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT-ANDROID: "--eh-frame-hdr"
 // CHECK-LD-RT-ANDROID: "-m" "armelf_linux_eabi"
@@ -104,11 +98,10 @@
 // CHECK-LD-RT-ANDROID: "-lc"
 // CHECK-LD-RT-ANDROID: libclang_rt.builtins.a"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GCC %s
-// CHECK-LD-GCC-NOT: warning:
 // CHECK-LD-GCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GCC: "--eh-frame-hdr"
 // CHECK-LD-GCC: "-m" "elf_x86_64"
@@ -122,12 +115,11 @@
 // CHECK-LD-GCC: "-lc"
 // CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static-libgcc \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64-STATIC-LIBGCC %s
-// CHECK-LD-64-STATIC-LIBGCC-NOT: warning:
 // CHECK-LD-64-STATIC-LIBGCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-64-STATIC-LIBGCC: "--eh-frame-hdr"
 // CHECK-LD-64-STATIC-LIBGCC: "-m" "elf_x86_64"
@@ -268,12 +260,10 @@
 // CHECK-CLANG-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins.a" "-l:libunwind.a" "-lc" "--end-group"
 //
-// RUN: %clang -### %s 2>&1      \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
+// RUN: %clang -### %s -Werror --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64-STATIC %s
-// CHECK-LD-64-STATIC-NOT: warning:
 // CHECK-LD-64-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-64-STATIC: "--eh-frame-hdr"
 // CHECK-LD-64-STATIC: "-m" "elf_x86_64"
@@ -309,7 +299,7 @@
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib/../lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-32-TO-32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib"
@@ -324,7 +314,7 @@
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib/../lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-32-TO-64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib"
@@ -339,7 +329,7 @@
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-64-TO-64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib"
@@ -354,7 +344,7 @@
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-64-TO-32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib"
@@ -369,7 +359,7 @@
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-X32: "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-X32: "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32: "-L[[SYSROOT]]/lib"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib"
@@ -384,7 +374,7 @@
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib"
@@ -399,7 +389,7 @@
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib"
@@ -414,7 +404,7 @@
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib"
@@ -429,7 +419,7 @@
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib"
@@ -443,7 +433,7 @@
 // CHECK-64-TO-32-SYSROOT: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32{{/|\\\\}}crtbegin.o"
 // CHECK-64-TO-32-SYSROOT: "-L{{[^"]*}}/Inputs/multilib_64bit_linux_tree/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib"
 //
@@ -486,13 +476,12 @@
 //
 // Test that we can use -stdlib=libc++ in a build system even when it
 // occasionally links C code instead of C++ code.
-// RUN: %clang -x c -### %s -no-pie 2>&1 \
+// RUN: %clang -x c -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-C-LINK %s
-// CHECK-BASIC-LIBCXX-C-LINK-NOT: warning:
 // CHECK-BASIC-LIBCXX-C-LINK: "-cc1"
 // CHECK-BASIC-LIBCXX-C-LINK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-BASIC-LIBCXX-C-LINK-NOT: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
@@ -535,7 +524,7 @@
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib/../lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/lib/../lib"
-// CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/../lib"
+// CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr{{/|\\\\}}lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8{{/|\\\\}}crtend.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib/../lib{{/|\\\\}}crtn.o"
@@ -553,7 +542,7 @@
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabi/4.7"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib/../lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/lib/../lib"
-// CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/../lib"
+// CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr{{/|\\\\}}lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7{{/|\\\\}}crtend.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib/../lib{{/|\\\\}}crtn.o"
@@ -586,7 +575,7 @@
 // CHECK-UBUNTU-14-04-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/x32"
 // CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../libx32"
 // CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-UBUNTU-14-04-X32: "{{.*}}/usr/lib/gcc/x86_64-linux-gnu/4.8/x32{{/|\\\\}}crtend.o"
 // CHECK-UBUNTU-14-04-X32: "{{.*}}/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../libx32{{/|\\\\}}crtn.o"
 //
@@ -660,7 +649,7 @@
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/4.1.2/64"
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/4.1.2/../../../../lib64"
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 //
 // Check openSuse Leap 42.2 on AArch64
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -950,6 +939,36 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-M %s
 // CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
+
+// Check that we pass --no-rosegment for pre-29 Android versions and do not for
+// 29+.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android28 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ROSEGMENT-28 %s
+// CHECK-ANDROID-ROSEGMENT-28: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-ROSEGMENT-28: "--no-rosegment"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android29 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ROSEGMENT-29 %s
+// CHECK-ANDROID-ROSEGMENT-29: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-ROSEGMENT-29-NOT: "--no-rosegment"
+
+// Check that we pass --pack-dyn-relocs=relr for API 28+ and not before.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android27 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-27 %s
+// CHECK-ANDROID-RELR-27: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=relr"
+// CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=android+relr"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android28 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-28 %s
+// CHECK-ANDROID-RELR-28: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-28: "--use-android-relr-tags"
+// CHECK-ANDROID-RELR-28: "--pack-dyn-relocs=relr"
+// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android+relr"
 
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64-linux-gnuabin32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABIN32 %s
@@ -1299,7 +1318,7 @@
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/../../../../lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/lib/../lib"
-// CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib/../lib"
+// CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr{{/|\\\\}}lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib"
 //
@@ -1314,7 +1333,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/64"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/../../../../lib64"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib"
 //
@@ -1329,7 +1348,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/n32"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/../../../../lib32"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -1417,6 +1436,9 @@
 // RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -funsafe-math-optimizations\
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffp-model=fast \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
 // RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -Ofast\
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
@@ -1444,6 +1466,32 @@
 // We don't have crtfastmath.o in the i386 tree, use it to check that file
 // detection works.
 // RUN: %clang --target=i386-unknown-linux -no-pie -### %s -ffast-math \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// Don't link crtfastmath.o with -shared
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffast-math -shared \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -Ofast -shared \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// Check for effects of -mdaz-ftz
+// RUN: %clang --target=x86_64-unknown-linux -### %s -ffast-math -shared -mdaz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffast-math -mdaz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -mdaz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -### %s -ffast-math -shared -mno-daz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffast-math -mno-daz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -mno-daz-ftz \
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
 // CHECK-CRTFASTMATH: usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtfastmath.o
@@ -1635,11 +1683,10 @@
 // CHECK-MUSL-AARCH64_BE: "-dynamic-linker" "/lib/ld-musl-aarch64_be.so.1"
 
 // Check whether multilib gcc install works fine on Gentoo with gcc-config
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO %s
-// CHECK-LD-GENTOO-NOT: warning:
 // CHECK-LD-GENTOO: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GENTOO: "--eh-frame-hdr"
 // CHECK-LD-GENTOO: "-m" "elf_x86_64"
@@ -1650,11 +1697,10 @@
 // CHECK-LD-GENTOO: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-GENTOO: "-lc"
 // CHECK-LD-GENTOO: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO-32 %s
-// CHECK-LD-GENTOO-32-NOT: warning:
 // CHECK-LD-GENTOO-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GENTOO-32: "--eh-frame-hdr"
 // CHECK-LD-GENTOO-32: "-m" "elf_i386"
@@ -1665,11 +1711,10 @@
 // CHECK-LD-GENTOO-32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-GENTOO-32: "-lc"
 // CHECK-LD-GENTOO-32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO-X32 %s
-// CHECK-LD-GENTOO-X32-NOT: warning:
 // CHECK-LD-GENTOO-X32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GENTOO-X32: "--eh-frame-hdr"
 // CHECK-LD-GENTOO-X32: "-m" "elf32_x86_64"
@@ -1691,11 +1736,10 @@
 // CHECK-LD-RHEL7-DTS: [[SYSROOT]]/usr/lib/gcc/x86_64-redhat-linux/7/../../../../bin/ld
 
 // Check whether gcc7 install works fine on Amazon Linux AMI
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-amazon-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/ami_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-AMI %s
-// CHECK-LD-AMI-NOT: warning:
 // CHECK-LD-AMI: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-AMI: "--eh-frame-hdr"
 // CHECK-LD-AMI: "-m" "elf_x86_64"

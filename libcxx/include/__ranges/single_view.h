@@ -12,6 +12,8 @@
 
 #include <__concepts/constructible.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__ranges/movable_box.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
@@ -20,7 +22,6 @@
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -69,6 +70,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp* end() noexcept { return data() + 1; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* end() const noexcept { return data() + 1; }
+
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return false; }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 1; }
 

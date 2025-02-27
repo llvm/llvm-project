@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
@@ -23,6 +22,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 
 static mlir::FunctionType
@@ -177,9 +177,10 @@ mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
 // explicit.
 static Fortran::evaluate::characteristics::DummyDataObject
 asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
-  Fortran::evaluate::Shape shape =
-      dummy.type.attrs().none() ? dummy.type.shape()
-                                : Fortran::evaluate::Shape(dummy.type.Rank());
+  std::optional<Fortran::evaluate::Shape> shape =
+      dummy.type.attrs().none()
+          ? dummy.type.shape()
+          : std::make_optional<Fortran::evaluate::Shape>(dummy.type.Rank());
   return Fortran::evaluate::characteristics::DummyDataObject(
       Fortran::evaluate::characteristics::TypeAndShape(dummy.type.type(),
                                                        std::move(shape)));
@@ -187,7 +188,7 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
 
 static Fortran::evaluate::characteristics::DummyArgument
 asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
-  return std::visit(
+  return Fortran::common::visit(
       Fortran::common::visitors{
           [&](Fortran::evaluate::characteristics::DummyDataObject &obj) {
             return Fortran::evaluate::characteristics::DummyArgument(
@@ -218,7 +219,7 @@ Fortran::lower::CallerInterface::characterize() const {
       converter.getFoldingContext();
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procRef.proc(), foldingContext);
+          procRef.proc(), foldingContext, /*emitError=*/false);
   assert(characteristic && "Failed to get characteristic from procRef");
   // The characteristic may not contain the argument characteristic if the
   // ProcedureDesignator has no interface, or may mismatch in case of implicit
@@ -575,20 +576,45 @@ mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
   return converter.hostAssocTupleValue();
 }
 
-void Fortran::lower::CalleeInterface::setFuncAttrs(
-    mlir::func::FuncOp func) const {
-  if (funit.parentHasHostAssoc())
-    func->setAttr(fir::getInternalProcedureAttrName(),
-                  mlir::UnitAttr::get(func->getContext()));
-}
-
 //===----------------------------------------------------------------------===//
 // CallInterface implementation: this part is common to both caller and callee.
 //===----------------------------------------------------------------------===//
 
 static void addSymbolAttribute(mlir::func::FuncOp func,
                                const Fortran::semantics::Symbol &sym,
+                               fir::FortranProcedureFlagsEnumAttr procAttrs,
                                mlir::MLIRContext &mlirContext) {
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  // The link between an internal procedure and its host procedure is lost
+  // in FIR if the host is BIND(C) since the internal mangling will not
+  // allow retrieving the host bind(C) name, and therefore func.func symbol.
+  // Preserve it as an attribute so that this can be later retrieved.
+  if (Fortran::semantics::ClassifyProcedure(ultimate) ==
+      Fortran::semantics::ProcedureDefinitionClass::Internal) {
+    if (ultimate.owner().kind() ==
+        Fortran::semantics::Scope::Kind::Subprogram) {
+      if (const Fortran::semantics::Symbol *hostProcedure =
+              ultimate.owner().symbol()) {
+        std::string hostName = Fortran::lower::mangle::mangleName(
+            *hostProcedure, /*keepExternalInScope=*/true);
+        func->setAttr(
+            fir::getHostSymbolAttrName(),
+            mlir::SymbolRefAttr::get(
+                &mlirContext, mlir::StringAttr::get(&mlirContext, hostName)));
+      }
+    } else if (ultimate.owner().kind() ==
+               Fortran::semantics::Scope::Kind::MainProgram) {
+      func->setAttr(fir::getHostSymbolAttrName(),
+                    mlir::SymbolRefAttr::get(
+                        &mlirContext,
+                        mlir::StringAttr::get(
+                            &mlirContext, fir::NameUniquer::doProgramEntry())));
+    }
+  }
+
+  if (procAttrs)
+    func->setAttr(fir::getFortranProcedureFlagsAttrName(), procAttrs);
+
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
   if (!Fortran::semantics::IsBindCProcedure(sym))
@@ -606,9 +632,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
                       characteristic) {
   if (characteristic && characteristic->cudaSubprogramAttrs) {
     func.getOperation()->setAttr(
-        fir::getCUDAAttrName(),
-        fir::getCUDAProcAttribute(func.getContext(),
-                                  *characteristic->cudaSubprogramAttrs));
+        cuf::getProcAttrName(),
+        cuf::getProcAttribute(func.getContext(),
+                              *characteristic->cudaSubprogramAttrs));
   }
 
   if (sym) {
@@ -628,9 +654,9 @@ setCUDAAttributes(mlir::func::FuncOp func,
           ubAttr =
               mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDALaunchBoundsAttrName(),
-            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
-                                           minBPMAttr, ubAttr));
+            cuf::getLaunchBoundsAttrName(),
+            cuf::LaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                       minBPMAttr, ubAttr));
       }
 
       if (!details->cudaClusterDims().empty()) {
@@ -642,9 +668,8 @@ setCUDAAttributes(mlir::func::FuncOp func,
         auto zAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
         func.getOperation()->setAttr(
-            fir::getCUDAClusterDimsAttrName(),
-            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
-                                          zAttr));
+            cuf::getClusterDimsAttrName(),
+            cuf::ClusterDimsAttr::get(func.getContext(), xAttr, yAttr, zAttr));
       }
     }
   }
@@ -671,6 +696,7 @@ void Fortran::lower::CallInterface<T>::declare() {
     func = fir::FirOpBuilder::getNamedFunction(module, symbolTable, name);
     if (!func) {
       mlir::Location loc = side().getCalleeLocation();
+      mlir::MLIRContext &mlirContext = converter.getMLIRContext();
       mlir::FunctionType ty = genFunctionType();
       func =
           fir::FirOpBuilder::createFunction(loc, module, name, ty, symbolTable);
@@ -680,13 +706,13 @@ void Fortran::lower::CallInterface<T>::declare() {
                         mlir::StringAttr::get(&converter.getMLIRContext(),
                                               sym->name().ToString()));
         } else {
-          addSymbolAttribute(func, *sym, converter.getMLIRContext());
+          addSymbolAttribute(func, *sym, getProcedureAttrs(&mlirContext),
+                             mlirContext);
         }
       }
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
-      side().setFuncAttrs(func);
 
       setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
     }
@@ -813,7 +839,7 @@ public:
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       const Fortran::evaluate::characteristics::DummyArgument
           &argCharacteristics = std::get<0>(pair);
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const auto &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
@@ -847,7 +873,7 @@ public:
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       const Fortran::evaluate::characteristics::DummyArgument
           &argCharacteristics = std::get<0>(pair);
-      std::visit(
+      Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::characteristics::DummyDataObject
                       &dummy) {
@@ -1081,30 +1107,32 @@ private:
     };
     if (obj.attrs.test(Attrs::Optional))
       addMLIRAttr(fir::getOptionalAttrName());
-    // Skipping obj.attrs.test(Attrs::Asynchronous), this does not impact the
-    // way the argument is passed given flang implement asynch IO synchronously.
-    // TODO: it would be safer to treat them as volatile because since Fortran
-    // 2018 asynchronous can also be used for C defined asynchronous user
-    // processes (see 18.10.4 Asynchronous communication).
     if (obj.attrs.test(Attrs::Contiguous))
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
       isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
-    if (obj.attrs.test(Attrs::Volatile))
+    if (obj.attrs.test(Attrs::Volatile)) {
       TODO(loc, "VOLATILE in procedure interface");
+      addMLIRAttr(fir::getVolatileAttrName());
+    }
+    // obj.attrs.test(Attrs::Asynchronous) does not impact the way the argument
+    // is passed given flang implement asynch IO synchronously. However, it's
+    // added to determine whether the argument is captured.
+    // TODO: it would be safer to treat them as volatile because since Fortran
+    // 2018 asynchronous can also be used for C defined asynchronous user
+    // processes (see 18.10.4 Asynchronous communication).
+    if (obj.attrs.test(Attrs::Asynchronous))
+      addMLIRAttr(fir::getAsynchronousAttrName());
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
     if (obj.cudaDataAttr)
       attrs.emplace_back(
-          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
-          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
+          mlir::StringAttr::get(&mlirContext, cuf::getDataAttrName()),
+          cuf::getDataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    const Fortran::evaluate::characteristics::TypeAndShape::Attrs &shapeAttrs =
-        obj.type.attrs();
-    if (shapeAttrs.test(ShapeAttr::Coarray))
+    if (obj.type.corank() > 0)
       TODO(loc, "coarray: dummy argument coarray in procedure interface");
 
     // So far assume that if the argument cannot be passed by implicit interface
@@ -1162,7 +1190,7 @@ private:
       Property prop = Property::BaseAddress;
       if (isValueAttr) {
         bool isBuiltinCptrType = fir::isa_builtin_cptr_type(type);
-        if (isBindC || (!type.isa<fir::SequenceType>() &&
+        if (isBindC || (!mlir::isa<fir::SequenceType>(type) &&
                         !obj.attrs.test(Attrs::Optional) &&
                         (dynamicType.category() !=
                              Fortran::common::TypeCategory::Derived ||
@@ -1170,7 +1198,7 @@ private:
           passBy = PassEntityBy::Value;
           prop = Property::Value;
           if (isBuiltinCptrType) {
-            auto recTy = type.dyn_cast<fir::RecordType>();
+            auto recTy = mlir::dyn_cast<fir::RecordType>(type);
             mlir::Type fieldTy = recTy.getTypeList()[0].second;
             passType = fir::ReferenceType::get(fieldTy);
           } else {
@@ -1278,18 +1306,17 @@ private:
   // with the shape (may contain unknown extents) for arrays.
   std::optional<fir::SequenceType::Shape> getBounds(
       const Fortran::evaluate::characteristics::TypeAndShape &typeAndShape) {
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    if (typeAndShape.shape().empty() &&
-        !typeAndShape.attrs().test(ShapeAttr::AssumedRank))
+    if (typeAndShape.shape() && typeAndShape.shape()->empty())
       return std::nullopt;
     fir::SequenceType::Shape bounds;
-    for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
-         typeAndShape.shape()) {
-      fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
-      if (std::optional<std::int64_t> i = toInt64(extent))
-        bound = *i;
-      bounds.emplace_back(bound);
-    }
+    if (typeAndShape.shape())
+      for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
+           *typeAndShape.shape()) {
+        fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
+        if (std::optional<std::int64_t> i = toInt64(extent))
+          bound = *i;
+        bounds.emplace_back(bound);
+      }
     return bounds;
   }
   std::optional<std::int64_t>
@@ -1516,6 +1543,44 @@ Fortran::lower::CallInterface<T>::getResultType() const {
   return types;
 }
 
+template <typename T>
+fir::FortranProcedureFlagsEnumAttr
+Fortran::lower::CallInterface<T>::getProcedureAttrs(
+    mlir::MLIRContext *mlirContext) const {
+  fir::FortranProcedureFlagsEnum flags = fir::FortranProcedureFlagsEnum::none;
+  if (characteristic) {
+    if (characteristic->IsBindC())
+      flags = flags | fir::FortranProcedureFlagsEnum::bind_c;
+    if (characteristic->IsPure())
+      flags = flags | fir::FortranProcedureFlagsEnum::pure;
+    if (characteristic->IsElemental())
+      flags = flags | fir::FortranProcedureFlagsEnum::elemental;
+    // TODO:
+    // - SIMPLE: F2023, not yet handled by semantics.
+  }
+
+  if constexpr (std::is_same_v<Fortran::lower::CalleeInterface, T>) {
+    // Only gather and set NON_RECURSIVE for procedure definition. It is
+    // meaningless on calls since this is not part of Fortran characteristics
+    // (Fortran 2023 15.3.1) so there is no way to always know if the procedure
+    // called is recursive or not.
+    if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
+      // Note: By default procedures are RECURSIVE unless
+      // -fno-automatic/-save/-Msave is set. NON_RECURSIVE is is made explicit
+      // in that case in FIR.
+      if (sym->attrs().test(Fortran::semantics::Attr::NON_RECURSIVE) ||
+          (sym->owner().context().languageFeatures().IsEnabled(
+               Fortran::common::LanguageFeature::DefaultSave) &&
+           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))) {
+        flags = flags | fir::FortranProcedureFlagsEnum::non_recursive;
+      }
+    }
+  }
+  if (flags != fir::FortranProcedureFlagsEnum::none)
+    return fir::FortranProcedureFlagsEnumAttr::get(mlirContext, flags);
+  return nullptr;
+}
+
 template class Fortran::lower::CallInterface<Fortran::lower::CalleeInterface>;
 template class Fortran::lower::CallInterface<Fortran::lower::CallerInterface>;
 
@@ -1551,7 +1616,7 @@ public:
                    Fortran::lower::AbstractConverter &c)
       : CallInterface{c}, procDesignator{&procDes},
         proc{Fortran::evaluate::characteristics::Procedure::Characterize(
-                 procDes, converter.getFoldingContext())
+                 procDes, converter.getFoldingContext(), /*emitError=*/false)
                  .value()} {}
   /// Does the procedure characteristics being translated have alternate
   /// returns ?
@@ -1598,10 +1663,6 @@ public:
   getCallDescription() const {
     return proc;
   }
-
-  /// Set internal procedure attribute on MLIR function. Internal procedure
-  /// are defined in the current file and will not go through SignatureBuilder.
-  void setFuncAttrs(mlir::func::FuncOp) const {}
 
   /// This is not the description of an indirect call.
   static constexpr bool isIndirectCall() { return false; }
@@ -1680,7 +1741,7 @@ bool Fortran::lower::mustPassLengthWithDummyProcedure(
     Fortran::lower::AbstractConverter &converter) {
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristics =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procedure, converter.getFoldingContext());
+          procedure, converter.getFoldingContext(), /*emitError=*/false);
   return ::mustPassLengthWithDummyProcedure(characteristics);
 }
 
@@ -1698,7 +1759,7 @@ mlir::Type Fortran::lower::getDummyProcedureType(
 }
 
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
-  return ty.isa<fir::ReferenceType>() &&
+  return mlir::isa<fir::ReferenceType>(ty) &&
          fir::isa_integer(fir::unwrapRefType(ty));
 }
 

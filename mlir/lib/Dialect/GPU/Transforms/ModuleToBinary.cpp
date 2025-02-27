@@ -13,7 +13,6 @@
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 
-#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -39,24 +38,9 @@ class GpuModuleToBinaryPass
     : public impl::GpuModuleToBinaryPassBase<GpuModuleToBinaryPass> {
 public:
   using Base::Base;
-  void getDependentDialects(DialectRegistry &registry) const override;
   void runOnOperation() final;
 };
 } // namespace
-
-void GpuModuleToBinaryPass::getDependentDialects(
-    DialectRegistry &registry) const {
-  // Register all GPU related translations.
-  registry.insert<gpu::GPUDialect>();
-  registry.insert<LLVM::LLVMDialect>();
-#if MLIR_ENABLE_CUDA_CONVERSIONS
-  registry.insert<NVVM::NVVMDialect>();
-#endif
-#if MLIR_ENABLE_ROCM_CONVERSIONS
-  registry.insert<ROCDL::ROCDLDialect>();
-#endif
-  registry.insert<spirv::SPIRVDialect>();
-}
 
 void GpuModuleToBinaryPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
@@ -84,14 +68,13 @@ void GpuModuleToBinaryPass::runOnOperation() {
     }
     return &parentTable.value();
   };
-
-  TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
-                              lazyTableBuilder);
+  SmallVector<Attribute> librariesToLink;
+  for (const std::string &path : linkFiles)
+    librariesToLink.push_back(StringAttr::get(&getContext(), path));
+  TargetOptions targetOptions(toolkitPath, librariesToLink, cmdOptions,
+                              elfSection, *targetFormat, lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
-          getOperation(),
-          offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(
-                                  offloadingHandler.getValue())
-                            : OffloadingLLVMTranslationAttrInterface(nullptr),
+          getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))
     return signalPassFailure();
 }
@@ -118,7 +101,8 @@ LogicalResult moduleSerializer(GPUModuleOp op,
       return failure();
     }
 
-    Attribute object = target.createObject(*serializedModule, targetOptions);
+    Attribute object =
+        target.createObject(op, *serializedModule, targetOptions);
     if (!object) {
       op.emitError("An error happened while creating the object.");
       return failure();
