@@ -242,10 +242,11 @@ jobs:
         - { config: clang-cl-no-vcruntime, mingw: false }
         - { config: clang-cl-debug, mingw: false }
         - { config: clang-cl-static-crt, mingw: false }
-        - { config: mingw-dll, mingw: true }
-        - { config: mingw-static, mingw: true }
-        - { config: mingw-dll-i686, mingw: true }
-        - { config: mingw-incomplete-sysroot, mingw: true }
+        - { config: mingw-dll, mingw: true, crt: ucrt }
+        - { config: mingw-static, mingw: true, crt: ucrt }
+        - { config: mingw-dll-i686, mingw: true, crt: ucrt }
+        - { config: mingw-incomplete-sysroot, mingw: true, crt: ucrt }
+        - { config: mingw-msvcrt, mingw: true, crt: msvcrt }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -259,7 +260,7 @@ jobs:
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240606/llvm-mingw-20240606-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240606/llvm-mingw-20240606-${{matrix.crt}}-x86_64.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw

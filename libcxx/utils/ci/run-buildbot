@@ -737,6 +737,15 @@ mingw-incomplete-sysroot)
     step "Building the runtimes"
     ${NINJA} -vC "${BUILD_DIR}"
 ;;
+mingw-msvcrt)
+    # All tests don't pass in msvcrt based configurations (and we don't have
+    # the right XFAIL markings for it yet), thus initially only test building.
+    clean
+    generate-cmake \
+          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
+    step "Building the runtimes"
+    ${NINJA} -vC "${BUILD_DIR}"
+;;
 aix)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
