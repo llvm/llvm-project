@@ -31,28 +31,23 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    cmpdi cr1, r4, 0
 ; CHECK-NEXT:    cmpdi cr5, r5, 0
 ; CHECK-NEXT:    cmpldi cr6, r3, 0
-; CHECK-NEXT:    beq cr6, .LBB0_3
+; CHECK-NEXT:    # implicit-def: $r3
+; CHECK-NEXT:    beq cr6, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb10
 ; CHECK-NEXT:    lwz r3, 0(r3)
-; CHECK-NEXT:    bc 12, 4*cr1+eq, .LBB0_4
-; CHECK-NEXT:  .LBB0_2: # %bb14
-; CHECK-NEXT:    lwz r5, 0(r3)
-; CHECK-NEXT:    b .LBB0_5
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    # implicit-def: $r3
-; CHECK-NEXT:    bc 4, 4*cr1+eq, .LBB0_2
-; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:  .LBB0_2: # %bb12
 ; CHECK-NEXT:    # implicit-def: $r5
-; CHECK-NEXT:  .LBB0_5: # %bb16
+; CHECK-NEXT:    bc 12, 4*cr1+eq, .LBB0_4
+; CHECK-NEXT:  # %bb.3: # %bb14
+; CHECK-NEXT:    lwz r5, 0(r3)
+; CHECK-NEXT:  .LBB0_4: # %bb16
 ; CHECK-NEXT:    crnot 4*cr1+lt, eq
 ; CHECK-NEXT:    crnot 4*cr5+un, 4*cr5+eq
-; CHECK-NEXT:    bc 12, 4*cr5+eq, .LBB0_7
-; CHECK-NEXT:  # %bb.6: # %bb18
-; CHECK-NEXT:    lwz r4, 0(r3)
-; CHECK-NEXT:    b .LBB0_8
-; CHECK-NEXT:  .LBB0_7:
 ; CHECK-NEXT:    # implicit-def: $r4
-; CHECK-NEXT:  .LBB0_8: # %bb20
+; CHECK-NEXT:    bc 12, 4*cr5+eq, .LBB0_6
+; CHECK-NEXT:  # %bb.5: # %bb18
+; CHECK-NEXT:    lwz r4, 0(r3)
+; CHECK-NEXT:  .LBB0_6: # %bb20
 ; CHECK-NEXT:    mfcr r12
 ; CHECK-NEXT:    cmpwi cr3, r4, -1
 ; CHECK-NEXT:    cmpwi cr2, r3, -1
@@ -62,38 +57,38 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    crand 4*cr5+lt, 4*cr3+gt, 4*cr5+un
 ; CHECK-NEXT:    crand 4*cr5+gt, 4*cr2+gt, 4*cr1+lt
 ; CHECK-NEXT:    # implicit-def: $x3
-; CHECK-NEXT:    bc 4, 4*cr5+gt, .LBB0_10
-; CHECK-NEXT:  # %bb.9: # %bb34
+; CHECK-NEXT:    bc 4, 4*cr5+gt, .LBB0_8
+; CHECK-NEXT:  # %bb.7: # %bb34
 ; CHECK-NEXT:    ld r3, 0(r3)
-; CHECK-NEXT:  .LBB0_10: # %bb36
+; CHECK-NEXT:  .LBB0_8: # %bb36
 ; CHECK-NEXT:    cmpwi cr2, r5, 0
 ; CHECK-NEXT:    # implicit-def: $x4
-; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_12
-; CHECK-NEXT:  # %bb.11: # %bb38
+; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_10
+; CHECK-NEXT:  # %bb.9: # %bb38
 ; CHECK-NEXT:    ld r4, 0(r3)
-; CHECK-NEXT:  .LBB0_12: # %bb40
+; CHECK-NEXT:  .LBB0_10: # %bb40
 ; CHECK-NEXT:    crand 4*cr6+gt, 4*cr7+lt, 4*cr1+lt
 ; CHECK-NEXT:    crand 4*cr6+lt, 4*cr6+lt, 4*cr5+un
 ; CHECK-NEXT:    crnot 4*cr6+un, 4*cr1+eq
 ; CHECK-NEXT:    # implicit-def: $x6
-; CHECK-NEXT:    bc 4, 4*cr6+lt, .LBB0_14
-; CHECK-NEXT:  # %bb.13: # %bb48
+; CHECK-NEXT:    bc 4, 4*cr6+lt, .LBB0_12
+; CHECK-NEXT:  # %bb.11: # %bb48
 ; CHECK-NEXT:    ld r6, 0(r3)
-; CHECK-NEXT:  .LBB0_14: # %bb50
+; CHECK-NEXT:  .LBB0_12: # %bb50
 ; CHECK-NEXT:    cmpwi cr3, r5, -1
 ; CHECK-NEXT:    crand 4*cr7+lt, 4*cr2+lt, 4*cr6+un
 ; CHECK-NEXT:    # implicit-def: $r5
-; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_16
-; CHECK-NEXT:  # %bb.15: # %bb52
+; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_14
+; CHECK-NEXT:  # %bb.13: # %bb52
 ; CHECK-NEXT:    lwz r5, 0(r3)
-; CHECK-NEXT:  .LBB0_16: # %bb54
+; CHECK-NEXT:  .LBB0_14: # %bb54
 ; CHECK-NEXT:    mfocrf r7, 128
 ; CHECK-NEXT:    stw r7, -4(r1)
 ; CHECK-NEXT:    # implicit-def: $r7
-; CHECK-NEXT:    bc 4, 4*cr7+lt, .LBB0_18
-; CHECK-NEXT:  # %bb.17: # %bb56
+; CHECK-NEXT:    bc 4, 4*cr7+lt, .LBB0_16
+; CHECK-NEXT:  # %bb.15: # %bb56
 ; CHECK-NEXT:    lwz r7, 0(r3)
-; CHECK-NEXT:  .LBB0_18: # %bb58
+; CHECK-NEXT:  .LBB0_16: # %bb58
 ; CHECK-NEXT:    lwz r6, 92(r6)
 ; CHECK-NEXT:    cmpwi cr4, r7, 1
 ; CHECK-NEXT:    crand 4*cr7+un, 4*cr3+gt, 4*cr6+un
@@ -106,10 +101,10 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    crand 4*cr6+gt, 4*cr3+lt, 4*cr6+gt
 ; CHECK-NEXT:    cmpwi r6, 1
 ; CHECK-NEXT:    crand 4*cr6+lt, lt, 4*cr6+lt
-; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_20
-; CHECK-NEXT:  # %bb.19: # %bb68
+; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_18
+; CHECK-NEXT:  # %bb.17: # %bb68
 ; CHECK-NEXT:    ld r5, 0(r3)
-; CHECK-NEXT:  .LBB0_20: # %bb70
+; CHECK-NEXT:  .LBB0_18: # %bb70
 ; CHECK-NEXT:    ld r6, 0(r3)
 ; CHECK-NEXT:    lwz r9, -4(r1)
 ; CHECK-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, 4*cr7+eq

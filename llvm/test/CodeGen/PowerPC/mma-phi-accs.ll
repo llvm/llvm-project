@@ -252,17 +252,14 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-LABEL: testNestedPHI:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmplwi r3, 0
+; CHECK-NEXT:    # implicit-def: $acc0
 ; CHECK-NEXT:    beq cr0, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xvf32gernp acc0, v2, v2
-; CHECK-NEXT:    cmpwi r4, 1
-; CHECK-NEXT:    bge cr0, .LBB3_3
-; CHECK-NEXT:    b .LBB3_5
-; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    # implicit-def: $acc0
+; CHECK-NEXT:  .LBB3_2: # %if.end
 ; CHECK-NEXT:    cmpwi r4, 1
 ; CHECK-NEXT:    blt cr0, .LBB3_5
-; CHECK-NEXT:  .LBB3_3: # %for.body.preheader
+; CHECK-NEXT:  # %bb.3: # %for.body.preheader
 ; CHECK-NEXT:    addi r3, r4, -1
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    addi r3, r3, 1
@@ -284,17 +281,14 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-BE-LABEL: testNestedPHI:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    cmplwi r3, 0
+; CHECK-BE-NEXT:    # implicit-def: $acc0
 ; CHECK-BE-NEXT:    beq cr0, .LBB3_2
 ; CHECK-BE-NEXT:  # %bb.1: # %if.then
 ; CHECK-BE-NEXT:    xvf32gernp acc0, v2, v2
-; CHECK-BE-NEXT:    cmpwi r4, 1
-; CHECK-BE-NEXT:    bge cr0, .LBB3_3
-; CHECK-BE-NEXT:    b .LBB3_5
-; CHECK-BE-NEXT:  .LBB3_2:
-; CHECK-BE-NEXT:    # implicit-def: $acc0
+; CHECK-BE-NEXT:  .LBB3_2: # %if.end
 ; CHECK-BE-NEXT:    cmpwi r4, 1
 ; CHECK-BE-NEXT:    blt cr0, .LBB3_5
-; CHECK-BE-NEXT:  .LBB3_3: # %for.body.preheader
+; CHECK-BE-NEXT:  # %bb.3: # %for.body.preheader
 ; CHECK-BE-NEXT:    addi r3, r4, -1
 ; CHECK-BE-NEXT:    clrldi r3, r3, 32
 ; CHECK-BE-NEXT:    addi r3, r3, 1

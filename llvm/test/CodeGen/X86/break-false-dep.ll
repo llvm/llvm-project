@@ -132,14 +132,14 @@ declare double @llvm.sqrt.f64(double)
 define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; SSE-LINUX-LABEL: loopdep1:
 ; SSE-LINUX:       # %bb.0: # %entry
-; SSE-LINUX-NEXT:    testl %edi, %edi
-; SSE-LINUX-NEXT:    je .LBB6_1
-; SSE-LINUX-NEXT:  # %bb.2: # %for.body.preheader
-; SSE-LINUX-NEXT:    movl $1, %eax
 ; SSE-LINUX-NEXT:    xorps %xmm0, %xmm0
 ; SSE-LINUX-NEXT:    xorps %xmm1, %xmm1
+; SSE-LINUX-NEXT:    testl %edi, %edi
+; SSE-LINUX-NEXT:    je .LBB6_3
+; SSE-LINUX-NEXT:  # %bb.1: # %for.body.preheader
+; SSE-LINUX-NEXT:    movl $1, %eax
 ; SSE-LINUX-NEXT:    .p2align 4
-; SSE-LINUX-NEXT:  .LBB6_3: # %for.body
+; SSE-LINUX-NEXT:  .LBB6_2: # %for.body
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    xorps %xmm2, %xmm2
 ; SSE-LINUX-NEXT:    cvtsi2ss %eax, %xmm2
@@ -149,26 +149,21 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; SSE-LINUX-NEXT:    addss %xmm3, %xmm1
 ; SSE-LINUX-NEXT:    incl %eax
 ; SSE-LINUX-NEXT:    decl %edi
-; SSE-LINUX-NEXT:    jne .LBB6_3
-; SSE-LINUX-NEXT:  # %bb.4: # %for.end
-; SSE-LINUX-NEXT:    subss %xmm1, %xmm0
-; SSE-LINUX-NEXT:    retq
-; SSE-LINUX-NEXT:  .LBB6_1:
-; SSE-LINUX-NEXT:    xorps %xmm0, %xmm0
-; SSE-LINUX-NEXT:    xorps %xmm1, %xmm1
+; SSE-LINUX-NEXT:    jne .LBB6_2
+; SSE-LINUX-NEXT:  .LBB6_3: # %for.end
 ; SSE-LINUX-NEXT:    subss %xmm1, %xmm0
 ; SSE-LINUX-NEXT:    retq
 ;
 ; SSE-WIN-LABEL: loopdep1:
 ; SSE-WIN:       # %bb.0: # %entry
-; SSE-WIN-NEXT:    testl %ecx, %ecx
-; SSE-WIN-NEXT:    je .LBB6_1
-; SSE-WIN-NEXT:  # %bb.2: # %for.body.preheader
-; SSE-WIN-NEXT:    movl $1, %eax
 ; SSE-WIN-NEXT:    xorps %xmm0, %xmm0
 ; SSE-WIN-NEXT:    xorps %xmm1, %xmm1
+; SSE-WIN-NEXT:    testl %ecx, %ecx
+; SSE-WIN-NEXT:    je .LBB6_3
+; SSE-WIN-NEXT:  # %bb.1: # %for.body.preheader
+; SSE-WIN-NEXT:    movl $1, %eax
 ; SSE-WIN-NEXT:    .p2align 4
-; SSE-WIN-NEXT:  .LBB6_3: # %for.body
+; SSE-WIN-NEXT:  .LBB6_2: # %for.body
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    xorps %xmm2, %xmm2
 ; SSE-WIN-NEXT:    cvtsi2ss %eax, %xmm2
@@ -178,26 +173,21 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; SSE-WIN-NEXT:    addss %xmm3, %xmm1
 ; SSE-WIN-NEXT:    incl %eax
 ; SSE-WIN-NEXT:    decl %ecx
-; SSE-WIN-NEXT:    jne .LBB6_3
-; SSE-WIN-NEXT:  # %bb.4: # %for.end
-; SSE-WIN-NEXT:    subss %xmm1, %xmm0
-; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:  .LBB6_1:
-; SSE-WIN-NEXT:    xorps %xmm0, %xmm0
-; SSE-WIN-NEXT:    xorps %xmm1, %xmm1
+; SSE-WIN-NEXT:    jne .LBB6_2
+; SSE-WIN-NEXT:  .LBB6_3: # %for.end
 ; SSE-WIN-NEXT:    subss %xmm1, %xmm0
 ; SSE-WIN-NEXT:    retq
 ;
 ; AVX1-LABEL: loopdep1:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    testl %ecx, %ecx
-; AVX1-NEXT:    je .LBB6_1
-; AVX1-NEXT:  # %bb.2: # %for.body.preheader
-; AVX1-NEXT:    movl $1, %eax
 ; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    testl %ecx, %ecx
+; AVX1-NEXT:    je .LBB6_3
+; AVX1-NEXT:  # %bb.1: # %for.body.preheader
+; AVX1-NEXT:    movl $1, %eax
 ; AVX1-NEXT:    .p2align 4
-; AVX1-NEXT:  .LBB6_3: # %for.body
+; AVX1-NEXT:  .LBB6_2: # %for.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vcvtsi2ss %eax, %xmm4, %xmm2
 ; AVX1-NEXT:    vcvtsi2ss %ecx, %xmm4, %xmm3
@@ -205,26 +195,21 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; AVX1-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    incl %eax
 ; AVX1-NEXT:    decl %ecx
-; AVX1-NEXT:    jne .LBB6_3
-; AVX1-NEXT:  # %bb.4: # %for.end
-; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB6_1:
-; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    jne .LBB6_2
+; AVX1-NEXT:  .LBB6_3: # %for.end
 ; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512VL-LABEL: loopdep1:
 ; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    testl %ecx, %ecx
-; AVX512VL-NEXT:    je .LBB6_1
-; AVX512VL-NEXT:  # %bb.2: # %for.body.preheader
-; AVX512VL-NEXT:    movl $1, %eax
 ; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    testl %ecx, %ecx
+; AVX512VL-NEXT:    je .LBB6_3
+; AVX512VL-NEXT:  # %bb.1: # %for.body.preheader
+; AVX512VL-NEXT:    movl $1, %eax
 ; AVX512VL-NEXT:    .p2align 4
-; AVX512VL-NEXT:  .LBB6_3: # %for.body
+; AVX512VL-NEXT:  .LBB6_2: # %for.body
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VL-NEXT:    vcvtsi2ss %eax, %xmm3, %xmm2
 ; AVX512VL-NEXT:    vaddss %xmm2, %xmm0, %xmm0
@@ -232,13 +217,8 @@ define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; AVX512VL-NEXT:    vaddss %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    incl %eax
 ; AVX512VL-NEXT:    decl %ecx
-; AVX512VL-NEXT:    jne .LBB6_3
-; AVX512VL-NEXT:  # %bb.4: # %for.end
-; AVX512VL-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    retq
-; AVX512VL-NEXT:  .LBB6_1:
-; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    jne .LBB6_2
+; AVX512VL-NEXT:  .LBB6_3: # %for.end
 ; AVX512VL-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 entry:

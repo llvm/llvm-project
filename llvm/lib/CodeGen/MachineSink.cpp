@@ -82,7 +82,7 @@ static cl::opt<unsigned> SplitEdgeProbabilityThreshold(
         "If the branch threshold is higher than this threshold, we allow "
         "speculative execution of up to 1 instruction to avoid branching to "
         "splitted critical edge"),
-    cl::init(40), cl::Hidden);
+    cl::init(35), cl::Hidden);
 
 static cl::opt<unsigned> SinkLoadInstsPerBlockThreshold(
     "machine-sink-load-instrs-threshold",

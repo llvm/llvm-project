@@ -52,26 +52,24 @@ if.end:
 define i32 @macrofuse_cmp_je(i32 %flags, ptr %p) nounwind {
 ; NOFUSION-LABEL: macrofuse_cmp_je:
 ; NOFUSION:       # %bb.0: # %entry
+; NOFUSION-NEXT:    xorl %eax, %eax
 ; NOFUSION-NEXT:    cmpl $512, %edi # imm = 0x200
 ; NOFUSION-NEXT:    movb $1, (%rsi)
-; NOFUSION-NEXT:    je .LBB1_1
-; NOFUSION-NEXT:  # %bb.2: # %if.then
+; NOFUSION-NEXT:    je .LBB1_2
+; NOFUSION-NEXT:  # %bb.1: # %if.then
 ; NOFUSION-NEXT:    movl $1, %eax
-; NOFUSION-NEXT:    retq
-; NOFUSION-NEXT:  .LBB1_1:
-; NOFUSION-NEXT:    xorl %eax, %eax
+; NOFUSION-NEXT:  .LBB1_2: # %if.end
 ; NOFUSION-NEXT:    retq
 ;
 ; FUSION-LABEL: macrofuse_cmp_je:
 ; FUSION:       # %bb.0: # %entry
+; FUSION-NEXT:    xorl %eax, %eax
 ; FUSION-NEXT:    movb $1, (%rsi)
 ; FUSION-NEXT:    cmpl $512, %edi # imm = 0x200
-; FUSION-NEXT:    je .LBB1_1
-; FUSION-NEXT:  # %bb.2: # %if.then
+; FUSION-NEXT:    je .LBB1_2
+; FUSION-NEXT:  # %bb.1: # %if.then
 ; FUSION-NEXT:    movl $1, %eax
-; FUSION-NEXT:    retq
-; FUSION-NEXT:  .LBB1_1:
-; FUSION-NEXT:    xorl %eax, %eax
+; FUSION-NEXT:  .LBB1_2: # %if.end
 ; FUSION-NEXT:    retq
 entry:
   %sub = sub i32 %flags, 512

@@ -632,20 +632,18 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ;
 ; CHECK-GI-LABEL: red_mla_dup_ext_u8_s8_s16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cbz w2, .LBB5_3
+; CHECK-GI-NEXT:    mov w8, wzr
+; CHECK-GI-NEXT:    cbz w2, .LBB5_9
 ; CHECK-GI-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-GI-NEXT:    cmp w2, #16
 ; CHECK-GI-NEXT:    mov w8, w2
-; CHECK-GI-NEXT:    b.hs .LBB5_4
+; CHECK-GI-NEXT:    b.hs .LBB5_3
 ; CHECK-GI-NEXT:  // %bb.2:
 ; CHECK-GI-NEXT:    mov w10, #0 // =0x0
 ; CHECK-GI-NEXT:    mov x9, xzr
 ; CHECK-GI-NEXT:    fmov s0, w10
-; CHECK-GI-NEXT:    b .LBB5_8
-; CHECK-GI-NEXT:  .LBB5_3:
-; CHECK-GI-NEXT:    mov w0, wzr
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB5_4: // %vector.ph
+; CHECK-GI-NEXT:    b .LBB5_7
+; CHECK-GI-NEXT:  .LBB5_3: // %vector.ph
 ; CHECK-GI-NEXT:    lsl w9, w1, #8
 ; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
@@ -654,7 +652,7 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    dup v2.8h, w9
 ; CHECK-GI-NEXT:    and x9, x8, #0xfffffff0
 ; CHECK-GI-NEXT:    mov x11, x9
-; CHECK-GI-NEXT:  .LBB5_5: // %vector.body
+; CHECK-GI-NEXT:  .LBB5_4: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldp d3, d4, [x10, #-8]
 ; CHECK-GI-NEXT:    subs x11, x11, #16
@@ -663,29 +661,31 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    ushll v4.8h, v4.8b, #0
 ; CHECK-GI-NEXT:    mla v0.8h, v2.8h, v3.8h
 ; CHECK-GI-NEXT:    mla v1.8h, v2.8h, v4.8h
-; CHECK-GI-NEXT:    b.ne .LBB5_5
-; CHECK-GI-NEXT:  // %bb.6: // %middle.block
+; CHECK-GI-NEXT:    b.ne .LBB5_4
+; CHECK-GI-NEXT:  // %bb.5: // %middle.block
 ; CHECK-GI-NEXT:    add v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    cmp x9, x8
 ; CHECK-GI-NEXT:    addv h0, v0.8h
-; CHECK-GI-NEXT:    b.ne .LBB5_8
-; CHECK-GI-NEXT:  // %bb.7:
-; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    b.ne .LBB5_7
+; CHECK-GI-NEXT:  // %bb.6:
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    mov w0, w8
 ; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB5_8: // %for.body.preheader1
+; CHECK-GI-NEXT:  .LBB5_7: // %for.body.preheader1
 ; CHECK-GI-NEXT:    sxtb w10, w1
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    sub x11, x8, x9
 ; CHECK-GI-NEXT:    add x9, x0, x9
-; CHECK-GI-NEXT:  .LBB5_9: // %for.body
+; CHECK-GI-NEXT:  .LBB5_8: // %for.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldrb w11, [x9], #1
+; CHECK-GI-NEXT:    ldrb w8, [x9], #1
 ; CHECK-GI-NEXT:    fmov w12, s0
-; CHECK-GI-NEXT:    subs x8, x8, #1
-; CHECK-GI-NEXT:    mul w11, w11, w10
-; CHECK-GI-NEXT:    add w0, w11, w12, uxth
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    b.ne .LBB5_9
-; CHECK-GI-NEXT:  // %bb.10: // %for.cond.cleanup
+; CHECK-GI-NEXT:    subs x11, x11, #1
+; CHECK-GI-NEXT:    mul w8, w8, w10
+; CHECK-GI-NEXT:    add w8, w8, w12, uxth
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    b.ne .LBB5_8
+; CHECK-GI-NEXT:  .LBB5_9: // %for.cond.cleanup
+; CHECK-GI-NEXT:    mov w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %conv2 = sext i8 %B to i16

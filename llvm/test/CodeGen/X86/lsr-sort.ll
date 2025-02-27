@@ -8,15 +8,17 @@ define dso_local i32 @foo(i32 %N) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jle .LBB0_2
+; CHECK-NEXT:    jle .LBB0_3
+; CHECK-NEXT:  # %bb.1: # %bb.preheader
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_1: # %bb
+; CHECK-NEXT:  .LBB0_2: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movw %ax, X(%rip)
 ; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    cmpl %eax, %edi
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  .LBB0_2: # %return
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  .LBB0_3: # %return
 ; CHECK-NEXT:    retq
 entry:
 	%0 = icmp sgt i32 %N, 0		; <i1> [#uses=1]

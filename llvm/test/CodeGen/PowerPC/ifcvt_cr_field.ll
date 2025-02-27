@@ -8,40 +8,34 @@ define dso_local signext i32 @test(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) loc
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vcmpgtsw. 2, 2, 3
-; CHECK-NEXT:    bge 6, .LBB0_2
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    bgelr 6
 ; CHECK-NEXT:  # %bb.1: # %land.rhs
 ; CHECK-NEXT:    vcmpgtsw. 2, 4, 3
 ; CHECK-NEXT:    mfocrf 3, 2
 ; CHECK-NEXT:    rlwinm 3, 3, 25, 31, 31
 ; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    blr
 ;
 ; CHECK-AIX-64-LABEL: test:
 ; CHECK-AIX-64:       # %bb.0: # %entry
 ; CHECK-AIX-64-NEXT:    vcmpgtsw. 2, 2, 3
-; CHECK-AIX-64-NEXT:    bge 6, L..BB0_2
+; CHECK-AIX-64-NEXT:    li 3, 0
+; CHECK-AIX-64-NEXT:    bgelr 6
 ; CHECK-AIX-64-NEXT:  # %bb.1: # %land.rhs
 ; CHECK-AIX-64-NEXT:    vcmpgtsw. 2, 4, 3
 ; CHECK-AIX-64-NEXT:    mfocrf 3, 2
 ; CHECK-AIX-64-NEXT:    rlwinm 3, 3, 25, 31, 31
 ; CHECK-AIX-64-NEXT:    blr
-; CHECK-AIX-64-NEXT:  L..BB0_2:
-; CHECK-AIX-64-NEXT:    li 3, 0
-; CHECK-AIX-64-NEXT:    blr
 ;
 ; CHECK-AIX-32-LABEL: test:
 ; CHECK-AIX-32:       # %bb.0: # %entry
 ; CHECK-AIX-32-NEXT:    vcmpgtsw. 2, 2, 3
-; CHECK-AIX-32-NEXT:    bge 6, L..BB0_2
+; CHECK-AIX-32-NEXT:    li 3, 0
+; CHECK-AIX-32-NEXT:    bgelr 6
 ; CHECK-AIX-32-NEXT:  # %bb.1: # %land.rhs
 ; CHECK-AIX-32-NEXT:    vcmpgtsw. 2, 4, 3
 ; CHECK-AIX-32-NEXT:    mfocrf 3, 2
 ; CHECK-AIX-32-NEXT:    rlwinm 3, 3, 25, 31, 31
-; CHECK-AIX-32-NEXT:    blr
-; CHECK-AIX-32-NEXT:  L..BB0_2:
-; CHECK-AIX-32-NEXT:    li 3, 0
 ; CHECK-AIX-32-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.altivec.vcmpgtsw.p(i32 2, <4 x i32> %a, <4 x i32> %b)

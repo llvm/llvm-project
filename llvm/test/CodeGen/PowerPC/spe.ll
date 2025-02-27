@@ -1750,6 +1750,7 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stwu 1, -32(1)
 ; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    # implicit-def: $r5
 ; CHECK-NEXT:    stw 0, 36(1)
 ; CHECK-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
@@ -1768,10 +1769,7 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    cmplwi 30, 0
 ; CHECK-NEXT:    addi 29, 29, 1
 ; CHECK-NEXT:    bc 12, 1, .LBB56_2
-; CHECK-NEXT:    b .LBB56_4
-; CHECK-NEXT:  .LBB56_3:
-; CHECK-NEXT:    # implicit-def: $r5
-; CHECK-NEXT:  .LBB56_4: # %for.cond.cleanup
+; CHECK-NEXT:  .LBB56_3: # %for.cond.cleanup
 ; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload

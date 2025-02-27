@@ -16,7 +16,16 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX942-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; GFX942-NEXT:    s_branch .LBB0_2
-; GFX942-NEXT:  .LBB0_1: ; %bb2
+; GFX942-NEXT:  .LBB0_1: ; %Flow
+; GFX942-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; GFX942-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; GFX942-NEXT:    s_cbranch_vccz .LBB0_4
+; GFX942-NEXT:  .LBB0_2: ; %bb
+; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX942-NEXT:    s_mov_b64 s[4:5], -1
+; GFX942-NEXT:    s_cbranch_vccnz .LBB0_1
+; GFX942-NEXT:  ; %bb.3: ; %bb2
 ; GFX942-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX942-NEXT:    s_or_b32 s4, s3, 1
 ; GFX942-NEXT:    s_ashr_i32 s5, s3, 31
@@ -30,15 +39,9 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-NEXT:    v_accvgpr_write_b32 a2, v2
 ; GFX942-NEXT:    v_accvgpr_write_b32 a3, v3
 ; GFX942-NEXT:    s_and_b32 s3, s5, s4
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    v_mfma_f32_16x16x16_f16 a[0:3], v[4:5], v[4:5], a[0:3]
-; GFX942-NEXT:    s_cbranch_execz .LBB0_4
-; GFX942-NEXT:  .LBB0_2: ; %bb
-; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX942-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; GFX942-NEXT:    s_cbranch_vccz .LBB0_1
-; GFX942-NEXT:  ; %bb.3:
-; GFX942-NEXT:    ; implicit-def: $sgpr3
+; GFX942-NEXT:    s_branch .LBB0_1
 ; GFX942-NEXT:  .LBB0_4: ; %common.ret
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -55,12 +58,20 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX908-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; GFX908-NEXT:    s_branch .LBB0_2
-; GFX908-NEXT:  .LBB0_1: ; %bb2
+; GFX908-NEXT:  .LBB0_1: ; %Flow
+; GFX908-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; GFX908-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; GFX908-NEXT:    s_cbranch_vccz .LBB0_4
+; GFX908-NEXT:  .LBB0_2: ; %bb
+; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX908-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX908-NEXT:    s_mov_b64 s[4:5], -1
+; GFX908-NEXT:    s_cbranch_vccnz .LBB0_1
+; GFX908-NEXT:  ; %bb.3: ; %bb2
 ; GFX908-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX908-NEXT:    s_or_b32 s4, s3, 1
 ; GFX908-NEXT:    s_ashr_i32 s5, s3, 31
 ; GFX908-NEXT:    s_mov_b32 s3, s2
-; GFX908-NEXT:    s_nop 3
 ; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX908-NEXT:    v_mov_b32_e32 v4, s2
@@ -72,13 +83,8 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, v3
 ; GFX908-NEXT:    s_and_b32 s3, s5, s4
 ; GFX908-NEXT:    v_mfma_f32_16x16x16f16 a[0:3], v[4:5], v[4:5], a[0:3]
-; GFX908-NEXT:    s_cbranch_execz .LBB0_4
-; GFX908-NEXT:  .LBB0_2: ; %bb
-; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX908-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; GFX908-NEXT:    s_cbranch_vccz .LBB0_1
-; GFX908-NEXT:  ; %bb.3:
-; GFX908-NEXT:    ; implicit-def: $sgpr3
+; GFX908-NEXT:    s_mov_b64 s[4:5], 0
+; GFX908-NEXT:    s_branch .LBB0_1
 ; GFX908-NEXT:  .LBB0_4: ; %common.ret
 ; GFX908-NEXT:    s_endpgm
 entry:

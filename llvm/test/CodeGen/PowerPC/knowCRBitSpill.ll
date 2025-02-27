@@ -89,6 +89,7 @@ define dso_local signext i32 @spillCRUNSET(ptr readonly %p1, i32 signext %p2, i3
 ; CHECK-NOT:    rlwinm [[REG2]], [[REG2]]
 ; CHECK:        stw [[REG1]]
 ; CHECK:        .LBB1_1:
+
 entry:
   %and = and i32 %p3, 128
   %tobool = icmp eq i32 %and, 0

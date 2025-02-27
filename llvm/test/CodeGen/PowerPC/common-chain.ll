@@ -35,34 +35,33 @@
 define i64 @two_chain_same_offset_succ(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: two_chain_same_offset_succ:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr r7, r3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB0_4
+; CHECK-NEXT:    blelr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r7, r4, 1
+; CHECK-NEXT:    sldi r3, r4, 1
+; CHECK-NEXT:    add r8, r5, r4
 ; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    add r8, r4, r7
-; CHECK-NEXT:    add r7, r5, r4
-; CHECK-NEXT:    add r5, r5, r8
-; CHECK-NEXT:    add r7, r3, r7
-; CHECK-NEXT:    add r5, r3, r5
+; CHECK-NEXT:    add r3, r4, r3
+; CHECK-NEXT:    add r8, r7, r8
+; CHECK-NEXT:    add r3, r5, r3
+; CHECK-NEXT:    add r5, r7, r3
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ld r6, 0(r7)
-; CHECK-NEXT:    ldx r8, r7, r4
+; CHECK-NEXT:    ld r6, 0(r8)
+; CHECK-NEXT:    ldx r7, r8, r4
 ; CHECK-NEXT:    ld r9, 0(r5)
 ; CHECK-NEXT:    ldx r10, r5, r4
-; CHECK-NEXT:    addi r7, r7, 1
+; CHECK-NEXT:    addi r8, r8, 1
 ; CHECK-NEXT:    addi r5, r5, 1
-; CHECK-NEXT:    mulld r6, r8, r6
+; CHECK-NEXT:    mulld r6, r7, r6
 ; CHECK-NEXT:    mulld r6, r6, r9
 ; CHECK-NEXT:    maddld r3, r6, r10, r3
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = shl nsw i64 %offset, 1
@@ -136,26 +135,27 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @not_perfect_chain_all_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: not_perfect_chain_all_same_offset_fail:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr r7, r3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB1_4
+; CHECK-NEXT:    blelr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    sldi r7, r4, 1
-; CHECK-NEXT:    add r5, r3, r5
-; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    add r8, r4, r7
-; CHECK-NEXT:    sldi r9, r4, 2
+; CHECK-NEXT:    sldi r8, r4, 1
+; CHECK-NEXT:    add r5, r7, r5
+; CHECK-NEXT:    add r9, r4, r8
+; CHECK-NEXT:    sldi r10, r4, 2
 ; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    add r10, r4, r9
+; CHECK-NEXT:    add r11, r4, r10
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldx r6, r5, r4
-; CHECK-NEXT:    ldx r11, r5, r7
-; CHECK-NEXT:    ldx r12, r5, r8
-; CHECK-NEXT:    ldx r0, r5, r9
-; CHECK-NEXT:    mulld r6, r11, r6
-; CHECK-NEXT:    ldx r30, r5, r10
+; CHECK-NEXT:    ldx r7, r5, r8
+; CHECK-NEXT:    ldx r12, r5, r9
+; CHECK-NEXT:    ldx r0, r5, r10
+; CHECK-NEXT:    mulld r6, r7, r6
+; CHECK-NEXT:    ldx r30, r5, r11
 ; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    mulld r6, r6, r12
 ; CHECK-NEXT:    mulld r6, r6, r0
@@ -163,9 +163,6 @@ define i64 @not_perfect_chain_all_same_offset_fail(ptr %p, i64 %offset, i64 %bas
 ; CHECK-NEXT:    bdnz .LBB1_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = shl nsw i64 %offset, 1
@@ -235,28 +232,26 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @no_enough_elements_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: no_enough_elements_fail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB2_4
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r7, r4, 1
-; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    add r5, r3, r5
+; CHECK-NEXT:    mr r7, r3
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    add r4, r4, r7
+; CHECK-NEXT:    cmpdi r6, 0
+; CHECK-NEXT:    blelr cr0
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    sldi r8, r4, 1
+; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    add r5, r7, r5
+; CHECK-NEXT:    add r4, r4, r8
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB2_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ld r6, 0(r5)
-; CHECK-NEXT:    ldx r8, r5, r7
+; CHECK-NEXT:    ldx r7, r5, r8
 ; CHECK-NEXT:    ldx r9, r5, r4
 ; CHECK-NEXT:    addi r5, r5, 1
-; CHECK-NEXT:    mulld r6, r8, r6
+; CHECK-NEXT:    mulld r6, r7, r6
 ; CHECK-NEXT:    maddld r3, r6, r9, r3
 ; CHECK-NEXT:    bdnz .LBB2_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = shl nsw i64 %offset, 1
@@ -320,32 +315,31 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @no_reuseable_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: no_reuseable_offset_fail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB3_4
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r9, r4, 3
-; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    add r5, r3, r5
+; CHECK-NEXT:    mr r7, r3
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    sldi r7, r4, 1
-; CHECK-NEXT:    sldi r8, r4, 2
-; CHECK-NEXT:    sub r4, r9, r4
+; CHECK-NEXT:    cmpdi r6, 0
+; CHECK-NEXT:    blelr cr0
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    sldi r3, r4, 3
+; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    add r5, r7, r5
+; CHECK-NEXT:    sldi r8, r4, 1
+; CHECK-NEXT:    sldi r9, r4, 2
+; CHECK-NEXT:    sub r4, r3, r4
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ld r6, 0(r5)
-; CHECK-NEXT:    ldx r9, r5, r7
-; CHECK-NEXT:    ldx r10, r5, r8
+; CHECK-NEXT:    ldx r7, r5, r8
+; CHECK-NEXT:    ldx r10, r5, r9
 ; CHECK-NEXT:    ldx r11, r5, r4
 ; CHECK-NEXT:    addi r5, r5, 1
-; CHECK-NEXT:    mulld r6, r9, r6
+; CHECK-NEXT:    mulld r6, r7, r6
 ; CHECK-NEXT:    mulld r6, r6, r10
 ; CHECK-NEXT:    maddld r3, r6, r11, r3
 ; CHECK-NEXT:    bdnz .LBB3_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB3_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = shl nsw i64 %offset, 1
@@ -423,31 +417,33 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @not_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: not_same_offset_fail:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr r7, r3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB4_4
+; CHECK-NEXT:    blelr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    add r5, r3, r5
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    add r5, r7, r5
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    mulli r11, r4, 10
-; CHECK-NEXT:    sldi r8, r4, 2
-; CHECK-NEXT:    add r8, r4, r8
-; CHECK-NEXT:    sldi r9, r4, 3
-; CHECK-NEXT:    sub r10, r9, r4
-; CHECK-NEXT:    sldi r7, r4, 1
+; CHECK-NEXT:    mulli r12, r4, 10
+; CHECK-NEXT:    sldi r3, r4, 2
+; CHECK-NEXT:    add r9, r4, r3
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    sldi r10, r4, 3
+; CHECK-NEXT:    sub r11, r10, r4
+; CHECK-NEXT:    sldi r8, r4, 1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldx r6, r5, r4
-; CHECK-NEXT:    ldx r12, r5, r7
-; CHECK-NEXT:    ldx r0, r5, r8
-; CHECK-NEXT:    ldx r30, r5, r10
-; CHECK-NEXT:    mulld r6, r12, r6
-; CHECK-NEXT:    ldx r29, r5, r9
-; CHECK-NEXT:    ldx r28, r5, r11
+; CHECK-NEXT:    ldx r7, r5, r8
+; CHECK-NEXT:    ldx r0, r5, r9
+; CHECK-NEXT:    ldx r30, r5, r11
+; CHECK-NEXT:    mulld r6, r7, r6
+; CHECK-NEXT:    ldx r29, r5, r10
+; CHECK-NEXT:    ldx r28, r5, r12
 ; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    mulld r6, r6, r0
 ; CHECK-NEXT:    mulld r6, r6, r30
@@ -458,9 +454,6 @@ define i64 @not_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB4_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = shl nsw i64 %offset, 1
@@ -541,34 +534,33 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @two_chain_different_offsets_succ(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: two_chain_different_offsets_succ:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr r7, r3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB5_4
+; CHECK-NEXT:    blelr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r8, r4, 2
-; CHECK-NEXT:    add r7, r5, r4
+; CHECK-NEXT:    sldi r3, r4, 2
+; CHECK-NEXT:    add r8, r5, r4
 ; CHECK-NEXT:    mtctr r6
-; CHECK-NEXT:    add r5, r5, r8
-; CHECK-NEXT:    add r7, r3, r7
+; CHECK-NEXT:    add r3, r5, r3
+; CHECK-NEXT:    add r8, r7, r8
 ; CHECK-NEXT:    sldi r4, r4, 1
-; CHECK-NEXT:    add r5, r3, r5
+; CHECK-NEXT:    add r5, r7, r3
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ld r6, 0(r7)
-; CHECK-NEXT:    ldx r8, r7, r4
+; CHECK-NEXT:    ld r6, 0(r8)
+; CHECK-NEXT:    ldx r7, r8, r4
 ; CHECK-NEXT:    ld r9, 0(r5)
 ; CHECK-NEXT:    ldx r10, r5, r4
-; CHECK-NEXT:    addi r7, r7, 1
+; CHECK-NEXT:    addi r8, r8, 1
 ; CHECK-NEXT:    addi r5, r5, 1
-; CHECK-NEXT:    mulld r6, r8, r6
+; CHECK-NEXT:    mulld r6, r7, r6
 ; CHECK-NEXT:    mulld r6, r6, r9
 ; CHECK-NEXT:    maddld r3, r6, r10, r3
 ; CHECK-NEXT:    bdnz .LBB5_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB5_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = mul nsw i64 %offset, 3
@@ -639,15 +631,17 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @two_chain_two_bases_succ(ptr %p, i64 %offset, i64 %base1, i64 %base2, i64 %n) {
 ; CHECK-LABEL: two_chain_two_bases_succ:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr r8, r3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    cmpdi r7, 0
-; CHECK-NEXT:    ble cr0, .LBB6_4
+; CHECK-NEXT:    blelr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    add r5, r5, r4
+; CHECK-NEXT:    add r3, r5, r4
 ; CHECK-NEXT:    add r6, r6, r4
 ; CHECK-NEXT:    mtctr r7
 ; CHECK-NEXT:    sldi r4, r4, 1
-; CHECK-NEXT:    add r5, r3, r5
-; CHECK-NEXT:    add r6, r3, r6
+; CHECK-NEXT:    add r5, r8, r3
+; CHECK-NEXT:    add r6, r8, r6
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_2: # %for.body
@@ -663,9 +657,6 @@ define i64 @two_chain_two_bases_succ(ptr %p, i64 %offset, i64 %base1, i64 %base2
 ; CHECK-NEXT:    maddld r3, r7, r10, r3
 ; CHECK-NEXT:    bdnz .LBB6_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB6_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = mul nsw i64 %offset, 3

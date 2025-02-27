@@ -2856,6 +2856,7 @@ entry:
 define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P10-LABEL: shrinkwrap:
 ; LE-P10:       # %bb.0: # %entry
+; LE-P10-NEXT:    li r4, 0
 ; LE-P10-NEXT:    cmpldi r3, 0
 ; LE-P10-NEXT:    beq cr0, .LBB2_2
 ; LE-P10-NEXT:  # %bb.1: # %if.end
@@ -2871,20 +2872,19 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P10-NEXT:    mr r3, r4
 ; LE-P10-NEXT:    bl callee2@notoc
 ; LE-P10-NEXT:    lwz r4, 16(r30)
-; LE-P10-NEXT:    add r3, r4, r3
+; LE-P10-NEXT:    add r4, r4, r3
 ; LE-P10-NEXT:    addi r1, r1, 64
 ; LE-P10-NEXT:    ld r0, 16(r1)
-; LE-P10-NEXT:    clrldi r3, r3, 32
 ; LE-P10-NEXT:    hashchk r0, -24(r1)
 ; LE-P10-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; LE-P10-NEXT:    mtlr r0
-; LE-P10-NEXT:    blr
-; LE-P10-NEXT:  .LBB2_2:
-; LE-P10-NEXT:    li r3, 0
+; LE-P10-NEXT:  .LBB2_2: # %return
+; LE-P10-NEXT:    clrldi r3, r4, 32
 ; LE-P10-NEXT:    blr
 ;
 ; LE-P9-LABEL: shrinkwrap:
 ; LE-P9:       # %bb.0: # %entry
+; LE-P9-NEXT:    li r4, 0
 ; LE-P9-NEXT:    cmpldi r3, 0
 ; LE-P9-NEXT:    beq cr0, .LBB2_2
 ; LE-P9-NEXT:  # %bb.1: # %if.end
@@ -2901,21 +2901,20 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P9-NEXT:    bl callee2
 ; LE-P9-NEXT:    nop
 ; LE-P9-NEXT:    lwz r4, 16(r30)
-; LE-P9-NEXT:    add r3, r4, r3
+; LE-P9-NEXT:    add r4, r4, r3
 ; LE-P9-NEXT:    addi r1, r1, 64
 ; LE-P9-NEXT:    ld r0, 16(r1)
-; LE-P9-NEXT:    clrldi r3, r3, 32
-; LE-P9-NEXT:    mtlr r0
 ; LE-P9-NEXT:    hashchk r0, -24(r1)
 ; LE-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; LE-P9-NEXT:    blr
-; LE-P9-NEXT:  .LBB2_2:
-; LE-P9-NEXT:    li r3, 0
+; LE-P9-NEXT:    mtlr r0
+; LE-P9-NEXT:  .LBB2_2: # %return
+; LE-P9-NEXT:    clrldi r3, r4, 32
 ; LE-P9-NEXT:    blr
 ;
 ; LE-P8-LABEL: shrinkwrap:
 ; LE-P8:       # %bb.0: # %entry
 ; LE-P8-NEXT:    cmpldi r3, 0
+; LE-P8-NEXT:    li r4, 0
 ; LE-P8-NEXT:    beq cr0, .LBB2_2
 ; LE-P8-NEXT:  # %bb.1: # %if.end
 ; LE-P8-NEXT:    mflr r0
@@ -2931,16 +2930,14 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P8-NEXT:    bl callee2
 ; LE-P8-NEXT:    nop
 ; LE-P8-NEXT:    lwz r4, 16(r30)
-; LE-P8-NEXT:    add r3, r4, r3
+; LE-P8-NEXT:    add r4, r4, r3
 ; LE-P8-NEXT:    addi r1, r1, 64
 ; LE-P8-NEXT:    ld r0, 16(r1)
-; LE-P8-NEXT:    clrldi r3, r3, 32
 ; LE-P8-NEXT:    hashchk r0, -24(r1)
-; LE-P8-NEXT:    mtlr r0
 ; LE-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; LE-P8-NEXT:    blr
-; LE-P8-NEXT:  .LBB2_2:
-; LE-P8-NEXT:    li r3, 0
+; LE-P8-NEXT:    mtlr r0
+; LE-P8-NEXT:  .LBB2_2: # %return
+; LE-P8-NEXT:    clrldi r3, r4, 32
 ; LE-P8-NEXT:    blr
 ;
 ; LE-P10-O0-LABEL: shrinkwrap:
@@ -3041,6 +3038,7 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ;
 ; BE-P10-LABEL: shrinkwrap:
 ; BE-P10:       # %bb.0: # %entry
+; BE-P10-NEXT:    li r4, 0
 ; BE-P10-NEXT:    cmpldi r3, 0
 ; BE-P10-NEXT:    beq cr0, .LBB2_2
 ; BE-P10-NEXT:  # %bb.1: # %if.end
@@ -3058,19 +3056,18 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-P10-NEXT:    nop
 ; BE-P10-NEXT:    lwz r4, 16(r30)
 ; BE-P10-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
-; BE-P10-NEXT:    add r3, r4, r3
+; BE-P10-NEXT:    add r4, r4, r3
 ; BE-P10-NEXT:    addi r1, r1, 144
 ; BE-P10-NEXT:    ld r0, 16(r1)
-; BE-P10-NEXT:    clrldi r3, r3, 32
 ; BE-P10-NEXT:    hashchk r0, -24(r1)
 ; BE-P10-NEXT:    mtlr r0
-; BE-P10-NEXT:    blr
-; BE-P10-NEXT:  .LBB2_2:
-; BE-P10-NEXT:    li r3, 0
+; BE-P10-NEXT:  .LBB2_2: # %return
+; BE-P10-NEXT:    clrldi r3, r4, 32
 ; BE-P10-NEXT:    blr
 ;
 ; BE-P9-LABEL: shrinkwrap:
 ; BE-P9:       # %bb.0: # %entry
+; BE-P9-NEXT:    li r4, 0
 ; BE-P9-NEXT:    cmpldi r3, 0
 ; BE-P9-NEXT:    beq cr0, .LBB2_2
 ; BE-P9-NEXT:  # %bb.1: # %if.end
@@ -3088,20 +3085,19 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-P9-NEXT:    nop
 ; BE-P9-NEXT:    lwz r4, 16(r30)
 ; BE-P9-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
-; BE-P9-NEXT:    add r3, r4, r3
+; BE-P9-NEXT:    add r4, r4, r3
 ; BE-P9-NEXT:    addi r1, r1, 144
 ; BE-P9-NEXT:    ld r0, 16(r1)
-; BE-P9-NEXT:    clrldi r3, r3, 32
-; BE-P9-NEXT:    mtlr r0
 ; BE-P9-NEXT:    hashchk r0, -24(r1)
-; BE-P9-NEXT:    blr
-; BE-P9-NEXT:  .LBB2_2:
-; BE-P9-NEXT:    li r3, 0
+; BE-P9-NEXT:    mtlr r0
+; BE-P9-NEXT:  .LBB2_2: # %return
+; BE-P9-NEXT:    clrldi r3, r4, 32
 ; BE-P9-NEXT:    blr
 ;
 ; BE-P8-LABEL: shrinkwrap:
 ; BE-P8:       # %bb.0: # %entry
 ; BE-P8-NEXT:    cmpldi r3, 0
+; BE-P8-NEXT:    li r4, 0
 ; BE-P8-NEXT:    beq cr0, .LBB2_2
 ; BE-P8-NEXT:  # %bb.1: # %if.end
 ; BE-P8-NEXT:    mflr r0
@@ -3118,15 +3114,13 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-P8-NEXT:    nop
 ; BE-P8-NEXT:    lwz r4, 16(r30)
 ; BE-P8-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
-; BE-P8-NEXT:    add r3, r4, r3
+; BE-P8-NEXT:    add r4, r4, r3
 ; BE-P8-NEXT:    addi r1, r1, 144
 ; BE-P8-NEXT:    ld r0, 16(r1)
-; BE-P8-NEXT:    clrldi r3, r3, 32
 ; BE-P8-NEXT:    hashchk r0, -24(r1)
 ; BE-P8-NEXT:    mtlr r0
-; BE-P8-NEXT:    blr
-; BE-P8-NEXT:  .LBB2_2:
-; BE-P8-NEXT:    li r3, 0
+; BE-P8-NEXT:  .LBB2_2: # %return
+; BE-P8-NEXT:    clrldi r3, r4, 32
 ; BE-P8-NEXT:    blr
 ;
 ; BE-32BIT-P10-LABEL: shrinkwrap:
@@ -3135,6 +3129,7 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-32BIT-P10-NEXT:    stw r0, 4(r1)
 ; BE-32BIT-P10-NEXT:    hashst r0, -16(r1)
 ; BE-32BIT-P10-NEXT:    stwu r1, -32(r1)
+; BE-32BIT-P10-NEXT:    li r4, 0
 ; BE-32BIT-P10-NEXT:    cmplwi r3, 0
 ; BE-32BIT-P10-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; BE-32BIT-P10-NEXT:    beq cr0, .LBB2_2
@@ -3146,13 +3141,11 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-32BIT-P10-NEXT:    mr r3, r4
 ; BE-32BIT-P10-NEXT:    bl callee2
 ; BE-32BIT-P10-NEXT:    lwz r4, 16(r30)
-; BE-32BIT-P10-NEXT:    add r3, r4, r3
-; BE-32BIT-P10-NEXT:    b .LBB2_3
-; BE-32BIT-P10-NEXT:  .LBB2_2:
-; BE-32BIT-P10-NEXT:    li r3, 0
-; BE-32BIT-P10-NEXT:  .LBB2_3: # %return
+; BE-32BIT-P10-NEXT:    add r4, r4, r3
+; BE-32BIT-P10-NEXT:  .LBB2_2: # %return
 ; BE-32BIT-P10-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
 ; BE-32BIT-P10-NEXT:    lwz r0, 36(r1)
+; BE-32BIT-P10-NEXT:    mr r3, r4
 ; BE-32BIT-P10-NEXT:    addi r1, r1, 32
 ; BE-32BIT-P10-NEXT:    hashchk r0, -16(r1)
 ; BE-32BIT-P10-NEXT:    mtlr r0
@@ -3164,6 +3157,7 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-32BIT-P9-NEXT:    stw r0, 4(r1)
 ; BE-32BIT-P9-NEXT:    hashst r0, -16(r1)
 ; BE-32BIT-P9-NEXT:    stwu r1, -32(r1)
+; BE-32BIT-P9-NEXT:    li r4, 0
 ; BE-32BIT-P9-NEXT:    cmplwi r3, 0
 ; BE-32BIT-P9-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; BE-32BIT-P9-NEXT:    beq cr0, .LBB2_2
@@ -3175,13 +3169,11 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-32BIT-P9-NEXT:    mr r3, r4
 ; BE-32BIT-P9-NEXT:    bl callee2
 ; BE-32BIT-P9-NEXT:    lwz r4, 16(r30)
-; BE-32BIT-P9-NEXT:    add r3, r4, r3
-; BE-32BIT-P9-NEXT:    b .LBB2_3
-; BE-32BIT-P9-NEXT:  .LBB2_2:
-; BE-32BIT-P9-NEXT:    li r3, 0
-; BE-32BIT-P9-NEXT:  .LBB2_3: # %return
+; BE-32BIT-P9-NEXT:    add r4, r4, r3
+; BE-32BIT-P9-NEXT:  .LBB2_2: # %return
 ; BE-32BIT-P9-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
 ; BE-32BIT-P9-NEXT:    lwz r0, 36(r1)
+; BE-32BIT-P9-NEXT:    mr r3, r4
 ; BE-32BIT-P9-NEXT:    addi r1, r1, 32
 ; BE-32BIT-P9-NEXT:    mtlr r0
 ; BE-32BIT-P9-NEXT:    hashchk r0, -16(r1)
@@ -3194,6 +3186,7 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-32BIT-P8-NEXT:    hashst r0, -16(r1)
 ; BE-32BIT-P8-NEXT:    stwu r1, -32(r1)
 ; BE-32BIT-P8-NEXT:    cmplwi r3, 0
+; BE-32BIT-P8-NEXT:    li r4, 0
 ; BE-32BIT-P8-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; BE-32BIT-P8-NEXT:    beq cr0, .LBB2_2
 ; BE-32BIT-P8-NEXT:  # %bb.1: # %if.end
@@ -3204,13 +3197,11 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-32BIT-P8-NEXT:    mr r3, r4
 ; BE-32BIT-P8-NEXT:    bl callee2
 ; BE-32BIT-P8-NEXT:    lwz r4, 16(r30)
-; BE-32BIT-P8-NEXT:    add r3, r4, r3
-; BE-32BIT-P8-NEXT:    b .LBB2_3
-; BE-32BIT-P8-NEXT:  .LBB2_2:
-; BE-32BIT-P8-NEXT:    li r3, 0
-; BE-32BIT-P8-NEXT:  .LBB2_3: # %return
+; BE-32BIT-P8-NEXT:    add r4, r4, r3
+; BE-32BIT-P8-NEXT:  .LBB2_2: # %return
 ; BE-32BIT-P8-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
 ; BE-32BIT-P8-NEXT:    lwz r0, 36(r1)
+; BE-32BIT-P8-NEXT:    mr r3, r4
 ; BE-32BIT-P8-NEXT:    addi r1, r1, 32
 ; BE-32BIT-P8-NEXT:    mtlr r0
 ; BE-32BIT-P8-NEXT:    hashchk r0, -16(r1)
@@ -3218,6 +3209,7 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ;
 ; LE-P10-PRIV-LABEL: shrinkwrap:
 ; LE-P10-PRIV:       # %bb.0: # %entry
+; LE-P10-PRIV-NEXT:    li r4, 0
 ; LE-P10-PRIV-NEXT:    cmpldi r3, 0
 ; LE-P10-PRIV-NEXT:    beq cr0, .LBB2_2
 ; LE-P10-PRIV-NEXT:  # %bb.1: # %if.end
@@ -3233,20 +3225,19 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P10-PRIV-NEXT:    mr r3, r4
 ; LE-P10-PRIV-NEXT:    bl callee2@notoc
 ; LE-P10-PRIV-NEXT:    lwz r4, 16(r30)
-; LE-P10-PRIV-NEXT:    add r3, r4, r3
+; LE-P10-PRIV-NEXT:    add r4, r4, r3
 ; LE-P10-PRIV-NEXT:    addi r1, r1, 64
 ; LE-P10-PRIV-NEXT:    ld r0, 16(r1)
-; LE-P10-PRIV-NEXT:    clrldi r3, r3, 32
 ; LE-P10-PRIV-NEXT:    hashchkp r0, -24(r1)
 ; LE-P10-PRIV-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; LE-P10-PRIV-NEXT:    mtlr r0
-; LE-P10-PRIV-NEXT:    blr
-; LE-P10-PRIV-NEXT:  .LBB2_2:
-; LE-P10-PRIV-NEXT:    li r3, 0
+; LE-P10-PRIV-NEXT:  .LBB2_2: # %return
+; LE-P10-PRIV-NEXT:    clrldi r3, r4, 32
 ; LE-P10-PRIV-NEXT:    blr
 ;
 ; LE-P9-PRIV-LABEL: shrinkwrap:
 ; LE-P9-PRIV:       # %bb.0: # %entry
+; LE-P9-PRIV-NEXT:    li r4, 0
 ; LE-P9-PRIV-NEXT:    cmpldi r3, 0
 ; LE-P9-PRIV-NEXT:    beq cr0, .LBB2_2
 ; LE-P9-PRIV-NEXT:  # %bb.1: # %if.end
@@ -3263,21 +3254,20 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P9-PRIV-NEXT:    bl callee2
 ; LE-P9-PRIV-NEXT:    nop
 ; LE-P9-PRIV-NEXT:    lwz r4, 16(r30)
-; LE-P9-PRIV-NEXT:    add r3, r4, r3
+; LE-P9-PRIV-NEXT:    add r4, r4, r3
 ; LE-P9-PRIV-NEXT:    addi r1, r1, 64
 ; LE-P9-PRIV-NEXT:    ld r0, 16(r1)
-; LE-P9-PRIV-NEXT:    clrldi r3, r3, 32
-; LE-P9-PRIV-NEXT:    mtlr r0
 ; LE-P9-PRIV-NEXT:    hashchkp r0, -24(r1)
 ; LE-P9-PRIV-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; LE-P9-PRIV-NEXT:    blr
-; LE-P9-PRIV-NEXT:  .LBB2_2:
-; LE-P9-PRIV-NEXT:    li r3, 0
+; LE-P9-PRIV-NEXT:    mtlr r0
+; LE-P9-PRIV-NEXT:  .LBB2_2: # %return
+; LE-P9-PRIV-NEXT:    clrldi r3, r4, 32
 ; LE-P9-PRIV-NEXT:    blr
 ;
 ; LE-P8-PRIV-LABEL: shrinkwrap:
 ; LE-P8-PRIV:       # %bb.0: # %entry
 ; LE-P8-PRIV-NEXT:    cmpldi r3, 0
+; LE-P8-PRIV-NEXT:    li r4, 0
 ; LE-P8-PRIV-NEXT:    beq cr0, .LBB2_2
 ; LE-P8-PRIV-NEXT:  # %bb.1: # %if.end
 ; LE-P8-PRIV-NEXT:    mflr r0
@@ -3293,20 +3283,19 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P8-PRIV-NEXT:    bl callee2
 ; LE-P8-PRIV-NEXT:    nop
 ; LE-P8-PRIV-NEXT:    lwz r4, 16(r30)
-; LE-P8-PRIV-NEXT:    add r3, r4, r3
+; LE-P8-PRIV-NEXT:    add r4, r4, r3
 ; LE-P8-PRIV-NEXT:    addi r1, r1, 64
 ; LE-P8-PRIV-NEXT:    ld r0, 16(r1)
-; LE-P8-PRIV-NEXT:    clrldi r3, r3, 32
 ; LE-P8-PRIV-NEXT:    hashchkp r0, -24(r1)
-; LE-P8-PRIV-NEXT:    mtlr r0
 ; LE-P8-PRIV-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; LE-P8-PRIV-NEXT:    blr
-; LE-P8-PRIV-NEXT:  .LBB2_2:
-; LE-P8-PRIV-NEXT:    li r3, 0
+; LE-P8-PRIV-NEXT:    mtlr r0
+; LE-P8-PRIV-NEXT:  .LBB2_2: # %return
+; LE-P8-PRIV-NEXT:    clrldi r3, r4, 32
 ; LE-P8-PRIV-NEXT:    blr
 ;
 ; BE-P10-PRIV-LABEL: shrinkwrap:
 ; BE-P10-PRIV:       # %bb.0: # %entry
+; BE-P10-PRIV-NEXT:    li r4, 0
 ; BE-P10-PRIV-NEXT:    cmpldi r3, 0
 ; BE-P10-PRIV-NEXT:    beq cr0, .LBB2_2
 ; BE-P10-PRIV-NEXT:  # %bb.1: # %if.end
@@ -3324,19 +3313,18 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-P10-PRIV-NEXT:    nop
 ; BE-P10-PRIV-NEXT:    lwz r4, 16(r30)
 ; BE-P10-PRIV-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
-; BE-P10-PRIV-NEXT:    add r3, r4, r3
+; BE-P10-PRIV-NEXT:    add r4, r4, r3
 ; BE-P10-PRIV-NEXT:    addi r1, r1, 144
 ; BE-P10-PRIV-NEXT:    ld r0, 16(r1)
-; BE-P10-PRIV-NEXT:    clrldi r3, r3, 32
 ; BE-P10-PRIV-NEXT:    hashchkp r0, -24(r1)
 ; BE-P10-PRIV-NEXT:    mtlr r0
-; BE-P10-PRIV-NEXT:    blr
-; BE-P10-PRIV-NEXT:  .LBB2_2:
-; BE-P10-PRIV-NEXT:    li r3, 0
+; BE-P10-PRIV-NEXT:  .LBB2_2: # %return
+; BE-P10-PRIV-NEXT:    clrldi r3, r4, 32
 ; BE-P10-PRIV-NEXT:    blr
 ;
 ; BE-P9-PRIV-LABEL: shrinkwrap:
 ; BE-P9-PRIV:       # %bb.0: # %entry
+; BE-P9-PRIV-NEXT:    li r4, 0
 ; BE-P9-PRIV-NEXT:    cmpldi r3, 0
 ; BE-P9-PRIV-NEXT:    beq cr0, .LBB2_2
 ; BE-P9-PRIV-NEXT:  # %bb.1: # %if.end
@@ -3354,20 +3342,19 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-P9-PRIV-NEXT:    nop
 ; BE-P9-PRIV-NEXT:    lwz r4, 16(r30)
 ; BE-P9-PRIV-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
-; BE-P9-PRIV-NEXT:    add r3, r4, r3
+; BE-P9-PRIV-NEXT:    add r4, r4, r3
 ; BE-P9-PRIV-NEXT:    addi r1, r1, 144
 ; BE-P9-PRIV-NEXT:    ld r0, 16(r1)
-; BE-P9-PRIV-NEXT:    clrldi r3, r3, 32
-; BE-P9-PRIV-NEXT:    mtlr r0
 ; BE-P9-PRIV-NEXT:    hashchkp r0, -24(r1)
-; BE-P9-PRIV-NEXT:    blr
-; BE-P9-PRIV-NEXT:  .LBB2_2:
-; BE-P9-PRIV-NEXT:    li r3, 0
+; BE-P9-PRIV-NEXT:    mtlr r0
+; BE-P9-PRIV-NEXT:  .LBB2_2: # %return
+; BE-P9-PRIV-NEXT:    clrldi r3, r4, 32
 ; BE-P9-PRIV-NEXT:    blr
 ;
 ; BE-P8-PRIV-LABEL: shrinkwrap:
 ; BE-P8-PRIV:       # %bb.0: # %entry
 ; BE-P8-PRIV-NEXT:    cmpldi r3, 0
+; BE-P8-PRIV-NEXT:    li r4, 0
 ; BE-P8-PRIV-NEXT:    beq cr0, .LBB2_2
 ; BE-P8-PRIV-NEXT:  # %bb.1: # %if.end
 ; BE-P8-PRIV-NEXT:    mflr r0
@@ -3384,15 +3371,13 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; BE-P8-PRIV-NEXT:    nop
 ; BE-P8-PRIV-NEXT:    lwz r4, 16(r30)
 ; BE-P8-PRIV-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
-; BE-P8-PRIV-NEXT:    add r3, r4, r3
+; BE-P8-PRIV-NEXT:    add r4, r4, r3
 ; BE-P8-PRIV-NEXT:    addi r1, r1, 144
 ; BE-P8-PRIV-NEXT:    ld r0, 16(r1)
-; BE-P8-PRIV-NEXT:    clrldi r3, r3, 32
 ; BE-P8-PRIV-NEXT:    hashchkp r0, -24(r1)
 ; BE-P8-PRIV-NEXT:    mtlr r0
-; BE-P8-PRIV-NEXT:    blr
-; BE-P8-PRIV-NEXT:  .LBB2_2:
-; BE-P8-PRIV-NEXT:    li r3, 0
+; BE-P8-PRIV-NEXT:  .LBB2_2: # %return
+; BE-P8-PRIV-NEXT:    clrldi r3, r4, 32
 ; BE-P8-PRIV-NEXT:    blr
 entry:
   %local = alloca i32, align 4

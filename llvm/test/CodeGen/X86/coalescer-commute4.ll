@@ -8,15 +8,15 @@ define float @foo(ptr %x, ptr %y, i32 %c) nounwind  {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je LBB0_1
-; CHECK-NEXT:  ## %bb.2: ## %bb.preheader
+; CHECK-NEXT:    je LBB0_3
+; CHECK-NEXT:  ## %bb.1: ## %bb.preheader
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_3: ## %bb
+; CHECK-NEXT:  LBB0_2: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtsi2ssl (%edx,%esi,4), %xmm1
@@ -24,11 +24,8 @@ define float @foo(ptr %x, ptr %y, i32 %c) nounwind  {
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    incl %esi
 ; CHECK-NEXT:    cmpl %eax, %esi
-; CHECK-NEXT:    jb LBB0_3
-; CHECK-NEXT:    jmp LBB0_4
-; CHECK-NEXT:  LBB0_1:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:  LBB0_4: ## %bb23
+; CHECK-NEXT:    jb LBB0_2
+; CHECK-NEXT:  LBB0_3: ## %bb23
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    addl $4, %esp
