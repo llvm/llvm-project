@@ -36,7 +36,7 @@ static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
 
 static MCInst loadZPRImmediate(MCRegister Reg, unsigned RegBitWidth,
                                const APInt &Value) {
-  assert(Value.getBitWidth() <= RegBitWidth && "Value must fit in the PPR Register");
+  assert(Value.getBitWidth() <= RegBitWidth && "Value must fit in the ZPR Register");
   // For ZPR, we typically use DUPM instruction to load immediate values
   return MCInstBuilder(AArch64::DUPM_ZI)
       .addReg(Reg)
