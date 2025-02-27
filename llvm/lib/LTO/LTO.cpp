@@ -100,7 +100,7 @@ cl::list<std::string> AdditionalThinLTODistributorArgs(
     cl::desc("Additional arguments to pass to the ThinLTO distributor"));
 
 cl::list<std::string>
-    ThinLTORemoteOptToolArgs("thinlto-remote-opt-tool-arg",
+    ThinLTORemoteCompilerArgs("thinlto-remote-compiler-arg",
                              cl::desc("Additional arguments to pass to the "
                                       "ThinLTO remote optimization tool"));
 } // namespace llvm
@@ -2207,7 +2207,7 @@ class OutOfProcessThinBackend : public CGThinBackend {
   StringSaver Saver{Alloc};
 
   SString LinkerOutputFile;
-  SString RemoteOptTool;
+  SString RemoteCompiler;
   SString DistributorPath;
   bool SaveTemps;
 
@@ -2240,12 +2240,12 @@ public:
       AddStreamFn AddStream, AddBufferFn AddBuffer,
       lto::IndexWriteCallback OnWrite, bool ShouldEmitIndexFiles,
       bool ShouldEmitImportsFiles, StringRef LinkerOutputFile,
-      StringRef RemoteOptTool, StringRef Distributor, bool SaveTemps)
+      StringRef RemoteCompiler, StringRef Distributor, bool SaveTemps)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries, OnWrite,
                       ShouldEmitIndexFiles, ShouldEmitImportsFiles,
                       ThinLTOParallelism),
         AddBuffer(std::move(AddBuffer)), LinkerOutputFile(LinkerOutputFile),
-        RemoteOptTool(RemoteOptTool), DistributorPath(Distributor),
+        RemoteCompiler(RemoteCompiler), DistributorPath(Distributor),
         SaveTemps(SaveTemps) {}
 
   virtual void setup(unsigned MaxTasks, unsigned ReservedTasks) override {
@@ -2311,7 +2311,7 @@ public:
   // approaches should be considered, such as:
   //   - A serialization/deserialization format for LTO configuration.
   //   - Modifying LLD to be the tool that performs the backend compilations.
-  void buildCommonRemoteOptToolOptions() {
+  void buildCommonRemoteCompilerOptions() {
     const lto::Config &C = Conf;
     auto &Ops = CodegenOptions;
     llvm::Triple TT{Jobs.front().Triple};
@@ -2349,8 +2349,8 @@ public:
     Ops.push_back("-Wno-unused-command-line-argument");
 
     // Forward any supplied options.
-    if (!ThinLTORemoteOptToolArgs.empty())
-      for (auto &a : ThinLTORemoteOptToolArgs)
+    if (!ThinLTORemoteCompilerArgs.empty())
+      for (auto &a : ThinLTORemoteCompilerArgs)
         Ops.push_back(a);
   }
 
@@ -2372,7 +2372,7 @@ public:
 
         // Common command line template.
         JOS.attributeArray("args", [&]() {
-          JOS.value(RemoteOptTool);
+          JOS.value(RemoteCompiler);
 
           // Reference to Job::NativeObjectPath.
           JOS.value("-o");
@@ -2454,7 +2454,7 @@ public:
       return make_error<StringError>(BCError + "all triples must be consistent",
                                      inconvertibleErrorCode());
 
-    buildCommonRemoteOptToolOptions();
+    buildCommonRemoteCompilerOptions();
 
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
     sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
@@ -2502,7 +2502,7 @@ public:
 ThinBackend lto::createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, lto::IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef RemoteOptTool, StringRef Distributor,
+    StringRef LinkerOutputFile, StringRef RemoteCompiler, StringRef Distributor,
     bool SaveTemps) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
@@ -2511,7 +2511,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, AddBuffer, OnWrite, ShouldEmitIndexFiles,
-            ShouldEmitImportsFiles, LinkerOutputFile, RemoteOptTool,
+            ShouldEmitImportsFiles, LinkerOutputFile, RemoteCompiler,
             Distributor, SaveTemps);
       };
   return ThinBackend(Func, Parallelism);

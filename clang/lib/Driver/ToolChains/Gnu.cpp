@@ -543,7 +543,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
     CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-remote-opt-tool=" +
+        Args.MakeArgString("--thinlto-remote-compiler=" +
                            Twine(ToolChain.getDriver().getClangProgramPath())));
 
     for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))

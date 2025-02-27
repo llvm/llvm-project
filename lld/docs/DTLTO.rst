@@ -19,7 +19,7 @@ The command line interface for DTLTO is:
   Specifies the file to execute as a distributor process.
   If specified, ThinLTO backend compilations will be distributed.
 
-- ``--thinlto-remote-opt-tool=<path>``
+- ``--thinlto-remote-compiler=<path>``
   Specifies the path to the tool that the distributor process will use for
   backend compilations.
 
@@ -33,7 +33,7 @@ The command line interface for DTLTO is:
 - ``-mllvm -thinlto-distributor-arg=<arg>``
   Specifies `<arg>` on the command line when invoking the distributor.  
 
-- ``-mllvm -thinlto-remote-opt-tool-arg=<arg>``
+- ``-mllvm -thinlto-remote-compiler-arg=<arg>``
   Specifies `<arg>` on the command line to the remote optimisation tool. These
   arguments are appended to the end of the command line for the remote 
   optimisation tool.

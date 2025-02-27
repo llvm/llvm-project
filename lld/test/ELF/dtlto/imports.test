@@ -13,7 +13,7 @@
 # RUN: echo "0.o 1.o \
 # RUN:       --thinlto-distributor=%python \
 # RUN:       -mllvm -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
-# RUN:       --thinlto-remote-opt-tool=dummy.exe" > l.rsp
+# RUN:       --thinlto-remote-compiler=dummy.exe" > l.rsp
 
 ## We expect an import from 0.o into 1.o but no imports into 0.o. Check that the
 ## expected input files have been added to the JSON.

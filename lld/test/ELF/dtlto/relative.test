@@ -14,7 +14,7 @@
 ## the link to fail.
 # RUN: echo "--thinlto-distributor=%python \
 # RUN:   -mllvm -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
-# RUN:   --thinlto-remote-opt-tool=dummy.exe" > l.rsp
+# RUN:   --thinlto-remote-compiler=dummy.exe" > l.rsp
 
 ## Check that the expected set of filenames have been generated.
 # RUN: not ld.lld @l.rsp ../0.o ../1.o -o ../up.elf --thinlto-emit-index-files \

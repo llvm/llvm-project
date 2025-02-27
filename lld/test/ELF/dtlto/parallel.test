@@ -16,7 +16,7 @@ RUN: llc thin2.ll --filetype=obj -o thin2.o --relocation-model=pic
 # Link with 3 LTO partitions.
 RUN: ld.lld full.bc thin1.bc thin2.bc \ 
 RUN:   --thinlto-distributor=%python \
-RUN:   --thinlto-remote-opt-tool=dummy \
+RUN:   --thinlto-remote-compiler=dummy \
 RUN:   -mllvm=-thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
 RUN:   -mllvm=-thinlto-distributor-arg=thin1.o \
 RUN:   -mllvm=-thinlto-distributor-arg=thin2.o \

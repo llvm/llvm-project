@@ -192,7 +192,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         llvm::heavyweight_hardware_concurrency(ctx.arg.thinLTOJobs),
         onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
         ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile,
-        ctx.arg.dtltoRemoteOptTool, ctx.arg.dtltoDistributor,
+        ctx.arg.dtltoRemoteCompiler, ctx.arg.dtltoDistributor,
         !ctx.arg.saveTempsArgs.empty());
   } else {
     backend = lto::createInProcessThinBackend(

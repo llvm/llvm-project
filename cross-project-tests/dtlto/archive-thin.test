@@ -32,7 +32,7 @@
 # RUN:   -nostdlib \
 # RUN:   -nostartfiles \
 # RUN:   -Wl,--save-temps \
-# RUN:   -Wl,-mllvm,--thinlto-remote-opt-tool-arg=-save-temps=cwd \
+# RUN:   -Wl,-mllvm,--thinlto-remote-compiler-arg=-save-temps=cwd \
 # RUN:   -Werror
 
 ## Check that the required output files have been created.

@@ -21,7 +21,7 @@
 ; DEFINE: %{triple} = dummy
 ; DEFINE: %{command} = llvm-lto2 run \
 ; DEFINE:   -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/%{distributor} \
-; DEFINE:   -thinlto-remote-opt-tool-arg=-Wunused-command-line-argument \
+; DEFINE:   -thinlto-remote-compiler-arg=-Wunused-command-line-argument \
 ; DEFINE:   @%{triple}.rsp %{extra_flags}
 
 
@@ -29,16 +29,16 @@
 
 ; RUN: echo "x86_64-unknown-linux-gnu.bc -o x86_64-unknown-linux-gnu.o \
 ; RUN:       -dtlto \
-; RUN:       -dtlto-remote-opt-tool=%clang \
-; RUN:       -thinlto-remote-opt-tool-arg=-Werror \
+; RUN:       -dtlto-remote-compiler=%clang \
+; RUN:       -thinlto-remote-compiler-arg=-Werror \
 ; RUN:       -dtlto-distributor=%python \
 ; RUN:       -r=x86_64-unknown-linux-gnu.bc,globalfunc1,plx" > x86_64-unknown-linux-gnu.rsp
 
 ; RUN: echo "x86_64-pc-windows-msvc.bc -o x86_64-pc-windows-msvc.o \
 ; RUN:       -dtlto \
-; RUN:       -dtlto-remote-opt-tool=%clang \
-; RUN:       -thinlto-remote-opt-tool-arg=-Werror \
-; RUN:       -thinlto-remote-opt-tool-arg=-Wno-override-module \
+; RUN:       -dtlto-remote-compiler=%clang \
+; RUN:       -thinlto-remote-compiler-arg=-Werror \
+; RUN:       -thinlto-remote-compiler-arg=-Wno-override-module \
 ; RUN:       -dtlto-distributor=%python \
 ; RUN:       -r=x86_64-pc-windows-msvc.bc,globalfunc2,plx" > x86_64-pc-windows-msvc.rsp
 

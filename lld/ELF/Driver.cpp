@@ -1342,8 +1342,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
   ctx.arg.discard = getDiscard(args);
   ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
-  ctx.arg.dtltoRemoteOptTool =
-      args.getLastArgValue(OPT_thinlto_remote_opt_tool_eq);
+  ctx.arg.dtltoRemoteCompiler =
+      args.getLastArgValue(OPT_thinlto_remote_compiler_eq);
   ctx.arg.dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   ctx.arg.dynamicLinker = getDynamicLinker(ctx, args);
   ctx.arg.ehFrameHdr =
