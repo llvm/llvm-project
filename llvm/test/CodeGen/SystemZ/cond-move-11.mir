@@ -1,5 +1,5 @@
 # RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z15 -start-before=systemz-post-rewrite \
-# RUN:   -stop-after=machine-cp 2>&1 | FileCheck %s
+# RUN:   -stop-after=machine-cp -verify-machineinstrs 2>&1 | FileCheck %s
 
 # The chained SELRMux:es both has two operands with the same register but
 # where one of the operands have been marked as undef (resulting from
