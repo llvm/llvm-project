@@ -227,8 +227,7 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
 static DecodeStatus decodeRVPGPRPair(MCInst &Inst, uint32_t RegNo,
                                      uint64_t Address,
                                      const MCDisassembler *Decoder) {
-  RegNo = RegNo << 1;
-  return DecodeGPRPairRegisterClass(Inst, RegNo, Address, Decoder);
+  return DecodeGPRPairRegisterClass(Inst, RegNo << 1, Address, Decoder);
 }
 
 static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
