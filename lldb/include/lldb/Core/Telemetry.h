@@ -14,7 +14,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -23,7 +22,6 @@
 #include <ctime>
 #include <memory>
 #include <optional>
-#include <stack>
 #include <string>
 
 namespace lldb_private {

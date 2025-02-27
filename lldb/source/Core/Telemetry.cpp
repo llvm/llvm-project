@@ -94,7 +94,8 @@ TelemetryManager *TelemetryManager::GetInstance() {
 }
 
 void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
-  g_instance = std::move(manager);
+  if (Config::BuildTimeEnableTelemetry)
+    g_instance = std::move(manager);
 }
 
 } // namespace telemetry
