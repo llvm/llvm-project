@@ -190,7 +190,7 @@ TEST_F(PipeTest, ReadWithTimeout) {
   memset(buf, 0, sizeof(buf));
   std::future<llvm::Expected<size_t>> future_num_bytes = std::async(
       std::launch::async, [&] { return pipe.Read(buf, sizeof(buf)); });
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
   ASSERT_THAT_EXPECTED(pipe.Write(hello_world.data(), hello_world.size()),
                        llvm::HasValue(hello_world.size()));
   ASSERT_THAT_EXPECTED(future_num_bytes.get(),
