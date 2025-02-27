@@ -484,8 +484,8 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  const char *Name;
-  unsigned Value;
+  char Name[10];
+  uint8_t Value;
 };
 
 #define GET_RISCVOpcodesList_DECL
