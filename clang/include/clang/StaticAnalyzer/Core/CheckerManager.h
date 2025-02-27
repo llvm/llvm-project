@@ -198,8 +198,8 @@ public:
   /// \returns a pointer to the checker object.
   template <typename CHECKER, typename... AT>
   CHECKER *registerChecker(AT &&... Args) {
-    CheckerTag tag = getTag<CHECKER>();
-    std::unique_ptr<CheckerBase> &Ref = CheckerTags[tag];
+    CheckerTag Tag = getTag<CHECKER>();
+    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
     assert(!Ref && "Checker already registered, use getChecker!");
 
     std::unique_ptr<CHECKER> Checker =
