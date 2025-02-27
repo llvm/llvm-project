@@ -234,7 +234,7 @@ class MapInfoFinalizationPass
   /// though. Non-descriptor objects listed on the `has_device_addr` clause
   /// can be passed to the kernel by just passing their address without any
   /// remapping.
-  /// The adding the OMP_MAP_TO flag is done because we will always need to
+  /// The adding of the OMP_MAP_TO flag is done because we will always need to
   /// map the descriptor to device, especially without device address clauses,
   /// as without the appropriate descriptor
   /// information on the device there is a risk of the kernel IR
