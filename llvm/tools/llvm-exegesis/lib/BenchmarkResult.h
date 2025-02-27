@@ -38,7 +38,6 @@ enum class BenchmarkPhaseSelectorE {
   PrepareAndAssembleSnippet,
   AssembleMeasuredCode,
   Measure,
-  DryRunMeasure,
 };
 
 enum class BenchmarkFilter { All, RegOnly, WithMem };
@@ -76,7 +75,7 @@ struct BenchmarkKey {
   // being used supports it.
   uintptr_t SnippetAddress = 0;
   // The register that should be used to hold the loop counter.
-  unsigned LoopRegister;
+  MCRegister LoopRegister;
 };
 
 struct BenchmarkMeasure {

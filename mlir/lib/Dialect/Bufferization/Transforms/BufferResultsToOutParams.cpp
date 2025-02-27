@@ -29,7 +29,7 @@ using MemCpyFn = bufferization::BufferResultsToOutParamsOpts::MemCpyFn;
 static bool hasFullyDynamicLayoutMap(MemRefType type) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(type, strides, offset)))
+  if (failed(type.getStridesAndOffset(strides, offset)))
     return false;
   if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;

@@ -59,3 +59,8 @@ struct PR65784s{
   int *ptr;
 } const PR65784[] = {(int *)""};
 PR65784s PR65784f() { return *PR65784; }
+
+const int b = 1 / 0; // both-warning {{division by zero is undefined}} \
+                     // both-note {{declared here}}
+_Static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                       // both-note {{initializer of 'b' is not a constant expression}}

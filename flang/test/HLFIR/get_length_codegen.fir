@@ -30,3 +30,22 @@ fir.global linkonce @_QQclX616263 constant : !fir.char<1,3> {
 // CHECK:           %[[VAL_33:.*]]:2 = hlfir.declare %[[VAL_31:.*]] typeparams %[[VAL_9]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           return %[[VAL_9]] : index
 // CHECK:         }
+
+// Test get_length taking the length from an expression with i32 length parameter.
+func.func @i32_length(%char: !fir.boxchar<1>, %shape : i32, %len : i32) -> index {
+  %14 = fir.shape %shape : (i32) -> !fir.shape<1>
+  %15 = hlfir.elemental %14 typeparams %len unordered : (!fir.shape<1>, i32) -> !hlfir.expr<?x!fir.char<1,?>> {
+  ^bb0(%arg0: index):
+    hlfir.yield_element %char : !fir.boxchar<1>
+  }
+  %18 = hlfir.get_length %15 : (!hlfir.expr<?x!fir.char<1,?>>) -> index
+  hlfir.destroy %15 : !hlfir.expr<?x!fir.char<1,?>>
+  return %18 : index
+}
+// CHECK-LABEL:   func.func @i32_length(
+// CHECK-SAME:                          %[[VAL_0:.*]]: !fir.boxchar<1>,
+// CHECK-SAME:                          %[[VAL_1:.*]]: i32,
+// CHECK-SAME:                          %[[VAL_2:.*]]: i32) -> index {
+// CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_2]] : (i32) -> index
+// CHECK:           return %[[VAL_14]] : index
+// CHECK:         }

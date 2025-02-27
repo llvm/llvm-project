@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/FrontendActions.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
@@ -34,6 +33,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
 #include "mlir/IR/Dialect.h"
@@ -261,12 +261,12 @@ bool CodeGenAction::beginSourceFileAction() {
   }
 
   // Load the MLIR dialects required by Flang
-  mlir::DialectRegistry registry;
-  mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
-  fir::support::registerNonCodegenDialects(registry);
-  fir::support::loadNonCodegenDialects(*mlirCtx);
+  mlirCtx = std::make_unique<mlir::MLIRContext>();
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
+  mlir::DialectRegistry registry;
+  fir::acc::registerOpenACCExtensions(registry);
+  mlirCtx->appendDialectRegistry(registry);
 
   const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
@@ -920,16 +920,23 @@ void CodeGenAction::generateLLVMIR() {
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
 
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
   // Set mcmodel level LLVM module flags
   std::optional<llvm::CodeModel::Model> cm = getCodeModel(opts.CodeModel);
   if (cm.has_value()) {
-    const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
     llvmModule->setCodeModel(*cm);
     if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
         triple.getArch() == llvm::Triple::x86_64) {
       llvmModule->setLargeDataThreshold(opts.LargeDataThreshold);
     }
   }
+
+  if (triple.isRISCV() && !targetOpts.abi.empty())
+    llvmModule->addModuleFlag(
+        llvm::Module::Error, "target-abi",
+        llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -1028,6 +1035,10 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   si.registerCallbacks(pic, &mam);
   if (ci.isTimingEnabled())
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
+  pto.LoopUnrolling = opts.UnrollLoops;
+  pto.LoopInterleaving = opts.UnrollLoops;
+  pto.LoopVectorization = opts.VectorizeLoop;
+
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
   // Attempt to load pass plugins and register their callbacks with PB.

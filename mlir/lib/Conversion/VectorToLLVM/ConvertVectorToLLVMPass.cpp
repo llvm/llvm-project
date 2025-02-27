@@ -69,12 +69,11 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorToVectorCanonicalizationPatterns(patterns);
     populateVectorBitCastLoweringPatterns(patterns);
     populateVectorBroadcastLoweringPatterns(patterns);
-    populateVectorContractLoweringPatterns(patterns, VectorTransformsOptions());
+    populateVectorContractLoweringPatterns(patterns, vectorTransformsOptions);
     populateVectorMaskOpLoweringPatterns(patterns);
     populateVectorShapeCastLoweringPatterns(patterns);
     populateVectorInterleaveLoweringPatterns(patterns);
-    populateVectorTransposeLoweringPatterns(patterns,
-                                            VectorTransformsOptions());
+    populateVectorTransposeLoweringPatterns(patterns, vectorTransformsOptions);
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
     populateVectorMaskMaterializationPatterns(patterns,

@@ -410,7 +410,8 @@ bool mlir::affine::isValidSymbol(Value value) {
 /// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
-/// *) It is the result of an affine apply operation with symbol arguments.
+/// *) It is a result of a `Pure` operation whose operands are valid symbolic
+/// *) identifiers.
 /// *) It is a result of the dim op on a memref whose corresponding size is
 ///    a valid symbol.
 /// *) It is defined at the top level of 'region' or is its argument.
@@ -443,9 +444,12 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
   if (matchPattern(defOp, m_Constant(&operandCst)))
     return true;
 
-  // Affine apply operation is ok if all of its operands are ok.
-  if (auto applyOp = dyn_cast<AffineApplyOp>(defOp))
-    return applyOp.isValidSymbol(region);
+  // `Pure` operation that whose operands are valid symbolic identifiers.
+  if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
+        return affine::isValidSymbol(operand, region);
+      })) {
+    return true;
+  }
 
   // Dim op results could be valid symbols at any level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(defOp))
@@ -1898,6 +1902,10 @@ LogicalResult AffineForOp::verifyRegions() {
     if (failed(verifyDimAndSymbolIdentifiers(*this, getUpperBoundOperands(),
                                              getUpperBoundMap().getNumDims())))
       return failure();
+  if (getLowerBoundMap().getNumResults() < 1)
+    return emitOpError("expected lower bound map to have at least one result");
+  if (getUpperBoundMap().getNumResults() < 1)
+    return emitOpError("expected upper bound map to have at least one result");
 
   unsigned opNumResults = getNumResults();
   if (opNumResults == 0)
@@ -3040,8 +3048,9 @@ void AffineLoadOp::print(OpAsmPrinter &p) {
 
 /// Verify common indexing invariants of affine.load, affine.store,
 /// affine.vector_load and affine.vector_store.
+template <typename AffineMemOpTy>
 static LogicalResult
-verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
+verifyMemoryOpIndexing(AffineMemOpTy op, AffineMapAttr mapAttr,
                        Operation::operand_range mapOperands,
                        MemRefType memrefType, unsigned numIndexOperands) {
   AffineMap map = mapAttr.getValue();
@@ -3050,14 +3059,12 @@ verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
   if (map.getNumInputs() != numIndexOperands)
     return op->emitOpError("expects as many subscripts as affine map inputs");
 
-  Region *scope = getAffineScope(op);
   for (auto idx : mapOperands) {
     if (!idx.getType().isIndex())
       return op->emitOpError("index to load must have 'index' type");
-    if (!isValidAffineIndexOperand(idx, scope))
-      return op->emitOpError(
-          "index must be a valid dimension or symbol identifier");
   }
+  if (failed(verifyDimAndSymbolIdentifiers(op, mapOperands, map.getNumDims())))
+    return failure();
 
   return success();
 }
@@ -3068,8 +3075,7 @@ LogicalResult AffineLoadOp::verify() {
     return emitOpError("result type must match element type of memref");
 
   if (failed(verifyMemoryOpIndexing(
-          getOperation(),
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
+          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
           getMapOperands(), memrefType,
           /*numIndexOperands=*/getNumOperands() - 1)))
     return failure();
@@ -3185,8 +3191,7 @@ LogicalResult AffineStoreOp::verify() {
         "value to store must have the same type as memref element type");
 
   if (failed(verifyMemoryOpIndexing(
-          getOperation(),
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
+          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
           getMapOperands(), memrefType,
           /*numIndexOperands=*/getNumOperands() - 2)))
     return failure();
@@ -3914,14 +3919,24 @@ LogicalResult AffineParallelOp::verify() {
   }
 
   unsigned expectedNumLBResults = 0;
-  for (APInt v : getLowerBoundsGroups())
-    expectedNumLBResults += v.getZExtValue();
+  for (APInt v : getLowerBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected lower bound map to have at least one result";
+    expectedNumLBResults += results;
+  }
   if (expectedNumLBResults != getLowerBoundsMap().getNumResults())
     return emitOpError() << "expected lower bounds map to have "
                          << expectedNumLBResults << " results";
   unsigned expectedNumUBResults = 0;
-  for (APInt v : getUpperBoundsGroups())
-    expectedNumUBResults += v.getZExtValue();
+  for (APInt v : getUpperBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected upper bound map to have at least one result";
+    expectedNumUBResults += results;
+  }
   if (expectedNumUBResults != getUpperBoundsMap().getNumResults())
     return emitOpError() << "expected upper bounds map to have "
                          << expectedNumUBResults << " results";
@@ -4407,8 +4422,7 @@ static LogicalResult verifyVectorMemoryOp(Operation *op, MemRefType memrefType,
 LogicalResult AffineVectorLoadOp::verify() {
   MemRefType memrefType = getMemRefType();
   if (failed(verifyMemoryOpIndexing(
-          getOperation(),
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
+          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
           getMapOperands(), memrefType,
           /*numIndexOperands=*/getNumOperands() - 1)))
     return failure();

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
@@ -23,6 +22,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 
 static mlir::FunctionType
@@ -1132,10 +1132,7 @@ private:
 
     // TODO: intents that require special care (e.g finalization)
 
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    const Fortran::evaluate::characteristics::TypeAndShape::Attrs &shapeAttrs =
-        obj.type.attrs();
-    if (shapeAttrs.test(ShapeAttr::Coarray))
+    if (obj.type.corank() > 0)
       TODO(loc, "coarray: dummy argument coarray in procedure interface");
 
     // So far assume that if the argument cannot be passed by implicit interface

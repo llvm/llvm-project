@@ -164,8 +164,7 @@ public:
       : __func_(std::move(__f)), __alloc_(std::move(__a)) {}
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __arg) {
-    typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(__func_, std::forward<_ArgTypes>(__arg)...);
+    return std::__invoke_r<_Rp>(__func_, std::forward<_ArgTypes>(__arg)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI __alloc_func* __clone() const {
@@ -213,8 +212,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __default_alloc_func(const _Target& __f) : __f_(__f) {}
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __arg) {
-    typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(__f_, std::forward<_ArgTypes>(__arg)...);
+    return std::__invoke_r<_Rp>(__f_, std::forward<_ArgTypes>(__arg)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const {
@@ -434,7 +432,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __args) const {
     if (__f_ == nullptr)
-      __throw_bad_function_call();
+      std::__throw_bad_function_call();
     return (*__f_)(std::forward<_ArgTypes>(__args)...);
   }
 
@@ -609,7 +607,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit __policy_invoker(__Call __c) : __call_(__c) {}
 
   _LIBCPP_HIDE_FROM_ABI static _Rp __call_empty(const __policy_storage*, __fast_forward<_ArgTypes>...) {
-    __throw_bad_function_call();
+    std::__throw_bad_function_call();
   }
 
   template <typename _Fun>
@@ -841,12 +839,12 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
   __func __f_;
 
   template <class _Fp,
-            bool = _And< _IsNotSame<__remove_cvref_t<_Fp>, function>, __invokable<_Fp, _ArgTypes...> >::value>
+            bool = _And<_IsNotSame<__remove_cvref_t<_Fp>, function>, __is_invocable<_Fp, _ArgTypes...> >::value>
   struct __callable;
   template <class _Fp>
   struct __callable<_Fp, true> {
     static const bool value =
-        is_void<_Rp>::value || __is_core_convertible<typename __invoke_of<_Fp, _ArgTypes...>::type, _Rp>::value;
+        is_void<_Rp>::value || __is_core_convertible<__invoke_result_t<_Fp, _ArgTypes...>, _Rp>::value;
   };
   template <class _Fp>
   struct __callable<_Fp, false> {

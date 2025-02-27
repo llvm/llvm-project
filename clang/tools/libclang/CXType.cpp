@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -1106,6 +1107,39 @@ long long clang_Cursor_getOffsetOfField(CXCursor C) {
       return Ctx.getFieldOffset(IFD);
   }
   return -1;
+}
+
+long long clang_getOffsetOfBase(CXCursor Parent, CXCursor Base) {
+  if (Base.kind != CXCursor_CXXBaseSpecifier)
+    return -1;
+
+  if (!clang_isDeclaration(Parent.kind))
+    return -1;
+
+  // we need to validate the parent type
+  CXType PT = clang_getCursorType(Parent);
+  long long Error = validateFieldParentType(Parent, PT);
+  if (Error < 0)
+    return Error;
+
+  const CXXRecordDecl *ParentRD =
+      dyn_cast<CXXRecordDecl>(cxcursor::getCursorDecl(Parent));
+  if (!ParentRD)
+    return -1;
+
+  ASTContext &Ctx = cxcursor::getCursorContext(Base);
+  const CXXBaseSpecifier *B = cxcursor::getCursorCXXBaseSpecifier(Base);
+  if (ParentRD->bases_begin() > B || ParentRD->bases_end() <= B)
+    return -1;
+
+  const CXXRecordDecl *BaseRD = B->getType()->getAsCXXRecordDecl();
+  if (!BaseRD)
+    return -1;
+
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(ParentRD);
+  if (B->isVirtual())
+    return Ctx.toBits(Layout.getVBaseClassOffset(BaseRD));
+  return Ctx.toBits(Layout.getBaseClassOffset(BaseRD));
 }
 
 enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T) {

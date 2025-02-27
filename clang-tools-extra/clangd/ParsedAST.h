@@ -38,9 +38,9 @@
 #include <vector>
 
 namespace clang {
+class HeuristicResolver;
 class Sema;
 namespace clangd {
-class HeuristicResolver;
 
 /// Stores and provides access to parsed AST.
 class ParsedAST {

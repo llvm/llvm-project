@@ -112,19 +112,14 @@ void mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
 #define GET_QTYPE(inputType)                                                   \
   (llvm::dyn_cast<quant::QuantizedType>((inputType).getElementType()))
 
-/// Method to build ConvOpQuantizationAttr, called from
-/// ConvOpQuantInfoBuilder/TransConvOpQuantInfoBuilder:
-/// input_zp: input zeropoint
-/// weight_zp: weight zeropoint.
-ConvOpQuantizationAttr
-mlir::tosa::buildConvOpQuantizationAttr(OpBuilder &builder, Value input,
-                                        Value weight) {
+static std::optional<std::pair<std::int64_t, std::int64_t>>
+getConvZeroPoints(Value input, Value weight) {
 
   auto inputType = dyn_cast<ShapedType>(input.getType());
   auto weightType = dyn_cast<ShapedType>(weight.getType());
 
   if (!inputType || !weightType)
-    return nullptr;
+    return std::nullopt;
 
   auto inputQType = GET_UQTYPE(inputType);
   auto weightPerTensorQType = GET_UQTYPE(weightType);
@@ -150,10 +145,58 @@ mlir::tosa::buildConvOpQuantizationAttr(OpBuilder &builder, Value input,
       weightZp = weightPerAxisQType.getZeroPoints().front();
     }
 
-    return builder.getAttr<tosa::ConvOpQuantizationAttr>(inputZp, weightZp);
+    return std::make_pair(inputZp, weightZp);
   }
 
-  return nullptr;
+  return std::nullopt;
+}
+
+std::pair<Value, Value>
+mlir::tosa::createZPsAsConst(OpBuilder &builder, Value input, Value weight) {
+  std::int64_t inputZp, weightZp;
+
+  auto inputEType = getElementTypeOrSelf(input.getType());
+  auto weightEType = getElementTypeOrSelf(weight.getType());
+
+  if (mlir::isa<FloatType>(inputEType) && mlir::isa<FloatType>(weightEType)) {
+    inputZp = 0;
+    weightZp = 0;
+  } else {
+    auto maybeZps = getConvZeroPoints(input, weight);
+    if (!maybeZps.has_value())
+      return {};
+
+    inputZp = maybeZps->first;
+    weightZp = maybeZps->second;
+  }
+
+  auto maybeInputZpValue =
+      createZeroPointTensor(builder, input.getLoc(), inputEType, inputZp);
+  if (!maybeInputZpValue.has_value())
+    return {};
+
+  auto maybeWeightZpValue =
+      createZeroPointTensor(builder, weight.getLoc(), weightEType, weightZp);
+  if (!maybeWeightZpValue.has_value())
+    return {};
+
+  return std::make_pair(*maybeInputZpValue, *maybeWeightZpValue);
+}
+
+/// Method to build ConvOpQuantizationAttr, called from
+/// ConvOpQuantInfoBuilder/TransConvOpQuantInfoBuilder:
+/// input_zp: input zeropoint
+/// weight_zp: weight zeropoint.
+ConvOpQuantizationAttr
+mlir::tosa::buildConvOpQuantizationAttr(OpBuilder &builder, Value input,
+                                        Value weight) {
+
+  auto maybeZps = getConvZeroPoints(input, weight);
+  if (!maybeZps.has_value())
+    return nullptr;
+
+  return builder.getAttr<tosa::ConvOpQuantizationAttr>(maybeZps->first,
+                                                       maybeZps->second);
 }
 
 /// Builds MatMulOpQuantizationAttr, called from

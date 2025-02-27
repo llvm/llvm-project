@@ -34,7 +34,7 @@ struct PDLLTypeConverter : public TypeConverter {
   static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
     // Convert I64 to F64.
     if (t.isSignlessInteger(64)) {
-      results.push_back(FloatType::getF64(t.getContext()));
+      results.push_back(Float64Type::get(t.getContext()));
       return success();
     }
 

@@ -644,13 +644,15 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
 /// Create a call to Masked Expand Load intrinsic
 /// \p Ty        - vector type to load
 /// \p Ptr       - base pointer for the load
+/// \p Align     - alignment of \p Ptr
 /// \p Mask      - vector of booleans which indicates what vector lanes should
 ///                be accessed in memory
 /// \p PassThru  - pass-through value that is used to fill the masked-off lanes
 ///                of the result
 /// \p Name      - name of the result variable
 CallInst *IRBuilderBase::CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
-                                                Value *Mask, Value *PassThru,
+                                                MaybeAlign Align, Value *Mask,
+                                                Value *PassThru,
                                                 const Twine &Name) {
   assert(Ty->isVectorTy() && "Type should be vector");
   assert(Mask && "Mask should not be all-ones (null)");
@@ -658,24 +660,32 @@ CallInst *IRBuilderBase::CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
     PassThru = PoisonValue::get(Ty);
   Type *OverloadedTypes[] = {Ty};
   Value *Ops[] = {Ptr, Mask, PassThru};
-  return CreateMaskedIntrinsic(Intrinsic::masked_expandload, Ops,
-                               OverloadedTypes, Name);
+  CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_expandload, Ops,
+                                       OverloadedTypes, Name);
+  if (Align)
+    CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), *Align));
+  return CI;
 }
 
 /// Create a call to Masked Compress Store intrinsic
 /// \p Val       - data to be stored,
 /// \p Ptr       - base pointer for the store
+/// \p Align     - alignment of \p Ptr
 /// \p Mask      - vector of booleans which indicates what vector lanes should
 ///                be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
+                                                   MaybeAlign Align,
                                                    Value *Mask) {
   Type *DataTy = Val->getType();
   assert(DataTy->isVectorTy() && "Val should be a vector");
   assert(Mask && "Mask should not be all-ones (null)");
   Type *OverloadedTypes[] = {DataTy};
   Value *Ops[] = {Val, Ptr, Mask};
-  return CreateMaskedIntrinsic(Intrinsic::masked_compressstore, Ops,
-                               OverloadedTypes);
+  CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_compressstore, Ops,
+                                       OverloadedTypes);
+  if (Align)
+    CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), *Align));
+  return CI;
 }
 
 template <typename T0>
@@ -1272,6 +1282,16 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");
   return CreateAlignmentAssumptionHelper(DL, PtrValue, Alignment, OffsetValue);
+}
+
+CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
+                                                         Value *SizeValue) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create an deferenceable assumption on a non-pointer?");
+  SmallVector<Value *, 4> Vals({PtrValue, SizeValue});
+  OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
+  return CreateAssumption(ConstantInt::getTrue(getContext()),
+                          {DereferenceableOpB});
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;

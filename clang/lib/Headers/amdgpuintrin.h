@@ -145,29 +145,89 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
 
 // Shuffles the the lanes inside the wavefront according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
-__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
-  return __builtin_amdgcn_ds_bpermute(__idx << 2, __x);
+__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
+                      uint32_t __width) {
+  uint32_t __lane = __idx + (__gpu_lane_id() & ~(__width - 1));
+  return __builtin_amdgcn_ds_bpermute(__lane << 2, __x);
 }
 
 // Shuffles the the lanes inside the wavefront according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
+__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
+                      uint32_t __width) {
   uint32_t __hi = (uint32_t)(__x >> 32ull);
   uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
-  return ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __hi) << 32ull) |
-         ((uint64_t)__builtin_amdgcn_ds_bpermute(__idx << 2, __lo));
+  return ((uint64_t)__gpu_shuffle_idx_u32(__lane_mask, __idx, __hi, __width)
+          << 32ull) |
+         ((uint64_t)__gpu_shuffle_idx_u32(__lane_mask, __idx, __lo, __width));
 }
 
-// Returns true if the flat pointer points to CUDA 'shared' memory.
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
+  uint32_t __match_mask = 0;
+
+  bool __done = 0;
+  while (__gpu_ballot(__lane_mask, !__done)) {
+    if (!__done) {
+      uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
+      if (__first == __x) {
+        __match_mask = __gpu_lane_mask();
+        __done = 1;
+      }
+    }
+  }
+  __gpu_sync_lane(__lane_mask);
+  return __match_mask;
+}
+
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
+  uint64_t __match_mask = 0;
+
+  bool __done = 0;
+  while (__gpu_ballot(__lane_mask, __done)) {
+    if (!__done) {
+      uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+      if (__first == __x) {
+        __match_mask = __gpu_lane_mask();
+        __done = 1;
+      }
+    }
+  }
+  __gpu_sync_lane(__lane_mask);
+  return __match_mask;
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
+  uint32_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
+  __gpu_sync_lane(__lane_mask);
+  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
+  uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
+  __gpu_sync_lane(__lane_mask);
+  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+}
+
+// Returns true if the flat pointer points to AMDGPU 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
-  return __builtin_amdgcn_is_shared((void __attribute__((address_space(0))) *)((
+  return __builtin_amdgcn_is_shared((void [[clang::address_space(0)]] *)((
       void [[clang::opencl_generic]] *)ptr));
 }
 
-// Returns true if the flat pointer points to CUDA 'local' memory.
+// Returns true if the flat pointer points to AMDGPU 'private' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
-  return __builtin_amdgcn_is_private((void __attribute__((
-      address_space(0))) *)((void [[clang::opencl_generic]] *)ptr));
+  return __builtin_amdgcn_is_private((void [[clang::address_space(0)]] *)((
+      void [[clang::opencl_generic]] *)ptr));
 }
 
 // Terminates execution of the associated wavefront.

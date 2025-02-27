@@ -1410,6 +1410,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP scope directive.
     OMP_SCOPE_DIRECTIVE = 306
 
+    # OpenMP stripe directive.
+    OMP_STRIPE_DIRECTIVE = 310
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
@@ -2133,6 +2136,14 @@ class Cursor(Structure):
         """Returns the offsetof the FIELD_DECL pointed by this Cursor."""
         return conf.lib.clang_Cursor_getOffsetOfField(self)  # type: ignore [no-any-return]
 
+    def get_base_offsetof(self, parent):
+        """Returns the offsetof the CXX_BASE_SPECIFIER pointed by this Cursor."""
+        return conf.lib.clang_getOffsetOfBase(parent, self)  # type: ignore [no-any-return]
+
+    def is_virtual_base(self):
+        """Returns whether the CXX_BASE_SPECIFIER pointed by this Cursor is virtual."""
+        return conf.lib.clang_isVirtualBase(self)  # type: ignore [no-any-return]
+
     def is_anonymous(self):
         """
         Check whether this is a record type without a name, or a field where
@@ -2686,6 +2697,21 @@ class Type(Structure):
         fields: list[Cursor] = []
         conf.lib.clang_Type_visitFields(self, fields_visit_callback(visitor), fields)
         return iter(fields)
+
+    def get_bases(self):
+        """Return an iterator for accessing the base classes of this type."""
+
+        def visitor(base, children):
+            assert base != conf.lib.clang_getNullCursor()
+
+            # Create reference to TU so it isn't GC'd before Cursor.
+            base._tu = self._tu
+            bases.append(base)
+            return 1  # continue
+
+        bases: list[Cursor] = []
+        conf.lib.clang_visitCXXBaseClasses(self, fields_visit_callback(visitor), bases)
+        return iter(bases)
 
     def get_exception_specification_kind(self):
         """
@@ -3940,6 +3966,7 @@ functionList: list[LibFunc] = [
     ("clang_getNumDiagnosticsInSet", [c_object_p], c_uint),
     ("clang_getNumElements", [Type], c_longlong),
     ("clang_getNumOverloadedDecls", [Cursor], c_uint),
+    ("clang_getOffsetOfBase", [Cursor, Cursor], c_longlong),
     ("clang_getOverloadedDecl", [Cursor, c_uint], Cursor),
     ("clang_getPointeeType", [Type], Type),
     ("clang_getRange", [SourceLocation, SourceLocation], SourceRange),
@@ -3992,6 +4019,7 @@ functionList: list[LibFunc] = [
         [TranslationUnit, SourceRange, POINTER(POINTER(Token)), POINTER(c_uint)],
     ),
     ("clang_visitChildren", [Cursor, cursor_visit_callback, py_object], c_uint),
+    ("clang_visitCXXBaseClasses", [Type, fields_visit_callback, py_object], c_uint),
     ("clang_Cursor_getNumArguments", [Cursor], c_int),
     ("clang_Cursor_getArgument", [Cursor, c_uint], Cursor),
     ("clang_Cursor_getNumTemplateArguments", [Cursor], c_int),

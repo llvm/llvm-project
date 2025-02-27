@@ -17,9 +17,11 @@ add_header_library(
   DEPENDS
     .memory_utils.inline_bzero
     .memory_utils.inline_memcpy
+    libc.hdr.types.size_t
     libc.include.stdlib
-    libc.src.__support.common
     libc.src.__support.CPP.bitset
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.common
   ${string_config_options}
 )
 

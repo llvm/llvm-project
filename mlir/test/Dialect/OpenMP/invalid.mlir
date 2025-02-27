@@ -1825,6 +1825,110 @@ func.func @omp_cancellationpoint2() {
 
 // -----
 
+omp.declare_reduction @add_f32 : f32
+init {
+ ^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+  ^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
+  %test1f32 = "test.f32"() : () -> (!llvm.ptr)
+  omp.wsloop reduction(mod:inscan, @add_f32 %test1f32 -> %arg1 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+  // expected-error @below {{Exactly one of EXCLUSIVE or INCLUSIVE clause is expected}}
+       omp.scan
+        omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+ ^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+  ^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
+  %test1f32 = "test.f32"() : () -> (!llvm.ptr)
+  omp.wsloop reduction(mod:inscan, @add_f32 %test1f32 -> %arg1 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+  // expected-error @below {{Exactly one of EXCLUSIVE or INCLUSIVE clause is expected}}
+       omp.scan inclusive(%test1f32 : !llvm.ptr) exclusive(%test1f32: !llvm.ptr)
+        omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+ ^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+  ^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
+  %test1f32 = "test.f32"() : () -> (!llvm.ptr)
+  omp.wsloop reduction(@add_f32 %test1f32 -> %arg1 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+  // expected-error @below {{SCAN directive needs to be enclosed within a parent worksharing loop construct or SIMD construct with INSCAN reduction modifier}}
+       omp.scan inclusive(%test1f32 : !llvm.ptr)
+        omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+ ^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+  ^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @scan_test_2(%lb: i32, %ub: i32, %step: i32) {
+  %test1f32 = "test.f32"() : () -> (!llvm.ptr)
+  omp.taskloop reduction(mod:inscan, @add_f32 %test1f32 -> %arg1 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+  // expected-error @below {{SCAN directive needs to be enclosed within a parent worksharing loop construct or SIMD construct with INSCAN reduction modifier}}
+       omp.scan inclusive(%test1f32 : !llvm.ptr)
+        omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testmemref = "test.memref"() : () -> (memref<i32>)
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
@@ -2331,8 +2435,8 @@ func.func @omp_distribute_unconstrained_order() -> () {
   return
 }
 // -----
-omp.private {type = private} @x.privatizer : i32 alloc {
-^bb0(%arg0: i32):
+omp.private {type = private} @x.privatizer : i32 init {
+^bb0(%arg0: i32, %arg1: i32):
   %0 = arith.constant 0.0 : f32
   // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: 'f32'}}
   omp.yield(%0 : f32)
@@ -2340,17 +2444,17 @@ omp.private {type = private} @x.privatizer : i32 alloc {
 
 // -----
 
-omp.private {type = private} @x.privatizer : i32 alloc {
-^bb0(%arg0: i32):
-  // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: None}}
+// expected-error @below {{Region argument type mismatch: got 'f32' expected 'i32'.}}
+omp.private {type = private} @x.privatizer : i32 init {
+^bb0(%arg0: i32, %arg1: f32):
   omp.yield
 }
 
 // -----
 
-omp.private {type = private} @x.privatizer : f32 alloc {
-^bb0(%arg0: f32):
-  omp.yield(%arg0 : f32)
+omp.private {type = private} @x.privatizer : f32 init {
+^bb0(%arg0: f32, %arg1: f32):
+  omp.yield(%arg0: f32)
 } dealloc {
 ^bb0(%arg0: f32):
   // expected-error @below {{Did not expect any values to be yielded.}}
@@ -2359,27 +2463,24 @@ omp.private {type = private} @x.privatizer : f32 alloc {
 
 // -----
 
-omp.private {type = private} @x.privatizer : i32 alloc {
-^bb0(%arg0: i32):
+omp.private {type = private} @x.privatizer : i32 init {
+^bb0(%arg0: i32, %arg1: i32):
   // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
   omp.terminator
 }
 
 // -----
 
-// expected-error @below {{`alloc`: expected 1 region arguments, got: 2}}
-omp.private {type = private} @x.privatizer : f32 alloc {
-^bb0(%arg0: f32, %arg1: f32):
+// expected-error @below {{`init`: expected 2 region arguments, got: 1}}
+omp.private {type = private} @x.privatizer : f32 init {
+^bb0(%arg0: f32):
   omp.yield(%arg0 : f32)
 }
 
 // -----
 
 // expected-error @below {{`copy`: expected 2 region arguments, got: 1}}
-omp.private {type = firstprivate} @x.privatizer : f32 alloc {
-^bb0(%arg0: f32):
-  omp.yield(%arg0 : f32)
-} copy {
+omp.private {type = firstprivate} @x.privatizer : f32 copy {
 ^bb0(%arg0: f32):
   omp.yield(%arg0 : f32)
 }
@@ -2387,30 +2488,24 @@ omp.private {type = firstprivate} @x.privatizer : f32 alloc {
 // -----
 
 // expected-error @below {{`dealloc`: expected 1 region arguments, got: 2}}
-omp.private {type = private} @x.privatizer : f32 alloc {
-^bb0(%arg0: f32):
-  omp.yield(%arg0 : f32)
-} dealloc {
+omp.private {type = private} @x.privatizer : f32 dealloc {
 ^bb0(%arg0: f32, %arg1: f32):
   omp.yield
 }
 
 // -----
 
-// expected-error @below {{`private` clauses require only an `alloc` region.}}
-omp.private {type = private} @x.privatizer : f32 alloc {
-^bb0(%arg0: f32):
-  omp.yield(%arg0 : f32)
-} copy {
+// expected-error @below {{`private` clauses do not require a `copy` region.}}
+omp.private {type = private} @x.privatizer : f32 copy {
 ^bb0(%arg0: f32, %arg1 : f32):
   omp.yield(%arg0 : f32)
 }
 
 // -----
 
-// expected-error @below {{`firstprivate` clauses require both `alloc` and `copy` regions.}}
-omp.private {type = firstprivate} @x.privatizer : f32 alloc {
-^bb0(%arg0: f32):
+// expected-error @below {{`firstprivate` clauses require at least a `copy` region.}}
+omp.private {type = firstprivate} @x.privatizer : f32 init {
+^bb0(%arg0: f32, %arg1: f32):
   omp.yield(%arg0 : f32)
 }
 
@@ -2425,8 +2520,8 @@ func.func @private_type_mismatch(%arg0: index) {
   return
 }
 
-omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
+omp.private {type = private} @var1.privatizer : index init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
 
@@ -2441,10 +2536,7 @@ func.func @firstprivate_type_mismatch(%arg0: index) {
   return
 }
 
-omp.private {type = firstprivate} @var1.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @var1.privatizer : index copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
@@ -2472,10 +2564,7 @@ func.func @undefined_privatizer(%arg0: !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-} copy {
+omp.private {type = private} @var1.privatizer : !llvm.ptr copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
@@ -2752,4 +2841,21 @@ func.func @missing_workshare(%idx : index) {
     }
   }
   return
+}
+
+// -----
+  // expected-error @below {{op expected terminator to be a DeclareMapperInfoOp}}
+  omp.declare_mapper @missing_declareMapperInfo : !llvm.struct<"mytype", (array<1024 x i32>)> {
+  ^bb0(%arg0: !llvm.ptr):
+    omp.terminator
+  }
+
+// -----
+llvm.func @invalid_mapper(%0 : !llvm.ptr) {
+  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) mapper(@my_mapper) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  // expected-error @below {{invalid mapper id}}
+  omp.target_data map_entries(%1 : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
 }

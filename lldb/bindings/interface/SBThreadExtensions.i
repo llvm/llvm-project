@@ -51,6 +51,14 @@ STRING_EXTENSION_OUTSIDE(SBThread)
                 for idx in range(self.GetStopReasonDataCount())
             ]
 
+        def set_selected_frame(self, frame):
+            if isinstance(frame, SBFrame):
+                if frame.thread != self:
+                    raise ValueError("cannot select frame from different thread")
+                self.SetSelectedFrame(frame.idx)
+            else:
+                self.SetSelectedFrame(frame)
+
         id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
         idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
         return_value = property(GetStopReturnValue, None, doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
@@ -65,6 +73,7 @@ STRING_EXTENSION_OUTSIDE(SBThread)
         stop_reason_data = property(get_stop_reason_data, None, doc='''A read only property that returns the stop reason data as a list.''')
         is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
         is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
+        selected_frame = property(GetSelectedFrame, set_selected_frame, doc='''A read/write property that gets and sets the selected frame of this SBThread.''')
     %}
 #endif
 }

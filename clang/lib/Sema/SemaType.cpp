@@ -1593,35 +1593,38 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   // object or incomplete types shall not be restrict-qualified."
   if (Qs.hasRestrict()) {
     unsigned DiagID = 0;
-    QualType ProblemTy;
+    QualType EltTy = Context.getBaseElementType(T);
 
-    if (T->isAnyPointerType() || T->isReferenceType() ||
-        T->isMemberPointerType()) {
-      QualType EltTy;
-      if (T->isObjCObjectPointerType())
-        EltTy = T;
-      else if (const MemberPointerType *PTy = T->getAs<MemberPointerType>())
+    if (EltTy->isAnyPointerType() || EltTy->isReferenceType() ||
+        EltTy->isMemberPointerType()) {
+
+      if (const auto *PTy = EltTy->getAs<MemberPointerType>())
         EltTy = PTy->getPointeeType();
       else
-        EltTy = T->getPointeeType();
+        EltTy = EltTy->getPointeeType();
 
       // If we have a pointer or reference, the pointee must have an object
       // incomplete type.
-      if (!EltTy->isIncompleteOrObjectType()) {
+      if (!EltTy->isIncompleteOrObjectType())
         DiagID = diag::err_typecheck_invalid_restrict_invalid_pointee;
-        ProblemTy = EltTy;
-      }
+
     } else if (!isDependentOrGNUAutoType(T)) {
       // For an __auto_type variable, we may not have seen the initializer yet
       // and so have no idea whether the underlying type is a pointer type or
       // not.
       DiagID = diag::err_typecheck_invalid_restrict_not_pointer;
-      ProblemTy = T;
+      EltTy = T;
     }
 
+    Loc = DS ? DS->getRestrictSpecLoc() : Loc;
     if (DiagID) {
-      Diag(DS ? DS->getRestrictSpecLoc() : Loc, DiagID) << ProblemTy;
+      Diag(Loc, DiagID) << EltTy;
       Qs.removeRestrict();
+    } else {
+      if (T->isArrayType())
+        Diag(Loc, getLangOpts().C23
+                      ? diag::warn_c23_compat_restrict_on_array_of_pointers
+                      : diag::ext_restrict_on_array_of_pointers_c23);
     }
   }
 
@@ -1826,7 +1829,8 @@ QualType Sema::BuildPointerType(QualType T,
   if (checkQualifiedFunction(*this, T, Loc, QFK_Pointer))
     return QualType();
 
-  assert(!T->isObjCObjectType() && "Should build ObjCObjectPointerType");
+  if (T->isObjCObjectType())
+    return Context.getObjCObjectPointerType(T);
 
   // In ARC, it is forbidden to build pointers to unqualified pointers.
   if (getLangOpts().ObjCAutoRefCount)
@@ -2526,7 +2530,8 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 }
 
 bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
-  if (T->isArrayType() || T->isFunctionType()) {
+  if ((T->isArrayType() && !getLangOpts().allowArrayReturnTypes()) ||
+      T->isFunctionType()) {
     Diag(Loc, diag::err_func_returning_array_function)
       << T->isFunctionType() << T;
     return true;
@@ -4930,7 +4935,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // C99 6.7.5.3p1: The return type may not be a function or array type.
       // For conversion functions, we'll diagnose this particular error later.
-      if (!D.isInvalidType() && (T->isArrayType() || T->isFunctionType()) &&
+      if (!D.isInvalidType() &&
+          ((T->isArrayType() && !S.getLangOpts().allowArrayReturnTypes()) ||
+           T->isFunctionType()) &&
           (D.getName().getKind() !=
            UnqualifiedIdKind::IK_ConversionFunctionId)) {
         unsigned diagID = diag::err_func_returning_array_function;
@@ -5181,6 +5188,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               // Reject, but continue to parse 'float(const void)'.
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
+
+              for (const auto *A : Param->attrs()) {
+                S.Diag(A->getLoc(), diag::warn_attribute_on_void_param)
+                    << A << A->getRange();
+              }
 
               // Reject, but continue to parse 'float(this void)' as
               // 'float(void)'.
@@ -8306,7 +8318,8 @@ static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
          BTy->getKind() == BuiltinType::ULongLong ||
          BTy->getKind() == BuiltinType::Float ||
          BTy->getKind() == BuiltinType::Half ||
-         BTy->getKind() == BuiltinType::BFloat16;
+         BTy->getKind() == BuiltinType::BFloat16 ||
+         BTy->getKind() == BuiltinType::MFloat8;
 }
 
 static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
@@ -8490,7 +8503,8 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  auto VScale = S.Context.getTargetInfo().getVScaleRange(S.getLangOpts());
+  auto VScale =
+      S.Context.getTargetInfo().getVScaleRange(S.getLangOpts(), false);
   if (!VScale || !VScale->first || VScale->first != VScale->second) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
@@ -9396,7 +9410,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         runWithSufficientStackSpace(Loc, [&] {
           Diagnosed = InstantiateClassTemplateSpecialization(
               Loc, ClassTemplateSpec, TSK_ImplicitInstantiation,
-              /*Complain=*/Diagnoser);
+              /*Complain=*/Diagnoser, ClassTemplateSpec->hasStrictPackMatch());
         });
         Instantiated = true;
       }
@@ -9806,8 +9820,7 @@ QualType Sema::BuiltinAddPointer(QualType BaseType, SourceLocation Loc) {
 }
 
 QualType Sema::BuiltinRemovePointer(QualType BaseType, SourceLocation Loc) {
-  // We don't want block pointers or ObjectiveC's id type.
-  if (!BaseType->isAnyPointerType() || BaseType->isObjCIdType())
+  if (!BaseType->isAnyPointerType())
     return BaseType;
 
   return BaseType->getPointeeType();

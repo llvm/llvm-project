@@ -643,9 +643,9 @@ static Value handleByValArgument(OpBuilder &builder, Operation *callable,
       return argument;
   }
   uint64_t targetAlignment = std::max(requestedAlignment, minimumAlignment);
-  return handleByValArgumentInit(builder, func.getLoc(), argument, elementType,
-                                 dataLayout.getTypeSize(elementType),
-                                 targetAlignment);
+  return handleByValArgumentInit(
+      builder, argument.getLoc(), argument, elementType,
+      dataLayout.getTypeSize(elementType), targetAlignment);
 }
 
 namespace {

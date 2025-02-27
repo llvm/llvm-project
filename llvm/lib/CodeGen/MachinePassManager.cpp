@@ -152,6 +152,7 @@ PassManager<MachineFunction>::run(MachineFunction &MF,
     PI.runAfterPass(*Pass, MF, PassPA);
     PA.intersect(std::move(PassPA));
   }
+  PA.preserveSet<AllAnalysesOn<MachineFunction>>();
   return PA;
 }
 

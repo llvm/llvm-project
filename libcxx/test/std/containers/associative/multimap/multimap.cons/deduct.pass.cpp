@@ -45,114 +45,114 @@
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
-using P = std::pair<int, long>;
+using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
 
-int main(int, char**)
-{
-    {
-    const P arr[] = { {1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} };
+int main(int, char**) {
+  {
+    const P arr[] = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
     std::multimap m(std::begin(arr), std::end(arr));
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long>);
-    const PC expected_m[] = { {1,1L}, {1,1L}, {2,2L}, {3,1L}, {INT_MAX,1L} };
+    const PC expected_m[] = {{1, 1L}, {1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    const P arr[] = { {1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} };
+  {
+    const P arr[] = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
     std::multimap m(std::begin(arr), std::end(arr), std::greater<int>());
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long, std::greater<int>>);
-    const PC expected_m[] = { {INT_MAX,1L}, {3,1L}, {2,2L}, {1,1L}, {1,1L} };
+    const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}, {1, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    const P arr[] = { {1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} };
+  {
+    const P arr[] = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
     std::multimap m(std::begin(arr), std::end(arr), std::greater<int>(), test_allocator<PC>(0, 42));
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long, std::greater<int>, test_allocator<PC>>);
-    const PC expected_m[] = { {INT_MAX,1L}, {3,1L}, {2,2L}, {1,1L}, {1,1L} };
+    const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}, {1, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 42);
-    }
+  }
 
-    {
+  {
     std::multimap<int, long> source;
     std::multimap m(source);
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.size() == 0);
-    }
+  }
 
-    {
+  {
     std::multimap<int, long> source;
-    std::multimap m{source};  // braces instead of parens
+    std::multimap m{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.size() == 0);
-    }
+  }
 
-    {
+  {
     std::multimap<int, long> source;
     std::multimap m(source, std::map<int, long>::allocator_type());
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.size() == 0);
-    }
+  }
 
-    {
-    std::multimap m{ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} };
+  {
+    std::multimap m{P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}};
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long>);
-    const PC expected_m[] = { {1,1L}, {1,1L}, {2,2L}, {3,1L}, {INT_MAX,1L} };
+    const PC expected_m[] = {{1, 1L}, {1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    std::multimap m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, std::greater<int>());
+  {
+    std::multimap m({P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}}, std::greater<int>());
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long, std::greater<int>>);
-    const PC expected_m[] = { {INT_MAX,1L}, {3,1L}, {2,2L}, {1,1L}, {1,1L} };
+    const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}, {1, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
-    }
+  }
 
-    {
-    std::multimap m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, std::greater<int>(), test_allocator<PC>(0, 43));
+  {
+    std::multimap m(
+        {P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}}, std::greater<int>(), test_allocator<PC>(0, 43));
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long, std::greater<int>, test_allocator<PC>>);
-    const PC expected_m[] = { {INT_MAX,1L}, {3,1L}, {2,2L}, {1,1L}, {1,1L} };
+    const PC expected_m[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}, {1, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 43);
-    }
+  }
 
-    {
-    const P arr[] = { {1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} };
+  {
+    const P arr[] = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
     std::multimap m(std::begin(arr), std::end(arr), test_allocator<PC>(0, 44));
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long, std::less<int>, test_allocator<PC>>);
-    const PC expected_m[] = { {1,1L}, {1,1L}, {2,2L}, {3,1L}, {INT_MAX,1L} };
+    const PC expected_m[] = {{1, 1L}, {1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 44);
-    }
+  }
 
-    {
-    std::multimap m({ P{1,1L}, P{2,2L}, P{1,1L}, P{INT_MAX,1L}, P{3,1L} }, test_allocator<PC>(0, 45));
+  {
+    std::multimap m({P{1, 1L}, P{2, 2L}, P{1, 1L}, P{INT_MAX, 1L}, P{3, 1L}}, test_allocator<PC>(0, 45));
 
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, long, std::less<int>, test_allocator<PC>>);
-    const PC expected_m[] = { {1,1L}, {1,1L}, {2,2L}, {3,1L}, {INT_MAX,1L} };
+    const PC expected_m[] = {{1, 1L}, {1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 45);
-    }
+  }
 
-    {
+  {
     // Examples from LWG3025
     std::multimap m{std::pair{1, 1}, {2, 2}, {3, 3}};
     ASSERT_SAME_TYPE(decltype(m), std::multimap<int, int>);
 
     std::multimap m2{m.begin(), m.end()};
     ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
-    }
+  }
 
-    {
+  {
     // Examples from LWG3531
     std::multimap m1{{std::pair{1, 2}, {3, 4}}, std::less<int>()};
     ASSERT_SAME_TYPE(decltype(m1), std::multimap<int, int>);
@@ -160,38 +160,38 @@ int main(int, char**)
     using value_type = std::pair<const int, int>;
     std::multimap m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
     ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
-    }
+  }
 
 #if TEST_STD_VER >= 23
-    {
-      using Range = std::array<P, 0>;
-      using Comp = std::greater<int>;
-      using DefaultComp = std::less<int>;
-      using Alloc = test_allocator<PC>;
+  {
+    using Range       = std::array<P, 0>;
+    using Comp        = std::greater<int>;
+    using DefaultComp = std::less<int>;
+    using Alloc       = test_allocator<PC>;
 
-      { // (from_range, range)
-        std::multimap c(std::from_range, Range());
-        static_assert(std::is_same_v<decltype(c), std::multimap<int, long>>);
-      }
-
-      { // (from_range, range, comp)
-        std::multimap c(std::from_range, Range(), Comp());
-        static_assert(std::is_same_v<decltype(c), std::multimap<int, long, Comp>>);
-      }
-
-      { // (from_range, range, comp, alloc)
-        std::multimap c(std::from_range, Range(), Comp(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::multimap<int, long, Comp, Alloc>>);
-      }
-
-      { // (from_range, range, alloc)
-        std::multimap c(std::from_range, Range(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::multimap<int, long, DefaultComp, Alloc>>);
-      }
+    { // (from_range, range)
+      std::multimap c(std::from_range, Range());
+      static_assert(std::is_same_v<decltype(c), std::multimap<int, long>>);
     }
+
+    { // (from_range, range, comp)
+      std::multimap c(std::from_range, Range(), Comp());
+      static_assert(std::is_same_v<decltype(c), std::multimap<int, long, Comp>>);
+    }
+
+    { // (from_range, range, comp, alloc)
+      std::multimap c(std::from_range, Range(), Comp(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::multimap<int, long, Comp, Alloc>>);
+    }
+
+    { // (from_range, range, alloc)
+      std::multimap c(std::from_range, Range(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::multimap<int, long, DefaultComp, Alloc>>);
+    }
+  }
 #endif
 
-    AssociativeContainerDeductionGuidesSfinaeAway<std::multimap, std::multimap<int, long>>();
+  AssociativeContainerDeductionGuidesSfinaeAway<std::multimap, std::multimap<int, long>>();
 
-    return 0;
+  return 0;
 }

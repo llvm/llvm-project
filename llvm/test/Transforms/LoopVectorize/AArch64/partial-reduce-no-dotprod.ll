@@ -8,7 +8,7 @@ define i32 @not_dotp(ptr %a, ptr %b) {
 ; CHECK-LABEL: define i32 @not_dotp(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 true, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -35,7 +35,7 @@ define i32 @not_dotp(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP13]] = add <16 x i32> [[TMP11]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP14]] = add <16 x i32> [[TMP12]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
 entry:
@@ -53,7 +53,7 @@ for.body:                                         ; preds = %for.body, %entry
   %mul = mul i32 %ext.b, %ext.a
   %add = add i32 %mul, %accum
   %iv.next = add i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, 1000
   br i1 %exitcond.not, label %for.exit, label %for.body
 
 for.exit:                        ; preds = %for.body

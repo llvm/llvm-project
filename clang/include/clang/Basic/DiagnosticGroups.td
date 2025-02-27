@@ -102,7 +102,6 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                [EnumEnumConversion,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
-def DeprecatedNoRelaxedTemplateTemplateArgs : DiagGroup<"deprecated-no-relaxed-template-template-args">;
 def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
@@ -230,7 +229,6 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedLiteralOperator,
                                           DeprecatedPragma,
                                           DeprecatedRegister,
-                                          DeprecatedNoRelaxedTemplateTemplateArgs,
                                           DeprecatedOFast,
                                           DeprecatedThisCapture,
                                           DeprecatedType,
@@ -696,6 +694,36 @@ def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
    NonTrivialMemaccess, MemsetTransposedArgs, SuspiciousBzero]>;
 def StaticInInline : DiagGroup<"static-in-inline">;
 def StaticLocalInInline : DiagGroup<"static-local-in-inline">;
+def UniqueObjectDuplication : DiagGroup<"unique-object-duplication"> {
+  code Documentation = [{
+Warns when objects which are supposed to be globally unique might get duplicated
+when built into a shared library.
+
+If an object with hidden visibility is built into a shared library, each instance
+of the library will get its own copy. This can cause very subtle bugs if there was
+only supposed to be one copy of the object in question: singletons aren't single,
+changes to one object won't affect the others, the object's initializer will run
+once per copy, etc.
+
+Specifically, this warning fires when it detects an object which:
+  1. Appears in a header file (so it might get compiled into multiple libaries), and
+  2. Has external linkage (otherwise it's supposed to be duplicated), and
+  3. Has hidden visibility.
+
+As well as one of the following:
+  1. The object is mutable, or
+  2. The object's initializer definitely has side effects.
+
+The warning is best resolved by making the object ``const`` (if possible), or by explicitly
+giving the object non-hidden visibility, e.g. using ``__attribute((visibility("default")))``.
+Note that all levels of a pointer variable must be constant; ``const int*`` will
+trigger the warning because the pointer itself is mutable.
+
+This warning is currently disabled on Windows since it uses import/export rules
+instead of visibility.
+}];
+}
+
 def GNUStaticFloatInit : DiagGroup<"gnu-static-float-init">;
 def StaticFloatInit : DiagGroup<"static-float-init", [GNUStaticFloatInit]>;
 // Allow differentiation between GNU statement expressions in a macro versus
@@ -760,6 +788,7 @@ def AmbiguousMacro : DiagGroup<"ambiguous-macro">;
 def KeywordAsMacro : DiagGroup<"keyword-macro">;
 def ReservedIdAsMacro : DiagGroup<"reserved-macro-identifier">;
 def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>;
+def ReservedAttributeIdentifier : DiagGroup<"reserved-attribute-identifier">;
 def RestrictExpansionMacro : DiagGroup<"restrict-expansion">;
 def FinalMacro : DiagGroup<"final-macro">;
 
@@ -935,7 +964,8 @@ def SignedEnumBitfield : DiagGroup<"signed-enum-bitfield">;
 
 def ReservedModuleIdentifier : DiagGroup<"reserved-module-identifier">;
 def ReservedIdentifier : DiagGroup<"reserved-identifier",
-    [ReservedIdAsMacro, ReservedModuleIdentifier, UserDefinedLiterals]>;
+    [ReservedIdAsMacro, ReservedModuleIdentifier,
+     UserDefinedLiterals, ReservedAttributeIdentifier]>;
 
 // Unreachable code warning groups.
 //
@@ -1126,6 +1156,7 @@ def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
 def ThreadSafetyReferenceReturn  : DiagGroup<"thread-safety-reference-return">;
 def ThreadSafetyReference  : DiagGroup<"thread-safety-reference",
                                              [ThreadSafetyReferenceReturn]>;
+def ThreadSafetyPointer    : DiagGroup<"thread-safety-pointer">;
 def ThreadSafetyNegative   : DiagGroup<"thread-safety-negative">;
 def ThreadSafety : DiagGroup<"thread-safety",
                              [ThreadSafetyAttributes,
@@ -1304,6 +1335,8 @@ def MicrosoftStaticAssert : DiagGroup<"microsoft-static-assert">;
 def MicrosoftInitFromPredefined : DiagGroup<"microsoft-init-from-predefined">;
 def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
+def MicrosoftInlineOnNonFunction : DiagGroup<
+    "microsoft-inline-on-non-function">;
 
 // Aliases.
 def : DiagGroup<"msvc-include", [MicrosoftInclude]>;
@@ -1322,7 +1355,7 @@ def Microsoft : DiagGroup<"microsoft",
      MicrosoftConstInit, MicrosoftVoidPseudoDtor, MicrosoftAnonTag,
      MicrosoftCommentPaste, MicrosoftEndOfFile, MicrosoftStaticAssert,
      MicrosoftInitFromPredefined, MicrosoftStringLiteralFromPredefined,
-     MicrosoftInconsistentDllImport]>;
+     MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction]>;
 
 def ClangClPch : DiagGroup<"clang-cl-pch">;
 

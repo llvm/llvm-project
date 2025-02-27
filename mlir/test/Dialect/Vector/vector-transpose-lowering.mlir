@@ -2,9 +2,9 @@
 
 // CHECK-LABEL: func @transpose23
 // CHECK-SAME: %[[A:.*]]: vector<2x3xf32>
-// CHECK:      %[[Z:.*]] = arith.constant dense<0.000000e+00> : vector<3x2xf32>
+// CHECK:      %[[UB:.*]] = ub.poison : vector<3x2xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0, 0] : f32 from vector<2x3xf32>
-// CHECK:      %[[T1:.*]] = vector.insert %[[T0]], %[[Z]] [0, 0] : f32 into vector<3x2xf32>
+// CHECK:      %[[T1:.*]] = vector.insert %[[T0]], %[[UB]] [0, 0] : f32 into vector<3x2xf32>
 // CHECK:      %[[T2:.*]] = vector.extract %[[A]][0, 1] : f32 from vector<2x3xf32>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[T1]] [1, 0] : f32 into vector<3x2xf32>
 // CHECK:      %[[T4:.*]] = vector.extract %[[A]][0, 2] : f32 from vector<2x3xf32>

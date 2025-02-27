@@ -36,17 +36,17 @@ static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
           Fortran::common::TypeCategory::Real, kind)) {
     switch (kind) {
     case 2:
-      return mlir::FloatType::getF16(context);
+      return mlir::Float16Type::get(context);
     case 3:
-      return mlir::FloatType::getBF16(context);
+      return mlir::BFloat16Type::get(context);
     case 4:
-      return mlir::FloatType::getF32(context);
+      return mlir::Float32Type::get(context);
     case 8:
-      return mlir::FloatType::getF64(context);
+      return mlir::Float64Type::get(context);
     case 10:
-      return mlir::FloatType::getF80(context);
+      return mlir::Float80Type::get(context);
     case 16:
-      return mlir::FloatType::getF128(context);
+      return mlir::Float128Type::get(context);
     }
   }
   llvm_unreachable("REAL type translation not implemented");

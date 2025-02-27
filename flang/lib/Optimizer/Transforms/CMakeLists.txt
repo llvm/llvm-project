@@ -29,6 +29,8 @@ add_flang_library(FIRTransforms
   VScaleAttr.cpp
   FunctionAttr.cpp
   DebugTypeGenerator.cpp
+  SetRuntimeCallAttributes.cpp
+  GenRuntimeCallsForTest.cpp
 
   DEPENDS
   CUFAttrs
@@ -46,8 +48,10 @@ add_flang_library(FIRTransforms
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranCommon
+  FortranSupport
   HLFIRDialect
+
+  MLIR_LIBS
   MLIRAffineUtils
   MLIRFuncDialect
   MLIRGPUDialect

@@ -191,7 +191,7 @@ symbol table entries. Here is an example of the "hello world" module:
     @.str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"
 
     ; External declaration of the puts function
-    declare i32 @puts(ptr nocapture) nounwind
+    declare i32 @puts(ptr captures(none)) nounwind
 
     ; Definition of main function
     define i32 @main() {
@@ -729,8 +729,8 @@ units that do not include the definition.
 As SSA values, global variables define pointer values that are in scope
 (i.e. they dominate) all basic blocks in the program. Global variables
 always define a pointer to their "content" type because they describe a
-region of memory, and all memory objects in LLVM are accessed through
-pointers.
+region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
+accessed through pointers.
 
 Global variables can be marked with ``unnamed_addr`` which indicates
 that the address is not significant, only the content. Constants marked
@@ -1170,7 +1170,7 @@ spaces. For example:
 .. code-block:: llvm
 
     ; On function declarations/definitions:
-    declare i32 @printf(ptr noalias nocapture, ...)
+    declare i32 @printf(ptr noalias captures(none), ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
     define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
@@ -1380,11 +1380,10 @@ Currently, only the following parameter attributes are defined:
     memory locations that are *modified*, by any means, during the execution of
     the function. If there are other accesses not based on the argument or
     return value, the behavior is undefined. The attribute on a return value
-    also has additional semantics described below. The caller shares the
-    responsibility with the callee for described below. The caller shares the
-    responsibility with the callee for ensuring that these requirements are met.
-    For further details, please see the discussion of the NoAlias response in
-    :ref:`alias analysis <Must, May,  or No>`.
+    also has additional semantics, as described below. Both the caller and the
+    callee share the responsibility of ensuring that these requirements are
+    met. For further details, please see the discussion of the NoAlias response
+    in :ref:`alias analysis <Must, May,  or No>`.
 
     Note that this definition of ``noalias`` is intentionally similar
     to the definition of ``restrict`` in C99 for function arguments.
@@ -1416,7 +1415,7 @@ Currently, only the following parameter attributes are defined:
     captured in certain locations. Currently only the return value (``ret``)
     and other (default) locations are supported.
 
-    The `pointer capture section <pointercapture>` discusses these semantics
+    The :ref:`pointer capture section <pointercapture>` discusses these semantics
     in more detail.
 
     Some examples of how to use the attribute:
@@ -1432,24 +1431,6 @@ Currently, only the following parameter attributes are defined:
     - ``captures(address_is_null, ret: address, provenance)``: The whole pointer
       is captured through the return value, and additionally whether the pointer
       is null is captured in some other way.
-
-.. _nocapture:
-
-``nocapture``
-    This indicates that the callee does not :ref:`capture <pointercapture>` the
-    pointer. This is not a valid attribute for return values.
-    This attribute applies only to the particular copy of the pointer passed in
-    this argument. A caller could pass two copies of the same pointer with one
-    being annotated nocapture and the other not, and the callee could validly
-    capture through the non annotated parameter.
-
-.. code-block:: llvm
-
-    define void @f(ptr nocapture %a, ptr %b) {
-      ; (capture %b)
-    }
-
-    call void @f(ptr @glb, ptr @glb) ; well-defined
 
 ``nofree``
     This indicates that callee does not free the pointer argument. This is not
@@ -1493,7 +1474,9 @@ Currently, only the following parameter attributes are defined:
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
-    implies ``noundef``.
+    implies ``noundef``. When used in an assume operand bundle, more restricted
+    semantics apply. See  :ref:`assume operand bundles <assume_opbundles>` for
+    more details.
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -1725,6 +1708,10 @@ Currently, only the following parameter attributes are defined:
     overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit integers,
     and negative values are allowed in case the argument points partway into
     an allocation. An empty list is not allowed.
+
+    On a ``byval`` argument, ``initializes`` refers to the given parts of the
+    callee copy being overwritten. A ``byval`` callee can never initialize the
+    original caller memory passed to the ``byval`` argument.
 
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead
@@ -2061,8 +2048,8 @@ For example:
     This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (``none``,
     ``read``, ``write``, or ``readwrite``) for the possible memory location
-    kinds (``argmem``, ``inaccessiblemem``, as well as a default). It is best
-    understood by example:
+    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, as well as a default).
+    It is best understood by example:
 
     - ``memory(none)``: Does not access any memory.
     - ``memory(read)``: May read (but not write) any memory.
@@ -2071,6 +2058,8 @@ For example:
     - ``memory(argmem: read)``: May only read argument memory.
     - ``memory(argmem: read, inaccessiblemem: write)``: May only read argument
       memory and only write inaccessible memory.
+    - ``memory(argmem: read, errnomem: write)``: May only read argument memory
+      and only write errno.
     - ``memory(read, argmem: readwrite)``: May read any memory (default mode)
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
@@ -2100,6 +2089,7 @@ For example:
       allocator function may return newly accessible memory while only
       accessing inaccessible memory itself). Inaccessible memory is often used
       to model control dependencies of intrinsics.
+    - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
       don't currently have a dedicated location kind (e.g. accesses to globals
@@ -2179,7 +2169,8 @@ For example:
     A ``nofree`` function is explicitly allowed to free memory which it
     allocated or (if not ``nosync``) arrange for another thread to free
     memory on it's behalf.  As a result, perhaps surprisingly, a ``nofree``
-    function can return a pointer to a previously deallocated memory object.
+    function can return a pointer to a previously deallocated
+    :ref:`allocated object<allocatedobjects>`.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
     use floating-point code and floating-point registers for operations that are
@@ -2941,6 +2932,10 @@ the behavior is undefined, unless one of the following exceptions applies:
   (including a zero alignment). If this is the case, then the pointer value
   must be a null pointer, otherwise the behavior is undefined.
 
+* ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
+  dereferenceable at the point of the assumption. The pointer may not be
+  dereferenceable at later pointers, e.g. because it could have been freed.
+
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle my also encode a ``separate_storage``
 operand bundle. This has the form:
@@ -3286,31 +3281,42 @@ This information is passed along to the backend so that it generates
 code for the proper architecture. It's possible to override this on the
 command line with the ``-mtriple`` command line option.
 
+
+.. _allocatedobjects:
+
+Allocated Objects
+-----------------
+
+An allocated object, memory object, or simply object, is a region of a memory
+space that is reserved by a memory allocation such as :ref:`alloca <i_alloca>`,
+heap allocation calls, and global variable definitions. Once it is allocated,
+the bytes stored in the region can only be read or written through a pointer
+that is :ref:`based on <pointeraliasing>` the allocation value. If a pointer
+that is not based on the object tries to read or write to the object, it is
+undefined behavior.
+
+The following properties hold for all allocated objects, otherwise the
+behavior is undefined:
+
+-  no allocated object may cross the unsigned address space boundary (including
+   the pointer after the end of the object),
+-  the size of all allocated objects must be non-negative and not exceed the
+   largest signed integer that fits into the index type.
+
 .. _objectlifetime:
 
 Object Lifetime
 ----------------------
 
-A memory object, or simply object, is a region of a memory space that is
-reserved by a memory allocation such as :ref:`alloca <i_alloca>`, heap
-allocation calls, and global variable definitions.
-Once it is allocated, the bytes stored in the region can only be read or written
-through a pointer that is :ref:`based on <pointeraliasing>` the allocation
-value.
-If a pointer that is not based on the object tries to read or write to the
-object, it is undefined behavior.
-
-A lifetime of a memory object is a property that decides its accessibility.
-Unless stated otherwise, a memory object is alive since its allocation, and
-dead after its deallocation.
-It is undefined behavior to access a memory object that isn't alive, but
-operations that don't dereference it such as
-:ref:`getelementptr <i_getelementptr>`, :ref:`ptrtoint <i_ptrtoint>` and
-:ref:`icmp <i_icmp>` return a valid result.
-This explains code motion of these instructions across operations that
-impact the object's lifetime.
-A stack object's lifetime can be explicitly specified using
-:ref:`llvm.lifetime.start <int_lifestart>` and
+A lifetime of an :ref:`allocated object<allocatedobjects>` is a property that
+decides its accessibility. Unless stated otherwise, an allocated object is alive
+since its allocation, and dead after its deallocation. It is undefined behavior
+to access an allocated object that isn't alive, but operations that don't
+dereference it such as :ref:`getelementptr <i_getelementptr>`,
+:ref:`ptrtoint <i_ptrtoint>` and :ref:`icmp <i_icmp>` return a valid result.
+This explains code motion of these instructions across operations that impact
+the object's lifetime. A stack object's lifetime can be explicitly specified
+using :ref:`llvm.lifetime.start <int_lifestart>` and
 :ref:`llvm.lifetime.end <int_lifeend>` intrinsic function calls.
 
 .. _pointeraliasing:
@@ -4490,11 +4496,10 @@ Here are some examples of multidimensional arrays:
 
 There is no restriction on indexing beyond the end of the array implied
 by a static type (though there are restrictions on indexing beyond the
-bounds of an allocated object in some cases). This means that
-single-dimension 'variable sized array' addressing can be implemented in
-LLVM with a zero length array type. An implementation of 'pascal style
-arrays' in LLVM could use the type "``{ i32, [0 x float]}``", for
-example.
+bounds of an :ref:`allocated object<allocatedobjects>` in some cases). This
+means that single-dimension 'variable sized array' addressing can be implemented
+in LLVM with a zero length array type. An implementation of 'pascal style
+arrays' in LLVM could use the type "``{ i32, [0 x float]}``", for example.
 
 .. _t_struct:
 
@@ -4776,8 +4781,8 @@ allowing the '``or``' to be folded to -1.
       %B = undef
       %C = undef
 
-This set of examples shows that undefined '``select``' (and conditional
-branch) conditions can go *either way*, but they have to come from one
+This set of examples shows that undefined '``select``'
+conditions can go *either way*, but they have to come from one
 of the two operands. In the ``%A`` example, if ``%X`` and ``%Y`` were
 both known to have a clear low bit, then ``%A`` would have to have a
 cleared low bit. However, in the ``%C`` example, the optimizer is
@@ -5118,10 +5123,6 @@ The following is the syntax for constant expressions:
     Perform an addition on constants.
 ``sub (LHS, RHS)``
     Perform a subtraction on constants.
-``mul (LHS, RHS)``
-    Perform a multiplication on constants.
-``shl (LHS, RHS)``
-    Perform a left shift on constants.
 ``xor (LHS, RHS)``
     Perform a bitwise xor on constants.
 
@@ -11718,8 +11719,9 @@ For ``nuw`` (no unsigned wrap):
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
 
- * The base pointer has an *in bounds* address of the allocated object that it
-   is :ref:`based <pointeraliasing>` on. This means that it points into that
+ * The base pointer has an *in bounds* address of the
+   :ref:`allocated object<allocatedobjects>` that it is
+   :ref:`based <pointeraliasing>` on. This means that it points into that
    allocated object, or to its end. Note that the object does not have to be
    live anymore; being in-bounds of a deallocated object is sufficient.
  * During the successive addition of offsets to the address, the resulting
@@ -11729,10 +11731,6 @@ Note that ``getelementptr`` with all-zero indices is always considered to be
 ``inbounds``, even if the base pointer does not point to an allocated object.
 As a corollary, the only pointer in bounds of the null pointer in the default
 address space is the null pointer itself.
-
-These rules are based on the assumption that no allocated object may cross
-the unsigned address space boundary, and no allocated object may be larger
-than half the pointer index type space.
 
 If ``inbounds`` is present on a ``getelementptr`` instruction, the ``nusw``
 attribute will be automatically set as well. For this reason, the ``nusw``
@@ -13924,7 +13922,7 @@ Syntax:
 
       declare <pointer type>
         @llvm.experimental.gc.get.pointer.base(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -13962,7 +13960,7 @@ Syntax:
 
       declare i64
         @llvm.experimental.gc.get.pointer.offset(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -16141,6 +16139,111 @@ of the argument.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+'``llvm.sincospi.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sincospi`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, float }          @llvm.sincospi.f32(float  %Val)
+      declare { double, double }        @llvm.sincospi.f64(double %Val)
+      declare { x86_fp80, x86_fp80 }    @llvm.sincospi.f80(x86_fp80  %Val)
+      declare { fp128, fp128 }          @llvm.sincospi.f128(fp128 %Val)
+      declare { ppc_fp128, ppc_fp128 }  @llvm.sincospi.ppcf128(ppc_fp128  %Val)
+      declare { <4 x float>, <4 x float> } @llvm.sincospi.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sincospi.*``' intrinsics returns the sine and cosine of pi*operand.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+This is equivalent to the ``llvm.sincos.*`` intrinsic where the argument has been
+multiplied by pi, however, it computes the result more accurately especially
+for large input values.
+
+.. note::
+
+  Currently, the default lowering of this intrinsic relies on the ``sincospi[f|l]``
+  functions being available in the target's runtime (e.g. libc).
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.modf.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.modf`` on any floating-point
+or vector of floating-point type. However, not all targets support all types.
+
+::
+
+ declare { float, float }             @llvm.modf.f32(float  %Val)
+ declare { double, double }           @llvm.modf.f64(double %Val)
+ declare { x86_fp80, x86_fp80 }       @llvm.modf.f80(x86_fp80  %Val)
+ declare { fp128, fp128 }             @llvm.modf.f128(fp128 %Val)
+ declare { ppc_fp128, ppc_fp128 }     @llvm.modf.ppcf128(ppc_fp128  %Val)
+ declare { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.modf.*``' intrinsics return the operand's integral and fractional
+parts.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+Return the same values as a corresponding libm '``modf``' function without
+trapping or setting ``errno``.
+
+The first result is the fractional part of the operand and the second result is
+the integral part of the operand. Both results have the same sign as the operand.
+
+Not including exceptional inputs (listed below), ``llvm.modf.*`` is semantically
+equivalent to:
+
+::
+
+  %fp = frem <fptype> %x, 1.0  ; Fractional part
+  %ip = fsub <fptype> %x, %fp  ; Integral part
+
+(assuming no floating-point precision errors)
+
+If the argument is a zero, returns a zero with the same sign for both the
+fractional and integral parts.
+
+If the argument is an infinity, returns a fractional part of zero with the same
+sign, and infinity with the same sign as the integral part.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 '``llvm.pow.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16679,7 +16782,7 @@ versions of the intrinsics respect the exception behavior.
      - qNaN, invalid exception
 
    * - ``+0.0 vs -0.0``
-     - either one
+     - +0.0(max)/-0.0(min)
      - +0.0(max)/-0.0(min)
      - +0.0(max)/-0.0(min)
 
@@ -16723,21 +16826,30 @@ type.
 
 Semantics:
 """"""""""
+Follows the semantics of minNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the minNum semantics, if either operand is sNaN,
+the result is qNaN. This matches the recommended behavior for the libm
+function ``fmin``, although not all implementations have implemented these recommended behaviors.
 
-Follows the IEEE-754 semantics for minNum, except for handling of
-signaling NaNs. This match's the behavior of libm's fmin.
+If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
+NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a minnum can produce inconsistent results. For example,
+``minnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
 
-If either operand is a NaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN. If the operands compare equal,
-returns either one of the operands. For example, this means that
-fmin(+0.0, -0.0) returns either operand.
+IEEE-754-2008 defines minNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
+defines :ref:`minimumNumber <i_minimumnum>`.
 
-Unlike the IEEE-754 2008 behavior, this does not distinguish between
-signaling and quiet NaN inputs. If a target's implementation follows
-the standard and returns a quiet NaN if either input is a signaling
-NaN, the intrinsic lowering is responsible for quieting the inputs to
-correctly return the non-NaN input (e.g. by using the equivalent of
-``llvm.canonicalize``).
+If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
+and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0.0.
+
+Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
+have instructions that match these semantics exactly; thus it is quite simple for these architectures.
+Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
+which implements the semantics of C code ``a<b?a:b``: NUM vs qNaN always return qNaN. ``MINPS`` can be used
+if ``nsz`` and ``nnan`` are given.
+
+For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
+even in the same release of a single libm implemention.
 
 .. _i_maxnum:
 
@@ -16774,20 +16886,30 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE-754 semantics for maxNum except for the handling of
-signaling NaNs. This matches the behavior of libm's fmax.
+Follows the semantics of maxNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the maxNum semantics, if either operand is sNaN,
+the result is qNaN. This matches the recommended behavior for the libm
+function ``fmax``, although not all implementations have implemented these recommended behaviors.
 
-If either operand is a NaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN. If the operands compare equal,
-returns either one of the operands. For example, this means that
-fmax(+0.0, -0.0) returns either -0.0 or 0.0.
+If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
+NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a maxnum can produce inconsistent results. For example,
+``maxnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
 
-Unlike the IEEE-754 2008 behavior, this does not distinguish between
-signaling and quiet NaN inputs. If a target's implementation follows
-the standard and returns a quiet NaN if either input is a signaling
-NaN, the intrinsic lowering is responsible for quieting the inputs to
-correctly return the non-NaN input (e.g. by using the equivalent of
-``llvm.canonicalize``).
+IEEE-754-2008 defines maxNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
+defines :ref:`maximumNumber <i_maximumnum>`.
+
+If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
+and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
+
+Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
+have instructions that match these semantics exactly; thus it is quite simple for these architectures.
+Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
+which implements the semantics of C code ``a>b?a:b``: NUM vs qNaN always return qNaN. ``MAXPS`` can be used
+if ``nsz`` and ``nnan`` are given.
+
+For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
+even in the same release of a single libm implemention.
 
 .. _i_minimum:
 
@@ -19666,12 +19788,8 @@ The '``llvm.vector.reduce.fmax.*``' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
-intrinsic. That is, the result will always be a number unless all elements of
-the vector are NaN. For a vector with maximum element magnitude 0.0 and
-containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
-
-If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
-assume that NaNs are not present in the input vector.
+intrinsic.  If the intrinsic call has the ``nnan`` fast-math flag, then the
+operation can assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
@@ -19699,12 +19817,8 @@ The '``llvm.vector.reduce.fmin.*``' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison semantics as the '``llvm.minnum.*``'
-intrinsic. That is, the result will always be a number unless all elements of
-the vector are NaN. For a vector with minimum element magnitude 0.0 and
-containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
-
-If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
-assume that NaNs are not present in the input vector.
+intrinsic. If the intrinsic call has the ``nnan`` fast-math flag, then the
+operation can assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
@@ -20148,18 +20262,31 @@ Overview:
 """""""""
 
 The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
-concatenation of the two vector operands down to the number of elements dictated
-by the result type. The result type is a vector type that matches the type of the
-first operand vector.
+concatenation of the two vector arguments down to the number of elements of the
+result vector type.
 
 Arguments:
 """"""""""
 
-Both arguments must be vectors of matching element types. The first argument type must
-match the result type, while the second argument type must have a vector length that is a
-positive integer multiple of the first vector/result type. The arguments must be either be
-both fixed or both scalable vectors.
+The first argument is an integer vector with the same type as the result.
 
+The second argument is a vector with a length that is a known integer multiple
+of the result's type, while maintaining the same element type.
+
+Semantics:
+""""""""""
+
+Other than the reduction operator (e.g. add) the way in which the concatenated
+arguments is reduced is entirely unspecified. By their nature these intrinsics
+are not expected to be useful in isolation but instead implement the first phase
+of an overall reduction operation.
+
+The typical use case is loop vectorization where reductions are split into an
+in-loop phase, where maintaining an unordered vector result is important for
+performance, and an out-of-loop phase to calculate the final scalar result.
+
+By avoiding the introduction of new ordering constraints, these intrinsics
+enhance the ability to leverage a target's accumulation instructions.
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21970,7 +22097,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754 minNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754-2008 minNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -22019,7 +22146,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754 maxNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754-2008 maxNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -23318,10 +23445,7 @@ result type. If only ``nnan`` is set then the neutral value is ``-Infinity``.
 
 This instruction has the same comparison semantics as the
 :ref:`llvm.vector.reduce.fmax <int_vector_reduce_fmax>` intrinsic (and thus the
-'``llvm.maxnum.*``' intrinsic). That is, the result will always be a number
-unless all elements of the vector and the starting value are ``NaN``. For a
-vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
-``-0.0`` elements, the sign of the result is unspecified.
+'``llvm.maxnum.*``' intrinsic).
 
 To ignore the start value, the neutral value can be used.
 
@@ -23388,10 +23512,7 @@ result type. If only ``nnan`` is set then the neutral value is ``+Infinity``.
 
 This instruction has the same comparison semantics as the
 :ref:`llvm.vector.reduce.fmin <int_vector_reduce_fmin>` intrinsic (and thus the
-'``llvm.minnum.*``' intrinsic). That is, the result will always be a number
-unless all elements of the vector and the starting value are ``NaN``. For a
-vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
-``-0.0`` elements, the sign of the result is unspecified.
+'``llvm.minnum.*``' intrinsic).
 
 To ignore the start value, the neutral value can be used.
 
@@ -26210,7 +26331,7 @@ Memory Use Markers
 ------------------
 
 This class of intrinsics provides information about the
-:ref:`lifetime of memory objects <objectlifetime>` and ranges where variables
+:ref:`lifetime of allocated objects <objectlifetime>` and ranges where variables
 are immutable.
 
 .. _int_lifestart:
@@ -26223,7 +26344,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.start(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.start(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26273,13 +26394,13 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.end(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.end(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
 
-The '``llvm.lifetime.end``' intrinsic specifies the end of a memory object's
-lifetime.
+The '``llvm.lifetime.end``' intrinsic specifies the end of a
+:ref:`allocated object's lifetime<objectlifetime>`.
 
 Arguments:
 """"""""""
@@ -26309,17 +26430,18 @@ with ``poison``.
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The memory object can belong to any address space.
+This is an overloaded intrinsic. The :ref:`allocated object<allocatedobjects>`
+can belong to any address space.
 
 ::
 
-      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr nocapture <ptr>)
+      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
 
 The '``llvm.invariant.start``' intrinsic specifies that the contents of
-a memory object will not change.
+an :ref:`allocated object<allocatedobjects>` will not change.
 
 Arguments:
 """"""""""
@@ -26340,17 +26462,18 @@ unchanging.
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The memory object can belong to any address space.
+This is an overloaded intrinsic. The :ref:`allocated object<allocatedobjects>`
+can belong to any address space.
 
 ::
 
-      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
 
-The '``llvm.invariant.end``' intrinsic specifies that the contents of a
-memory object are mutable.
+The '``llvm.invariant.end``' intrinsic specifies that the contents of an
+:ref:`allocated object<allocatedobjects>` are mutable.
 
 Arguments:
 """"""""""
@@ -26370,9 +26493,9 @@ This intrinsic indicates that the memory is mutable again.
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The memory object can belong to any address
-space. The returned pointer must belong to the same address space as the
-argument.
+This is an overloaded intrinsic. The :ref:`allocated object<allocatedobjects>`
+can belong to any address space. The returned pointer must belong to the same
+address space as the argument.
 
 ::
 
@@ -26406,9 +26529,9 @@ It does not read any accessible memory and the execution can be speculated.
 
 Syntax:
 """""""
-This is an overloaded intrinsic. The memory object can belong to any address
-space. The returned pointer must belong to the same address space as the
-argument.
+This is an overloaded intrinsic. The :ref:`allocated object<allocatedobjects>`
+can belong to any address space. The returned pointer must belong to the same
+address space as the argument.
 
 ::
 
@@ -28061,7 +28184,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for maxNum.
+This function follows the IEEE-754-2008 semantics for maxNum.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
@@ -28093,7 +28216,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for minNum.
+This function follows the IEEE-754-2008 semantics for minNum.
 
 
 '``llvm.experimental.constrained.maximum``' Intrinsic

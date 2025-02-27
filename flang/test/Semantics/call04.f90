@@ -56,11 +56,11 @@ end module
 subroutine s06(x) ! C847
   use ISO_FORTRAN_ENV, only: lock_type
   !ERROR: An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE
-  type(lock_type), intent(out) :: x
+  type(lock_type), intent(out) :: x[*]
 end subroutine
 
 subroutine s07(x) ! C847
   use ISO_FORTRAN_ENV, only: event_type
   !ERROR: An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE
-  type(event_type), intent(out) :: x
+  type(event_type), intent(out) :: x[*]
 end subroutine

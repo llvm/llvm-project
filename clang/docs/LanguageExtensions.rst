@@ -434,6 +434,112 @@ __datasizeof
 ``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
 type ignoring tail padding.
 
+_BitInt, _ExtInt
+----------------
+
+Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
+and in C++. This type was previously implemented in Clang with the same
+semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
+favor of the standard type.
+
+Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
+so this type should not yet be used in interfaces that require ABI stability.
+
+C keywords supported in all language modes
+------------------------------------------
+
+Clang supports ``_Alignas``, ``_Alignof``, ``_Atomic``, ``_Complex``,
+``_Generic``, ``_Imaginary``, ``_Noreturn``, ``_Static_assert``,
+``_Thread_local``, and ``_Float16`` in all language modes with the C semantics.
+
+__alignof, __alignof__
+----------------------
+
+``__alignof`` and ``__alignof__`` return, in contrast to ``_Alignof`` and
+``alignof``, the preferred alignment of a type. This may be larger than the
+required alignment for improved performance.
+
+__extension__
+-------------
+
+``__extension__`` suppresses extension diagnostics in the statement it is
+prepended to.
+
+__auto_type
+-----------
+
+``__auto_type`` behaves the same as ``auto`` in C++11 but is available in all
+language modes.
+
+__imag, __imag__
+----------------
+
+``__imag`` and ``__imag__`` can be used to get the imaginary part of a complex
+value.
+
+__real, __real__
+----------------
+
+``__real`` and ``__real__`` can be used to get the real part of a complex value.
+
+__asm, __asm__
+--------------
+
+``__asm`` and ``__asm__`` are alternate spellings for ``asm``, but available in
+all language modes.
+
+__complex, __complex__
+----------------------
+
+``__complex`` and ``__complex__`` are alternate spellings for ``_Complex``.
+
+__const, __const__, __volatile, __volatile__, __restrict, __restrict__
+----------------------------------------------------------------------
+
+These are alternate spellings for their non-underscore counterparts, but are
+available in all langauge modes.
+
+__decltype
+----------
+
+``__decltype`` is an alternate spelling for ``decltype``, but is also available
+in C++ modes before C++11.
+
+__inline, __inline__
+--------------------
+
+``__inline`` and ``__inline__`` are alternate spellings for ``inline``, but are
+available in all language modes.
+
+__nullptr
+---------
+
+``__nullptr`` is an alternate spelling for ``nullptr``. It is available in all C and C++ language modes.
+
+__signed, __signed__
+--------------------
+
+``__signed`` and ``__signed__`` are alternate spellings for ``signed``.
+``__unsigned`` and ``__unsigned__`` are **not** supported.
+
+__typeof, __typeof__, __typeof_unqual, __typeof_unqual__
+--------------------------------------------------------
+
+``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
+available in all langauge modes. These spellings result in the operand,
+retaining all qualifiers.
+
+``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
+C23 ``typeof_unqual`` type specifier, but are available in all language modes.
+These spellings result in the type of the operand, stripping all qualifiers.
+
+__char16_t, __char32_t
+----------------------
+
+``__char16_t`` and ``__char32_t`` are alternate spellings for ``char16_t`` and
+``char32_t`` respectively, but are also available in C++ modes before C++11.
+They are only supported in C++. ``__char8_t`` is not available.
+
 ..
   FIXME: This should list all the keyword extensions
 
@@ -650,6 +756,9 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
 ``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+
+No implicit promotion of integer types takes place. The mixing of integer types
+of different sizes and signs is forbidden in binary and ternary builtins.
 
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
@@ -1531,6 +1640,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+Packs in Structured Bindings                 __cpp_structured_bindings        C++26         C++03
 Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
 Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
@@ -1694,10 +1804,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
-* ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
-  Returns true if a type is referenceable, and false otherwise. A referenceable
-  type is a type that's either an object type, a reference type, or an unqualified
-  function type.
 * ``__is_rvalue_reference`` (C++, Embarcadero)
 * ``__is_same`` (C++, Embarcadero)
 * ``__is_same_as`` (GCC): Synonym for ``__is_same``.
@@ -2524,7 +2630,7 @@ with the current table size.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   size_t getSize() {
     return __builtin_wasm_table_size(table);
@@ -2546,10 +2652,10 @@ or -1. It will return -1 if not enough space could be allocated.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   // grow returns the new table size or -1 on error.
-  int grow(__funcref fn, int delta) {
+  int grow(funcref_t fn, int delta) {
     int prevSize = __builtin_wasm_table_grow(table, fn, delta);
     if (prevSize == -1)
       return -1;
@@ -2760,6 +2866,47 @@ passing the addresses of fields in the same struct, elements of the same array,
 etc.).
 
 Query for this feature with ``__has_builtin(__builtin_assume_separate_storage)``.
+
+``__builtin_assume_dereferenceable``
+-------------------------------------
+
+``__builtin_assume_dereferenceable`` is used to provide the optimizer with the
+knowledge that the pointer argument P is dereferenceable up to at least the
+specified number of bytes.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_assume_dereferenceable(const void *, size_t)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  int foo(int *x, int y) {
+      __builtin_assume_dereferenceable(x, sizeof(int));
+      int z = 0;
+      if (y == 1) {
+        // The optimizer may execute the load of x unconditionally due to
+        // __builtin_assume_dereferenceable guaranteeing sizeof(int) bytes can
+        // be loaded speculatively without trapping.
+        z = *x;
+      }
+      return z;
+  }
+
+**Description**:
+
+The arguments to this function provide a start pointer ``P`` and a size ``S``.
+``S`` must be at least 1 and a constant. The optimizer may assume that ``S``
+bytes are dereferenceable starting at ``P``. Note that this does not necessarily
+imply that ``P`` is non-null as ``nullptr`` can be dereferenced in some cases.
+The assumption also does not imply that ``P`` is not dereferenceable past ``S``
+bytes.
+
+
+Query for this feature with ``__has_builtin(__builtin_assume_dereferenceable)``.
 
 
 ``__builtin_offsetof``
@@ -5548,7 +5695,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 
 * The pragma clang section is enabled automatically, without need of any flags.
 
-* This feature is only defined to work sensibly for ELF and Mach-O targets.
+* This feature is only defined to work sensibly for ELF, Mach-O and COFF targets.
 
 * If section name is specified through _attribute_((section("myname"))), then
   the attribute name gains precedence.
@@ -5784,17 +5931,6 @@ Examples are:
    # 1 "/usr/include/stdio.h" 1 3 // Enter a system header
    # 60 "" 2 // return to "main.c"
    # 1 "/usr/ancient/header.h" 1 4 // Enter an implicit extern "C" header
-
-Extended Integer Types
-======================
-
-Clang supports the C23 ``_BitInt(N)`` feature as an extension in older C modes
-and in C++. This type was previously implemented in Clang with the same
-semantics, but spelled ``_ExtInt(N)``. This spelling has been deprecated in
-favor of the standard type.
-
-Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
-so this type should not yet be used in interfaces that require ABI stability.
 
 Intrinsics Support within Constant Expressions
 ==============================================

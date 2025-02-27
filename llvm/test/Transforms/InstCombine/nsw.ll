@@ -415,3 +415,63 @@ define i8 @neg_nsw_mul_missing_nsw_on_mul(i8 %a1, i8 %a2, i8 %b) {
   %neg = sub nsw i8 0, %shl
   ret i8 %neg
 }
+
+; This could propagate nsw.
+
+define i16 @mul_nsw_reassoc_prop(i16 %x) {
+; CHECK-LABEL: @mul_nsw_reassoc_prop(
+; CHECK-NEXT:    [[B:%.*]] = mul nsw i16 [[X:%.*]], 6
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %a = mul nsw i16 %x, 3
+  %b = mul nsw i16 %a, 2
+  ret i16 %b
+}
+
+; This could propagate nsw.
+
+define i16 @mul_nsw_reassoc_prop_neg(i16 %x) {
+; CHECK-LABEL: @mul_nsw_reassoc_prop_neg(
+; CHECK-NEXT:    [[B:%.*]] = mul nsw i16 [[X:%.*]], -2201
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %a = mul nsw i16 %x, -71
+  %b = mul nsw i16 %a, 31
+  ret i16 %b
+}
+
+; Must not propagate nsw.
+
+define i16 @mul_nsw_reassoc_prop_no_nsw1(i16 %x) {
+; CHECK-LABEL: @mul_nsw_reassoc_prop_no_nsw1(
+; CHECK-NEXT:    [[B:%.*]] = mul i16 [[X:%.*]], 6
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %a = mul i16 %x, 3
+  %b = mul nsw i16 %a, 2
+  ret i16 %b
+}
+
+; Must not propagate nsw.
+
+define i16 @mul_nsw_reassoc_prop_no_nsw2(i16 %x) {
+; CHECK-LABEL: @mul_nsw_reassoc_prop_no_nsw2(
+; CHECK-NEXT:    [[B:%.*]] = mul i16 [[X:%.*]], 6
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %a = mul nsw i16 %x, 3
+  %b = mul i16 %a, 2
+  ret i16 %b
+}
+
+; Must not propagate nsw.
+
+define i16 @mul_nsw_reassoc_prop_overflow(i16 %x) {
+; CHECK-LABEL: @mul_nsw_reassoc_prop_overflow(
+; CHECK-NEXT:    [[B:%.*]] = mul i16 [[X:%.*]], -31777
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %a = mul nsw i16 %x, 1023
+  %b = mul nsw i16 %a, 33
+  ret i16 %b
+}

@@ -189,10 +189,7 @@ void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
   Properties.set(MachineFunctionProperties::Property::IsSSA);
   Properties.set(MachineFunctionProperties::Property::TracksLiveness);
-  if (STI->getRegisterInfo())
-    RegInfo = new (Allocator) MachineRegisterInfo(this);
-  else
-    RegInfo = nullptr;
+  RegInfo = new (Allocator) MachineRegisterInfo(this);
 
   MFInfo = nullptr;
 
@@ -833,7 +830,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
   LP.LandingPadLabel = LandingPadLabel;
 
-  const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
+  BasicBlock::const_iterator FirstI =
+      LandingPad->getBasicBlock()->getFirstNonPHIIt();
   if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
     // If there's no typeid list specified, then "cleanup" is implicit.
     // Otherwise, id 0 is reserved for the cleanup action.
@@ -966,13 +964,13 @@ void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = CSIt->second;
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = CGIt->second;
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 
@@ -990,14 +988,14 @@ void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = std::move(CSIt->second);
     CallSitesInfo.erase(CSIt);
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = std::move(CGIt->second);
     CalledGlobalsInfo.erase(CGIt);
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 
@@ -1053,7 +1051,7 @@ auto MachineFunction::salvageCopySSA(
   // Check whether this copy-like instruction has already been salvaged into
   // an operand pair.
   Register Dest;
-  if (auto CopyDstSrc = TII.isCopyInstr(MI)) {
+  if (auto CopyDstSrc = TII.isCopyLikeInstr(MI)) {
     Dest = CopyDstSrc->Destination->getReg();
   } else {
     assert(MI.isSubregToReg());
@@ -1137,7 +1135,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     CurInst = Inst.getIterator();
 
     // Any non-copy instruction is the defining instruction we're seeking.
-    if (!Inst.isCopyLike() && !TII.isCopyInstr(Inst))
+    if (!Inst.isCopyLike() && !TII.isCopyLikeInstr(Inst))
       break;
     State = GetRegAndSubreg(Inst);
   };
@@ -1311,6 +1309,10 @@ const unsigned MachineFunction::DebugOperandMemNumber = 1000000;
 //  MachineJumpTableInfo implementation
 //===----------------------------------------------------------------------===//
 
+MachineJumpTableEntry::MachineJumpTableEntry(
+    const std::vector<MachineBasicBlock *> &MBBs)
+    : MBBs(MBBs), Hotness(MachineFunctionDataHotness::Unknown) {}
+
 /// Return the size of each entry in the jump table.
 unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
   // The size of a jump table entry is 4 bytes unless the entry is just the
@@ -1358,6 +1360,17 @@ unsigned MachineJumpTableInfo::createJumpTableIndex(
   assert(!DestBBs.empty() && "Cannot create an empty jump table!");
   JumpTables.push_back(MachineJumpTableEntry(DestBBs));
   return JumpTables.size()-1;
+}
+
+bool MachineJumpTableInfo::updateJumpTableEntryHotness(
+    size_t JTI, MachineFunctionDataHotness Hotness) {
+  assert(JTI < JumpTables.size() && "Invalid JTI!");
+  // Record the largest hotness value.
+  if (Hotness <= JumpTables[JTI].Hotness)
+    return false;
+
+  JumpTables[JTI].Hotness = Hotness;
+  return true;
 }
 
 /// If Old is the target of any jump tables, update the jump tables to branch

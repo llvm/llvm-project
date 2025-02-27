@@ -194,12 +194,14 @@ public:
 // A deduction guide can be either a template or a non-template function
 // declaration. If \p TemplateParams is null, a non-template function
 // declaration will be created.
-NamedDecl *buildDeductionGuide(
-    Sema &SemaRef, TemplateDecl *OriginalTemplate,
-    TemplateParameterList *TemplateParams, CXXConstructorDecl *Ctor,
-    ExplicitSpecifier ES, TypeSourceInfo *TInfo, SourceLocation LocStart,
-    SourceLocation Loc, SourceLocation LocEnd, bool IsImplicit,
-    llvm::ArrayRef<TypedefNameDecl *> MaterializedTypedefs = {}) {
+NamedDecl *
+buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
+                    TemplateParameterList *TemplateParams,
+                    CXXConstructorDecl *Ctor, ExplicitSpecifier ES,
+                    TypeSourceInfo *TInfo, SourceLocation LocStart,
+                    SourceLocation Loc, SourceLocation LocEnd, bool IsImplicit,
+                    llvm::ArrayRef<TypedefNameDecl *> MaterializedTypedefs = {},
+                    Expr *FunctionTrailingRC = nullptr) {
   DeclContext *DC = OriginalTemplate->getDeclContext();
   auto DeductionGuideName =
       SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(
@@ -210,9 +212,9 @@ NamedDecl *buildDeductionGuide(
       TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams();
 
   // Build the implicit deduction guide template.
-  auto *Guide =
-      CXXDeductionGuideDecl::Create(SemaRef.Context, DC, LocStart, ES, Name,
-                                    TInfo->getType(), TInfo, LocEnd, Ctor);
+  auto *Guide = CXXDeductionGuideDecl::Create(
+      SemaRef.Context, DC, LocStart, ES, Name, TInfo->getType(), TInfo, LocEnd,
+      Ctor, DeductionCandidate::Normal, FunctionTrailingRC);
   Guide->setImplicit(IsImplicit);
   Guide->setParams(Params);
 
@@ -354,10 +356,11 @@ struct ConvertConstructorToDeductionGuideTransform {
     //       template arguments) of the constructor, if any.
     TemplateParameterList *TemplateParams =
         SemaRef.GetTemplateParameterList(Template);
+    SmallVector<TemplateArgument, 16> Depth1Args;
+    Expr *OuterRC = TemplateParams->getRequiresClause();
     if (FTD) {
       TemplateParameterList *InnerParams = FTD->getTemplateParameters();
       SmallVector<NamedDecl *, 16> AllParams;
-      SmallVector<TemplateArgument, 16> Depth1Args;
       AllParams.reserve(TemplateParams->size() + InnerParams->size());
       AllParams.insert(AllParams.begin(), TemplateParams->begin(),
                        TemplateParams->end());
@@ -374,8 +377,15 @@ struct ConvertConstructorToDeductionGuideTransform {
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         auto [Depth, Index] = getDepthAndIndex(Param);
+        // Depth can still be 0 if FTD belongs to an explicit class template
+        // specialization with an empty template parameter list. In that case,
+        // we don't want the NewDepth to overflow, and it should remain 0.
+        assert(Depth ||
+               cast<ClassTemplateSpecializationDecl>(FTD->getDeclContext())
+                   ->isExplicitSpecialization());
         NamedDecl *NewParam = transformTemplateParameter(
-            SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment, Depth - 1);
+            SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment,
+            Depth ? Depth - 1 : 0);
         if (!NewParam)
           return nullptr;
         // Constraints require that we substitute depth-1 arguments
@@ -390,7 +400,7 @@ struct ConvertConstructorToDeductionGuideTransform {
               /*EvaluateConstraint=*/false);
         }
 
-        assert(NewParam->getTemplateDepth() == 0 &&
+        assert(getDepthAndIndex(NewParam).first == 0 &&
                "Unexpected template parameter depth");
 
         AllParams.push_back(NewParam);
@@ -406,10 +416,11 @@ struct ConvertConstructorToDeductionGuideTransform {
         Args.addOuterRetainedLevel();
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
-        ExprResult E = SemaRef.SubstExpr(InnerRC, Args);
-        if (E.isInvalid())
+        ExprResult E =
+            SemaRef.SubstConstraintExprWithoutSatisfaction(InnerRC, Args);
+        if (!E.isUsable())
           return nullptr;
-        RequiresClause = E.getAs<Expr>();
+        RequiresClause = E.get();
       }
 
       TemplateParams = TemplateParameterList::Create(
@@ -445,10 +456,46 @@ struct ConvertConstructorToDeductionGuideTransform {
       return nullptr;
     TypeSourceInfo *NewTInfo = TLB.getTypeSourceInfo(SemaRef.Context, NewType);
 
+    // At this point, the function parameters are already 'instantiated' in the
+    // current scope. Substitute into the constructor's trailing
+    // requires-clause, if any.
+    Expr *FunctionTrailingRC = nullptr;
+    if (Expr *RC = CD->getTrailingRequiresClause()) {
+      MultiLevelTemplateArgumentList Args;
+      Args.setKind(TemplateSubstitutionKind::Rewrite);
+      Args.addOuterTemplateArguments(Depth1Args);
+      Args.addOuterRetainedLevel();
+      if (NestedPattern)
+        Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
+      ExprResult E = SemaRef.SubstConstraintExprWithoutSatisfaction(RC, Args);
+      if (!E.isUsable())
+        return nullptr;
+      FunctionTrailingRC = E.get();
+    }
+
+    // C++ [over.match.class.deduct]p1:
+    // If C is defined, for each constructor of C, a function template with
+    // the following properties:
+    // [...]
+    // - The associated constraints are the conjunction of the associated
+    // constraints of C and the associated constraints of the constructor, if
+    // any.
+    if (OuterRC) {
+      // The outer template parameters are not transformed, so their
+      // associated constraints don't need substitution.
+      if (!FunctionTrailingRC)
+        FunctionTrailingRC = OuterRC;
+      else
+        FunctionTrailingRC = BinaryOperator::Create(
+            SemaRef.Context, /*lhs=*/OuterRC, /*rhs=*/FunctionTrailingRC,
+            BO_LAnd, SemaRef.Context.BoolTy, VK_PRValue, OK_Ordinary,
+            TemplateParams->getTemplateLoc(), FPOptionsOverride());
+    }
+
     return buildDeductionGuide(
         SemaRef, Template, TemplateParams, CD, CD->getExplicitSpecifier(),
         NewTInfo, CD->getBeginLoc(), CD->getLocation(), CD->getEndLoc(),
-        /*IsImplicit=*/true, MaterializedTypedefs);
+        /*IsImplicit=*/true, MaterializedTypedefs, FunctionTrailingRC);
   }
 
   /// Build a deduction guide with the specified parameter types.
@@ -700,6 +747,28 @@ bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext *DC) {
   return false;
 }
 
+// Returns all source deduction guides associated with the declared
+// deduction guides that have the specified deduction guide name.
+llvm::DenseSet<const NamedDecl *> getSourceDeductionGuides(DeclarationName Name,
+                                                           DeclContext *DC) {
+  assert(Name.getNameKind() ==
+             DeclarationName::NameKind::CXXDeductionGuideName &&
+         "name must be a deduction guide name");
+  llvm::DenseSet<const NamedDecl *> Result;
+  for (auto *D : DC->lookup(Name)) {
+    if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      D = FTD->getTemplatedDecl();
+
+    if (const auto *GD = dyn_cast<CXXDeductionGuideDecl>(D)) {
+      assert(GD->getSourceDeductionGuide() &&
+             "deduction guide for alias template must have a source deduction "
+             "guide");
+      Result.insert(GD->getSourceDeductionGuide());
+    }
+  }
+  return Result;
+}
+
 // Build the associated constraints for the alias deduction guides.
 // C++ [over.match.class.deduct]p3.3:
 //   The associated constraints ([temp.constr.decl]) are the conjunction of the
@@ -936,8 +1005,6 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
       Template = CTSD->getSpecializedTemplate();
       AliasRhsTemplateArgs = CTSD->getTemplateArgs().asArray();
     }
-  } else {
-    assert(false && "unhandled RHS type of the alias");
   }
   return {Template, AliasRhsTemplateArgs};
 }
@@ -996,7 +1063,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
       F->getTemplateParameters()->size());
 
   // FIXME: DeduceTemplateArguments stops immediately at the first
-  // non-deducible template argument. However, this doesn't seem to casue
+  // non-deducible template argument. However, this doesn't seem to cause
   // issues for practice cases, we probably need to extend it to continue
   // performing deduction for rest of arguments to align with the C++
   // standard.
@@ -1053,6 +1120,42 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     TransformedDeducedAliasArgs[AliasTemplateParamIdx] = NewTemplateArgument;
   }
   unsigned FirstUndeducedParamIdx = FPrimeTemplateParams.size();
+
+  // To form a deduction guide f' from f, we leverage clang's instantiation
+  // mechanism, we construct a template argument list where the template
+  // arguments refer to the newly-created template parameters of f', and
+  // then apply instantiation on this template argument list to instantiate
+  // f, this ensures all template parameter occurrences are updated
+  // correctly.
+  //
+  // The template argument list is formed, in order, from
+  //   1) For the template parameters of the alias, the corresponding deduced
+  //      template arguments
+  //   2) For the non-deduced template parameters of f. the
+  //      (rebuilt) template arguments corresponding.
+  //
+  // Note: the non-deduced template arguments of `f` might refer to arguments
+  // deduced in 1), as in a type constraint.
+  MultiLevelTemplateArgumentList Args;
+  Args.setKind(TemplateSubstitutionKind::Rewrite);
+  Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
+  for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
+    const auto &D = DeduceResults[Index];
+    if (D.isNull()) {
+      // 2): Non-deduced template parameters would be substituted later.
+      continue;
+    }
+    TemplateArgumentLoc Input =
+        SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
+    TemplateArgumentLoc Output;
+    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
+      assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
+             "InstantiatedArgs must be null before setting");
+      TemplateArgsForBuildingFPrime[Index] = Output.getArgument();
+    }
+  }
+
+  // Case 2)
   //   ...followed by the template parameters of f that were not deduced
   //   (including their default template arguments)
   for (unsigned FTemplateParamIdx : NonDeducedTemplateParamsInFIndex) {
@@ -1071,43 +1174,6 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
            "The argument must be null before setting");
     TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
         Context.getInjectedTemplateArg(NewParam);
-  }
-
-  // To form a deduction guide f' from f, we leverage clang's instantiation
-  // mechanism, we construct a template argument list where the template
-  // arguments refer to the newly-created template parameters of f', and
-  // then apply instantiation on this template argument list to instantiate
-  // f, this ensures all template parameter occurrences are updated
-  // correctly.
-  //
-  // The template argument list is formed from the `DeducedArgs`, two parts:
-  //  1) appeared template parameters of alias: transfrom the deduced
-  //  template argument;
-  //  2) non-deduced template parameters of f: rebuild a
-  //  template argument;
-  //
-  // 2) has been built already (when rebuilding the new template
-  // parameters), we now perform 1).
-  MultiLevelTemplateArgumentList Args;
-  Args.setKind(TemplateSubstitutionKind::Rewrite);
-  Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
-  for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
-    const auto &D = DeduceResults[Index];
-    if (D.isNull()) {
-      // 2): Non-deduced template parameter has been built already.
-      assert(!TemplateArgsForBuildingFPrime[Index].isNull() &&
-             "template arguments for non-deduced template parameters should "
-             "be been set!");
-      continue;
-    }
-    TemplateArgumentLoc Input =
-        SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
-    TemplateArgumentLoc Output;
-    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
-      assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
-             "InstantiatedArgs must be null before setting");
-      TemplateArgsForBuildingFPrime[Index] = Output.getArgument();
-    }
   }
 
   auto *TemplateArgListForBuildingFPrime =
@@ -1136,8 +1202,12 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
         GG->getTypeSourceInfo(), AliasTemplate->getBeginLoc(),
         AliasTemplate->getLocation(), AliasTemplate->getEndLoc(),
         F->isImplicit()));
-    cast<CXXDeductionGuideDecl>(Result->getTemplatedDecl())
-        ->setDeductionCandidateKind(GG->getDeductionCandidateKind());
+    auto *DGuide = cast<CXXDeductionGuideDecl>(Result->getTemplatedDecl());
+    DGuide->setDeductionCandidateKind(GG->getDeductionCandidateKind());
+    DGuide->setSourceDeductionGuide(
+        cast<CXXDeductionGuideDecl>(F->getTemplatedDecl()));
+    DGuide->setSourceDeductionGuideKind(
+        CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
     return Result;
   }
   return nullptr;
@@ -1148,17 +1218,14 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
   if (AliasTemplate->isInvalidDecl())
     return;
   auto &Context = SemaRef.Context;
-  // FIXME: if there is an explicit deduction guide after the first use of the
-  // type alias usage, we will not cover this explicit deduction guide. fix this
-  // case.
-  if (hasDeclaredDeductionGuides(
-          Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
-          AliasTemplate->getDeclContext()))
-    return;
   auto [Template, AliasRhsTemplateArgs] =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
   if (!Template)
     return;
+  auto SourceDeductionGuides = getSourceDeductionGuides(
+      Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
+      AliasTemplate->getDeclContext());
+
   DeclarationNameInfo NameInfo(
       Context.DeclarationNames.getCXXDeductionGuideName(Template), Loc);
   LookupResult Guides(SemaRef, NameInfo, clang::Sema::LookupOrdinaryName);
@@ -1167,6 +1234,8 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 
   for (auto *G : Guides) {
     if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(G)) {
+      if (SourceDeductionGuides.contains(DG))
+        continue;
       // The deduction guide is a non-template function decl, we just clone it.
       auto *FunctionType =
           SemaRef.Context.getTrivialTypeSourceInfo(DG->getType());
@@ -1184,11 +1253,14 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
         NewParam->setScopeInfo(0, I);
         FPTL.setParam(I, NewParam);
       }
-      auto *Transformed = cast<FunctionDecl>(buildDeductionGuide(
+      auto *Transformed = cast<CXXDeductionGuideDecl>(buildDeductionGuide(
           SemaRef, AliasTemplate, /*TemplateParams=*/nullptr,
           /*Constructor=*/nullptr, DG->getExplicitSpecifier(), FunctionType,
           AliasTemplate->getBeginLoc(), AliasTemplate->getLocation(),
           AliasTemplate->getEndLoc(), DG->isImplicit()));
+      Transformed->setSourceDeductionGuide(DG);
+      Transformed->setSourceDeductionGuideKind(
+          CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
 
       // FIXME: Here the synthesized deduction guide is not a templated
       // function. Per [dcl.decl]p4, the requires-clause shall be present only
@@ -1203,9 +1275,10 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           Constraint = Conjunction.getAs<Expr>();
       }
       Transformed->setTrailingRequiresClause(Constraint);
+      continue;
     }
     FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(G);
-    if (!F)
+    if (!F || SourceDeductionGuides.contains(F->getTemplatedDecl()))
       continue;
     // The **aggregate** deduction guides are handled in a different code path
     // (DeclareAggregateDeductionGuideFromInitList), which involves the tricky

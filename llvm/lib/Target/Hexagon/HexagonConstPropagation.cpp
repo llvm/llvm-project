@@ -101,7 +101,7 @@ namespace {
 
   // Lattice cell, based on that was described in the W-Z paper on constant
   // propagation.
-  // Latice cell will be allowed to hold multiple constant values. While
+  // Lattice cell will be allowed to hold multiple constant values. While
   // multiple values would normally indicate "bottom", we can still derive
   // some useful information from them. For example, comparison X > 0
   // could be folded if all the values in the cell associated with X are
@@ -795,7 +795,7 @@ void MachineConstPropagator::visitUsesOf(unsigned Reg) {
   LLVM_DEBUG(dbgs() << "Visiting uses of " << printReg(Reg, &MCE.TRI)
                     << Cells.get(Reg) << '\n');
   for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
-    // Do not process non-executable instructions. They can become exceutable
+    // Do not process non-executable instructions. They can become executable
     // later (via a flow-edge in the work queue). In such case, the instruc-
     // tion will be visited at that time.
     if (!InstrExec.count(&MI))

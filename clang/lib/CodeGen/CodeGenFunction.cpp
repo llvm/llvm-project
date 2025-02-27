@@ -404,9 +404,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   bool HasCleanups = EHStack.stable_begin() != PrologueCleanupDepth;
-  bool HasOnlyLifetimeMarkers =
-      HasCleanups && EHStack.containsOnlyLifetimeMarkers(PrologueCleanupDepth);
-  bool EmitRetDbgLoc = !HasCleanups || HasOnlyLifetimeMarkers;
+  bool HasOnlyNoopCleanups =
+      HasCleanups && EHStack.containsOnlyNoopCleanups(PrologueCleanupDepth);
+  bool EmitRetDbgLoc = !HasCleanups || HasOnlyNoopCleanups;
 
   std::optional<ApplyDebugLocation> OAL;
   if (HasCleanups) {
@@ -550,14 +550,6 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (getContext().getTargetInfo().getTriple().isX86())
     CurFn->addFnAttr("min-legal-vector-width",
                      llvm::utostr(LargestVectorWidth));
-
-  // Add vscale_range attribute if appropriate.
-  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
-      getContext().getTargetInfo().getVScaleRange(getLangOpts());
-  if (VScaleRange) {
-    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
-        getLLVMContext(), VScaleRange->first, VScaleRange->second));
-  }
 
   // If we generated an unreachable return block, delete it now.
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty()) {
@@ -1109,6 +1101,15 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // "main" doesn't need to zero out call-used registers.
   if (FD && FD->isMain())
     Fn->removeFnAttr("zero-call-used-regs");
+
+  // Add vscale_range attribute if appropriate.
+  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
+      getContext().getTargetInfo().getVScaleRange(
+          getLangOpts(), FD ? IsArmStreamingFunction(FD, true) : false);
+  if (VScaleRange) {
+    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
+        getLLVMContext(), VScaleRange->first, VScaleRange->second));
+  }
 
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 

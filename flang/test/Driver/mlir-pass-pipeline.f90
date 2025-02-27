@@ -35,15 +35,19 @@ end program
 ! O2-NEXT: (S) {{.*}} num-dce'd
 ! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! O2-NEXT: 'fir.global' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: 'func.func' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: 'omp.declare_reduction' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: 'omp.private' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! ALL: LowerHLFIROrderedAssignments
@@ -119,6 +123,8 @@ end program
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+! O2-NEXT:  'func.func' Pipeline
+! O2-NEXT:    SetRuntimeCallAttributes
 ! ALL-NEXT: BoxedProcedurePass
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']

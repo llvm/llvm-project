@@ -145,12 +145,20 @@ public:
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
   /// or SetNoExternalVisibleDeclsForName.
+  /// \param DC The context for lookup in. \c DC should be a primary context.
+  /// \param Name The name to look for.
+  /// \param OriginalDC The original context for lookup.  \c OriginalDC can
+  /// provide more information than \c DC. e.g., The same namespace can appear
+  /// in multiple module units. So we need the \c OriginalDC to tell us what
+  /// the module the lookup come from.
+  ///
   /// \return \c true if any declarations might have been found, \c false if
   /// we definitely have no declarations with tbis name.
   ///
   /// The default implementation of this method is a no-op returning \c false.
-  virtual bool
-  FindExternalVisibleDeclsByName(const DeclContext *DC, DeclarationName Name);
+  virtual bool FindExternalVisibleDeclsByName(const DeclContext *DC,
+                                              DeclarationName Name,
+                                              const DeclContext *OriginalDC);
 
   /// Load all the external specializations for the Decl \param D if \param
   /// OnlyPartial is false. Otherwise, load all the external **partial**

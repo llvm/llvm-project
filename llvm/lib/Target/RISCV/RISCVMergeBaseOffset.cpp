@@ -434,8 +434,8 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
         // Memory constraints have two operands.
         if (NumOps != 2 || !Flags.isMemKind()) {
-          // If the register is used by something other than a memory contraint,
-          // we should not fold.
+          // If the register is used by something other than a memory
+          // constraint, we should not fold.
           for (unsigned J = 0; J < NumOps; ++J) {
             const MachineOperand &MO = UseMI.getOperand(I + 1 + J);
             if (MO.isReg() && MO.getReg() == DestReg)

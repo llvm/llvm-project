@@ -241,7 +241,7 @@ LIBC_INLINE constexpr void quick_mul_hi(cpp::array<word, N> &dst,
 }
 
 template <typename word, size_t N>
-LIBC_INLINE constexpr bool is_negative(cpp::array<word, N> &array) {
+LIBC_INLINE constexpr bool is_negative(const cpp::array<word, N> &array) {
   using signed_word = cpp::make_signed_t<word>;
   return cpp::bit_cast<signed_word>(array.back()) < 0;
 }
@@ -936,6 +936,18 @@ public:
   // Return the i-th word of the number.
   LIBC_INLINE constexpr WordType &operator[](size_t i) { return val[i]; }
 
+  // Return the i-th bit of the number.
+  LIBC_INLINE constexpr bool get_bit(size_t i) const {
+    const size_t word_index = i / WORD_SIZE;
+    return 1 & (val[word_index] >> (i % WORD_SIZE));
+  }
+
+  // Set the i-th bit of the number.
+  LIBC_INLINE constexpr void set_bit(size_t i) {
+    const size_t word_index = i / WORD_SIZE;
+    val[word_index] |= WordType(1) << (i % WORD_SIZE);
+  }
+
 private:
   LIBC_INLINE friend constexpr int cmp(const BigInt &lhs, const BigInt &rhs) {
     constexpr auto compare = [](WordType a, WordType b) {
@@ -968,7 +980,7 @@ private:
   }
 
   LIBC_INLINE constexpr void decrement() {
-    multiword::add_with_carry(val, cpp::array<WordType, 1>{1});
+    multiword::sub_with_borrow(val, cpp::array<WordType, 1>{1});
   }
 
   LIBC_INLINE constexpr void extend(size_t index, bool is_neg) {
@@ -989,12 +1001,6 @@ private:
   LIBC_INLINE constexpr void clear_msb() {
     val.back() &= mask_trailing_ones<WordType, WORD_SIZE - 1>();
   }
-
-  LIBC_INLINE constexpr void set_bit(size_t i) {
-    const size_t word_index = i / WORD_SIZE;
-    val[word_index] |= WordType(1) << (i % WORD_SIZE);
-  }
-
   LIBC_INLINE constexpr static Division divide_unsigned(const BigInt &dividend,
                                                         const BigInt &divider) {
     BigInt remainder = dividend;

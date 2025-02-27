@@ -243,6 +243,10 @@ private:
   }
   void writeDIDerivedType(const DIDerivedType *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDISubrangeType(const DISubrangeType *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DISubrangeType Nodes");
+  }
   void writeDICompositeType(const DICompositeType *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDISubroutineType(const DISubroutineType *N,
@@ -644,8 +648,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_ALIAS;
   case Attribute::NoBuiltin:
     return bitc::ATTR_KIND_NO_BUILTIN;
-  case Attribute::NoCapture:
-    return bitc::ATTR_KIND_NO_CAPTURE;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoImplicitFloat:
@@ -1390,16 +1392,16 @@ void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
 
   // TODO: Do we need to handle DIExpression here? What about cases where Count
   // isn't specified but UpperBound and such are?
-  ConstantInt *Count = N->getCount().dyn_cast<ConstantInt *>();
+  ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount());
   assert(Count && "Count is missing or not ConstantInt");
   Record.push_back(Count->getValue().getSExtValue());
 
   // TODO: Similarly, DIExpression is allowed here now
   DISubrange::BoundType LowerBound = N->getLowerBound();
-  assert((LowerBound.isNull() || LowerBound.is<ConstantInt *>()) &&
+  assert((LowerBound.isNull() || isa<ConstantInt *>(LowerBound)) &&
          "Lower bound provided but not ConstantInt");
   Record.push_back(
-      LowerBound ? rotateSign(LowerBound.get<ConstantInt *>()->getValue()) : 0);
+      LowerBound ? rotateSign(cast<ConstantInt *>(LowerBound)->getValue()) : 0);
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();

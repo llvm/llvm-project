@@ -17,6 +17,7 @@ add_llvm_unittest(JITLinkTests
     MachOLinkGraphTests.cpp
     MemoryManagerErrorTests.cpp
     StubsTests.cpp
+    X86_64Tests.cpp
   )
 
 target_link_libraries(JITLinkTests PRIVATE LLVMTestingSupport)

@@ -1860,6 +1860,33 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
       }
     }
+    // If C is not 0:
+    //   umax(nuw_shl(x, C), x + 1) -> x == 0 ? 1 : nuw_shl(x, C)
+    // If C is not 0 or 1:
+    //   umax(nuw_mul(x, C), x + 1) -> x == 0 ? 1 : nuw_mul(x, C)
+    auto foldMaxMulShift = [&](Value *A, Value *B) -> Instruction * {
+      const APInt *C;
+      Value *X;
+      if (!match(A, m_NUWShl(m_Value(X), m_APInt(C))) &&
+          !(match(A, m_NUWMul(m_Value(X), m_APInt(C))) && !C->isOne()))
+        return nullptr;
+      if (C->isZero())
+        return nullptr;
+      if (!match(B, m_OneUse(m_Add(m_Specific(X), m_One()))))
+        return nullptr;
+
+      Value *Cmp = Builder.CreateICmpEQ(X, ConstantInt::get(X->getType(), 0));
+      Value *NewSelect =
+          Builder.CreateSelect(Cmp, ConstantInt::get(X->getType(), 1), A);
+      return replaceInstUsesWith(*II, NewSelect);
+    };
+
+    if (IID == Intrinsic::umax) {
+      if (Instruction *I = foldMaxMulShift(I0, I1))
+        return I;
+      if (Instruction *I = foldMaxMulShift(I1, I0))
+        return I;
+    }
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
     [[fallthrough]];
@@ -2522,13 +2549,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         default:
           llvm_unreachable("unexpected intrinsic ID");
         }
-        Value *V = Builder.CreateBinaryIntrinsic(
-            IID, X, ConstantFP::get(Arg0->getType(), Res), II);
         // TODO: Conservatively intersecting FMF. If Res == C2, the transform
         //       was a simplification (so Arg0 and its original flags could
         //       propagate?)
-        if (auto *CI = dyn_cast<CallInst>(V))
-          CI->andIRFlags(M);
+        Value *V = Builder.CreateBinaryIntrinsic(
+            IID, X, ConstantFP::get(Arg0->getType(), Res),
+            FMFSource::intersect(II, M));
         return replaceInstUsesWith(*II, V);
       }
     }
@@ -2623,13 +2649,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fmuladd: {
     // Try to simplify the underlying FMul.
-    if (Value *V = simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
-                                    II->getFastMathFlags(),
-                                    SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, II->getArgOperand(2));
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+    if (Value *V =
+            simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
+                             II->getFastMathFlags(), SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, II->getArgOperand(2),
+                                           II->getFastMathFlags());
 
     [[fallthrough]];
   }
@@ -2656,11 +2680,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
     if (Value *V = simplifyFMAFMul(Src0, Src1, II->getFastMathFlags(),
-                                   SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, Src2);
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+                                   SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, Src2, II->getFastMathFlags());
 
     // fma x, y, 0 -> fmul x, y
     // This is always valid for -0.0, but requires nsz for +0.0 as
@@ -2731,7 +2752,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
-      if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
+      if (Arg->hasOneUse() ? (isa<Constant>(TVal) || isa<Constant>(FVal))
+                           : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
@@ -2754,8 +2776,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
       CallInst *AbsSign =
-          Builder.CreateCall(II->getCalledFunction(), {Magnitude});
-      AbsSign->copyFastMathFlags(II);
+          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -2862,16 +2883,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectLHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
         Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
       } else if (match(SelectLHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectRHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
         Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
       }
 
       if (NewLdexp) {
         Select->takeName(II);
-        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
         return replaceInstUsesWith(*II, Select);
       }
     }
@@ -3240,7 +3260,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (auto *Replacement = buildAssumeFromKnowledge(
               {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
 
-        Replacement->insertBefore(Next);
+        Replacement->insertBefore(Next->getIterator());
         AC.registerAssumption(Replacement);
         return RemoveConditionFromAssume(II);
       }
@@ -3253,12 +3273,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %D)
     // into
     // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
-    uint64_t AlignMask;
+    uint64_t AlignMask = 1;
     if (EnableKnowledgeRetention &&
-        match(IIOperand,
-              m_SpecificICmp(ICmpInst::ICMP_EQ,
-                             m_And(m_Value(A), m_ConstantInt(AlignMask)),
-                             m_Zero()))) {
+        (match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
+         match(IIOperand,
+               m_SpecificICmp(ICmpInst::ICMP_EQ,
+                              m_And(m_Value(A), m_ConstantInt(AlignMask)),
+                              m_Zero())))) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
@@ -3272,7 +3293,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           if (auto *Replacement =
                   buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
 
-            Replacement->insertAfter(II);
+            Replacement->insertAfter(II->getIterator());
             AC.registerAssumption(Replacement);
           }
           return RemoveConditionFromAssume(II);
@@ -3356,7 +3377,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         while (MoveI != NextInst) {
           auto *Temp = MoveI;
           MoveI = MoveI->getNextNonDebugInstruction();
-          Temp->moveBefore(II);
+          Temp->moveBefore(II->getIterator());
         }
         replaceOperand(*II, 0, Builder.CreateAnd(CurrCond, NextCond));
       }
@@ -3972,10 +3993,23 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   unsigned ArgNo = 0;
 
   for (Value *V : Call.args()) {
-    if (V->getType()->isPointerTy() &&
-        !Call.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        isKnownNonZero(V, getSimplifyQuery().getWithInstruction(&Call)))
-      ArgNos.push_back(ArgNo);
+    if (V->getType()->isPointerTy()) {
+      // Simplify the nonnull operand if the parameter is known to be nonnull.
+      // Otherwise, try to infer nonnull for it.
+      bool HasDereferenceable = Call.getParamDereferenceableBytes(ArgNo) > 0;
+      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) ||
+          (HasDereferenceable &&
+           !NullPointerIsDefined(Call.getFunction(),
+                                 V->getType()->getPointerAddressSpace()))) {
+        if (Value *Res = simplifyNonNullOperand(V, HasDereferenceable)) {
+          replaceOperand(Call, ArgNo, Res);
+          Changed = true;
+        }
+      } else if (isKnownNonZero(V,
+                                getSimplifyQuery().getWithInstruction(&Call))) {
+        ArgNos.push_back(ArgNo);
+      }
+    }
     ArgNo++;
   }
 
@@ -4186,13 +4220,14 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     DenseMap<Value *, unsigned> Val2Idx;
     std::vector<Value *> NewLiveGc;
     for (Value *V : Bundle->Inputs) {
-      if (Val2Idx.count(V))
+      auto [It, Inserted] = Val2Idx.try_emplace(V);
+      if (!Inserted)
         continue;
       if (LiveGcValues.count(V)) {
-        Val2Idx[V] = NewLiveGc.size();
+        It->second = NewLiveGc.size();
         NewLiveGc.push_back(V);
       } else
-        Val2Idx[V] = NumOfGCLives;
+        It->second = NumOfGCLives;
     }
     // Update all gc.relocates
     for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {

@@ -15,3 +15,10 @@ functions:
       - type: void *
       - type: size_t
       - type: unsigned int
+  - name: getentropy
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t

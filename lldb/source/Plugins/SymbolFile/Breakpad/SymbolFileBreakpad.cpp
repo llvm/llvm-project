@@ -251,11 +251,11 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
     addr_t address = record->Address + base;
     SectionSP section_sp = list->FindSectionContainingFileAddress(address);
     if (section_sp) {
-      AddressRange func_range(
-          section_sp, address - section_sp->GetFileAddress(), record->Size);
+      Address func_addr(section_sp, address - section_sp->GetFileAddress());
       // Use the CU's id because every CU has only one function inside.
-      func_sp = std::make_shared<Function>(&comp_unit, id, 0, func_name,
-                                           nullptr, AddressRanges{func_range});
+      func_sp = std::make_shared<Function>(
+          &comp_unit, id, 0, func_name, nullptr, func_addr,
+          AddressRanges{AddressRange(func_addr, record->Size)});
       comp_unit.AddFunction(func_sp);
     }
   }
@@ -837,18 +837,16 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
          "How did we create compile units without a base address?");
 
   SupportFileMap map;
-  std::vector<std::unique_ptr<LineSequence>> sequences;
-  std::unique_ptr<LineSequence> line_seq_up =
-      LineTable::CreateLineSequenceContainer();
+  std::vector<LineTable::Sequence> sequences;
+  LineTable::Sequence sequence;
   std::optional<addr_t> next_addr;
   auto finish_sequence = [&]() {
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), *next_addr, /*line=*/0, /*column=*/0,
+        sequence, *next_addr, /*line=*/0, /*column=*/0,
         /*file_idx=*/0, /*is_start_of_statement=*/false,
         /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
         /*is_epilogue_begin=*/false, /*is_terminal_entry=*/true);
-    sequences.push_back(std::move(line_seq_up));
-    line_seq_up = LineTable::CreateLineSequenceContainer();
+    sequences.push_back(std::move(sequence));
   };
 
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
@@ -870,7 +868,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
       finish_sequence();
     }
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), record->Address, record->LineNum, /*column=*/0,
+        sequence, record->Address, record->LineNum, /*column=*/0,
         map[record->FileNum], /*is_start_of_statement=*/true,
         /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
         /*is_epilogue_begin=*/false, /*is_terminal_entry=*/false);

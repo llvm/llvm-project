@@ -19,7 +19,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @induction_with_global(i32 %init, ptr noalias nocapture %A, i32 %N) {
 ; CHECK-LABEL: define void @induction_with_global(
-; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias captures(none) [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @int_inc, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -1
@@ -106,7 +106,7 @@ exit:
 
 define i32 @induction_with_loop_inv(i32 %init, ptr noalias nocapture %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: define i32 @induction_with_loop_inv(
-; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias captures(none) [[A:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP3]] to i64
@@ -418,26 +418,26 @@ define void @wide_sub_induction_step_live_in(ptr %dst, i64 %N, i16 %off) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i16 [[DOTCAST]], [[TMP0]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP0]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[O_1]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i16> [[DOTSPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP0]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT1:%.*]] = shufflevector <8 x i16> [[DOTSPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, [[DOTSPLAT1]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i16> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP0]], 8
-; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP3]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <8 x i16> [[DOTSPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[O_1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i16> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = sub <8 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <8 x i16> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    store <8 x i16> [[TMP5]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i16> [[VEC_IND]], [[DOTSPLAT2]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

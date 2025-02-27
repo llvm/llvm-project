@@ -36,15 +36,19 @@ func.func @_QQmain() {
 // PASSES-NEXT:    (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT: 'fir.global' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.declare_reduction' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.private' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT:   LowerHLFIROrderedAssignments
@@ -117,6 +121,8 @@ func.func @_QQmain() {
 // PASSES-NEXT: CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   SetRuntimeCallAttributes
 // PASSES-NEXT: BoxedProcedurePass
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']

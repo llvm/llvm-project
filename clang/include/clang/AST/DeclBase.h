@@ -492,7 +492,7 @@ public:
   /// perform non-Decl specific checks based on the object's type and strict
   /// flex array level.
   static bool isFlexibleArrayMemberLike(
-      ASTContext &Context, const Decl *D, QualType Ty,
+      const ASTContext &Context, const Decl *D, QualType Ty,
       LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution);
 
@@ -835,6 +835,10 @@ public:
   Module *getOwningModule() const {
     return isFromASTFile() ? getImportedOwningModule() : getLocalOwningModule();
   }
+
+  /// Get the top level owning named module that owns this declaration if any.
+  /// \returns nullptr if the declaration is not owned by a named module.
+  Module *getTopLevelOwningNamedModule() const;
 
   /// Get the module that owns this declaration for linkage purposes.
   /// There only ever is such a standard C++ module.
@@ -1253,8 +1257,11 @@ public:
   int64_t getID() const;
 
   /// Looks through the Decl's underlying type to extract a FunctionType
-  /// when possible. Will return null if the type underlying the Decl does not
-  /// have a FunctionType.
+  /// when possible. This includes direct FunctionDecls, along with various
+  /// function types and typedefs. This includes function pointers/references,
+  /// member function pointers, and optionally if \p BlocksToo is set
+  /// Objective-C block pointers. Returns nullptr if the type underlying the
+  /// Decl does not have a FunctionType.
   const FunctionType *getFunctionType(bool BlocksToo = true) const;
 
   // Looks through the Decl's underlying type to determine if it's a
@@ -1387,7 +1394,7 @@ public:
   const_iterator end() const { return iterator(); }
 
   bool empty() const { return Result.isNull();  }
-  bool isSingleResult() const { return Result.dyn_cast<NamedDecl*>(); }
+  bool isSingleResult() const { return isa_and_present<NamedDecl *>(Result); }
   reference front() const { return *begin(); }
 
   // Find the first declaration of the given type in the list. Note that this
@@ -1671,7 +1678,7 @@ protected:
     uint64_t HasNonTrivialToPrimitiveCopyCUnion : 1;
 
     /// True if any field is marked as requiring explicit initialization with
-    /// [[clang::requires_explicit_initialization]].
+    /// [[clang::require_explicit_initialization]].
     /// In C++, this is also set for types without a user-provided default
     /// constructor, and is propagated from any base classes and/or member
     /// variables whose types are aggregates.
@@ -1773,6 +1780,8 @@ protected:
     uint64_t HasImplicitReturnZero : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsLateTemplateParsed : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t IsInstantiatedFromMemberTemplate : 1;
 
     /// Kind of contexpr specifier as defined by ConstexprSpecKind.
     LLVM_PREFERRED_TYPE(ConstexprSpecKind)
@@ -1823,7 +1832,7 @@ protected:
   };
 
   /// Number of inherited and non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = NumDeclContextBits + 31 };
+  enum { NumFunctionDeclBits = NumDeclContextBits + 32 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1834,12 +1843,12 @@ protected:
     LLVM_PREFERRED_TYPE(FunctionDeclBitfields)
     uint64_t : NumFunctionDeclBits;
 
-    /// 20 bits to fit in the remaining available space.
+    /// 19 bits to fit in the remaining available space.
     /// Note that this makes CXXConstructorDeclBitfields take
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    uint64_t NumCtorInitializers : 17;
+    uint64_t NumCtorInitializers : 16;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsInheritingConstructor : 1;
 
@@ -1853,7 +1862,7 @@ protected:
   };
 
   /// Number of inherited and non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 20 };
+  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 19 };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor
@@ -2722,6 +2731,9 @@ public:
                    bool Deserialize = false) const;
 
 private:
+  lookup_result lookupImpl(DeclarationName Name,
+                           const DeclContext *OriginalLookupDC) const;
+
   /// Whether this declaration context has had externally visible
   /// storage added since the last lookup. In this case, \c LookupPtr's
   /// invariant may not hold and needs to be fixed before we perform

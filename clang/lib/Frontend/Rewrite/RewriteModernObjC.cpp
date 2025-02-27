@@ -3800,8 +3800,8 @@ QualType RewriteModernObjC::GetGroupRecordTypeForObjCIvarBitfield(ObjCIvarDecl *
   const ObjCInterfaceDecl *CDecl = IV->getContainingInterface();
   unsigned GroupNo = ObjCIvarBitfieldGroupNo(IV);
   std::pair<const ObjCInterfaceDecl*, unsigned> tuple = std::make_pair(CDecl, GroupNo);
-  if (GroupRecordType.count(tuple))
-    return GroupRecordType[tuple];
+  if (auto It = GroupRecordType.find(tuple); It != GroupRecordType.end())
+    return It->second;
 
   SmallVector<ObjCIvarDecl *, 8> IVars;
   for (const ObjCIvarDecl *IVD = CDecl->all_declared_ivar_begin();

@@ -55,6 +55,7 @@ public:
     target.addLegalOp<tosa::ApplyScaleOp>();
     target.addLegalOp<tosa::IfOp>();
     target.addLegalOp<tosa::ConstOp>();
+    target.addLegalOp<tosa::ConstShapeOp>();
     target.addLegalOp<tosa::WhileOp>();
     target.addLegalOp<tosa::ConcatOp>();
     target.addLegalOp<tosa::SliceOp>();
@@ -116,7 +117,8 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
         TosaValidationOptions validationOptions;
         validationOptions.profile = {"none"};
-        validationOptions.StrictOperationSpecAlignment = true;
+        validationOptions.extension = {"none"};
+        validationOptions.strictOpSpecAlignment = false;
         validationOptions.level = tosa::TosaLevelEnum::EightK;
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
                                     tosaToLinalgNamedOptions,

@@ -1256,7 +1256,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
-    if (isa<UndefValue>(II.getArgOperand(0)))
+    Value *Src = II.getArgOperand(0);
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    if (isa<UndefValue>(Src))
       return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
 
     if (isa<ConstantPointerNull>(II.getArgOperand(0)))
@@ -1346,7 +1349,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (Src1Ty->getNumElements() > Src1NumElts) {
       Src1 = IC.Builder.CreateExtractVector(
-          FixedVectorType::get(Src0Ty->getElementType(), Src1NumElts), Src1,
+          FixedVectorType::get(Src1Ty->getElementType(), Src1NumElts), Src1,
           IC.Builder.getInt64(0));
       MadeChange = true;
     }

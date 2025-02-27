@@ -63,14 +63,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK: %{{.*}} = fir.load %[[COORD]] : !fir.ref<f64>
 // CHECK: fir.result %{{.*}}, %{{.*}}
 // CHECK: }
-// CHECK  fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
+// CHECK: fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
 // CHECK: } else {
 // CHECK: %[[LOOP_RES2:.*]]:2 = fir.do_loop {{.*}}
 // CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[REBOX]], %{{.*}} : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
 // CHECK: %{{.*}}= fir.load %[[COORD2]] : !fir.ref<f64>
 // CHECK: fir.result %{{.*}}, %{{.*}}
 // CHECK: }
-// CHECK  fir.result %[[LOOP_RES2]]#0, %[[LOOP_RES2]]#1
+// CHECK: fir.result %[[LOOP_RES2]]#0, %[[LOOP_RES2]]#1
 // CHECK: }
 // CHECK: fir.store %[[IF_RES]]#1 to %{{.*}}
 // CHECK: return
@@ -378,14 +378,14 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK: %{{.*}} = fir.load %[[COORD]] : !fir.ref<f64>
 // CHECK: fir.result %{{.*}}, %{{.*}}
 // CHECK: }
-// CHECK  fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
+// CHECK: fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
 // CHECK: } else {
 // CHECK: %[[LOOP_RES2:.*]]:2 = fir.do_loop {{.*}}
 // CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[ARG0]], %{{.*}} : (!fir.box<!fir.array<?x?xf64>>, i64, i64) -> !fir.ref<f64>
 // CHECK: %{{.*}}= fir.load %[[COORD2]] : !fir.ref<f64>
 // CHECK: fir.result %{{.*}}, %{{.*}}
 // CHECK: }
-// CHECK  fir.result %[[LOOP_RES2]]#0, %[[LOOP_RES2]]#1
+// CHECK: fir.result %[[LOOP_RES2]]#0, %[[LOOP_RES2]]#1
 // CHECK: }
 // CHECK: fir.store %[[IF_RES]]#1 to %{{.*}}
 // CHECK: return
@@ -510,14 +510,14 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK: %{{.*}} = fir.load %[[COORD]] : !fir.ref<f64>
 // CHECK: fir.result %{{.*}}, %{{.*}}
 // CHECK: }
-// CHECK  fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
+// CHECK: fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
 // CHECK: } else {
 // CHECK: %[[LOOP_RES2:.*]]:2 = fir.do_loop {{.*}}
 // CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[ARG0]], %{{.*}} : (!fir.box<!fir.array<?x?x?xf64>>, i64, i64, i64) -> !fir.ref<f64>
 // CHECK: %{{.*}}= fir.load %[[COORD2]] : !fir.ref<f64>
 // CHECK: fir.result %{{.*}}, %{{.*}}
 // CHECK: }
-// CHECK  fir.result %[[LOOP_RES2]]#0, %[[LOOP_RES2]]#1
+// CHECK: fir.result %[[LOOP_RES2]]#0, %[[LOOP_RES2]]#1
 // CHECK: }
 // CHECK: fir.store %[[IF_RES]]#1 to %{{.*}}
 // CHECK: return

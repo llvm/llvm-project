@@ -415,6 +415,8 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 
   for (unsigned Idx = 0, E = I.getNumOperands() - 1; Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
+    if (isa<MetadataAsValue>(V))
+      return nullptr;
     Constant *C = findConstantFor(V);
     if (!C)
       return nullptr;

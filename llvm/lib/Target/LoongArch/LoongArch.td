@@ -135,6 +135,12 @@ def FeatureDiv32
                         "Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended">;
 def HasDiv32 : Predicate<"Subtarget->hasDiv32()">;
 
+// Support SC.Q instruction
+def FeatureSCQ
+    : SubtargetFeature<"scq", "HasSCQ", "true",
+                        "Support sc.q instruction">;
+def HasSCQ : Predicate<"Subtarget->hasSCQ()">;
+
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
@@ -180,7 +186,8 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
                                              FeatureLAM_BH,
                                              FeatureLAMCAS,
                                              FeatureLD_SEQ_SA,
-                                             FeatureDiv32]>;
+                                             FeatureDiv32,
+                                             FeatureSCQ]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.

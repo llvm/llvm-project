@@ -352,9 +352,7 @@ define void @drop_zext_nneg(ptr noalias %p, ptr noalias %p1) #0 {
 ; CHECK-LABEL: define void @drop_zext_nneg(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[P1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -372,12 +370,12 @@ define void @drop_zext_nneg(ptr noalias %p, ptr noalias %p1) #0 {
 ; CHECK-NEXT:    store double [[TMP6]], ptr [[P1]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[NEXT:%.*]], [[ELSE:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -394,7 +392,7 @@ define void @drop_zext_nneg(ptr noalias %p, ptr noalias %p1) #0 {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi double [ [[TMP9]], [[THEN]] ], [ 0.000000e+00, [[BODY]] ]
 ; CHECK-NEXT:    store double [[PHI]], ptr [[P1]], align 8
 ; CHECK-NEXT:    [[NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[NEXT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -419,7 +417,7 @@ else:
   %phi = phi double [ %1, %then ], [ 0.000000e+00, %body ]
   store double %phi, ptr %p1, align 8
   %next = add i64 %iv, 1
-  %cmp = icmp eq i64 %next, 0
+  %cmp = icmp eq i64 %next, 1024
   br i1 %cmp, label %exit, label %body
 
 exit:

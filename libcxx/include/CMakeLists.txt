@@ -256,6 +256,7 @@ set(files
   __chrono/exception.h
   __chrono/file_clock.h
   __chrono/formatter.h
+  __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
   __chrono/leap_second.h
@@ -270,11 +271,13 @@ set(files
   __chrono/steady_clock.h
   __chrono/sys_info.h
   __chrono/system_clock.h
+  __chrono/tai_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
   __chrono/time_zone_link.h
   __chrono/tzdb.h
   __chrono/tzdb_list.h
+  __chrono/utc_clock.h
   __chrono/weekday.h
   __chrono/year.h
   __chrono/year_month.h
@@ -361,8 +364,11 @@ set(files
   __filesystem/space_info.h
   __filesystem/u8path.h
   __flat_map/flat_map.h
+  __flat_map/flat_multimap.h
   __flat_map/key_value_iterator.h
+  __flat_map/sorted_equivalent.h
   __flat_map/sorted_unique.h
+  __flat_map/utils.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -507,6 +513,7 @@ set(files
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
+  __locale_dir/support/linux.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
@@ -552,12 +559,14 @@ set(files
   __memory/compressed_pair.h
   __memory/concepts.h
   __memory/construct_at.h
+  __memory/destroy.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
+  __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_count.h
