@@ -1196,11 +1196,9 @@ bool LoopInterchangeProfitability::isProfitable(
   // analysis the profitability then only, isProfitableForVectorization
   // will decide.
   //
-  // The bubble sort fashion algorithm is used to sort the loop nest and this
-  // function is utilized like the "comparison function". Once this function
-  // returns true for a loop pair A and B, it must never return true for a pair
-  // B and A. If this happens, it triggers the LoopInterchange to undo its own
-  // transformation.
+  // For a loop A and B, once isProfitable(A, B) returns true,
+  // isProfitable(B, A) must never return true. If this happens, it triggers the
+  // LoopInterchange to undo its own transformation.
   std::optional<bool> shouldInterchange =
       isProfitablePerLoopCacheAnalysis(CostMap, CC);
   if (!shouldInterchange.has_value()) {
