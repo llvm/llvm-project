@@ -139,6 +139,11 @@ CompareHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), std::move(E), "{0}");
   else if (*lhs_younger)
     return HeapCFAComparisonResult::Younger;
+  llvm::Expected<bool> lhs_older = IsReachableParent(rhs_cfa, lhs_cfa, process);
+  if (auto E = lhs_older.takeError())
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), std::move(E), "{0}");
+  else if (*lhs_older)
+    return HeapCFAComparisonResult::Older;
   return HeapCFAComparisonResult::NoOpinion;
 }
 // END SWIFT
