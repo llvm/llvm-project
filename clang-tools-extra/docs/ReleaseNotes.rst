@@ -120,6 +120,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers 
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
+  on ternary operators calling ``std::move``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
