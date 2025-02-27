@@ -251,6 +251,9 @@ v_alignbit_b32_e64_dpp v5, v1, v2, -1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_alignbit_b32_e64_dpp v255, v255, v255, src_scc dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_alignbit_b32_e64_dpp v255, v255, v255, src_scc dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x00,0x16,0xd6,0xe9,0xfe,0xf7,0x03,0xff,0x00,0x00,0x00]
 
+v_alignbit_b32_e64_dpp v5, v1, v2, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_alignbit_b32_e64_dpp v5, v1, v2, v255.h op_sel:[0,0,1,0] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x20,0x16,0xd6,0xe9,0x04,0xfe,0x07,0x01,0x77,0x39,0x05]
+
 v_alignbyte_b32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_alignbyte_b32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x17,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
 

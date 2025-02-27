@@ -703,6 +703,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     return MCDisassembler::Fail;
   } while (false);
 
+  DecodeStatus Status = MCDisassembler::Success;
+
   if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::DPP) {
     if (isMacDPP(MI))
       convertMacDPPInst(MI);
@@ -841,8 +843,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (ImmLitIdx != -1 && !IsSOPK)
     convertFMAanyK(MI, ImmLitIdx);
 
+  // Some VOPC instructions, e.g., v_cmpx_f_f64, use VOP3 encoding and
+  // have EXEC as implicit destination. Issue a warning if encoding for
+  // vdst is not EXEC.
+  if ((MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3) &&
+      MCII->get(MI.getOpcode()).hasImplicitDefOfPhysReg(AMDGPU::EXEC)) {
+    auto ExecEncoding = MRI.getEncodingValue(AMDGPU::EXEC_LO);
+    if (Bytes_[0] != ExecEncoding)
+      Status = MCDisassembler::SoftFail;
+  }
+
   Size = MaxInstBytesNum - Bytes.size();
-  return MCDisassembler::Success;
+  return Status;
 }
 
 void AMDGPUDisassembler::convertEXPInst(MCInst &MI) const {

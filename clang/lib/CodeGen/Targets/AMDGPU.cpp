@@ -603,19 +603,19 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
 
-  if (!RMW || !CGF.getTarget().allowAMDGPUUnsafeFPAtomics())
+  if (!RMW)
     return;
 
-  // TODO: Introduce new, more controlled options that also work for integers,
-  // and deprecate allowAMDGPUUnsafeFPAtomics.
-  llvm::AtomicRMWInst::BinOp RMWOp = RMW->getOperation();
-  if (llvm::AtomicRMWInst::isFPOperation(RMWOp)) {
-    llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  if (!AO.getOption(clang::AtomicOptionKind::FineGrainedMemory))
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
-
-    if (RMWOp == llvm::AtomicRMWInst::FAdd && RMW->getType()->isFloatTy())
-      RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
-  }
+  if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
+    RMW->setMetadata("amdgpu.no.remote.memory", Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
+      RMW->getType()->isFloatTy())
+    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
