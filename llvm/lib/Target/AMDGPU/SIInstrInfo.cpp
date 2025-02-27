@@ -4920,6 +4920,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       return false;
     }
 
+    for (auto Op : {AMDGPU::OpName::src0_sel, AMDGPU::OpName::src1_sel,
+                    AMDGPU::OpName::dst_sel}) {
+      const MachineOperand *MO = getNamedOperand(MI, Op);
+      if (!MO)
+        continue;
+      int64_t Imm = MO->getImm();
+      if (Imm < 0 || Imm > AMDGPU::SDWA::SdwaSel::DWORD) {
+        ErrInfo = "Invalid SDWA selection";
+        return false;
+      }
+    }
+
     int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
 
     for (int OpIdx : {DstIdx, Src0Idx, Src1Idx, Src2Idx}) {
