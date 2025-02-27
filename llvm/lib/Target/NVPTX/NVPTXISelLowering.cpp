@@ -822,7 +822,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR});
+                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -5209,6 +5209,26 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getNode(ISD::BITCAST, DL, VT, PRMT);
 }
 
+static SDValue combineADDRSPACECAST(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  auto *ASCN1 = cast<AddrSpaceCastSDNode>(N);
+
+  if (auto *ASCN2 = dyn_cast<AddrSpaceCastSDNode>(ASCN1->getOperand(0))) {
+    assert(ASCN2->getDestAddressSpace() == ASCN1->getSrcAddressSpace());
+
+    // Fold asc[B -> A](asc[A -> B](x)) -> x
+    if (ASCN1->getDestAddressSpace() == ASCN2->getSrcAddressSpace())
+      return ASCN2->getOperand(0);
+
+    // Fold asc[B -> C](asc[A -> B](x)) -> asc[A -> C](x)
+    return DCI.DAG.getAddrSpaceCast(
+        SDLoc(N), N->getValueType(0), ASCN2->getOperand(0),
+        ASCN2->getSrcAddressSpace(), ASCN1->getDestAddressSpace());
+  }
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5243,6 +5263,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformVSELECTCombine(N, DCI);
     case ISD::BUILD_VECTOR:
       return PerformBUILD_VECTORCombine(N, DCI);
+    case ISD::ADDRSPACECAST:
+      return combineADDRSPACECAST(N, DCI);
   }
   return SDValue();
 }
