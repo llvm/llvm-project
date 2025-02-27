@@ -188,7 +188,7 @@ createBufferHandleType(const HLSLBufferDecl *BufDecl) {
 // 2. default constant buffer declarations at global scope can have
 //    register(c#) annotations (translates to HLSLResourceBindingAttr with
 //    RegisterType::C)
-// It is not quaranteed that all declarations in a buffer have an annotation.
+// It is not guaranteed that all declarations in a buffer have an annotation.
 // For those where it is not specified a -1 value is added to the Layout
 // vector. In the final layout these declarations will be placed at the end
 // of the HLSL buffer after all of the elements with specified offset.
@@ -213,7 +213,7 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
           if (RBA->getRegisterType() ==
               HLSLResourceBindingAttr::RegisterType::C) {
             // size of constant buffer row is 16 bytes
-            Offset = RBA->getSlotNumber() * 16U;
+            Offset = RBA->getSlotNumber() * CGHLSLRuntime::BufferRowSizeInBytes;
           }
         }
       }

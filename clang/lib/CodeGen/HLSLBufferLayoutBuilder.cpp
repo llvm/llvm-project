@@ -196,8 +196,8 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
   unsigned ArrayCount = 1;
   unsigned ArrayStride = 0;
 
-  const unsigned BufferRowAlign = 16U;
-  unsigned NextRowOffset = llvm::alignTo(EndOffset, BufferRowAlign);
+  unsigned NextRowOffset =
+      llvm::alignTo(EndOffset, CGHLSLRuntime::BufferRowSizeInBytes);
 
   llvm::Type *ElemLayoutTy = nullptr;
   QualType FieldTy = FD->getType();
@@ -227,7 +227,7 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
           getScalarOrVectorSizeInBytes(CGM.getTypes().ConvertTypeForMem(Ty));
       ElemLayoutTy = CGM.getTypes().ConvertTypeForMem(FieldTy);
     }
-    ArrayStride = llvm::alignTo(ElemSize, BufferRowAlign);
+    ArrayStride = llvm::alignTo(ElemSize, CGHLSLRuntime::BufferRowSizeInBytes);
     ElemOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
 
   } else if (FieldTy->isStructureType()) {

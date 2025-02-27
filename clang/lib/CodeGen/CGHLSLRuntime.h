@@ -134,6 +134,8 @@ public:
     BufferResBinding(HLSLResourceBindingAttr *Attr);
   };
 
+  static const unsigned BufferRowSizeInBytes = 16U;
+
 protected:
   CodeGenModule &CGM;
 
