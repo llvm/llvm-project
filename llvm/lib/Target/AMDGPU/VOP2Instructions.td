@@ -947,10 +947,12 @@ defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isCommutable = 1
 
 // These are special and do not read the exec mask.
-let isConvergent = 1, Uses = []<Register> in {
+let isConvergent = 1, Uses = []<Register>, IsInvalidSingleUseConsumer = 1 in {
 def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE, []>;
 let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
-def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []>;
+def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []> {
+    let IsInvalidSingleUseProducer = 1;
+  }
 } // End IsNeverUniform, $vdst = $vdst_in, DisableEncoding $vdst_in
 } // End isConvergent = 1
 

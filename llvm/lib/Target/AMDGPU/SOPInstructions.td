@@ -1838,6 +1838,11 @@ let OtherPredicates = [HasExportInsts] in
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
+  def S_SINGLEUSE_VDST :
+    SOPP_Pseudo<"s_singleuse_vdst", (ins s16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = HasVGPRSingeUseHintInsts
+
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
     SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
@@ -2888,6 +2893,7 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
 }
 
 defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>;
+defm S_SINGLEUSE_VDST    : SOPP_Real_32_gfx13<0x13>;
 defm S_BARRIER_WAIT      : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP     : SOPP_Real_32_gfx13<0x2c>;
 defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx13<0x1c>;

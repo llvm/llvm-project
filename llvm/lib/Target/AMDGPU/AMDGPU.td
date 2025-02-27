@@ -1127,6 +1127,12 @@ def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
 
+def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
+  "HasVGPRSingleUseHintInsts",
+  "true",
+  "Has single-use VGPR hint instructions"
+>;
+
 def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
   "HasPseudoScalarTrans",
   "true",
@@ -2178,6 +2184,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureVNBREncoding,
    FeatureGloballyAddressableScratch,
    FeatureIndexedResources,
+   FeatureVGPRSingleUseHintInsts,
    FeatureVmemPrefInsts,
    FeatureCvtPkF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts
@@ -2923,6 +2930,9 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
+def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
+  AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;

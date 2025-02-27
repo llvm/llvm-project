@@ -420,6 +420,12 @@ struct DPMACCInstructionInfo {
   bool IsDPMACCInstruction;
 };
 
+struct SingleUseExceptionInfo {
+  uint16_t Opcode;
+  bool IsInvalidSingleUseConsumer;
+  bool IsInvalidSingleUseProducer;
+};
+
 struct FP4FP8DstByteSelInfo {
   uint16_t Opcode;
   bool HasFP8DstByteSel;
@@ -434,6 +440,8 @@ struct FP4FP8DstByteSelInfo {
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
+#define GET_SingleUseExceptionTable_DECL
+#define GET_SingleUseExceptionTable_IMPL
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
 #define GET_VOP1InfoTable_DECL
@@ -785,6 +793,16 @@ FPType getFPDstSelType(unsigned Opc) {
 bool isDPMACCInstruction(unsigned Opc) {
   const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
   return Info && Info->IsDPMACCInstruction;
+}
+
+bool isInvalidSingleUseConsumerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseConsumer;
+}
+
+bool isInvalidSingleUseProducerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseProducer;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
