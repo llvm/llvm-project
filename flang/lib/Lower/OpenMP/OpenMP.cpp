@@ -367,6 +367,9 @@ extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
           [](const parser::OpenMPAllocatorsConstruct &c) {
             return llvm::omp::OMPD_allocators;
           },
+          [](const parser::OpenMPAssumeConstruct &c) {
+            return llvm::omp::OMPD_assume;
+          },
           [](const parser::OpenMPAtomicConstruct &c) {
             return llvm::omp::OMPD_atomic;
           },
@@ -562,8 +565,11 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_distribute_parallel_do:
     case OMPD_distribute_parallel_do_simd:
-      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       cp.processNumThreads(stmtCtx, hostInfo.ops);
+      [[fallthrough]];
+    case OMPD_distribute:
+    case OMPD_distribute_simd:
+      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       break;
 
     // Cases where 'teams' clauses might be present, and target SPMD is
@@ -573,10 +579,8 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_target_teams:
       cp.processNumTeams(stmtCtx, hostInfo.ops);
-      processSingleNestedIf([](Directive nestedDir) {
-        return nestedDir == OMPD_distribute_parallel_do ||
-               nestedDir == OMPD_distribute_parallel_do_simd;
-      });
+      processSingleNestedIf(
+          [](Directive nestedDir) { return topDistributeSet.test(nestedDir); });
       break;
 
     // Cases where only 'teams' host-evaluated clauses might be present.
@@ -586,6 +590,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
+      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       cp.processNumTeams(stmtCtx, hostInfo.ops);
       break;
 
@@ -3101,6 +3106,13 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
 }
 
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDeclarativeAssumes &assumesConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+}
+
 static void genOMP(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
@@ -3443,6 +3455,14 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                           eval, source, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPAssumeConstruct &assumeConstruct) {
+  mlir::Location clauseLocation = converter.genLocation(assumeConstruct.source);
+  TODO(clauseLocation, "OpenMP ASSUME construct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

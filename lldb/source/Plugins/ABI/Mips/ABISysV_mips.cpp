@@ -954,31 +954,24 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_mips::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_mips::CreateFunctionEntryUnwindPlan() {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value
   row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  // The previous PC is in the RA
+  // The previous PC is in the RA, all other registers are the same.
   row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
-  unwind_plan.AppendRow(row);
 
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("mips at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(dwarf_r31);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("mips at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetReturnAddressRegister(dwarf_r31);
+  return plan_sp;
 }
 
-bool ABISysV_mips::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_mips::CreateDefaultUnwindPlan() {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   row->SetUnspecifiedRegistersAreUndefined(true);
@@ -986,12 +979,13 @@ bool ABISysV_mips::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
   row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("mips default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("mips default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_mips::RegisterIsVolatile(const RegisterInfo *reg_info) {

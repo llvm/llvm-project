@@ -485,10 +485,10 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
         AArch64BuildAttrs::SubsectionType::ULEB128);
     TS->emitAttribute(
         AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "", false);
+        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "");
     TS->emitAttribute(
         AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "", false);
+        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "");
   }
 
   unsigned BTIValue = (Flags & AArch64BuildAttrs::Feature_BTI_Flag) ? 1 : 0;
@@ -502,13 +502,13 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
                                 AArch64BuildAttrs::SubsectionType::ULEB128);
     TS->emitAttribute(AArch64BuildAttrs::getVendorName(
                           AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "", false);
+                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "");
     TS->emitAttribute(AArch64BuildAttrs::getVendorName(
                           AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "", false);
+                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "");
     TS->emitAttribute(AArch64BuildAttrs::getVendorName(
                           AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "", false);
+                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "");
   }
 }
 

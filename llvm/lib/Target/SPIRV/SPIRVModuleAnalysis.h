@@ -176,8 +176,9 @@ struct ModuleAnalysisInfo {
     RegisterAliasTable[MF][Reg] = AliasReg;
   }
   Register getRegisterAlias(const MachineFunction *MF, Register Reg) {
-    auto RI = RegisterAliasTable[MF].find(Reg);
-    if (RI == RegisterAliasTable[MF].end()) {
+    auto &RegTable = RegisterAliasTable[MF];
+    auto RI = RegTable.find(Reg);
+    if (RI == RegTable.end()) {
       return Register(0);
     }
     return RI->second;
@@ -196,12 +197,10 @@ struct ModuleAnalysisInfo {
   // Convert MBB's number to corresponding ID register.
   Register getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
     auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    auto It = BBNumToRegMap.find(Key);
-    if (It != BBNumToRegMap.end())
-      return It->second;
-    Register NewReg = Register::index2VirtReg(getNextID());
-    BBNumToRegMap[Key] = NewReg;
-    return NewReg;
+    auto [It, Inserted] = BBNumToRegMap.try_emplace(Key);
+    if (Inserted)
+      It->second = Register::index2VirtReg(getNextID());
+    return It->second;
   }
 };
 } // namespace SPIRV

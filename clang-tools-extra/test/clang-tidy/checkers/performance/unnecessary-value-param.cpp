@@ -332,11 +332,7 @@ void PositiveNonConstDeclaration(const ExpensiveToCopyType A) {
 
 void PositiveOnlyMessageAsReferencedInCompilationUnit(ExpensiveToCopyType A) {
   // CHECK-MESSAGES: [[@LINE-1]]:75: warning: the parameter 'A' is copied
-  // CHECK-FIXES: void PositiveOnlyMessageAsReferencedInCompilationUnit(ExpensiveToCopyType A) {
-}
-
-void ReferenceFunctionOutsideOfCallExpr() {
-  void (*ptr)(ExpensiveToCopyType) = &PositiveOnlyMessageAsReferencedInCompilationUnit;
+  // CHECK-FIXES: void PositiveOnlyMessageAsReferencedInCompilationUnit(const ExpensiveToCopyType& A) {
 }
 
 void PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType A) {

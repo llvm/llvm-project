@@ -1,6 +1,5 @@
-#include <clc/clc.h>
-#include <clc/utils.h>
+#include <clc/clcmacro.h>
+#include <clc/math/clc_nan.h>
 
-#define __OPENCL_AS_GENTYPE __CLC_XCONCAT(as_, __CLC_GENTYPE)
 #define __CLC_BODY <nan.inc>
 #include <clc/math/gentype.inc>

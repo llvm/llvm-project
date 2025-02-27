@@ -782,7 +782,7 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
     return true;
 
   // TODO: This should probably be a combine somewhere
-  // (build_vector $src0, undef)  -> copy $src0
+  // (build_vector $src0, undef) -> copy $src0
   MachineInstr *Src1Def = getDefIgnoringCopies(Src1, *MRI);
   if (Src1Def->getOpcode() == AMDGPU::G_IMPLICIT_DEF) {
     MI.setDesc(TII.get(AMDGPU::COPY));

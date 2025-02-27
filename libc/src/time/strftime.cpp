@@ -19,7 +19,6 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(size_t, strftime,
                    (char *__restrict buffer, size_t buffsz,
                     const char *__restrict format, const tm *timeptr)) {
-
   printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(&wb);
   int ret = strftime_core::strftime_main(&writer, format, timeptr);

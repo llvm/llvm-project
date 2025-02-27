@@ -117,6 +117,7 @@ clang_target_link_libraries(clangTidyBugproneModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSema
   clangTooling
   clangTransformer
   )

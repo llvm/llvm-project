@@ -124,7 +124,7 @@ jobs:
             **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
-    needs: [ stage1, stage2 ]
+    needs: [ stage2 ]
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -188,7 +188,7 @@ jobs:
             **/crash_diagnostics/*
 
   macos:
-    needs: [ stage1 ]
+    needs: [ stage3 ]
     strategy:
       fail-fast: false
       matrix:
@@ -232,7 +232,7 @@ jobs:
 
   windows:
     runs-on: windows-2022
-    needs: [ stage1 ]
+    needs: [ stage2 ]
     strategy:
       fail-fast: false
       matrix:

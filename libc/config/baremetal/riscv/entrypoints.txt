@@ -244,6 +244,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
+    libc.src.time.strftime
+    libc.src.time.strftime_l
     libc.src.time.timespec_get
 
     # internal entrypoints

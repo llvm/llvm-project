@@ -1545,24 +1545,22 @@ void HoistSpillHelper::runHoistSpills(
     for (MachineDomTreeNode *Child : (*RIt)->children()) {
       if (!SpillsInSubTreeMap.contains(Child))
         continue;
-      // The stmt "SpillsInSubTree = SpillsInSubTreeMap[*RIt].first" below
-      // should be placed before getting the begin and end iterators of
+      // The stmt:
+      // "auto &[SpillsInSubTree, SubTreeCost] = SpillsInSubTreeMap[*RIt]"
+      // below should be placed before getting the begin and end iterators of
       // SpillsInSubTreeMap[Child].first, or else the iterators may be
       // invalidated when SpillsInSubTreeMap[*RIt] is seen the first time
       // and the map grows and then the original buckets in the map are moved.
-      SmallPtrSet<MachineDomTreeNode *, 16> &SpillsInSubTree =
-          SpillsInSubTreeMap[*RIt].first;
-      BlockFrequency &SubTreeCost = SpillsInSubTreeMap[*RIt].second;
-      SubTreeCost += SpillsInSubTreeMap[Child].second;
-      auto BI = SpillsInSubTreeMap[Child].first.begin();
-      auto EI = SpillsInSubTreeMap[Child].first.end();
+      auto &[SpillsInSubTree, SubTreeCost] = SpillsInSubTreeMap[*RIt];
+      auto ChildIt = SpillsInSubTreeMap.find(Child);
+      SubTreeCost += ChildIt->second.second;
+      auto BI = ChildIt->second.first.begin();
+      auto EI = ChildIt->second.first.end();
       SpillsInSubTree.insert(BI, EI);
-      SpillsInSubTreeMap.erase(Child);
+      SpillsInSubTreeMap.erase(ChildIt);
     }
 
-    SmallPtrSet<MachineDomTreeNode *, 16> &SpillsInSubTree =
-          SpillsInSubTreeMap[*RIt].first;
-    BlockFrequency &SubTreeCost = SpillsInSubTreeMap[*RIt].second;
+    auto &[SpillsInSubTree, SubTreeCost] = SpillsInSubTreeMap[*RIt];
     // No spills in subtree, simply continue.
     if (SpillsInSubTree.empty())
       continue;

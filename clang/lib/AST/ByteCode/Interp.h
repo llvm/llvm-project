@@ -2589,7 +2589,10 @@ inline bool NarrowPtr(InterpState &S, CodePtr OpPC) {
 
 inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  S.Stk.push<Pointer>(Ptr.expand());
+  if (Ptr.isBlockPointer())
+    S.Stk.push<Pointer>(Ptr.expand());
+  else
+    S.Stk.push<Pointer>(Ptr);
   return true;
 }
 

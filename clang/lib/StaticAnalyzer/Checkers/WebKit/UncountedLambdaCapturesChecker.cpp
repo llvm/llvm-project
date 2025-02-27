@@ -61,7 +61,8 @@ public:
       }
 
       bool shouldCheckThis() {
-        auto result = !ClsType.isNull() ? isUnsafePtr(ClsType) : std::nullopt;
+        auto result =
+            !ClsType.isNull() ? isUnsafePtr(ClsType, false) : std::nullopt;
         return result && *result;
       }
 
@@ -305,7 +306,7 @@ public:
         if (ignoreParamVarDecl && isa<ParmVarDecl>(CapturedVar))
           continue;
         QualType CapturedVarQualType = CapturedVar->getType();
-        auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType(), false);
         if (IsUncountedPtr && *IsUncountedPtr)
           reportBug(C, CapturedVar, CapturedVarQualType);
       } else if (C.capturesThis() && shouldCheckThis) {

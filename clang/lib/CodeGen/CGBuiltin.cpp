@@ -3377,6 +3377,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sinh, Intrinsic::experimental_constrained_sinh));
 
+    case Builtin::BI__builtin_sincospi:
+    case Builtin::BI__builtin_sincospif:
+    case Builtin::BI__builtin_sincospil:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincospi intrinsic once one exists.
+      emitSincosBuiltin(*this, E, Intrinsic::sincospi);
+      return RValue::get(nullptr);
+
     case Builtin::BIsincos:
     case Builtin::BIsincosf:
     case Builtin::BIsincosl:
@@ -20821,6 +20829,19 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_length,
         ArrayRef<Value *>{X}, nullptr, "spv.length");
   }
+  case SPIRV::BI__builtin_spirv_reflect: {
+    Value *I = EmitScalarExpr(E->getArg(0));
+    Value *N = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "Reflect operands must have a float representation");
+    assert(E->getArg(0)->getType()->isVectorType() &&
+           E->getArg(1)->getType()->isVectorType() &&
+           "Reflect operands must be a vector");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/I->getType(), Intrinsic::spv_reflect,
+        ArrayRef<Value *>{I, N}, nullptr, "spv.reflect");
+  }
   }
   return nullptr;
 }
@@ -22503,11 +22524,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Tag = EmitScalarExpr(E->getArg(0));
     Value *Obj = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_throw);
-    return Builder.CreateCall(Callee, {Tag, Obj});
+    return EmitRuntimeCallOrInvoke(Callee, {Tag, Obj});
   }
   case WebAssembly::BI__builtin_wasm_rethrow: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_rethrow);
-    return Builder.CreateCall(Callee);
+    return EmitRuntimeCallOrInvoke(Callee);
   }
   case WebAssembly::BI__builtin_wasm_memory_atomic_wait32: {
     Value *Addr = EmitScalarExpr(E->getArg(0));

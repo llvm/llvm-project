@@ -69,8 +69,6 @@
 
 #ifdef cl_khr_fp16
 
-#if __OPENCL_VERSION__ >= 120
-
 #define HALF_DIG 3
 #define HALF_MANT_DIG 11
 #define HALF_MAX_10_EXP +4
@@ -83,6 +81,6 @@
 #define HALF_MIN 0x1.0p-14h
 #define HALF_EPSILON 0x1.0p-10h
 
-#endif
+#define M_LOG2E_H 0x1.714p+0h
 
 #endif
