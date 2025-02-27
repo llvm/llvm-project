@@ -2267,6 +2267,7 @@ size_t Process::WriteMemoryPrivate(addr_t addr, const void *buf, size_t size,
   return bytes_written;
 }
 
+#define USE_ALLOCATE_MEMORY_CACHE 1
 size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
                             Status &error) {
   if (ABISP abi_sp = GetABI())
@@ -2279,7 +2280,12 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (buf == nullptr || size == 0)
     return 0;
 
+#if defined(USE_ALLOCATE_MEMORY_CACHE)
+  if (!m_allocated_memory_cache.IsInCache(addr))
+    m_mod_id.BumpMemoryID();
+#else
   m_mod_id.BumpMemoryID();
+#endif
 
   // We need to write any data that would go where any current software traps
   // (enabled software breakpoints) any software traps (breakpoints) that we
@@ -2408,7 +2414,6 @@ Status Process::WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) {
   return error;
 }
 
-#define USE_ALLOCATE_MEMORY_CACHE 1
 addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
                                Status &error) {
   if (GetPrivateState() != eStateStopped) {
