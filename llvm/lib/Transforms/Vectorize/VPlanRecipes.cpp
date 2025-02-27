@@ -745,9 +745,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ExtractFirstActive: {
     // Calculate the cost of determining the lane index.
     auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(1)), VF);
-    IntrinsicCostAttributes Attrs(
-        Intrinsic::experimental_cttz_elts, Type::getInt64Ty(Ctx.LLVMCtx),
-        {PoisonValue::get(PredTy), ConstantInt::getTrue(Ctx.LLVMCtx)});
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
+                                  Type::getInt64Ty(Ctx.LLVMCtx),
+                                  {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
     InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
