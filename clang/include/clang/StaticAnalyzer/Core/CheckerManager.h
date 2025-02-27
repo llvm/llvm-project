@@ -614,9 +614,6 @@ public:
 //===----------------------------------------------------------------------===//
 
 private:
-  template <typename CHECKER>
-  static void destruct(void *obj) { delete static_cast<CHECKER *>(obj); }
-
   template <typename T>
   static void *getTag() { static int tag; return &tag; }
 
