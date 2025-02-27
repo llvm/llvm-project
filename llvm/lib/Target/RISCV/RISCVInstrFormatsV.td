@@ -68,7 +68,7 @@ class RVInstSetiVLi<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Defs = [VTYPE, VL];
+  let Defs = [VL, VTYPE];
 }
 
 class RVInstSetVLi<dag outs, dag ins, string opcodestr, string argstr>
@@ -84,7 +84,7 @@ class RVInstSetVLi<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Defs = [VTYPE, VL];
+  let Defs = [VL, VTYPE];
 }
 
 class RVInstSetVL<dag outs, dag ins, string opcodestr, string argstr>
@@ -101,7 +101,7 @@ class RVInstSetVL<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Defs = [VTYPE, VL];
+  let Defs = [VL, VTYPE];
 }
 
 class RVInstVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
