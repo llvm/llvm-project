@@ -1935,7 +1935,6 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
   return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     /* StoreCaptures */ true,
                                      L->getHeader()->getTerminator(), DT);
 }
 

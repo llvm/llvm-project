@@ -128,8 +128,7 @@ void RegAllocBase::allocatePhysRegs() {
       AvailablePhysReg = getErrorAssignment(*RC, MI);
 
       // Keep going after reporting the error.
-      VRM->assignVirt2Phys(VirtReg->reg(), AvailablePhysReg);
-      FailedVRegs.insert(VirtReg->reg());
+      cleanupFailedVReg(VirtReg->reg(), AvailablePhysReg, SplitVRegs);
     } else if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
 
@@ -163,38 +162,35 @@ void RegAllocBase::postOptimization() {
   DeadRemats.clear();
 }
 
-void RegAllocBase::cleanupFailedVRegs() {
-  SmallSet<Register, 8> JunkRegs;
+void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
+                                     SmallVectorImpl<Register> &SplitRegs) {
+  // We still should produce valid IR. Kill all the uses and reduce the live
+  // ranges so that we don't think it's possible to introduce kill flags later
+  // which will fail the verifier.
+  for (MachineOperand &MO : MRI->reg_operands(FailedReg)) {
+    if (MO.readsReg())
+      MO.setIsUndef(true);
+  }
 
-  for (Register FailedReg : FailedVRegs) {
-    JunkRegs.insert(FailedReg);
-
-    MCRegister PhysReg = VRM->getPhys(FailedReg);
-    LiveInterval &FailedInterval = LIS->getInterval(FailedReg);
-
-    // The liveness information for the failed register and anything interfering
-    // with the physical register we arbitrarily chose is junk and needs to be
-    // deleted.
-    for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      LiveIntervalUnion::Query &Q = Matrix->query(FailedInterval, *Units);
-      for (const LiveInterval *InterferingReg : Q.interferingVRegs())
-        JunkRegs.insert(InterferingReg->reg());
+  if (!MRI->isReserved(PhysReg)) {
+    // Physical liveness for any aliasing registers is now unreliable, so delete
+    // the uses.
+    for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
+         ++Aliases) {
+      for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
+        if (MO.readsReg()) {
+          MO.setIsUndef(true);
+          LIS->removeAllRegUnitsForPhysReg(MO.getReg());
+        }
+      }
     }
   }
 
-  // TODO: Probably need to set undef on any physreg uses not associated with
-  // a virtual register.
-  for (Register JunkReg : JunkRegs) {
-    // We still should produce valid IR. Kill all the uses and reduce the live
-    // ranges so that we don't think it's possible to introduce kill flags
-    // later which will fail the verifier.
-    for (MachineOperand &MO : MRI->reg_operands(JunkReg)) {
-      if (MO.readsReg())
-        MO.setIsUndef(true);
-    }
-
-    LIS->shrinkToUses(&LIS->getInterval(JunkReg));
-  }
+  // Directly perform the rewrite, and do not leave it to VirtRegRewriter as
+  // usual. This avoids trying to manage illegal overlapping assignments in
+  // LiveRegMatrix.
+  MRI->replaceRegWith(FailedReg, PhysReg);
+  LIS->removeInterval(FailedReg);
 }
 
 void RegAllocBase::enqueue(const LiveInterval *LI) {

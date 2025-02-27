@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -205,6 +206,109 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   SelectCode(N);
 }
 
+#define TCGEN05_LD_OPCODE(SHAPE, NUM)                                          \
+  (enablePack ? NVPTX::TCGEN05_LD_##SHAPE##_##NUM##_PACK                       \
+              : NVPTX::TCGEN05_LD_##SHAPE##_##NUM)
+
+static unsigned getTcgen05LdOpcode(unsigned IID, bool enablePack) {
+  switch (IID) {
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
+    return TCGEN05_LD_OPCODE(16x64b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+    return TCGEN05_LD_OPCODE(16x64b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+    return TCGEN05_LD_OPCODE(16x64b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+    return TCGEN05_LD_OPCODE(16x64b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+    return TCGEN05_LD_OPCODE(16x64b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+    return TCGEN05_LD_OPCODE(16x64b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+    return TCGEN05_LD_OPCODE(16x64b, x64);
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+    return TCGEN05_LD_OPCODE(16x64b, x128);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+    return TCGEN05_LD_OPCODE(16x128b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+    return TCGEN05_LD_OPCODE(16x128b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+    return TCGEN05_LD_OPCODE(16x128b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+    return TCGEN05_LD_OPCODE(16x128b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+    return TCGEN05_LD_OPCODE(16x128b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+    return TCGEN05_LD_OPCODE(16x128b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+    return TCGEN05_LD_OPCODE(16x128b, x64);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+    return TCGEN05_LD_OPCODE(16x256b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+    return TCGEN05_LD_OPCODE(16x256b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+    return TCGEN05_LD_OPCODE(16x256b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+    return TCGEN05_LD_OPCODE(16x256b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+    return TCGEN05_LD_OPCODE(16x256b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+    return TCGEN05_LD_OPCODE(16x256b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1:
+    return TCGEN05_LD_OPCODE(16x32bx2, x1);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+    return TCGEN05_LD_OPCODE(16x32bx2, x2);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+    return TCGEN05_LD_OPCODE(16x32bx2, x4);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+    return TCGEN05_LD_OPCODE(16x32bx2, x8);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+    return TCGEN05_LD_OPCODE(16x32bx2, x16);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+    return TCGEN05_LD_OPCODE(16x32bx2, x32);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+    return TCGEN05_LD_OPCODE(16x32bx2, x64);
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
+    return TCGEN05_LD_OPCODE(16x32bx2, x128);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
+    return TCGEN05_LD_OPCODE(32x32b, x1);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+    return TCGEN05_LD_OPCODE(32x32b, x2);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+    return TCGEN05_LD_OPCODE(32x32b, x4);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+    return TCGEN05_LD_OPCODE(32x32b, x8);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+    return TCGEN05_LD_OPCODE(32x32b, x16);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+    return TCGEN05_LD_OPCODE(32x32b, x32);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+    return TCGEN05_LD_OPCODE(32x32b, x64);
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+    return TCGEN05_LD_OPCODE(32x32b, x128);
+  }
+  llvm_unreachable("unhandled tcgen05.ld lowering");
+}
+
+void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
+  SDLoc DL(N);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+
+  if (hasOffset) {
+    bool enablePack = cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
+    auto OffsetNode = CurDAG->getTargetConstant(
+        cast<ConstantSDNode>(N->getOperand(3))->getZExtValue(), DL, MVT::i32);
+    ReplaceNode(N, CurDAG->getMachineNode(
+                       getTcgen05LdOpcode(IID, enablePack), DL, N->getVTList(),
+                       {N->getOperand(2), OffsetNode, N->getOperand(0)}));
+  } else {
+    bool enablePack = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+    ReplaceNode(N, CurDAG->getMachineNode(
+                       getTcgen05LdOpcode(IID, enablePack), DL, N->getVTList(),
+                       {N->getOperand(2), N->getOperand(0)}));
+  }
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   switch (IID) {
@@ -214,6 +318,51 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_p:
     return tryLDGLDU(N);
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128: {
+    SelectTcgen05Ld(N);
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
+    SelectTcgen05Ld(N, /* hasOffset */ true);
+    return true;
+  }
   }
 }
 
@@ -342,30 +491,28 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   return true;
 }
 
-static unsigned int getCodeAddrSpace(MemSDNode *N) {
-  const Value *Src = N->getMemOperand()->getValue();
-
-  if (!Src)
+static std::optional<unsigned> convertAS(unsigned AS) {
+  switch (AS) {
+  case llvm::ADDRESS_SPACE_LOCAL:
+    return NVPTX::AddressSpace::Local;
+  case llvm::ADDRESS_SPACE_GLOBAL:
+    return NVPTX::AddressSpace::Global;
+  case llvm::ADDRESS_SPACE_SHARED:
+    return NVPTX::AddressSpace::Shared;
+  case llvm::ADDRESS_SPACE_GENERIC:
     return NVPTX::AddressSpace::Generic;
-
-  if (auto *PT = dyn_cast<PointerType>(Src->getType())) {
-    switch (PT->getAddressSpace()) {
-    case llvm::ADDRESS_SPACE_LOCAL:
-      return NVPTX::AddressSpace::Local;
-    case llvm::ADDRESS_SPACE_GLOBAL:
-      return NVPTX::AddressSpace::Global;
-    case llvm::ADDRESS_SPACE_SHARED:
-      return NVPTX::AddressSpace::Shared;
-    case llvm::ADDRESS_SPACE_GENERIC:
-      return NVPTX::AddressSpace::Generic;
-    case llvm::ADDRESS_SPACE_PARAM:
-      return NVPTX::AddressSpace::Param;
-    case llvm::ADDRESS_SPACE_CONST:
-      return NVPTX::AddressSpace::Const;
-    default: break;
-    }
+  case llvm::ADDRESS_SPACE_PARAM:
+    return NVPTX::AddressSpace::Param;
+  case llvm::ADDRESS_SPACE_CONST:
+    return NVPTX::AddressSpace::Const;
+  default:
+    return std::nullopt;
   }
-  return NVPTX::AddressSpace::Generic;
+}
+
+static unsigned int getCodeAddrSpace(const MemSDNode *N) {
+  return convertAS(N->getMemOperand()->getAddrSpace())
+      .value_or(NVPTX::AddressSpace::Generic);
 }
 
 namespace {
@@ -1107,9 +1254,6 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                           std::nullopt, NVPTX::LDV_f32_v4_asi, std::nullopt);
       break;
     }
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64) {
       SelectADDRri64(Op1.getNode(), Op1, Base, Offset);
@@ -1149,10 +1293,10 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
         break;
       }
     }
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
   }
+  if (!Opcode)
+    return false;
+  Ops.append({Base, Offset, Chain});
   LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
 
   MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
@@ -1203,63 +1347,59 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   std::optional<unsigned> Opcode;
   SDLoc DL(N);
   SDNode *LD;
-  SDValue Base, Offset, Addr;
+  SDValue Base, Offset;
 
-  if (SelectDirectAddr(Op1, Addr)) {
+  if (SelectADDRsi(Op1.getNode(), Op1, Base, Offset)) {
     switch (N->getOpcode()) {
     default:
       return false;
     case ISD::LOAD:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8avar,
-          NVPTX::INT_PTX_LDG_GLOBAL_i16avar, NVPTX::INT_PTX_LDG_GLOBAL_i32avar,
-          NVPTX::INT_PTX_LDG_GLOBAL_i64avar, NVPTX::INT_PTX_LDG_GLOBAL_f32avar,
-          NVPTX::INT_PTX_LDG_GLOBAL_f64avar);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8asi,
+          NVPTX::INT_PTX_LDG_GLOBAL_i16asi, NVPTX::INT_PTX_LDG_GLOBAL_i32asi,
+          NVPTX::INT_PTX_LDG_GLOBAL_i64asi, NVPTX::INT_PTX_LDG_GLOBAL_f32asi,
+          NVPTX::INT_PTX_LDG_GLOBAL_f64asi);
       break;
     case ISD::INTRINSIC_W_CHAIN:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8avar,
-          NVPTX::INT_PTX_LDU_GLOBAL_i16avar, NVPTX::INT_PTX_LDU_GLOBAL_i32avar,
-          NVPTX::INT_PTX_LDU_GLOBAL_i64avar, NVPTX::INT_PTX_LDU_GLOBAL_f32avar,
-          NVPTX::INT_PTX_LDU_GLOBAL_f64avar);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8asi,
+          NVPTX::INT_PTX_LDU_GLOBAL_i16asi, NVPTX::INT_PTX_LDU_GLOBAL_i32asi,
+          NVPTX::INT_PTX_LDU_GLOBAL_i64asi, NVPTX::INT_PTX_LDU_GLOBAL_f32asi,
+          NVPTX::INT_PTX_LDU_GLOBAL_f64asi);
       break;
     case NVPTXISD::LoadV2:
       Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                               NVPTX::INT_PTX_LDG_G_v2i8_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2i16_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2i32_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2i64_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2f32_ELE_avar,
-                               NVPTX::INT_PTX_LDG_G_v2f64_ELE_avar);
+                               NVPTX::INT_PTX_LDG_G_v2i8_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2i16_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2i32_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2i64_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2f32_ELE_asi,
+                               NVPTX::INT_PTX_LDG_G_v2f64_ELE_asi);
       break;
     case NVPTXISD::LDUV2:
       Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy,
-                               NVPTX::INT_PTX_LDU_G_v2i8_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2i16_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2i32_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2i64_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2f32_ELE_avar,
-                               NVPTX::INT_PTX_LDU_G_v2f64_ELE_avar);
+                               NVPTX::INT_PTX_LDU_G_v2i8_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2i16_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2i32_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2i64_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2f32_ELE_asi,
+                               NVPTX::INT_PTX_LDU_G_v2f64_ELE_asi);
       break;
     case NVPTXISD::LoadV4:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_avar,
-          NVPTX::INT_PTX_LDG_G_v4i16_ELE_avar,
-          NVPTX::INT_PTX_LDG_G_v4i32_ELE_avar, std::nullopt,
-          NVPTX::INT_PTX_LDG_G_v4f32_ELE_avar, std::nullopt);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE_asi,
+          NVPTX::INT_PTX_LDG_G_v4i16_ELE_asi,
+          NVPTX::INT_PTX_LDG_G_v4i32_ELE_asi, std::nullopt,
+          NVPTX::INT_PTX_LDG_G_v4f32_ELE_asi, std::nullopt);
       break;
     case NVPTXISD::LDUV4:
       Opcode = pickOpcodeForVT(
-          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE_avar,
-          NVPTX::INT_PTX_LDU_G_v4i16_ELE_avar,
-          NVPTX::INT_PTX_LDU_G_v4i32_ELE_avar, std::nullopt,
-          NVPTX::INT_PTX_LDU_G_v4f32_ELE_avar, std::nullopt);
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE_asi,
+          NVPTX::INT_PTX_LDU_G_v4i16_ELE_asi,
+          NVPTX::INT_PTX_LDU_G_v4i32_ELE_asi, std::nullopt,
+          NVPTX::INT_PTX_LDU_G_v4f32_ELE_asi, std::nullopt);
       break;
     }
-    if (!Opcode)
-      return false;
-    SDValue Ops[] = { Addr, Chain };
-    LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
   } else {
     if (TM.is64Bit()) {
       SelectADDRri64(Op1.getNode(), Op1, Base, Offset);
@@ -1370,11 +1510,11 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
         break;
       }
     }
-    if (!Opcode)
-      return false;
-    SDValue Ops[] = {Base, Offset, Chain};
-    LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
   }
+  if (!Opcode)
+    return false;
+  SDValue Ops[] = {Base, Offset, Chain};
+  LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
 
   // For automatic generation of LDG (through SelectLoad[Vector], not the
   // intrinsics), we may have an extending load like:
@@ -1578,7 +1718,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
                           std::nullopt, NVPTX::STV_f32_v4_asi, std::nullopt);
       break;
     }
-    Ops.append({Base, Offset});
   } else {
     if (PointerSize == 64) {
       SelectADDRri64(N2.getNode(), N2, Base, Offset);
@@ -1618,12 +1757,10 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
         break;
       }
     }
-    Ops.append({Base, Offset});
   }
   if (!Opcode)
     return false;
-
-  Ops.push_back(Chain);
+  Ops.append({Base, Offset, Chain});
 
   ST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
 
@@ -2908,6 +3045,115 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
+#define TCGEN05_ST_OPCODE(SHAPE, NUM)                                          \
+  (enableUnpack ? NVPTX::TCGEN05_ST_##SHAPE##_##NUM##_UNPACK                   \
+                : NVPTX::TCGEN05_ST_##SHAPE##_##NUM)
+
+static unsigned getTcgen05StOpcode(unsigned IID, bool enableUnpack) {
+  switch (IID) {
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+    return TCGEN05_ST_OPCODE(16x64b, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+    return TCGEN05_ST_OPCODE(16x64b, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+    return TCGEN05_ST_OPCODE(16x64b, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+    return TCGEN05_ST_OPCODE(16x64b, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+    return TCGEN05_ST_OPCODE(16x64b, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+    return TCGEN05_ST_OPCODE(16x64b, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+    return TCGEN05_ST_OPCODE(16x64b, x64);
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+    return TCGEN05_ST_OPCODE(16x64b, x128);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+    return TCGEN05_ST_OPCODE(16x128b, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+    return TCGEN05_ST_OPCODE(16x128b, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+    return TCGEN05_ST_OPCODE(16x128b, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+    return TCGEN05_ST_OPCODE(16x128b, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+    return TCGEN05_ST_OPCODE(16x128b, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+    return TCGEN05_ST_OPCODE(16x128b, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+    return TCGEN05_ST_OPCODE(16x128b, x64);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+    return TCGEN05_ST_OPCODE(16x256b, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+    return TCGEN05_ST_OPCODE(16x256b, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+    return TCGEN05_ST_OPCODE(16x256b, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+    return TCGEN05_ST_OPCODE(16x256b, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+    return TCGEN05_ST_OPCODE(16x256b, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+    return TCGEN05_ST_OPCODE(16x256b, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
+    return TCGEN05_ST_OPCODE(16x32bx2, x1);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+    return TCGEN05_ST_OPCODE(16x32bx2, x2);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+    return TCGEN05_ST_OPCODE(16x32bx2, x4);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+    return TCGEN05_ST_OPCODE(16x32bx2, x8);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+    return TCGEN05_ST_OPCODE(16x32bx2, x16);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+    return TCGEN05_ST_OPCODE(16x32bx2, x32);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+    return TCGEN05_ST_OPCODE(16x32bx2, x64);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+    return TCGEN05_ST_OPCODE(16x32bx2, x128);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+    return TCGEN05_ST_OPCODE(32x32b, x1);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+    return TCGEN05_ST_OPCODE(32x32b, x2);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+    return TCGEN05_ST_OPCODE(32x32b, x4);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+    return TCGEN05_ST_OPCODE(32x32b, x8);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+    return TCGEN05_ST_OPCODE(32x32b, x16);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+    return TCGEN05_ST_OPCODE(32x32b, x32);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+    return TCGEN05_ST_OPCODE(32x32b, x64);
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+    return TCGEN05_ST_OPCODE(32x32b, x128);
+  }
+  llvm_unreachable("unhandled tcgen05.st lowering");
+}
+
+void NVPTXDAGToDAGISel::SelectTcgen05St(SDNode *N, bool hasOffset) {
+  SDLoc DL(N);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+
+  SmallVector<SDValue, 128> Operands = {
+      N->getOperand(2) // taddr
+  };
+
+  if (hasOffset)
+    Operands.push_back(CurDAG->getTargetConstant(
+        cast<ConstantSDNode>(N->getOperand(3))->getZExtValue(), DL,
+        MVT::i32)); // Offset
+
+  for (unsigned I = hasOffset ? 4 : 3; I < (N->getNumOperands() - 1); I++)
+    Operands.push_back(N->getOperand(I));
+
+  bool enableUnpack =
+      cast<ConstantSDNode>(N->getOperand(N->getNumOperands() - 1))
+          ->getZExtValue();
+
+  Operands.push_back(N->getOperand(0)); // Chain
+  ReplaceNode(N, CurDAG->getMachineNode(getTcgen05StOpcode(IID, enableUnpack),
+                                        DL, N->getVTList(), Operands));
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   using TMARedTy = llvm::nvvm::TMAReductionOp;
@@ -3064,5 +3310,50 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     SelectCpAsyncBulkTensorReduceCommon(N, CastTy(TMARedTy::XOR),
                                         /*IsIm2Col=*/true);
     return true;
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32: {
+    SelectTcgen05St(N);
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128: {
+    SelectTcgen05St(N, /*  hasOffset */ true);
+    return true;
+  }
   }
 }

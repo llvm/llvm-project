@@ -5,10 +5,10 @@
 ; still need to enqueue and allocate the newly split vregs after the
 ; failure.
 
-; The machine verifier complains about usage of register
-; which is marked as killed in previous instruction.
-; This happens due to when register allocator is out of registers
-; it takes the first avialable register.
+; The machine verifier should not complain about usage of register
+; which is marked as killed in previous instruction.  This happens due
+; to when register allocator is out of registers it takes the first
+; avialable register.
 
 ; CHECK: error: <unknown>:0:0: ran out of registers during register allocation
 define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) #0 {

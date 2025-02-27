@@ -21,6 +21,7 @@
 #  include <__chrono/day.h>
 #  include <__chrono/duration.h>
 #  include <__chrono/file_clock.h>
+#  include <__chrono/gps_clock.h>
 #  include <__chrono/hh_mm_ss.h>
 #  include <__chrono/local_info.h>
 #  include <__chrono/month.h>
@@ -235,6 +236,8 @@ _LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const 
 #      if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
   else if constexpr (__is_time_point<_Tp> && requires { requires same_as<typename _Tp::clock, chrono::tai_clock>; })
     return {"TAI", chrono::seconds{0}};
+  else if constexpr (__is_time_point<_Tp> && requires { requires same_as<typename _Tp::clock, chrono::gps_clock>; })
+    return {"GPS", chrono::seconds{0}};
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return __formatter::__convert_to_time_zone(__value.get_info());
 #      endif // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
@@ -739,6 +742,17 @@ public:
 
 template <class _Duration, __fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::tai_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__clock);
+  }
+};
+
+template <class _Duration, __fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<chrono::gps_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
 public:
   using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 

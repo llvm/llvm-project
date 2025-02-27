@@ -28,6 +28,11 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
+  clc/lib/amdgcn/SOURCES;
+  clc/lib/amdgpu/SOURCES;
+  clc/lib/clspv/SOURCES;
+  clc/lib/r600/SOURCES;
+  clc/lib/spirv/SOURCES;
 )
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
@@ -256,13 +261,6 @@ if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS
     DEPENDS ${script_loc} )
   add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
   set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-
-  add_custom_command(
-    OUTPUT clc-clspv-convert.cl
-    COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc --clspv > clc-clspv-convert.cl
-    DEPENDS ${script_loc} )
-  add_custom_target( generate-clc-clspv-convert.cl DEPENDS clc-clspv-convert.cl )
-  set_target_properties( generate-clc-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 endif()
 
 enable_testing()
@@ -312,12 +310,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   endif()
 
   set( clc_lib_files )
-
-  if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
-    set( clc_gen_files clc-clspv-convert.cl )
-  else()
-    set( clc_gen_files clc-convert.cl )
-  endif()
+  set( clc_gen_files clc-convert.cl )
 
   libclc_configure_lib_source(
     clc_lib_files
@@ -386,8 +379,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
     )
 
     if( NOT "${cpu}" STREQUAL "" )
@@ -409,6 +400,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     list( APPEND build_flags
       -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
+      # FIXME: Fix libclc to not require disabling this noisy warning
+      -Wno-bitwise-conditional-parentheses
     )
 
     add_libclc_builtin_set(
