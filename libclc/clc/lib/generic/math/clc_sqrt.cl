@@ -20,14 +20,8 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
+#include <clc/float/definitions.h>
+#include <clc/internal/clc.h>
 
-// Map the llvm sqrt intrinsic to an OpenCL function.
-#define __CLC_FUNCTION __clc_llvm_intr_sqrt
-#define __CLC_INTRINSIC "llvm.sqrt"
-#include <clc/math/unary_intrin.inc>
-#undef __CLC_FUNCTION
-#undef __CLC_INTRINSIC
-
-#define __CLC_BODY <clc_sqrt_impl.inc>
+#define __CLC_BODY <clc_sqrt.inc>
 #include <clc/math/gentype.inc>
