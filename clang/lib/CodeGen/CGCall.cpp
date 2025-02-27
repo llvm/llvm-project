@@ -5163,6 +5163,21 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       }
     }
     if (IRFunctionArgs.hasSRetArg()) {
+      // A mismatch between the allocated return value's AS and the target's
+      // chosen IndirectAS can happen e.g. when passing the this pointer through
+      // a chain involving stores to / loads from the DefaultAS; we address this
+      // here, symmetrically with the handling we have for normal pointer args.
+      if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace()) {
+        llvm::Value *V = SRetPtr.getBasePointer();
+        LangAS SAS = getLangASFromTargetAS(SRetPtr.getAddressSpace());
+        LangAS DAS = getLangASFromTargetAS(RetAI.getIndirectAddrSpace());
+        llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
+                                                RetAI.getIndirectAddrSpace());
+
+        SRetPtr = SRetPtr.withPointer(
+            getTargetHooks().performAddrSpaceCast(*this, V, SAS, DAS, Ty, true),
+            SRetPtr.isKnownNonNull());
+      }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
     } else if (RetAI.isInAlloca()) {
@@ -5394,9 +5409,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             V->getType()->isIntegerTy())
           V = Builder.CreateZExt(V, ArgInfo.getCoerceToType());
 
-        // The only plausible mismatch here would be for pointer address spaces,
-        // which can happen e.g. when passing a sret arg that is in the AllocaAS
-        // to a function that takes a pointer to and argument in the DefaultAS.
+        // The only plausible mismatch here would be for pointer address spaces.
         // We assume that the target has a reasonable mapping for the DefaultAS
         // (it can be casted to from incoming specific ASes), and insert an AS
         // cast to address the mismatch.

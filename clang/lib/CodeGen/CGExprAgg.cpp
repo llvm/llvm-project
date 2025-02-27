@@ -302,15 +302,8 @@ void AggExprEmitter::withReturnValueSlot(
   llvm::Value *LifetimeSizePtr = nullptr;
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
-    // It is possible for the existing slot we are using directly to have been
-    // allocated in the correct AS for an indirect return, and then cast to
-    // the default AS (this is the behaviour of CreateMemTemp), however we know
-    // that the return address is expected to point to the uncasted AS, hence we
-    // strip possible pointer casts here.
-    if (Dest.getAddress().isValid())
-      RetAddr = Dest.getAddress().withPointer(
-          Dest.getAddress().getBasePointer()->stripPointerCasts(),
-          Dest.getAddress().isKnownNonNull());
+    RetAddr = Dest.getAddress();
+    RawAddress RetAllocaAddr = RawAddress::invalid();
   } else {
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     llvm::TypeSize Size =
