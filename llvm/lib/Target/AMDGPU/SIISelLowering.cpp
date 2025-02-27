@@ -2568,7 +2568,7 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
           : HwregEncoding::encode(ID_WAVE_GROUP_INFO, 0, 4),
       SL, VT);
   SDNode *GetReg =
-      DAG.getMachineNode(AMDGPU::S_GETREG_B32, SL, VT, ClusterIdField);
+      DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
   SDValue ClusterId(GetReg, 0);
   SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
   SDValue One = DAG.getConstant(1, SL, VT);
@@ -9656,20 +9656,20 @@ SDValue SITargetLowering::lowerWaveIDInWavegroup(SelectionDAG &DAG,
   using namespace AMDGPU::Hwreg;
   return {
       DAG.getMachineNode(
-          AMDGPU::S_GETREG_B32, SL, MVT::i32,
+          AMDGPU::S_GETREG_B32_const, SL, MVT::i32,
           DAG.getTargetConstant(
               HwregEncoding::encode(ID_WAVE_GROUP_INFO, 16, 4), SL, MVT::i32)),
       0};
 }
 
-SDValue SITargetLowering::lowerHwRegRead(SelectionDAG &DAG, SDValue Op,
-                                         AMDGPU::Hwreg::Id HwReg,
-                                         unsigned LowBit,
-                                         unsigned Width) const {
+SDValue SITargetLowering::lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                                              AMDGPU::Hwreg::Id HwReg,
+                                              unsigned LowBit,
+                                              unsigned Width) const {
   SDLoc SL(Op);
   using namespace AMDGPU::Hwreg;
   return {DAG.getMachineNode(
-              AMDGPU::S_GETREG_B32, SL, MVT::i32,
+              AMDGPU::S_GETREG_B32_const, SL, MVT::i32,
               DAG.getTargetConstant(HwregEncoding::encode(HwReg, LowBit, Width),
                                     SL, MVT::i32)),
           0};
@@ -9923,9 +9923,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
     if (AMDGPU::isGFX13Plus(*Subtarget))
-      return lowerHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_WAVE_GROUP_INFO, 4, 4);
+      return lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_WAVE_GROUP_INFO, 4,
+                                 4);
     if (AMDGPU::isGFX1250Only(*Subtarget))
-      return lowerHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
+      return lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
     return SDValue();
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return Subtarget->hasGFX1250Insts()

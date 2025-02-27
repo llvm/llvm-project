@@ -15,21 +15,21 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %src, ptr addrspace
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[2:3], 0x0
-; CHECK-NEXT:    s_bfe_u32 s5, ttmp6, 0x4000c
-; CHECK-NEXT:    s_and_b32 s7, ttmp6, 15
-; CHECK-NEXT:    s_add_co_i32 s5, s5, 1
-; CHECK-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_mul_i32 s5, ttmp9, s5
-; CHECK-NEXT:    s_getreg_b32 s8, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x20019
-; CHECK-NEXT:    s_add_co_i32 s7, s7, s5
-; CHECK-NEXT:    s_cmp_eq_u32 s8, 0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp6, 0x4000c
+; CHECK-NEXT:    s_and_b32 s6, ttmp6, 15
+; CHECK-NEXT:    s_add_co_i32 s4, s4, 1
+; CHECK-NEXT:    s_getreg_b32 s7, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
+; CHECK-NEXT:    s_mul_i32 s4, ttmp9, s4
+; CHECK-NEXT:    s_bfe_u32 s5, ttmp8, 0x20019
+; CHECK-NEXT:    s_add_co_i32 s6, s6, s4
+; CHECK-NEXT:    s_cmp_eq_u32 s7, 0
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; CHECK-NEXT:    s_cselect_b32 s5, ttmp9, s7
-; CHECK-NEXT:    s_lshl_b32 s4, s4, 5
-; CHECK-NEXT:    s_lshl_b32 s5, s5, 7
+; CHECK-NEXT:    s_cselect_b32 s4, ttmp9, s6
+; CHECK-NEXT:    s_lshl_b32 s5, s5, 5
+; CHECK-NEXT:    s_lshl_b32 s4, s4, 7
+; CHECK-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    v_or3_b32 v0, s4, s5, v0
 ; CHECK-NEXT:    s_cmp_lg_u32 s6, 0
-; CHECK-NEXT:    v_or3_b32 v0, s5, s4, v0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %store
 ; CHECK-NEXT:    s_wait_kmcnt 0x0

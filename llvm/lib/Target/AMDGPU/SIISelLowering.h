@@ -92,8 +92,9 @@ private:
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWavegroupID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWaveIDInWavegroup(SelectionDAG &DAG, SDValue Op) const;
-  SDValue lowerHwRegRead(SelectionDAG &DAG, SDValue Op, AMDGPU::Hwreg::Id HwReg,
-                         unsigned LowBit, unsigned Width) const;
+  SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
   SDValue buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG, SDValue Op,
