@@ -859,24 +859,6 @@ static void emitSincosBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   StoreCos->setMetadata(LLVMContext::MD_noalias, AliasScopeList);
 }
 
-static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
-                                    llvm::Intrinsic::ID IntrinsicID) {
-  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Value *IntPartDest = CGF.EmitScalarExpr(E->getArg(1));
-
-  llvm::Value *Call =
-      CGF.Builder.CreateIntrinsic(IntrinsicID, {Val->getType()}, Val);
-
-  llvm::Value *FractionalResult = CGF.Builder.CreateExtractValue(Call, 0);
-  llvm::Value *IntegralResult = CGF.Builder.CreateExtractValue(Call, 1);
-
-  QualType DestPtrType = E->getArg(1)->getType()->getPointeeType();
-  LValue IntegralLV = CGF.MakeNaturalAlignAddrLValue(IntPartDest, DestPtrType);
-  CGF.EmitStoreOfScalar(IntegralResult, IntegralLV);
-
-  return FractionalResult;
-}
-
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -3395,6 +3377,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sinh, Intrinsic::experimental_constrained_sinh));
 
+    case Builtin::BI__builtin_sincospi:
+    case Builtin::BI__builtin_sincospif:
+    case Builtin::BI__builtin_sincospil:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincospi intrinsic once one exists.
+      emitSincosBuiltin(*this, E, Intrinsic::sincospi);
+      return RValue::get(nullptr);
+
     case Builtin::BIsincos:
     case Builtin::BIsincosf:
     case Builtin::BIsincosl:
@@ -4130,15 +4120,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
-  case Builtin::BImodf:
-  case Builtin::BImodff:
-  case Builtin::BImodfl:
-  case Builtin::BI__builtin_modf:
-  case Builtin::BI__builtin_modff:
-  case Builtin::BI__builtin_modfl:
-    if (Builder.getIsFPConstrained())
-      break; // TODO: Emit constrained modf intrinsic once one exists.
-    return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:
@@ -20848,6 +20829,19 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_length,
         ArrayRef<Value *>{X}, nullptr, "spv.length");
   }
+  case SPIRV::BI__builtin_spirv_reflect: {
+    Value *I = EmitScalarExpr(E->getArg(0));
+    Value *N = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "Reflect operands must have a float representation");
+    assert(E->getArg(0)->getType()->isVectorType() &&
+           E->getArg(1)->getType()->isVectorType() &&
+           "Reflect operands must be a vector");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/I->getType(), Intrinsic::spv_reflect,
+        ArrayRef<Value *>{I, N}, nullptr, "spv.reflect");
+  }
   }
   return nullptr;
 }
@@ -22530,11 +22524,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Tag = EmitScalarExpr(E->getArg(0));
     Value *Obj = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_throw);
-    return Builder.CreateCall(Callee, {Tag, Obj});
+    return EmitRuntimeCallOrInvoke(Callee, {Tag, Obj});
   }
   case WebAssembly::BI__builtin_wasm_rethrow: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_rethrow);
-    return Builder.CreateCall(Callee);
+    return EmitRuntimeCallOrInvoke(Callee);
   }
   case WebAssembly::BI__builtin_wasm_memory_atomic_wait32: {
     Value *Addr = EmitScalarExpr(E->getArg(0));

@@ -887,17 +887,18 @@ define amdgpu_kernel void @test_fmin3_olt_0_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b64 v[2:3], off, s[16:19], null scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s4, s6
-; GFX12-NEXT:    s_mov_b32 s5, s7
-; GFX12-NEXT:    s_mov_b32 s6, s10
-; GFX12-NEXT:    s_mov_b32 s7, s11
+; GFX12-NEXT:    s_mov_b32 s12, s6
+; GFX12-NEXT:    s_mov_b32 s13, s7
 ; GFX12-NEXT:    s_mov_b32 s8, s0
-; GFX12-NEXT:    buffer_load_b64 v[4:5], off, s[4:7], null scope:SCOPE_SYS
+; GFX12-NEXT:    buffer_load_b64 v[4:5], off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s9, s1
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[4:5]
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
+; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null
 ; GFX12-NEXT:    s_endpgm
   %a = load volatile double, ptr addrspace(1) %aptr, align 4
@@ -1062,17 +1063,18 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b64 v[2:3], off, s[16:19], null scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s4, s6
-; GFX12-NEXT:    s_mov_b32 s5, s7
-; GFX12-NEXT:    s_mov_b32 s6, s10
-; GFX12-NEXT:    s_mov_b32 s7, s11
+; GFX12-NEXT:    s_mov_b32 s12, s6
+; GFX12-NEXT:    s_mov_b32 s13, s7
 ; GFX12-NEXT:    s_mov_b32 s8, s0
-; GFX12-NEXT:    buffer_load_b64 v[4:5], off, s[4:7], null scope:SCOPE_SYS
+; GFX12-NEXT:    buffer_load_b64 v[4:5], off, s[12:15], null scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s9, s1
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[4:5], v[0:1]
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
+; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX12-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null
 ; GFX12-NEXT:    s_endpgm
   %a = load volatile double, ptr addrspace(1) %aptr, align 4

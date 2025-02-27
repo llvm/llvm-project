@@ -161,30 +161,36 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
 Scheduler::BndlSchedState
 Scheduler::getBndlSchedState(ArrayRef<Instruction *> Instrs) const {
   assert(!Instrs.empty() && "Expected non-empty bundle");
-  bool PartiallyScheduled = false;
-  bool FullyScheduled = true;
-  for (auto *I : Instrs) {
+  auto *N0 = DAG.getNode(Instrs[0]);
+  auto *SB0 = N0 != nullptr ? N0->getSchedBundle() : nullptr;
+  bool AllUnscheduled = SB0 == nullptr;
+  bool FullyScheduled = SB0 != nullptr && !SB0->isSingleton();
+  for (auto *I : drop_begin(Instrs)) {
     auto *N = DAG.getNode(I);
-    if (N != nullptr && N->scheduled())
-      PartiallyScheduled = true;
-    else
+    auto *SB = N != nullptr ? N->getSchedBundle() : nullptr;
+    if (SB != nullptr) {
+      // We found a scheduled instr, so there is now way all are unscheduled.
+      AllUnscheduled = false;
+      if (SB->isSingleton()) {
+        // We found an instruction in a temporarily scheduled singleton. There
+        // is no way that all instructions are scheduled in the same bundle.
+        FullyScheduled = false;
+      }
+    }
+
+    if (SB != SB0) {
+      // Either one of SB, SB0 is null, or they are in different bundles, so
+      // Instrs are definitely not in the same vector bundle.
       FullyScheduled = false;
+      // One of SB, SB0 are in a vector bundle and they differ.
+      if ((SB != nullptr && !SB->isSingleton()) ||
+          (SB0 != nullptr && !SB0->isSingleton()))
+        return BndlSchedState::AlreadyScheduled;
+    }
   }
-  if (FullyScheduled) {
-    // If not all instrs in the bundle are in the same SchedBundle then this
-    // should be considered as partially-scheduled, because we will need to
-    // re-schedule.
-    SchedBundle *SB = DAG.getNode(Instrs[0])->getSchedBundle();
-    assert(SB != nullptr && "FullyScheduled assumes that there is an SB!");
-    if (any_of(drop_begin(Instrs), [this, SB](sandboxir::Value *SBV) {
-          return DAG.getNode(cast<sandboxir::Instruction>(SBV))
-                     ->getSchedBundle() != SB;
-        }))
-      FullyScheduled = false;
-  }
-  return FullyScheduled       ? BndlSchedState::FullyScheduled
-         : PartiallyScheduled ? BndlSchedState::PartiallyOrDifferentlyScheduled
-                              : BndlSchedState::NoneScheduled;
+  return AllUnscheduled   ? BndlSchedState::NoneScheduled
+         : FullyScheduled ? BndlSchedState::FullyScheduled
+                          : BndlSchedState::TemporarilyScheduled;
 }
 
 void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
@@ -203,13 +209,14 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   //
   Instruction *TopI = &*ScheduleTopItOpt.value();
   Instruction *LowestI = VecUtils::getLowest(Instrs);
-  // Destroy the schedule bundles from LowestI all the way to the top.
+  // Destroy the singleton schedule bundles from LowestI all the way to the top.
   for (auto *I = LowestI, *E = TopI->getPrevNode(); I != E;
        I = I->getPrevNode()) {
     auto *N = DAG.getNode(I);
     if (N == nullptr)
       continue;
-    if (auto *SB = N->getSchedBundle())
+    auto *SB = N->getSchedBundle();
+    if (SB->isSingleton())
       eraseBundle(SB);
   }
   // The DAG Nodes contain state like the number of UnscheduledSuccs and the
@@ -259,7 +266,12 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
   case BndlSchedState::FullyScheduled:
     // Nothing to do.
     return true;
-  case BndlSchedState::PartiallyOrDifferentlyScheduled:
+  case BndlSchedState::AlreadyScheduled:
+    // Instructions are part of a different vector schedule, so we can't
+    // schedule \p Instrs in the same bundle (without destroying the existing
+    // schedule).
+    return false;
+  case BndlSchedState::TemporarilyScheduled:
     // If one or more instrs are already scheduled we need to destroy the
     // top-most part of the schedule that includes the instrs in the bundle and
     // re-schedule.

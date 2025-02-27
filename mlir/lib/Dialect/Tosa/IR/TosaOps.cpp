@@ -42,7 +42,10 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc"
+#include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
+#include "mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc"
 
 namespace {
 #include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
@@ -212,6 +215,28 @@ void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
 }
 
 //===----------------------------------------------------------------------===//
+// Tosa utilities.
+//===----------------------------------------------------------------------===//
+
+std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
+  if (lhs % rhs != 0)
+    return std::nullopt;
+  return lhs / rhs;
+}
+
+//===----------------------------------------------------------------------===//
+// Tosa utilities.
+//===----------------------------------------------------------------------===//
+
+static Type getStorageElementTypeOrSelf(Type type) {
+  auto elementType = getElementTypeOrSelf(type);
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(elementType))
+    elementType = quantType.getStorageType();
+
+  return elementType;
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
@@ -242,6 +267,9 @@ static LogicalResult verifyConvOp(T op) {
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = quantType.getStorageType();
+
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(weightEType))
+    weightEType = quantType.getStorageType();
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(biasEType))
     biasEType = quantType.getStorageType();
@@ -279,37 +307,31 @@ static LogicalResult verifyConvOp(T op) {
     return failure();
   }
 
-  // We require an explicit input zero point and weight zero point for i8
-  // convolution.
-  if (!op.getInputZp() && !op.getWeightZp())
-    return inputEType.isInteger(8) ? failure() : success();
-
-  ElementsAttr inputZpAttr;
-  ElementsAttr weightZpAttr;
-  if (!matchPattern(op.getInputZp(), m_Constant(&inputZpAttr)) ||
-      !matchPattern(op.getWeightZp(), m_Constant(&weightZpAttr))) {
-    op.emitOpError(
-        "bail out if the actual value of zero points cannot be determined");
-    return failure();
+  auto inputZpEType = getStorageElementTypeOrSelf(op.getInputZp().getType());
+  if (inputEType != inputZpEType) {
+    return op.emitOpError("expect both input and its zero point are the same "
+                          "element type, got ")
+           << inputEType << " and " << inputZpEType;
   }
 
-  // Get and verify explicit zero points.
+  auto weightZpEType = getStorageElementTypeOrSelf(op.getWeightZp().getType());
+  if (weightEType != weightZpEType) {
+    return op.emitOpError("expect both weight and its zero point are the same "
+                          "element type, got ")
+           << weightEType << " and " << weightZpEType;
+  }
+
   int64_t inputZpVal;
+  if (op.getInputZeroPoint(inputZpVal).succeeded() &&
+      op.verifyInputZeroPoint(inputZpVal).failed())
+    return op.emitOpError(
+        "input zero point must be zero for non-int8 integer types");
+
   int64_t weightZpVal;
-
-  if (tosa::getZeroPoint(inputZpAttr, inputZpVal).failed() ||
-      tosa::verifyZeroPoint<T>(getElementTypeOrSelf(inputZpAttr), inputZpVal)
-          .failed()) {
-    op.emitOpError("input zero point must be zero for non-int8 integer types");
-    return failure();
-  }
-
-  if (tosa::getZeroPoint(weightZpAttr, weightZpVal).failed() ||
-      tosa::verifyZeroPoint<T>(getElementTypeOrSelf(weightZpAttr), weightZpVal)
-          .failed()) {
-    op.emitOpError("weight zero point must be zero for non-int8 integer types");
-    return failure();
-  }
+  if (op.getWeightZeroPoint(weightZpVal).succeeded() &&
+      op.verifyWeightZeroPoint(weightZpVal).failed())
+    return op.emitOpError(
+        "weight zero point must be zero for non-int8 integer types");
 
   return success();
 }
@@ -1371,54 +1393,110 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
   return mlir::success();
 }
 
-LogicalResult tosa::TransposeOp::getConstantPerms(SmallVector<int32_t> &perms) {
-  // Perms must be constants.
-  DenseIntElementsAttr permsAttr;
-  if (!matchPattern(getPerms(), m_Constant(&permsAttr)))
+template <typename T>
+static LogicalResult getZeroPoint(T op, Value val, int64_t &zp) {
+  ElementsAttr zpAttr;
+  if (!matchPattern(val, m_Constant(&zpAttr))) {
+    return failure();
+  }
+
+  Type zpElemType = zpAttr.getElementType();
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(zpElemType)) {
+    zp = quantType.getZeroPoint();
+    return success();
+  }
+
+  if (llvm::isa<FloatType>(zpElemType)) {
+    if (!zpAttr.getValues<APFloat>()[0].isZero())
+      return op.emitOpError(
+          "non-zero zero point is not allowed for float types");
+    zp = 0;
+    return success();
+  }
+
+  if (llvm::isa<IntegerType>(zpElemType)) {
+    zp = zpAttr.getValues<APInt>()[0].getSExtValue();
+    return success();
+  }
+
+  return op.emitOpError("zero point is not allowed for unsupported types");
+}
+
+template <typename T>
+static LogicalResult verifyZeroPoint(T op, Value val, int64_t &zp) {
+  // TODO clean it up when the entire zero point (attribute -> input tensor
+  // type) change is done. Remaining Matmul, Rescale, Negate, and AvgPool2D.
+  if constexpr (!std::is_same_v<T, Conv2DOp> && !std::is_same_v<T, Conv3DOp> &&
+                !std::is_same_v<T, DepthwiseConv2DOp> &&
+                !std::is_same_v<T, TransposeConv2DOp>)
     return failure();
 
-  perms.clear();
-  for (auto v : permsAttr.getValues<APInt>())
-    perms.push_back(v.getSExtValue());
+  Type zpElemType = getElementTypeOrSelf(val);
+
+  if (!zpElemType.isIntOrFloat())
+    return op.emitOpError("zero point is not integer or float typss");
+
+  if (!zpElemType.isInteger(8) && zp != 0)
+    return op.emitOpError("zero point must be zero for non-int8 integer types");
+
+  if (zp < -128 || zp > 127)
+    return failure();
 
   return success();
 }
+
+#define ZERO_POINT_HELPER(OP)                                                  \
+  LogicalResult tosa::OP::getInputZeroPoint(int64_t &zp) {                     \
+    return getZeroPoint(*this, getInputZp(), zp);                              \
+  }                                                                            \
+  LogicalResult tosa::OP::getWeightZeroPoint(int64_t &zp) {                    \
+    return getZeroPoint(*this, getWeightZp(), zp);                             \
+  }                                                                            \
+  LogicalResult tosa::OP::verifyInputZeroPoint(int64_t zp) {                   \
+    return verifyZeroPoint(*this, getInputZp(), zp);                           \
+  }                                                                            \
+  LogicalResult tosa::OP::verifyWeightZeroPoint(int64_t zp) {                  \
+    return verifyZeroPoint(*this, getWeightZp(), zp);                          \
+  }
+
+ZERO_POINT_HELPER(Conv2DOp)
+ZERO_POINT_HELPER(Conv3DOp)
+ZERO_POINT_HELPER(DepthwiseConv2DOp)
+ZERO_POINT_HELPER(TransposeConv2DOp)
+#undef ZERO_POINT_HELPER
 
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TransposeOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
-  ShapeAdaptor permsShape(adaptor.getPerms().getType());
-
-  // We cannot infer anything from a rank-0 "permutation" tensor.
-  if (permsShape.hasRank() && permsShape.getRank() == 0)
-    return failure();
 
   // If input rank and permutation length is unknown, the output rank is
   // unknown.
-  if (!inputShape.hasRank() || !permsShape.hasRank() ||
-      permsShape.isDynamicDim(0)) {
+  if (!inputShape.hasRank()) {
     inferredReturnShapes.push_back(ShapedTypeComponents());
     return success();
   }
 
+  const auto inputRank = inputShape.getRank();
+
   // This would imply the number of permutations does not match the rank of
   // the input which is illegal.
-  if (permsShape.getDimSize(0) != inputShape.getRank()) {
+  if (adaptor.getPerms().size() != static_cast<size_t>(inputRank)) {
     return failure();
   }
 
   SmallVector<int64_t> outputShape;
   // Rank-0 means no permutations matter.
-  if (inputShape.getRank() == 0) {
+  if (inputRank == 0) {
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
 
   // Check whether the input dimensions are all the same.
   bool allTheSame = true;
-  for (int i = 1, s = inputShape.getRank(); i < s; i++) {
+  for (int i = 1, s = inputRank; i < s; i++) {
     if (inputShape.getDimSize(0) != inputShape.getDimSize(i)) {
       allTheSame = false;
       break;
@@ -1428,34 +1506,21 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
   // If all of the input dimensions are the same we don't care about the
   // permutation.
   if (allTheSame) {
-    outputShape.resize(inputShape.getRank(), inputShape.getDimSize(0));
+    outputShape.resize(inputRank, inputShape.getDimSize(0));
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
 
-  outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
-  // If the permuations are a constant we can directly determine the output
-  // shape.
-  DenseIntElementsAttr attr;
-  if (matchPattern(adaptor.getPerms(), m_Constant(&attr)) &&
-      attr.getType().getRank() == 1) {
-    ShapeAdaptor permShape = attr;
-    // Constant permutation must be the same length as the input rank.
-    if (inputShape.getRank() != permShape.getRank())
-      return emitOptionalError(location,
-                               "constant permutation must be the same length"
-                               " as the input rank");
+  outputShape.resize(inputRank, ShapedType::kDynamic);
 
-    // Constant permutation values must be within the input rank.
-    for (int i = 0, e = inputShape.getRank(); i < e; i++) {
-      if (inputShape.getRank() <= permShape.getDimSize(i))
-        return failure();
-    }
+  // Constant permutation values must be within the input rank.
+  if (llvm::any_of(adaptor.getPerms(),
+                   [inputRank](const auto i) { return i >= inputRank; }))
+    return failure();
 
-    outputShape.reserve(inputShape.getRank());
-    for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-      outputShape[i] = inputShape.getDimSize(permShape.getDimSize(i));
-    }
+  outputShape.reserve(inputRank);
+  for (int i = 0, s = inputRank; i < s; i++) {
+    outputShape[i] = inputShape.getDimSize(adaptor.getPerms()[i]);
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
@@ -1464,75 +1529,60 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
 
 LogicalResult tosa::TransposeOp::verify() {
   TensorType inputType = getInput1().getType();
-  TensorType permType = getPerms().getType();
   TensorType outputType = getOutput().getType();
+  const llvm::ArrayRef<int32_t> constantPerms = getPerms();
 
-  if (permType.hasRank() && permType.getRank() != 1)
-    return emitOpError()
-           << "expected permutation tensor to be rank 1 but got rank "
-           << permType.getRank();
-  if (inputType.hasRank() && permType.hasRank())
-    if (!permType.isDynamicDim(0) &&
-        permType.getDimSize(0) != inputType.getRank())
-      return emitOpError() << "expected permutation tensor dim 0 to have size "
-                           << inputType.getRank()
-                           << " (input rank) but got size "
-                           << permType.getDimSize(0);
+  if (inputType.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(inputType.getRank()))
+    return emitOpError() << "expected perms attribute to have size "
+                         << inputType.getRank() << " (input rank) but got size "
+                         << constantPerms.size();
   if (inputType.hasRank() && outputType.hasRank() &&
       inputType.getRank() != outputType.getRank())
     return emitOpError()
            << "expected input tensor rank to equal result tensor rank";
-  if (outputType.hasRank() && permType.hasRank())
-    if (!permType.isDynamicDim(0) &&
-        permType.getDimSize(0) != outputType.getRank())
-      return emitOpError() << "expected permutation tensor dim 0 to have size "
-                           << outputType.getRank()
-                           << " (output rank) but got size "
-                           << permType.getDimSize(0);
+  if (outputType.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(outputType.getRank()))
+    return emitOpError() << "expected perms attribute to have size "
+                         << outputType.getRank()
+                         << " (output rank) but got size "
+                         << constantPerms.size();
 
-  SmallVector<int32_t> constantPerms;
-  if (succeeded(getConstantPerms(constantPerms))) {
-    // Assert that the permutation tensor has a rank, which means that the
-    // rank has been verified above.
-    assert(permType.hasRank() &&
-           "Unexpectedly found permutation tensor without rank");
-    if (!llvm::all_of(constantPerms,
-                      [&constantPerms](int32_t s) {
-                        return s >= 0 &&
-                               static_cast<size_t>(s) < constantPerms.size();
-                      }) ||
-        !isPermutationVector(llvm::to_vector(llvm::map_range(
-            constantPerms, [](int32_t v) -> int64_t { return v; }))))
-      return emitOpError() << "expected valid permutation tensor";
+  if (!llvm::all_of(constantPerms,
+                    [&constantPerms](int32_t s) {
+                      return s >= 0 &&
+                             static_cast<size_t>(s) < constantPerms.size();
+                    }) ||
+      !isPermutationVector(llvm::to_vector(llvm::map_range(
+          constantPerms, [](int32_t v) -> int64_t { return v; }))))
+    return emitOpError() << "expected valid permutation indices";
 
-    // Verify that the types of the input and output tensors are properly
-    // permuted.
-    if (inputType.hasRank() && outputType.hasRank()) {
-      assert(constantPerms.size() == static_cast<size_t>(inputType.getRank()) &&
-             inputType.getRank() == outputType.getRank());
+  // Verify that the types of the input and output tensors are properly
+  // permuted.
+  if (inputType.hasRank() && outputType.hasRank()) {
+    assert(constantPerms.size() == static_cast<size_t>(inputType.getRank()) &&
+           inputType.getRank() == outputType.getRank());
 
-      for (auto i = 0; i < outputType.getRank(); i++) {
-        if (inputType.isDynamicDim(constantPerms[i]) ||
-            outputType.isDynamicDim(i))
-          continue;
+    for (auto i = 0; i < outputType.getRank(); i++) {
+      if (inputType.isDynamicDim(constantPerms[i]) ||
+          outputType.isDynamicDim(i))
+        continue;
 
-        if (inputType.getDimSize(constantPerms[i]) != outputType.getDimSize(i))
-          return emitOpError()
-                 << "expected output tensor dim " << i << " to match "
-                 << "input dim " << constantPerms[i] << " with value of "
-                 << inputType.getDimSize(constantPerms[i]);
-      }
+      if (inputType.getDimSize(constantPerms[i]) != outputType.getDimSize(i))
+        return emitOpError()
+               << "expected output tensor dim " << i << " to match "
+               << "input dim " << constantPerms[i] << " with value of "
+               << inputType.getDimSize(constantPerms[i]);
     }
   }
+
   return success();
 }
 
 LogicalResult TransposeOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
 
-  SmallVector<int32_t> transposePerms;
-  if (getConstantPerms(transposePerms).failed())
-    return failure();
+  const llvm::ArrayRef<int32_t> transposePerms = getPerms();
 
   Value input = getInput1();
   auto inputType = cast<TensorType>(input.getType());
@@ -1665,13 +1715,6 @@ LogicalResult tosa::ResizeOp::verify() {
   const int64_t borderY = borderValues[0];
   const int64_t borderX = borderValues[1];
 
-  auto idivCheck = [](const int64_t lhs,
-                      const int64_t rhs) -> std::optional<int64_t> {
-    if (lhs % rhs != 0)
-      return std::nullopt;
-    return lhs / rhs;
-  };
-
   // Don't check with input height that could be broadcast (ih != 1)
   // since Linalg, a consumer of TOSA, expects broadcasting support
   // in resize to be available. Taking the cautious approach for now,
@@ -1789,7 +1832,7 @@ REDUCE_SHAPE_INFER(tosa::ReduceAllOp)
 REDUCE_SHAPE_INFER(tosa::ReduceAnyOp)
 REDUCE_SHAPE_INFER(tosa::ReduceMaxOp)
 REDUCE_SHAPE_INFER(tosa::ReduceMinOp)
-REDUCE_SHAPE_INFER(tosa::ReduceProdOp)
+REDUCE_SHAPE_INFER(tosa::ReduceProductOp)
 REDUCE_SHAPE_INFER(tosa::ReduceSumOp)
 #undef REDUCE_SHAPE_INFER
 COMPATIBLE_RETURN_TYPES(tosa::ConcatOp)
@@ -1849,7 +1892,7 @@ LogicalResult tosa::ReduceAllOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceAnyOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceMaxOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceMinOp::verify() { return verifyReduceOp(*this); }
-LogicalResult tosa::ReduceProdOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceProductOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceSumOp::verify() { return verifyReduceOp(*this); }
 
 static LogicalResult NAryInferReturnTypes(
@@ -2011,6 +2054,97 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
 LogicalResult Conv2DOp::verify() {
   if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
     return failure();
+
+  llvm::ArrayRef<int64_t> padding = getPad();
+  if (llvm::any_of(padding, [](int64_t p) { return p < 0; }))
+    return emitOpError("expect all padding values to be >= 0, got ") << padding;
+
+  llvm::ArrayRef<int64_t> strides = getStride();
+  if (llvm::any_of(strides, [](int64_t s) { return s < 1; }))
+    return emitOpError("expect all stride values to be >= 1, got ") << strides;
+
+  llvm::ArrayRef<int64_t> dilations = getDilation();
+  if (llvm::any_of(dilations, [](int64_t d) { return d < 1; }))
+    return emitOpError("expect all dilation values to be >= 1, got ")
+           << dilations;
+
+  const RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
+  if (!outputType)
+    // Skip following checks if output is not ranked
+    return success();
+
+  const RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  const RankedTensorType weightType =
+      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
+
+  if (inputType && weightType) {
+    const auto verifyOutputSize =
+        [this](const int64_t inputSize, const int64_t kernelSize,
+               const int64_t outputSize, const int64_t padBefore,
+               const int64_t padAfter, const int64_t stride,
+               const int64_t dilation, const llvm::StringRef dimName,
+               const llvm::StringRef dimAxis,
+               const llvm::StringRef padBeforeName,
+               const llvm::StringRef padAfterName) -> LogicalResult {
+      if (inputSize == ShapedType::kDynamic ||
+          kernelSize == ShapedType::kDynamic)
+        return success();
+
+      const std::optional<int64_t> calculatedOutSizeMinusOne = idivCheck(
+          inputSize - 1 + padBefore + padAfter - (kernelSize - 1) * dilation,
+          stride);
+      if (!calculatedOutSizeMinusOne.has_value())
+        return emitOpError("expected input_")
+               << dimName << " - 1 + pad_" << padBeforeName << " + pad_"
+               << padAfterName << " - (kernel_" << dimName
+               << " - 1) * dilation_" << dimAxis
+               << " to be wholly divisible by stride_" << dimAxis << ", got ("
+               << inputSize << " - 1 + " << padBefore << " + " << padAfter
+               << " - (" << kernelSize << " - 1) * " << dilation << ") / "
+               << stride;
+
+      const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
+      if (outputSize != ShapedType::kDynamic && calculatedOutSize != outputSize)
+        return emitOpError("calculated output ")
+               << dimName << " did not match expected: "
+               << "calculated=" << calculatedOutSize
+               << ", expected=" << outputSize;
+
+      return success();
+    };
+
+    if (failed(verifyOutputSize(
+            inputType.getDimSize(1), weightType.getDimSize(1),
+            outputType.getDimSize(1), padding[0], padding[1], strides[0],
+            dilations[0], "height", "y", "top", "bottom")))
+      return failure();
+
+    if (failed(verifyOutputSize(
+            inputType.getDimSize(2), weightType.getDimSize(2),
+            outputType.getDimSize(2), padding[2], padding[3], strides[1],
+            dilations[1], "width", "x", "left", "right")))
+      return failure();
+  }
+
+  const RankedTensorType biasType =
+      llvm::dyn_cast<RankedTensorType>(getBias().getType());
+  if (!biasType)
+    // Skip following checks if bias is not ranked
+    return success();
+
+  const int64_t biasChannels = biasType.getDimSize(0);
+  const int64_t outputChannels = outputType.getDimSize(3);
+  if (biasChannels == ShapedType::kDynamic ||
+      outputChannels == ShapedType::kDynamic)
+    // Skip following checks if biasChannels or outputChannels is dynamic dim
+    return success();
+
+  if (biasChannels != outputChannels && biasChannels != 1)
+    return emitOpError(
+               "bias channels expected to be equal to output channels (")
+           << outputChannels << ") or 1, got " << biasChannels;
   return success();
 }
 
@@ -2509,36 +2643,12 @@ void WhileOp::print(OpAsmPrinter &parser) {
   parser.printOptionalAttrDictWithKeyword((*this)->getAttrs());
 }
 
-LogicalResult mlir::tosa::getZeroPoint(ElementsAttr zpAttr, int64_t &zp) {
-  Type zpElemType = zpAttr.getElementType();
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(zpElemType)) {
-    zp = quantType.getZeroPoint();
-    return success();
-  }
-  if (llvm::isa<FloatType>(zpElemType)) {
-    // non-zero zero point is not allowed for float types.
-    if (!zpAttr.getValues<APFloat>()[0].isZero())
-      return failure();
-    zp = 0;
-    return success();
-  }
-  if (llvm::isa<IntegerType>(zpElemType)) {
-    zp = zpAttr.getValues<APInt>()[0].getSExtValue();
-    return success();
-  }
-  // zero point is not allowed for unsupported types.
-  return failure();
-}
-
 // Create a rank-1 const tensor for zero point of the source tensor.
 std::optional<Value> mlir::tosa::createZeroPointTensor(OpBuilder &builder,
                                                        Location loc,
                                                        Type srcElemType,
                                                        int64_t zp) {
-  srcElemType = getElementTypeOrSelf(srcElemType);
-  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcElemType))
-    srcElemType = quantType.getStorageType();
+  srcElemType = getStorageElementTypeOrSelf(srcElemType);
   auto zpType = mlir::RankedTensorType::get({1}, srcElemType);
   if (llvm::isa<FloatType>(srcElemType)) {
     auto zpAttr = DenseElementsAttr::get(

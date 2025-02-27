@@ -552,8 +552,8 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]].sub0, implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]].sub1, implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]].sub0, implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]].sub1, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
   ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE]], [[COPY]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U64_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
@@ -576,8 +576,8 @@ body:             |
     %3:sreg_64_xexec = S_MOV_B64 $exec
 
   bb.1:
-    %4:sgpr_32 = V_READFIRSTLANE_B32 %0.sub0, implicit $exec
-    %5:sgpr_32 = V_READFIRSTLANE_B32 %0.sub1, implicit $exec
+    %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %0.sub0, implicit $exec
+    %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %0.sub1, implicit $exec
     %6:sgpr_64 = REG_SEQUENCE %4, %subreg.sub0, %5, %subreg.sub1
     %7:sreg_64_xexec = V_CMP_EQ_U64_e64 %6, %0, implicit $exec
     %8:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed %7, implicit-def $exec, implicit-def $scc, implicit $exec
