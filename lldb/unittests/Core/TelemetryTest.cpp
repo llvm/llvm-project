@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/Config/llvm-config.h"
-
-#ifdef LLVM_BUILD_TELEMETRY
-
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
@@ -71,7 +66,13 @@ public:
 
 } // namespace lldb_private
 
-TEST(TelemetryTest, PluginTest) {
+#if LLVM_ENABLE_TELEMETRY
+#define TELEMETRY_TEST(suite, test) TEST(suite, test)
+#else
+#define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
+#endif
+
+TELEMETRY_TEST(TelemetryTest, PluginTest) {
   // This would have been called by the plugin reg in a "real" plugin
   // For tests, we just call it directly.
   lldb_private::FakePlugin::Initialize();
@@ -94,5 +95,3 @@ TEST(TelemetryTest, PluginTest) {
 
   ASSERT_EQ("FakeTelemetryPlugin", ins->GetInstanceName());
 }
-
-#endif // LLVM_BUILD_TELEMETRY
