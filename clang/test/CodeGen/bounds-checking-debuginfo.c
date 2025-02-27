@@ -89,7 +89,7 @@ double f1(int b, int i) {
 // CHECK-TRAP: [[DBG22]] = !DILocation(line: 65, column: 3, scope: [[DBG5]])
 // CHECK-TRAP: [[DBG23]] = !DILocation(line: 66, column: 12, scope: [[DBG5]])
 // CHECK-TRAP: [[DBG24]] = !DILocation(line: 0, scope: [[META25:![0-9]+]], inlinedAt: [[DBG27]])
-// CHECK-TRAP: [[META25]] = distinct !DISubprogram(name: "check_array_bounds", scope: [[META6]], file: [[META6]], type: [[META26:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-TRAP: [[META25]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META6]], file: [[META6]], type: [[META26:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK-TRAP: [[META26]] = !DISubroutineType(types: null)
 // CHECK-TRAP: [[DBG27]] = !DILocation(line: 66, column: 10, scope: [[DBG5]])
 // CHECK-TRAP: [[DBG28]] = !DILocation(line: 66, column: 3, scope: [[DBG5]])
@@ -116,7 +116,7 @@ double f1(int b, int i) {
 // CHECK-NOTRAP: [[DBG22]] = !DILocation(line: 65, column: 3, scope: [[DBG5]])
 // CHECK-NOTRAP: [[DBG23]] = !DILocation(line: 66, column: 12, scope: [[DBG5]])
 // CHECK-NOTRAP: [[DBG24]] = !DILocation(line: 0, scope: [[META25:![0-9]+]], inlinedAt: [[DBG27]])
-// CHECK-NOTRAP: [[META25]] = distinct !DISubprogram(name: "check_array_bounds", scope: [[META6]], file: [[META6]], type: [[META26:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-NOTRAP: [[META25]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META6]], file: [[META6]], type: [[META26:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK-NOTRAP: [[META26]] = !DISubroutineType(types: null)
 // CHECK-NOTRAP: [[DBG27]] = !DILocation(line: 66, column: 10, scope: [[DBG5]])
 // CHECK-NOTRAP: [[PROF28]] = !{!"branch_weights", i32 1048575, i32 1}

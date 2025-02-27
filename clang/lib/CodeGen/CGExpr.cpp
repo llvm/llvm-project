@@ -1219,10 +1219,9 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   llvm::DILocation *TrapSP = Builder.getCurrentDebugLocation();
   if (TrapSP) {
     TrapSP = getDebugInfo()->CreateSyntheticInline(
-      Builder.getCurrentDebugLocation(),
-      "check_array_bounds");
+        Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
   }
-   ApplyDebugLocation ApplyTrapDI(*this, TrapSP);
+  ApplyDebugLocation ApplyTrapDI(*this, TrapSP);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
