@@ -3609,7 +3609,7 @@ static bool checkOffsets(ScalarEvolution *SE, const SCEV *V, const SCEV *&Param,
 
     // Check whether "(Param - V) % Size == 0".
     const SCEV *Diff = SE->getMinusSCEV(Param, V);
-    if (const SCEVConstant *Cst = dyn_cast<SCEVConstant>(Diff)) {
+    if (auto *Cst = dyn_cast<SCEVConstant>(Diff)) {
       APInt Val = Cst->getAPInt();
       if (Val.isZero())
         return true;
