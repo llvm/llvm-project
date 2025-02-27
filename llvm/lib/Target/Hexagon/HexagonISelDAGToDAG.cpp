@@ -617,7 +617,8 @@ void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
       if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Shl2_1)) {
         int32_t ValConst = 1 << (ShlConst + C2->getSExtValue());
         if (isInt<9>(-ValConst)) {
-          SDValue Val = CurDAG->getTargetConstant(-ValConst, dl, MVT::i32);
+          SDValue Val =
+              CurDAG->getSignedTargetConstant(-ValConst, dl, MVT::i32);
           SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
                                                   MVT::i32, Shl2_0, Val);
           ReplaceNode(N, Result);

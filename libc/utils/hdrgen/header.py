@@ -233,3 +233,12 @@ class HeaderFile:
         content.append("__END_C_DECLS")
 
         return "\n".join(content)
+
+    def json_data(self):
+        return {
+            "name": self.name,
+            "standards": self.standards,
+            "includes": [
+                str(file) for file in sorted({COMMON_HEADER} | self.includes())
+            ],
+        }

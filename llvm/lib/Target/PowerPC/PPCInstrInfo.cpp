@@ -1758,23 +1758,6 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(PPC::EFDCFS), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
-  } else if ((PPC::G8RCRegClass.contains(DestReg) ||
-              PPC::GPRCRegClass.contains(DestReg)) &&
-             SrcReg == PPC::CARRY) {
-    bool Is64Bit = PPC::G8RCRegClass.contains(DestReg);
-    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MFSPR8 : PPC::MFSPR), DestReg)
-        .addImm(1)
-        .addReg(PPC::CARRY, RegState::Implicit);
-    return;
-  } else if ((PPC::G8RCRegClass.contains(SrcReg) ||
-              PPC::GPRCRegClass.contains(SrcReg)) &&
-             DestReg == PPC::CARRY) {
-    bool Is64Bit = PPC::G8RCRegClass.contains(SrcReg);
-    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MTSPR8 : PPC::MTSPR))
-        .addImm(1)
-        .addReg(SrcReg)
-        .addReg(PPC::CARRY, RegState::ImplicitDefine);
-    return;
   }
 
   unsigned Opc;

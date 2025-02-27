@@ -176,8 +176,9 @@ struct ModuleAnalysisInfo {
     RegisterAliasTable[MF][Reg] = AliasReg;
   }
   Register getRegisterAlias(const MachineFunction *MF, Register Reg) {
-    auto RI = RegisterAliasTable[MF].find(Reg);
-    if (RI == RegisterAliasTable[MF].end()) {
+    auto &RegTable = RegisterAliasTable[MF];
+    auto RI = RegTable.find(Reg);
+    if (RI == RegTable.end()) {
       return Register(0);
     }
     return RI->second;

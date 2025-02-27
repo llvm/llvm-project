@@ -595,6 +595,13 @@ void mlir::populateGpuToNVVMConversionPatterns(
   populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
                                     "__nv_floor");
   populateOpPatterns<math::FmaOp>(converter, patterns, "__nv_fmaf", "__nv_fma");
+  // Note: libdevice does not provide `__nv_isfinitef` as of moment of writing.
+  populateOpPatterns<math::IsFiniteOp>(converter, patterns, "",
+                                       "__nv_isfinited");
+  populateOpPatterns<math::IsInfOp>(converter, patterns, "__nv_isinff",
+                                    "__nv_isinfd");
+  populateOpPatterns<math::IsNaNOp>(converter, patterns, "__nv_isnanf",
+                                    "__nv_isnand");
   populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log",
                                   "__nv_fast_logf");
   populateOpPatterns<math::Log10Op>(converter, patterns, "__nv_log10f",

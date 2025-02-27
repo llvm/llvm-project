@@ -427,6 +427,23 @@ bool lazyLinkingRequested() {
   return false;
 }
 
+static Error applyLibraryLinkModifiers(Session &S, LinkGraph &G) {
+  // If there are hidden archives and this graph is an archive
+  // member then apply hidden modifier.
+  if (!S.HiddenArchives.empty()) {
+    StringRef ObjName(G.getName());
+    if (ObjName.ends_with(')')) {
+      auto LibName = ObjName.split('(').first;
+      if (S.HiddenArchives.count(LibName)) {
+        for (auto *Sym : G.defined_symbols())
+          Sym->setScope(std::max(Sym->getScope(), Scope::Hidden));
+      }
+    }
+  }
+
+  return Error::success();
+}
+
 static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
   std::lock_guard<std::mutex> Lock(S.M);
 
@@ -1329,6 +1346,8 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
     return Error::success();
   });
   PassConfig.PrePrunePasses.push_back(
+      [this](LinkGraph &G) { return applyLibraryLinkModifiers(*this, G); });
+  PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
 
   if (ShowRelocatedSectionContents)
@@ -2182,11 +2201,6 @@ static Error addLibraries(Session &S,
     LibraryLoadQueue.push_back(std::move(LL));
   }
 
-  // If there are any load-<modified> options then turn on flag overrides
-  // to avoid flag mismatch errors.
-  if (!LibrariesHidden.empty() || !LoadHidden.empty())
-    S.ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
-
   // Sort library loads by position in the argument list.
   llvm::sort(LibraryLoadQueue,
              [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
@@ -2204,6 +2218,7 @@ static Error addLibraries(Session &S,
       break;
     case LibraryLoad::Hidden:
       GetObjFileInterface = getObjectFileInterfaceHidden;
+      S.HiddenArchives.insert(Path);
       break;
     }
 

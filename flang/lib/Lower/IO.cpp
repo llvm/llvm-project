@@ -1841,7 +1841,9 @@ static mlir::Value genIOUnit(Fortran::lower::AbstractConverter &converter,
                              int defaultUnitNumber) {
   auto &builder = converter.getFirOpBuilder();
   if (iounit)
-    if (auto *e = std::get_if<Fortran::parser::FileUnitNumber>(&iounit->u))
+    if (auto *e =
+            std::get_if<Fortran::common::Indirection<Fortran::parser::Expr>>(
+                &iounit->u))
       return genIOUnitNumber(converter, loc, Fortran::semantics::GetExpr(*e),
                              ty, csi, stmtCtx);
   return builder.create<mlir::arith::ConstantOp>(

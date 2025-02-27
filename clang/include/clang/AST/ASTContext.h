@@ -287,8 +287,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is lazily created.  This is intentionally not serialized.
   mutable llvm::DenseMap<const RecordDecl*, const ASTRecordLayout*>
     ASTRecordLayouts;
-  mutable llvm::DenseMap<const ObjCContainerDecl*, const ASTRecordLayout*>
-    ObjCLayouts;
+  mutable llvm::DenseMap<const ObjCInterfaceDecl *, const ASTRecordLayout *>
+      ObjCLayouts;
 
   /// A cache from types to size and alignment information.
   using TypeInfoMap = llvm::DenseMap<const Type *, struct TypeInfo>;
@@ -499,6 +499,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
   static constexpr unsigned FunctionProtoTypesLog2InitSize = 12;
+
+  /// A mapping from an ObjC class to its subclasses.
+  llvm::DenseMap<const ObjCInterfaceDecl *,
+                 SmallVector<const ObjCInterfaceDecl *, 4>>
+      ObjCSubClasses;
 
   ASTContext &this_() { return *this; }
 
@@ -2671,13 +2676,6 @@ public:
   void DumpRecordLayout(const RecordDecl *RD, raw_ostream &OS,
                         bool Simple = false) const;
 
-  /// Get or compute information about the layout of the specified
-  /// Objective-C implementation.
-  ///
-  /// This may differ from the interface if synthesized ivars are present.
-  const ASTRecordLayout &
-  getASTObjCImplementationLayout(const ObjCImplementationDecl *D) const;
-
   /// Get our current best idea for the key function of the
   /// given record decl, or nullptr if there isn't one.
   ///
@@ -2716,7 +2714,6 @@ public:
 
   /// Get the offset of an ObjCIvarDecl in bits.
   uint64_t lookupFieldBitOffset(const ObjCInterfaceDecl *OID,
-                                const ObjCImplementationDecl *ID,
                                 const ObjCIvarDecl *Ivar) const;
 
   /// Find the 'this' offset for the member path in a pointer-to-member
@@ -3174,7 +3171,12 @@ public:
       bool &CanUseFirst, bool &CanUseSecond,
       SmallVectorImpl<FunctionProtoType::ExtParameterInfo> &NewParamInfos);
 
-  void ResetObjCLayout(const ObjCContainerDecl *CD);
+  void ResetObjCLayout(const ObjCInterfaceDecl *D);
+
+  void addObjCSubClass(const ObjCInterfaceDecl *D,
+                       const ObjCInterfaceDecl *SubClass) {
+    ObjCSubClasses[D].push_back(SubClass);
+  }
 
   //===--------------------------------------------------------------------===//
   //                    Integer Predicates
@@ -3564,9 +3566,7 @@ private:
   friend class DeclarationNameTable;
   friend class DeclContext;
 
-  const ASTRecordLayout &
-  getObjCLayout(const ObjCInterfaceDecl *D,
-                const ObjCImplementationDecl *Impl) const;
+  const ASTRecordLayout &getObjCLayout(const ObjCInterfaceDecl *D) const;
 
   /// A set of deallocations that should be performed when the
   /// ASTContext is destroyed.

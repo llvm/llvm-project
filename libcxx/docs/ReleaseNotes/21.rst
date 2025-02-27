@@ -40,12 +40,13 @@ Implemented Papers
 
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
 - P2542R8: ``views::concat`` (`Github <https://github.com/llvm/llvm-project/issues/105419>`__)
+- P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
 
 Improvements and New Features
 -----------------------------
 
-- The ``std::ranges::{copy, copy_n, copy_backward}`` algorithms have been optimized for ``std::vector<bool>::iterator``\s,
-  resulting in a performance improvement of up to 2000x.
+- The ``std::ranges::{copy, copy_n, copy_backward, move, move_backward}`` algorithms have been optimized for
+  ``std::vector<bool>::iterator``, resulting in a performance improvement of up to 2000x.
 
 - Updated formatting library to Unicode 16.0.0.
 

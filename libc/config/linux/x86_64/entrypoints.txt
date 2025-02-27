@@ -328,6 +328,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
@@ -1128,6 +1129,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.strftime
+    libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
 

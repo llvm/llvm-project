@@ -521,6 +521,12 @@ def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
+def Sincospi : Builtin, FPMathTemplate {
+  let Spellings = ["__builtin_sincospi"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
+}
+
 // Access to floating point environment.
 def BuiltinFltRounds : Builtin {
   let Spellings = ["__builtin_flt_rounds"];
@@ -4769,6 +4775,12 @@ def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(...)";
+}
+
+def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {

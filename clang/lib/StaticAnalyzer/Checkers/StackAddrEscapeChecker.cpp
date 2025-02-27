@@ -274,7 +274,13 @@ private:
   void SaveIfEscapes(const MemRegion *MR) {
     const StackSpaceRegion *SSR =
         MR->getMemorySpace()->getAs<StackSpaceRegion>();
-    if (SSR && SSR->getStackFrame() == PoppedStackFrame)
+
+    if (!SSR)
+      return;
+
+    const StackFrameContext *CapturedSFC = SSR->getStackFrame();
+    if (CapturedSFC == PoppedStackFrame ||
+        PoppedStackFrame->isParentOf(CapturedSFC))
       EscapingStackRegions.push_back(MR);
   }
 
