@@ -1130,6 +1130,7 @@ Experimental extensions
     xqcilo               0.2
     xqcilsm              0.2
     xqcisls              0.2
+    xrivosvisni          0.1
     xrivosvizip          0.1
 
 Supported Profiles
