@@ -635,7 +635,12 @@ public:
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
                                                 StringRef Category,
                                                 StringRef FailureMsg);
-
+  /// Create a debug location from `TrapLocation` that adds an artificial inline
+  /// frame where the frame name is FuncName
+  ///
+  /// This is used to indiciate instructions that come from compiler instrumentation.
+  llvm::DILocation *CreateSyntheticInline(
+      llvm::DebugLoc TrapLocation, StringRef FuncName);
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the

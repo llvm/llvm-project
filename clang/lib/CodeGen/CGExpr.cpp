@@ -31,6 +31,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1214,6 +1215,14 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
     return;
 
   SanitizerScope SanScope(this);
+
+  llvm::DILocation *TrapSP = Builder.getCurrentDebugLocation();
+  if (TrapSP) {
+    TrapSP = getDebugInfo()->CreateSyntheticInline(
+      Builder.getCurrentDebugLocation(),
+      "check_array_bounds");
+  }
+   ApplyDebugLocation ApplyTrapDI(*this, TrapSP);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
@@ -3614,6 +3623,7 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
+
   // Expand checks into:
   //   (Check1 || !allow_ubsan_check) && (Check2 || !allow_ubsan_check) ...
   // We need separate allow_ubsan_check intrinsics because they have separately
@@ -3923,7 +3933,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     TrapBBs.resize(CheckHandlerID + 1);
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
-
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
