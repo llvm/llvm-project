@@ -299,7 +299,7 @@ bool4 and(bool4 x, bool4 y);
 /// vector output.
 
 // TODO: Clean up clang-format marker once we've resolved
-//       https://github.com/llvm/llvm-project/issues/128979
+//       https://github.com/llvm/llvm-project/issues/127851
 //
 // clang-format off
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
