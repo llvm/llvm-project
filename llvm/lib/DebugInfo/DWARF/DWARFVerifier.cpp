@@ -1930,14 +1930,10 @@ void DWARFVerifier::verifyNameIndexCompleteness(
 static void extractCUsTus(DWARFContext &DCtx) {
   // Abbrev DeclSet is shared beween the units.
   for (auto &CUTU : DCtx.normal_units()) {
-    if (CUTU->getVersion() < 5)
-      continue;
     CUTU->getUnitDIE();
     CUTU->getBaseAddress();
   }
   parallelForEach(DCtx.normal_units(), [&](const auto &CUTU) {
-    if (CUTU->getVersion() < 5)
-      return;
     if (Error E = CUTU->tryExtractDIEsIfNeeded(false))
       DCtx.getRecoverableErrorHandler()(std::move(E));
   });
@@ -1945,7 +1941,7 @@ static void extractCUsTus(DWARFContext &DCtx) {
   // Invoking getNonSkeletonUnitDIE() sets up all the base pointers for DWO
   // Units. This is needed for getBaseAddress().
   for (const auto &CU : DCtx.compile_units()) {
-    if (!(CU->getVersion() >= 5 && CU->getDWOId()))
+    if (!CU->getDWOId())
       continue;
     DWARFContext &NonSkeletonContext =
         CU->getNonSkeletonUnitDIE().getDwarfUnit()->getContext();
