@@ -8,10 +8,9 @@
 //CHECK-NEXT:    [[HLSL_OR:%.*]] = or i1 [[x]], [[y]]
 //CHECK-NEXT:    ret i1 [[HLSL_OR]]
 //CHECK_NEXT:  }
-bool test_or_bool(bool x, bool y)
+bool test_and_scalar(bool x, bool y)
 {
     return or(x, y);
-
 }
 
 //CHECK-LABEL: define noundef <2 x i1> @_Z13test_or_bool2Dv2_bS_(

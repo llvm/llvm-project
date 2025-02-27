@@ -294,11 +294,14 @@ bool4 and(bool4 x, bool4 y);
 // or builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn T or(T x, T y)
-/// \brief Returns the bitwise OR of the two input values, \a x and \a y.
-/// \param x The first input value and y The second input value.
-///
-/// \returns A boolean vector by performing a logical OR operation elementwise.
+/// \fn bool or(bool x, bbol y)
+/// \brief Logically ors two boolean vectors elementwise and produces a bool
+/// vector output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/128979
+//
+// clang-format off
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
 bool or(bool, bool);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
@@ -307,6 +310,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
 bool3 or(bool3, bool3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
 bool4 or(bool4, bool4);
+// clang-format on
 
 //===----------------------------------------------------------------------===//
 // any builtins

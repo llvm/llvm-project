@@ -2311,11 +2311,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
 
-    // Ensure input expr type is a scalar/vector and the same as the return type
+    // Ensure input expr type is a scalar/vector of type Boolty
     if (CheckScalarOrVector(&SemaRef, TheCall, getASTContext().BoolTy, 0))
       return true;
 
-    // Ensure input parameter type is bool
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
 
