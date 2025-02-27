@@ -36,7 +36,7 @@ typedef enum { MyVal_C } MyEnum3;
 // CHECK-NEXT: |-TypedefDecl 0x{{.*}} imported in ModA.ModAFile1 hidden MyEnum3 'enum MyEnum3':'MyEnum3'
 // CHECK-NEXT: | `-ElaboratedType 0x{{.*}} 'enum MyEnum3' sugar imported
 // CHECK-NEXT: |   `-EnumType 0x{{.*}} 'MyEnum3' imported
-// CHECK-NEXT: |     `-Enum 0x{{.*}} ''
+// CHECK-NEXT: |     `-Enum 0x{{.*}}
 
 struct MyStruct {
   enum MyEnum5 { MyVal_D } Field;
@@ -67,7 +67,7 @@ enum { MyVal_E };
 // CHECK-NEXT: |-TypedefDecl 0x{{.*}} prev 0x{{.*}} imported in ModB MyEnum3 'enum MyEnum3':'MyEnum3'
 // CHECK-NEXT: | `-ElaboratedType 0x{{.*}} 'enum MyEnum3' sugar imported
 // CHECK-NEXT: |   `-EnumType 0x{{.*}} 'MyEnum3' imported
-// CHECK-NEXT: |     `-Enum 0x{{.*}} ''
+// CHECK-NEXT: |     `-Enum 0x{{.*}}
 
 // CHECK:      |-EnumDecl 0x{{.*}} imported in ModB <undeserialized declarations>
 // CHECK-NEXT: | `-EnumConstantDecl 0x{{.*}} first 0x{{.*}} imported in ModB referenced MyVal_E 'int'
