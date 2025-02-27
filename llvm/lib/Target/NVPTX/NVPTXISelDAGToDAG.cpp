@@ -1140,6 +1140,10 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   SDVTList InstVTList = CurDAG->getVTList(InstVTs);
   SDValue Chain = N->getOperand(0);
 
+  SDValue Base, Offset;
+  SelectADDR(Op1, Base, Offset);
+  SDValue Ops[] = {Base, Offset, Chain};
+
   std::optional<unsigned> Opcode;
   switch (N->getOpcode()) {
   default:
@@ -1189,9 +1193,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     return false;
 
   SDLoc DL(N);
-  SDValue Base, Offset;
-  SelectADDR(Op1, Base, Offset);
-  SDValue Ops[] = {Base, Offset, Chain};
   SDNode *LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
 
   // For automatic generation of LDG (through SelectLoad[Vector], not the
@@ -2079,12 +2080,13 @@ static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
                                       MVT::i32);
 }
 
-// Select a pair of operands which represnent a valid PTX address, this could be
+// Select a pair of operands which represent a valid PTX address, this could be
 // one of the following things:
 //  - [var] - Offset is simply set to 0
 //  - [reg] - Offset is simply set to 0
 //  - [reg+immOff]
 //  - [var+immOff]
+// Note that immOff must fit into a 32-bit signed integer.
 bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
                                    SDValue &Offset) {
   Offset = accumulateOffset(Addr, SDLoc(Addr), CurDAG);
