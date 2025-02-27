@@ -150,13 +150,15 @@ end
   have this capability. An Arm executable will run on either type of
   processor, so it is effectively unknown at compile time whether or
   not this support will be available at runtime. The standard requires
-  that a call to intrinsic module procedure `IEEE_SUPPORT_HALTING` with
+  that a call to intrinsic module procedure `ieee_support_halting` with
   a constant argument has a compile time constant result in `constant
   expression` and `specification expression` contexts. In compilations
   where this information is not known at compile time, f18 generates code
   to determine the absence or presence of this capability at runtime.
-  A call to `IEEE_SUPPORT_HALTING` in contexts that the standard requires
-  to be constant will generate a compilation error.
+  A call to `ieee_support_halting` in contexts that the standard requires
+  to be constant will generate a compilation error. `ieee_support_standard`
+  depends in part on `ieee_support_halting`, so this also applies to
+  `ieee_support_standard` calls.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -814,6 +816,14 @@ print *, [(j,j=1,10)]
   F18 follows other widely-used Fortran compilers. Specifically, f18 assumes
   integer overflow never occurs in address calculations and increment of
   do-variable unless the option `-fwrapv` is enabled.
+
+* Two new ieee_round_type values were added in f18 beyond the four values
+  defined in f03 and f08: ieee_away and ieee_other. Contemporary hardware
+  typically does not have support for these rounding modes;
+  ieee_support_rounding calls for these values return false.
+  ieee_set_rounding_mode calls that attempt to set the rounding mode to one
+  of these values in violation of the restriction in f23 clause 17.11.42 set
+  the mode to ieee_nearest.
 
 ## De Facto Standard Features
 

@@ -136,6 +136,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let isMoveImm = 1;
   let SchedRW = [Write64Bit];
   let Size = 4;
+  let VOP1 = 1; // Not entirely correct, but close enough.
   let UseNamedOperandTable = 1;
 }
 
@@ -1002,6 +1003,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
   } // End UseNamedOperandTable = 1, Spill = 1, VALU = 1, SchedRW = [WriteVMEM]
 }
 
+defm SI_SPILL_V16  : SI_SPILL_VGPR <VGPR_16>;
 defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
 defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
 defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;
@@ -2497,6 +2499,7 @@ def : AMDGPUPat <
                $src1), sub1)
 >;
 
+let True16Predicate = NotHasTrue16BitInsts in {
 def : ROTRPattern <V_ALIGNBIT_B32_e64>;
 
 def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
@@ -2506,6 +2509,42 @@ def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
 def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
           (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
+} // end True16Predicate = NotHasTrue16BitInsts
+
+let True16Predicate = UseFakeTrue16Insts in {
+def : GCNPat <
+  (rotr i32:$src0, i32:$src1),
+  (V_ALIGNBIT_B32_fake16_e64 /* src0_modifiers */ 0, $src0,
+                             /* src1_modifiers */ 0, $src0,
+                             /* src2_modifiers */ 0,
+                             $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
+     (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                                0, /* src1_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                                0, /* src2_modifiers */
+                                $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+     (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                                0, /* src1_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                                0, /* src2_modifiers */
+                                $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
+     (V_ALIGNBIT_B32_fake16_e64 /* src0_modifiers */ 0, $src0,
+                                /* src1_modifiers */ 0, $src1,
+                                /* src2_modifiers */ 0,
+                                $src2, /* clamp */ 0, /* op_sel */ 0)
+>;
+} // end True16Predicate = UseFakeTrue16Insts
 
 /********** ====================== **********/
 /**********   Indirect addressing  **********/
@@ -3013,6 +3052,7 @@ def : GCNPat <
                     (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
 >;
 
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (i32 (bswap i32:$a)),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
@@ -3020,28 +3060,61 @@ def : GCNPat <
              (V_ALIGNBIT_B32_e64 VSrc_b32:$a, VSrc_b32:$a, (i32 8)))
 >;
 
-// FIXME: This should have been narrowed to i32 during legalization.
-// This pattern should also be skipped for GlobalISel
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (i32 (bswap i32:$a)),
+  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
+             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src1_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src2_modifiers */
+                                        (i32 24), /* clamp */ 0, /* op_sel */ 0),
+             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src1_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src2_modifiers */
+                                        (i32 8), /* clamp */ 0, /* op_sel */ 0))
+>;
+
+class AlignBit32Inst<dag op1, dag op2, dag op3, bit isTrue16> {
+  defvar inst = !if(isTrue16, V_ALIGNBIT_B32_fake16_e64, V_ALIGNBIT_B32_e64);
+  defvar NoMods = !if(isTrue16, (inst 0), (inst));
+  dag ret = !con(NoMods, (inst op1), NoMods, (inst op2),
+                     NoMods, (inst op3), NoMods, NoMods);
+}
+
+multiclass bswapi64ExtPat<bit hasTrue16> {
 def : GCNPat <
   (i64 (bswap i64:$a)),
   (REG_SEQUENCE VReg_64,
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 24)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 8))),
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 24), hasTrue16>.ret,
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 8), hasTrue16>.ret),
   sub0,
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 24)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 8))),
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 24), hasTrue16>.ret,
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 8), hasTrue16>.ret),
   sub1)
 >;
+}
+
+// FIXME: This should have been narrowed to i32 during legalization.
+// This pattern should also be skipped for GlobalISel
+let True16Predicate = NotHasTrue16BitInsts in
+defm : bswapi64ExtPat</*hasTrue16*/0>;
+
+let True16Predicate = UseFakeTrue16Insts in
+defm : bswapi64ExtPat</*hasTrue16*/1>;
 
 // FIXME: The AddedComplexity should not be needed, but in GlobalISel
 // the BFI pattern ends up taking precedence without it.
@@ -3287,6 +3360,14 @@ def : GCNPat <
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
+  (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
   (fma (f16 (VOP3NoMods f16:$src0)),
@@ -3351,6 +3432,8 @@ def : GCNPat <
   (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
@@ -3360,6 +3443,7 @@ def : GCNPat <
   (vecTy (UniformBinFrag<build_vector> (Ty undef), (Ty SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
+}
 
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_32:$src1))),
@@ -3369,6 +3453,8 @@ def : GCNPat <
 }
 
 let SubtargetPredicate = HasVOP3PInsts in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
@@ -3398,12 +3484,24 @@ def : GCNPat <
   (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a), (Ty VGPR_32:$b))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x05040100)))
 >;
 
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$a), (Ty VGPR_16:$b))),
+  (REG_SEQUENCE VGPR_32, VGPR_16:$a, lo16, VGPR_16:$b, hi16)
+>;
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$src0), (Ty undef))),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (IMPLICIT_DEF), hi16)
+>;
+}
 
 // Take the lower 16 bits from V[0] and the upper 16 bits from V[1]
 // Special case, can use V_BFI (0xffff literal likely more reusable than 0x70601000)
@@ -3429,6 +3527,7 @@ def : GCNPat <
 
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3438,7 +3537,19 @@ def : GCNPat <
     (V_ALIGNBIT_B32_e64 VGPR_32:$b, VGPR_32:$a, (i32 16))
 >;
 
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector>
+    (Ty !if(!eq(Ty, i16),
+      (Ty (trunc (srl VGPR_32:$a, (i32 16)))),
+      (Ty (bitconvert (i16 (trunc (srl VGPR_32:$a, (i32 16)))))))),
+    (Ty VGPR_32:$b))),
+    (V_ALIGNBIT_B32_fake16_e64 0, VGPR_32:$b, 0, VGPR_32:$a, 0, (i16 16), 0, 0)
+>;
+
 // Take the upper 16 bits from each VGPR_32 and concat them
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3449,7 +3560,6 @@ def : GCNPat <
       (Ty (bitconvert (i16 (trunc (srl VGPR_32:$b, (i32 16)))))))))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x07060302)))
 >;
-
 
 } // end foreach Ty
 
@@ -4268,3 +4378,9 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
+
+// FIXME: Would be nice if we could set the register class for the destination
+// register too.
+def IMP_DEF_FROM_INTRINSIC: Pat<
+  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
+

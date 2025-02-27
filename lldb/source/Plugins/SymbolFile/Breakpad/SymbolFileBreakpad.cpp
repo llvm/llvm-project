@@ -837,18 +837,16 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
          "How did we create compile units without a base address?");
 
   SupportFileMap map;
-  std::vector<std::unique_ptr<LineSequence>> sequences;
-  std::unique_ptr<LineSequence> line_seq_up =
-      LineTable::CreateLineSequenceContainer();
+  std::vector<LineTable::Sequence> sequences;
+  LineTable::Sequence sequence;
   std::optional<addr_t> next_addr;
   auto finish_sequence = [&]() {
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), *next_addr, /*line=*/0, /*column=*/0,
+        sequence, *next_addr, /*line=*/0, /*column=*/0,
         /*file_idx=*/0, /*is_start_of_statement=*/false,
         /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
         /*is_epilogue_begin=*/false, /*is_terminal_entry=*/true);
-    sequences.push_back(std::move(line_seq_up));
-    line_seq_up = LineTable::CreateLineSequenceContainer();
+    sequences.push_back(std::move(sequence));
   };
 
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
@@ -870,7 +868,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
       finish_sequence();
     }
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), record->Address, record->LineNum, /*column=*/0,
+        sequence, record->Address, record->LineNum, /*column=*/0,
         map[record->FileNum], /*is_start_of_statement=*/true,
         /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
         /*is_epilogue_begin=*/false, /*is_terminal_entry=*/false);

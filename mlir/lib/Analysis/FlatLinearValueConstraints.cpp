@@ -581,6 +581,103 @@ std::pair<AffineMap, AffineMap> FlatLinearConstraints::getLowerAndUpperBound(
   return {lbMap, ubMap};
 }
 
+/// Compute a representation of `num` identifiers starting at `offset` in `cst`
+/// as affine expressions involving other known identifiers. Each identifier's
+/// expression (in terms of known identifiers) is populated into `memo`.
+static void computeUnknownVars(const FlatLinearConstraints &cst,
+                               MLIRContext *context, unsigned offset,
+                               unsigned num,
+                               SmallVectorImpl<AffineExpr> &memo) {
+  // Initialize dimensional and symbolic variables.
+  for (unsigned i = 0, e = cst.getNumDimVars(); i < e; i++) {
+    if (i < offset)
+      memo[i] = getAffineDimExpr(i, context);
+    else if (i >= offset + num)
+      memo[i] = getAffineDimExpr(i - num, context);
+  }
+  for (unsigned i = cst.getNumDimVars(), e = cst.getNumDimAndSymbolVars();
+       i < e; i++)
+    memo[i] = getAffineSymbolExpr(i - cst.getNumDimVars(), context);
+
+  bool changed;
+  do {
+    changed = false;
+    // Identify yet unknown variables as constants or mod's / floordiv's of
+    // other variables if possible.
+    for (unsigned pos = 0, f = cst.getNumVars(); pos < f; pos++) {
+      if (memo[pos])
+        continue;
+
+      auto lbConst = cst.getConstantBound64(BoundType::LB, pos);
+      auto ubConst = cst.getConstantBound64(BoundType::UB, pos);
+      if (lbConst.has_value() && ubConst.has_value()) {
+        // Detect equality to a constant.
+        if (*lbConst == *ubConst) {
+          memo[pos] = getAffineConstantExpr(*lbConst, context);
+          changed = true;
+          continue;
+        }
+
+        // Detect a variable as modulo of another variable w.r.t a
+        // constant.
+        if (detectAsMod(cst, pos, offset, num, *lbConst, *ubConst, context,
+                        memo)) {
+          changed = true;
+          continue;
+        }
+      }
+
+      // Detect a variable as a floordiv of an affine function of other
+      // variables (divisor is a positive constant).
+      if (detectAsFloorDiv(cst, pos, context, memo)) {
+        changed = true;
+        continue;
+      }
+
+      // Detect a variable as an expression of other variables.
+      unsigned idx;
+      if (!cst.findConstraintWithNonZeroAt(pos, /*isEq=*/true, &idx)) {
+        continue;
+      }
+
+      // Build AffineExpr solving for variable 'pos' in terms of all others.
+      auto expr = getAffineConstantExpr(0, context);
+      unsigned j, e;
+      for (j = 0, e = cst.getNumVars(); j < e; ++j) {
+        if (j == pos)
+          continue;
+        int64_t c = cst.atEq64(idx, j);
+        if (c == 0)
+          continue;
+        // If any of the involved IDs hasn't been found yet, we can't proceed.
+        if (!memo[j])
+          break;
+        expr = expr + memo[j] * c;
+      }
+      if (j < e)
+        // Can't construct expression as it depends on a yet uncomputed
+        // variable.
+        continue;
+
+      // Add constant term to AffineExpr.
+      expr = expr + cst.atEq64(idx, cst.getNumVars());
+      int64_t vPos = cst.atEq64(idx, pos);
+      assert(vPos != 0 && "expected non-zero here");
+      if (vPos > 0)
+        expr = (-expr).floorDiv(vPos);
+      else
+        // vPos < 0.
+        expr = expr.floorDiv(-vPos);
+      // Successfully constructed expression.
+      memo[pos] = expr;
+      changed = true;
+    }
+    // This loop is guaranteed to reach a fixed point - since once an
+    // variable's explicit form is computed (in memo[pos]), it's not updated
+    // again.
+  } while (changed);
+}
+
 /// Computes the lower and upper bounds of the first 'num' dimensional
 /// variables (starting at 'offset') as affine maps of the remaining
 /// variables (dimensional and symbolic variables). Local variables are
@@ -602,93 +699,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
 
   // Record computed/detected variables.
   SmallVector<AffineExpr, 8> memo(getNumVars());
-  // Initialize dimensional and symbolic variables.
-  for (unsigned i = 0, e = getNumDimVars(); i < e; i++) {
-    if (i < offset)
-      memo[i] = getAffineDimExpr(i, context);
-    else if (i >= offset + num)
-      memo[i] = getAffineDimExpr(i - num, context);
-  }
-  for (unsigned i = getNumDimVars(), e = getNumDimAndSymbolVars(); i < e; i++)
-    memo[i] = getAffineSymbolExpr(i - getNumDimVars(), context);
-
-  bool changed;
-  do {
-    changed = false;
-    // Identify yet unknown variables as constants or mod's / floordiv's of
-    // other variables if possible.
-    for (unsigned pos = 0; pos < getNumVars(); pos++) {
-      if (memo[pos])
-        continue;
-
-      auto lbConst = getConstantBound64(BoundType::LB, pos);
-      auto ubConst = getConstantBound64(BoundType::UB, pos);
-      if (lbConst.has_value() && ubConst.has_value()) {
-        // Detect equality to a constant.
-        if (*lbConst == *ubConst) {
-          memo[pos] = getAffineConstantExpr(*lbConst, context);
-          changed = true;
-          continue;
-        }
-
-        // Detect a variable as modulo of another variable w.r.t a
-        // constant.
-        if (detectAsMod(*this, pos, offset, num, *lbConst, *ubConst, context,
-                        memo)) {
-          changed = true;
-          continue;
-        }
-      }
-
-      // Detect a variable as a floordiv of an affine function of other
-      // variables (divisor is a positive constant).
-      if (detectAsFloorDiv(*this, pos, context, memo)) {
-        changed = true;
-        continue;
-      }
-
-      // Detect a variable as an expression of other variables.
-      unsigned idx;
-      if (!findConstraintWithNonZeroAt(pos, /*isEq=*/true, &idx)) {
-        continue;
-      }
-
-      // Build AffineExpr solving for variable 'pos' in terms of all others.
-      auto expr = getAffineConstantExpr(0, context);
-      unsigned j, e;
-      for (j = 0, e = getNumVars(); j < e; ++j) {
-        if (j == pos)
-          continue;
-        int64_t c = atEq64(idx, j);
-        if (c == 0)
-          continue;
-        // If any of the involved IDs hasn't been found yet, we can't proceed.
-        if (!memo[j])
-          break;
-        expr = expr + memo[j] * c;
-      }
-      if (j < e)
-        // Can't construct expression as it depends on a yet uncomputed
-        // variable.
-        continue;
-
-      // Add constant term to AffineExpr.
-      expr = expr + atEq64(idx, getNumVars());
-      int64_t vPos = atEq64(idx, pos);
-      assert(vPos != 0 && "expected non-zero here");
-      if (vPos > 0)
-        expr = (-expr).floorDiv(vPos);
-      else
-        // vPos < 0.
-        expr = expr.floorDiv(-vPos);
-      // Successfully constructed expression.
-      memo[pos] = expr;
-      changed = true;
-    }
-    // This loop is guaranteed to reach a fixed point - since once an
-    // variable's explicit form is computed (in memo[pos]), it's not updated
-    // again.
-  } while (changed);
+  computeUnknownVars(*this, context, offset, num, memo);
 
   int64_t ubAdjustment = closedUB ? 0 : 1;
 

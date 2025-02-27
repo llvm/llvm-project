@@ -150,11 +150,17 @@ analyzeModule(Module &M) {
       continue;
     }
 
-    MDNode *RootElementListNode =
-        dyn_cast<MDNode>(RSDefNode->getOperand(1).get());
+    Metadata *RootElementListOperand = RSDefNode->getOperand(1).get();
 
+    if (RootElementListOperand == nullptr) {
+      reportError(Ctx, "Root Element mdnode is null.");
+      continue;
+    }
+
+    MDNode *RootElementListNode = dyn_cast<MDNode>(RootElementListOperand);
     if (RootElementListNode == nullptr) {
-      reportError(Ctx, "Missing Root Element List Metadata node.");
+      reportError(Ctx, "Root Element is not a metadata node.");
+      continue;
     }
 
     mcdxbc::RootSignatureDesc RSD;

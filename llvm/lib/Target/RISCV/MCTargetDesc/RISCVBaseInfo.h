@@ -65,13 +65,9 @@ enum {
   VLMulShift = ConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
-  // Force a tail agnostic policy even this instruction has a tied destination.
-  ForceTailAgnosticShift = VLMulShift + 3,
-  ForceTailAgnosticMask = 1 << ForceTailAgnosticShift,
-
   // Is this a _TIED vector pseudo instruction. For these instructions we
   // shouldn't skip the tied operand when converting to MC instructions.
-  IsTiedPseudoShift = ForceTailAgnosticShift + 1,
+  IsTiedPseudoShift = VLMulShift + 3,
   IsTiedPseudoMask = 1 << IsTiedPseudoShift,
 
   // Does this instruction have a SEW operand. It will be the last explicit
@@ -145,12 +141,8 @@ static inline unsigned getFormat(uint64_t TSFlags) {
   return (TSFlags & InstFormatMask) >> InstFormatShift;
 }
 /// \returns the LMUL for the instruction.
-static inline VLMUL getLMul(uint64_t TSFlags) {
-  return static_cast<VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
-}
-/// \returns true if tail agnostic is enforced for the instruction.
-static inline bool doesForceTailAgnostic(uint64_t TSFlags) {
-  return TSFlags & ForceTailAgnosticMask;
+static inline RISCVVType::VLMUL getLMul(uint64_t TSFlags) {
+  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
 }
 /// \returns true if this a _TIED pseudo.
 static inline bool isTiedPseudo(uint64_t TSFlags) {
@@ -208,7 +200,8 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - Offset;
 }
 
-static inline unsigned getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
+static inline MCRegister
+getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
   // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
   // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
   return FeatureBits[RISCV::FeatureStdExtZicfilp] ? RISCV::X7 : RISCV::X6;
@@ -335,6 +328,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM26,
+  OPERAND_SIMM32,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -491,8 +485,8 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  const char *Name;
-  unsigned Value;
+  char Name[10];
+  uint8_t Value;
 };
 
 #define GET_RISCVOpcodesList_DECL
