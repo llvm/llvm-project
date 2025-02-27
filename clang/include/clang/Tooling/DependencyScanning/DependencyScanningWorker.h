@@ -80,6 +80,10 @@ public:
 /// using the regular processing run.
 class DependencyScanningWorker {
 public:
+  /// Construct a dependency scanning worker.
+  ///
+  /// @param Service The parent service. Must outlive the worker.
+  /// @param FS The filesystem for the worker to use.
   DependencyScanningWorker(DependencyScanningService &Service,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
