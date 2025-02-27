@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-wave-transform=1 -run-pass=gcn-wave-transform -gcn-wave-transform-print-final=1 -o - %s 2>&1 | FileCheck -check-prefixes=CFG %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-wave-transform=1 -run-pass=amdgpu-pre-wave-transform,gcn-wave-transform -gcn-wave-transform-print-final=1 -o - %s 2>&1 | FileCheck -check-prefixes=CFG %s
 
 # TODO: Test some of the generated MIR. This is currently not done because
 #       of high fluctuations in the MIR.

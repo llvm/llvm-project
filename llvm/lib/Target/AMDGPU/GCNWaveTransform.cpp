@@ -2103,7 +2103,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineCycleInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineUniformityAnalysisPass>();
+    AU.addUsedIfAvailable<MachineUniformityAnalysisPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -2123,7 +2123,6 @@ INITIALIZE_PASS_BEGIN(GCNWaveTransform, DEBUG_TYPE, "GCN Wave Transform", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(GCNWaveTransform, DEBUG_TYPE, "GCN Wave Transform", false,
                     false)
 
@@ -2146,9 +2145,9 @@ bool GCNWaveTransform::runOnMachineFunction(MachineFunction &MF) {
 
   // ConvergenceInfo = computeMachineConvergenceInfo(MF, *DomTree);
   CycleInfo = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  UniformInfo =
-      &getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
-
+  UniformInfo = &getAnalysisIfAvailable<MachineUniformityAnalysisPass>()
+                     ->getUniformityInfo();
+  assert(UniformInfo && "wave transform needs MachineUniformityAnalysis");
   LLVM_DEBUG(UniformInfo->print(dbgs()));
 
   // Step 1: Compute reconverging Wave CFG

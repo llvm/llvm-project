@@ -473,6 +473,10 @@ extern char &AMDGPUWaitSGPRHazardsLegacyID;
 FunctionPass *createGCNWaveTransformPass();
 void initializeGCNWaveTransformPass(PassRegistry &);
 
+FunctionPass *createAMDGPUPreWaveTransformPass();
+void initializeAMDGPUPreWaveTransformPass(PassRegistry &);
+extern char &AMDGPUPreWaveTransformID;
+
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,
