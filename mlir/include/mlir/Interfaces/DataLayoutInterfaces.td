@@ -656,7 +656,7 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*desc=*/"Returns true if the two lists of entries are compatible, that "
                "is, that `newLayout` spec entries can be nested in an op with "
                "`oldLayout` spec entries. `newSpec` is provided to further"
-               "query data from the spec, e.g. the default address space.",
+               "query data from the spec, e.g., the default address space.",
       /*retTy=*/"bool",
       /*methodName=*/"areCompatible",
       /*args=*/(ins "::mlir::DataLayoutEntryListRef":$oldLayout,
