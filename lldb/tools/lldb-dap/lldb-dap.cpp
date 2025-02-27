@@ -202,12 +202,13 @@ EXAMPLES:
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adaptor.
-static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                      llvm::StringRef comm_file,
-                                      lldb::pid_t debugger_pid, char *argv[]) {
+static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                                             llvm::StringRef comm_file,
+                                             lldb::pid_t debugger_pid,
+                                             char *argv[]) {
 #if defined(_WIN32)
-  llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(
+      "runInTerminal is only supported on POSIX systems");
 #else
 
   // On Linux with the Yama security module enabled, a process can only attach
@@ -219,10 +220,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #endif
 
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid()) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
-  }
+  if (llvm::Error err = comm_channel.NotifyPid())
+    return err;
 
   // We will wait to be attached with a timeout. We don't wait indefinitely
   // using a signal to prevent being paused forever.
@@ -233,8 +232,7 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
       timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
   if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
+    return err;
   }
 
   const char *target = target_arg.getValue();
@@ -242,8 +240,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   std::string error = std::strerror(errno);
   comm_channel.NotifyError(error);
-  llvm::errs() << error << "\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 std::move(error));
 #endif
 }
 
@@ -471,13 +469,18 @@ int main(int argc, char *argv[]) {
         }
       }
       int target_args_pos = argc;
-      for (int i = 0; i < argc; i++)
+      for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "--launch-target") == 0) {
           target_args_pos = i + 1;
           break;
         }
-      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                argv + target_args_pos);
+      }
+      if (llvm::Error err =
+              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
+                                        argv + target_args_pos)) {
+        llvm::errs() << llvm::toString(std::move(err)) << '\n';
+        return EXIT_FAILURE;
+      }
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
                       "specified\n";
