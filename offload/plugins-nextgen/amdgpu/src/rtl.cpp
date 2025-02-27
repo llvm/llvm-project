@@ -3903,9 +3903,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       case HSA_DEVICE_TYPE_DSP:
         TmpCharPtr = "DSP";
         break;
-      case HSA_DEVICE_TYPE_AIE:
-        TmpCharPtr = "AIE";
-        break;
       }
       Info.add("Device Type", TmpCharPtr);
     }

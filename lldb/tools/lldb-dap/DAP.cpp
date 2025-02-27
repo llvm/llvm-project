@@ -18,6 +18,7 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -61,7 +62,7 @@ const char DEV_NULL[] = "/dev/null";
 namespace lldb_dap {
 
 DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-         StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+         lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
     : name(std::move(name)), debug_adaptor_path(path), log(log),
       input(std::move(input)), output(std::move(output)),
