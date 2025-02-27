@@ -717,7 +717,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   if (!SrcVecTy || DstVecScalarTy != SrcVecTy->getScalarType())
     return false;
 
-  // Ignore bogus insert/extract index.
+  // Ignore if insert/extract index is out of bounds or destination vector has
+  // one element
   unsigned NumDstElts = DstVecTy->getNumElements();
   unsigned NumSrcElts = SrcVecTy->getNumElements();
   if (InsIdx >= NumDstElts || ExtIdx >= NumSrcElts || NumDstElts == 1)
