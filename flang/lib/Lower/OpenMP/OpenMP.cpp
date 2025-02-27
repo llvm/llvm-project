@@ -3275,13 +3275,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &objectList =
       std::get<std::optional<parser::OmpObjectList>>(flushConstruct.t);
   const auto &clauseList =
-      std::get<std::optional<std::list<parser::OmpMemoryOrderClause>>>(
-          flushConstruct.t);
+      std::get<std::optional<parser::OmpClauseList>>(flushConstruct.t);
   ObjectList objects =
       objectList ? makeObjects(*objectList, semaCtx) : ObjectList{};
   List<Clause> clauses =
-      clauseList ? makeList(*clauseList,
-                            [&](auto &&s) { return makeClause(s.v, semaCtx); })
+      clauseList ? makeList(clauseList->v,
+                            [&](auto &&s) { return makeClause(s, semaCtx); })
                  : List<Clause>{};
   mlir::Location currentLocation = converter.genLocation(verbatim.source);
 

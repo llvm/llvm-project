@@ -2139,16 +2139,26 @@ void OmpStructureChecker::Enter(const parser::OpenMPFlushConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
+  auto &flushList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
+
   if (FindClause(llvm::omp::Clause::OMPC_acquire) ||
       FindClause(llvm::omp::Clause::OMPC_release) ||
       FindClause(llvm::omp::Clause::OMPC_acq_rel)) {
-    if (const auto &flushList{
-            std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
+    if (flushList) {
       context_.Say(parser::FindSourceLocation(flushList),
           "If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items "
           "must not be specified on the FLUSH directive"_err_en_US);
     }
   }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  if (version >= 52) {
+    if (!std::get</*TrailingClauses=*/bool>(x.t)) {
+      context_.Say(parser::FindSourceLocation(flushList),
+          "The syntax \"FLUSH clause (object, ...)\" has been deprecated, use \"FLUSH(object, ...) clause\" instead"_warn_en_US);
+    }
+  }
+
   dirContext_.pop_back();
 }
 

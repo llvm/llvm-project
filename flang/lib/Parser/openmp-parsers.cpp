@@ -1104,9 +1104,26 @@ TYPE_PARSER(sourced(construct<OmpAtomicClauseList>(
 TYPE_PARSER(sourced(construct<OpenMPDepobjConstruct>(verbatim("DEPOBJ"_tok),
     parenthesized(Parser<OmpObject>{}), sourced(Parser<OmpClause>{}))))
 
-TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
-    many(maybe(","_tok) >> sourced(Parser<OmpMemoryOrderClause>{})),
-    maybe(parenthesized(Parser<OmpObjectList>{})))))
+static OpenMPFlushConstruct makeFlushFromOldSyntax(
+    Verbatim &&text, std::optional<OmpClauseList> &&clauses,
+    std::optional<OmpObjectList> &&objects) {
+  bool oldSyntax{
+      clauses && !clauses->v.empty() && objects && !objects->v.empty()};
+  return OpenMPFlushConstruct{
+      std::move(text), std::move(objects), std::move(clauses),
+      /*TrailingClauses=*/!oldSyntax};
+}
+
+TYPE_PARSER(sourced( //
+    construct<OpenMPFlushConstruct>(
+        applyFunction<OpenMPFlushConstruct>(makeFlushFromOldSyntax,
+            verbatim("FLUSH"_tok), maybe(Parser<OmpClauseList>{}),
+            maybe(parenthesized(Parser<OmpObjectList>{})))) ||
+
+    construct<OpenMPFlushConstruct>(
+        verbatim("FLUSH"_tok),
+        maybe(parenthesized(Parser<OmpObjectList>{})),
+        Parser<OmpClauseList>{}, pure(/*TrailingClauses=*/true))))
 
 // Simple Standalone Directives
 TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(

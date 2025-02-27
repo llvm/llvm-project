@@ -2874,9 +2874,14 @@ public:
   }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP FLUSH ");
-    Walk(std::get<std::optional<std::list<OmpMemoryOrderClause>>>(x.t));
-    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Word("!$OMP FLUSH");
+    if (std::get</*ClausesTrailing=*/bool>(x.t)) {
+      Walk("(", std::get<std::optional<OmpObjectList>>(x.t), ")");
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+    } else {
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+      Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    }
     Put("\n");
     EndOpenMP();
   }
