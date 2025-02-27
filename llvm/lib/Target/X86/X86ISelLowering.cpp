@@ -53822,11 +53822,17 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   if (VT == MVT::i32 && SrcVT == MVT::i64 && SrcOpcode == ISD::SRL &&
-      Src.getOperand(0).getNumOperands() == 2 &&
-      isa<ConstantSDNode>(Src.getOperand(1)) &&
-      isa<ConstantSDNode>(Src.getOperand(0).getOperand(1))) {
+      isa<ConstantSDNode>(Src.getOperand(1))) {
+
+    unsigned SrcOpOpcode = Src.getOperand(0).getOpcode();
+    if ((SrcOpOpcode != ISD::ADD && SrcOpOpcode != ISD::OR &&
+         SrcOpOpcode != ISD::XOR) ||
+        !isa<ConstantSDNode>(Src.getOperand(0).getOperand(1)))
+      return SDValue();
+
     if (SDValue R = combinei64TruncSrlConstant(Src, VT, DAG, DL))
       return R;
+
     return SDValue();
   }
 
