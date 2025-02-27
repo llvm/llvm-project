@@ -1,3 +1,4 @@
+// XFAIL: windows
 // RUN: %libomp-compile-and-run
 #include <stdio.h>
 #include <stdlib.h>

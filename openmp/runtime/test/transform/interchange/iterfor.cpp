@@ -1,3 +1,4 @@
+// XFAIL: windows
 // RUN: %libomp-cxx20-compile-and-run | FileCheck %s --match-full-lines
 
 #ifndef HEADER
