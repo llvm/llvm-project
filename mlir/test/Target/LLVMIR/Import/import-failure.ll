@@ -38,6 +38,18 @@ bb1:
 
 ; // -----
 
+declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
+
+; CHECK:      <unknown>
+; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg1, ptr null)
+define void @unhandled_intrinsic() gc "example" {
+  %arg1 = alloca ptr
+  call void @llvm.gcroot(ptr %arg1, ptr null)
+  ret void
+}
+
+; // -----
+
 ; Check that debug intrinsics with an unsupported argument are dropped.
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
