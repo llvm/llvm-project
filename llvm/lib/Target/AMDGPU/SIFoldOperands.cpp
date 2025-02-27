@@ -1022,7 +1022,7 @@ void SIFoldOperandsImpl::foldOperand(
       OpToFold.setIsKill(false);
 
       // Remove kill flags as kills may now be out of order with uses.
-      MRI->clearKillFlags(OpToFold.getReg());
+      MRI->clearKillFlags(UseReg);
       if (foldCopyToAGPRRegSequence(UseMI))
         return;
     }
