@@ -743,11 +743,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
     NewShuf = Builder.CreateShuffleVector(DstVec, VecFNeg, Mask);
   }
 
-  if (LenChgShuf)
-    Worklist.pushValue(LenChgShuf);
-
   Worklist.pushValue(VecFNeg);
-  Worklist.pushValue(NewShuf);
   replaceValue(I, *NewShuf);
   return true;
 }
