@@ -682,11 +682,21 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (!CanCommute)
       return false;
 
+    MachineOperand &Op = MI->getOperand(OpNo);
+    MachineOperand &CommutedOp = MI->getOperand(CommuteOpNo);
+
     // One of operands might be an Imm operand, and OpNo may refer to it after
     // the call of commuteInstruction() below. Such situations are avoided
     // here explicitly as OpNo must be a register operand to be a candidate
     // for memory folding.
-    if (!MI->getOperand(OpNo).isReg() || !MI->getOperand(CommuteOpNo).isReg())
+    if (!Op.isReg() || !CommutedOp.isReg())
+      return false;
+
+    // The same situation with an immediate could reproduce if both inputs are
+    // the same register.
+    if (Op.isReg() && CommutedOp.isReg() &&
+        (Op.getReg() == CommutedOp.getReg() &&
+         Op.getSubReg() == CommutedOp.getSubReg()))
       return false;
 
     if (!TII->commuteInstruction(*MI, false, OpNo, CommuteOpNo))
