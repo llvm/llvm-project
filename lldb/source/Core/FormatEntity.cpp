@@ -450,7 +450,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
 
     if (sc) {
       if (sc->function) {
-        func_addr = sc->function->GetAddressRange().GetBaseAddress();
+        func_addr = sc->function->GetAddress();
         if (sc->block && !concrete_only) {
           // Check to make sure we aren't in an inline function. If we are, use
           // the inline block range that contains "format_addr" since blocks
@@ -468,7 +468,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
     if (func_addr.IsValid()) {
       const char *addr_offset_padding = no_padding ? "" : " ";
 
-      if (func_addr.GetSection() == format_addr.GetSection()) {
+      if (func_addr.GetModule() == format_addr.GetModule()) {
         addr_t func_file_addr = func_addr.GetFileAddress();
         addr_t addr_file_addr = format_addr.GetFileAddress();
         if (addr_file_addr > func_file_addr ||

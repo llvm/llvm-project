@@ -17,6 +17,4 @@ void entry() {
   // These _should_ work in HLSL but aren't yet supported.
   S s;
   float2 GettingStrange = float2(s, s); // expected-error{{no viable conversion from 'S' to 'float'}} expected-error{{no viable conversion from 'S' to 'float'}}
-  S2 s2;
-  float2 EvenStranger = float2(s2); // expected-error{{cannot convert 'S2' to 'float2' (vector of 2 'float' values) without a conversion operator}}
 }

@@ -164,8 +164,8 @@ void CallStackTrie::addCallStack(
     }
     // Update existing caller node if it exists.
     CallStackTrieNode *Prev = nullptr;
-    auto Next = Curr->Callers.find(StackId);
-    if (Next != Curr->Callers.end()) {
+    auto [Next, Inserted] = Curr->Callers.try_emplace(StackId);
+    if (!Inserted) {
       Prev = Curr;
       Curr = Next->second;
       Curr->addAllocType(AllocType);
@@ -177,7 +177,7 @@ void CallStackTrie::addCallStack(
     }
     // Otherwise add a new caller node.
     auto *New = new CallStackTrieNode(AllocType);
-    Curr->Callers[StackId] = New;
+    Next->second = New;
     Curr = New;
   }
   assert(Curr);

@@ -824,7 +824,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_pointer);
     REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
     REVERTIBLE_TYPE_TRAIT(__is_reference);
-    REVERTIBLE_TYPE_TRAIT(__is_referenceable);
     REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
     REVERTIBLE_TYPE_TRAIT(__is_rvalue_reference);
     REVERTIBLE_TYPE_TRAIT(__is_same);
@@ -2237,6 +2236,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
               RunSignatureHelp();
             LHS = ExprError();
+          } else if (!HasError && HasTrailingComma) {
+            Diag(Tok, diag::err_expected_expression);
           } else if (LHS.isInvalid()) {
             for (auto &E : ArgExprs)
               Actions.CorrectDelayedTyposInExpr(E);

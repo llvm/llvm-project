@@ -508,14 +508,15 @@ protected:
     auto *Variable =
         DBuilder.createAutoVariable(Subprogram, "x", File, 5, IntType, true);
     auto *DL = DILocation::get(Subprogram->getContext(), 5, 0, Subprogram);
-    DBuilder.insertDeclare(Alloca, Variable, E, DL, Store);
+    DBuilder.insertDeclare(Alloca, Variable, E, DL, Store->getIterator());
     DBuilder.insertDbgValueIntrinsic(AllocaContent, Variable, E, DL, Entry);
     // Also create an inlined variable.
     // Create a distinct struct type that we should not duplicate during
     // cloning).
     auto *StructType = DICompositeType::getDistinct(
         C, dwarf::DW_TAG_structure_type, "some_struct", nullptr, 0, nullptr,
-        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr);
+        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, std::nullopt, nullptr,
+        nullptr);
     auto *InlinedSP = DBuilder.createFunction(
         CU, "inlined", "inlined", File, 8, FuncType, 9, DINode::FlagZero,
         DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition);
@@ -527,7 +528,8 @@ protected:
         Subprogram->getContext(), 9, 4, Scope,
         DILocation::get(Subprogram->getContext(), 5, 2, Subprogram));
     IBuilder.SetCurrentDebugLocation(InlinedDL);
-    DBuilder.insertDeclare(Alloca, InlinedVar, E, InlinedDL, Store);
+    DBuilder.insertDeclare(Alloca, InlinedVar, E, InlinedDL,
+                           Store->getIterator());
     IBuilder.CreateStore(IBuilder.getInt32(2), Alloca);
     // Finalize the debug info.
     DBuilder.finalize();

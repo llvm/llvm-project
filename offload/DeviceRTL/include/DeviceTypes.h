@@ -12,8 +12,14 @@
 #ifndef OMPTARGET_TYPES_H
 #define OMPTARGET_TYPES_H
 
+#include <gpuintrin.h>
 #include <stddef.h>
 #include <stdint.h>
+
+template <typename T> using Private = __gpu_private T;
+template <typename T> using Constant = __gpu_constant T;
+template <typename T> using Local = __gpu_local T;
+template <typename T> using Global = __gpu_local T;
 
 enum omp_proc_bind_t {
   omp_proc_bind_false = 0,
@@ -154,19 +160,6 @@ typedef enum omp_allocator_handle_t {
 
 #define __PRAGMA(STR) _Pragma(#STR)
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
-
-#define SHARED(NAME)                                                           \
-  [[clang::address_space(3)]] NAME [[clang::loader_uninitialized]];
-
-// TODO: clang should use address space 5 for omp_thread_mem_alloc, but right
-//       now that's not the case.
-#define THREAD_LOCAL(NAME)                                                     \
-  [[clang::address_space(5)]] NAME [[clang::loader_uninitialized]]
-
-// TODO: clang should use address space 4 for omp_const_mem_alloc, maybe it
-//       does?
-#define CONSTANT(NAME)                                                         \
-  [[clang::address_space(4)]] NAME [[clang::loader_uninitialized]]
 
 ///}
 

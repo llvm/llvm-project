@@ -113,7 +113,7 @@ struct DigitsOutput {
 // enough that for any binary exponent in the range of float128 it will give
 // the correct value of floor(log10(2^n)).
 LIBC_INLINE int estimate_log10(int exponent_of_2) {
-  return (exponent_of_2 * 1292913986LL) >> 32;
+  return static_cast<int>((exponent_of_2 * 1292913986LL) >> 32);
 }
 
 // Calculate the actual digits of a decimal representation of an FP number.
@@ -189,7 +189,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   // overflow _after_ the multiplication and retry. So if even the smaller
   // number of possible output digits is too many, we might as well change our
   // mind right now and switch into E mode.
-  if (log10_input_max - log10_low_digit + 1 > MAX_DIGITS) {
+  if (log10_input_max - log10_low_digit + 1 > int(MAX_DIGITS)) {
     precision = MAX_DIGITS;
     e_mode = true;
     log10_low_digit = log10_input_min + 1 - precision;
@@ -362,8 +362,8 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // we made it from and doing the decimal conversion all over again.)
       for (size_t i = output.ndigits; i-- > 0;) {
         if (output.digits[i] != '9') {
-          output.digits[i] = internal::int_to_b36_char(
-              internal::b36_char_to_int(output.digits[i]) + 1);
+          output.digits[i] = static_cast<char>(internal::int_to_b36_char(
+              internal::b36_char_to_int(output.digits[i]) + 1));
           break;
         } else {
           output.digits[i] = '0';

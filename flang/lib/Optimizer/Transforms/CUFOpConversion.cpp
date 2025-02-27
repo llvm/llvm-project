@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/CUFOpConversion.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
@@ -22,6 +21,7 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Matchers.h"
@@ -541,7 +541,8 @@ static mlir::Value getShapeFromDecl(mlir::Value src) {
 
 static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
                             cuf::DataTransferOp op,
-                            const mlir::SymbolTable &symtab) {
+                            const mlir::SymbolTable &symtab,
+                            mlir::Type dstEleTy = nullptr) {
   auto mod = op->getParentOfType<mlir::ModuleOp>();
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, mod);
@@ -555,11 +556,21 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
       // from a LOGICAL constant. Store it as a fir.logical.
       srcTy = fir::LogicalType::get(rewriter.getContext(), 4);
       src = createConvertOp(rewriter, loc, srcTy, src);
+      addr = builder.createTemporary(loc, srcTy);
+      builder.create<fir::StoreOp>(loc, src, addr);
+    } else {
+      if (dstEleTy && fir::isa_trivial(dstEleTy) && srcTy != dstEleTy) {
+        // Use dstEleTy and convert to avoid assign mismatch.
+        addr = builder.createTemporary(loc, dstEleTy);
+        auto conv = builder.create<fir::ConvertOp>(loc, dstEleTy, src);
+        builder.create<fir::StoreOp>(loc, conv, addr);
+        srcTy = dstEleTy;
+      } else {
+        // Put constant in memory if it is not.
+        addr = builder.createTemporary(loc, srcTy);
+        builder.create<fir::StoreOp>(loc, src, addr);
+      }
     }
-    // Put constant in memory if it is not.
-    mlir::Value alloc = builder.createTemporary(loc, srcTy);
-    builder.create<fir::StoreOp>(loc, src, alloc);
-    addr = alloc;
   } else {
     addr = op.getSrc();
   }
@@ -729,7 +740,7 @@ struct CUFDataTransferOpConversion
     };
 
     // Conversion of data transfer involving at least one descriptor.
-    if (mlir::isa<fir::BaseBoxType>(dstTy)) {
+    if (auto dstBoxTy = mlir::dyn_cast<fir::BaseBoxType>(dstTy)) {
       // Transfer to a descriptor.
       mlir::func::FuncOp func =
           isDstGlobal(op)
@@ -740,7 +751,8 @@ struct CUFDataTransferOpConversion
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
       if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
-        src = emboxSrc(rewriter, op, symtab);
+        mlir::Type dstEleTy = fir::unwrapInnerType(dstBoxTy.getEleTy());
+        src = emboxSrc(rewriter, op, symtab, dstEleTy);
         if (fir::isa_trivial(srcTy))
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
               loc, builder);

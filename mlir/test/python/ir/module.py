@@ -1,7 +1,6 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
-from pathlib import Path
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 
@@ -38,7 +37,7 @@ def testParseFromFileSuccess():
     with NamedTemporaryFile(mode="w") as tmp_file:
         tmp_file.write(r"""module @successfulParse {}""")
         tmp_file.flush()
-        module = Module.parse(Path(tmp_file.name), ctx)
+        module = Module.parseFile(tmp_file.name, ctx)
         assert module.context is ctx
         print("CLEAR CONTEXT")
         ctx = None  # Ensure that module captures the context.

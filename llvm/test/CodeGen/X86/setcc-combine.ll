@@ -463,14 +463,23 @@ define <2 x double> @oge(<2 x double> %x) {
 ; negative test - don't create an fneg to replace 0.0 operand
 
 define double @ogt_no_fneg(double %x, double %y) {
-; CHECK-LABEL: ogt_no_fneg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorpd %xmm2, %xmm2
-; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
-; CHECK-NEXT:    andpd %xmm2, %xmm0
-; CHECK-NEXT:    andnpd %xmm1, %xmm2
-; CHECK-NEXT:    orpd %xmm2, %xmm0
-; CHECK-NEXT:    retq
+; SSE2-LABEL: ogt_no_fneg:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorpd %xmm2, %xmm2
+; SSE2-NEXT:    cmpltsd %xmm0, %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: ogt_no_fneg:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd %xmm0, %xmm2
+; SSE41-NEXT:    xorpd %xmm0, %xmm0
+; SSE41-NEXT:    cmpltsd %xmm2, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    retq
   %cmp = fcmp ogt double %x, 0.0
   %r = select i1 %cmp, double %x, double %y
   ret double %r
@@ -479,16 +488,27 @@ define double @ogt_no_fneg(double %x, double %y) {
 ; negative test - can't change the setcc for non-zero constant
 
 define double @ogt_no_zero(double %x) {
-; CHECK-LABEL: ogt_no_zero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    xorpd %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
-; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
-; CHECK-NEXT:    andpd %xmm2, %xmm0
-; CHECK-NEXT:    andnpd %xmm1, %xmm2
-; CHECK-NEXT:    orpd %xmm2, %xmm0
-; CHECK-NEXT:    retq
+; SSE2-LABEL: ogt_no_zero:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    xorpd %xmm0, %xmm1
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
+; SSE2-NEXT:    cmpltsd %xmm0, %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: ogt_no_zero:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd %xmm0, %xmm1
+; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    xorpd %xmm0, %xmm2
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
+; SSE41-NEXT:    cmpltsd %xmm1, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    movapd %xmm2, %xmm0
+; SSE41-NEXT:    retq
   %neg = fneg double %x
   %cmp = fcmp ogt double %x, 1.0
   %r = select i1 %cmp, double %x, double %neg
