@@ -14,9 +14,9 @@ completed update is reported even if the user doesn't explicitly cause one
 to be sent.") lldb::SBProgress;
 
 %feature("docstring",
-"Explicitly end an SBProgress, this is a utility to send the progressEnd event
-without waiting for your language or language implementations non-deterministic destruction
-of the SBProgress object.
+"Finalize the SBProgress, which will cause a progress end event to be emitted. This 
+happens automatically when the SBProcess object is destroyed, but can be done explicitly 
+with Finalize to avoid having to rely on the language semantics for destruction.
 
 Note once finalized, no further increments will be processed.") lldb::SBProgress::Finalize;
 
