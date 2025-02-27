@@ -5104,6 +5104,33 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+// Add DIOp based expression in the declare target variables for AMDGPU target.
+static void updateDebugInfoForDeclareTargetVariables(
+    LLVM::GlobalOp globalOp, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *M = moduleTranslation.getLLVMModule();
+  if (!llvm::Triple(M->getTargetTriple()).isAMDGPU())
+    return;
+
+  llvm::GlobalVariable *GV = M->getGlobalVariable(globalOp.getSymName());
+  if (GV) {
+    llvm::SmallVector<llvm::DIGlobalVariableExpression *> GVEs;
+    GV->getDebugInfo(GVEs);
+    GV->eraseMetadata(llvm::LLVMContext::MD_dbg);
+    llvm::DIExprBuilder ExprBuilder(M->getContext());
+    unsigned int globalAS = M->getDataLayout().getDefaultGlobalsAddressSpace();
+    auto ptrTy = llvm::PointerType::get(M->getContext(), globalAS);
+    ExprBuilder.append<llvm::DIOp::Arg>(0u, ptrTy);
+    ExprBuilder.append<llvm::DIOp::Deref>(GV->getType());
+    for (auto *GVE : GVEs) {
+      llvm::DIExpression *Old = GVE->getExpression();
+      assert((Old == nullptr) || (Old->getNumElements() == 0));
+      auto *newGVE = llvm::DIGlobalVariableExpression::get(
+          M->getContext(), GVE->getVariable(), ExprBuilder.intoExpression());
+      GV->addDebugInfo(newGVE);
+    }
+  }
+}
+
 static LogicalResult
 convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                          LLVM::ModuleTranslation &moduleTranslation) {
@@ -5135,6 +5162,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
 
   if (LLVM::GlobalOp gOp = dyn_cast<LLVM::GlobalOp>(op)) {
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+    updateDebugInfoForDeclareTargetVariables(gOp, moduleTranslation);
     if (auto *gVal = llvmModule->getNamedValue(gOp.getSymName())) {
       llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
       bool isDeclaration = gOp.isDeclaration();
