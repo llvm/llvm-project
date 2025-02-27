@@ -3107,6 +3107,9 @@ Sema::PerformObjectMemberConversion(Expr *From,
                                    /*IgnoreAccess=*/true))
     return ExprError();
 
+  // Propagate qualifiers to base subobjects as per:
+  // C++ [basic.type.qualifier]p1.2:
+  //   A volatile object is [...] a subobject of a volatile object.
   Qualifiers FromTypeQuals = FromType.getQualifiers();
   FromTypeQuals.setAddressSpace(DestType.getAddressSpace());
   DestType = Context.getQualifiedType(DestType, FromTypeQuals);
