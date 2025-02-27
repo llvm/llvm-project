@@ -50,9 +50,11 @@ void SBProgress::Increment(uint64_t amount, const char *description) {
 }
 
 void SBProgress::Finalize() {
-  if (!m_opaque_up)
-    return;
-
+  // The lldb_private::Progress object is designed to be RAII and send the end
+  // progress event when it gets destroyed. So force our contained object to be
+  // destroyed and send the progress end event. Clearing this object also allows
+  // all other methods to quickly return without doing any work if they are
+  // called after this method.
   m_opaque_up.reset();
 }
 

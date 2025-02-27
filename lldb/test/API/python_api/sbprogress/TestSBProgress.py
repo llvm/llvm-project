@@ -37,7 +37,7 @@ class SBProgressTestCase(TestBase):
         event.GetDescription(stream)
         self.assertIn("Step 3", stream.GetData())
 
-    def test_progress_finalize(self):
+    def test_progress_finalize_non_deterministic_progress(self):
         """Test SBProgress finalize sends the progressEnd event"""
 
         progress = lldb.SBProgress("Test SBProgress", "Test finalize", self.dbg)
@@ -49,4 +49,20 @@ class SBProgressTestCase(TestBase):
         self.assertTrue(listener.WaitForEvent(5, event))
         stream = lldb.SBStream()
         event.GetDescription(stream)
+        self.assertIn("type = end", stream.GetData())
+
+    def test_progress_finalize_deterministic_progress(self):
+        """Test SBProgress finalize sends the progressEnd event"""
+
+        progress = lldb.SBProgress("Test SBProgress", "Test finalize", 13, self.dbg)
+        listener = lldb.SBListener("Test listener")
+        broadcaster = self.dbg.GetBroadcaster()
+        broadcaster.AddListener(listener, lldb.eBroadcastBitExternalProgressCategory)
+        event = lldb.SBEvent()
+        progress.Finalize()
+        self.assertTrue(listener.WaitForEvent(5, event))
+        stream = lldb.SBStream()
+        event.GetDescription(stream)
+        # Note even for progresses with a total, the total isn't
+        # sent in the end message.
         self.assertIn("type = end", stream.GetData())
