@@ -11586,6 +11586,11 @@ VectorExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   QualType EltTy = VT->getElementType();
   SmallVector<APValue, 4> Elements;
 
+  // MFloat8 type doesn't have constants and thus constant folding
+  // is impossible.
+  if (EltTy->isMFloat8Type())
+    return false;
+
   // The number of initializers can be less than the number of
   // vector elements. For OpenCL, this can be due to nested vector
   // initialization. For GCC compatibility, missing trailing elements
