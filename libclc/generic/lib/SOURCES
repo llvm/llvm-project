@@ -106,7 +106,6 @@ math/exp10.cl
 math/fabs.cl
 math/fdim.cl
 math/floor.cl
-math/clc_fma.cl
 math/fma.cl
 math/fmax.cl
 math/fmin.cl
@@ -131,7 +130,6 @@ math/half_tan.cl
 math/clc_hypot.cl
 math/hypot.cl
 math/ilogb.cl
-math/clc_ldexp.cl
 math/ldexp.cl
 math/lgamma.cl
 math/lgamma_r.cl

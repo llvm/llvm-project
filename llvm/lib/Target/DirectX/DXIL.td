@@ -46,6 +46,12 @@ def ResRetDoubleTy : DXILOpParamType;
 def ResRetInt16Ty : DXILOpParamType;
 def ResRetInt32Ty : DXILOpParamType;
 def ResRetInt64Ty : DXILOpParamType;
+def CBufRetHalfTy : DXILOpParamType;
+def CBufRetFloatTy : DXILOpParamType;
+def CBufRetDoubleTy : DXILOpParamType;
+def CBufRetInt16Ty : DXILOpParamType;
+def CBufRetInt32Ty : DXILOpParamType;
+def CBufRetInt64Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
@@ -816,6 +822,19 @@ def CreateHandle : DXILOp<57, createHandle> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def CBufferLoadLegacy : DXILOp<59, cbufferLoadLegacy> {
+  let Doc = "loads a value from a constant buffer resource";
+  // Handle, Index
+  let arguments = [HandleTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [
+    CBufRetHalfTy, CBufRetFloatTy, CBufRetDoubleTy, CBufRetInt16Ty,
+    CBufRetInt32Ty, CBufRetInt64Ty
+  ]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
 def BufferLoad : DXILOp<68, bufferLoad> {
   let Doc = "reads from a TypedBuffer";
   // Handle, Coord0, Coord1
@@ -930,6 +949,7 @@ def MakeDouble : DXILOp<101, makeDouble> {
 
 def SplitDouble : DXILOp<102, splitDouble> {
   let Doc = "Splits a double into 2 uints";
+  let intrinsics = [IntrinSelect<int_dx_splitdouble>];
   let arguments = [OverloadTy];
   let result = SplitDoubleTy;
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];

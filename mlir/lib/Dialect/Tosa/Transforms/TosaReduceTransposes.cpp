@@ -287,8 +287,7 @@ bool TosaReduceTransposes::collectFanIn(Operation *op,
 
     for (Value operand : op->getOperands()) {
       // If this is a problem in future, think about alternatives to recursion.
-      if (llvm::isa<tosa::MulOp>(op) && op->getNumOperands() == 3 &&
-          operand == op->getOperand(2)) {
+      if (llvm::isa<tosa::MulOp>(op) && operand == op->getOperand(2)) {
         // do not recurse into MulOp's shift operand
         continue;
       }
@@ -332,8 +331,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   for (Value v : op->getOperands()) {
     if (valuesMap.contains(v)) {
       operands.push_back(valuesMap.at(v));
-    } else if (llvm::isa<tosa::MulOp>(op) && op->getNumOperands() == 3 &&
-               v == op->getOperand(2)) {
+    } else if (llvm::isa<tosa::MulOp>(op) && v == op->getOperand(2)) {
       // special case for MulOp's shift operand
       operands.push_back(v);
     } else {
@@ -369,9 +367,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     TransposeOp transposeOp, const DenseMap<Value, Value> &valuesMap,
     IRRewriter &rewriter, ArrayRef<int32_t> hoistedPerms) {
-  SmallVector<int32_t> perms;
-  if (failed(transposeOp.getConstantPerms(perms)) ||
-      !areInvolutionTransposes(hoistedPerms, perms))
+  if (!areInvolutionTransposes(hoistedPerms, transposeOp.getPerms()))
     return std::nullopt;
   return transposeOp.getInput1();
 }
@@ -508,14 +504,11 @@ bool TosaReduceTransposes::dependenciesAreValid(
       // replaced.
       Operation *user = use.getOwner();
       if (auto otherTranspose = llvm::dyn_cast<TransposeOp>(user)) {
-        SmallVector<int32_t> otherPerms;
-
         // Can later think about cases where transpose -> transpose
         // or reshape -> transpose, where the transposes are not necessarily
         // the same perms as the hoisted, if implementing a more general
         // transform. These could be permitted.
-        if (failed(otherTranspose.getConstantPerms(otherPerms)) ||
-            !llvm::equal(perms, otherPerms))
+        if (!llvm::equal(perms, otherTranspose.getPerms()))
           return false;
       } else if (userNotContainedInValidTransposeDependencies(
                      user, validTransposes, transposeInfo)) {
@@ -609,9 +602,8 @@ void TosaReduceTransposes::runOnOperation() {
         !llvm::isa<RankedTensorType>(output.getType()))
       return;
 
-    // No transformation when transpose permutation non-constant.
-    if (failed(transposeOp.getConstantPerms(perms)))
-      return;
+    llvm::for_each(transposeOp.getPerms(),
+                   [&perms](const auto i) { perms.emplace_back(i); });
 
     // We let --canonicalize deal with identity transpose.
     if (llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))

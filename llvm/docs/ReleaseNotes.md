@@ -57,6 +57,10 @@ Changes to the LLVM IR
 ----------------------
 
 * The `nocapture` attribute has been replaced by `captures(none)`.
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * `mul`
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -103,6 +107,11 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
+  extension.
+* Adds experimental assembler support for the Qualcomm 'Xqccmp' extension, which
+  is a frame-pointer convention compatible version of Zcmp.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
@@ -121,6 +130,15 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the `LLVMBuildXYZ` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * `LLVMConstMul`
+  * `LLVMConstNUWMul`
+  * `LLVMConstNSWMul`
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -133,6 +151,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
+
 Changes to LLDB
 ---------------------------------
 
@@ -142,6 +162,8 @@ Changes to LLDB
   does not provide API to query the number of supported hardware watchpoints.
   Therefore current implementation allows only 1 watchpoint, as tested with
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
+* LLDB now steps through C++ thunks. This fixes an issue where previously, it
+  wouldn't step into multiple inheritance virtual functions.
 
 ### Changes to lldb-dap
 

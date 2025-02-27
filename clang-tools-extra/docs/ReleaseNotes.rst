@@ -91,6 +91,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-unintended-char-ostream-output
+  <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
+
+  Finds unintended character output from ``unsigned char`` and ``signed char`` to an
+  ``ostream``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -106,9 +112,23 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by adding the option
+  `AllowedTypes`, that excludes specified types from const-correctness
+  checking.
+
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
+
+- Improved :doc:`performance/unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
+  tolerating fix-it breaking compilation when functions is used as pointers 
+  to avoid matching usage of functions within the current compilation unit.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
+  on ternary operators calling ``std::move``.
 
 Removed checks
 ^^^^^^^^^^^^^^
