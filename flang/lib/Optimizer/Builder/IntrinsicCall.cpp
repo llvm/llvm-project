@@ -2734,6 +2734,20 @@ mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
 
   mlir::Value arg1 = args[1];
   mlir::Value arg2 = args[2];
+
+  auto bitCastFloat = [&](mlir::Value arg) -> mlir::Value {
+    if (mlir::isa<mlir::Float32Type>(arg.getType()))
+      return builder.create<mlir::LLVM::BitcastOp>(loc, builder.getI32Type(),
+                                                   arg);
+    if (mlir::isa<mlir::Float64Type>(arg.getType()))
+      return builder.create<mlir::LLVM::BitcastOp>(loc, builder.getI64Type(),
+                                                   arg);
+    return arg;
+  };
+
+  arg1 = bitCastFloat(arg1);
+  arg2 = bitCastFloat(arg2);
+
   if (arg1.getType() != arg2.getType()) {
     // arg1 and arg2 need to have the same type in AtomicCmpXchgOp.
     arg2 = builder.createConvert(loc, arg1.getType(), arg2);

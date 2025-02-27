@@ -10,6 +10,7 @@
 
 // ASan seems to try to create threadsm which obviouly doesn't work in this test.
 // UNSUPPORTED: asan
+// UNSUPPORTED: hwasan
 
 // UNSUPPORTED: c++03
 
