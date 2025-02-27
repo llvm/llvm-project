@@ -421,6 +421,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"cos", {{"x", SameFloating}}, SameFloating},
     {"cosd", {{"x", SameFloating}}, SameFloating},
     {"cosh", {{"x", SameFloating}}, SameFloating},
+    {"coshape", {{"coarray", AnyData, Rank::coarray}, SizeDefaultKIND}, KINDInt,
+        Rank::vector, IntrinsicClass::inquiryFunction},
     {"count", {{"mask", AnyLogical, Rank::array}, OptionalDIM, DefaultingKIND},
         KINDInt, Rank::dimReduced, IntrinsicClass::transformationalFunction},
     {"cshift",
@@ -1054,8 +1056,6 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_numeric_storage_size", {}, DefaultInt},
 };
 
-// TODO: Coarray intrinsic functions
-//  COSHAPE
 // TODO: Non-standard intrinsic functions
 //  SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
