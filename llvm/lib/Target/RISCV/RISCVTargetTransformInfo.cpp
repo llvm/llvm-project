@@ -477,8 +477,8 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
 InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
                                            ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind) {
-  // Avoid missing masks
-  if (Mask.size() <= 2)
+  // Avoid missing masks and length changing shuffles
+  if (Mask.size() <= 2 || Mask.size() != Tp->getNumElements())
     return InstructionCost::getInvalid();
 
   int NumElts = Tp->getNumElements();

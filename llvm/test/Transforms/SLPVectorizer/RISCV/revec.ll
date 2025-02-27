@@ -235,16 +235,17 @@ define ptr @test4() {
 define i32 @test5() {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV0:%.*]] = fdiv <2 x double> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv <2 x double> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> poison, <2 x double> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> [[TMP0]], <2 x double> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <4 x double> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> poison, <2 x double> zeroinitializer, i64 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP3]], <2 x double> zeroinitializer, i64 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP4]], <2 x double> zeroinitializer, i64 4)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP5]], <2 x double> zeroinitializer, i64 6)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> poison, <2 x double> zeroinitializer, i64 2)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP7]], <2 x double> zeroinitializer, i64 6)
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP8]], <2 x double> [[DIV0]], i64 0)
-; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v2f64(<8 x double> [[TMP9]], <2 x double> [[DIV1]], i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v4f64(<8 x double> poison, <4 x double> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x double> [[TMP9]], <8 x double> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 2, i32 3, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x double> [[TMP6]], [[TMP10]]
 ; CHECK-NEXT:    br label [[FOR_END47:%.*]]
 ; CHECK:       for.end47:
