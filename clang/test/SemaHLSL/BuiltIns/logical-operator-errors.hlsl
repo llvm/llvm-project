@@ -17,7 +17,7 @@ bool test_too_many_arg(bool a)
 bool2 test_mismatched_args(bool2 a, bool3 b)
 {
     return TEST_FUNC(a, b);
-  // expected-error@-1 {{all arguments to}}{{.*}}{{must have the same type}}
+  // expected-error@-1 {{all arguments to}}{{_builtin_hlsl_or|_builtin_hlsl_and }}{{must have the same type}}
 }
 
 bool test_incorrect_type(int a)
