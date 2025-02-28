@@ -998,7 +998,8 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
                 "Failed to read memory region at: %" PRIx64
                 ". Bytes read: %zu, error: %s",
                 addr, bytes_read_for_chunk, error.AsCString());
-      // If we've only read one byte we can just give up and return
+      // If we've read nothing, and get an error or fail to read
+      // we can just give up early.
       if (total_bytes_read == 0)
         return Status();
 
