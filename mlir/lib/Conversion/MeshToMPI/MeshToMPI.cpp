@@ -45,7 +45,8 @@ using namespace mlir;
 using namespace mesh;
 
 namespace {
-/// Convert vec of OpFoldResults (ints) into vector of Values.
+/// Converts a vector of OpFoldResults (ints) into vector of Values of the
+/// provided type.
 static SmallVector<Value> getMixedAsValues(OpBuilder b, const Location &loc,
                                            llvm::ArrayRef<int64_t> statics,
                                            ValueRange dynamics,
@@ -55,14 +56,15 @@ static SmallVector<Value> getMixedAsValues(OpBuilder b, const Location &loc,
   Type i64 = b.getI64Type();
   if (!type)
     type = i64;
-  assert(i64 == type || b.getIndexType() == type);
+  assert((i64 == type || b.getIndexType() == type) &&
+         "expected an i64 or an intex type");
   for (auto s : statics) {
-    values.emplace_back(
-        ShapedType::isDynamic(s)
-            ? *(dyn++)
-            : b.create<arith::ConstantOp>(loc, type,
-                                          i64 == type ? b.getI64IntegerAttr(s)
-                                                      : b.getIndexAttr(s)));
+    if (s == ShapedType::kDynamic) {
+      values.emplace_back(*(dyn++));
+    } else {
+      TypedAttr val = type == i64 ? b.getI64IntegerAttr(s) : b.getIndexAttr(s);
+      values.emplace_back(b.create<arith::ConstantOp>(loc, type, val));
+    }
   }
   return values;
 };
@@ -129,9 +131,8 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto splitAxes = op.getSplitAxes().getAxes();
     int64_t maxNAxes = 0;
-    for (auto axes : splitAxes) {
+    for (auto axes : splitAxes)
       maxNAxes = std::max<int64_t>(maxNAxes, axes.size());
-    }
 
     // To hold the split axes, create empty 2d tensor with shape
     // {splitAxes.size(), max-size-of-split-groups}.
@@ -139,23 +140,24 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
     Location loc = op.getLoc();
     auto i16 = rewriter.getI16Type();
     auto i64 = rewriter.getI64Type();
-    int64_t shape[] = {static_cast<int64_t>(splitAxes.size()), maxNAxes};
+    std::array<int64_t, 2> shape = {static_cast<int64_t>(splitAxes.size()),
+                                    maxNAxes};
     Value resSplitAxes = rewriter.create<tensor::EmptyOp>(loc, shape, i16);
-    auto attr = IntegerAttr::get(i16, 0xffff);
+    auto attr = IntegerAttr::get(i16, -1);
     Value fillValue = rewriter.create<arith::ConstantOp>(loc, i16, attr);
     resSplitAxes = rewriter.create<linalg::FillOp>(loc, fillValue, resSplitAxes)
                        .getResult(0);
 
     // explicitly write values into tensor row by row
-    int64_t strides[] = {1, 1};
+    std::array<int64_t, 2> strides = {1, 1};
     int64_t nSplits = 0;
     ValueRange empty = {};
     for (auto [i, axes] : llvm::enumerate(splitAxes)) {
       int64_t size = axes.size();
       if (size > 0)
         ++nSplits;
-      int64_t offs[] = {(int64_t)i, 0};
-      int64_t sizes[] = {1, size};
+      std::array<int64_t, 2> offs = {(int64_t)i, 0};
+      std::array<int64_t, 2> sizes = {1, size};
       auto tensorType = RankedTensorType::get({size}, i16);
       auto attrs = DenseIntElementsAttr::get(tensorType, axes.asArrayRef());
       auto vals = rewriter.create<arith::ConstantOp>(loc, tensorType, attrs);
@@ -165,7 +167,7 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
 
     // To hold halos sizes, create 2d Tensor with shape {nSplits, 2}.
     // Store the halo sizes in the tensor.
-    auto haloSizes =
+    SmallVector<Value> haloSizes =
         getMixedAsValues(rewriter, loc, adaptor.getStaticHaloSizes(),
                          adaptor.getDynamicHaloSizes());
     auto type = RankedTensorType::get({nSplits, 2}, i64);
@@ -190,7 +192,7 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
     } else {
       SymbolTableCollection symbolTableCollection;
       auto meshOp = getMesh(op, symbolTableCollection);
-      auto maxSplitSize = 0;
+      int64_t maxSplitSize = 0;
       for (auto axes : splitAxes) {
         int64_t splitSize =
             collectiveProcessGroupSize(axes.asArrayRef(), meshOp.getShape());
@@ -206,7 +208,7 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
           loc, i64, rewriter.getI64IntegerAttr(ShapedType::kDynamic));
       resOffsets =
           rewriter.create<linalg::FillOp>(loc, zero, resOffsets).getResult(0);
-      auto offsets =
+      SmallVector<Value> offsets =
           getMixedAsValues(rewriter, loc, adaptor.getStaticShardedDimsOffsets(),
                            adaptor.getDynamicShardedDimsOffsets());
       int64_t curr = 0;
@@ -217,8 +219,8 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
         ++splitSize; // add one for the total size
         ArrayRef<Value> values(&offsets[curr], splitSize);
         Value vals = rewriter.create<tensor::FromElementsOp>(loc, values);
-        int64_t offs[] = {(int64_t)i, 0};
-        int64_t sizes[] = {1, splitSize};
+        std::array<int64_t, 2> offs = {static_cast<int64_t>(i), 0};
+        std::array<int64_t, 2> sizes = {1, splitSize};
         resOffsets = rewriter.create<tensor::InsertSliceOp>(
             loc, vals, resOffsets, empty, empty, empty, offs, sizes, strides);
         curr += splitSize;
@@ -275,9 +277,9 @@ struct ConvertProcessMultiIndexOp
     if (!axes.empty()) {
       SmallVector<Value> subIndex;
       for (auto axis : axes) {
-        subIndex.push_back(mIdx[axis]);
+        subIndex.emplace_back(mIdx[axis]);
       }
-      mIdx = subIndex;
+      mIdx = std::move(subIndex);
     }
 
     rewriter.replaceOp(op, mIdx);
@@ -294,8 +296,8 @@ public:
 
   // Constructor accepting worldRank
   ConvertProcessLinearIndexOp(const TypeConverter &typeConverter,
-                              MLIRContext *context, int64_t worldRank_ = -1)
-      : OpConversionPattern(typeConverter, context), worldRank(worldRank_) {}
+                              MLIRContext *context, int64_t worldRank = -1)
+      : OpConversionPattern(typeConverter, context), worldRank(worldRank) {}
 
   LogicalResult
   matchAndRewrite(ProcessLinearIndexOp op, OpAdaptor adaptor,
@@ -308,12 +310,11 @@ public:
     }
 
     // Otherwise call create mpi::CommRankOp
-    auto rank =
-        rewriter
-            .create<mpi::CommRankOp>(
-                op.getLoc(), TypeRange{mpi::RetvalType::get(op->getContext()),
+    auto rank = rewriter
+                    .create<mpi::CommRankOp>(
+                        loc, TypeRange{mpi::RetvalType::get(op->getContext()),
                                        rewriter.getI32Type()})
-            .getRank();
+                    .getRank();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(op, rewriter.getIndexType(),
                                                     rank);
     return success();
@@ -400,11 +401,11 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
     }
 
     // Compute the sharded shape by applying the sharding to the input shape.
-    // Without shardedDimsOffsets in the sharding, the shard shape is computed
-    // by dividing the dimension size by the number of shards in that dimension
-    // (which is given by the size of the mesh axes provided in split-axes).
-    // Odd elements get distributed to trailing shards.
-    // If a shardedDimsOffsets is provided, the shard shape is computed by
+    // If shardedDimsOffsets is not defined in the sharding, the shard shape is
+    // computed by dividing the dimension size by the number of shards in that
+    // dimension (which is given by the size of the mesh axes provided in
+    // split-axes). Odd elements get distributed to trailing shards. If a
+    // shardedDimsOffsets is provided, the shard shape is computed by
     // subtracting the offset of the current shard from the offset of the next
     // shard.
 
@@ -429,8 +430,9 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
 
     // To keep the code simple, convert dims/device to values when they are
     // attributes. Count on canonicalization to fold static values.
-    auto shape = getMixedAsValues(rewriter, loc, op.getDims(), dynDims, index);
-    auto multiIdx =
+    SmallVector<Value> shape =
+        getMixedAsValues(rewriter, loc, op.getDims(), dynDims, index);
+    SmallVector<Value> multiIdx =
         getMixedAsValues(rewriter, loc, adaptor.getDevice(), dynDevice, index);
 
     // Get the MeshOp, the mesh shape is needed to compute the sharded shape.
@@ -448,7 +450,7 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
     // local shard-size.
     Value shardedDimsOffs;
     {
-      auto tmp = getMixedAsValues(
+      SmallVector<Value> tmp = getMixedAsValues(
           rewriter, loc, sharding.getStaticShardedDimsOffsets(),
           sharding.getDynamicShardedDimsOffsets(), index);
       if (!tmp.empty())
@@ -478,7 +480,7 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
             rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(pos));
         // Get the index of the local shard in the mesh axis.
         Value idx = multiIdx[axes[0]];
-        auto _numShards =
+        auto numShards =
             collectiveProcessGroupSize(axes.asArrayRef(), meshOp.getShape());
         if (shardedDimsOffs) {
           // If sharded dims offsets are provided, use them to compute the
@@ -497,22 +499,22 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
           Value sz = rewriter.create<arith::SubIOp>(loc, nextOff, off);
           shardShape.emplace_back(sz);
         } else {
-          auto numShards = rewriter.create<arith::ConstantOp>(
-              loc, rewriter.getIndexAttr(_numShards));
+          Value numShardsVal = rewriter.create<arith::ConstantOp>(
+              loc, rewriter.getIndexAttr(numShards));
           // Compute shard dim size by distributing odd elements to trailing
           // shards:
           // sz = dim / numShards
           //      + (idx >= (numShards - (dim % numShards)) ? 1 : 0)
-          Value sz = rewriter.create<arith::DivSIOp>(loc, dim, numShards);
-          Value sz1 = rewriter.create<arith::RemSIOp>(loc, dim, numShards);
-          sz1 = rewriter.create<arith::SubIOp>(loc, numShards, sz1);
+          Value sz = rewriter.create<arith::DivSIOp>(loc, dim, numShardsVal);
+          Value sz1 = rewriter.create<arith::RemSIOp>(loc, dim, numShardsVal);
+          sz1 = rewriter.create<arith::SubIOp>(loc, numShardsVal, sz1);
           auto cond = rewriter.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::sge, idx, sz1);
           Value odd = rewriter.create<arith::SelectOp>(loc, cond, one, zero);
           sz = rewriter.create<arith::AddIOp>(loc, sz, odd);
           shardShape.emplace_back(sz);
         }
-        pos += _numShards + 1; // add one for the total size.
+        pos += numShards + 1; // add one for the total size.
       } // else no sharding if split axis is empty or no split axis
       // If no size was added -> no sharding in this dimension.
       if (shardShape.size() <= i)
@@ -698,25 +700,24 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
         offsets[dim] = orgOffset;
       };
 
-      auto get_i32val = [&](OpFoldResult &v) {
-        return isa<Value>(v)
-                   ? cast<Value>(v)
-                   : rewriter.create<arith::ConstantOp>(
-                         loc,
-                         rewriter.getI32IntegerAttr(
-                             cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
-      };
-
-      for (int i = 0; i < 2; ++i) {
-        Value haloSz = get_i32val(haloSizes[currHaloDim * 2 + i]);
+      auto doSendRecv = [&](int upOrDown) {
+        OpFoldResult &v = haloSizes[currHaloDim * 2 + upOrDown];
+        Value haloSz = dyn_cast<Value>(v);
+        if (!haloSz)
+          haloSz = rewriter.create<arith::ConstantOp>(
+              loc, rewriter.getI32IntegerAttr(
+                       cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
         auto hasSize = rewriter.create<arith::CmpIOp>(
             loc, arith::CmpIPredicate::sgt, haloSz, zero);
         rewriter.create<scf::IfOp>(loc, hasSize,
                                    [&](OpBuilder &builder, Location loc) {
-                                     genSendRecv(i > 0);
+                                     genSendRecv(upOrDown > 0);
                                      builder.create<scf::YieldOp>(loc);
                                    });
-      }
+      };
+
+      doSendRecv(0);
+      doSendRecv(1);
 
       // the shape for lower dims include higher dims' halos
       dimSizes[dim] = shape[dim];
@@ -775,8 +776,8 @@ struct ConvertMeshToMPIPass
            SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
           auto i16 = IntegerType::get(type.getContext(), 16);
           auto i64 = IntegerType::get(type.getContext(), 64);
-          std::array<int64_t, 2> shp{ShapedType::kDynamic,
-                                     ShapedType::kDynamic};
+          std::array<int64_t, 2> shp = {ShapedType::kDynamic,
+                                        ShapedType::kDynamic};
           results.emplace_back(RankedTensorType::get(shp, i16));
           results.emplace_back(RankedTensorType::get(shp, i64)); // actually ?x2
           results.emplace_back(RankedTensorType::get(shp, i64));

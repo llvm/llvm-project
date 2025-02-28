@@ -34,7 +34,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
     return %1#0, %1#1, %1#2 : index, index, index
   }
 
-  // all except first shard in second dim get an extra element
+  // In the second dimension the shard sizes are now [3 4 4 4]
   // CHECK-LABEL: func.func @shard_shape_odd_2() -> (index, index, index) {
   func.func @shard_shape_odd_2() -> (index, index, index) {
     %sharding = mesh.sharding @mesh0 split_axes = [[0], [1], [2]] : !mesh.sharding
@@ -46,7 +46,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
     return %1#0, %1#1, %1#2 : index, index, index
   }
 
-  // all except first shard in first dim get an extra element
+  // In the first dimension the shard sizes are now [3 4 4]
   // CHECK-LABEL: func.func @shard_shape_odd_3() -> (index, index, index) {
   func.func @shard_shape_odd_3() -> (index, index, index) {
     %sharding = mesh.sharding @mesh0 split_axes = [[0], [1], [2]] : !mesh.sharding
