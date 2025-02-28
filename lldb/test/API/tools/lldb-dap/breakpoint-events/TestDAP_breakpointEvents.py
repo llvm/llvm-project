@@ -41,7 +41,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         foo_bp1_line = line_number("foo.cpp", "foo breakpoint 1")
         foo_bp2_line = line_number("foo.cpp", "foo breakpoint 2")
 
-        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")
