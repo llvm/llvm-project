@@ -7744,7 +7744,11 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_HISTOGRAM(Op, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
-    return LowerPARTIAL_REDUCE_MLA(Op, DAG);
+  case ISD::PARTIAL_REDUCE_SMLA: {
+    if (SDValue Result = LowerPARTIAL_REDUCE_MLA(Op, DAG))
+      return Result;
+    return expandPartialReduceMLA(Op.getNode(), DAG);
+  }
   }
 }
 
@@ -27569,6 +27573,15 @@ void AArch64TargetLowering::ReplaceNodeResults(
     if (SDValue Res = LowerVECTOR_COMPRESS(SDValue(N, 0), DAG))
       Results.push_back(Res);
     return;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA: {
+    SDValue Res;
+    if (Res = LowerPARTIAL_REDUCE_MLA(SDValue(N, 0), DAG))
+      Results.push_back(Res);
+    else
+      Results.push_back(expandPartialReduceMLA(N, DAG));
+    return;
+  }
   case ISD::ADD:
   case ISD::FADD:
     ReplaceAddWithADDP(N, Results, DAG, Subtarget);
@@ -29524,6 +29537,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
+
   SDLoc DL(Op);
 
   SDValue Acc = Op.getOperand(0);
