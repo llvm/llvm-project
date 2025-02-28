@@ -92,5 +92,6 @@ let TargetPrefix = "riscv" in {
   def int_riscv_cv_mac_machhsRN : ScalarCoreVMacGprGprGprImmIntrinsic;
 
   def int_riscv_cv_elw_elw
-    : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
+    : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+                [IntrReadMem, IntrArgMemOnly, IntrHasSideEffects]>;
 } // TargetPrefix = "riscv"
