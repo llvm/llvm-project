@@ -317,7 +317,7 @@ struct VPTransformState {
 
     /// A mapping of each VPBasicBlock to the corresponding BasicBlock. In case
     /// of replication, maps the BasicBlock of the last replica created.
-    SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
+    SmallDenseMap<const VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
     /// Updater for the DominatorTree.
     DomTreeUpdater DTU;
