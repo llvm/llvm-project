@@ -401,9 +401,9 @@ for option in options_dictionary["!instanceof"]["Option"]:
     if prefixes is not None and len(prefixes) > 0:
         # Assuming the first prefix is the preferred prefix
         prefix = prefixes[0]
-        # When the "/" prefix is used incorrectly, misleading output is returned that also makes parsing more
-        # complicated. Instead, given all "/" prefix options accept prefix "-" as well, use "-", which returns the
-        # typical error.
+        # When options prefixed with "/" are used with unsupported drivers, misleading output is returned that also
+        # makes parsing more complicated. Instead, given all "/" prefix options accept prefix "-" as well, use "-",
+        # which returns the typical error.
         # Example:
         #   clang -cc1 /AI -x c++
         #     error: error reading '/AI': No such file or directory
