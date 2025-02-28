@@ -9,6 +9,8 @@ set(LLVM_LINK_COMPONENTS
   Exegesis
   Core
   Support
+  MC
+  TargetParser
   )
 
 add_llvm_library(LLVMExegesisRISCV
