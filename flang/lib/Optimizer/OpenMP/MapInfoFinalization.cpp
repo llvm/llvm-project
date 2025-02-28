@@ -268,6 +268,7 @@ class MapInfoFinalizationPass
   /// Check if the mapOp is present in the HasDeviceAddr clause on
   /// the userOp. Only applies to TargetOp.
   bool isHasDeviceAddr(mlir::omp::MapInfoOp mapOp, mlir::Operation *userOp) {
+    assert(userOp && "Expecting non-null argument");
     if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(userOp)) {
       for (mlir::Value hda : targetOp.getHasDeviceAddrVars()) {
         if (hda.getDefiningOp() == mapOp)

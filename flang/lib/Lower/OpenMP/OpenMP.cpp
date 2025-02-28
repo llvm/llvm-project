@@ -2291,19 +2291,19 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(loc, clauseOps);
 
-  llvm::SmallVector<mlir::Value> mapBaseValues, hasDeviceAddrBaseValues;
-  extractMappedBaseValues(clauseOps.mapVars, mapBaseValues);
+  llvm::SmallVector<mlir::Value> hasDeviceAddrBaseValues, mapBaseValues;
   extractMappedBaseValues(clauseOps.hasDeviceAddrVars, hasDeviceAddrBaseValues);
+  extractMappedBaseValues(clauseOps.mapVars, mapBaseValues);
 
   EntryBlockArgs args;
+  args.hasDeviceAddr.syms = hasDeviceAddrSyms;
+  args.hasDeviceAddr.vars = hasDeviceAddrBaseValues;
   args.hostEvalVars = clauseOps.hostEvalVars;
   // TODO: Add in_reduction syms and vars.
   args.map.syms = mapSyms;
   args.map.vars = mapBaseValues;
   args.priv.syms = dsp.getDelayedPrivSymbols();
   args.priv.vars = clauseOps.privateVars;
-  args.hasDeviceAddr.syms = hasDeviceAddrSyms;
-  args.hasDeviceAddr.vars = hasDeviceAddrBaseValues;
 
   genBodyOfTargetOp(converter, symTable, semaCtx, eval, targetOp, args, loc,
                     queue, item, dsp);

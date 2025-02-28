@@ -1326,7 +1326,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
-    custom<HasDeviceAddrHostEvalInReductionMapPrivateRegion>(
+    custom<TargetOpRegion>(
         $region, $has_device_addr_vars, type($has_device_addr_vars),
         $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
         type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
