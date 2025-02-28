@@ -181,10 +181,13 @@ export class LLDBDapDescriptorFactory
    * Shows a message box when the debug adapter's path is not found
    */
   static async showLLDBDapNotFoundMessage(path?: string) {
+    const message =
+      path
+        ? `Debug adapter path: ${path} is not a valid file.`
+        : "Unable to find the path to the LLDB debug adapter executable.";
     const openSettingsAction = "Open Settings";
     const callbackValue = await vscode.window.showErrorMessage(
-      path ? `Debug adapter path: ${path} is not a valid file` :
-        `Debug adapter executable not found`,
+      message,
       openSettingsAction,
     );
 
