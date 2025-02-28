@@ -5001,9 +5001,12 @@ static bool isLikePadUnPad(PackOrUnpackOp packOp, ShapedType packedTensorType) {
 }
 
 bool PackOp::isLikePad() {
-  auto packedTensorType =
-      llvm::cast<RankedTensorType>((*this)->getResultTypes().front());
-  return isLikePadUnPad(*this, packedTensorType);
+  if (auto packedTensorType =
+          llvm::dyn_cast<RankedTensorType>((*this)->getResultTypes().front()))
+    return isLikePadUnPad(*this, packedTensorType);
+  if (auto packedTensorType =
+          llvm::dyn_cast<MemRefType>((*this)->getResultTypes().front()))
+    return isLikePadUnPad(*this, packedTensorType);
 }
 
 OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
