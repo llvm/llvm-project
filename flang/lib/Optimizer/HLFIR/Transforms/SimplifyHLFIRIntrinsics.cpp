@@ -767,7 +767,6 @@ private:
       // possible.
       mlir::Value elemSize;
       mlir::Value stride;
-      mlir::Type elementType = array.getFortranElementType();
       if (dimVal == 1 && mlir::isa<fir::BaseBoxType>(array.getType())) {
         mlir::Type indexType = builder.getIndexType();
         elemSize =
