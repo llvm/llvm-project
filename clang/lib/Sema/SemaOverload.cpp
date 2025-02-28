@@ -5710,12 +5710,14 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     //    - if the initializer list has one element that is not itself an
     //      initializer list, the implicit conversion sequence is the one
     //      required to convert the element to the parameter type.
+    // Bail out on EmbedExpr as well since we never create EmbedExpr for a
+    // single integer.
     unsigned NumInits = From->getNumInits();
-    if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0)))
-      Result = TryCopyInitialization(S, From->getInit(0), ToType,
-                                     SuppressUserConversions,
-                                     InOverloadResolution,
-                                     AllowObjCWritebackConversion);
+    if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0)) &&
+        !isa<EmbedExpr>(From->getInit(0)))
+      Result = TryCopyInitialization(
+          S, From->getInit(0), ToType, SuppressUserConversions,
+          InOverloadResolution, AllowObjCWritebackConversion);
     //    - if the initializer list has no elements, the implicit conversion
     //      sequence is the identity conversion.
     else if (NumInits == 0) {
