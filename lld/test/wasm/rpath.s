@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld -shared -o %t1.wasm %t.o -rpath /a/b/c -rpath /x/y/z
+# RUN: wasm-ld -shared -o %t1.wasm %t.o -rpath /a/b/c -rpath /x/y/z --experimental-pic
 # RUN: obj2yaml %t1.wasm | FileCheck %s
 
 # CHECK:  - Type:            CUSTOM

@@ -134,12 +134,12 @@ void DylinkSection::writeBody() {
 
     sub.writeTo(os);
   }
+
   if (!ctx.arg.rpath.empty()) {
     SubSection sub(WASM_DYLINK_RUNTIME_PATH);
     writeUleb128(sub.os, ctx.arg.rpath.size(), "num rpath entries");
-    for (const auto ref : ctx.arg.rpath) {
+    for (const auto ref : ctx.arg.rpath)
       writeStr(sub.os, ref, "rpath entry");
-    }
     sub.writeTo(os);
   }
 }

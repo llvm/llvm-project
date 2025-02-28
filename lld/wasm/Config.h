@@ -70,7 +70,6 @@ struct Config {
   bool pie;
   bool printGcSections;
   bool relocatable;
-  llvm::SmallVector<llvm::StringRef, 0> rpath;
   bool saveTemps;
   bool shared;
   bool shlibSigCheck;
@@ -125,6 +124,7 @@ struct Config {
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
+  llvm::SmallVector<llvm::StringRef, 0> rpath;
 };
 
 // The Ctx object hold all other (non-configuration) global state.

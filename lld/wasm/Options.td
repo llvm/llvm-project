@@ -291,7 +291,6 @@ def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
-def: JoinedOrSeparate<["-"], "R">, Alias<rpath>, HelpText<"Alias for --rpath">;
 
 // LTO-related options.
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
