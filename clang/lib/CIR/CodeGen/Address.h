@@ -52,6 +52,14 @@ public:
            elementType);
   }
 
+  Address(mlir::Value pointer, clang::CharUnits alignment)
+      : Address(pointer,
+                mlir::cast<cir::PointerType>(pointer.getType()).getPointee(),
+                alignment) {
+    assert((!alignment.isZero() || pointer == nullptr) &&
+           "creating valid address with invalid alignment");
+  }
+
   static Address invalid() { return Address(nullptr); }
   bool isValid() const {
     return pointerAndKnownNonNull.getPointer() != nullptr;
