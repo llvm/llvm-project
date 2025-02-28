@@ -12,7 +12,7 @@
 // WITHOUT-NEXT:    store i32 0, ptr [[X]], align 4, !tbaa [[TBAA2:![0-9]+]]
 // WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @foo(
-// CHECK-SAME: ptr noundef writeonly [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(address) [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[COUNT]] to i64
 // CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = shl nuw nsw i64 [[IDX_EXT]], 2, !annotation [[META2:![0-9]+]]
@@ -54,7 +54,7 @@ void foo(int *__counted_by(count) x, unsigned count) {
 // WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA2]]
 // WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @bar(
-// CHECK-SAME: ptr noundef writeonly [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(address) [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[COUNT]] to i64
 // CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = shl nsw i64 [[IDX_EXT]], 2, !annotation [[META5]]

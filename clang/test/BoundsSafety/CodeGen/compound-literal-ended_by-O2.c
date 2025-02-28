@@ -91,7 +91,7 @@ void assign_via_ptr(struct eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_operator(
-// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(address) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_START]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX]], align 8
@@ -122,7 +122,7 @@ void assign_operator(char* __bidi_indexable new_start, char* new_end) {
 
 
 // CHECK-LABEL: define dso_local void @local_var_init(
-// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(address) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_START]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX]], align 8
@@ -218,7 +218,7 @@ struct eb return_eb(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @construct_not_used(
-// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(address) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_START]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_1_0_NEW_START_SROA_IDX]], align 8
@@ -614,7 +614,7 @@ void assign_via_ptr_from_eb(struct eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_operator_from_eb(
-// CHECK-SAME: ptr noundef readnone [[NEW_START:%.*]], ptr noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readnone captures(address) [[NEW_START:%.*]], ptr noundef readnone captures(address) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp ugt ptr [[NEW_START]], [[NEW_END]], !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[CMP19_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
@@ -634,7 +634,7 @@ void assign_operator_from_eb(char* __ended_by(new_end) new_start, char* new_end)
 
 
 // CHECK-LABEL: define dso_local void @local_var_init_from_eb(
-// CHECK-SAME: ptr noundef readnone [[NEW_START:%.*]], ptr noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readnone captures(address) [[NEW_START:%.*]], ptr noundef readnone captures(address) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp ugt ptr [[NEW_START]], [[NEW_END]], !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[CMP19_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
@@ -697,7 +697,7 @@ struct eb return_eb_from_eb(char* __ended_by(new_end) new_start, char* new_end) 
 }
 
 // CHECK-LABEL: define dso_local void @construct_not_used_from_eb(
-// CHECK-SAME: ptr noundef readnone [[NEW_START:%.*]], ptr noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readnone captures(address) [[NEW_START:%.*]], ptr noundef readnone captures(address) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp ugt ptr [[NEW_START]], [[NEW_END]], !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[CMP19_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]

@@ -16,7 +16,7 @@ struct Outer {
 };
 
 // CHECK-LABEL: define dso_local i8 @access(
-// CHECK-SAME: ptr noundef readonly [[BAR:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(address) [[BAR:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FAM:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 8
 // CHECK-NEXT:    [[LEN:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 4
