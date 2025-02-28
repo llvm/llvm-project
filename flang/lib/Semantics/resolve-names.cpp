@@ -1487,8 +1487,9 @@ public:
     auto &name = std::get<parser::Name>(procDes.u);
     auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
     if (!symbol) {
-      symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
-      Resolve(name, *symbol);
+      context().Say(name.source,
+          "Implicit subroutine declaration '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          name.source);
     }
     return true;
   }
