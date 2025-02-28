@@ -122,6 +122,9 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto Fixer = [&](auto SourceValue, auto Value,
                    const std::string &Replacement) {
+    static_assert(std::is_same_v<decltype(SourceValue), decltype(Value)>,
+                  "The types of SourceValue and Value must match");
+
     SourceLocation Location = MatchedDecl->getExprLoc();
     SourceRange Range{MatchedDecl->getBeginLoc(), MatchedDecl->getEndLoc()};
 
