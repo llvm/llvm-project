@@ -2,6 +2,8 @@
 ; RUN: opt -mtriple=x86_64-apple-darwin10.0.0 -passes=pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
 
 ;.
+; CHECK: @G = global i32 5
+; CHECK: @ptr_pat = private unnamed_addr constant ptr @G, align 8
 ; CHECK: @.memset_pattern = private unnamed_addr constant [2 x i64] [i64 -6148895925951734307, i64 -6148895925951734307], align 16
 ; CHECK: @.memset_pattern.1 = private unnamed_addr constant [2 x i64] [i64 4614256656552045848, i64 4614256656552045848], align 16
 ; CHECK: @.memset_pattern.2 = private unnamed_addr constant [8 x i16] [i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555], align 16
@@ -143,6 +145,78 @@ define void @memset_pattern_i64_128_tbaa(ptr %a) nounwind {
 !6 = !{!"double", !7, i64 0}
 !7 = !{!"omnipotent char", !8, i64 0}
 !8 = !{!"Simple C++ TBAA"}
+
+@G = global i32 5
+@ptr_pat = private unnamed_addr constant ptr @G, align 8
+
+; FIXME: memset_pattern16 should be selected.
+define void @memset_pattern_i64_16_fromptr(ptr %a) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i64_16_fromptr(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @ptr_pat, align 8
+; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK:       [[LOADSTORELOOP]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 16
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    ret void
+;
+  %1 = load i64, ptr @ptr_pat, align 8
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i64 %1, i64 16, i1 false)
+  ret void
+}
+
+; FIXME: memset_pattern16 should be selected.
+define void @memset_pattern_i64_x_fromptr(ptr %a, i64 %x) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i64_x_fromptr(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @ptr_pat, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK:       [[LOADSTORELOOP]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[LOADSTORELOOP]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP5]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[X]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    ret void
+;
+  %1 = load i64, ptr @ptr_pat, align 8
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i64 %1, i64 %x, i1 false)
+  ret void
+}
+
+@nonconst_ptr_pat = private unnamed_addr global ptr @G, align 8
+
+; memset_pattern16 shouldn't be used for this example (at least not by just
+; creating a constantarray global at compile tiem), as the global isn't
+; constant.
+define void @memset_pattern_i64_x_fromnonconstptr(ptr %a, i64 %x) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i64_x_fromnonconstptr(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @nonconst_ptr_pat, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK:       [[LOADSTORELOOP]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[LOADSTORELOOP]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP5]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[X]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    ret void
+;
+  %1 = load i64, ptr @nonconst_ptr_pat, align 8
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i64 %1, i64 %x, i1 false)
+  ret void
+}
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
