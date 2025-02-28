@@ -8,7 +8,7 @@
 
 // <forward_list>
 
-// void merge(forward_list& x);
+// void merge(forward_list& x); // constexpr since C++26
 
 #include <forward_list>
 #include <iterator>
@@ -30,11 +30,11 @@ struct value {
   int a;
   int b;
 
-  friend bool operator<(const value& lhs, const value& rhs) { return lhs.a < rhs.a; }
-  friend bool operator==(const value& lhs, const value& rhs) { return lhs.a == rhs.a && lhs.b == rhs.b; }
+  friend TEST_CONSTEXPR bool operator<(const value& lhs, const value& rhs) { return lhs.a < rhs.a; }
+  friend TEST_CONSTEXPR bool operator==(const value& lhs, const value& rhs) { return lhs.a == rhs.a && lhs.b == rhs.b; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   { // Basic merge operation.
     typedef int T;
     typedef std::forward_list<T> C;
@@ -107,6 +107,15 @@ int main(int, char**) {
     C c3(std::begin(t3), std::end(t3));
     assert(c1 == c3);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;
