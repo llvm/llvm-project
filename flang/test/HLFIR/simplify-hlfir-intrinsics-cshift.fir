@@ -1,8 +1,6 @@
 // Test hlfir.cshift simplification to hlfir.elemental and hlfir.eval_in_mem:
 // RUN: fir-opt --simplify-hlfir-intrinsics %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
-
 func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32>) -> !hlfir.expr<?xi32>{
   %res = hlfir.cshift %arg0 %arg1 : (!fir.box<!fir.array<?xi32>>, !fir.ref<i32>) -> !hlfir.expr<?xi32>
   return %res : !hlfir.expr<?xi32>
@@ -11,7 +9,6 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK-SAME:                             %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>>,
 // CHECK-SAME:                             %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32>) -> !hlfir.expr<?xi32> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 4 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -29,8 +26,10 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK:           %[[VAL_18:.*]] = hlfir.eval_in_mem shape %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 // CHECK:           ^bb0(%[[VAL_19:.*]]: !fir.ref<!fir.array<?xi32>>):
 // CHECK:             %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_7]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:             %[[VAL_3:.*]] = fir.box_elesize %[[VAL_0]] : (!fir.box<!fir.array<?xi32>>) -> index
 // CHECK:             %[[VAL_21:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:             %[[VAL_22:.*]] = arith.cmpi eq, %[[VAL_21]]#2, %[[VAL_3]] : index
+
+// CHECK:             %[[VAL_22:.*]] = arith.cmpi eq, %[[VAL_3]], %[[VAL_21]]#2 : index
 // CHECK:             fir.if %[[VAL_22]] {
 // CHECK:               %[[VAL_23:.*]] = fir.shape %[[VAL_6]]#1 : (index) -> !fir.shape<1>
 // CHECK:               %[[VAL_24:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_2]]:%[[VAL_6]]#1:%[[VAL_2]])  shape %[[VAL_23]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
@@ -321,5 +320,3 @@ func.func @cshift_vector_assumed_dim_1(%arg0: !fir.box<!fir.array<?xi32>>, %arg1
 }
 // CHECK-LABEL:   func.func @cshift_vector_assumed_dim_1(
 // CHECK-NOT: hlfir.cshift
-
-} // end module

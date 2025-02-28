@@ -18,7 +18,6 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/Support/DataLayout.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Pass/Pass.h"
@@ -457,8 +456,7 @@ public:
     // representation.
     hlfir::Entity array = hlfir::Entity{cshift.getArray()};
     mlir::Type elementType = array.getFortranElementType();
-    if (dimVal == 1 && fir::isa_trivial(elementType) &&
-        !array.isSimplyContiguous())
+    if (dimVal == 1 && fir::isa_trivial(elementType))
       rewriter.replaceOp(cshift, genInMemCShift(rewriter, cshift, dimVal));
     else
       rewriter.replaceOp(cshift, genElementalCShift(rewriter, cshift, dimVal));
@@ -759,30 +757,18 @@ private:
       mlir::Value elemSize;
       mlir::Value stride;
       mlir::Type elementType = array.getFortranElementType();
-      if (dimVal == 1 && mlir::isa<fir::BaseBoxType>(array.getType()) &&
-          fir::isa_trivial(elementType)) {
-        mlir::ModuleOp module = cshift->getParentOfType<mlir::ModuleOp>();
-        std::optional<mlir::DataLayout> dl =
-            fir::support::getMLIRDataLayout(module);
-        if (dl) {
-          fir::KindMapping kindMap = fir::getKindMapping(module);
-          auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
-              loc, elementType, *dl, kindMap);
-          size = llvm::alignTo(size, align);
-          if (size) {
-            mlir::Type indexType = builder.getIndexType();
-            elemSize = builder.createIntegerConstant(loc, indexType, size);
-
-            mlir::Value dimIdx =
-                builder.createIntegerConstant(loc, indexType, dimVal - 1);
-            auto boxDim = builder.create<fir::BoxDimsOp>(
-                loc, indexType, indexType, indexType, array.getBase(), dimIdx);
-            stride = boxDim.getByteStride();
-          }
-        }
+      if (dimVal == 1 && mlir::isa<fir::BaseBoxType>(array.getType())) {
+        mlir::Type indexType = builder.getIndexType();
+        elemSize =
+            builder.create<fir::BoxEleSizeOp>(loc, indexType, array.getBase());
+        mlir::Value dimIdx =
+            builder.createIntegerConstant(loc, indexType, dimVal - 1);
+        auto boxDim = builder.create<fir::BoxDimsOp>(
+            loc, indexType, indexType, indexType, array.getBase(), dimIdx);
+        stride = boxDim.getByteStride();
       }
 
-      if (!elemSize || !stride) {
+      if (array.isSimplyContiguous() || !elemSize || !stride) {
         genDimensionShift(loc, builder, shiftVal, /*exposeContiguity=*/false,
                           oneBasedIndices);
         return {};

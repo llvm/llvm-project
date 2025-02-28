@@ -58,12 +58,6 @@ std::optional<mlir::DataLayout>
 getOrSetMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
                        bool allowDefaultLayout = false);
 
-/// Create mlir::DataLayout from the data layout information on the
-/// mlir::Module. If the DLTI attribute is not set, returns std::nullopt.
-std::optional<mlir::DataLayout> getMLIRDataLayout(mlir::ModuleOp mlirModule);
-std::optional<mlir::DataLayout>
-getMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule);
-
 } // namespace fir::support
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_DATALAYOUT_H

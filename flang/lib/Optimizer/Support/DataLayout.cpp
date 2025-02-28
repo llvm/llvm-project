@@ -51,13 +51,6 @@ static void setDataLayoutFromAttributes(ModOpTy mlirModule,
 }
 
 template <typename ModOpTy>
-static std::optional<mlir::DataLayout> getDataLayout(ModOpTy mlirModule) {
-  if (!mlirModule.getDataLayoutSpec())
-    return std::nullopt;
-  return mlir::DataLayout(mlirModule);
-}
-
-template <typename ModOpTy>
 static std::optional<mlir::DataLayout>
 getOrSetDataLayout(ModOpTy mlirModule, bool allowDefaultLayout) {
   if (!mlirModule.getDataLayoutSpec())
@@ -101,14 +94,4 @@ std::optional<mlir::DataLayout>
 fir::support::getOrSetMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
                                      bool allowDefaultLayout) {
   return getOrSetDataLayout(mlirModule, allowDefaultLayout);
-}
-
-std::optional<mlir::DataLayout>
-fir::support::getMLIRDataLayout(mlir::ModuleOp mlirModule) {
-  return getDataLayout(mlirModule);
-}
-
-std::optional<mlir::DataLayout>
-fir::support::getMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule) {
-  return getDataLayout(mlirModule);
 }
