@@ -211,6 +211,7 @@ Target::~Target() {
 
 void Target::PrimeFromDummyTarget(Target &target) {
   m_stop_hooks = target.m_stop_hooks;
+  m_stop_hook_next_id = target.m_stop_hook_next_id;
 
   for (const auto &breakpoint_sp : target.m_breakpoint_list.Breakpoints()) {
     if (breakpoint_sp->IsInternal())
