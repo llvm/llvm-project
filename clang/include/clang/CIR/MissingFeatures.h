@@ -59,6 +59,7 @@ struct MissingFeatures {
   // Misc
   static bool scalarConversionOpts() { return false; }
   static bool tryEmitAsConstant() { return false; }
+  static bool constructABIArgDirectExtend() { return false; }
 };
 
 } // namespace cir
