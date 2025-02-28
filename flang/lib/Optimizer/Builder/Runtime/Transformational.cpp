@@ -24,7 +24,7 @@ using namespace Fortran::runtime;
 struct ForcedBesselJn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -41,7 +41,7 @@ struct ForcedBesselJn_10 {
 struct ForcedBesselJn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -58,7 +58,7 @@ struct ForcedBesselJn_16 {
 struct ForcedBesselJnX0_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJnX0_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(builder);
@@ -74,7 +74,7 @@ struct ForcedBesselJnX0_10 {
 struct ForcedBesselJnX0_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJnX0_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(builder);
@@ -90,7 +90,7 @@ struct ForcedBesselJnX0_16 {
 struct ForcedBesselYn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -107,7 +107,7 @@ struct ForcedBesselYn_10 {
 struct ForcedBesselYn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -124,7 +124,7 @@ struct ForcedBesselYn_16 {
 struct ForcedBesselYnX0_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYnX0_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(builder);
@@ -140,7 +140,7 @@ struct ForcedBesselYnX0_10 {
 struct ForcedBesselYnX0_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYnX0_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(builder);
@@ -332,7 +332,7 @@ void fir::runtime::genEoshiftVector(fir::FirOpBuilder &builder,
 /// Define ForcedMatmul<ACAT><AKIND><BCAT><BKIND> models.
 struct ForcedMatmulTypeModel {
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto boxRefTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(builder);

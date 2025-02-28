@@ -26,7 +26,7 @@ using namespace Fortran::runtime;
 struct ForcedMaxvalReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MaxvalReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -44,7 +44,7 @@ struct ForcedMaxvalReal10 {
 struct ForcedMaxvalReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MaxvalReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -63,7 +63,7 @@ struct ForcedMaxvalInteger16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(MaxvalInteger16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -82,7 +82,7 @@ struct ForcedMaxvalUnsigned16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(MaxvalUnsigned16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(
           ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -101,7 +101,7 @@ struct ForcedMaxvalUnsigned16 {
 struct ForcedMinvalReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MinvalReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -119,7 +119,7 @@ struct ForcedMinvalReal10 {
 struct ForcedMinvalReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MinvalReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -138,7 +138,7 @@ struct ForcedMinvalInteger16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(MinvalInteger16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -157,7 +157,7 @@ struct ForcedMinvalUnsigned16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(MinvalUnsigned16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(
           ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -188,7 +188,7 @@ using ForcedMinlocUnsigned16 = mkRTKey(MinlocUnsigned16);
 struct ForcedNorm2Real10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -205,7 +205,7 @@ struct ForcedNorm2Real10 {
 struct ForcedNorm2Real16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -222,7 +222,7 @@ struct ForcedNorm2Real16 {
 struct ForcedNorm2DimReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2DimReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(
@@ -240,7 +240,7 @@ struct ForcedNorm2DimReal16 {
 struct ForcedProductReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -258,7 +258,7 @@ struct ForcedProductReal10 {
 struct ForcedProductReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -277,7 +277,7 @@ struct ForcedProductInteger16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ProductInteger16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -296,7 +296,7 @@ struct ForcedProductUnsigned16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ProductUnsigned16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(
           ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -316,7 +316,7 @@ struct ForcedProductComplex10 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppProductComplex10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
@@ -336,7 +336,7 @@ struct ForcedProductComplex16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppProductComplex16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
@@ -356,7 +356,7 @@ struct ForcedDotProductReal10 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(DotProductReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -374,7 +374,7 @@ struct ForcedDotProductReal16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(DotProductReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -392,7 +392,7 @@ struct ForcedDotProductComplex10 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppDotProductComplex10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
@@ -412,7 +412,7 @@ struct ForcedDotProductComplex16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppDotProductComplex16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
@@ -432,7 +432,7 @@ struct ForcedDotProductInteger16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(DotProductInteger16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -450,7 +450,7 @@ struct ForcedDotProductUnsigned16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(DotProductUnsigned16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(
           ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -468,7 +468,7 @@ struct ForcedDotProductUnsigned16 {
 struct ForcedSumReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -486,7 +486,7 @@ struct ForcedSumReal10 {
 struct ForcedSumReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -504,7 +504,7 @@ struct ForcedSumReal16 {
 struct ForcedSumInteger16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumInteger16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -522,7 +522,7 @@ struct ForcedSumInteger16 {
 struct ForcedSumUnsigned16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumUnsigned16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(
           ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -542,7 +542,7 @@ struct ForcedSumComplex10 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppSumComplex10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
@@ -562,7 +562,7 @@ struct ForcedSumComplex16 {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppSumComplex16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
@@ -581,7 +581,7 @@ struct ForcedSumComplex16 {
 struct ForcedIAll16 {
   static constexpr const char *name = EXPAND_AND_QUOTE_KEY(IAll16);
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -599,7 +599,7 @@ struct ForcedIAll16 {
 struct ForcedIAny16 {
   static constexpr const char *name = EXPAND_AND_QUOTE_KEY(IAny16);
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -617,7 +617,7 @@ struct ForcedIAny16 {
 struct ForcedIParity16 {
   static constexpr const char *name = EXPAND_AND_QUOTE_KEY(IParity16);
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -636,7 +636,7 @@ struct ForcedReduceReal10Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -658,7 +658,7 @@ struct ForcedReduceReal10Value {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal10Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -680,7 +680,7 @@ struct ForcedReduceReal16Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -702,7 +702,7 @@ struct ForcedReduceReal16Value {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal16Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -724,7 +724,7 @@ struct ForcedReduceReal10DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -748,7 +748,7 @@ struct ForcedReduceReal10DimValue {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal10DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
@@ -772,7 +772,7 @@ struct ForcedReduceReal16DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -796,7 +796,7 @@ struct ForcedReduceReal16DimValue {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceReal16DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
@@ -820,7 +820,7 @@ struct ForcedReduceInteger16Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceInteger16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -842,7 +842,7 @@ struct ForcedReduceUnsigned16Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceUnsigned16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -864,7 +864,7 @@ struct ForcedReduceInteger16Value {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceInteger16Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -886,7 +886,7 @@ struct ForcedReduceUnsigned16Value {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceUnsigned16Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -908,7 +908,7 @@ struct ForcedReduceInteger16DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceInteger16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -932,7 +932,7 @@ struct ForcedReduceUnsigned16DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceUnsigned16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(
           ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -957,7 +957,7 @@ struct ForcedReduceInteger16DimValue {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceInteger16DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(ctx, 128);
       auto boxTy =
@@ -981,7 +981,7 @@ struct ForcedReduceUnsigned16DimValue {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(ReduceUnsigned16DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::IntegerType::get(
           ctx, 128, mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -1006,7 +1006,7 @@ struct ForcedReduceComplex10Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
@@ -1029,7 +1029,7 @@ struct ForcedReduceComplex10Value {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
@@ -1052,7 +1052,7 @@ struct ForcedReduceComplex10DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
@@ -1076,7 +1076,7 @@ struct ForcedReduceComplex10DimValue {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
@@ -1100,7 +1100,7 @@ struct ForcedReduceComplex16Ref {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
@@ -1123,7 +1123,7 @@ struct ForcedReduceComplex16Value {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
@@ -1146,7 +1146,7 @@ struct ForcedReduceComplex16DimRef {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
@@ -1170,7 +1170,7 @@ struct ForcedReduceComplex16DimValue {
   static constexpr const char *name =
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto ctx = builder.getContext();
       auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =

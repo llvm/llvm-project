@@ -51,14 +51,14 @@ class DerivedType;
 
 namespace fir::runtime {
 
-using TypeBuilderFunc = mlir::Type (*)(const fir::FirOpBuilder &);
-using FuncTypeBuilderFunc = mlir::FunctionType (*)(const fir::FirOpBuilder &);
+using TypeBuilderFunc = mlir::Type (*)(fir::FirOpBuilder &);
+using FuncTypeBuilderFunc = mlir::FunctionType (*)(fir::FirOpBuilder &);
 
 #define REDUCTION_REF_OPERATION_MODEL(T)                                       \
   template <>                                                                  \
   constexpr TypeBuilderFunc                                                    \
   getModel<Fortran::runtime::ReferenceReductionOperation<T>>() {               \
-    return [](const fir::FirOpBuilder &builder) -> mlir::Type {                \
+    return [](fir::FirOpBuilder &builder) -> mlir::Type {                      \
       TypeBuilderFunc f{getModel<T>()};                                        \
       auto refTy = fir::ReferenceType::get(f(builder));                        \
       return mlir::FunctionType::get(builder.getContext(), {refTy, refTy},     \
@@ -70,7 +70,7 @@ using FuncTypeBuilderFunc = mlir::FunctionType (*)(const fir::FirOpBuilder &);
   template <>                                                                  \
   constexpr TypeBuilderFunc                                                    \
   getModel<Fortran::runtime::ValueReductionOperation<T>>() {                   \
-    return [](const fir::FirOpBuilder &builder) -> mlir::Type {                \
+    return [](fir::FirOpBuilder &builder) -> mlir::Type {                      \
       TypeBuilderFunc f{getModel<T>()};                                        \
       auto refTy = fir::ReferenceType::get(f(builder));                        \
       return mlir::FunctionType::get(builder.getContext(),                     \
@@ -82,7 +82,7 @@ using FuncTypeBuilderFunc = mlir::FunctionType (*)(const fir::FirOpBuilder &);
   template <>                                                                  \
   constexpr TypeBuilderFunc                                                    \
   getModel<Fortran::runtime::ReductionCharOperation<T>>() {                    \
-    return [](const fir::FirOpBuilder &builder) -> mlir::Type {                \
+    return [](fir::FirOpBuilder &builder) -> mlir::Type {                      \
       TypeBuilderFunc f{getModel<T>()};                                        \
       auto voidTy = fir::LLVMPointerType::get(                                 \
           builder.getContext(),                                                \
@@ -115,20 +115,19 @@ static constexpr TypeBuilderFunc getModel();
 
 template <>
 constexpr TypeBuilderFunc getModel<unsigned int>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
-    return mlir::IntegerType::get(builder.getContext(),
-                                  8 * sizeof(unsigned int));
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
+    return builder.getCIntType();
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<short int>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
-    return mlir::IntegerType::get(builder.getContext(), 8 * sizeof(short int));
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
+    return builder.getCShortType();
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<short int *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<short int>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -139,13 +138,13 @@ constexpr TypeBuilderFunc getModel<const short int *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<int>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
-    return mlir::IntegerType::get(builder.getContext(), 8 * sizeof(int));
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
+    return builder.getCIntType();
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<int &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<int>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -156,14 +155,14 @@ constexpr TypeBuilderFunc getModel<int *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<const int *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<int>()};
     return fir::ReferenceType::get(f(builder));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<char *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(
         mlir::IntegerType::get(builder.getContext(), 8));
   };
@@ -174,34 +173,34 @@ constexpr TypeBuilderFunc getModel<const char *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<const char16_t *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(
         mlir::IntegerType::get(builder.getContext(), 16));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<const char32_t *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(
         mlir::IntegerType::get(builder.getContext(), 32));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<char>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(), 8 * sizeof(char));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<signed char>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(),
                                   8 * sizeof(signed char));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<signed char *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<signed char>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -212,47 +211,47 @@ constexpr TypeBuilderFunc getModel<const signed char *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<char16_t>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(), 8 * sizeof(char16_t));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<char16_t *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<char16_t>()};
     return fir::ReferenceType::get(f(builder));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<char32_t>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(), 8 * sizeof(char32_t));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<char32_t *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<char32_t>()};
     return fir::ReferenceType::get(f(builder));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned char>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(),
                                   8 * sizeof(unsigned char));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<void *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::LLVMPointerType::get(
         builder.getContext(), mlir::IntegerType::get(builder.getContext(), 8));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<void (*)(int)>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::LLVMPointerType::get(
         builder.getContext(),
         mlir::FunctionType::get(builder.getContext(), /*inputs=*/{},
@@ -261,20 +260,20 @@ constexpr TypeBuilderFunc getModel<void (*)(int)>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<void **>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(fir::LLVMPointerType::get(
         builder.getContext(), mlir::IntegerType::get(builder.getContext(), 8)));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<long>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(), 8 * 4);
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<long &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<long>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -289,20 +288,20 @@ constexpr TypeBuilderFunc getModel<const long *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<long long>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(), 8 * sizeof(long long));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::common::int128_t>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(),
                                   8 * sizeof(Fortran::common::int128_t));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<long long &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<long long>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -317,26 +316,26 @@ constexpr TypeBuilderFunc getModel<const long long *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(), 8 * 4);
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long long>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(),
                                   8 * sizeof(unsigned long long));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<double>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::Float64Type::get(builder.getContext());
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<double &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<double>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -351,7 +350,7 @@ constexpr TypeBuilderFunc getModel<const double *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<long double>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     // See TODO at the top of the file. This is configuring for the host system
     // - it might be incorrect when cross-compiling!
     constexpr size_t size = sizeof(long double);
@@ -368,7 +367,7 @@ constexpr TypeBuilderFunc getModel<long double>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<long double *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<long double>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -379,13 +378,13 @@ constexpr TypeBuilderFunc getModel<const long double *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<float>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::Float32Type::get(builder.getContext());
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<float &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<float>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -400,27 +399,27 @@ constexpr TypeBuilderFunc getModel<const float *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<bool>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(), 1);
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<bool &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<bool>()};
     return fir::ReferenceType::get(f(builder));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<bool *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<bool>()};
     return fir::ReferenceType::get(f(builder));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned short>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(
         builder.getContext(), 8 * sizeof(unsigned short),
         mlir::IntegerType::SignednessSemantics::Unsigned);
@@ -428,7 +427,7 @@ constexpr TypeBuilderFunc getModel<unsigned short>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned char *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(
         mlir::IntegerType::get(builder.getContext(), 8));
   };
@@ -439,7 +438,7 @@ constexpr TypeBuilderFunc getModel<const unsigned char *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned short *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(mlir::IntegerType::get(
         builder.getContext(), 8 * sizeof(unsigned short)));
   };
@@ -458,7 +457,7 @@ constexpr TypeBuilderFunc getModel<const unsigned *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(mlir::IntegerType::get(
         builder.getContext(), 8 * sizeof(unsigned long)));
   };
@@ -469,7 +468,7 @@ constexpr TypeBuilderFunc getModel<const unsigned long *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long long *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(mlir::IntegerType::get(
         builder.getContext(), 8 * sizeof(unsigned long long)));
   };
@@ -484,7 +483,7 @@ constexpr TypeBuilderFunc getModel<Fortran::common::uint128_t>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::common::int128_t *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     TypeBuilderFunc f{getModel<Fortran::common::int128_t>()};
     return fir::ReferenceType::get(f(builder));
   };
@@ -507,7 +506,7 @@ constexpr TypeBuilderFunc getModel<const Fortran::common::uint128_t *>() {
 
 template <>
 constexpr TypeBuilderFunc getModel<std::complex<float> &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type floatTy = getModel<float>()(builder);
     return fir::ReferenceType::get(mlir::ComplexType::get(floatTy));
   };
@@ -522,7 +521,7 @@ constexpr TypeBuilderFunc getModel<const std::complex<float> *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<std::complex<double> &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type floatTy = getModel<double>()(builder);
     return fir::ReferenceType::get(mlir::ComplexType::get(floatTy));
   };
@@ -537,27 +536,27 @@ constexpr TypeBuilderFunc getModel<const std::complex<double> *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<c_float_complex_t>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type floatTy = getModel<float>()(builder);
     return mlir::ComplexType::get(floatTy);
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<c_double_complex_t>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type floatTy = getModel<double>()(builder);
     return mlir::ComplexType::get(floatTy);
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<const Fortran::runtime::Descriptor &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::BoxType::get(mlir::NoneType::get(builder.getContext()));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::runtime::Descriptor &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(
         fir::BoxType::get(mlir::NoneType::get(builder.getContext())));
   };
@@ -572,7 +571,7 @@ constexpr TypeBuilderFunc getModel<Fortran::runtime::Descriptor *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::common::TypeCategory>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(),
                                   sizeof(Fortran::common::TypeCategory) * 8);
   };
@@ -580,20 +579,20 @@ constexpr TypeBuilderFunc getModel<Fortran::common::TypeCategory>() {
 template <>
 constexpr TypeBuilderFunc
 getModel<const Fortran::runtime::typeInfo::DerivedType &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(mlir::NoneType::get(builder.getContext()));
   };
 }
 template <>
 constexpr TypeBuilderFunc
 getModel<const Fortran::runtime::typeInfo::DerivedType *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(mlir::NoneType::get(builder.getContext()));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<void>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::NoneType::get(builder.getContext());
   };
 }
@@ -605,7 +604,7 @@ constexpr TypeBuilderFunc getModel<Fortran::runtime::io::IoStatementState *>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::runtime::io::Iostat>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(builder.getContext(),
                                   8 * sizeof(Fortran::runtime::io::Iostat));
   };
@@ -613,14 +612,14 @@ constexpr TypeBuilderFunc getModel<Fortran::runtime::io::Iostat>() {
 template <>
 constexpr TypeBuilderFunc
 getModel<const Fortran::runtime::io::NamelistGroup &>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(mlir::TupleType::get(builder.getContext()));
   };
 }
 template <>
 constexpr TypeBuilderFunc
 getModel<const Fortran::runtime::io::NonTbpDefinedIoTable *>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return fir::ReferenceType::get(mlir::TupleType::get(builder.getContext()));
   };
 }
@@ -660,7 +659,7 @@ REDUCTION_VALUE_OPERATION_MODEL(long double)
 template <>
 constexpr TypeBuilderFunc
 getModel<Fortran::runtime::ValueReductionOperation<std::complex<float>>>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type cplx = mlir::ComplexType::get(getModel<float>()(builder));
     auto refTy = fir::ReferenceType::get(cplx);
     return mlir::FunctionType::get(builder.getContext(), {cplx, cplx}, refTy);
@@ -669,7 +668,7 @@ getModel<Fortran::runtime::ValueReductionOperation<std::complex<float>>>() {
 template <>
 constexpr TypeBuilderFunc
 getModel<Fortran::runtime::ValueReductionOperation<std::complex<double>>>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type cplx = mlir::ComplexType::get(getModel<double>()(builder));
     auto refTy = fir::ReferenceType::get(cplx);
     return mlir::FunctionType::get(builder.getContext(), {cplx, cplx}, refTy);
@@ -678,7 +677,7 @@ getModel<Fortran::runtime::ValueReductionOperation<std::complex<double>>>() {
 template <>
 constexpr TypeBuilderFunc
 getModel<Fortran::runtime::ReferenceReductionOperation<std::complex<float>>>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type cplx = mlir::ComplexType::get(getModel<float>()(builder));
     auto refTy = fir::ReferenceType::get(cplx);
     return mlir::FunctionType::get(builder.getContext(), {refTy, refTy}, refTy);
@@ -687,7 +686,7 @@ getModel<Fortran::runtime::ReferenceReductionOperation<std::complex<float>>>() {
 template <>
 constexpr TypeBuilderFunc getModel<
     Fortran::runtime::ReferenceReductionOperation<std::complex<double>>>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     mlir::Type cplx = mlir::ComplexType::get(getModel<double>()(builder));
     auto refTy = fir::ReferenceType::get(cplx);
     return mlir::FunctionType::get(builder.getContext(), {refTy, refTy}, refTy);
@@ -701,7 +700,7 @@ REDUCTION_CHAR_OPERATION_MODEL(char32_t)
 template <>
 constexpr TypeBuilderFunc
 getModel<Fortran::runtime::ReductionDerivedTypeOperation>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     auto voidTy = fir::LLVMPointerType::get(
         builder.getContext(), mlir::IntegerType::get(builder.getContext(), 8));
     return mlir::FunctionType::get(builder.getContext(),
@@ -714,7 +713,7 @@ struct RuntimeTableKey;
 template <typename RT, typename... ATs>
 struct RuntimeTableKey<RT(ATs...)> {
   static constexpr FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       TypeBuilderFunc ret = getModel<RT>();
       std::array<TypeBuilderFunc, sizeof...(ATs)> args = {getModel<ATs>()...};
       mlir::Type retTy = ret(builder);

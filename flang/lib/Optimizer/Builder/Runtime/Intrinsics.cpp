@@ -32,7 +32,7 @@ namespace {
 struct ForcedRandomNumberReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(RandomNumber16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](const fir::FirOpBuilder &builder) {
+    return [](fir::FirOpBuilder &builder) {
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(
               builder);

@@ -17,7 +17,7 @@ using namespace Fortran::runtime;
 template <>
 constexpr fir::runtime::TypeBuilderFunc
 fir::runtime::getModel<Fortran::runtime::LowerBoundModifier>() {
-  return [](const fir::FirOpBuilder &builder) -> mlir::Type {
+  return [](fir::FirOpBuilder &builder) -> mlir::Type {
     return mlir::IntegerType::get(
         builder.getContext(), sizeof(Fortran::runtime::LowerBoundModifier) * 8);
   };
