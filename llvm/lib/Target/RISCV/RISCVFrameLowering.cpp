@@ -367,8 +367,7 @@ getPushPopEncodingAndNum(const Register MaxReg) {
 }
 
 // Get the max reg of Push/Pop for restoring callee saved registers.
-static Register getMaxPushPopReg(const MachineFunction &MF,
-                                 const std::vector<CalleeSavedInfo> &CSI) {
+static Register getMaxPushPopReg(const std::vector<CalleeSavedInfo> &CSI) {
   MCRegister MaxPushPopReg;
   for (auto &CS : CSI) {
     if (llvm::find_if(FixedCSRFIMap, [&](auto P) {
@@ -1791,7 +1790,7 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
 
   if (RVFI->isPushable(MF)) {
     // Determine how many GPRs we need to push and save it to RVFI.
-    Register MaxReg = getMaxPushPopReg(MF, CSI);
+    Register MaxReg = getMaxPushPopReg(CSI);
     if (MaxReg != RISCV::NoRegister) {
       auto [RegEnc, PushedRegNum] = getPushPopEncodingAndNum(MaxReg);
       RVFI->setRVPushRegs(PushedRegNum);
