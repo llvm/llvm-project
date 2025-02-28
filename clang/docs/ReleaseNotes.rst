@@ -214,7 +214,7 @@ Improvements to Clang's diagnostics
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
 
-- Improve the diagnostics for shadows template parameter.
+- Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
 Improvements to Clang's time-trace
 ----------------------------------

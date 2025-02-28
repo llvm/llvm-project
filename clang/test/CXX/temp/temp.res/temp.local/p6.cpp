@@ -164,7 +164,8 @@ A<0>::B a;
 }
 
 template <typename T> void shadow() {  // expected-note{{template parameter is declared here}}
-  using arr = int[1]; // expected-warning@+1 {{decomposition declarations are a C++17 extension}}
+  using arr = int[1];
+  // expected-warning@+1 {{decomposition declarations are a C++17 extension}}
   auto [
     T // expected-error {{declaration of 'T' shadows template parameter}}
     ] = arr{};
