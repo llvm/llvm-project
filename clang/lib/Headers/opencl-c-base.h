@@ -55,6 +55,10 @@
 #endif // defined(__SPIR__) || defined(__SPIRV__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 
+#if (__OPENCL_C_VERSION__ == 120)
+#define __opencl_c_images 1
+#endif // (__OPENCL_C_VERSION__ == 120)
+
 // Define feature macros for OpenCL C 2.0
 #if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
 #define __opencl_c_pipes 1
