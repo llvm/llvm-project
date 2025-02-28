@@ -2309,6 +2309,14 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
         // with the correct offset into the .debug_line section.
         for (const auto &StmtSeq : Unit.getStmtSeqListAttributes()) {
           uint64_t OrigStmtSeq = StmtSeq.get();
+
+          // Set the stmt_sequence attribute to the 'invalid offset' magic
+          // value. If we fail to patch it, the attribute will be marked as
+          // invalid, so we'll know not to use it. This scenario happens when
+          // the stmt_sequence attribute points to an empty sequence - which the
+          // linker will ommit from the output line table.
+          StmtSeq.set(UINT64_MAX);
+
           // 1. Get the original row index from the stmt list offset.
           auto OrigRowIter = SeqOffToOrigRow.find(OrigStmtSeq);
           if (OrigRowIter == SeqOffToOrigRow.end())
@@ -2317,12 +2325,8 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
           // 2. Get the new row index from the original row index.
           auto NewRowIter = OrigRowToNewRow.find(OrigRowIndex);
-          if (NewRowIter == OrigRowToNewRow.end()) {
-            // If the original row index is not found in the map, update the
-            // stmt_sequence attribute to the 'invalid offset' magic value.
-            StmtSeq.set(UINT64_MAX);
+          if (NewRowIter == OrigRowToNewRow.end())
             continue;
-          }
 
           // 3. Get the offset of the new row in the output .debug_line section.
           assert(NewRowIter->second < OutputRowOffsets.size() &&
