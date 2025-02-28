@@ -3506,6 +3506,10 @@ public:
   /// The default implementation just freezes the set of reserved registers.
   virtual void finalizeLowering(MachineFunction &MF) const;
 
+  /// Returns true if it's profitable to allow merging store of loads when there
+  /// are functions calls between the load and the store.
+  virtual bool shouldMergeStoreOfLoadsOverCall() const { return true; }
+
   //===----------------------------------------------------------------------===//
   //  GlobalISel Hooks
   //===----------------------------------------------------------------------===//

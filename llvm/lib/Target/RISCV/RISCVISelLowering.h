@@ -1070,6 +1070,12 @@ private:
     return false;
   }
 
+  /// Disables storing and loading vectors when there are function calls between
+  /// the load and store, since these are more expensive than just using scalars
+  bool shouldMergeStoreOfLoadsOverCall() const override {
+    return false;
+  }
+
   /// For available scheduling models FDIV + two independent FMULs are much
   /// faster than two FDIVs.
   unsigned combineRepeatedFPDivisors() const override;

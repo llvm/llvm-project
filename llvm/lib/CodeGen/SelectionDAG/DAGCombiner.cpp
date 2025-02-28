@@ -21363,8 +21363,38 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
   // must not be zext, volatile, indexed, and they must be consecutive.
   BaseIndexOffset LdBasePtr;
 
-  for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
-    StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
+  // Check if a call exists in the store chain.
+  auto HasCallInLdStChain = [](SDNode *Load, SDNode *Store) {
+    bool FoundCall = false;
+    SmallVector<SDNode *, 8> Nodes = {Store->getOperand(0).getNode()};
+    while (!Nodes.empty()) {
+      SDNode *Node = Nodes.pop_back_val();
+      if (Node->getNumOperands() == 0)
+        continue;
+
+      switch (Node->getOpcode()) {
+      case ISD::TokenFactor:
+        for (unsigned Nops = Node->getNumOperands(); Nops;)
+          Nodes.push_back(Node->getOperand(--Nops).getNode());
+        break;
+      case ISD::CALLSEQ_START:
+        FoundCall = true;
+        break;
+      case ISD::LOAD:
+        if (Node == Load)
+          return false;
+        [[fallthrough]];
+      default:
+        Nodes.push_back(Node->getOperand(0).getNode());
+        break;
+      }
+    }
+    return FoundCall;
+  };
+
+  auto StIt = StoreNodes.begin();
+  while (StIt != StoreNodes.end()) {
+    StoreSDNode *St = cast<StoreSDNode>(StIt->MemNode);
     SDValue Val = peekThroughBitcasts(St->getValue());
     LoadSDNode *Ld = cast<LoadSDNode>(Val);
 
@@ -21380,8 +21410,14 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       LdBasePtr = LdPtr;
     }
 
-    // We found a potential memory operand to merge.
-    LoadNodes.push_back(MemOpLink(Ld, LdOffset));
+    // Check if there is a call in the load/store chain.
+    if (!TLI.shouldMergeStoreOfLoadsOverCall() &&
+        HasCallInLdStChain(Ld, St)) {
+      StIt = StoreNodes.erase(StIt);
+    } else {
+      LoadNodes.push_back(MemOpLink(Ld, LdOffset));
+      ++StIt;
+    }
   }
 
   while (NumConsecutiveStores >= 2 && LoadNodes.size() >= 2) {
