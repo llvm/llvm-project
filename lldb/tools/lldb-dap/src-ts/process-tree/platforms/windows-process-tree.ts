@@ -1,20 +1,18 @@
 import * as path from "path";
 import { BaseProcessTree, ProcessTreeParser } from "../base-process-tree";
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 
 export class WindowsProcessTree extends BaseProcessTree {
-  protected override spawnProcess(): ChildProcessWithoutNullStreams {
-    const wmic = path.join(
+  protected override getCommand(): string {
+    return path.join(
       process.env["WINDIR"] || "C:\\Windows",
       "System32",
       "wbem",
       "WMIC.exe",
     );
-    return spawn(
-      wmic,
-      ["process", "get", "CommandLine,CreationDate,ProcessId"],
-      { stdio: "pipe" },
-    );
+  }
+
+  protected override getCommandArguments(): string[] {
+    return ["process", "get", "CommandLine,CreationDate,ProcessId"];
   }
 
   protected override createParser(): ProcessTreeParser {

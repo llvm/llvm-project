@@ -1,15 +1,12 @@
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { BaseProcessTree, ProcessTreeParser } from "../base-process-tree";
 
 export class LinuxProcessTree extends BaseProcessTree {
-  protected override spawnProcess(): ChildProcessWithoutNullStreams {
-    return spawn(
-      "ps",
-      ["-axo", `pid=PID,lstart=START,comm:128=COMMAND,command=ARGUMENTS`],
-      {
-        stdio: "pipe",
-      },
-    );
+  protected override getCommand(): string {
+    return "ps";
+  }
+
+  protected override getCommandArguments(): string[] {
+    return ["-axo", "pid=PID,lstart=START,comm:128=COMMAND,command=ARGUMENTS"];
   }
 
   protected override createParser(): ProcessTreeParser {
