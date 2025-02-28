@@ -204,10 +204,8 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
-        if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI) ||
-            (isa<VPIRInstruction>(UI) &&
-             isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())))
+        if (!UI || isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
+                       VPIRPhi>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
