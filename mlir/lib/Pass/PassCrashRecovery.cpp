@@ -414,6 +414,19 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
+  // Notify the context to disable the use of thread-local storage while the
+  // pass manager is running in a crash recovery context thread. This RAII guard
+  // will re-enable thread local storage use upon function exit.
+  class ScopedThreadLocalStorageDisable {
+    MLIRContext *const ctx;
+
+  public:
+    ScopedThreadLocalStorageDisable(MLIRContext *ctx) : ctx(ctx) {
+      ctx->disableThreadLocalStorage();
+    }
+    ~ScopedThreadLocalStorageDisable() { ctx->enableThreadLocalStorage(); }
+  };
+  ScopedThreadLocalStorageDisable raii(this->getContext());
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.

@@ -153,6 +153,13 @@ public:
     disableMultithreading(!enable);
   }
 
+  /// Set the flag specifying if thread-local storage should be used
+  /// by storage allocators in this context.
+  void disableThreadLocalStorage(bool disable = true);
+  void enableThreadLocalStorage(bool enable = true) {
+    disableThreadLocalStorage(!enable);
+  }
+
   /// Set a new thread pool to be used in this context. This method requires
   /// that multithreading is disabled for this context prior to the call. This
   /// allows to share a thread pool across multiple contexts, as well as
