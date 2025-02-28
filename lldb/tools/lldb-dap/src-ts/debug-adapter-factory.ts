@@ -215,7 +215,7 @@ export class LLDBDapDescriptorFactory
     const message =
       path !== undefined
         ? `Debug adapter path: ${path} is not a valid file`
-        : "Unable to find the LLDB debug adapter executable.";
+        : "Unable to find the path to the LLDB debug adapter executable.";
     const openSettingsAction = "Open Settings";
     const callbackValue = await vscode.window.showErrorMessage(
       message,

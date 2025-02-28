@@ -83,7 +83,7 @@
           "items": {
             "type": "string"
           },
-          "description": "The arguments provided to the lldb-dap process."
+          "description": "The list of additional arguments used to launch the debug adapter executable."
         },
         "lldb-dap.log-path": {
           "scope": "resource",
@@ -173,7 +173,7 @@
                 "items": {
                   "type": "string"
                 },
-                "markdownDescription": "The list of arguments used to launch the debug adapter executable."
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable."
               },
               "program": {
                 "type": "string",
@@ -370,7 +370,7 @@
                 "items": {
                   "type": "string"
                 },
-                "markdownDescription": "The list of arguments used to launch the debug adapter executable."
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable."
               },
               "program": {
                 "type": "string",
