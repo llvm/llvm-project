@@ -51,6 +51,12 @@ on:
         type: string
         default: '3.11'
 
+      # Optional reference to the branch being checked out.
+      # Uses the current branch if not specified.
+      repo_ref:
+        required: false
+        type: string
+
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
@@ -93,6 +99,7 @@ jobs:
       # clean: false.
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.repo_ref || github.ref }}
           fetch-depth: 250
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1

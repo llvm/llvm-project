@@ -1,0 +1,49 @@
+name: Clang CIR Rebase
+
+on: workflow_dispatch
+
+permissions:
+  contents: write
+
+env:
+  UPSTREAM_REPO: https://github.com/llvm/llvm-project.git
+  TARGET_BRANCH: rebased-${{ github.head_ref || github.ref_name }}
+
+jobs:
+  rebase:
+    name: Rebase Clang CIR onto LLVM upstream
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.WORKFLOW_TOKEN }}
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream $UPSTREAM_REPO
+          git fetch upstream main
+
+      - name: Rebase CIR branch onto LLVM upstream
+        run: |
+          sh ./.github/workflows/rebase-clangir-onto-llvm-upstream.sh $TARGET_BRANCH
+
+      - name: Push rebase branch ${{ github.env.TARGET_BRANCH }}
+        run: |
+          git push --set-upstream origin ${{ github.env.TARGET_BRANCH }}
+
+  test-clang-cir:
+    name: Test Clang CIR
+    needs: rebase
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-clang-cir
+      projects: clang;mlir
+      extra_cmake_args: -DCLANG_ENABLE_CIR=ON
+      repo_ref: ${{ github.env.TARGET_BRANCH }}
