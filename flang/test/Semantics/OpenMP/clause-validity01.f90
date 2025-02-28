@@ -334,8 +334,8 @@ use omp_lib
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
-  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
-  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+  !WARNING: NOWAIT clause is already used on the SINGLE directive
+  !WARNING: NOWAIT clause is already used on the SINGLE directive
   !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2

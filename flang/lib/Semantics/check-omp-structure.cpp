@@ -1204,33 +1204,71 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   }
 
   if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
-    bool foundCopyPrivate{false};
-    bool foundNowait{false};
-    parser::CharBlock NowaitSource{""};
-    auto catchCopyPrivateNowaitClauses = [&](const auto &dir) {
+    std::set<Symbol *> singleCopyprivateSyms;
+    std::set<Symbol *> endSingleCopyprivateSyms;
+    bool singleNowait{false};
+    bool endSingleNowait{false};
+    parser::CharBlock NowaitSource;
+
+    auto catchCopyPrivateNowaitClauses = [&](const auto &dir, bool endDir) {
       for (auto &clause : std::get<parser::OmpClauseList>(dir.t).v) {
         if (clause.Id() == llvm::omp::Clause::OMPC_copyprivate) {
-          if (foundCopyPrivate) {
-            context_.Say(clause.source,
-                "At most one COPYPRIVATE clause can appear on the SINGLE directive"_err_en_US);
-          } else {
-            foundCopyPrivate = true;
+          for (const auto &ompObject : GetOmpObjectList(clause)->v) {
+            const auto *name{parser::Unwrap<parser::Name>(ompObject)};
+            if (Symbol * symbol{name->symbol}) {
+              if (singleCopyprivateSyms.count(symbol)) {
+                if (endDir) {
+                  context_.Warn(common::UsageWarning::OpenMPUsage, name->source,
+                      "The COPYPRIVATE clause with '%s' is already used on the SINGLE directive"_warn_en_US,
+                      name->ToString());
+                } else {
+                  context_.Say(name->source,
+                      "'%s' appears in more than one COPYPRIVATE clause on the SINGLE directive"_err_en_US,
+                      name->ToString());
+                }
+              } else if (endSingleCopyprivateSyms.count(symbol)) {
+                context_.Say(name->source,
+                    "'%s' appears in more than one COPYPRIVATE clause on the END SINGLE directive"_err_en_US,
+                    name->ToString());
+              } else {
+                if (endDir) {
+                  endSingleCopyprivateSyms.insert(symbol);
+                } else {
+                  singleCopyprivateSyms.insert(symbol);
+                }
+              }
+            }
           }
         } else if (clause.Id() == llvm::omp::Clause::OMPC_nowait) {
-          if (foundNowait) {
+          if (singleNowait) {
+            if (endDir) {
+              context_.Warn(common::UsageWarning::OpenMPUsage, clause.source,
+                  "NOWAIT clause is already used on the SINGLE directive"_warn_en_US);
+            } else {
+              context_.Say(clause.source,
+                  "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
+            }
+          } else if (endSingleNowait) {
             context_.Say(clause.source,
-                "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
+                "At most one NOWAIT clause can appear on the END SINGLE directive"_err_en_US);
           } else {
-            foundNowait = true;
+            if (endDir) {
+              endSingleNowait = true;
+            } else {
+              singleNowait = true;
+            }
+          }
+          if (!NowaitSource.ToString().size()) {
             NowaitSource = clause.source;
           }
         }
       }
     };
-    catchCopyPrivateNowaitClauses(beginBlockDir);
-    catchCopyPrivateNowaitClauses(endBlockDir);
+    catchCopyPrivateNowaitClauses(beginBlockDir, false);
+    catchCopyPrivateNowaitClauses(endBlockDir, true);
     unsigned version{context_.langOptions().OpenMPVersion};
-    if (version <= 52 && foundCopyPrivate && foundNowait) {
+    if (version <= 52 && NowaitSource.ToString().size() &&
+        (singleCopyprivateSyms.size() || endSingleCopyprivateSyms.size())) {
       context_.Say(NowaitSource,
           "NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive"_err_en_US);
     }
@@ -1818,8 +1856,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
 
   auto it{block.begin()};
   bool passChecks{false};
-  if (const parser::AssignmentStmt *
-      assignStmt{parser::Unwrap<parser::AssignmentStmt>(*it)}) {
+  if (const parser::AssignmentStmt *assignStmt{
+          parser::Unwrap<parser::AssignmentStmt>(*it)}) {
     if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
       passChecks = true;
     }

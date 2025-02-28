@@ -38,13 +38,13 @@ subroutine omp_single
         !ERROR: COPYPRIVATE variable 'j' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
         !$omp single private(j) copyprivate(j)
             print *, "omp single", j
-        !ERROR: At most one COPYPRIVATE clause can appear on the SINGLE directive
         !ERROR: COPYPRIVATE variable 'j' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
+        !WARNING: The COPYPRIVATE clause with 'j' is already used on the SINGLE directive
         !$omp end single copyprivate(j)
 
         !$omp single nowait
             print *, "omp single", j
-        !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+        !WARNING: NOWAIT clause is already used on the SINGLE directive
         !$omp end single nowait
     !$omp end parallel
 
