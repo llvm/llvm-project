@@ -317,8 +317,20 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
   const object::SectionedAddress SecAddress{
       StartAddress, object::SectionedAddress::UndefSection};
 
+  // Attempt to retrieve DW_AT_LLVM_stmt_sequence if present.
+  std::optional<uint64_t> StmtSeqOffset;
+  if (auto StmtSeqAttr = Die.find(llvm::dwarf::DW_AT_LLVM_stmt_sequence)) {
+    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to `UINT64_MAX`
+    // when it refers to an empty line sequence. In such cases, the DWARF linker
+    // will exclude the empty sequence from the final output and assign
+    // `UINT64_MAX` to the `DW_AT_LLVM_stmt_sequence` attribute.
+    auto StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
+    if (StmtSeqVal != UINT32_MAX)
+      StmtSeqOffset = StmtSeqVal;
+  }
 
-  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
+  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector,
+                                         StmtSeqOffset)) {
     // If we have a DW_TAG_subprogram but no line entries, fall back to using
     // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
     std::string FilePath = Die.getDeclFile(
