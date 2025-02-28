@@ -230,7 +230,7 @@ class MapInfoFinalizationPass
   /// This is because the descriptor can be rematerialized by the compiler,
   /// and so the address of the descriptor for a given object at one place in
   /// the code may differ from that address in another place. The contents
-  /// of the descriptor (the base address in paticular) will remain unchanged
+  /// of the descriptor (the base address in particular) will remain unchanged
   /// though. Non-descriptor objects listed on the `has_device_addr` clause
   /// can be passed to the kernel by just passing their address without any
   /// remapping.
