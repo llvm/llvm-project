@@ -177,9 +177,9 @@ using VoidResponseBody = std::nullptr_t;
 //   },
 //   "required": [ "seq", "type" ]
 // },
-using ProtocolMessage = std::variant<Request, Response, Event>;
-bool fromJSON(const llvm::json::Value &, ProtocolMessage &, llvm::json::Path);
-llvm::json::Value toJSON(const ProtocolMessage &);
+using Message = std::variant<Request, Response, Event>;
+bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
+llvm::json::Value toJSON(const Message &);
 
 } // namespace protocol
 } // namespace lldb_dap

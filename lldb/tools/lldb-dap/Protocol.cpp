@@ -14,131 +14,184 @@
 #include <optional>
 #include <utility>
 
-namespace llvm {
-namespace json {
-bool fromJSON(const llvm::json::Value &Params, llvm::json::Value &V,
-              llvm::json::Path P) {
-  V = std::move(Params);
+using namespace llvm;
+
+static bool mapRaw(const json::Value &Params, StringLiteral Prop,
+                   std::optional<json::Value> &V, json::Path P) {
+  const auto *O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+  if (const json::Value *E = O->get(Prop))
+    V = std::move(Params);
   return true;
 }
-} // namespace json
-} // namespace llvm
 
 namespace lldb_dap {
 namespace protocol {
 
 enum class MessageType { request, response, event };
 
-bool fromJSON(const llvm::json::Value &Params, MessageType &M,
-              llvm::json::Path P) {
+bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
   auto rawType = Params.getAsString();
   if (!rawType) {
     P.report("expected a string");
     return false;
   }
   std::optional<MessageType> type =
-      llvm::StringSwitch<std::optional<MessageType>>(*rawType)
+      StringSwitch<std::optional<MessageType>>(*rawType)
           .Case("request", MessageType::request)
           .Case("response", MessageType::response)
           .Case("event", MessageType::event)
           .Default(std::nullopt);
   if (!type) {
-    P.report("unexpected value");
+    P.report("unexpected value, expected 'request', 'response' or 'event'");
     return false;
   }
   M = *type;
   return true;
 }
 
-llvm::json::Value toJSON(const Request &R) {
-  llvm::json::Object Result{
+json::Value toJSON(const Request &R) {
+  json::Object Result{
       {"type", "request"},
       {"seq", R.seq},
       {"command", R.command},
   };
+
   if (R.rawArguments)
     Result.insert({"arguments", R.rawArguments});
+
   return std::move(Result);
 }
 
-bool fromJSON(llvm::json::Value const &Params, Request &R, llvm::json::Path P) {
-  llvm::json::ObjectMapper O(Params, P);
-  MessageType type;
-  if (!O.map("type", type)) {
+bool fromJSON(json::Value const &Params, Request &R, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  if (!O)
     return false;
-  }
+
+  MessageType type;
+  if (!O.map("type", type) || !O.map("command", R.command) ||
+      !O.map("seq", R.seq))
+    return false;
+
   if (type != MessageType::request) {
     P.field("type").report("expected to be 'request'");
     return false;
   }
 
-  return O && O.map("command", R.command) && O.map("seq", R.seq) &&
-         O.map("arguments", R.rawArguments);
+  if (R.command.empty()) {
+    P.field("command").report("expected to not be ''");
+    return false;
+  }
+
+  if (!R.seq) {
+    P.field("seq").report("expected to not be '0'");
+    return false;
+  }
+
+  return mapRaw(Params, "arguments", R.rawArguments, P);
 }
 
-llvm::json::Value toJSON(const Response &R) {
-  llvm::json::Object Result{{"type", "response"},
-                            {"req", 0},
-                            {"command", R.command},
-                            {"request_seq", R.request_seq},
-                            {"success", R.success}};
+json::Value toJSON(const Response &R) {
+  json::Object Result{{"type", "response"},
+                      {"req", 0},
+                      {"command", R.command},
+                      {"request_seq", R.request_seq},
+                      {"success", R.success}};
 
   if (R.message)
     Result.insert({"message", R.message});
+
   if (R.rawBody)
     Result.insert({"body", R.rawBody});
 
   return std::move(Result);
 }
 
-bool fromJSON(llvm::json::Value const &Params, Response &R,
-              llvm::json::Path P) {
-  llvm::json::ObjectMapper O(Params, P);
-  MessageType type;
-  if (!O.map("type", type)) {
+bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  if (!O)
     return false;
-  }
+
+  MessageType type;
+  int64_t seq;
+  if (!O.map("type", type) || !O.map("seq", seq) ||
+      !O.map("command", R.command) || !O.map("request_seq", R.request_seq))
+    return false;
+
   if (type != MessageType::response) {
     P.field("type").report("expected to be 'response'");
     return false;
   }
-  return O && O.map("command", R.command) &&
-         O.map("request_seq", R.request_seq) && O.map("success", R.success) &&
-         O.mapOptional("message", R.message) &&
-         O.mapOptional("body", R.rawBody);
+
+  if (seq != 0) {
+    P.field("seq").report("expected to be '0'");
+    return false;
+  }
+
+  if (R.command.empty()) {
+    P.field("command").report("expected to not be ''");
+    return false;
+  }
+
+  if (R.request_seq == 0) {
+    P.field("request_seq").report("expected to not be '0'");
+    return false;
+  }
+
+  return O.map("success", R.success) && O.mapOptional("message", R.message) &&
+         mapRaw(Params, "body", R.rawBody, P);
 }
 
-llvm::json::Value toJSON(const Event &E) {
-  llvm::json::Object Result{
+json::Value toJSON(const Event &E) {
+  json::Object Result{
       {"type", "event"},
       {"seq", 0},
       {"event", E.event},
   };
+
   if (E.rawBody)
     Result.insert({"body", E.rawBody});
+
   if (E.statistics)
     Result.insert({"statistics", E.statistics});
+
   return std::move(Result);
 }
 
-bool fromJSON(llvm::json::Value const &Params, Event &E, llvm::json::Path P) {
-  llvm::json::ObjectMapper O(Params, P);
-  MessageType type;
-  if (!O.map("type", type)) {
+bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  if (!O)
     return false;
-  }
+
+  MessageType type;
+  int64_t seq;
+  if (!O.map("type", type) || !O.map("seq", seq) || O.map("event", E.event))
+    return false;
+
   if (type != MessageType::event) {
     P.field("type").report("expected to be 'event'");
     return false;
   }
 
-  return O && O.map("event", E.event) && O.mapOptional("body", E.rawBody) &&
-         O.mapOptional("statistics", E.statistics);
+  if (seq != 0) {
+    P.field("seq").report("expected to be '0'");
+    return false;
+  }
+
+  if (E.event.empty()) {
+    P.field("event").report("expected to not be ''");
+    return false;
+  }
+
+  return mapRaw(Params, "body", E.rawBody, P) &&
+         mapRaw(Params, "statistics", E.statistics, P);
 }
 
-bool fromJSON(const llvm::json::Value &Params, ProtocolMessage &PM,
-              llvm::json::Path P) {
-  llvm::json::ObjectMapper O(Params, P);
+bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
+  json::ObjectMapper O(Params, P);
   if (!O)
     return false;
 
@@ -149,42 +202,29 @@ bool fromJSON(const llvm::json::Value &Params, ProtocolMessage &PM,
   switch (type) {
   case MessageType::request: {
     Request req;
-    if (!fromJSON(Params, req, P)) {
+    if (!fromJSON(Params, req, P))
       return false;
-    }
     PM = std::move(req);
     return true;
   }
   case MessageType::response: {
     Response resp;
-    if (!fromJSON(Params, resp, P)) {
+    if (!fromJSON(Params, resp, P))
       return false;
-    }
     PM = std::move(resp);
     return true;
   }
   case MessageType::event:
     Event evt;
-    if (!fromJSON(Params, evt, P)) {
+    if (!fromJSON(Params, evt, P))
       return false;
-    }
     PM = std::move(evt);
     return true;
   }
-  llvm_unreachable("Unsupported protocol message");
 }
 
-llvm::json::Value toJSON(const ProtocolMessage &PM) {
-  if (auto const *Req = std::get_if<Request>(&PM)) {
-    return toJSON(*Req);
-  }
-  if (auto const *Resp = std::get_if<Response>(&PM)) {
-    return toJSON(*Resp);
-  }
-  if (auto const *Evt = std::get_if<Event>(&PM)) {
-    return toJSON(*Evt);
-  }
-  llvm_unreachable("Unsupported protocol message");
+json::Value toJSON(const Message &M) {
+  return std::visit([](auto &M) { return toJSON(M); }, M);
 }
 
 } // namespace protocol
