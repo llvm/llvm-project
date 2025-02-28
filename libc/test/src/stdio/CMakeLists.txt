@@ -149,6 +149,16 @@ add_fp_unittest(
 )
 
 add_libc_test(
+  siprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    siprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.siprintf
+)
+
+add_libc_test(
   snprintf_test
   SUITE
     libc_stdio_unittests
@@ -156,6 +166,16 @@ add_libc_test(
     snprintf_test.cpp
   DEPENDS
     libc.src.stdio.snprintf
+)
+
+add_libc_test(
+  sniprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    sniprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.sniprintf
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -196,6 +216,30 @@ add_libc_test(
     printf_test.cpp
   DEPENDS
     libc.src.stdio.printf
+)
+
+add_libc_test(
+  iprintf_test
+  ${hermetic_test_only}
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    iprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.iprintf
+)
+
+add_libc_test(
+  fiprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fiprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.fiprintf
+    ${fprintf_test_deps}
+  COMPILE_OPTIONS
+    ${use_system_file}
 )
 
 add_libc_test(
