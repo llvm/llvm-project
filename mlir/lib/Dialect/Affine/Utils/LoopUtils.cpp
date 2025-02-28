@@ -2131,6 +2131,9 @@ static LogicalResult generateCopy(
 
   if (!copyOptions.generateDma) {
     // Point-wise copy generation.
+    // Unable to copy generation for scala memref due to lack of access point.
+    if (rank == 0)
+      return failure();
     auto copyNest =
         generatePointWiseCopy(loc, memref, fastMemRef, lbMaps,
                               /*lbOperands=*/regionSymbols, ubMaps,
