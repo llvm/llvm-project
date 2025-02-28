@@ -306,10 +306,9 @@ define <2 x i16> @extract_elt13_v4i16readfirstlane(<4 x i16> %src) {
 define <2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify0(i32 %src0, i32 %src2) {
 ; CHECK-LABEL: define <2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify0(
 ; CHECK-SAME: i32 [[SRC0:%.*]], i32 [[SRC2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x i32> poison, i32 [[SRC0]], i64 0
-; CHECK-NEXT:    [[INS_1:%.*]] = shufflevector <4 x i32> [[INS_0]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x i32> poison, i32 [[SRC0]], i64 1
 ; CHECK-NEXT:    [[VEC:%.*]] = call <4 x i32> @llvm.amdgcn.readfirstlane.v4i32(<4 x i32> [[INS_1]])
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[SHUFFLE]]
 ;
   %ins.0 = insertelement <4 x i32> poison, i32 %src0, i32 0
@@ -338,11 +337,7 @@ define < 2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify1(i32 %src0,
 define < 2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify2(i32 %src0, i32 %src2) {
 ; CHECK-LABEL: define <2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify2(
 ; CHECK-SAME: i32 [[SRC0:%.*]], i32 [[SRC2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x i32> poison, i32 [[SRC0]], i64 0
-; CHECK-NEXT:    [[INS_1:%.*]] = shufflevector <4 x i32> [[INS_0]], <4 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>
-; CHECK-NEXT:    [[VEC:%.*]] = call <4 x i32> @llvm.amdgcn.readfirstlane.v4i32(<4 x i32> [[INS_1]])
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    ret <2 x i32> [[SHUFFLE]]
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %ins.0 = insertelement <4 x i32> poison, i32 %src0, i32 0
   %ins.1 = insertelement <4 x i32> %ins.0, i32 %src0, i32 2
