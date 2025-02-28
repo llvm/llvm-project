@@ -12502,7 +12502,7 @@ InstructionCost BoUpSLP::getSpillCost() {
         return It->second.getInt() != 0;
       PrevInstIt = Checked->getIterator().getReverse();
     }
-    SmallVector<const Instruction *> LastInstsInRange(1, Last);
+    SmallVector<const Instruction *> LastInstsInRange;
     while (InstIt != PrevInstIt && Budget <= BudgetLimit) {
       // Debug information does not impact spill cost.
       // Vectorized calls, represented as vector intrinsics, do not impact spill
