@@ -182,6 +182,10 @@ void Value::destroy() {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void Value::print(llvm::raw_ostream &OS) const { OS << *this; }
+#endif // !NDEBUG || LLVM_ENABLE_DUMP
+
 bool operator==(const Value &L, const Value &R) {
   if (L.kind() != R.kind())
     return false;
