@@ -31,6 +31,10 @@ public:
   llvm::Error cleanUp() override;
 
   ~WasmIncrementalExecutor() override;
+
+private:
+  // Tracks loaded modules and their handles
+  std::unordered_map<std::string, void *> LoadedModules;
 };
 
 } // namespace clang
