@@ -7,7 +7,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 ;.
 ; CHECK: @G = global i32 5
 ; CHECK: @g_50 = global [7 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0], align 16
-; CHECK: @.memset_pattern = private unnamed_addr constant ptr @G, align 64
+; CHECK: @.memset_pattern = private unnamed_addr constant ptr @G, align 8
 ;.
 define void @test1(ptr %Base, i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test1(

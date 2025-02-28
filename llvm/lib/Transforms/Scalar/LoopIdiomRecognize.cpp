@@ -1154,7 +1154,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
                                               PatternValue, ".memset_pattern");
       GV->setUnnamedAddr(
           GlobalValue::UnnamedAddr::Global); // Ok to merge these.
-      GV->setAlignment(Align(PatternArgTy->getPrimitiveSizeInBits()));
+      GV->setAlignment(Align(PatternArgTy->getPrimitiveSizeInBits() / 8));
       PatternArg = Builder.CreateLoad(PatternArgTy, GV);
     }
     assert(PatternArg);
