@@ -1,3 +1,4 @@
+// clang-format off
 /// Test that -mllvm options are forwarded to the remote compiler for DTLTO.
 
 // RUN: rm -rf %t && mkdir %t && cd %t
@@ -28,6 +29,5 @@
 // -mllvm arguments are forwarded to `clang -cc1` in the remote execution.
 // CHECK:      -mllvm -thinlto-remote-compiler-arg=llvm1
 // CHECK-SAME: -mllvm -thinlto-remote-compiler-arg=llvm2
-
 
 int _start() { return 0; }
