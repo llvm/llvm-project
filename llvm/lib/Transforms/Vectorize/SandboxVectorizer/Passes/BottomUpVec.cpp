@@ -230,10 +230,9 @@ Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
         // This may also return a Constant if ExtrI is a Constant.
         auto *InsertI = InsertElementInst::create(
             LastInsert, ExtrI, InsertLaneC, WhereIt, Ctx, "VPack");
-        if (!isa<Constant>(InsertI)) {
-          LastInsert = InsertI;
+        LastInsert = InsertI;
+        if (!isa<Constant>(InsertI))
           WhereIt = std::next(cast<Instruction>(LastInsert)->getIterator());
-        }
       }
     } else {
       Constant *InsertLaneC =
