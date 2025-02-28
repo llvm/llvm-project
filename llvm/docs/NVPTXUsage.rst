@@ -695,6 +695,9 @@ integer constant that specifies the length in bytes of the address range ``[a, a
 If no state space is specified then `generic-addressing` is used. If the specified address does 
 not fall within the address window of ``.global`` state space then the behavior is undefined.
 
+LLVM does not define anywhere what an *unstable indeterminate values* is, and the closest concept 
+LLVM has breaks the example below:
+
 .. code-block:: text
   
   discard.global.L2 [ptr], 128;
