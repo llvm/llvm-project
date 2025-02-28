@@ -685,14 +685,22 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.discard.*``'  invalidates the data at the address range [a .. a + (size - 1)]
-abhilash1910 marked this conversation as resolved.
-in the cache level specified by the .level qualifier without writing back the data
-in the cache to the memory. The operand size is an integer constant that specifies the amount of data,
-in bytes, in the cache level specified by the .level qualifier to be discarded. The only supported value
-for the size operand is 128. If no state space is specified then Generic Addressing is used.
-If the specified address does not fall within the address window of .global state space then
-the behavior is undefined.
+The '``@llvm.nvvm.discard.*``' semantically behaves like a weak write of an *unstable indeterminate value*: 
+reads of memory locations with *unstable indeterminate values* may return different 
+bit patterns each time until the memory is overwritten.
+This operation *hints* to the implementation that data in the specified cache ``.level`` 
+can be destructively discarded without writing it back to memory. The operand ``size`` is an 
+integer constant that specifies the length in bytes of the address range ``[a, a + size)`` to write 
+*unstable indeterminate values* into. The only supported value for the ``size`` operand is ``128``. 
+If no state space is specified then `generic-addressing` is used. If the specified address does 
+not fall within the address window of ``.global`` state space then the behavior is undefined.
+
+.. code-block:: text
+  
+  discard.global.L2 [ptr], 128;
+  ld.weak.u32 r0, [ptr];
+  ld.weak.u32 r1, [ptr];
+  // The values in r0 and r1 may differ!
 
 For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`_.
