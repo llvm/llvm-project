@@ -208,3 +208,10 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         innerFunctionType = frame.FindVariable("innerFunctionType")
         innerFuncField = innerFunctionType.GetChildMemberWithName("innerFuncField")
         lldbutil.check_variable(self, innerFuncField, False, value='8479')
+
+        array = frame.FindVariable("array")
+        arrayStorage = array.GetChildMemberWithName("_storage")
+        lldbutil.check_variable(self, arrayStorage, False, num_children=4)
+        for i in range(4):
+            lldbutil.check_variable(self, arrayStorage.GetChildAtIndex(i),
+                                    False, value=str(i+1))

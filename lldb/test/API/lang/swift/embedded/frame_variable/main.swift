@@ -159,6 +159,8 @@ func g() {
     let functionType = FunctionType()
     let innerFunctionType = InnerFunctionType()
 
+    var array: InlineArray<4, Int> = [1, 2, 3, 4]
+
     // Dummy statement to set breakpoint print can't be used in embedded Swift for now.
     let dummy = A() // break here
     let string = StaticString("Hello") 
