@@ -21,10 +21,13 @@ define ptr @test1(ptr %p) {
 define ptr addrspace(1) @test2(ptr addrspace(5) %p) {
 ; CHECK-LABEL: test2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test2_param_0];
+; CHECK-NEXT:    cvta.local.u64 %rd2, %rd1;
+; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %a = addrspacecast ptr addrspace(5) %p to ptr
   %b = addrspacecast ptr %a to ptr addrspace(1)

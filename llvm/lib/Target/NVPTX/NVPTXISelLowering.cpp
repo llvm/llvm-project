@@ -5219,11 +5219,6 @@ static SDValue combineADDRSPACECAST(SDNode *N,
     // Fold asc[B -> A](asc[A -> B](x)) -> x
     if (ASCN1->getDestAddressSpace() == ASCN2->getSrcAddressSpace())
       return ASCN2->getOperand(0);
-
-    // Fold asc[B -> C](asc[A -> B](x)) -> asc[A -> C](x)
-    return DCI.DAG.getAddrSpaceCast(
-        SDLoc(N), N->getValueType(0), ASCN2->getOperand(0),
-        ASCN2->getSrcAddressSpace(), ASCN1->getDestAddressSpace());
   }
 
   return SDValue();
