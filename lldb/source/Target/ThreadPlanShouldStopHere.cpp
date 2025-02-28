@@ -8,6 +8,7 @@
 
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
@@ -83,7 +84,11 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
     if (Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol) {
       ProcessSP process_sp(current_plan->GetThread().GetProcess());
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
-        if (runtime->IsSymbolARuntimeThunk(*symbol)) {
+        if (runtime->IsSymbolARuntimeThunk(*symbol)
+             && flags.Test(ThreadPlanShouldStopHere::eStepOutPastThunks)) {
+         LLDB_LOGF(log, "Stepping out past a language thunk %s for: %s",
+                   frame->GetFunctionName(),
+                   Language::GetNameForLanguageType(runtime->GetLanguageType()));
           should_stop_here = false;
           break;
         }
@@ -131,9 +136,11 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
       // because it's marked line 0.
       bool is_thunk = false;
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
-        if (runtime->IsSymbolARuntimeThunk(*sc.symbol)) {
-          LLDB_LOGF(log, "In runtime thunk %s - stepping out.",
-                    sc.symbol->GetName().GetCString());
+        if (runtime->IsSymbolARuntimeThunk(*sc.symbol)
+             && flags.Test(ThreadPlanShouldStopHere::eStepOutPastThunks)) {
+          LLDB_LOGF(log, "Stepping out past a language thunk %s for: %s",
+                   frame->GetFunctionName(),
+                   Language::GetNameForLanguageType(runtime->GetLanguageType()));
           is_thunk = true;
           break;
         }
