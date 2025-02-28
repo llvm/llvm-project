@@ -1382,9 +1382,7 @@ struct KernelRunRecordTy {
     IdxThread++;
     TuningData[KernelName].IdxThread = IdxThread;
 
-    uint16_t ConstWGSize = GenericDevice.getDefaultNumThreads();
-
-    // Threads should be smaller than ConstWGSize.
+    // Threads should be within the limit.
     if (IdxThread >= ThreadCandidate.size() ||
         !Kernel.isValidBlockSize(ThreadCandidate[IdxThread])) {
       TuningData[KernelName].IdxThread = 0;
