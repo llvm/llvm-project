@@ -58,17 +58,17 @@ void UseNumericLimitsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void UseNumericLimitsCheck::registerMatchers(MatchFinder *Finder) {
   auto PositiveIntegerMatcher = [](auto Value) {
-    return unaryOperator(
-        hasOperatorName("+"),
-        hasUnaryOperand(
-            integerLiteral(equals(Value)).bind("positive-integer-literal")));
+    return unaryOperator(hasOperatorName("+"),
+                         hasUnaryOperand(integerLiteral(equals(Value))
+                                             .bind("positive-integer-literal")))
+        .bind("unary-op");
   };
 
   auto NegativeIntegerMatcher = [](auto Value) {
-    return unaryOperator(
-        hasOperatorName("-"),
-        hasUnaryOperand(
-            integerLiteral(equals(-Value)).bind("negative-integer-literal")));
+    return unaryOperator(hasOperatorName("-"),
+                         hasUnaryOperand(integerLiteral(equals(-Value))
+                                             .bind("negative-integer-literal")))
+        .bind("unary-op");
   };
 
   auto BareIntegerMatcher = [](auto Value) {
@@ -80,20 +80,17 @@ void UseNumericLimitsCheck::registerMatchers(MatchFinder *Finder) {
 
   for (const auto &[Value, _] : SignedConstants) {
     if (Value < 0) {
-      Finder->addMatcher(
-          expr(NegativeIntegerMatcher(Value)).bind("unary-op-exp"), this);
+      Finder->addMatcher(NegativeIntegerMatcher(Value), this);
     } else {
       Finder->addMatcher(
-          expr(anyOf(PositiveIntegerMatcher(Value), BareIntegerMatcher(Value)))
-              .bind("unary-op-exp"),
+          expr(anyOf(PositiveIntegerMatcher(Value), BareIntegerMatcher(Value))),
           this);
     }
   }
 
   for (const auto &[Value, _] : UnsignedConstants) {
     Finder->addMatcher(
-        expr(anyOf(PositiveIntegerMatcher(Value), BareIntegerMatcher(Value)))
-            .bind("unary-op-exp"),
+        expr(anyOf(PositiveIntegerMatcher(Value), BareIntegerMatcher(Value))),
         this);
   }
 }
@@ -130,7 +127,7 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Only valid if unary operator is present
     const UnaryOperator *UnaryOpExpr =
-        Result.Nodes.getNodeAs<UnaryOperator>("unary-op-exp");
+        Result.Nodes.getNodeAs<UnaryOperator>("unary-op");
 
     if (MatchedDecl == NegativeMatchedDecl && -SourceValue == Value) {
       Range = SourceRange(UnaryOpExpr->getBeginLoc(), UnaryOpExpr->getEndLoc());
