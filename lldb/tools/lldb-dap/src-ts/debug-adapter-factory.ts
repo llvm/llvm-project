@@ -162,7 +162,7 @@ export class LLDBDapDescriptorFactory
         'connect://localhost:0'
       );
       const server = child_process.spawn(dapPath, args, options);
-      server.stdout!.setEncoding('utf8').on('data', (data: string) => {
+      server.stdout!.setEncoding('utf8').once('data', (data: string) => {
         const connection = /connection:\/\/\[([^\]]+)\]:(\d+)/.exec(data);
         if (connection) {
           const host = connection[1];
