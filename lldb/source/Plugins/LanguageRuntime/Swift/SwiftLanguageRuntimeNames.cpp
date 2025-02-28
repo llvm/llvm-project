@@ -24,6 +24,7 @@
 #include "lldb/Utility/Log.h"
 #include "swift/ABI/Task.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/Demangler.h"
 
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Utility/ARM64_DWARF_Registers.h"
@@ -105,8 +106,10 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
 
 /// Returns true if closure1 and closure2 have the same number, type, and
 /// parent closures / function.
-static bool AreFuncletsOfSameAsyncClosure(NodePointer closure1,
-                                          NodePointer closure2) {
+static bool
+AreFuncletsOfSameAsyncClosure(swift::Demangle::NodePointer closure1,
+                              swift::Demangle::NodePointer closure2) {
+  using namespace swift::Demangle;
   NodePointer closure1_number = childAtPath(closure1, Node::Kind::Number);
   NodePointer closure2_number = childAtPath(closure2, Node::Kind::Number);
   if (!Node::deepEquals(closure1_number, closure2_number))
@@ -134,8 +137,8 @@ static bool AreFuncletsOfSameAsyncClosure(NodePointer closure1,
 }
 
 SwiftLanguageRuntime::FuncletComparisonResult
-SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(StringRef name1,
-                                                     StringRef name2) {
+SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(llvm::StringRef name1,
+                                                     llvm::StringRef name2) {
   using namespace swift::Demangle;
   Context ctx;
   NodePointer node1 = DemangleSymbolAsNode(name1, ctx);
@@ -174,7 +177,7 @@ SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(StringRef name1,
              : FuncletComparisonResult::DifferentAsyncFunctions;
 }
 
-bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
+bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(llvm::StringRef name) {
   if (!IsSwiftMangledName(name))
     return false;
   using namespace swift::Demangle;
@@ -184,7 +187,7 @@ bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
 }
 
 bool SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
-    StringRef name) {
+    llvm::StringRef name) {
   if (!IsSwiftMangledName(name))
     return false;
   using namespace swift::Demangle;
@@ -193,7 +196,7 @@ bool SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
   return hasChild(node, Node::Kind::AsyncAwaitResumePartialFunction);
 }
 
-bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(StringRef name) {
+bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(llvm::StringRef name) {
   if (!IsSwiftMangledName(name))
     return false;
   using namespace swift::Demangle;
@@ -202,7 +205,9 @@ bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(StringRef name) {
   return IsAnySwiftAsyncFunctionSymbol(node);
 }
 
-bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(NodePointer node) {
+bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(
+    swift::Demangle::NodePointer node) {
+  using namespace swift::Demangle;
   if (!node || node->getKind() != Node::Kind::Global || !node->getNumChildren())
     return false;
   auto marker = node->getFirstChild()->getKind();
@@ -322,7 +327,7 @@ CreateRunThroughTaskSwitchThreadPlan(Thread &thread,
 /// a task switch, like `async_task_switch` or `swift_asyncLet_get`.
 static ThreadPlanSP
 CreateRunThroughTaskSwitchingTrampolines(Thread &thread,
-                                         StringRef trampoline_name) {
+                                         llvm::StringRef trampoline_name) {
   // The signature for `swift_task_switch` is as follows:
   //   SWIFT_CC(swiftasync)
   //   void swift_task_switch(
@@ -434,7 +439,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
     // of the function this protocol thunk is preparing to call, then
     // step into through the thunk, stopping if I end up in a frame
     // with that function name.
-    Context ctx;
+    swift::Demangle::Context ctx;
     auto *demangled_nodes =
         SwiftLanguageRuntime::DemangleSymbolAsNode(symbol_name, ctx);
 
@@ -554,7 +559,8 @@ bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
 void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
     const SymbolContext &const_sc, const ExecutionContext *exe_ctx,
     swift::Mangle::ManglingFlavor flavor,
-    llvm::DenseMap<SwiftLanguageRuntime::ArchetypePath, StringRef> &dict) {
+    llvm::DenseMap<SwiftLanguageRuntime::ArchetypePath, llvm::StringRef>
+        &dict) {
   // This terrifying cast avoids having too many differences with llvm.org.
   SymbolContext &sc = const_cast<SymbolContext &>(const_sc);
 
@@ -575,7 +581,7 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
 
   for (unsigned i = 0; i < var_list->GetSize(); ++i) {
     VariableSP var_sp = var_list->GetVariableAtIndex(i);
-    StringRef name = var_sp->GetName().GetStringRef();
+    llvm::StringRef name = var_sp->GetName().GetStringRef();
     if (!name.consume_front(g_dollar_tau_underscore))
       continue;
 
@@ -633,10 +639,10 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
 }
 
 std::string SwiftLanguageRuntime::DemangleSymbolAsString(
-    StringRef symbol, DemangleMode mode, const SymbolContext *sc,
+    llvm::StringRef symbol, DemangleMode mode, const SymbolContext *sc,
     const ExecutionContext *exe_ctx) {
   bool did_init = false;
-  llvm::DenseMap<ArchetypePath, StringRef> dict;
+  llvm::DenseMap<ArchetypePath, llvm::StringRef> dict;
   swift::Demangle::DemangleOptions options;
   switch (mode) {
   case eSimplified:
@@ -904,7 +910,7 @@ bool SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
       // have to demangle the whole name to figure this out anyway.
       // I'm leaving the test here in case we actually need to do this
       // only to functions.
-      Context ctx;
+      swift::Demangle::Context ctx;
       auto *node = SwiftLanguageRuntime::DemangleSymbolAsNode(mangled_ref, ctx);
       StreamString identifier;
       if (node) {
@@ -1135,14 +1141,14 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 std::optional<SwiftLanguageRuntime::GenericSignature>
-SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
+SwiftLanguageRuntime::GetGenericSignature(llvm::StringRef function_name,
                                           TypeSystemSwiftTypeRef &ts) {
   GenericSignature signature;
   unsigned num_generic_params = 0;
 
   auto flavor = SwiftLanguageRuntime::GetManglingFlavor(function_name);
   // Walk to the function type.
-  Context ctx;
+  swift::Demangle::Context ctx;
   auto *node = SwiftLanguageRuntime::DemangleSymbolAsNode(function_name, ctx);
   if (!node)
     return {};

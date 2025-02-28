@@ -42,6 +42,9 @@ template <unsigned PointerSize> struct RuntimeTarget;
 namespace reflection {
 template <typename T> class ReflectionContext;
 class TypeInfo;
+struct FieldInfo;
+class TypeRef;
+class RecordTypeInfo;
 } // namespace reflection
 
 namespace remoteAST {
@@ -160,7 +163,7 @@ public:
   /// DifferentAsyncFunctions.
   /// Otherwise, returns SameAsyncFunction.
   static FuncletComparisonResult
-  AreFuncletsOfSameAsyncFunction(StringRef name1, StringRef name2);
+  AreFuncletsOfSameAsyncFunction(llvm::StringRef name1, llvm::StringRef name2);
 
   /// Return true if name is a Swift async function symbol.
   static bool IsSwiftAsyncFunctionSymbol(llvm::StringRef name);
@@ -171,7 +174,7 @@ public:
 
   /// Return true if node is a Swift async function, await resume partial
   /// function, or suspend resume partial function symbol.
-  static bool IsAnySwiftAsyncFunctionSymbol(NodePointer node);
+  static bool IsAnySwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node);
 
   /// Return the async context address using the target's specific register.
   static lldb::addr_t GetAsyncContext(RegisterContext *regctx);

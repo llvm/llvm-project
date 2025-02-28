@@ -1229,7 +1229,7 @@ bool Module::IsEmbeddedSwift() {
 
     m_is_embedded_swift = eLazyBoolNo;
     auto options = sym_file->GetCompileOptions();
-    StringRef enable_embedded_swift("-enable-embedded-swift");
+    llvm::StringRef enable_embedded_swift("-enable-embedded-swift");
     for (auto &[_, args] : options) {
       for (const char *arg : args.GetArgumentArrayRef()) {
         if (enable_embedded_swift == arg) {

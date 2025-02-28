@@ -23,7 +23,6 @@
 #include "llvm/Support/OnDiskHashTable.h"
 
 #include "swift/Remote/ExternalTypeRefCache.h"
-#include "swift/RemoteInspection/ReflectionContext.h"
 
 namespace lldb_private {
 

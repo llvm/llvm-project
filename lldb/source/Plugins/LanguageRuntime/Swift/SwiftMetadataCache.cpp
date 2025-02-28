@@ -15,6 +15,7 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Version/Version.h"
+#include "swift/RemoteInspection/ReflectionContext.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CachePruning.h"
 

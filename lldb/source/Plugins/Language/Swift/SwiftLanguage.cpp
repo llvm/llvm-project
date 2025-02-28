@@ -148,7 +148,7 @@ SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
   // in type `A`). Second, it can refer the *getter* block for property `A`.
   // LLDB's baseline behavior handles the first case. The second case is
   // produced here as a variant name.
-  for (StringRef suffix : {".get", ".set", ".willset", ".didset"})
+  for (llvm::StringRef suffix : {".get", ".set", ".willset", ".didset"})
     if (method_name.GetStringRef().ends_with(suffix)) {
       // The method name, complete with suffix, *is* the variant.
       variant_names.emplace_back(method_name, eFunctionNameTypeFull |
@@ -1835,7 +1835,8 @@ bool SwiftLanguage::IgnoreForLineBreakpoints(const SymbolContext &sc) const {
   // If we don't have a function, conservatively return false.
   if (!sc.function)
     return false;
-  StringRef name = sc.function->GetMangled().GetMangledName().GetStringRef();
+  llvm::StringRef name =
+      sc.function->GetMangled().GetMangledName().GetStringRef();
   // In async functions, ignore await resume ("Q") funclets, these only
   // deallocate the async context and task_switch back to user code.
   return SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
