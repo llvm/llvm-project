@@ -251,7 +251,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
 
     MachineInstr *instrToInsert = SlotMIRemoved ? SlotMI : MI;
 
-    // Insert isntruction back into the maps after passing it/removing the index
+    // Insert instruction back into the maps after passing it/removing the index
     if ((MIIndexNotFound || SlotMIRemoved) && instrToInsert->getParent() != nullptr && !instrToInsert->isDebugOrPseudoInstr())
       insertMachineInstrInMaps(*instrToInsert);
   }
