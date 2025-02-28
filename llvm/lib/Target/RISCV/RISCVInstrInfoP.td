@@ -48,8 +48,8 @@ class RVPUnary<bits<5> funct5, bits<7> wuimm,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm9<bits<7> funct7, string opcodestr, DAGOperand TyRd = GPR>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs TyRd:$rd), (ins simm10:$simm10),
+class RVPUnaryImm9<bits<7> funct7, string opcodestr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins simm10:$simm10),
                   opcodestr, "$rd, $simm10"> {
   bits<10> simm10;
 
@@ -58,13 +58,42 @@ class RVPUnaryImm9<bits<7> funct7, string opcodestr, DAGOperand TyRd = GPR>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm8<bits<8> funct8, string opcodestr, DAGOperand TyRd = GPR>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs TyRd:$rd), (ins uimm8:$uimm8),
+class RVPUnaryImm9Rdp<bits<7> funct7, string opcodestr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs RVPGPRPairRV32:$rdp),
+                  (ins simm10:$simm10),
+                  opcodestr, "$rdp, $simm10"> {
+  bits<10> simm10;
+  bits<4> rdp;
+
+  let Inst{31-25} = funct7;
+  let Inst{24-15} = simm10;
+  let Inst{11-8}  = rdp;
+  let Inst{7}     = 0b0;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPUnaryImm8<bits<8> funct8, string opcodestr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins uimm8:$uimm8),
                   opcodestr, "$rd, $uimm8"> {
   bits<8> uimm8;
+
   let Inst{31-24} = funct8;
   let Inst{23-16} = uimm8;
-  let Inst{15} = 0b0;
+  let Inst{15}    = 0b0;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPUnaryImm8Rdp<bits<8> funct8, string opcodestr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs RVPGPRPairRV32:$rdp),
+                  (ins uimm8:$uimm8), opcodestr, "$rdp, $uimm8"> {
+  bits<8> uimm8;
+  bits<4> rdp;
+
+  let Inst{31-24} = funct8;
+  let Inst{23-16} = uimm8;
+  let Inst{15}    = 0b0;
+  let Inst{11-8}  = rdp;
+  let Inst{7}     = 0b0;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -96,9 +125,9 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnaryF<bit bfr, bits<3> f, bit aft, bits<7> wuimm, string opcodestr,
                 bits<3> funct3, dag outs, dag ins, string argstr>
     : RVInstIBase<funct3, OPC_OP_IMM_32, outs, ins, opcodestr, argstr>  {
-  let Inst{31} = bfr;
+  let Inst{31}    = bfr;
   let Inst{30-28} = f;
-  let Inst{27} = aft;
+  let Inst{27}    = aft;
   let Inst{26-20} = wuimm;
 }
 
@@ -143,9 +172,9 @@ class RVPBinaryFW<bit bfr, bits<3> f, bit aft, bits<2> w, bits<3> funct3,
                   dag outs = (outs GPR:$rd), dag ins = (ins GPR:$rs1, GPR:$rs2),
                   string argstr = "$rd, $rs1, $rs2">
     : RVInstRBase<funct3, Opcode, outs, ins, opcodestr, argstr>  {
-  let Inst{31} = bfr;
+  let Inst{31}    = bfr;
   let Inst{30-28} = f;
-  let Inst{27} = aft;
+  let Inst{27}    = aft;
   let Inst{26-25} = w;
 }
 
@@ -200,15 +229,15 @@ class RVPBinary1FWRs2pRs1pRdp<bits<4> f, bits<2> w, string opcodestr,
   bits<4> rs2p;
   bits<4> rdp;
 
-  let Inst{31} = 0b1;
+  let Inst{31}    = 0b1;
   let Inst{30-27} = f;
   let Inst{26-25} = w;
   let Inst{24-21} = rs2p;
-  let Inst{20} = aft;
+  let Inst{20}    = aft;
   let Inst{19-16} = rs1p;
-  let Inst{15} = aft;
-  let Inst{11-8} = rdp;
-  let Inst{7} = 0b0;
+  let Inst{15}    = aft;
+  let Inst{11-8}  = rdp;
+  let Inst{7}     = 0b0;
 }
 
 class RVPBinary1F0WRs2pRs1pRdp<bits<3> f, bits<2> w, string opcodestr,
@@ -233,7 +262,7 @@ class RVPBinaryLongFW<bit bfr = 1, bits<4> f, bits<2> w, bits<3> funct3,
                       string opcodestr, dag outs, dag ins, string argstr>
     : RVInstRBase<funct3, OPC_OP_32, outs, ins,
                         opcodestr, argstr>  {
-  let Inst{31} = bfr;
+  let Inst{31}    = bfr;
   let Inst{30-27} = f;
   let Inst{26-25} = w;
 }
@@ -795,9 +824,9 @@ def PWSLAI_B : RVPUnary0F0Rdp<0b100, 0b0010000, "pwslai.b">;
 def PWSLAI_H : RVPUnary0F0Rdp<0b100, 0b0100000, "pwslai.h">;
 def WSLAI    : RVPUnary0F0Rdp<0b100, 0b1000000, "wslai">;
 
-def PLI_DH   : RVPUnaryImm9<0b0011000,  "pli.dh", RVPGPRPairRV32>;
-def PLI_DB   : RVPUnaryImm8<0b00110100, "pli.db", RVPGPRPairRV32>;
-def PLUI_DH  : RVPUnaryImm9<0b0111000,  "plui.dh", RVPGPRPairRV32>;
+def PLI_DH   : RVPUnaryImm9Rdp<0b0011000,  "pli.dh">;
+def PLI_DB   : RVPUnaryImm8Rdp<0b00110100, "pli.db">;
+def PLUI_DH  : RVPUnaryImm9Rdp<0b0111000,  "plui.dh">;
 
 
 def PWSLLI_BS : RVPBinary0F1WRdp<0b000, 0b00, "pwslli.bs">;
