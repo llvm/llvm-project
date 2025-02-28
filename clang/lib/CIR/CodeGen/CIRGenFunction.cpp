@@ -12,6 +12,8 @@
 
 #include "CIRGenFunction.h"
 
+#include "CIRGenCall.h"
+#include "mlir/IR/Location.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -132,15 +134,17 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
-mlir::LogicalResult CIRGenFunction::declare(Address addr, const Decl *var,
-                                            QualType ty, mlir::Location loc,
-                                            CharUnits alignment) {
+mlir::LogicalResult CIRGenFunction::declare(mlir::Value addrVal,
+                                            const Decl *var, QualType ty,
+                                            mlir::Location loc,
+                                            CharUnits alignment, bool isParam) {
   const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
   assert(namedVar && "Needs a named decl");
   assert(!cir::MissingFeatures::cgfSymbolTable());
 
-  mlir::Value addrVal = addr.getPointer();
   auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
+  if (isParam)
+    allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
@@ -149,7 +153,7 @@ mlir::LogicalResult CIRGenFunction::declare(Address addr, const Decl *var,
 
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                                    cir::FuncOp fn, cir::FuncType funcType,
-                                   SourceLocation loc,
+                                   FunctionArgList args, SourceLocation loc,
                                    SourceLocation startLoc) {
   assert(!curFn &&
          "CIRGenFunction can only be used for one function at a time");
@@ -157,8 +161,41 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   fnRetTy = returnType;
   curFn = fn;
 
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
+
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
+
+  // TODO(cir): this should live in `emitFunctionProlog
+  // Declare all the function arguments in the symbol table.
+  for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
+    const VarDecl *paramVar = std::get<0>(nameValue);
+    mlir::Value paramVal = std::get<1>(nameValue);
+    CharUnits alignment = getContext().getDeclAlign(paramVar);
+    mlir::Location paramLoc = getLoc(paramVar->getSourceRange());
+    paramVal.setLoc(paramLoc);
+
+    mlir::Value addrVal =
+        emitAlloca(cast<NamedDecl>(paramVar)->getName(),
+                   convertType(paramVar->getType()), paramLoc, alignment);
+
+    declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
+            /*isParam=*/true);
+
+    setAddrOfLocalVar(paramVar, Address(addrVal, alignment));
+
+    bool isPromoted = isa<ParmVarDecl>(paramVar) &&
+                      cast<ParmVarDecl>(paramVar)->isKNRPromoted();
+    assert(!cir::MissingFeatures::constructABIArgDirectExtend());
+    if (isPromoted)
+      cgm.errorNYI(fd->getSourceRange(), "Function argument demotion");
+
+    // Location of the store to the param storage tracked as beginning of
+    // the function body.
+    mlir::Location fnBodyBegin = getLoc(fd->getBody()->getBeginLoc());
+    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
+  }
+  assert(builder.getInsertionBlock() && "Should be valid");
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {}
@@ -187,8 +224,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   // This will be used once more code is upstreamed.
   [[maybe_unused]] mlir::Block *entryBB = fn.addEntryBlock();
 
-  startFunction(gd, funcDecl->getReturnType(), fn, funcType, loc,
-                bodyRange.getBegin());
+  FunctionArgList args;
+  QualType retTy = buildFunctionArgList(gd, args);
+
+  startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
   if (isa<CXXDestructorDecl>(funcDecl))
     getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
@@ -232,6 +271,29 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   finishFunction(bodyRange.getEnd());
 
   return fn;
+}
+
+clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
+                                                     FunctionArgList &args) {
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  QualType retTy = fd->getReturnType();
+
+  const auto *md = dyn_cast<CXXMethodDecl>(fd);
+  if (md && md->isInstance())
+    cgm.errorNYI(fd->getSourceRange(), "buildFunctionArgList: CXXMethodDecl");
+
+  if (isa<CXXConstructorDecl>(fd))
+    cgm.errorNYI(fd->getSourceRange(),
+                 "buildFunctionArgList: CXXConstructorDecl");
+
+  for (auto *param : fd->parameters())
+    args.push_back(param);
+
+  if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
+    cgm.errorNYI(fd->getSourceRange(),
+                 "buildFunctionArgList: implicit structor params");
+
+  return retTy;
 }
 
 /// Emit code to compute a designator that specifies the location
