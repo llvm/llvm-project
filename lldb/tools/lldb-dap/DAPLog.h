@@ -1,4 +1,4 @@
-//===-- DAPLog.h ------------------------------------------------*- C++ -*-===//
+//===-- DAPLog.h ----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_LLDBLOG_H
-#define LLDB_UTILITY_LLDBLOG_H
+#ifndef LLDB_TOOLS_LLDB_DAP_DAPLOG_H
+#define LLDB_TOOLS_LLDB_DAP_DAPLOG_H
 
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/BitmaskEnum.h"
