@@ -12501,12 +12501,12 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
   return SDValue();
 }
 
-// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(MulOpLHS), ZEXT(MulOpRHS)),
+// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(LHSExtOp), ZEXT(RHSExtOp)),
 // Splat(1)) into
-// PARTIAL_REDUCE_UMLA(Acc, MulOpLHS, MulOpRHS).
-// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(MulOpLHS), SEXT(MulOpRHS)),
+// PARTIAL_REDUCE_UMLA(Acc, LHSExtOp, RHSExtOp).
+// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(LHSExtOp), SEXT(RHSExtOp)),
 // Splat(1)) into
-// PARTIAL_REDUCE_SMLA(Acc, MulOpLHS, MulOpRHS).
+// PARTIAL_REDUCE_SMLA(Acc, LHSExtOp, RHSExtOp).
 SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   SDLoc DL(N);
 
