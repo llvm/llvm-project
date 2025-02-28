@@ -35,11 +35,7 @@
 
 #pragma push_macro("__PRIVATE_AS")
 
-#ifdef __SPIRV__
-#define __PRIVATE_AS __attribute__((address_space(0)))
-#else
-#define __PRIVATE_AS __attribute__((address_space(5)))
-#endif
+#define __PRIVATE_AS __attribute__((opencl_private))
 // Device library provides fast low precision and slow full-recision
 // implementations for some functions. Which one gets selected depends on
 // __CLANG_GPU_APPROX_TRANSCENDENTALS__ which gets defined by clang if
