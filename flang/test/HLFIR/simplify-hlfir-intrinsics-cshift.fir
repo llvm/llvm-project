@@ -320,3 +320,12 @@ func.func @cshift_vector_assumed_dim_1(%arg0: !fir.box<!fir.array<?xi32>>, %arg1
 }
 // CHECK-LABEL:   func.func @cshift_vector_assumed_dim_1(
 // CHECK-NOT: hlfir.cshift
+
+// Check that hlfir.cshift is converted to hlfir.elemental
+// when the argument is an array expression:
+func.func @cshift_vector_expr(%arg0: !hlfir.expr<?xi32>, %arg1: !fir.ref<i32>) -> !hlfir.expr<?xi32>{
+  %res = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?xi32>, !fir.ref<i32>) -> !hlfir.expr<?xi32>
+  return %res : !hlfir.expr<?xi32>
+}
+// CHECK-LABEL:   func.func @cshift_vector_expr(
+// CHECK: hlfir.elemental

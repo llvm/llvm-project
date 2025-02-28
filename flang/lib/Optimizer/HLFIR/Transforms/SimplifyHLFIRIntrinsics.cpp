@@ -456,7 +456,9 @@ public:
     // representation.
     hlfir::Entity array = hlfir::Entity{cshift.getArray()};
     mlir::Type elementType = array.getFortranElementType();
-    if (dimVal == 1 && fir::isa_trivial(elementType))
+    if (dimVal == 1 && fir::isa_trivial(elementType) &&
+        // genInMemCShift() only works for variables currently.
+        array.isVariable())
       rewriter.replaceOp(cshift, genInMemCShift(rewriter, cshift, dimVal));
     else
       rewriter.replaceOp(cshift, genElementalCShift(rewriter, cshift, dimVal));
