@@ -50,16 +50,23 @@ def FallbackBytecodeOpInterface : OpInterface<"FallbackBytecodeOpInterface"> {
 
   let methods = [
     StaticInterfaceMethod<[{
+      Set the original name for this operation from the bytecode.
+      }],
+      "void", "setOriginalOperationName", (ins
+          "::mlir::StringRef":$opName,
+          "::mlir::OperationState &":$state)
+    >,
+    StaticInterfaceMethod<[{
       Read the properties blob for this operation from the bytecode and populate the state.
       }],
-      "LogicalResult", "readPropertiesBlob", (ins
-          "ArrayRef<char>":$blob,
+      "::mlir::LogicalResult", "readPropertiesBlob", (ins
+          "::mlir::ArrayRef<char>":$blob,
           "::mlir::OperationState &":$state)
     >,
     InterfaceMethod<[{
       Get the properties blob for this operation to be emitted into the bytecode.
       }],
-      "ArrayRef<char>", "getPropertiesBlob", (ins)
+      "::mlir::ArrayRef<char>", "getPropertiesBlob", (ins)
     >,
   ];
 }

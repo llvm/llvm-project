@@ -20,6 +20,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/PatternBase.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Bytecode/BytecodeOpInterface.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
@@ -30,7 +31,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-
 
 // Include the attribute definitions.
 include "TestAttrDefs.td"
@@ -3028,6 +3028,25 @@ def TestVersionedOpC : TEST_Op<"versionedC"> {
   let arguments = (ins AnyAttrOf<[TestAttrParams,
                                   I32ElementsAttr]>:$attribute
   );
+}
+
+// def TestVersionedOpD : TEST_Op<"versionedD"> {
+//   let arguments = (ins AnyAttrOf<[TestAttrParams,
+//                                   I32ElementsAttr]>:$attribute
+//   );
+
+//   let useCustomPropertiesEncoding = 1;
+// }
+
+def TestBytecodeFallbackOp : TEST_Op<"bytecode.fallback", [
+  DeclareOpInterfaceMethods<FallbackBytecodeOpInterface, ["setOriginalOperationName", "readPropertiesBlob", "getPropertiesBlob"]>
+]> {
+  let arguments = (ins 
+    StrAttr:$opname,
+    DenseI8ArrayAttr:$bytecodeProperties,
+    Variadic<AnyType>:$operands);
+  let regions = (region VariadicRegion<AnyRegion>:$bodyRegions);
+  let results = (outs Variadic<AnyType>:$results);
 }
 
 //===----------------------------------------------------------------------===//

@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -90,6 +91,11 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return readAttrNewEncoding(reader);
     // Forbid reading future versions by returning nullptr.
     return Attribute();
+  }
+
+  FailureOr<OperationName> getFallbackOperationName() const final {
+    return OperationName(TestBytecodeFallbackOp::getOperationName(),
+                         getContext());
   }
 
   // Emit a specific version of the dialect.

@@ -9,9 +9,12 @@
 #include "TestDialect.h"
 #include "TestOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/Support/LogicalResult.h"
+#include <cstdint>
 
 using namespace mlir;
 using namespace test;
@@ -1228,6 +1231,53 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
     }
   }
   writer.writeAttribute(prop.modifier);
+}
+
+//===----------------------------------------------------------------------===//
+// TestVersionedOpD
+//===----------------------------------------------------------------------===//
+
+// LogicalResult
+// TestVersionedOpD::readProperties(mlir::DialectBytecodeReader &reader,
+//                                  mlir::OperationState &state) {
+//   auto &prop = state.getOrAddProperties<Properties>();
+//   StringRef res;
+//   if (failed(reader.readString(res)))
+//     return failure();
+//   if (failed(reader.readAttribute(prop.attribute)))
+//     return failure();
+
+//   return success();
+// }
+
+// void TestVersionedOpD::writeProperties(mlir::DialectBytecodeWriter &writer) {
+//   auto &prop = getProperties();
+//   writer.writeOwnedString("version 1");
+//   writer.writeAttribute(prop.attribute);
+// }
+
+//===----------------------------------------------------------------------===//
+// TestBytecodeFallbackOp
+//===----------------------------------------------------------------------===//
+
+void TestBytecodeFallbackOp::setOriginalOperationName(StringRef name,
+                                                      OperationState &state) {
+  state.getOrAddProperties<Properties>().setOpname(
+      StringAttr::get(state.getContext(), name));
+}
+
+LogicalResult
+TestBytecodeFallbackOp::readPropertiesBlob(ArrayRef<char> blob,
+                                           OperationState &state) {
+  state.getOrAddProperties<Properties>().bytecodeProperties =
+      DenseI8ArrayAttr::get(state.getContext(),
+                            ArrayRef((const int8_t *)blob.data(), blob.size()));
+  return success();
+}
+
+ArrayRef<char> TestBytecodeFallbackOp::getPropertiesBlob() {
+  return ArrayRef((const char *)getBytecodeProperties().data(),
+                  getBytecodeProperties().size());
 }
 
 //===----------------------------------------------------------------------===//

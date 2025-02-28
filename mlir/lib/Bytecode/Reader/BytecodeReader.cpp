@@ -1415,8 +1415,8 @@ private:
   /// Parse an operation name reference using the given reader, and set the
   /// `wasRegistered` flag that indicates if the bytecode was produced by a
   /// context where opName was registered.
-  FailureOr<OperationName> parseOpName(EncodingReader &reader,
-                                       std::optional<bool> &wasRegistered);
+  FailureOr<BytecodeOperationName *>
+  parseOpName(EncodingReader &reader, std::optional<bool> &wasRegistered);
 
   //===--------------------------------------------------------------------===//
   // Attribute/Type Section
@@ -1848,7 +1848,7 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
   return success();
 }
 
-FailureOr<OperationName>
+FailureOr<BytecodeOperationName *>
 BytecodeReader::Impl::parseOpName(EncodingReader &reader,
                                   std::optional<bool> &wasRegistered) {
   BytecodeOperationName *opName = nullptr;
@@ -1868,21 +1868,28 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
       // Load the dialect and its version.
       DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
                                   dialectsMap, reader, version);
-      if (succeeded(opName->dialect->load(dialectReader, getContext()))) {
-        opName->opName.emplace(
-            (opName->dialect->name + "." + opName->name).str(), getContext());
-      } else if (auto fallbackOp =
-                     opName->dialect->interface->getFallbackOperationName();
-                 succeeded(fallbackOp)) {
-        // If the dialect's bytecode interface specifies a fallback op, we want
-        // to use that instead of an unregistered op.
-        opName->opName.emplace(*fallbackOp);
-      } else {
+      if (failed(opName->dialect->load(dialectReader, getContext())))
         return failure();
+
+      opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
+                             getContext());
+
+      // If the op is unregistered now, but was not marked as unregistered, try
+      // to parse it as a fallback op if the dialect's bytecode interface
+      // specifies one.
+      // We don't treat this condition as an error because we may still be able
+      // to parse the op as an unregistered op if it doesn't use custom
+      // properties encoding.
+      if (wasRegistered && !opName->opName->isRegistered()) {
+        if (auto fallbackOp =
+                opName->dialect->interface->getFallbackOperationName();
+            succeeded(fallbackOp)) {
+          opName->opName.emplace(*fallbackOp);
+        }
       }
     }
   }
-  return *opName->opName;
+  return opName;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2227,8 +2234,12 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
                                             bool &isIsolatedFromAbove) {
   // Parse the name of the operation.
   std::optional<bool> wasRegistered;
-  FailureOr<OperationName> opName = parseOpName(reader, wasRegistered);
-  if (failed(opName))
+  FailureOr<BytecodeOperationName *> bytecodeOp =
+      parseOpName(reader, wasRegistered);
+  if (failed(bytecodeOp))
+    return failure();
+  auto opName = (*bytecodeOp)->opName;
+  if (!opName)
     return failure();
 
   // Parse the operation mask, which indicates which components of the operation
@@ -2245,6 +2256,9 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
   // With the location and name resolved, we can start building the operation
   // state.
   OperationState opState(opLoc, *opName);
+  // If this is a fallback op, provide the original name of the operation.
+  if (auto *iface = opName->getInterface<FallbackBytecodeOpInterface>())
+    iface->setOriginalOperationName((*bytecodeOp)->name, opState);
 
   // Parse the attributes of the operation.
   if (opMask & bytecode::OpEncodingMask::kHasAttrs) {
