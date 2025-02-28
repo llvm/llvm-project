@@ -646,6 +646,20 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
   Ty = RefTy;
 }
 
+Type *getGEPType(GetElementPtrInst *Ref) {
+  Type *Ty = nullptr;
+  // TODO: not sure if GetElementPtrInst::getTypeAtIndex() does anything
+  // useful here
+  if (isNestedPointer(Ref->getSourceElementType())) {
+    Ty = Ref->getSourceElementType();
+    for (Use &U : drop_begin(Ref->indices()))
+      Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
+  } else {
+    Ty = Ref->getResultElementType();
+  }
+  return Ty;
+}
+
 Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     Value *I, std::unordered_set<Value *> &Visited, bool UnknownElemTypeI8,
     bool IgnoreKnownType) {
@@ -668,15 +682,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
   if (auto *Ref = dyn_cast<AllocaInst>(I)) {
     maybeAssignPtrType(Ty, I, Ref->getAllocatedType(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
-    // TODO: not sure if GetElementPtrInst::getTypeAtIndex() does anything
-    // useful here
-    if (isNestedPointer(Ref->getSourceElementType())) {
-      Ty = Ref->getSourceElementType();
-      for (Use &U : drop_begin(Ref->indices()))
-        Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
-    } else {
-      Ty = Ref->getResultElementType();
-    }
+    Ty = getGEPType(Ref);
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     Value *Op = Ref->getPointerOperand();
     Type *KnownTy = GR->findDeducedElementType(Op);
@@ -2373,6 +2379,15 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
+
+  // fix GEP result types ahead of inference
+  for (auto &I : instructions(Func)) {
+    auto *Ref = dyn_cast<GetElementPtrInst>(&I);
+    if (!Ref || GR->findDeducedElementType(Ref))
+      continue;
+    if (Type *GepTy = getGEPType(Ref))
+      GR->addDeducedElementType(Ref, normalizeType(GepTy));
+  }
 
   processParamTypesByFunHeader(CurrF, B);
 
