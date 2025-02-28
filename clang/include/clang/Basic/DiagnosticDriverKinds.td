@@ -577,6 +577,11 @@ def err_drv_module_output_with_multiple_arch : Error<
 def err_modules_no_lsv : Error<"standard C++ modules require "
   "the -fmodules-local-submodule-visibility -cc1 option">;
   
+def err_drv_reduced_module_output_overrided : Warning<
+  "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
+  "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
+  InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
