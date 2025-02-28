@@ -128,6 +128,7 @@ define void @callee() {
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s9, -44
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s10, -48
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s11, -52
+; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IXQCCMP-WITH-FP-NEXT:    lui t1, %hi(var)
 ; RV32IXQCCMP-WITH-FP-NEXT:    lw a0, %lo(var)(t1)
 ; RV32IXQCCMP-WITH-FP-NEXT:    sw a0, -56(s0) # 4-byte Folded Spill
@@ -325,6 +326,7 @@ define void @callee() {
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s9, -88
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s10, -96
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s11, -104
+; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IXQCCMP-WITH-FP-NEXT:    lui t1, %hi(var)
 ; RV64IXQCCMP-WITH-FP-NEXT:    lw a0, %lo(var)(t1)
 ; RV64IXQCCMP-WITH-FP-NEXT:    sd a0, -112(s0) # 8-byte Folded Spill
@@ -569,6 +571,7 @@ define void @caller() {
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s11, -52
 ; RV32IXQCCMP-WITH-FP-NEXT:    addi sp, sp, -32
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 144
+; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IXQCCMP-WITH-FP-NEXT:    lui s6, %hi(var)
 ; RV32IXQCCMP-WITH-FP-NEXT:    lw a0, %lo(var)(s6)
 ; RV32IXQCCMP-WITH-FP-NEXT:    sw a0, -56(s0) # 4-byte Folded Spill
@@ -840,6 +843,7 @@ define void @caller() {
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s11, -104
 ; RV64IXQCCMP-WITH-FP-NEXT:    addi sp, sp, -128
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 288
+; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IXQCCMP-WITH-FP-NEXT:    lui s6, %hi(var)
 ; RV64IXQCCMP-WITH-FP-NEXT:    lw a0, %lo(var)(s6)
 ; RV64IXQCCMP-WITH-FP-NEXT:    sd a0, -112(s0) # 8-byte Folded Spill
@@ -983,6 +987,7 @@ define void @foo() {
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset ra, -4
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s0, -8
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s4, -24
+; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IXQCCMP-WITH-FP-NEXT:    #APP
 ; RV32IXQCCMP-WITH-FP-NEXT:    li s4, 0
 ; RV32IXQCCMP-WITH-FP-NEXT:    #NO_APP
@@ -1006,6 +1011,7 @@ define void @foo() {
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset ra, -8
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s0, -16
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s4, -48
+; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IXQCCMP-WITH-FP-NEXT:    #APP
 ; RV64IXQCCMP-WITH-FP-NEXT:    li s4, 0
 ; RV64IXQCCMP-WITH-FP-NEXT:    #NO_APP
@@ -1035,6 +1041,7 @@ define void @bar() {
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset ra, -4
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s0, -8
 ; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_offset s11, -52
+; RV32IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IXQCCMP-WITH-FP-NEXT:    #APP
 ; RV32IXQCCMP-WITH-FP-NEXT:    li s11, 0
 ; RV32IXQCCMP-WITH-FP-NEXT:    #NO_APP
@@ -1058,6 +1065,7 @@ define void @bar() {
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset ra, -8
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s0, -16
 ; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_offset s11, -104
+; RV64IXQCCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IXQCCMP-WITH-FP-NEXT:    #APP
 ; RV64IXQCCMP-WITH-FP-NEXT:    li s11, 0
 ; RV64IXQCCMP-WITH-FP-NEXT:    #NO_APP

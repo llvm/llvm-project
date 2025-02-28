@@ -974,17 +974,20 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   emitCFIForCSI<CFISaveRegisterEmitter>(MBB, MBBI, getUnmanagedCSI(MF, CSI));
 
   // Generate new FP.
-  if (hasFP(MF) && RVFI->getPushPopKind(MF) !=
-                       RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
+  if (hasFP(MF)) {
     if (STI.isRegisterReservedByUser(FPReg))
       MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
           MF.getFunction(), "Frame pointer required, but has been reserved."});
     // The frame pointer does need to be reserved from register allocation.
     assert(MF.getRegInfo().isReserved(FPReg) && "FP not reserved");
 
-    RI->adjustReg(MBB, MBBI, DL, FPReg, SPReg,
-                  StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
-                  MachineInstr::FrameSetup, getStackAlign());
+    // Xqxxmp with hasFP will update FP using `qc.cm.pushfp`, so we don't need
+    // to update it again, but we do need to emit the `.cfi_def_cfa` below.
+    if (RVFI->getPushPopKind(MF) != RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
+      RI->adjustReg(MBB, MBBI, DL, FPReg, SPReg,
+                    StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
+                    MachineInstr::FrameSetup, getStackAlign());
+    }
 
     // Emit ".cfi_def_cfa $fp, RVFI->getVarArgsSaveSize()"
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
