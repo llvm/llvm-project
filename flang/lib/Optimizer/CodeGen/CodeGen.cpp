@@ -982,7 +982,8 @@ struct EmboxCharOpConversion : public fir::FIROpConversion<fir::EmboxCharOp> {
 template <typename ModuleOp>
 static mlir::SymbolRefAttr
 getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
-                  mlir::ConversionPatternRewriter &rewriter) {
+                  mlir::ConversionPatternRewriter &rewriter,
+                  mlir::Type indexType) {
   static constexpr char mallocName[] = "malloc";
   if (auto mallocFunc =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
@@ -992,7 +993,6 @@ getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
     return mlir::SymbolRefAttr::get(userMalloc);
 
   mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
-  auto indexType = mlir::IntegerType::get(op.getContext(), 64);
   auto mallocDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       op.getLoc(), mallocName,
       mlir::LLVM::LLVMFunctionType::get(getLlvmPtrType(op.getContext()),
@@ -1002,12 +1002,13 @@ getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
 }
 
 /// Return the LLVMFuncOp corresponding to the standard malloc call.
-static mlir::SymbolRefAttr
-getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
+static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
+                                     mlir::ConversionPatternRewriter &rewriter,
+                                     mlir::Type indexType) {
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getMallocInModule(mod, op, rewriter);
+    return getMallocInModule(mod, op, rewriter, indexType);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getMallocInModule(mod, op, rewriter);
+  return getMallocInModule(mod, op, rewriter, indexType);
 }
 
 /// Helper function for generating the LLVM IR that computes the distance
@@ -1067,7 +1068,12 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     for (mlir::Value opnd : adaptor.getOperands())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
-    heap->setAttr("callee", getMalloc(heap, rewriter));
+    auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
+    auto mallocTy =
+        mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
+    if (mallocTyWidth != ity.getIntOrFloatBitWidth())
+      size = integerCast(loc, rewriter, mallocTy, size);
+    heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, ::getLlvmPtrType(heap.getContext()), size,
         addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 1));
