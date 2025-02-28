@@ -45,6 +45,10 @@ int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
     ProcessInfo Result = Wait(
         PI, SecondsToWait == 0 ? std::nullopt : std::optional(SecondsToWait),
         ErrMsg, ProcStat);
+
+    if (ExecutionFailed && Result.ReturnCode < 0)
+      *ExecutionFailed = true;
+
     return Result.ReturnCode;
   }
 

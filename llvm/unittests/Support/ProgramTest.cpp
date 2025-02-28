@@ -433,10 +433,19 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     ProcessInfo PI = ExecuteNoWait(Executable, argv, std::nullopt, {}, 0,
                                    &Error, &ExecutionFailed);
-    EXPECT_EQ(PI.Pid, ProcessInfo::InvalidPid)
-        << "On error ExecuteNoWait should return an invalid ProcessInfo";
-    EXPECT_TRUE(ExecutionFailed);
-    EXPECT_FALSE(Error.empty());
+
+    if (ExecutionFailed) {
+      EXPECT_EQ(PI.Pid, ProcessInfo::InvalidPid)
+          << "On error ExecuteNoWait should return an invalid ProcessInfo";
+      EXPECT_FALSE(Error.empty());
+    } else {
+      std::string WaitErrMsg;
+      EXPECT_NE(PI.Pid, ProcessInfo::InvalidPid);
+      ProcessInfo WaitPI = Wait(PI, std::nullopt, &WaitErrMsg);
+      EXPECT_EQ(WaitPI.Pid, PI.Pid);
+      EXPECT_LT(WaitPI.ReturnCode, 0);
+      EXPECT_FALSE(WaitErrMsg.empty());
+    }
   }
 
 }
