@@ -1684,14 +1684,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_InvalidStackAdj: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    StringRef SpecName = "Zc";
-    if (getSTI().hasFeature(RISCV::FeatureVendorXqccmp))
-      SpecName = "Xqccmp";
-
-    return Error(ErrorLoc,
-                 Twine("stack adjustment is invalid for this instruction") +
-                     " and register list; refer to " + SpecName +
-                     " spec for a detailed range of stack adjustment");
+    return Error(
+        ErrorLoc,
+        "stack adjustment is invalid for this instruction and register list");
   }
   }
 
@@ -2771,12 +2766,25 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
 
   SMLoc S = getLoc();
   int64_t StackAdjustment = getLexer().getTok().getIntVal();
-  unsigned Spimm = 0;
   unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
 
-  if (Negative != ExpectNegative ||
-      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64()))
-    return ParseStatus::NoMatch;
+  assert(RlistVal != RISCVZC::INVALID_RLIST);
+  unsigned StackAdjBase = RISCVZC::getStackAdjBase(RlistVal, isRV64());
+  if (Negative != ExpectNegative || StackAdjustment % 16 != 0 ||
+      StackAdjustment < StackAdjBase || (StackAdjustment - StackAdjBase) > 48) {
+    int64_t Lower = StackAdjBase;
+    int64_t Upper = StackAdjBase + 48;
+    if (ExpectNegative) {
+      Lower = -Lower;
+      Upper = -Upper;
+      std::swap(Lower, Upper);
+    }
+    return generateImmOutOfRangeError(S, Lower, Upper,
+                                      "stack adjustment for register list must "
+                                      "be a multiple of 16 bytes in the range");
+  }
+
+  unsigned Spimm = (StackAdjustment - StackAdjBase) / 16;
   Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
   getLexer().Lex();
   return ParseStatus::Success;

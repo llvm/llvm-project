@@ -1355,10 +1355,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v256i1, Custom);
   }
   if (Subtarget.hasMMA()) {
-    if (Subtarget.isISAFuture())
+    if (Subtarget.isISAFuture()) {
       addRegisterClass(MVT::v512i1, &PPC::WACCRCRegClass);
-    else
+      addRegisterClass(MVT::v1024i1, &PPC::DMRRCRegClass);
+      setOperationAction(ISD::LOAD, MVT::v1024i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v1024i1, Custom);
+    } else {
       addRegisterClass(MVT::v512i1, &PPC::UACCRCRegClass);
+    }
     setOperationAction(ISD::LOAD, MVT::v512i1, Custom);
     setOperationAction(ISD::STORE, MVT::v512i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v512i1, Custom);
@@ -11758,6 +11762,64 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   return Op;
 }
 
+SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
+  SDValue LoadChain = LN->getChain();
+  SDValue BasePtr = LN->getBasePtr();
+  EVT VT = Op.getValueType();
+
+  // Type v1024i1 is used for Dense Math dmr registers.
+  assert(VT == MVT::v1024i1 && "Unsupported type.");
+  assert((Subtarget.hasMMA() && Subtarget.isISAFuture()) &&
+         "Dense Math support required.");
+  assert(Subtarget.pairedVectorMemops() && "Vector pair support required.");
+
+  SmallVector<SDValue, 4> Loads;
+  SmallVector<SDValue, 4> LoadChains;
+  SDValue IntrinID = DAG.getConstant(Intrinsic::ppc_vsx_lxvp, dl, MVT::i32);
+  SDValue LoadOps[] = {LoadChain, IntrinID, BasePtr};
+  MachineMemOperand *MMO = LN->getMemOperand();
+  unsigned NumVecs = VT.getSizeInBits() / 256;
+  for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
+    MachineMemOperand *NewMMO =
+        DAG.getMachineFunction().getMachineMemOperand(MMO, Idx * 32, 32);
+    if (Idx > 0) {
+      BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
+                            DAG.getConstant(32, dl, BasePtr.getValueType()));
+      LoadOps[2] = BasePtr;
+    }
+    SDValue Ld = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, dl,
+                                         DAG.getVTList(MVT::v256i1, MVT::Other),
+                                         LoadOps, MVT::v256i1, NewMMO);
+    LoadChains.push_back(Ld.getValue(1));
+    Loads.push_back(Ld);
+  }
+
+  if (Subtarget.isLittleEndian()) {
+    std::reverse(Loads.begin(), Loads.end());
+    std::reverse(LoadChains.begin(), LoadChains.end());
+  }
+
+  SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
+  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTFDMR512, dl, MVT::v512i1, Loads[0],
+                                Loads[1]),
+             0);
+  SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
+  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTFDMR512_HI, dl, MVT::v512i1,
+                                Loads[2], Loads[3]),
+             0);
+  SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
+  SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
+  const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
+  SDValue Value =
+      SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
+
+  SDValue RetOps[] = {Value, TF};
+  return DAG.getMergeValues(RetOps, dl);
+}
+
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -11765,6 +11827,9 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
   SDValue LoadChain = LN->getChain();
   SDValue BasePtr = LN->getBasePtr();
   EVT VT = Op.getValueType();
+
+  if (VT == MVT::v1024i1)
+    return LowerDMFVectorLoad(Op, DAG);
 
   if (VT != MVT::v256i1 && VT != MVT::v512i1)
     return Op;
@@ -11803,6 +11868,69 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
   return DAG.getMergeValues(RetOps, dl);
 }
 
+SDValue PPCTargetLowering::LowerDMFVectorStore(SDValue Op,
+                                               SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+  StoreSDNode *SN = cast<StoreSDNode>(Op.getNode());
+  SDValue StoreChain = SN->getChain();
+  SDValue BasePtr = SN->getBasePtr();
+  SmallVector<SDValue, 4> Values;
+  SmallVector<SDValue, 4> Stores;
+  EVT VT = SN->getValue().getValueType();
+
+  // Type v1024i1 is used for Dense Math dmr registers.
+  assert(VT == MVT::v1024i1 && "Unsupported type.");
+  assert((Subtarget.hasMMA() && Subtarget.isISAFuture()) &&
+         "Dense Math support required.");
+  assert(Subtarget.pairedVectorMemops() && "Vector pair support required.");
+
+  SDValue Lo(
+      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                         Op.getOperand(1),
+                         DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+      0);
+  SDValue Hi(
+      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                         Op.getOperand(1),
+                         DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+      0);
+  EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
+  MachineSDNode *ExtNode =
+      DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Lo);
+  Values.push_back(SDValue(ExtNode, 0));
+  Values.push_back(SDValue(ExtNode, 1));
+  ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Hi);
+  Values.push_back(SDValue(ExtNode, 0));
+  Values.push_back(SDValue(ExtNode, 1));
+
+  if (Subtarget.isLittleEndian())
+    std::reverse(Values.begin(), Values.end());
+
+  SDVTList Tys = DAG.getVTList(MVT::Other);
+  SmallVector<SDValue, 4> Ops{
+      StoreChain, DAG.getConstant(Intrinsic::ppc_vsx_stxvp, dl, MVT::i32),
+      Values[0], BasePtr};
+  MachineMemOperand *MMO = SN->getMemOperand();
+  unsigned NumVecs = VT.getSizeInBits() / 256;
+  for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
+    MachineMemOperand *NewMMO =
+        DAG.getMachineFunction().getMachineMemOperand(MMO, Idx * 32, 32);
+    if (Idx > 0) {
+      BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
+                            DAG.getConstant(32, dl, BasePtr.getValueType()));
+      Ops[3] = BasePtr;
+    }
+    Ops[2] = Values[Idx];
+    SDValue St = DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, dl, Tys, Ops,
+                                         MVT::v256i1, NewMMO);
+    Stores.push_back(St);
+  }
+
+  SDValue TF = DAG.getTokenFactor(dl, Stores);
+  return TF;
+}
+
 SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -11812,6 +11940,9 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   SDValue Value = SN->getValue();
   SDValue Value2 = SN->getValue();
   EVT StoreVT = Value.getValueType();
+
+  if (StoreVT == MVT::v1024i1)
+    return LowerDMFVectorStore(Op, DAG);
 
   if (StoreVT != MVT::v256i1 && StoreVT != MVT::v512i1)
     return Op;
