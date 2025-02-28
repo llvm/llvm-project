@@ -5084,12 +5084,12 @@ def int_nvvm_applypriority_L2_evict_normal
 
 // Intrinsics for discard
 def int_nvvm_discard_global_L2 : DefaultAttrsIntrinsic<[], 
-    [llvm_global_ptr_ty, llvm_i64_ty], [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, 
-    NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
+    [llvm_global_ptr_ty, llvm_i64_ty], [NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
 
 def int_nvvm_discard_L2 : DefaultAttrsIntrinsic<[], 
-    [llvm_ptr_ty, llvm_i64_ty], [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, 
-    NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
+    [llvm_ptr_ty, llvm_i64_ty], [NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
 // From Global to Shared Cluster
