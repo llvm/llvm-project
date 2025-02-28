@@ -1583,7 +1583,7 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
     bool IsInteger = EltTy->isIntegerTy();
     bool IsFP = EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
     unsigned EltBits = EltTy->getPrimitiveSizeInBits();
-    unsigned E = std::min(BitWidth / EltBits, CDS->getNumElements());
+    unsigned E = std::min(BitWidth / EltBits, (unsigned)CDS->getNumElements());
     assert((BitWidth % EltBits) == 0 && "Element size mismatch");
     for (unsigned I = 0; I != E; ++I) {
       if (I != 0)
