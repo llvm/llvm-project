@@ -135,7 +135,9 @@ bool DereferenceChecker::suppressReport(CheckerContext &C,
   QualType Ty = E->getType();
   if (!Ty.hasAddressSpace())
     return false;
-  if (C.getAnalysisManager().getAnalyzerOptions().ShouldSuppressAddressSpaces)
+  if (C.getAnalysisManager()
+          .getAnalyzerOptions()
+          .ShouldSuppressAddressSpaceDereferences)
     return true;
 
   const llvm::Triple::ArchType Arch =

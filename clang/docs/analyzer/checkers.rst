@@ -162,10 +162,13 @@ as error. Specifically on x86/x86-64 target if the pointer address space is
 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
 dereference is not defined as error. See `X86/X86-64 Language Extensions
 <https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
-for reference. The ``suppress-all-address-spaces`` configuration option can be
-used to control if null dereferences with any address space or only with the
-specific x86 address spaces 256, 257, 258 are excluded from reporting as error.
-The default is all address spaces.
+for reference.
+	
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but null dereferences from other address spaces are reported.
 
 .. _core-StackAddressEscape:
 
@@ -2944,10 +2947,12 @@ value.
    int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
  }
 
-The analyzer option ``suppress-all-address-spaces`` affects this checker. If it
-is set to true pointer dereferences with any address space are not reported as
-error. Otherwise only address spaces 256, 257, 258 on target x86/x86-64 are
-excluded from reporting as error. The default is all address spaces.
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
 
 .. _alpha-core-PointerArithm:
 

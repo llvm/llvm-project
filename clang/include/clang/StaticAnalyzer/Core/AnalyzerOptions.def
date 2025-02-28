@@ -396,7 +396,7 @@ ANALYZER_OPTION(
     true)
 
 ANALYZER_OPTION(
-    bool, ShouldSuppressAddressSpaces, "suppress-all-address-spaces",
+    bool, ShouldSuppressAddressSpaceDereferences, "suppress-dereferences-from-any-address-space",
     "The analyzer does not report dereferences on memory that use "
     "address space #256, #257, and #258. Those address spaces are used when "
     "dereferencing address spaces relative to the GS, FS, and SS segments on "

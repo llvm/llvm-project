@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -analyzer-config suppress-all-address-spaces=false -verify=x86-nosuppress %s
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -verify=x86-suppress %s
-// RUN: %clang_analyze_cc1 -triple arm-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -analyzer-config suppress-all-address-spaces=false -verify=other-nosuppress %s
-// RUN: %clang_analyze_cc1 -triple arm-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -verify=other-suppress %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -analyzer-config suppress-dereferences-from-any-address-space=false -verify=x86-nosuppress,common %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -verify=x86-suppress,common %s
+// RUN: %clang_analyze_cc1 -triple arm-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -analyzer-config suppress-dereferences-from-any-address-space=false -verify=other-nosuppress,common %s
+// RUN: %clang_analyze_cc1 -triple arm-pc-linux-gnu -analyzer-checker=core,alpha.core -std=gnu99 -verify=other-suppress,common %s
 
 #define AS_ATTRIBUTE(_X) volatile __attribute__((address_space(_X)))
 
@@ -34,10 +34,7 @@ void test_other_address_space_condition(int AS_ATTRIBUTE(259) *cpu_data) {
 
 void test_no_address_space_condition(int *cpu_data) {
   if (cpu_data == 0) {
-    *cpu_data = 3; // other-nosuppress-warning{{Dereference}} \
-                   // x86-nosuppress-warning{{Dereference}} \
-                   // other-suppress-warning{{Dereference}} \
-                   // x86-suppress-warning{{Dereference}}
+    *cpu_data = 3; // common-warning{{Dereference}}
   }
 }
 
@@ -69,9 +66,6 @@ void fixed_test_other_address_space_condition(int AS_ATTRIBUTE(259) *cpu_data) {
 
 void fixed_test_no_address_space_condition(int *cpu_data) {
   if (cpu_data == (int *)2) {
-    *cpu_data = 3; // other-nosuppress-warning{{Dereference}} \
-                   // x86-nosuppress-warning{{Dereference}} \
-                   // other-suppress-warning{{Dereference}} \
-                   // x86-suppress-warning{{Dereference}}
+    *cpu_data = 3; // common-warning{{Dereference}}
   }
 }

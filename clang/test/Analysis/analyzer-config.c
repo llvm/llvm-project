@@ -123,8 +123,8 @@
 // CHECK-NEXT: silence-checkers = ""
 // CHECK-NEXT: stable-report-filename = false
 // CHECK-NEXT: support-symbolic-integer-casts = false
-// CHECK-NEXT: suppress-all-address-spaces = true
 // CHECK-NEXT: suppress-c++-stdlib = true
+// CHECK-NEXT: suppress-dereferences-from-any-address-space = true
 // CHECK-NEXT: suppress-inlined-defensive-checks = true
 // CHECK-NEXT: suppress-null-return-paths = true
 // CHECK-NEXT: track-conditions = true
