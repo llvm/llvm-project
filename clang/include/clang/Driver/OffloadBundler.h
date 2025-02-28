@@ -118,6 +118,7 @@ private:
   static inline const size_t UncompressedSizeFieldSizeV3 = sizeof(uint64_t);
   static inline const size_t HashFieldSize = sizeof(uint64_t);
 
+public:
   // Keep V1 header size for backward compatibility
   static inline const size_t V1HeaderSize =
       MagicSize + VersionFieldSize + MethodFieldSize +
@@ -135,7 +136,6 @@ private:
 
   static inline const llvm::StringRef MagicNumber = "CCOB";
 
-public:
   static inline const uint16_t DefaultVersion = 2;
 
   // Helper method to get header size based on version

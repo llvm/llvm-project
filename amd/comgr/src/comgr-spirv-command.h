@@ -3,7 +3,9 @@
  * University of Illinois/NCSA
  * Open Source License
  *
- * Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
+ * Modifications (c) 2018 Advanced Micro Devices, Inc.
+ * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,13 +21,14 @@
  *       notice, this list of conditions and the following disclaimers in the
  *       documentation and/or other materials provided with the distribution.
  *
- *     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived from
- *       this Software without specific prior written permission.
+ *     * Neither the names of the LLVM Team, University of Illinois at
+ *       Urbana-Champaign, nor the names of its contributors may be used to
+ *       endorse or promote products derived from this Software without specific
+ *       prior written permission.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
  * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
@@ -33,27 +36,34 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_DEVICE_LIBS_H
-#define COMGR_DEVICE_LIBS_H
+#ifndef COMGR_SPIRV_COMMAND_H
+#define COMGR_SPIRV_COMMAND_H
 
-#include "amd_comgr.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include <tuple>
+#include "comgr-cache-command.h"
+#include "comgr.h"
 
 namespace COMGR {
+class SPIRVCommand : public CachedCommandAdaptor {
+public:
+  llvm::StringRef InputBuffer;
+  llvm::SmallVectorImpl<char> &OutputBuffer;
 
-struct DataAction;
-struct DataSet;
+public:
+  SPIRVCommand(DataObject *Input, llvm::SmallVectorImpl<char> &OutputBuffer)
+      : InputBuffer(Input->Data, Input->Size), OutputBuffer(OutputBuffer) {}
 
-amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
-                                         DataSet *ResultSet);
+  bool canCache() const final { return true; }
+  llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) final;
+  llvm::Expected<llvm::StringRef> readExecuteOutput() final;
+  amd_comgr_status_t execute(llvm::raw_ostream &LogS) final;
 
-llvm::StringRef getDeviceLibrariesIdentifier();
+  ~SPIRVCommand() override = default;
 
-llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>
-getDeviceLibraries();
-
+protected:
+  ActionClass getClass() const override;
+  void addOptionsIdentifier(HashAlgorithm &) const override;
+  llvm::Error addInputIdentifier(HashAlgorithm &) const override;
+};
 } // namespace COMGR
 
-#endif // COMGR_DEVICE_LIBS_H
+#endif

@@ -33,49 +33,45 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_ENV_H
-#define COMGR_ENV_H
+#ifndef COMGR_CACHE_H
+#define COMGR_CACHE_H
 
-#include "llvm/ADT/StringRef.h"
+#include "amd_comgr.h"
+#include "comgr-cache-command.h"
+
+#include <llvm/ADT/StringRef.h>
+#include <llvm/Support/CachePruning.h>
+#include <llvm/Support/MemoryBuffer.h>
+
+#include <functional>
+#include <memory>
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace COMGR {
-namespace env {
+class CommandCache {
+  std::string CacheDir;
+  llvm::CachePruningPolicy Policy;
 
-/// Return whether the environment requests temps be saved.
-bool shouldSaveTemps();
+  CommandCache(llvm::StringRef CacheDir,
+               const llvm::CachePruningPolicy &Policy);
 
-/// If the environment requests logs be redirected, return the string identifier
-/// of where to redirect. Otherwise return @p None.
-std::optional<llvm::StringRef> getRedirectLogs();
+  static std::optional<llvm::CachePruningPolicy>
+  getPolicyFromEnv(llvm::raw_ostream &LogS);
 
-/// Return whether the environment requests verbose logging.
-bool shouldEmitVerboseLogs();
+public:
+  static std::unique_ptr<CommandCache> get(llvm::raw_ostream &);
 
-/// Return whether the environment requests time statistics collection.
-bool needTimeStatistics();
+  ~CommandCache();
+  void prune();
 
-/// If environment variable ROCM_PATH is set, return the environment varaible,
-/// otherwise return the default ROCM path.
-llvm::StringRef getROCMPath();
-
-/// If environment variable HIP_PATH is set, return the environment variable,
-/// otherwise return the default HIP path.
-llvm::StringRef getHIPPath();
-
-/// If environment variable LLVM_PATH is set, return the environment variable,
-/// otherwise return the default LLVM path.
-llvm::StringRef getLLVMPath();
-
-/// If environment variable AMD_COMGR_CACHE_POLICY is set, return the
-/// environment variable, otherwise return empty
-llvm::StringRef getCachePolicy();
-
-/// If environment variable AMD_COMGR_CACHE_DIR is set, return the environment
-/// variable, otherwise return the default path: On Linux it's typically
-/// $HOME/.cache/comgr_cache (depends on XDG_CACHE_HOME)
-llvm::StringRef getCacheDirectory();
-
-} // namespace env
+  /// Checks if the Command C is cached.
+  /// If it is the case, it replaces its output and logs its error-stream.
+  /// Otherwise it executes C through the callback Execute
+  amd_comgr_status_t execute(CachedCommandAdaptor &C, llvm::raw_ostream &LogS);
+};
 } // namespace COMGR
 
-#endif // COMGR_ENV_H
+#endif

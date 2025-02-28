@@ -37,9 +37,12 @@
  ******************************************************************************/
 
 #include "comgr-compiler.h"
+#include "comgr-cache-bundler-command.h"
+#include "comgr-cache.h"
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
+#include "comgr-spirv-command.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
 #include "clang/Basic/Version.h"
@@ -54,6 +57,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -83,10 +87,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
-
-#ifndef COMGR_DISABLE_SPIRV
-#include "LLVMSPIRVLib/LLVMSPIRVLib.h"
-#endif
 
 #include "time-stat/ts-interface.h"
 
@@ -720,6 +720,15 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+std::string getStableCUID(const DataSet *InSet) {
+  using Hash = CachedCommandAdaptor::HashAlgorithm;
+  Hash H;
+  for (const DataObject *Input : InSet->DataObjects) {
+    CachedCommandAdaptor::addFileContents(H,
+                                          StringRef{Input->Data, Input->Size});
+  }
+  return toHex(H.final());
+}
 } // namespace
 
 amd_comgr_status_t
@@ -771,9 +780,17 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
     return AMD_COMGR_STATUS_ERROR;
   }
 
+  auto Cache = CommandCache::get(LogS);
   for (auto &Job : C->getJobs()) {
-    if (auto Status = executeCommand(Job, LogS, *DiagOpts, *VFS)) {
-      return Status;
+    ClangCommand C(Job, *DiagOpts, *VFS, executeCommand);
+    if (Cache) {
+      if (auto Status = Cache->execute(C, LogS)) {
+        return Status;
+      }
+    } else {
+      if (auto Status = C.execute(LogS)) {
+        return Status;
+      }
     }
   }
   return AMD_COMGR_STATUS_SUCCESS;
@@ -1031,6 +1048,10 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
     Args.push_back(ROCMIncludePath.c_str());
     Args.push_back("-isystem");
     Args.push_back(HIPIncludePath.c_str());
+    // Pass a cuid that depends on the input files
+    // Otherwise, a random (which depends on the /tmp/comgr-xxxxx path) cuid is
+    // generated which causes a cache miss on every run.
+    Args.push_back(Saver.save("-cuid=" + getStableCUID(InSet)).data());
     break;
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -1227,6 +1248,7 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
   }
 
   // Collect bitcode memory buffers from bitcodes, bundles, and archives
+  auto Cache = CommandCache::get(LogS);
   for (auto *Input : InSet->DataObjects) {
 
     const char *FileExtension;
@@ -1289,9 +1311,6 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       BundlerConfig.OutputFileNames.emplace_back(OutputFilePath);
     }
 
-    OffloadBundler Bundler(BundlerConfig);
-
-    // TODO: log vectors, build clang command
     if (env::shouldEmitVerboseLogs()) {
       LogS << "Extracting Bundle:\n"
            << "\t  Unbundled Files Extension: ." << FileExtension << "\n"
@@ -1304,27 +1323,15 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       LogS.flush();
     }
 
-    switch (Input->DataKind) {
-    case AMD_COMGR_DATA_KIND_BC_BUNDLE: {
-      llvm::Error Err = Bundler.UnbundleFiles();
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Unbundle Bitcodes Error: ");
-      break;
-    }
-    case AMD_COMGR_DATA_KIND_AR_BUNDLE: {
-      llvm::Error Err = Bundler.UnbundleArchive();
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Unbundle Archives Error: ");
-      break;
-    }
-    case AMD_COMGR_DATA_KIND_OBJ_BUNDLE: {
-      llvm::Error Err = Bundler.UnbundleFiles();
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Unbundle Objects Error: ");
-      break;
-    }
-    default:
-      llvm_unreachable("invalid bundle type");
+    UnbundleCommand Unbundle(Input->DataKind, BundlerConfig);
+    if (Cache) {
+      if (auto Status = Cache->execute(Unbundle, LogS)) {
+        return Status;
+      }
+    } else {
+      if (auto Status = Unbundle.execute(LogS)) {
+        return Status;
+      }
     }
 
     // Add new bitcodes to OutSetT
@@ -1874,10 +1881,6 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
     return Status;
   }
 
-  LLVMContext Context;
-  Context.setDiagnosticHandler(
-      std::make_unique<AMDGPUCompilerDiagnosticHandler>(this->LogS), true);
-
   for (auto *Input : InSet->DataObjects) {
 
     if (env::shouldSaveTemps()) {
@@ -1890,28 +1893,20 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-    // TODO: With C++23, we should investigate replacing with spanstream
-    // to avoid memory copies:
-    //  https://en.cppreference.com/w/cpp/io/basic_ispanstream
-    std::istringstream ISS(std::string(Input->Data, Input->Size));
+    SmallString<0> OutBuf;
+    SPIRVCommand SPIRV(Input, OutBuf);
 
-    llvm::Module *M;
-    std::string Err;
-
-    SPIRV::TranslatorOpts Opts;
-    Opts.enableAllExtensions();
-    Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::OpenCL20);
-
-    if (!llvm::readSpirv(Context, Opts, ISS, M, Err)) {
-      LogS << "Failed to load SPIR-V as LLVM Module: " << Err << '\n';
-      return AMD_COMGR_STATUS_ERROR;
+    std::optional<CommandCache> &Cache = CommandCache::singleton(LogS);
+    amd_comgr_status_t Status;
+    if (!Cache) {
+      Status = SPIRV.execute(LogS);
+    } else {
+      Status = Cache->execute(SPIRV, LogS);
     }
 
-    SmallString<0> OutBuf;
-    BitcodeWriter Writer(OutBuf);
-    Writer.writeModule(*M, false, nullptr, false, nullptr);
-    Writer.writeSymtab();
-    Writer.writeStrtab();
+    if (Status) {
+      return Status;
+    }
 
     amd_comgr_data_t OutputT;
     if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT)) {

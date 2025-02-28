@@ -59,10 +59,15 @@ amd_comgr_status_t addObject(DataSet *DataSet, amd_comgr_data_kind_t Kind,
   DataSet->DataObjects.insert(Obj);
   return AMD_COMGR_STATUS_SUCCESS;
 }
-} // namespace
 
+#include "libraries.inc"
+#include "libraries_sha.inc"
 #include "opencl1.2-c.inc"
 #include "opencl2.0-c.inc"
+} // namespace
+
+StringRef getDeviceLibrariesIdentifier() { return DEVICE_LIBS_ID; }
+
 amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
                                          DataSet *ResultSet) {
   switch (ActionInfo->Language) {
@@ -77,7 +82,6 @@ amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
   }
 }
 
-#include "libraries.inc"
 llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>
 getDeviceLibraries() {
   static std::tuple<llvm::StringRef, llvm::StringRef> DeviceLibs[] = {
