@@ -612,7 +612,7 @@ class MapInfoFinalizationPass
           if (!shouldMapField)
             continue;
 
-          int64_t fieldIdx = recordType.getFieldIndex(field);
+          int32_t fieldIdx = recordType.getFieldIndex(field);
           bool alreadyMapped = [&]() {
             if (op.getMembersIndexAttr())
               for (auto indexList : op.getMembersIndexAttr()) {
@@ -630,12 +630,11 @@ class MapInfoFinalizationPass
             continue;
 
           builder.setInsertionPoint(op);
-          mlir::Value fieldIdxVal = builder.createIntegerConstant(
-              op.getLoc(), mlir::IndexType::get(builder.getContext()),
-              fieldIdx);
+          fir::IntOrValue idxConst =
+              mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
           auto fieldCoord = builder.create<fir::CoordinateOp>(
               op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
-              fieldIdxVal);
+              llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
           fir::factory::AddrAndBoundsInfo info =
               fir::factory::getDataOperandBaseAddr(
                   builder, fieldCoord, /*isOptional=*/false, op.getLoc());

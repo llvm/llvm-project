@@ -360,8 +360,8 @@ define void @vecInstrsPlacement(ptr %ptr0) {
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
 ; CHECK-NEXT:    [[VECL2:%.*]] = load <2 x double>, ptr [[PTR0]], align 8
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x double>, ptr [[PTR0]], align 8
-; CHECK-NEXT:    [[VEC2:%.*]] = fmul <2 x double> [[VECL]], [[VECL2]]
-; CHECK-NEXT:    [[VEC:%.*]] = fmul <2 x double> [[VECL]], [[VECL2]]
+; CHECK-NEXT:    [[VEC2:%.*]] = fmul <2 x double> [[VECL2]], [[VECL]]
+; CHECK-NEXT:    [[VEC:%.*]] = fmul <2 x double> [[VECL2]], [[VECL]]
 ; CHECK-NEXT:    [[VEC5:%.*]] = fadd <2 x double> [[VEC]], [[VEC2]]
 ; CHECK-NEXT:    store <2 x double> [[VEC5]], ptr [[PTR0]], align 8
 ; CHECK-NEXT:    ret void

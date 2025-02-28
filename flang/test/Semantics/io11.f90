@@ -355,7 +355,7 @@ contains
     class(t), intent(inout) :: dtv
     integer, intent(in) :: unit
     character(len=*), intent(in) :: iotype
-    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be deferred shape
+    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be assumed shape
     integer, intent(in) :: vlist(5)
     integer, intent(out) :: iostat
     character(len=*), intent(inout) :: iomsg
@@ -687,5 +687,60 @@ module m26b
   use m26a
   interface read(unformatted)
     procedure unformattedRead
+  end interface
+end
+
+module m27a
+  type t
+    integer c
+   contains
+    procedure ur1
+    generic, private :: read(unformatted) => ur1
+  end type
+ contains
+  subroutine ur1(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end
+end
+module m27b
+  use m27a
+  interface read(unformatted)
+    module procedure ur2 ! ok, t's generic is inaccessible
+  end interface
+ contains
+  subroutine ur2(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end
+end
+
+module m28
+  type t
+   contains
+    procedure, private :: write1
+    generic :: write(formatted) => write1
+  end type
+  abstract interface
+    subroutine absWrite(dtv, unit, iotype, v_list, iostat, iomsg)
+      import t
+      class(t), intent(in) :: dtv
+      integer, intent(in) :: unit
+      character(*), intent(in) :: iotype
+      integer, intent(in)  :: v_list(:)
+      integer, intent(out) :: iostat
+      character(*), intent(inout) :: iomsg
+    end
+  end interface
+  !ERROR: Derived type 't' has conflicting type-bound input/output procedure 'write(formatted)'
+  procedure(absWrite) write1, write2
+  interface write(formatted)
+    procedure write2
   end interface
 end

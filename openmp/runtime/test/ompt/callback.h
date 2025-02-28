@@ -12,6 +12,8 @@
 #include <omp.h>
 #include <omp-tools.h>
 #include "ompt-signal.h"
+#include <stdlib.h>
+#include <assert.h>
 
 // Used to detect architecture
 #include "../../src/kmp_platform.h"
@@ -147,6 +149,22 @@ static ompt_get_proc_id_t ompt_get_proc_id;
 static ompt_enumerate_states_t ompt_enumerate_states;
 static ompt_enumerate_mutex_impls_t ompt_enumerate_mutex_impls;
 
+void assert_frame_flags(int enterf, int exitf) {
+  if (!(enterf == (ompt_frame_application | ompt_frame_cfa) ||
+        enterf == (ompt_frame_runtime | ompt_frame_cfa))) {
+    printf("enter_frame_flags (%i) is invalid\n", enterf);
+    fflush(NULL);
+  }
+  if (!(exitf == (ompt_frame_application | ompt_frame_cfa) ||
+        exitf == (ompt_frame_runtime | ompt_frame_cfa))) {
+    printf("exit_frame_flags (%i) is invalid\n", exitf);
+    fflush(NULL);
+  }
+  assert(enterf == (ompt_frame_application | ompt_frame_cfa) ||
+         enterf == (ompt_frame_runtime | ompt_frame_cfa));
+  assert(exitf == (ompt_frame_application | ompt_frame_cfa) ||
+         exitf == (ompt_frame_runtime | ompt_frame_cfa));
+}
 static void print_ids(int level)
 {
   int task_type, thread_num;
@@ -157,7 +175,7 @@ static void print_ids(int level)
                                        &task_parallel_data, &thread_num);
   char buffer[2048];
   format_task_type(task_type, buffer);
-  if (frame)
+  if (frame) {
     printf("%" PRIu64 ": task level %d: parallel_id=%" PRIu64
            ", task_id=%" PRIu64 ", exit_frame=%p, reenter_frame=%p, "
            "task_type=%s=%d, thread_num=%d\n",
@@ -165,6 +183,8 @@ static void print_ids(int level)
            exists_task ? task_parallel_data->value : 0,
            exists_task ? task_data->value : 0, frame->exit_frame.ptr,
            frame->enter_frame.ptr, buffer, task_type, thread_num);
+    assert_frame_flags(frame->enter_frame_flags, frame->exit_frame_flags);
+  }
 }
 
 #define get_frame_address(level) __builtin_frame_address(level)

@@ -1251,6 +1251,22 @@ void OmpStructureChecker::CheckMasterNesting(
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPAssumeConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assume);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPAssumeConstruct &) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAssumes &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assumes);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
@@ -3117,6 +3133,18 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   // is not private in the parallel region that it binds to.
   if (llvm::omp::nestedReduceWorkshareAllowedSet.test(GetContext().directive)) {
     CheckSharedBindingInOuterContext(objects);
+  }
+
+  if (GetContext().directive == llvm::omp::Directive::OMPD_loop) {
+    for (auto clause : GetContext().clauseInfo) {
+      if (const auto *bindClause{
+              std::get_if<parser::OmpClause::Bind>(&clause.second->u)}) {
+        if (bindClause->v.v == parser::OmpBindClause::Binding::Teams) {
+          context_.Say(GetContext().clauseSource,
+              "'REDUCTION' clause not allowed with '!$OMP LOOP BIND(TEAMS)'."_err_en_US);
+        }
+      }
+    }
   }
 }
 
