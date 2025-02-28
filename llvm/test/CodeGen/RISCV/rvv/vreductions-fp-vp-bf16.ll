@@ -4,8 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfbfmin,+zvfbfmin,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-define bfloat @vpreduce_fmin_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fmin_nxv4f16:
+define bfloat @vpreduce_fmin_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmin_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -17,12 +17,12 @@ define bfloat @vpreduce_fmin_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, 
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call bfloat @llvm.vp.reduce.fmin.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call bfloat @llvm.vp.reduce.fmin.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
 
-define bfloat @vpreduce_fmax_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fmax_nxv4f16:
+define bfloat @vpreduce_fmax_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmax_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -34,12 +34,12 @@ define bfloat @vpreduce_fmax_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, 
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call bfloat @llvm.vp.reduce.fmax.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call bfloat @llvm.vp.reduce.fmax.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
 
-define bfloat @vpreduce_fmin_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fmin_nnan_nxv4f16:
+define bfloat @vpreduce_fmin_nnan_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmin_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -51,12 +51,12 @@ define bfloat @vpreduce_fmin_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call nnan bfloat @llvm.vp.reduce.fmin.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call nnan bfloat @llvm.vp.reduce.fmin.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
 
-define bfloat @vpreduce_fmax_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fmax_nnan_nxv4f16:
+define bfloat @vpreduce_fmax_nnan_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmax_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -68,12 +68,12 @@ define bfloat @vpreduce_fmax_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call nnan bfloat @llvm.vp.reduce.fmax.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call nnan bfloat @llvm.vp.reduce.fmax.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
 
-define bfloat @vpreduce_fminimum_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fminimum_nxv4f16:
+define bfloat @vpreduce_fminimum_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fminimum_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -98,12 +98,12 @@ define bfloat @vpreduce_fminimum_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %v
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call bfloat @llvm.vp.reduce.fminimum.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call bfloat @llvm.vp.reduce.fminimum.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
 
-define bfloat @vpreduce_fmaximum_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fmaximum_nxv4f16:
+define bfloat @vpreduce_fmaximum_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmaximum_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -128,12 +128,12 @@ define bfloat @vpreduce_fmaximum_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %v
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call bfloat @llvm.vp.reduce.fmaximum.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call bfloat @llvm.vp.reduce.fmaximum.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
 
-define bfloat @vpreduce_fminimum_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fminimum_nnan_nxv4f16:
+define bfloat @vpreduce_fminimum_nnan_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fminimum_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -145,12 +145,12 @@ define bfloat @vpreduce_fminimum_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloa
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call nnan bfloat @llvm.vp.reduce.fminimum.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call nnan bfloat @llvm.vp.reduce.fminimum.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
 
-define bfloat @vpreduce_fmaximum_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vpreduce_fmaximum_nnan_nxv4f16:
+define bfloat @vpreduce_fmaximum_nnan_nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmaximum_nnan_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
@@ -162,6 +162,6 @@ define bfloat @vpreduce_fmaximum_nnan_nxv4f16(bfloat %start, <vscale x 4 x bfloa
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
-  %s = call nnan bfloat @llvm.vp.reduce.fmaximum.nxv4f16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
+  %s = call nnan bfloat @llvm.vp.reduce.fmaximum.nxv4bf16(bfloat %start, <vscale x 4 x bfloat> %val, <vscale x 4 x i1> %m, i32 %evl)
   ret bfloat %s
 }
