@@ -1217,7 +1217,7 @@ typedef __char32_t char32_t;
 
 // TODO(LLVM 22): Remove this macro once LLVM19 support ends.
 #  if __has_builtin(__reference_constructs_from_temporary) ||                                                          \
-      (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1))
+      (defined(_LIBCPP_CLANG_VER) && (_LIBCPP_CLANG_VER == 1901))
 #    define _LIBCPP_HAS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY 1
 #  else
 #    define _LIBCPP_HAS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY 0
@@ -1225,7 +1225,7 @@ typedef __char32_t char32_t;
 
 // TODO(LLVM 22): Remove this macro once LLVM19 support ends.
 #  if __has_builtin(__reference_converts_from_temporary) ||                                                            \
-      (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1))
+      (defined(_LIBCPP_CLANG_VER) && (_LIBCPP_CLANG_VER == 1901))
 #    define _LIBCPP_HAS_REFERENCE_CONVERTS_FROM_TEMPORARY 1
 #  else
 #    define _LIBCPP_HAS_REFERENCE_CONVERTS_FROM_TEMPORARY 0
