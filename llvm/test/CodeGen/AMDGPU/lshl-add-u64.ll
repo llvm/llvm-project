@@ -207,3 +207,52 @@ define i32 @lshl_add_u64_gep(ptr %p, i64 %a) {
   %v = load i32, ptr %gep
   ret i32 %v
 }
+
+@arr = global [10 x [10 x i64]] zeroinitializer
+define i64 @lshl_add_u64_gep_shift(i64 %row, i64 %col) {
+; GCN-LABEL: lshl_add_u64_gep_shift:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_getpc_b64 s[0:1]
+; GCN-NEXT:    s_add_u32 s0, s0, arr@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s1, s1, arr@gotpcrel32@hi+12
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GCN-NEXT:    s_movk_i32 s2, 0x50
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GCN-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v0, s2, v[4:5]
+; GCN-NEXT:    v_mov_b32_e32 v0, v5
+; GCN-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v1, s2, v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v5, v0
+; GCN-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[4:5]
+; GCN-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GI-LABEL: lshl_add_u64_gep_shift:
+; GI:       ; %bb.0: ; %entry
+; GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GI-NEXT:    s_getpc_b64 s[0:1]
+; GI-NEXT:    s_add_u32 s0, s0, arr@gotpcrel32@lo+4
+; GI-NEXT:    s_addc_u32 s1, s1, arr@gotpcrel32@hi+12
+; GI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GI-NEXT:    v_mov_b32_e32 v6, 0x50
+; GI-NEXT:    v_mad_u64_u32 v[4:5], s[2:3], v0, v6, 0
+; GI-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], v1, v6, 0
+; GI-NEXT:    v_add_u32_e32 v5, v5, v0
+; GI-NEXT:    s_waitcnt lgkmcnt(0)
+; GI-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GI-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
+; GI-NEXT:    s_nop 1
+; GI-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v5, vcc
+; GI-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
+; GI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; GI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GI-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %base = getelementptr [10 x [10 x i64]], ptr @arr, i64 0, i64 %row, i64 0
+  %shifted_col = shl i64 %col, 2 ; multiply by sizeof(i64) (shift left by 2)
+  %ptr = getelementptr i8, ptr %base, i64 %shifted_col
+  %val = load i64, ptr %ptr
+  ret i64 %val
+}

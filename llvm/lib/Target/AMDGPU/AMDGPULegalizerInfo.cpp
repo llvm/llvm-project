@@ -747,7 +747,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
       getActionDefinitionsBuilder(G_ADD)
           .legalFor(ST.hasLshlAddB64()
-                        ? std::initializer_list<LLT>{S32, S16, V2S16, S64}
+                        ? std::initializer_list<LLT>{S64, S32, S16, V2S16}
                         : std::initializer_list<LLT>{S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
           .scalarize(0)

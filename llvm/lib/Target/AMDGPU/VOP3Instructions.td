@@ -775,11 +775,6 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (ptradd i64:$src0, i64:$src1),
-  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, (i32 0), VSrc_b64:$src1)
->;
-
-def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
 >;
