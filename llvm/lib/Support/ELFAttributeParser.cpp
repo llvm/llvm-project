@@ -213,8 +213,8 @@ Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
       return cursor.takeError();
 
     if (sw) {
-      sw->startLine() << "Section " << ++sectionNumber << " {\n";
-      sw->indent();
+      ++sectionNumber;
+      sw->objectBegin((Twine("Section ") + Twine(sectionNumber)).str());
     }
 
     if (sectionLength < 4 || cursor.tell() - 4 + sectionLength > section.size())
@@ -226,8 +226,7 @@ Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
     if (Error e = parseSubsection(sectionLength))
       return e;
     if (sw) {
-      sw->unindent();
-      sw->startLine() << "}\n";
+      sw->objectEnd();
     }
   }
 
