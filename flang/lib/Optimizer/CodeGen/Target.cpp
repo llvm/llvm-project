@@ -1816,6 +1816,44 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// WebAssembly (wasm32) target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetWasm32 : public GenericTarget<TargetWasm32> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 32;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 eleTy, byval, align 4
+    auto structTy =
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy});
+    marshal.emplace_back(fir::ReferenceType::get(structTy),
+                         AT{/*alignment=*/4, /*byval=*/true});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 eleTy, sret, align 4
+    auto structTy = mlir::TupleType::get(eleTy.getContext(),
+                                          mlir::TypeRange{eleTy, eleTy});
+    marshal.emplace_back(fir::ReferenceType::get(structTy),
+                          AT{/*alignment=*/4, /*byval=*/false, /*sret=*/true});
+    return marshal;
+  }
+};
+} // namespace
+
 // Instantiate the overloaded target instance based on the triple value.
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
@@ -1870,6 +1908,9 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
         ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::loongarch64:
     return std::make_unique<TargetLoongArch64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+  case llvm::Triple::ArchType::wasm32:
+    return std::make_unique<TargetWasm32>(
         ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
