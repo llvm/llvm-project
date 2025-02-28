@@ -78,8 +78,10 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             const semantics::CharacterTypeSpec &cts{
                 typeSpec->characterTypeSpec()};
             const semantics::ParamValue &len{cts.length()};
-            // N.B. CHARACTER(LEN=*) is allowed in type-specs in ALLOCATE() &
-            // type guards, but not in array constructors.
+            if (len.isAssumed() || len.isDeferred()) {
+              context.messages().Say(
+                  "A length specifier of '*' or ':' may not appear in the type of an array constructor"_err_en_US);
+            }
             DynamicTypeWithLength type{DynamicType{kind, len}};
             if (auto lenExpr{type.LEN()}) {
               type.length = Fold(context,
@@ -3289,7 +3291,7 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
           const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
           const Symbol *lastWhole{
-              lastWhole0 ? &lastWhole0->GetUltimate() : nullptr};
+              lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
           if (!lastWhole || !IsAllocatable(*lastWhole)) {
             Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
           } else if (evaluate::IsCoarray(*lastWhole)) {

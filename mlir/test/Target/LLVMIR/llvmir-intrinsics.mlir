@@ -142,6 +142,15 @@ llvm.func @inv_trig_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @atan2_test
+llvm.func @atan2_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.atan2.f32
+  "llvm.intr.atan2"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.atan2.v8f32
+  "llvm.intr.atan2"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @hyperbolic_trig_test
 llvm.func @hyperbolic_trig_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.sinh.f32
