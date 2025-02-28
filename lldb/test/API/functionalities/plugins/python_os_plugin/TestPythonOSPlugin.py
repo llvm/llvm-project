@@ -131,7 +131,7 @@ class PluginPythonOSPlugin(TestBase):
             "Make sure there is no thread 0x333333333 after we unload the python OS plug-in",
         )
 
-    tid_regex = re.compile("tid = (0x[0-9a-fA-F]+)")
+    tid_regex = re.compile(r"tid = ((0x)?[0-9a-fA-F]+)")
 
     def get_tid_from_thread_info_command(self, thread, use_backing_thread):
         interp = self.dbg.GetCommandInterpreter()
