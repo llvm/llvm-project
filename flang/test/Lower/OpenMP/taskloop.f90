@@ -53,7 +53,7 @@ end subroutine test_grainsize
 !CHECK-LABEL: func.func @_QPtest_grainsize_strict()
 subroutine test_grainsize_strict
   integer :: res, i
-  !CHECK: omp.taskloop grainsize(strict: %{{.*}}: i32) {
+  !CHECK: omp.taskloop grainsize(strict, %{{.*}}: i32) {
   !$omp taskloop grainsize(strict:10)
   do i = 1, 100
      !CHECK: arith.addi
@@ -65,8 +65,8 @@ end subroutine
 !CHECK-LABEL: func.func @_QPtest_num_tasks()
 subroutine test_num_tasks
   integer :: res, i
-  !CHECK: omp.taskloop num_tasks(strict: %{{.*}}: i32) {
-  !$omp taskloop num_tasks(strict:10)
+  !CHECK: omp.taskloop num_tasks(%{{.*}}: i32) {
+  !$omp taskloop num_tasks(10)
   do i = 1, 100
      !CHECK: arith.addi
      res = res + 1
@@ -77,7 +77,7 @@ end subroutine
 !CHECK-LABEL: func.func @_QPtest_num_tasks_strict()
 subroutine test_num_tasks_strict
   integer :: res, i
-  !CHECK: omp.taskloop num_tasks(strict: %{{.*}}: i32) {
+  !CHECK: omp.taskloop num_tasks(strict, %{{.*}}: i32) {
   !$omp taskloop num_tasks(strict:10)
   do i = 1, 100
      !CHECK: arith.addi
