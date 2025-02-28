@@ -301,7 +301,7 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   );
 
   let results = (outs
-    Tosa_Tensor3D:$c
+    Tosa_Tensor3D:$output
   );
 
   list<Availability> availability = [
