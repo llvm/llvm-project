@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-use-numeric-limits %t
 #include <stdint.h>
 
-void constants() {
+void Invalid() {
   // CHECK-MESSAGES: :[[@LINE+2]]:14: warning: The constant -128 is being utilized. Consider using std::numeric_limits<int8_t>::min() instead [readability-use-numeric-limits]
   // CHECK-FIXES: int8_t a = std::numeric_limits<int8_t>::min();
   int8_t a = -128;
@@ -81,4 +81,10 @@ void constants() {
   // CHECK-MESSAGES: :[[@LINE+2]]:16: warning: The constant 18446744073709551615 is being utilized. Consider using std::numeric_limits<uint64_t>::max() instead [readability-use-numeric-limits]
   // CHECK-FIXES: uint64_t t = std::numeric_limits<uint64_t>::max();
   uint64_t t = +18446744073709551615;
+}
+
+void Valid(){
+  int16_t a = +128;
+
+  int16_t b = -127;
 }
