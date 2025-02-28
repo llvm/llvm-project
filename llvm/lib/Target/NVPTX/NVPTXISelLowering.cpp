@@ -3376,10 +3376,18 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     assert(ObjectVT == Ins[InsIdx].VT &&
            "Ins type did not match function type");
     SDValue Arg = getParamSymbol(DAG, i, PtrVT);
-    SDValue p = DAG.getNode(NVPTXISD::MoveParam, dl, ObjectVT, Arg);
-    if (p.getNode())
-      p.getNode()->setIROrder(i + 1);
-    InVals.push_back(p);
+
+    SDValue P;
+    if (isKernelFunction(*F)) {
+      P = DAG.getNode(NVPTXISD::Wrapper, dl, ObjectVT, Arg);
+      P.getNode()->setIROrder(i + 1);
+    } else {
+      P = DAG.getNode(NVPTXISD::MoveParam, dl, ObjectVT, Arg);
+      P.getNode()->setIROrder(i + 1);
+      P = DAG.getAddrSpaceCast(dl, ObjectVT, P, ADDRESS_SPACE_LOCAL,
+                               ADDRESS_SPACE_GENERIC);
+    }
+    InVals.push_back(P);
   }
 
   if (!OutChains.empty())
