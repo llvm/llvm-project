@@ -969,12 +969,82 @@ Status MinidumpFileBuilder::DumpDirectories() const {
   return error;
 }
 
-static uint64_t
-GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
-  uint64_t max_size = 0;
-  for (const auto &core_range : ranges)
-    max_size = std::max(max_size, core_range.range.size());
-  return max_size;
+Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
+    const lldb_private::CoreFileMemoryRange &range, uint64_t *bytes_read) {
+  Log *log = GetLog(LLDBLog::Object);
+  lldb::addr_t addr = range.range.start();
+  lldb::addr_t size = range.range.size();
+  // First we set the byte tally to 0, so if we do exit gracefully
+  // the caller doesn't think the random garbage on the stack is a
+  // success.
+  if (bytes_read)
+    *bytes_read = 0;
+
+  uint64_t bytes_remaining = size;
+  uint64_t total_bytes_read = 0;
+  auto data_up = std::make_unique<DataBufferHeap>(
+      std::min(bytes_remaining, MAX_WRITE_CHUNK_SIZE), 0);
+  Status error;
+  while (bytes_remaining > 0) {
+    // Get the next read chunk size as the minimum of the remaining bytes and
+    // the write chunk max size.
+    const size_t bytes_to_read =
+        std::min(bytes_remaining, MAX_WRITE_CHUNK_SIZE);
+    const size_t bytes_read_for_chunk =
+        m_process_sp->ReadMemory(range.range.start() + total_bytes_read,
+                                 data_up->GetBytes(), bytes_to_read, error);
+    if (error.Fail() || bytes_read_for_chunk == 0) {
+      LLDB_LOGF(log,
+                "Failed to read memory region at: %" PRIx64
+                ". Bytes read: %zu, error: %s",
+                addr, bytes_read_for_chunk, error.AsCString());
+      // If we've only read one byte we can just give up and return
+      if (total_bytes_read == 0)
+        return Status();
+
+      // If we've read some bytes, we stop trying to read more and return
+      // this best effort attempt
+      bytes_remaining = 0;
+    } else if (bytes_read_for_chunk != bytes_to_read) {
+      LLDB_LOGF(
+          log, "Memory region at: %" PRIx64 " failed to read %" PRIx64 " bytes",
+          addr, size);
+
+      // If we've read some bytes, we stop trying to read more and return
+      // this best effort attempt
+      bytes_remaining = 0;
+    }
+
+    // Write to the minidump file with the chunk potentially flushing to disk.
+    // this is the only place we want to return a true error, so that we can
+    // fail. If we get an error writing to disk we can't easily gaurauntee
+    // that we won't corrupt the minidump.
+    error = AddData(data_up->GetBytes(), bytes_read_for_chunk);
+    if (error.Fail())
+      return error;
+
+    // This check is so we don't overflow when the error code above sets the
+    // bytes to read to 0 (the graceful exit condition).
+    if (bytes_remaining > 0)
+      bytes_remaining -= bytes_read_for_chunk;
+
+    total_bytes_read += bytes_read_for_chunk;
+    // If the caller wants a tally back of the bytes_read, update it as we
+    // write. We do this in the loop so if we encounter an error we can
+    // report the accurate total.
+    if (bytes_read)
+      *bytes_read += bytes_read_for_chunk;
+
+    // We clear the heap per loop, without checking if we
+    // read the expected bytes this is so we don't allocate
+    // more than the MAX_WRITE_CHUNK_SIZE. But we do check if
+    // this is even worth clearing before we return and
+    // destruct the heap.
+    if (bytes_remaining > 0)
+      data_up->Clear();
+  }
+
+  return error;
 }
 
 Status
@@ -987,8 +1057,6 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
 
   Log *log = GetLog(LLDBLog::Object);
   size_t region_index = 0;
-  auto data_up =
-      std::make_unique<DataBufferHeap>(GetLargestRangeSize(ranges), 0);
   for (const auto &core_range : ranges) {
     // Take the offset before we write.
     const offset_t offset_for_data = GetCurrentDataEndOffset();
@@ -1003,18 +1071,15 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     ++region_index;
 
     progress.Increment(1, "Adding Memory Range " + core_range.Dump());
-    const size_t bytes_read =
-        m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
-    if (error.Fail() || bytes_read == 0) {
-      LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
-                bytes_read, error.AsCString());
-      // Just skip sections with errors or zero bytes in 32b mode
+    uint64_t bytes_read;
+    error = ReadWriteMemoryInChunks(core_range, &bytes_read);
+    if (error.Fail())
+      return error;
+
+    // If we completely failed to read this range
+    // we can just omit any of the book keeping.
+    if (bytes_read == 0)
       continue;
-    } else if (bytes_read != size) {
-      LLDB_LOGF(
-          log, "Memory region at: %" PRIx64 " failed to read %" PRIx64 " bytes",
-          addr, size);
-    }
 
     MemoryDescriptor descriptor;
     descriptor.StartOfMemoryRange =
@@ -1026,11 +1091,6 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     descriptors.push_back(descriptor);
     if (m_thread_by_range_end.count(end) > 0)
       m_thread_by_range_end[end].Stack = descriptor;
-
-    // Add the data to the buffer, flush as needed.
-    error = AddData(data_up->GetBytes(), bytes_read);
-    if (error.Fail())
-      return error;
   }
 
   // Add a directory that references this list
@@ -1106,8 +1166,6 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
 
   Log *log = GetLog(LLDBLog::Object);
   size_t region_index = 0;
-  auto data_up =
-      std::make_unique<DataBufferHeap>(GetLargestRangeSize(ranges), 0);
   for (const auto &core_range : ranges) {
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
@@ -1120,27 +1178,19 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
     ++region_index;
 
     progress.Increment(1, "Adding Memory Range " + core_range.Dump());
-    const size_t bytes_read =
-        m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
-    if (error.Fail()) {
-      LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
-                bytes_read, error.AsCString());
-      error.Clear();
+    uint64_t bytes_read;
+    error = ReadWriteMemoryInChunks(core_range, &bytes_read);
+    if (error.Fail())
+      return error;
+
+    if (bytes_read == 0) {
       cleanup_required = true;
       descriptors[region_index].DataSize = 0;
     }
     if (bytes_read != size) {
-      LLDB_LOGF(
-          log, "Memory region at: %" PRIx64 " failed to read %" PRIx64 " bytes",
-          addr, size);
       cleanup_required = true;
       descriptors[region_index].DataSize = bytes_read;
     }
-
-    // Add the data to the buffer, flush as needed.
-    error = AddData(data_up->GetBytes(), bytes_read);
-    if (error.Fail())
-      return error;
   }
 
   // Early return if there is no cleanup needed.
