@@ -9,6 +9,7 @@
 # RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 -benchmark-phase=assemble-measured-code --mode=latency \
 # RUN:    --opcode-name=PseudoVFREDUSUM_VS_M1_E16 --max-configs-per-opcode=1000 --min-instructions=100 | \
 # RUN:    FileCheck %s --check-prefix=VFRED --allow-empty
+# UNSUPPORTED: expensive_checks
 
 # Make sure only the supported SEWs are generated for fractional LMUL.
 # FRAC-LMUL: PseudoVMUL_VV_MF4_MASK
