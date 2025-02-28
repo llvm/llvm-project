@@ -654,6 +654,18 @@ inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
 
+namespace RISCVVInversePseudosTable {
+struct PseudoInfo {
+  uint16_t Pseudo;
+  uint16_t BaseInstr;
+  uint8_t VLMul;
+  uint8_t SEW;
+};
+
+#define GET_RISCVVInversePseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVVInversePseudosTable
+
 } // namespace llvm
 
 #endif
