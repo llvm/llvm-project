@@ -34,9 +34,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
-# temporary! only for this PR to catch warnings in CI
-add_compile_options("-Werror=implicit-const-int-float-conversion")
-
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
