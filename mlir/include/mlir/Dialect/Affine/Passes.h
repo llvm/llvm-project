@@ -117,6 +117,11 @@ std::unique_ptr<Pass> createAffineExpandIndexOpsPass();
 /// operations.
 std::unique_ptr<Pass> createAffineExpandIndexOpsAsAffinePass();
 
+/// Creates a pass in order to remove invalid loops or to move the IR out of the
+/// loop when the loop is only iterated once.
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
+createRemoveSingleIterationLoopPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

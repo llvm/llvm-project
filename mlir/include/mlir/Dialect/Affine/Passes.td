@@ -229,6 +229,11 @@ def AffineLoopUnrollAndJam : InterfacePass<"affine-loop-unroll-jam", "FunctionOp
   ];
 }
 
+def RemoveSingleIterationLoop : InterfacePass<"remove-single-iteration-loop", "FunctionOpInterface"> {
+  let summary = "Remove distributed loop with single iteration.";
+  let constructor = "mlir::affine::createRemoveSingleIterationLoopPass()";
+}
+
 def AffinePipelineDataTransfer
     : Pass<"affine-pipeline-data-transfer", "func::FuncOp"> {
   let summary = "Pipeline non-blocking data transfers between explicitly "
