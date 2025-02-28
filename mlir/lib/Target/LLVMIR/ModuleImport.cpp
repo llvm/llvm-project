@@ -1078,31 +1078,34 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
   if (!knownInit)
     return failure();
 
-  SmallVector<Attribute> funcs;
-  SmallVector<int32_t> priorities;
-  if (isa<llvm::ConstantArray>(initializer)) {
-    for (llvm::Value *operand : initializer->operands()) {
-      auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
-      if (!aggregate || aggregate->getNumOperands() != 3)
-        return failure();
-
-      auto *priority = dyn_cast<llvm::ConstantInt>(aggregate->getOperand(0));
-      auto *func = dyn_cast<llvm::Function>(aggregate->getOperand(1));
-      auto *data = dyn_cast<llvm::Constant>(aggregate->getOperand(2));
-      if (!priority || !func || !data)
-        return failure();
-
-      // GlobalCtorsOps and GlobalDtorsOps do not support non-null data fields.
-      if (!data->isNullValue())
-        return failure();
-
-      funcs.push_back(FlatSymbolRefAttr::get(context, func->getName()));
-      priorities.push_back(priority->getValue().getZExtValue());
-    }
+  // ConstantAggregateZero does not engage with the operand initialization
+  // in the loop that follows - there should be no operands. This implies
+  // empty ctor/dtor lists.
+  if (auto *caz = dyn_cast<llvm::ConstantAggregateZero>(initializer)) {
+    if (caz->getElementCount().getFixedValue() != 0)
+      return failure();
   }
 
-  // Note: no action needed for ConstantAggregateZero, which implies empty
-  // ctor/dtor lists.
+  SmallVector<Attribute> funcs;
+  SmallVector<int32_t> priorities;
+  for (llvm::Value *operand : initializer->operands()) {
+    auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
+    if (!aggregate || aggregate->getNumOperands() != 3)
+      return failure();
+
+    auto *priority = dyn_cast<llvm::ConstantInt>(aggregate->getOperand(0));
+    auto *func = dyn_cast<llvm::Function>(aggregate->getOperand(1));
+    auto *data = dyn_cast<llvm::Constant>(aggregate->getOperand(2));
+    if (!priority || !func || !data)
+      return failure();
+
+    // GlobalCtorsOps and GlobalDtorsOps do not support non-null data fields.
+    if (!data->isNullValue())
+      return failure();
+
+    funcs.push_back(FlatSymbolRefAttr::get(context, func->getName()));
+    priorities.push_back(priority->getValue().getZExtValue());
+  }
 
   // Insert the global after the last one or at the start of the module.
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
