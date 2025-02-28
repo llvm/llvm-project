@@ -982,7 +982,8 @@ lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
     return eLanguageTypeUnknown;
 }
 
-XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
+std::pair<XcodeSDK, std::string>
+SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (!dwarf_cu)
@@ -993,21 +994,26 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
-  const char *sysroot =
+  std::string sysroot =
       cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
-  // Register the sysroot path remapping with the module belonging to
-  // the CU as well as the one belonging to the symbol file. The two
-  // would be different if this is an OSO object and module is the
-  // corresponding debug map, in which case both should be updated.
-  ModuleSP module_sp = comp_unit.GetModule();
-  if (module_sp)
-    module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-  ModuleSP local_module_sp = m_objfile_sp->GetModule();
-  if (local_module_sp && local_module_sp != module_sp)
-    local_module_sp->RegisterXcodeSDK(sdk, sysroot);
+  // RegisterXcodeSDK calls into xcrun which is not aware of CLT, which is
+  // expensive.
+  if (sysroot.find("/Library/Developer/CommandLineTools/SDKs") != 0) {
+    // Register the sysroot path remapping with the module belonging to
+    // the CU as well as the one belonging to the symbol file. The two
+    // would be different if this is an OSO object and module is the
+    // corresponding debug map, in which case both should be updated.
+    ModuleSP module_sp = comp_unit.GetModule();
+    if (module_sp)
+      module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-  return {sdk};
+    ModuleSP local_module_sp = m_objfile_sp->GetModule();
+    if (local_module_sp && local_module_sp != module_sp)
+      local_module_sp->RegisterXcodeSDK(sdk, sysroot);
+  }
+
+  return std::pair{XcodeSDK{sdk}, std::move(sysroot)};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {

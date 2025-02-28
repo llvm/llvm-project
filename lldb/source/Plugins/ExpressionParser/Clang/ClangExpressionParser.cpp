@@ -336,13 +336,7 @@ sdkSupportsBuiltinModules(lldb_private::Target &target) {
   if (!platform_sp)
     return llvm::createStringError("No Platform plugin found on target.");
 
-  auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*module_sp);
-  if (!sdk_or_err)
-    return sdk_or_err.takeError();
-
-  // Use the SDK path from debug-info to find a local matching SDK directory.
-  auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{std::move(sdk_or_err->first)});
+  auto sdk_path_or_err = platform_sp->ResolveSDKPathFromDebugInfo(*module_sp);
   if (!sdk_path_or_err)
     return sdk_path_or_err.takeError();
 

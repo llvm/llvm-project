@@ -438,25 +438,6 @@ public:
     return lldb_private::ConstString();
   }
 
-  /// Search each CU associated with the specified 'module' for
-  /// the SDK paths the CUs were compiled against. In the presence
-  /// of different SDKs, we try to pick the most appropriate one
-  /// using \ref XcodeSDK::Merge.
-  ///
-  /// \param[in] module Module whose debug-info CUs to parse for
-  ///                   which SDK they were compiled against.
-  ///
-  /// \returns If successful, returns a pair of a parsed XcodeSDK
-  ///          object and a boolean that is 'true' if we encountered
-  ///          a conflicting combination of SDKs when parsing the CUs
-  ///          (e.g., a public and internal SDK).
-  virtual llvm::Expected<std::pair<XcodeSDK, bool>>
-  GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
-
   /// Returns the full path of the most appropriate SDK for the
   /// specified 'module'. This function gets this path by parsing
   /// debug-info (see \ref `GetSDKPathFromDebugInfo`).
@@ -477,8 +458,9 @@ public:
   ///
   /// \param[in] unit The CU
   ///
-  /// \returns A parsed XcodeSDK object if successful, an Error otherwise. 
-  virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
+  /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
+  virtual llvm::Expected<std::pair<XcodeSDK, std::string>>
+  GetSDKPathFromDebugInfo(CompileUnit &unit) {
     return llvm::createStringError(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));

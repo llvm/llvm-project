@@ -64,7 +64,8 @@ public:
 
   // Compile Unit function calls
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override;
-  XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) override;
+  std::pair<XcodeSDK, std::string>
+  ParseXcodeSDK(CompileUnit &comp_unit) override;
   llvm::SmallSet<lldb::LanguageType, 4>
   ParseAllLanguages(CompileUnit &comp_unit) override;
   size_t ParseFunctions(CompileUnit &comp_unit) override;

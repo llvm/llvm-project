@@ -65,7 +65,7 @@ public:
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
-  lldb_private::XcodeSDK
+  std::pair<lldb_private::XcodeSDK, std::string>
   ParseXcodeSDK(lldb_private::CompileUnit &comp_unit) override;
 
   void InitializeObject() override;

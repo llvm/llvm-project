@@ -183,9 +183,8 @@ public:
     eEnumerateDirectoryResultQuit
   };
 
-  typedef std::function<EnumerateDirectoryResult(
-      void *baton, llvm::sys::fs::file_type file_type, llvm::StringRef)>
-      EnumerateDirectoryCallbackType;
+  typedef EnumerateDirectoryResult (*EnumerateDirectoryCallbackType)(
+      void *baton, llvm::sys::fs::file_type file_type, llvm::StringRef);
 
   typedef std::function<EnumerateDirectoryResult(
       llvm::sys::fs::file_type file_type, llvm::StringRef)>
