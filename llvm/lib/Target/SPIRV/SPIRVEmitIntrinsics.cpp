@@ -139,8 +139,6 @@ class SPIRVEmitIntrinsics
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
                         bool IsPostprocessing);
 
-  void buildAssignType(IRBuilder<> &B, Type *ElemTy, Value *Arg);
-
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
   void processInstrAfterVisit(Instruction *I, IRBuilder<> &B);
   bool insertAssignPtrTypeIntrs(Instruction *I, IRBuilder<> &B,
@@ -254,18 +252,6 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
   }
 }
 
-bool allowEmitFakeUse(const Value *Arg) {
-  if (isSpvIntrinsic(Arg))
-    return false;
-  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
-      dyn_cast<UndefValue>(Arg))
-    return false;
-  if (const auto *LI = dyn_cast<LoadInst>(Arg))
-    if (LI->getType()->isAggregateType())
-      return false;
-  return true;
-}
-
 } // namespace
 
 char SPIRVEmitIntrinsics::ID = 0;
@@ -336,10 +322,7 @@ static void emitAssignName(Instruction *I, IRBuilder<> &B) {
 
 void SPIRVEmitIntrinsics::replaceAllUsesWith(Value *Src, Value *Dest,
                                              bool DeleteOld) {
-  Src->replaceAllUsesWith(Dest);
-  // Update deduced type records
-  GR->updateIfExistDeducedElementType(Src, Dest, DeleteOld);
-  GR->updateIfExistAssignPtrTypeInstr(Src, Dest, DeleteOld);
+  GR->replaceAllUsesWith(Src, Dest, DeleteOld);
   // Update uncomplete type records if any
   if (isTodoType(Src)) {
     if (DeleteOld)
@@ -404,26 +387,6 @@ Type *SPIRVEmitIntrinsics::reconstructType(Value *Op, bool UnknownElemTypeI8,
                                   getPointerAddressSpace(Ty));
   }
   return nullptr;
-}
-
-void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
-                                          Value *Arg) {
-  Value *OfType = getNormalizedPoisonValue(Ty);
-  CallInst *AssignCI = nullptr;
-  if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
-      allowEmitFakeUse(Arg)) {
-    LLVMContext &Ctx = Arg->getContext();
-    SmallVector<Metadata *, 2> ArgMDs{
-        MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
-        MDString::get(Ctx, Arg->getName())};
-    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
-                      {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
-    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
-  } else {
-    AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
-                               OfType, Arg, {}, B);
-  }
-  GR->addAssignPtrTypeInstr(Arg, AssignCI);
 }
 
 CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Function *F, Value *Op,
@@ -1453,7 +1416,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
 
   CallInst *AssignCI = GR->findAssignPtrTypeInstr(V);
   if (!AssignCI) {
-    buildAssignType(B, AssignedType, V);
+    GR->buildAssignType(B, AssignedType, V);
     return;
   }
 
@@ -1907,8 +1870,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
         setInsertPointAfterDef(B, I);
         switch (ResIt->second) {
         case WellKnownTypes::Event:
-          buildAssignType(B, TargetExtType::get(I->getContext(), "spirv.Event"),
-                          I);
+          GR->buildAssignType(
+              B, TargetExtType::get(I->getContext(), "spirv.Event"), I);
           break;
         }
       }
@@ -1953,7 +1916,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
       }
     }
     TypeToAssign = restoreMutatedType(GR, I, TypeToAssign);
-    buildAssignType(B, TypeToAssign, I);
+    GR->buildAssignType(B, TypeToAssign, I);
   }
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||

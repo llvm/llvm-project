@@ -1,4 +1,4 @@
-//===-- SPIRVLegalizePointerLoad.cpp ----------------------*- C++ -*-===//
+//===-- SPIRVLegalizePointerCast.cpp ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 // by logical SPIR-V.
 //
 // This pass relies on the assign_ptr_type intrinsic to deduce the type of the
-// pointee. All occurrences of `ptrcast` must be replaced because the lead to
-// invalid SPIR-V. Unhandled cases result in an error.
+// pointed values, must replace all occurences of `ptrcast`. This is why
+// unhandled cases are reported as unreachable: we MUST cover all cases.
 //
 // 1. Loading the first element of an array
 //
@@ -57,18 +57,10 @@
 using namespace llvm;
 
 namespace llvm {
-void initializeSPIRVLegalizePointerLoadPass(PassRegistry &);
+void initializeSPIRVLegalizePointerCastPass(PassRegistry &);
 }
 
-class SPIRVLegalizePointerLoad : public FunctionPass {
-
-  // Replace all uses of a |Old| with |New| updates the global registry type
-  // mappings.
-  void replaceAllUsesWith(Value *Old, Value *New) {
-    Old->replaceAllUsesWith(New);
-    GR->updateIfExistDeducedElementType(Old, New, /* deleteOld = */ true);
-    GR->updateIfExistAssignPtrTypeInstr(Old, New, /* deleteOld = */ true);
-  }
+class SPIRVLegalizePointerCast : public FunctionPass {
 
   // Builds the `spv_assign_type` assigning |Ty| to |Value| at the current
   // builder position.
@@ -79,72 +71,37 @@ class SPIRVLegalizePointerLoad : public FunctionPass {
     GR->addAssignPtrTypeInstr(Arg, AssignCI);
   }
 
-  // Loads a single scalar of type |To| from the vector pointed by |Source| of
-  // the type |From|. Returns the loaded value.
-  Value *loadScalarFromVector(IRBuilder<> &B, Value *Source,
-                              FixedVectorType *From) {
-
-    LoadInst *NewLoad = B.CreateLoad(From, Source);
-    buildAssignType(B, From, NewLoad);
-
-    SmallVector<Value *, 2> Args = {NewLoad, B.getInt64(0)};
-    SmallVector<Type *, 3> Types = {From->getElementType(), Args[0]->getType(),
-                                    Args[1]->getType()};
-    Value *Extracted =
-        B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
-    buildAssignType(B, Extracted->getType(), Extracted);
-    return Extracted;
-  }
-
-  // Loads parts of the vector of type |From| from the pointer |Source| and
-  // create a new vector of type |To|. |To| must be a vector type, and element
-  // types of |To| and |From| must match. Returns the loaded value.
-  Value *loadVectorFromVector(IRBuilder<> &B, FixedVectorType *From,
-                              FixedVectorType *To, Value *Source) {
+  // Loads parts of the vector of type |SourceType| from the pointer |Source|
+  // and create a new vector of type |TargetType|. |TargetType| must be a vector
+  // type, and element types of |TargetType| and |SourceType| must match.
+  // Returns the loaded value.
+  Value *loadVectorFromVector(IRBuilder<> &B, FixedVectorType *SourceType,
+                              FixedVectorType *TargetType, Value *Source) {
     // We expect the codegen to avoid doing implicit bitcast from a load.
-    assert(To->getElementType() == From->getElementType());
-    assert(To->getNumElements() < From->getNumElements());
+    assert(TargetType->getElementType() == SourceType->getElementType());
+    assert(TargetType->getNumElements() < SourceType->getNumElements());
 
-    LoadInst *NewLoad = B.CreateLoad(From, Source);
-    buildAssignType(B, From, NewLoad);
+    LoadInst *NewLoad = B.CreateLoad(SourceType, Source);
+    buildAssignType(B, SourceType, NewLoad);
 
-    auto ConstInt = ConstantInt::get(IntegerType::get(B.getContext(), 32), 0);
-    ElementCount VecElemCount = ElementCount::getFixed(To->getNumElements());
-    Value *Output = ConstantVector::getSplat(VecElemCount, ConstInt);
-    for (unsigned I = 0; I < To->getNumElements(); ++I) {
-      Value *Extracted = nullptr;
-      {
-        SmallVector<Value *, 2> Args = {NewLoad, B.getInt64(I)};
-        SmallVector<Type *, 3> Types = {To->getElementType(),
-                                        Args[0]->getType(), Args[1]->getType()};
-        Extracted =
-            B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
-        buildAssignType(B, Extracted->getType(), Extracted);
-      }
-      assert(Extracted != nullptr);
-
-      {
-        SmallVector<Value *, 3> Args = {Output, Extracted, B.getInt64(I)};
-        SmallVector<Type *, 4> Types = {Args[0]->getType(), Args[0]->getType(),
-                                        Args[1]->getType(), Args[2]->getType()};
-        Output = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
-        buildAssignType(B, Output->getType(), Output);
-      }
-    }
+    SmallVector<int> Mask(/* Size= */ TargetType->getNumElements(),
+                          /* Value= */ 0);
+    Value *Output = B.CreateShuffleVector(NewLoad, NewLoad, Mask);
+    buildAssignType(B, TargetType, Output);
     return Output;
   }
 
-  // Loads the first value in an array pointed by |Source| of type |From|. Load
-  // flags will be copied from |BadLoad|, which should be the illegal load being
-  // legalized. Returns the loaded value.
-  Value *loadFirstValueFromArray(IRBuilder<> &B, ArrayType *From, Value *Source,
-                                 LoadInst *BadLoad) {
+  // Loads the first value in an aggregate pointed by |Source| of containing
+  // elements of type |ElementType|. Load flags will be copied from |BadLoad|,
+  // which should be the load being legalized. Returns the loaded value.
+  Value *loadFirstValueFromAggregate(IRBuilder<> &B, Type *ElementType,
+                                     Value *Source, LoadInst *BadLoad) {
     SmallVector<Type *, 2> Types = {BadLoad->getPointerOperandType(),
                                     BadLoad->getPointerOperandType()};
-    SmallVector<Value *, 3> Args{/* isInBounds= */ B.getInt1(true), Source,
-                                 B.getInt64(0), B.getInt64(0)};
+    SmallVector<Value *, 3> Args{/* isInBounds= */ B.getInt1(false), Source,
+                                 B.getInt32(0), B.getInt32(0)};
     auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
-    GR->buildAssignPtr(B, From->getElementType(), GEP);
+    GR->buildAssignPtr(B, ElementType, GEP);
 
     const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
     MachineMemOperand::Flags Flags = TLI->getLoadMemOperandFlags(
@@ -152,16 +109,16 @@ class SPIRVLegalizePointerLoad : public FunctionPass {
     Instruction *LI = B.CreateIntrinsic(
         Intrinsic::spv_load, {BadLoad->getOperand(0)->getType()},
         {GEP, B.getInt16(Flags), B.getInt8(BadLoad->getAlign().value())});
-    buildAssignType(B, From->getElementType(), LI);
+    buildAssignType(B, ElementType, LI);
     return LI;
   }
 
-  // Transforms an illegal partial load into a sequence we can lower to logical
-  // SPIR-V.
+  // Replaces the load instruction to get rid of the ptrcast used as source
+  // operand.
   void transformLoad(IRBuilder<> &B, LoadInst *LI, Value *CastedOperand,
                      Value *OriginalOperand) {
     Type *FromTy = GR->findDeducedElementType(OriginalOperand);
-    Type *ToTy /*-fruity*/ = GR->findDeducedElementType(CastedOperand);
+    Type *ToTy = GR->findDeducedElementType(CastedOperand);
     Value *Output = nullptr;
 
     auto *SAT = dyn_cast<ArrayType>(FromTy);
@@ -174,12 +131,14 @@ class SPIRVLegalizePointerLoad : public FunctionPass {
     // Loading 1st element.
     // - float a = array[0];
     if (SAT && SAT->getElementType() == ToTy)
-      Output = loadFirstValueFromArray(B, SAT, OriginalOperand, LI);
+      Output = loadFirstValueFromAggregate(B, SAT->getElementType(),
+                                           OriginalOperand, LI);
     // Destination is the element type of Source, and source is a vector ->
     // Vector to scalar.
     // - float a = vector.x;
     else if (!DVT && SVT && SVT->getElementType() == ToTy) {
-      Output = loadScalarFromVector(B, OriginalOperand, SVT);
+      Output = loadFirstValueFromAggregate(B, SVT->getElementType(),
+                                           OriginalOperand, LI);
     }
     // Destination is a smaller vector than source.
     // - float3 v3 = vector4;
@@ -188,7 +147,7 @@ class SPIRVLegalizePointerLoad : public FunctionPass {
     else
       llvm_unreachable("Unimplemented implicit down-cast from load.");
 
-    replaceAllUsesWith(LI, Output);
+    GR->replaceAllUsesWith(LI, Output, /* DeleteOld= */ true);
     DeadInstructions.push_back(LI);
   }
 
@@ -220,8 +179,8 @@ class SPIRVLegalizePointerLoad : public FunctionPass {
   }
 
 public:
-  SPIRVLegalizePointerLoad(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {
-    initializeSPIRVLegalizePointerLoadPass(*PassRegistry::getPassRegistry());
+  SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {
+    initializeSPIRVLegalizePointerCastPass(*PassRegistry::getPassRegistry());
   };
 
   virtual bool runOnFunction(Function &F) override {
@@ -256,10 +215,10 @@ public:
   static char ID;
 };
 
-char SPIRVLegalizePointerLoad::ID = 0;
-INITIALIZE_PASS(SPIRVLegalizePointerLoad, "spirv-legalize-bitcast",
+char SPIRVLegalizePointerCast::ID = 0;
+INITIALIZE_PASS(SPIRVLegalizePointerCast, "spirv-legalize-bitcast",
                 "SPIRV legalize bitcast pass", false, false)
 
-FunctionPass *llvm::createSPIRVLegalizePointerLoadPass(SPIRVTargetMachine *TM) {
-  return new SPIRVLegalizePointerLoad(TM);
+FunctionPass *llvm::createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM) {
+  return new SPIRVLegalizePointerCast(TM);
 }
