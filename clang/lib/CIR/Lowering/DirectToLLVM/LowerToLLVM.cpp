@@ -24,10 +24,10 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "clang/CIR/Dialect/IR/CIRAttrVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -37,7 +37,7 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
-class CIRAttrToValue : public CirAttrVisitor<CIRAttrToValue, mlir::Value> {
+class CIRAttrToValue {
 public:
   CIRAttrToValue(mlir::Operation *parentOp,
                  mlir::ConversionPatternRewriter &rewriter,
@@ -46,19 +46,26 @@ public:
 
   mlir::Value lowerCirAttrAsValue(mlir::Attribute attr) { return visit(attr); }
 
-  mlir::Value visitCirIntAttr(cir::IntAttr intAttr) {
+  mlir::Value visit(mlir::Attribute attr) {
+    return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
+        .Case<cir::IntAttr, cir::FPAttr, cir::ConstPtrAttr>(
+            [&](auto attrT) { return visitCirAttr(attrT); })
+        .Default([&](auto attrT) { return mlir::Value(); });
+  }
+
+  mlir::Value visitCirAttr(cir::IntAttr intAttr) {
     mlir::Location loc = parentOp->getLoc();
     return rewriter.create<mlir::LLVM::ConstantOp>(
         loc, converter->convertType(intAttr.getType()), intAttr.getValue());
   }
 
-  mlir::Value visitCirFPAttr(cir::FPAttr fltAttr) {
+  mlir::Value visitCirAttr(cir::FPAttr fltAttr) {
     mlir::Location loc = parentOp->getLoc();
     return rewriter.create<mlir::LLVM::ConstantOp>(
         loc, converter->convertType(fltAttr.getType()), fltAttr.getValue());
   }
 
-  mlir::Value visitCirConstPtrAttr(cir::ConstPtrAttr ptrAttr) {
+  mlir::Value visitCirAttr(cir::ConstPtrAttr ptrAttr) {
     mlir::Location loc = parentOp->getLoc();
     if (ptrAttr.isNullValue()) {
       return rewriter.create<mlir::LLVM::ZeroOp>(
@@ -81,8 +88,7 @@ private:
 
 // This class handles rewriting initializer attributes for types that do not
 // require region initialization.
-class GlobalInitAttrRewriter
-    : public CirAttrVisitor<GlobalInitAttrRewriter, mlir::Attribute> {
+class GlobalInitAttrRewriter {
 public:
   GlobalInitAttrRewriter(mlir::Type type,
                          mlir::ConversionPatternRewriter &rewriter)
@@ -90,10 +96,17 @@ public:
 
   mlir::Attribute rewriteInitAttr(mlir::Attribute attr) { return visit(attr); }
 
-  mlir::Attribute visitCirIntAttr(cir::IntAttr attr) {
+  mlir::Attribute visit(mlir::Attribute attr) {
+    return llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(attr)
+        .Case<cir::IntAttr, cir::FPAttr>(
+            [&](auto attrT) { return visitCirAttr(attrT); })
+        .Default([&](auto attrT) { return mlir::Attribute(); });
+  }
+
+  mlir::Attribute visitCirAttr(cir::IntAttr attr) {
     return rewriter.getIntegerAttr(llvmType, attr.getValue());
   }
-  mlir::Attribute visitCirFPAttr(cir::FPAttr attr) {
+  mlir::Attribute visitCirAttr(cir::FPAttr attr) {
     return rewriter.getFloatAttr(llvmType, attr.getValue());
   }
 
