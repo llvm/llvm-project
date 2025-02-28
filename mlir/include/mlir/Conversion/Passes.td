@@ -10,6 +10,7 @@
 #define MLIR_CONVERSION_PASSES
 
 include "mlir/Pass/PassBase.td"
+include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 
 //===----------------------------------------------------------------------===//
 // ToLLVM
@@ -1413,7 +1414,7 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "vector::VectorContractLowering",
            /*default=*/"vector::VectorContractLowering::Dot",
            VectorContractLoweringAttr.summary, [{::llvm::cl::values(
-           clEnumValN(::mlir::vector::VectorContractLowering::Dot, "dot", 
+           clEnumValN(::mlir::vector::VectorContractLowering::Dot, "dot",
             "Progressively lower to finer grained `vector.contract` and dot-products. (default)"),
            clEnumValN(::mlir::vector::VectorContractLowering::Matmul, "matmul",
             "Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics."),
