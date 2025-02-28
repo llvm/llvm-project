@@ -1921,9 +1921,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = Style.IndentWidth +
                   std::min(State.Column, CurrentState.NestedBlockIndent);
     } else if (Current.is(tok::l_brace)) {
-      NewIndent =
-          CurrentState.LastSpace + Style.BracedInitializerIndentWidth.value_or(
-                                       Style.ContinuationIndentWidth);
+      const auto Width = Style.BracedInitializerIndentWidth;
+      NewIndent = CurrentState.LastSpace +
+                  (Width < 0 ? Style.ContinuationIndentWidth : Width);
     } else {
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
