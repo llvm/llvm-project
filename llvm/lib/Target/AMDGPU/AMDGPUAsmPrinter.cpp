@@ -622,12 +622,13 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
 
   int64_t PGRM_Rsrc3 = 1;
   bool EvaluatableRsrc3 =
-      CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(PGRM_Rsrc3);
+      CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGRM_Rsrc3);
   (void)PGRM_Rsrc3;
   (void)EvaluatableRsrc3;
-  assert(STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
+  assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+         STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
          static_cast<uint64_t>(PGRM_Rsrc3) == 0);
-  KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3GFX90A;
+  KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(
       AMDGPU::hasKernargPreload(STM) ? Info->getNumKernargPreloadedSGPRs() : 0,
@@ -822,22 +823,22 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                                 false);
 
     [[maybe_unused]] int64_t PGMRSrc3;
-    assert(STM.hasGFX90AInsts() ||
-           (CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(
-                PGMRSrc3) &&
+    assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+           STM.hasGFX90AInsts() ||
+           (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
             static_cast<uint64_t>(PGMRSrc3) == 0));
     if (STM.hasGFX90AInsts()) {
       OutStreamer->emitRawComment(
           " COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: " +
               getMCExprStr(MCKernelDescriptor::bits_get(
-                  CurrentProgramInfo.ComputePGMRSrc3GFX90A,
+                  CurrentProgramInfo.ComputePGMRSrc3,
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET, Ctx)),
           false);
       OutStreamer->emitRawComment(
           " COMPUTE_PGM_RSRC3_GFX90A:TG_SPLIT: " +
               getMCExprStr(MCKernelDescriptor::bits_get(
-                  CurrentProgramInfo.ComputePGMRSrc3GFX90A,
+                  CurrentProgramInfo.ComputePGMRSrc3,
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Ctx)),
           false);
@@ -1241,12 +1242,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       return Dst;
     };
 
-    ProgInfo.ComputePGMRSrc3GFX90A =
-        SetBits(ProgInfo.ComputePGMRSrc3GFX90A, ProgInfo.AccumOffset,
+    ProgInfo.ComputePGMRSrc3 =
+        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT);
-    ProgInfo.ComputePGMRSrc3GFX90A =
-        SetBits(ProgInfo.ComputePGMRSrc3GFX90A, CreateExpr(ProgInfo.TgSplit),
+    ProgInfo.ComputePGMRSrc3 =
+        SetBits(ProgInfo.ComputePGMRSrc3, CreateExpr(ProgInfo.TgSplit),
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }

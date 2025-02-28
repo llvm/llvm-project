@@ -57,7 +57,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   LdsSize = 0;
   EXCPEnable = 0;
 
-  ComputePGMRSrc3GFX90A = ZeroExpr;
+  ComputePGMRSrc3 = ZeroExpr;
 
   NumVGPR = ZeroExpr;
   NumArchVGPR = ZeroExpr;
