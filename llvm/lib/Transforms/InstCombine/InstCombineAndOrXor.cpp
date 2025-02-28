@@ -610,8 +610,13 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
       APInt NewMask = *ConstB & *ConstD;
       if (NewMask == *ConstB)
         return LHS;
-      if (NewMask == *ConstD)
+      if (NewMask == *ConstD) {
+        if (IsLogical) {
+          if (auto *RHSI = dyn_cast<Instruction>(RHS))
+            RHSI->dropPoisonGeneratingFlags();
+        }
         return RHS;
+      }
     }
 
     if (Mask & AMask_NotAllOnes) {
@@ -3067,8 +3072,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
 }
 
 /// Attempt to combine or(zext(x),shl(zext(y),bw/2) concat packing patterns.
-static Instruction *matchOrConcat(Instruction &Or,
-                                  InstCombiner::BuilderTy &Builder) {
+static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
   assert(Or.getOpcode() == Instruction::Or && "bswap requires an 'or'");
   Value *Op0 = Or.getOperand(0), *Op1 = Or.getOperand(1);
   Type *Ty = Or.getType();
@@ -3609,7 +3613,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Funnel = matchFunnelShift(I, *this))
     return Funnel;
 
-  if (Instruction *Concat = matchOrConcat(I, Builder))
+  if (Value *Concat = matchOrConcat(I, Builder))
     return replaceInstUsesWith(I, Concat);
 
   if (Instruction *R = foldBinOpShiftWithShift(I))

@@ -7,7 +7,8 @@
 # CHECK: :[[@LINE+1]]:20: error: expected register
 qc.swm x5, x20, 12(20)
 
-# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.swm x5, x0, 12(x3)
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -42,7 +43,8 @@ qc.swmi x10, 4, 20(x4)
 # CHECK: :[[@LINE+1]]:23: error: expected register
 qc.setwm x4, x30, 124(2)
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.setwm x4, x0, 124(x2)
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -80,7 +82,8 @@ qc.lwm x7, x1, 24(20)
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.lwm x7, x1, 24
 
-# CHECK: :[[@LINE+1]]:8: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:8: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:8: error: invalid operand for instruction
 qc.lwm x0, x1, 24(x20)
 
 # CHECK-PLUS: :[[@LINE+1]]:16: error: immediate must be a multiple of 4 bytes in the range [0, 124]
@@ -96,7 +99,8 @@ qc.lwmi x13, 9, 4(23)
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.lwmi x13, 9, 4
 
-# CHECK: :[[@LINE+1]]:9: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.lwmi x0, 9, 4(x23)
 
 # CHECK-PLUS: :[[@LINE+1]]:14: error: immediate must be an integer in the range [1, 31]

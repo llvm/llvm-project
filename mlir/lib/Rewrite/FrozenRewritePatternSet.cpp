@@ -43,7 +43,7 @@ convertPDLToPDLInterp(ModuleOp pdlModule,
   // mode.
   pdlPipeline.enableVerifier(false);
 #endif
-  pdlPipeline.addPass(createPDLToPDLInterpPass(configMap));
+  pdlPipeline.addPass(createConvertPDLToPDLInterpPass(configMap));
   if (failed(pdlPipeline.run(pdlModule)))
     return failure();
 

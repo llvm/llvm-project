@@ -48,6 +48,7 @@ def VMaskAsmOperand : AsmOperandClass {
   let IsOptional = 1;
   let DefaultMethod = "defaultMaskRegOp";
   let DiagnosticType = "InvalidVMaskRegister";
+  let DiagnosticString = "operand must be v0.t";
 }
 
 def VMaskCarryInAsmOperand : AsmOperandClass {
@@ -55,6 +56,7 @@ def VMaskCarryInAsmOperand : AsmOperandClass {
   let RenderMethod = "addRegOperands";
   let PredicateMethod = "isV0Reg";
   let DiagnosticType = "InvalidVMaskCarryInRegister";
+  let DiagnosticString = "operand must be v0";
 }
 
 def VMaskOp : RegisterOperand<VMV0> {
@@ -1356,7 +1358,7 @@ defm VNCLIP_W : VNCLP_IV_V_X_I<"vnclip", 0b101111>;
 
 let Predicates = [HasVInstructionsAnyF] in {
 // Vector Single-Width Floating-Point Add/Subtract Instructions
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFADD_V : VALU_FV_V_F<"vfadd", 0b000000>;
 defm VFSUB_V : VALU_FV_V_F<"vfsub", 0b000010>;
 defm VFRSUB_V : VALU_FV_F<"vfrsub", 0b100111>;
@@ -1364,7 +1366,7 @@ defm VFRSUB_V : VALU_FV_F<"vfrsub", 0b100111>;
 
 // Vector Widening Floating-Point Add/Subtract Instructions
 let Constraints = "@earlyclobber $vd",
-    Uses = [FRM],
+    Uses = [FRM, VL, VTYPE],
     mayRaiseFPException = true,
     DestEEW = EEWSEWx2 in {
 let RVVConstraint = WidenV in {
@@ -1379,10 +1381,10 @@ let RVVConstraint = WidenW in {
 defm VFWADD_W : VWALU_FV_V_F<"vfwadd", 0b110100, "w">;
 defm VFWSUB_W : VWALU_FV_V_F<"vfwsub", 0b110110, "w">;
 } // RVVConstraint = WidenW
-} // Constraints = "@earlyclobber $vd", Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Single-Width Floating-Point Multiply/Divide Instructions
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFMUL_V : VMUL_FV_V_F<"vfmul", 0b100100>;
 defm VFDIV_V : VDIV_FV_V_F<"vfdiv", 0b100000>;
 defm VFRDIV_V : VDIV_FV_F<"vfrdiv", 0b100001>;
@@ -1390,12 +1392,12 @@ defm VFRDIV_V : VDIV_FV_F<"vfrdiv", 0b100001>;
 
 // Vector Widening Floating-Point Multiply
 let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV,
-    Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
 defm VFWMUL_V : VWMUL_FV_V_F<"vfwmul", 0b111000>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFMACC_V : VMAC_FV_V_F<"vfmacc", 0b101100>;
 defm VFNMACC_V : VMAC_FV_V_F<"vfnmacc", 0b101101>;
 defm VFMSAC_V : VMAC_FV_V_F<"vfmsac", 0b101110>;
@@ -1407,15 +1409,15 @@ defm VFNMSUB_V : VMAC_FV_V_F<"vfnmsub", 0b101011>;
 }
 
 // Vector Widening Floating-Point Fused Multiply-Add Instructions
-let Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
 defm VFWMACC_V : VWMAC_FV_V_F<"vfwmacc", 0b111100>;
 defm VFWNMACC_V : VWMAC_FV_V_F<"vfwnmacc", 0b111101>;
 defm VFWMSAC_V : VWMAC_FV_V_F<"vfwmsac", 0b111110>;
 defm VFWNMSAC_V : VWMAC_FV_V_F<"vfwnmsac", 0b111111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Floating-Point Square-Root Instruction
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFSQRT_V : VSQR_FV_VS2<"vfsqrt.v", 0b010011, 0b00000>;
 defm VFREC7_V : VRCP_FV_VS2<"vfrec7.v", 0b010011, 0b00101>;
 }
@@ -1480,13 +1482,13 @@ def VFMV_V_F : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
 
 // Single-Width Floating-Point/Integer Type-Convert Instructions
 let mayRaiseFPException = true in {
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFCVT_XU_F_V : VCVTI_FV_VS2<"vfcvt.xu.f.v", 0b010010, 0b00000>;
 defm VFCVT_X_F_V : VCVTI_FV_VS2<"vfcvt.x.f.v", 0b010010, 0b00001>;
 }
 defm VFCVT_RTZ_XU_F_V : VCVTI_FV_VS2<"vfcvt.rtz.xu.f.v", 0b010010, 0b00110>;
 defm VFCVT_RTZ_X_F_V : VCVTI_FV_VS2<"vfcvt.rtz.x.f.v", 0b010010, 0b00111>;
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFCVT_F_XU_V : VCVTF_IV_VS2<"vfcvt.f.xu.v", 0b010010, 0b00010>;
 defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
 }
@@ -1495,7 +1497,7 @@ defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
 // Widening Floating-Point/Integer Type-Convert Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt,
     mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFWCVT_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.xu.f.v", 0b010010, 0b01000>;
 defm VFWCVT_X_F_V : VWCVTI_FV_VS2<"vfwcvt.x.f.v", 0b010010, 0b01001>;
 }
@@ -1508,13 +1510,13 @@ defm VFWCVT_F_F_V : VWCVTF_FV_VS2<"vfwcvt.f.f.v", 0b010010, 0b01100>;
 
 // Narrowing Floating-Point/Integer Type-Convert Instructions
 let Constraints = "@earlyclobber $vd", mayRaiseFPException = true in {
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFNCVT_XU_F_W : VNCVTI_FV_VS2<"vfncvt.xu.f.w", 0b010010, 0b10000>;
 defm VFNCVT_X_F_W : VNCVTI_FV_VS2<"vfncvt.x.f.w", 0b010010, 0b10001>;
 }
 defm VFNCVT_RTZ_XU_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.xu.f.w", 0b010010, 0b10110>;
 defm VFNCVT_RTZ_X_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.x.f.w", 0b010010, 0b10111>;
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFNCVT_F_XU_W : VNCVTF_IV_VS2<"vfncvt.f.xu.w", 0b010010, 0b10010>;
 defm VFNCVT_F_X_W : VNCVTF_IV_VS2<"vfncvt.f.x.w", 0b010010, 0b10011>;
 defm VFNCVT_F_F_W : VNCVTF_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
@@ -1552,7 +1554,7 @@ defm VWREDSUM : VWRED_IV_V<"vwredsum", 0b110001>;
 let Predicates = [HasVInstructionsAnyF] in {
 // Vector Single-Width Floating-Point Reduction Instructions
 let RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask in {
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFREDOSUM : VREDO_FV_V<"vfredosum", 0b000011>;
 defm VFREDUSUM : VRED_FV_V<"vfredusum", 0b000001>;
 }
@@ -1571,7 +1573,7 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDep
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
 // overlap with the first (wide) operand.
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFWREDOSUM : VWREDO_FV_V<"vfwredosum", 0b110011>;
 defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 }

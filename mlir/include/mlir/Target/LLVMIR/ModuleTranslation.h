@@ -23,12 +23,13 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace llvm {
 class BasicBlock;
-class IRBuilderBase;
 class Function;
+class IRBuilderBase;
+class OpenMPIRBuilder;
 class Value;
 } // namespace llvm
 
@@ -234,6 +235,11 @@ public:
                             /*recordInsertions=*/false);
   }
 
+  /// Translates parameter attributes of a call and adds them to the returned
+  /// AttrBuilder. Returns failure if any of the translations failed.
+  FailureOr<llvm::AttrBuilder> convertParameterAttrs(CallOpInterface callOp,
+                                                     DictionaryAttr paramAttrs);
+
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
@@ -284,13 +290,12 @@ public:
   /// Calls `callback` for every ModuleTranslation stack frame of type `T`
   /// starting from the top of the stack.
   template <typename T>
-  WalkResult
-  stackWalk(llvm::function_ref<WalkResult(const T &)> callback) const {
+  WalkResult stackWalk(llvm::function_ref<WalkResult(T &)> callback) {
     static_assert(std::is_base_of<StackFrame, T>::value,
                   "expected T derived from StackFrame");
     if (!callback)
       return WalkResult::skip();
-    for (const std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
+    for (std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
       if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
         WalkResult result = callback(*ptr);
         if (result.wasInterrupted())
@@ -358,8 +363,8 @@ private:
   convertDialectAttributes(Operation *op,
                            ArrayRef<llvm::Instruction *> instructions);
 
-  /// Translates parameter attributes and adds them to the returned AttrBuilder.
-  /// Returns failure if any of the translations failed.
+  /// Translates parameter attributes of a function and adds them to the
+  /// returned AttrBuilder. Returns failure if any of the translations failed.
   FailureOr<llvm::AttrBuilder>
   convertParameterAttrs(LLVMFuncOp func, int argIdx, DictionaryAttr paramAttrs);
 

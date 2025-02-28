@@ -962,13 +962,18 @@ ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
   return symbolRef;
 }
 
-LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
-  // Insert the global after the last one or at the start of the module.
+OpBuilder::InsertionGuard ModuleImport::setGlobalInsertionPoint() {
   OpBuilder::InsertionGuard guard(builder);
-  if (!aliasInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
+  if (globalInsertionOp)
+    builder.setInsertionPointAfter(globalInsertionOp);
   else
-    builder.setInsertionPointAfter(aliasInsertionOp);
+    builder.setInsertionPointToStart(mlirModule.getBody());
+  return guard;
+}
+
+LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
+  // Insert the alias after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Type type = convertType(alias->getValueType());
   AliasOp aliasOp = builder.create<AliasOp>(
@@ -977,7 +982,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
       /*dso_local=*/alias->isDSOLocal(),
       /*thread_local=*/alias->isThreadLocal(),
       /*attrs=*/ArrayRef<NamedAttribute>());
-  aliasInsertionOp = aliasOp;
+  globalInsertionOp = aliasOp;
 
   clearRegionState();
   Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
@@ -996,11 +1001,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
 
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Attribute valueAttr;
   if (globalVar->hasInitializer())
@@ -1070,10 +1071,20 @@ LogicalResult
 ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
   if (!globalVar->hasInitializer() || !globalVar->hasAppendingLinkage())
     return failure();
-  auto *initializer =
-      dyn_cast<llvm::ConstantArray>(globalVar->getInitializer());
-  if (!initializer)
+  llvm::Constant *initializer = globalVar->getInitializer();
+
+  bool knownInit = isa<llvm::ConstantArray>(initializer) ||
+                   isa<llvm::ConstantAggregateZero>(initializer);
+  if (!knownInit)
     return failure();
+
+  // ConstantAggregateZero does not engage with the operand initialization
+  // in the loop that follows - there should be no operands. This implies
+  // empty ctor/dtor lists.
+  if (auto *caz = dyn_cast<llvm::ConstantAggregateZero>(initializer)) {
+    if (caz->getElementCount().getFixedValue() != 0)
+      return failure();
+  }
 
   SmallVector<Attribute> funcs;
   SmallVector<int32_t> priorities;
@@ -1096,11 +1107,8 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
     priorities.push_back(priority->getValue().getZExtValue());
   }
 
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  // Insert the global after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   if (globalVar->getName() == getGlobalCtorsVarName()) {
     globalInsertionOp = builder.create<LLVM::GlobalCtorsOp>(
@@ -1756,6 +1764,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       auto callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
       if (failed(convertCallAttributes(callInst, callOp)))
         return failure();
+      // Handle parameter and result attributes.
+      convertParameterAttributes(callInst, callOp, builder);
       return callOp.getOperation();
     }();
 
@@ -1835,6 +1845,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
+
+    // Handle parameter and result attributes.
+    convertParameterAttributes(invokeInst, invokeOp, builder);
 
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
@@ -2197,6 +2210,37 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
     return;
   funcOp.setResAttrsAttr(
       builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
+}
+
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              CallOpInterface callOp,
+                                              OpBuilder &builder) {
+  llvm::AttributeList llvmAttrs = call->getAttributes();
+  SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
+  bool anyArgAttrs = false;
+  for (size_t i = 0, e = call->arg_size(); i < e; ++i) {
+    llvmArgAttrsSet.emplace_back(llvmAttrs.getParamAttrs(i));
+    if (llvmArgAttrsSet.back().hasAttributes())
+      anyArgAttrs = true;
+  }
+  auto getArrayAttr = [&](ArrayRef<DictionaryAttr> dictAttrs) {
+    SmallVector<Attribute> attrs;
+    for (auto &dict : dictAttrs)
+      attrs.push_back(dict ? dict : builder.getDictionaryAttr({}));
+    return builder.getArrayAttr(attrs);
+  };
+  if (anyArgAttrs) {
+    SmallVector<DictionaryAttr> argAttrs;
+    for (auto &llvmArgAttrs : llvmArgAttrsSet)
+      argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
+    callOp.setArgAttrsAttr(getArrayAttr(argAttrs));
+  }
+
+  llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
+  if (!llvmResAttr.hasAttributes())
+    return;
+  DictionaryAttr resAttrs = convertParameterAttribute(llvmResAttr, builder);
+  callOp.setResAttrsAttr(getArrayAttr({resAttrs}));
 }
 
 template <typename Op>

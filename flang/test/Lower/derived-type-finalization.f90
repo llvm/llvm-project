@@ -132,8 +132,7 @@ contains
 ! CHECK:   cf.br ^bb3
 ! CHECK: ^bb2:
 ! CHECK:   %[[C10:.*]] = arith.constant 10 : i32
-! CHECK:   %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMderived_type_finalizationTt1{a:i32}>
-! CHECK:   %[[COORD_A:.*]] = fir.coordinate_of %[[T]], %[[FIELD_A]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:   %[[COORD_A:.*]] = fir.coordinate_of %[[T]], a : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.ref<i32>
 ! CHECK:   fir.store %[[C10]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:   cf.br ^bb3
 ! CHECK: ^bb3:

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB//IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -73,8 +73,7 @@ public:
     SmallVector<int64_t> srcIdx(srcRank - 1, 0);
     SmallVector<int64_t> resIdx(resRank, 0);
     int64_t extractSize = sourceVectorType.getShape().back();
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
+    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
 
     // Compute the indices of each 1-D vector element of the source extraction
     // and destination slice insertion and generate such instructions.
@@ -129,8 +128,7 @@ public:
     SmallVector<int64_t> srcIdx(srcRank, 0);
     SmallVector<int64_t> resIdx(resRank - 1, 0);
     int64_t extractSize = resultVectorType.getShape().back();
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
+    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
     for (int64_t i = 0; i < numElts; ++i) {
       if (i != 0) {
         incIdx(srcIdx, sourceVectorType, /*step=*/extractSize);
@@ -184,8 +182,7 @@ public:
     // within the source and result shape.
     SmallVector<int64_t> srcIdx(srcRank, 0);
     SmallVector<int64_t> resIdx(resRank, 0);
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
+    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
     for (int64_t i = 0; i < numElts; i++) {
       if (i != 0) {
         incIdx(srcIdx, sourceVectorType);
@@ -291,9 +288,7 @@ public:
     auto extractionVectorType = VectorType::get(
         {minExtractionSize}, sourceVectorType.getElementType(), {true});
 
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
-
+    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
     SmallVector<int64_t> srcIdx(srcRank, 0);
     SmallVector<int64_t> resIdx(resRank, 0);
 

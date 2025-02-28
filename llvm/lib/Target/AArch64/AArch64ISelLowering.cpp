@@ -154,6 +154,13 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
+// FIXME : This is a temporary flag, and is used to help transition to
+// performing lowering the proper way using the new PARTIAL_REDUCE_MLA ISD
+// nodes.
+static cl::opt<bool> EnablePartialReduceNodes(
+    "aarch64-enable-partial-reduce-nodes", cl::init(false), cl::ReallyHidden,
+    cl::desc("Use the new method of lowering partial reductions."));
+
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -735,19 +742,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
   }
 
-  for (auto Op : {ISD::FREM,          ISD::FPOW,          ISD::FPOWI,
-                  ISD::FCOS,          ISD::FSIN,          ISD::FSINCOS,
-                  ISD::FACOS,         ISD::FASIN,         ISD::FATAN,
-                  ISD::FATAN2,        ISD::FCOSH,         ISD::FSINH,
-                  ISD::FTANH,         ISD::FTAN,          ISD::FEXP,
-                  ISD::FEXP2,         ISD::FEXP10,        ISD::FLOG,
-                  ISD::FLOG2,         ISD::FLOG10,        ISD::STRICT_FREM,
-                  ISD::STRICT_FPOW,   ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,
-                  ISD::STRICT_FSIN,   ISD::STRICT_FACOS,  ISD::STRICT_FASIN,
-                  ISD::STRICT_FATAN,  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH,
-                  ISD::STRICT_FSINH,  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,
-                  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2,
-                  ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
+  for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                  ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                  ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                  ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                  ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                  ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                  ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                  ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                  ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                  ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::v4f16, Expand);
     setOperationAction(Op, MVT::v8f16, Expand);
@@ -1208,7 +1216,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FSIN,              ISD::FCOS,           ISD::FTAN,
           ISD::FASIN,             ISD::FACOS,          ISD::FATAN,
           ISD::FSINH,             ISD::FCOSH,          ISD::FTANH,
-          ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,          
+          ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,
           ISD::FLOG10,            ISD::FEXP,           ISD::FEXP2,
           ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
           ISD::FROUNDEVEN,        ISD::FTRUNC,         ISD::FMINNUM,
@@ -1217,7 +1225,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::STRICT_FADD,       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,
           ISD::STRICT_FDIV,       ISD::STRICT_FMA,     ISD::STRICT_FCEIL,
           ISD::STRICT_FFLOOR,     ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,
-          ISD::STRICT_FNEARBYINT, ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  
+          ISD::STRICT_FNEARBYINT, ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,
           ISD::STRICT_FROUNDEVEN, ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM,
           ISD::STRICT_FMINIMUM,   ISD::STRICT_FMAXIMUM})
       setOperationAction(Op, MVT::v1f64, Expand);
@@ -1693,7 +1701,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FP_ROUND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
+      setOperationAction(ISD::SELECT, VT, Custom);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
       if (Subtarget->hasSVEB16B16()) {
@@ -2047,7 +2059,10 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
-  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
+  assert(I->getIntrinsicID() ==
+             Intrinsic::experimental_vector_partial_reduce_add &&
+         "Unexpected intrinsic!");
+  if (EnablePartialReduceNodes)
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
@@ -2983,6 +2998,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
     MAKE_CASE(AArch64ISD::CALL_ARM64EC_TO_X64)
     MAKE_CASE(AArch64ISD::URSHR_I_PRED)
+    MAKE_CASE(AArch64ISD::CB)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -10593,6 +10609,17 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
                          DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
     }
 
+    // Try to emit Armv9.6 CB instructions. We prefer tb{n}z/cb{n}z due to their
+    // larger branch displacement but do prefer CB over cmp + br.
+    if (Subtarget->hasCMPBR() &&
+        AArch64CC::isValidCBCond(changeIntCCToAArch64CC(CC)) &&
+        ProduceNonFlagSettingCondBr) {
+      SDValue Cond =
+          DAG.getTargetConstant(changeIntCCToAArch64CC(CC), dl, MVT::i32);
+      return DAG.getNode(AArch64ISD::CB, dl, MVT::Other, Chain, Cond, LHS, RHS,
+                         Dest);
+    }
+
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl);
     return DAG.getNode(AArch64ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
@@ -11779,8 +11806,9 @@ SDValue AArch64TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   if (Align && *Align > MinSlotSize) {
     VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
                          DAG.getConstant(Align->value() - 1, DL, PtrVT));
-    VAList = DAG.getNode(ISD::AND, DL, PtrVT, VAList,
-                         DAG.getConstant(-(int64_t)Align->value(), DL, PtrVT));
+    VAList =
+        DAG.getNode(ISD::AND, DL, PtrVT, VAList,
+                    DAG.getSignedConstant(-(int64_t)Align->value(), DL, PtrVT));
   }
 
   Type *ArgTy = VT.getTypeForEVT(*DAG.getContext());
@@ -15507,7 +15535,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   unsigned EltSize = VT.getScalarSizeInBits();
   unsigned NumElts = VT.getVectorNumElements();
-  return (ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
+  return (ShuffleVectorSDNode::isSplatMask(M) ||
           isREVMask(M, EltSize, NumElts, 64) ||
           isREVMask(M, EltSize, NumElts, 32) ||
           isREVMask(M, EltSize, NumElts, 16) ||
@@ -16146,8 +16174,9 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
     if (Align)
-      SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                       DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+      SP =
+          DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                      DAG.getSignedConstant(-(uint64_t)Align->value(), dl, VT));
     Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
     SDValue Ops[2] = {SP, Chain};
     return DAG.getMergeValues(Ops, dl);
@@ -16184,7 +16213,7 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
   SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
   if (Align)
     SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                     DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+                     DAG.getSignedConstant(-(uint64_t)Align->value(), dl, VT));
   Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
 
   Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
@@ -16212,7 +16241,7 @@ AArch64TargetLowering::LowerInlineDYNAMIC_STACKALLOC(SDValue Op,
   SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
   if (Align)
     SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                     DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+                     DAG.getSignedConstant(-(uint64_t)Align->value(), dl, VT));
 
   // Set the real SP to the new value with a probing loop.
   Chain = DAG.getNode(AArch64ISD::PROBED_ALLOCA, dl, MVT::Other, Chain, SP);
@@ -16866,9 +16895,16 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     // mul(zext(i8), sext) can be transformed into smull(zext, sext) which
     // performs one extend implicitly. If DstWidth is at most 4 * SrcWidth, at
     // most one extra extend step is needed and using tbl is not profitable.
+    // Similarly, bail out if partial_reduce(acc, zext(i8)) can be lowered to a
+    // udot instruction.
     if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
       auto *SingleUser = cast<Instruction>(*I->user_begin());
-      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
+      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
+          (match(SingleUser,
+                 m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
+                     m_Value(), m_Specific(I))) &&
+           !shouldExpandPartialReductionIntrinsic(
+               cast<IntrinsicInst>(SingleUser))))
         return false;
     }
 
@@ -21484,7 +21520,7 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
 
   if (IsRightShift && ShiftAmount <= -1 && ShiftAmount >= -(int)ElemBits) {
     Op = DAG.getNode(Opcode, dl, VT, Op,
-                     DAG.getConstant(-ShiftAmount, dl, MVT::i32));
+                     DAG.getSignedConstant(-ShiftAmount, dl, MVT::i32));
     if (N->getValueType(0) == MVT::i64)
       Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
                        DAG.getConstant(0, dl, MVT::i64));
@@ -21975,8 +22011,11 @@ static SDValue performIntrinsicCombine(SDNode *N,
       return Dot;
     if (SDValue WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))
       return WideAdd;
-    return DAG.getPartialReduceAdd(SDLoc(N), N->getValueType(0),
-                                   N->getOperand(1), N->getOperand(2));
+    SDLoc DL(N);
+    SDValue Input = N->getOperand(2);
+    return DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL, N->getValueType(0),
+                       N->getOperand(1), Input,
+                       DAG.getConstant(1, DL, Input.getValueType()));
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:
@@ -22363,6 +22402,9 @@ static SDValue performZExtDeinterleaveShuffleCombine(SDNode *N,
   if (!IsDeInterleave)
     IsUndefDeInterleave =
         Shuffle->getOperand(1).isUndef() &&
+        all_of(
+            Shuffle->getMask().slice(ExtOffset, VT.getVectorNumElements() / 2),
+            [](int M) { return M < 0; }) &&
         ShuffleVectorInst::isDeInterleaveMaskOfFactor(
             Shuffle->getMask().slice(ExtOffset + VT.getVectorNumElements() / 2,
                                      VT.getVectorNumElements() / 2),
@@ -23037,8 +23079,9 @@ static SDValue isNVCastToHalfWidthElements(SDValue V) {
     return SDValue();
 
   SDValue Op = V.getOperand(0);
-  if (V.getValueType().getVectorElementCount() !=
-      Op.getValueType().getVectorElementCount() * 2)
+  if (!Op.getValueType().isVector() ||
+      V.getValueType().getVectorElementCount() !=
+          Op.getValueType().getVectorElementCount() * 2)
     return SDValue();
 
   return Op;
@@ -25066,10 +25109,10 @@ static SDValue performSETCCCombine(SDNode *N,
   // setcc (srl x, imm), 0, ne ==> setcc (and x, (-1 << imm)), 0, ne
   if (Cond == ISD::SETNE && isNullConstant(RHS) &&
       LHS->getOpcode() == ISD::SRL && isa<ConstantSDNode>(LHS->getOperand(1)) &&
-      LHS->getConstantOperandVal(1) < VT.getScalarSizeInBits() &&
       LHS->hasOneUse()) {
     EVT TstVT = LHS->getValueType(0);
-    if (TstVT.isScalarInteger() && TstVT.getFixedSizeInBits() <= 64) {
+    if (TstVT.isScalarInteger() && TstVT.getFixedSizeInBits() <= 64 &&
+        LHS->getConstantOperandVal(1) < TstVT.getFixedSizeInBits()) {
       // this pattern will get better opt in emitComparison
       uint64_t TstImm = -1ULL << LHS->getConstantOperandVal(1);
       SDValue TST = DAG.getNode(ISD::AND, DL, TstVT, LHS->getOperand(0),
@@ -27360,10 +27403,10 @@ static void ReplaceATOMIC_LOAD_128Results(SDNode *N,
     SDLoc dl(Val128);
     Val2x64.first =
         DAG.getNode(ISD::XOR, dl, MVT::i64,
-                    DAG.getConstant(-1ULL, dl, MVT::i64), Val2x64.first);
+                    DAG.getAllOnesConstant(dl, MVT::i64), Val2x64.first);
     Val2x64.second =
         DAG.getNode(ISD::XOR, dl, MVT::i64,
-                    DAG.getConstant(-1ULL, dl, MVT::i64), Val2x64.second);
+                    DAG.getAllOnesConstant(dl, MVT::i64), Val2x64.second);
   }
 
   SDValue Ops[] = {Val2x64.first, Val2x64.second, Ptr, Chain};

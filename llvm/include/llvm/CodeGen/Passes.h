@@ -176,7 +176,7 @@ namespace llvm {
   extern char &LiveRangeShrinkID;
 
   /// Greedy register allocator.
-  extern char &RAGreedyID;
+  extern char &RAGreedyLegacyID;
 
   /// Basic register allocator.
   extern char &RABasicID;

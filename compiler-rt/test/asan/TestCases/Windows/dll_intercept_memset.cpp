@@ -1,9 +1,9 @@
-// RUN: %clang_cl_asan %Od %p/dll_host.cpp %Fe%t
-// RUN: %clang_cl_asan -Wno-fortify-source %LD %Od %s %Fe%t.dll
+// RUN: %clang_cl_asan %Od %Oy- %p/dll_host.cpp %Fe%t
+// RUN: %clang_cl_asan %if !MSVC %{ -Wno-fortify-source %} %Oy- %LD %Od %s %Fe%t.dll
 // RUN: not %run %t %t.dll 2>&1 | FileCheck %s
 
 // Test that it works correctly even with ICF enabled.
-// RUN: %clang_cl_asan -Wno-fortify-source %LD %Od %s %Fe%t.dll \
+// RUN: %clang_cl_asan %if !MSVC %{ -Wno-fortify-source %} %Oy- %LD %Od %s %Fe%t.dll \
 // RUN:   %if target={{.*-windows-gnu}} %{ -Wl,--gc-sections,--icf=all %} \
 // RUN:   %else %{ -link /OPT:REF /OPT:ICF %}
 // RUN: not %run %t %t.dll 2>&1 | FileCheck %s

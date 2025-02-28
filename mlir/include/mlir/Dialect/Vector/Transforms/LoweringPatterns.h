@@ -157,12 +157,6 @@ void populateVectorTransposeLoweringPatterns(RewritePatternSet &patterns,
 /// Progressive lowering of transfer_write. This pattern supports lowering of
 /// `vector.transfer_write` to `vector.store`
 ///
-/// [VectorLoadToMemrefLoadLowering]
-/// Replace a 0-d vector.load with a memref.load + vector.broadcast.
-///
-/// [VectorStoreToMemrefStoreLowering]
-/// Replace a 0-d vector.store with a vector.extractelement + memref.store.
-///
 /// These patterns lower transfer ops to simpler ops like `vector.load`,
 /// `vector.store` and `vector.broadcast`. Only transfers with a transfer rank
 /// of a most `maxTransferRank` are lowered. This is useful when combined with

@@ -492,7 +492,7 @@ public:
   /// perform non-Decl specific checks based on the object's type and strict
   /// flex array level.
   static bool isFlexibleArrayMemberLike(
-      ASTContext &Context, const Decl *D, QualType Ty,
+      const ASTContext &Context, const Decl *D, QualType Ty,
       LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution);
 

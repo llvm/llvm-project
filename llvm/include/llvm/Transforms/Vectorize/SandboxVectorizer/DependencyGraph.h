@@ -101,7 +101,7 @@ protected:
   /// The scheduler bundle that this node belongs to.
   SchedBundle *SB = nullptr;
 
-  void setSchedBundle(SchedBundle &SB) { this->SB = &SB; }
+  void setSchedBundle(SchedBundle &SB);
   void clearSchedBundle() { this->SB = nullptr; }
   friend class SchedBundle; // For setSchedBundle(), clearSchedBundle().
 
@@ -117,9 +117,15 @@ public:
   virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
   unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
+  // TODO: Make this private?
   void decrUnscheduledSuccs() {
     assert(UnscheduledSuccs > 0 && "Counting error!");
     --UnscheduledSuccs;
+  }
+  void incrUnscheduledSuccs() { ++UnscheduledSuccs; }
+  void resetScheduleState() {
+    UnscheduledSuccs = 0;
+    Scheduled = false;
   }
   /// \Returns true if all dependent successors have been scheduled.
   bool ready() const { return UnscheduledSuccs == 0; }
@@ -213,6 +219,8 @@ class MemDGNode final : public DGNode {
   MemDGNode *NextMemN = nullptr;
   /// Memory predecessors.
   DenseSet<MemDGNode *> MemPreds;
+  /// Memory successors.
+  DenseSet<MemDGNode *> MemSuccs;
   friend class PredIterator; // For MemPreds.
   /// Creates both edges: this<->N.
   void setNextNode(MemDGNode *N) {
@@ -264,8 +272,18 @@ public:
     [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
     assert(Inserted && "PredN already exists!");
     assert(PredN != this && "Trying to add a dependency to self!");
+    PredN->MemSuccs.insert(this);
     if (!Scheduled) {
       ++PredN->UnscheduledSuccs;
+    }
+  }
+  /// Removes the memory dependency PredN->this. This also updates the
+  /// UnscheduledSuccs counter of PredN if this node has not been scheduled.
+  void removeMemPred(MemDGNode *PredN) {
+    MemPreds.erase(PredN);
+    PredN->MemSuccs.erase(this);
+    if (!Scheduled) {
+      PredN->decrUnscheduledSuccs();
     }
   }
   /// \Returns true if there is a memory dependency N->this.
@@ -277,6 +295,10 @@ public:
   /// \Returns all memory dependency predecessors. Used by tests.
   iterator_range<DenseSet<MemDGNode *>::const_iterator> memPreds() const {
     return make_range(MemPreds.begin(), MemPreds.end());
+  }
+  /// \Returns all memory dependency successors.
+  iterator_range<DenseSet<MemDGNode *>::const_iterator> memSuccs() const {
+    return make_range(MemSuccs.begin(), MemSuccs.end());
   }
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const override;
@@ -312,6 +334,7 @@ private:
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
   std::optional<Context::CallbackID> MoveInstrCB;
+  std::optional<Context::CallbackID> SetUseCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -367,6 +390,8 @@ private:
   /// Called by the callbacks when instruction \p I is about to be moved to
   /// \p To.
   void notifyMoveInstr(Instruction *I, const BBIterator &To);
+  /// Called by the callbacks when \p U's source is about to be set to \p NewSrc
+  void notifySetUse(const Use &U, Value *NewSrc);
 
 public:
   /// This constructor also registers callbacks.
@@ -380,6 +405,8 @@ public:
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
         });
+    SetUseCB = Ctx.registerSetUseCallback(
+        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
@@ -388,6 +415,8 @@ public:
       Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
     if (MoveInstrCB)
       Ctx->unregisterMoveInstrCallback(*MoveInstrCB);
+    if (SetUseCB)
+      Ctx->unregisterSetUseCallback(*SetUseCB);
   }
 
   DGNode *getNode(Instruction *I) const {

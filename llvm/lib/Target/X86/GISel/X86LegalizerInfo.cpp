@@ -99,9 +99,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder(G_LROUND).libcall();
-
-  getActionDefinitionsBuilder(G_LLROUND).libcall();
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS, G_FCOSH, G_FACOS,
+                               G_FSIN, G_FSINH, G_FASIN, G_FTAN, G_FTANH,
+                               G_FATAN, G_FATAN2})
+      .libcall();
 
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -452,10 +453,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 && typePairInSet(0, 1, {{s8, s32}})(Query)) ||
-               (HasSSE2 && typePairInSet(0, 1, {{s8, s64}})(Query));
-      })
+      .legalFor(HasSSE1 || UseX87, {s8, s32})
+      .legalFor(HasSSE2 || UseX87, {s8, s64})
+      .legalFor(UseX87, {s8, s80})
       .clampScalar(0, s8, s8)
       .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
