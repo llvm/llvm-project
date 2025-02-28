@@ -14,11 +14,7 @@
 #include "hip/hip_version.h"
 #endif // __has_include("hip/hip_version.h")
 
-#ifdef __SPIRV__
-#define __PRIVATE_AS __attribute__((address_space(0)))
-#else
-#define __PRIVATE_AS __attribute__((address_space(5)))
-#endif
+#define __PRIVATE_AS __attribute__((opencl_private))
 
 #ifdef __cplusplus
 extern "C" {
