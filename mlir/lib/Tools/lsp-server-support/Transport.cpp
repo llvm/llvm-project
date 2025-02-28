@@ -175,7 +175,7 @@ llvm::Error decodeError(const llvm::json::Object &o) {
 }
 
 void JSONTransport::notify(StringRef method, llvm::json::Value params) {
-  sendMessage(llvm::json::Object{
+  out->sendMessage(llvm::json::Object{
       {"jsonrpc", "2.0"},
       {"method", method},
       {"params", std::move(params)},
@@ -183,7 +183,7 @@ void JSONTransport::notify(StringRef method, llvm::json::Value params) {
 }
 void JSONTransport::call(StringRef method, llvm::json::Value params,
                          llvm::json::Value id) {
-  sendMessage(llvm::json::Object{
+  out->sendMessage(llvm::json::Object{
       {"jsonrpc", "2.0"},
       {"id", std::move(id)},
       {"method", method},
@@ -193,14 +193,14 @@ void JSONTransport::call(StringRef method, llvm::json::Value params,
 void JSONTransport::reply(llvm::json::Value id,
                           llvm::Expected<llvm::json::Value> result) {
   if (result) {
-    return sendMessage(llvm::json::Object{
+    return out->sendMessage(llvm::json::Object{
         {"jsonrpc", "2.0"},
         {"id", std::move(id)},
         {"result", std::move(*result)},
     });
   }
 
-  sendMessage(llvm::json::Object{
+  out->sendMessage(llvm::json::Object{
       {"jsonrpc", "2.0"},
       {"id", std::move(id)},
       {"error", encodeError(result.takeError())},
@@ -209,13 +209,13 @@ void JSONTransport::reply(llvm::json::Value id,
 
 llvm::Error JSONTransport::run(MessageHandler &handler) {
   std::string json;
-  while (!feof(in)) {
-    if (ferror(in)) {
+  while (!in->isEndOfInput()) {
+    if (in->getError()) {
       return llvm::errorCodeToError(
           std::error_code(errno, std::system_category()));
     }
 
-    if (succeeded(readMessage(json))) {
+    if (succeeded(in->readMessage(json))) {
       if (llvm::Expected<llvm::json::Value> doc = llvm::json::parse(json)) {
         if (!handleMessage(std::move(*doc), handler))
           return llvm::Error::success();
@@ -227,7 +227,7 @@ llvm::Error JSONTransport::run(MessageHandler &handler) {
   return llvm::errorCodeToError(std::make_error_code(std::errc::io_error));
 }
 
-void JSONTransport::sendMessage(llvm::json::Value msg) {
+void JSONTransportOutputOverStream::sendMessage(const llvm::json::Value &msg) {
   outputBuffer.clear();
   llvm::raw_svector_ostream os(outputBuffer);
   os << llvm::formatv(prettyOutput ? "{0:2}\n" : "{0}", msg);
@@ -303,7 +303,8 @@ LogicalResult readLine(std::FILE *in, SmallVectorImpl<char> &out) {
 // Returns std::nullopt when:
 //  - ferror(), feof(), or shutdownRequested() are set.
 //  - Content-Length is missing or empty (protocol error)
-LogicalResult JSONTransport::readStandardMessage(std::string &json) {
+LogicalResult
+JSONTransportInputOverFile::readStandardMessage(std::string &json) {
   // A Language Server Protocol message starts with a set of HTTP headers,
   // delimited  by \r\n, and terminated by an empty line (\r\n).
   unsigned long long contentLength = 0;
@@ -349,7 +350,8 @@ LogicalResult JSONTransport::readStandardMessage(std::string &json) {
 /// This is a testing path, so favor simplicity over performance here.
 /// When returning failure: feof(), ferror(), or shutdownRequested() will be
 /// set.
-LogicalResult JSONTransport::readDelimitedMessage(std::string &json) {
+LogicalResult
+JSONTransportInputOverFile::readDelimitedMessage(std::string &json) {
   json.clear();
   llvm::SmallString<128> line;
   while (succeeded(readLine(in, line))) {
