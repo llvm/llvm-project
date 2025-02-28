@@ -7,7 +7,7 @@ backend compilation job. This simple functional distributor is intended to be
 used for integration tests.
 
 Usage:
-    python dtlto_codegen.py <json_file>
+    python local.py <json_file>
 
 Arguments:
     - <json_file> : JSON file describing the DTLTO jobs.

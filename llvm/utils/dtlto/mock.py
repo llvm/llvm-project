@@ -6,10 +6,10 @@ used for testing DTLTO when a Clang binary is not be available to invoke to
 perform the backend compilation jobs.
 
 Usage:
-    python mock_distributor.py <input_file1> <input_file2> ... <json_file>
+    python mock.py <input_file1> <input_file2> ... <json_file>
 
 Arguments:
-    - <input_file1>, <input_file2>, ... : Input files to be copied.
+    - <input_file1>, <input_file2>, ...  : Input files to be copied.
     - <json_file>                        : JSON file describing the DTLTO jobs.
 
 The script performs the following:
