@@ -382,7 +382,16 @@ public:
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader);
 
-  bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
+  bool shouldExpandReduction(const IntrinsicInst *II) const {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::vector_reduce_mul:
+      return II->getOperand(0)->getType()->isScalableTy();
+    case Intrinsic::vector_reduce_fmul:
+      return II->getOperand(1)->getType()->isScalableTy();
+    default:
+      return false;
+    }
+  }
 
   unsigned getGISelRematGlobalCost() const {
     return 2;
