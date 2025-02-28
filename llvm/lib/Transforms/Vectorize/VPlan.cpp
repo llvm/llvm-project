@@ -827,7 +827,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // For the scalar case, we may not always execute the original predicated
   // block, Thus, scale the block's cost by the probability of executing it.
   if (VF.isScalar())
-    return ThenCost / getReciprocalPredBlockProb();
+    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
 
   return ThenCost;
 }
@@ -874,7 +874,7 @@ VPlan::~VPlan() {
     }
     delete VPB;
   }
-  for (VPValue *VPV : VPLiveInsToFree)
+  for (VPValue *VPV : getLiveIns())
     delete VPV;
   if (BackedgeTakenCount)
     delete BackedgeTakenCount;
@@ -1245,7 +1245,7 @@ VPlan *VPlan::duplicate() {
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  for (VPValue *OldLiveIn : VPLiveInsToFree) {
+  for (VPValue *OldLiveIn : getLiveIns()) {
     Old2NewVPValues[OldLiveIn] =
         NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
@@ -1549,7 +1549,7 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignName(Plan.BackedgeTakenCount);
-  for (VPValue *LI : Plan.VPLiveInsToFree)
+  for (VPValue *LI : Plan.getLiveIns())
     assignName(LI);
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>

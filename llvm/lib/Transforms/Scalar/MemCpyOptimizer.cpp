@@ -1549,14 +1549,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
-        case UseCaptureKind::MAY_CAPTURE:
+        UseCaptureInfo CI =
+            DetermineUseCaptureKind(U, AI, IsDereferenceableOrNull);
+        // TODO(captures): Make this more precise.
+        if (capturesAnything(CI.UseCC))
           return false;
-        case UseCaptureKind::PASSTHROUGH:
-          // Instructions cannot have non-instruction users.
-          Worklist.push_back(UI);
-          continue;
-        case UseCaptureKind::NO_CAPTURE: {
+
+        if (UI->mayReadOrWriteMemory()) {
           if (UI->isLifetimeStartOrEnd()) {
             // We note the locations of these intrinsic calls so that we can
             // delete them later if the optimization succeeds, this is safe
@@ -1574,6 +1573,10 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
           if (!ModRefCallback(UI))
             return false;
         }
+
+        if (capturesAnything(CI.ResultCC)) {
+          Worklist.push_back(UI);
+          continue;
         }
       }
     }

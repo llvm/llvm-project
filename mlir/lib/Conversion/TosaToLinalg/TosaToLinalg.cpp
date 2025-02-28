@@ -49,6 +49,11 @@ using namespace mlir::tosa;
 // calculated result based on whether the lhs or rhs is NaN or not. In pseudo
 // code:
 //
+// In the case that the op is operating on non floating point types we ignore
+// the attribute completely, this is consistent with the TOSA spec which has
+// the following wording: "This attribute is ignored by non floating-point
+// types."
+//
 // binary<op>(lhs, rhs):
 //   result = op(lhs, rhs)
 //   if lhs == NaN return rhs
@@ -58,6 +63,10 @@ template <typename OpTy>
 static Value
 materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
                                     Value lhs, Value rhs, Value result) {
+  // NaN propagation has no meaning for non floating point types.
+  if (!isa<FloatType>(getElementTypeOrSelf(lhs)))
+    return result;
+
   auto nanMode = op.getNanMode();
   if (nanMode == "PROPAGATE")
     return result;
@@ -449,6 +458,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
     auto clampOp = llvm::cast<tosa::ClampOp>(op);
     const auto nanMode = clampOp.getNanMode();
+
+    // NaN propagation has no meaning for non floating point types.
+    if (!isa<FloatType>(elementTy))
+      return result;
+
     // In the case of "PROPAGATE" semantics no compare and selection is
     // required.
     if (nanMode == "PROPAGATE")
@@ -524,6 +538,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::CastOp>(op)) {
     Type srcTy = elementTy;
     Type dstTy = resultTypes.front();
+    if (!srcTy.isIntOrFloat() || !dstTy.isIntOrFloat()) {
+      (void)rewriter.notifyMatchFailure(op, "unsupported type");
+      return nullptr;
+    }
+
     bool bitExtend =
         srcTy.getIntOrFloatBitWidth() < dstTy.getIntOrFloatBitWidth();
 
@@ -1050,10 +1069,10 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
   if (isa<tosa::ReduceSumOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(elementTy, 0);
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<FloatType>(elementTy))
+  if (isa<tosa::ReduceProductOp>(op) && isa<FloatType>(elementTy))
     return rewriter.getFloatAttr(elementTy, 1.0);
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<IntegerType>(elementTy))
+  if (isa<tosa::ReduceProductOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(elementTy, 1);
 
   if (isa<tosa::ReduceMinOp>(op) && isa<FloatType>(elementTy))
@@ -1107,11 +1126,11 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
     return rewriter.create<arith::AddIOp>(loc, args);
   }
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<FloatType>(elementTy)) {
+  if (isa<tosa::ReduceProductOp>(op) && isa<FloatType>(elementTy)) {
     return rewriter.create<arith::MulFOp>(loc, args);
   }
 
-  if (isa<tosa::ReduceProdOp>(op) && isa<IntegerType>(elementTy)) {
+  if (isa<tosa::ReduceProductOp>(op) && isa<IntegerType>(elementTy)) {
     return rewriter.create<arith::MulIOp>(loc, args);
   }
 
@@ -1187,7 +1206,8 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   bool isNanIgnoreMode = false;
   if constexpr (std::is_same_v<OpTy, tosa::ReduceMinOp> ||
                 std::is_same_v<OpTy, tosa::ReduceMaxOp>) {
-    if (op.getNanMode() == "IGNORE") {
+    // NaN propagation has no meaning for non floating point types.
+    if (isa<FloatType>(elementTy) && op.getNanMode() == "IGNORE") {
       isNanIgnoreMode = true;
       // Because the TOSA spec requires the result be NaN iff all elements in
       // the reduction are NaN we can't simply perform a compare and select.
@@ -2277,7 +2297,8 @@ public:
           // In the case "IGNORE" we check if the current argument is NaN and
           // select the old index and value otherwise take the updated index and
           // value.
-          if (const auto nanMode = argmaxOp.getNanMode(); nanMode == "IGNORE") {
+          if (const auto nanMode = argmaxOp.getNanMode();
+              isa<FloatType>(inElementTy) && nanMode == "IGNORE") {
             // Unordered comparison of NaN against itself will always return
             // true.
             Value isNaN = rewriter.create<arith::CmpFOp>(
@@ -2869,7 +2890,7 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>,
       ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProdOp>,
+      ReduceConverter<tosa::ReduceProductOp>,
       ArgMaxConverter,
       GatherConverter,
       RescaleConverter,

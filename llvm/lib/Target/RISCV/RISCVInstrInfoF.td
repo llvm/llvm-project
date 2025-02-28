@@ -116,7 +116,7 @@ class ExtInfo<string suffix, string space, list<Predicate> predicates,
 
 def FExt       : ExtInfo<"", "", [HasStdExtF], f32, FPR32, FPR32, ?, ?>;
 
-def ZfinxExt   : ExtInfo<"_INX", "RVZfinx", [HasStdExtZfinx], f32, FPR32INX, FPR32INX, ?, ?>;
+def ZfinxExt   : ExtInfo<"_INX", "Zfinx", [HasStdExtZfinx], f32, FPR32INX, FPR32INX, ?, ?>;
 
 defvar FExts   = [FExt, ZfinxExt];
 

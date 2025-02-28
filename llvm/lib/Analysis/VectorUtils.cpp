@@ -72,6 +72,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::atan2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::tan:
   case Intrinsic::sinh:
   case Intrinsic::cosh:
@@ -87,6 +89,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -185,6 +188,9 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::modf:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;

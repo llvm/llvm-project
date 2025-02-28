@@ -23,6 +23,7 @@ math/clc_fabs.cl
 math/clc_fma.cl
 math/clc_floor.cl
 math/clc_frexp.cl
+math/clc_ldexp.cl
 math/clc_log.cl
 math/clc_log10.cl
 math/clc_log2.cl
@@ -32,6 +33,8 @@ math/clc_nan.cl
 math/clc_nextafter.cl
 math/clc_rint.cl
 math/clc_round.cl
+math/clc_rsqrt.cl
+math/clc_sqrt.cl
 math/clc_sw_fma.cl
 math/clc_trunc.cl
 relational/clc_all.cl

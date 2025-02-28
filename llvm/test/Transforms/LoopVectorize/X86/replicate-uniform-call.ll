@@ -47,10 +47,8 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP4]], i64 0)
 ; CHECK-NEXT:    [[TMP13:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP9]], i64 0)
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[TMP14]], i64 [[TMP12]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[TMP15]], i64 [[TMP13]], i64 1
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 1, i64 [[TMP12]]
+; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[P]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[DST]], i64 [[ADD]]
