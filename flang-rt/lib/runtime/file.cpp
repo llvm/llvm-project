@@ -31,6 +31,10 @@ void OpenFile::set_path(OwningPtr<char> &&path, std::size_t bytes) {
 }
 
 static int openfile_mkstemp(IoErrorHandler &handler) {
+#ifdef __wasi__
+  handler.SignalError("not supported on WASI");
+  return -1;
+#else
 #ifdef _WIN32
   const unsigned int uUnique{0};
   // GetTempFileNameA needs a directory name < MAX_PATH-14 characters in length.
@@ -58,6 +62,7 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   ::unlink(path);
 #endif
   return fd;
+#endif
 }
 
 void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,

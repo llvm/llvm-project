@@ -21,7 +21,9 @@
 #include "flang/Common/windows-include.h"
 #else
 #include <signal.h>
+#ifndef __wasi__
 #include <sys/wait.h>
+#endif
 #include <unistd.h>
 #endif
 
@@ -65,6 +67,7 @@ void CheckAndStoreIntToDescriptor(
   }
 }
 
+#ifndef __wasi__
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
 std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
@@ -180,6 +183,7 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
 #endif
   return exitStatusVal;
 }
+#endif
 
 void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
@@ -202,6 +206,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(cmdmsg));
   }
 
+#ifndef __wasi__
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
     std::int64_t status{std::system(newCmd)};
@@ -278,6 +283,9 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
 #endif
   }
+#else
+  terminator.Crash("not supported on WASI");
+#endif
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
     FreeMemory(newCmd);

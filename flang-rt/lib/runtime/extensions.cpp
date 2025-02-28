@@ -61,7 +61,7 @@ extern "C" {
 namespace Fortran::runtime {
 
 gid_t RTNAME(GetGID)() {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__wasi__)
   // Group IDs don't exist on Windows, return 1 to avoid errors
   return 1;
 #else
@@ -70,7 +70,7 @@ gid_t RTNAME(GetGID)() {
 }
 
 uid_t RTNAME(GetUID)() {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__wasi__)
   // User IDs don't exist on Windows, return 1 to avoid errors
   return 1;
 #else
