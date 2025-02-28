@@ -1,6 +1,6 @@
 ; RUN: not opt -passes='print<dxil-root-signature>' %s -S -o - 2>&1 | FileCheck %s
 
-; CHECK: error: Invalid Root Signature flag value
+; CHECK:  Invalid Root Signature flag value in metadata 2147487744
 ; CHECK-NOT: Root Signature Definitions
 
 target triple = "dxil-unknown-shadermodel6.0-compute"

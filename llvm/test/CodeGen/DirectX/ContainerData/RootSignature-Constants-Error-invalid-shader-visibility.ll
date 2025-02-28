@@ -1,6 +1,6 @@
 ; RUN: not opt -passes='print<dxil-root-signature>' %s -S -o - 2>&1 | FileCheck %s
 
-; CHECK: error: Invalid shader visibility flag value in root constant.
+; CHECK: error: Invalid Root Signature parameter shader visibility in metadata 666
 ; CHECK-NOT: Root Signature Definitions
 target triple = "dxil-unknown-shadermodel6.0-compute"
 

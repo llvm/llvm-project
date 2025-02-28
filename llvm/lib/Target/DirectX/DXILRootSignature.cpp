@@ -17,19 +17,8 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstdint>
-#include <optional>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -50,12 +39,8 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 
   auto *ShaderVisibility =
       mdconst::extract<ConstantInt>(RootConstNode->getOperand(1));
-  dxbc::ShaderVisibility SvFlag =
+  NewParam.ShaderVisibility =
       (dxbc::ShaderVisibility)ShaderVisibility->getZExtValue();
-  if (!dxbc::RootSignatureValidations::isValidShaderVisibility(SvFlag))
-    return reportError(
-        Ctx, "Invalid shader visibility flag value in root constant.");
-  NewParam.ShaderVisibility = SvFlag;
 
   auto *ShaderRegister =
       mdconst::extract<ConstantInt>(RootConstNode->getOperand(2));
@@ -129,8 +114,24 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 }
 
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
+
   if (!dxbc::RootSignatureValidations::isValidRootFlag(RSD.Header.Flags)) {
-    return reportError(Ctx, "Invalid Root Signature flag value");
+    return reportError(Ctx, "Invalid Root Signature flag value in metadata " +
+                                Twine(RSD.Header.Flags));
+  }
+
+  for (const auto &P : RSD.Parameters) {
+    // Parameter Type cannot be set through metadata.
+    assert(
+        dxbc::RootSignatureValidations::isValidParameterType(P.ParameterType));
+
+    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
+            P.ShaderVisibility)) {
+      return reportError(
+          Ctx,
+          "Invalid Root Signature parameter shader visibility in metadata " +
+              Twine((uint32_t)P.ShaderVisibility));
+    }
   }
   return false;
 }
