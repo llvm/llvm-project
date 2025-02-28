@@ -2065,6 +2065,30 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 // -----
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testi64 = "test.i64"() : () -> (i64)
+  // expected-error @below {{invalid grainsize modifier : 'strict1'}}
+  omp.taskloop grainsize(strict1, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testi64 = "test.i64"() : () -> (i64)
+  // expected-error @below {{invalid num_tasks modifier : 'default'}}
+  omp.taskloop num_tasks(default, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   // expected-error @below {{op nested in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
   omp.taskloop {
     %0 = arith.constant 0 : i32

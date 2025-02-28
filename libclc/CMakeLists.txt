@@ -29,7 +29,9 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   # CLC internal libraries
   clc/lib/generic/SOURCES;
   clc/lib/amdgcn/SOURCES;
+  clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
+  clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )
 

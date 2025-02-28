@@ -5998,6 +5998,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_remote_memory,
+                    options::OPT_fno_atomic_remote_memory);
+  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_fine_grained_memory,
+                    options::OPT_fno_atomic_fine_grained_memory);
+  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_ignore_denormal_mode,
+                    options::OPT_fno_atomic_ignore_denormal_mode);
+
   if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {
     const llvm::Triple::ArchType Arch = TC.getArch();
     if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {
