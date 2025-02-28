@@ -1,4 +1,4 @@
-//===-- lldb-dap.cpp -----------------------------------------*- C++ -*-===//
+//===-- lldb-dap.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +8,7 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "FifoFiles.h"
 #include "Handler/RequestHandler.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
 #include "RunInTerminal.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
@@ -38,22 +35,15 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <condition_variable>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <fcntl.h>
 #include <fstream>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <optional>
-#include <ostream>
 #include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -118,8 +108,9 @@ public:
       : llvm::opt::GenericOptTable(OptionStrTable, OptionPrefixesTable,
                                    InfoTable, true) {}
 };
+} // anonymous namespace
 
-void RegisterRequestCallbacks(DAP &dap) {
+static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
@@ -160,9 +151,7 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
 }
 
-} // anonymous namespace
-
-static void printHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
+static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
 
@@ -202,12 +191,13 @@ EXAMPLES:
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adaptor.
-static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                      llvm::StringRef comm_file,
-                                      lldb::pid_t debugger_pid, char *argv[]) {
+static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                                             llvm::StringRef comm_file,
+                                             lldb::pid_t debugger_pid,
+                                             char *argv[]) {
 #if defined(_WIN32)
-  llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(
+      "runInTerminal is only supported on POSIX systems");
 #else
 
   // On Linux with the Yama security module enabled, a process can only attach
@@ -219,10 +209,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #endif
 
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid()) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
-  }
+  if (llvm::Error err = comm_channel.NotifyPid())
+    return err;
 
   // We will wait to be attached with a timeout. We don't wait indefinitely
   // using a signal to prevent being paused forever.
@@ -233,8 +221,7 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
       timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
   if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
+    return err;
   }
 
   const char *target = target_arg.getValue();
@@ -242,8 +229,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   std::string error = std::strerror(errno);
   comm_channel.NotifyError(error);
-  llvm::errs() << error << "\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 std::move(error));
 #endif
 }
 
@@ -435,7 +422,7 @@ int main(int argc, char *argv[]) {
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {
-    printHelp(T, llvm::sys::path::filename(argv[0]));
+    PrintHelp(T, llvm::sys::path::filename(argv[0]));
     return EXIT_SUCCESS;
   }
 
@@ -471,13 +458,18 @@ int main(int argc, char *argv[]) {
         }
       }
       int target_args_pos = argc;
-      for (int i = 0; i < argc; i++)
+      for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "--launch-target") == 0) {
           target_args_pos = i + 1;
           break;
         }
-      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                argv + target_args_pos);
+      }
+      if (llvm::Error err =
+              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
+                                        argv + target_args_pos)) {
+        llvm::errs() << llvm::toString(std::move(err)) << '\n';
+        return EXIT_FAILURE;
+      }
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
                       "specified\n";
