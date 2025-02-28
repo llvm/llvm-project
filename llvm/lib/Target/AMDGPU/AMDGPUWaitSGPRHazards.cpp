@@ -16,13 +16,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm-c/Core.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/ilist_iterator.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/IR/CFG.h"
-#include <iterator>
 
 using namespace llvm;
 
@@ -410,15 +404,18 @@ public:
             auto Preds = MBB.predecessors();
             if (MBB.pred_size() == 1) {
               auto &Pred = *Preds.begin();
-              auto PrevMI = Pred->instr_end();
-              PrevWaitAlu = getPreviousWaitAlu(PrevMI);
+              if (!Pred->empty()) {
+                auto PrevMI = Pred->instr_end();
+                PrevWaitAlu = getPreviousWaitAlu(PrevMI);
+              }
             }
           }
 
           if (PrevWaitAlu != nullptr &&
               PrevWaitAlu->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
             Mask = mergeMasks(Mask, PrevWaitAlu->getOperand(0).getImm());
-            PrevWaitAlu->eraseFromParent();
+            PrevWaitAlu->getOperand(0).setImm(Mask);
+            continue;
           }
           auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
                                TII->get(AMDGPU::S_WAITCNT_DEPCTR))

@@ -27,11 +27,11 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
+  ; CHECK-NEXT:   S_WAITCNT_DEPCTR 61946
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAITCNT_DEPCTR 61946
   ; CHECK-NEXT:   renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
   bb.0:
     liveins: $vgpr0
@@ -45,169 +45,18 @@ body:             |
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
 ...
 ---
-name: skip_implicit_def
+name: skip_meta_instruction
 machineFunctionInfo:
 body: |
   bb.0:
-    ; CHECK-LABEL: name: skip_implicit_def
+    ; CHECK-LABEL: name: skip_meta_instruction
     ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: $sgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    $sgpr0 = IMPLICIT_DEF
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_kill
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_kill
-    ; CHECK: KILL $sgpr0
-    ; CHECK-NEXT: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: KILL $sgpr0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    KILL $sgpr0
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    KILL $sgpr0
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_cfi
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_cfi
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: CFI_INSTRUCTION undefined $sgpr0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    CFI_INSTRUCTION undefined $sgpr0
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_eh_label
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_eh_label
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: EH_LABEL 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    EH_LABEL 0
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_gc_label
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_gc_label
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: GC_LABEL 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    GC_LABEL 0
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_dbg_value
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_dbg_value
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: DBG_VALUE 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    DBG_VALUE 0
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_dbg_label
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_dbg_label
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: DBG_LABEL 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    DBG_LABEL 0
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_lifetime_start
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_lifetime_start
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-    ; CHECK-NEXT: LIFETIME_START 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    LIFETIME_START 0
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
----
-name: skip_lifetime_end
-machineFunctionInfo:
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: skip_lifetime_end
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
     ; CHECK-NEXT: LIFETIME_END 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61946
     ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
     renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
     S_WAITCNT_DEPCTR 65530
     LIFETIME_END 0
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
 ...
----
-name: merge_consecutive_wait_alus_two_bb_meta
-body:             |
-  ; CHECK-LABEL: name: merge_consecutive_wait_alus_two_bb_meta
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
-  ; CHECK-NEXT:   EH_LABEL 0
-  ; CHECK-NEXT:   GC_LABEL 0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $sgpr0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAITCNT_DEPCTR 61946
-  ; CHECK-NEXT:   renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
-  bb.0:
-    liveins: $vgpr0
 
-    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
-    S_WAITCNT_DEPCTR 65530
-    EH_LABEL 0
-    GC_LABEL 0
-
-  bb.1:
-    liveins: $sgpr0
-
-    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
-...
