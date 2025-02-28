@@ -712,14 +712,14 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                             options::OPT_m_amdgpu_Features_Group);
 }
 
-static unsigned GetFullLTOPartitions(const Driver &D, const ArgList &Args) {
+static unsigned getFullLTOPartitions(const Driver &D, const ArgList &Args) {
   const Arg *A = Args.getLastArg(options::OPT_flto_partitions_EQ);
   // In the absence of an option, use the number of available threads with a cap
   // at 16 partitions. More than 16 partitions rarely benefits code splitting
   // and can lead to more empty/small modules each with their own overhead.
   if (!A)
     return std::min(16u, llvm::hardware_concurrency().compute_thread_count());
-  int Value;
+  int Value = 0;
   if (StringRef(A->getValue()).getAsInteger(10, Value) || (Value < 1)) {
     D.Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
@@ -732,9 +732,10 @@ static unsigned GetFullLTOPartitions(const Driver &D, const ArgList &Args) {
 void amdgpu::addFullLTOPartitionOption(const Driver &D,
                                        const llvm::opt::ArgList &Args,
                                        llvm::opt::ArgStringList &CmdArgs) {
-  // TODO: restrict to gpu-rdc only?
+  // TODO: Should this be restricted to fgpu-rdc only ? Currently we'll
+  //       also do it for non gpu-rdc LTO
 
-  if (unsigned NumParts = GetFullLTOPartitions(D, Args); NumParts > 1) {
+  if (unsigned NumParts = getFullLTOPartitions(D, Args); NumParts > 1) {
     CmdArgs.push_back(
         Args.MakeArgString("--lto-partitions=" + Twine(NumParts)));
   }
